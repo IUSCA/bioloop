@@ -181,11 +181,11 @@ router.post(
 // make sure that the request body is array of objects which at least will have
 // a "message" key
 const append_log_schema = {
-  '0.message': {
+  '*.message': {
     in: ['body'],
     notEmpty: true,
   },
-  '0.level': {
+  '*.level': {
     in: ['body'],
     default: 'stdout',
   },
@@ -225,7 +225,9 @@ router.post(
 router.get(
   '/processes',
   isPermittedTo('read'),
-  validate([query('pid').isInt().toInt().optional()]),
+  validate([
+    query('pid').isInt().toInt().optional(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']

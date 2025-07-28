@@ -94,22 +94,6 @@ router.get(
 );
 
 // add hierarchy association
-const assoc_body_schema = {
-  '0.source_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Source ID must be an integer',
-    },
-    toInt: true,
-  },
-  '0.derived_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Derived ID must be an integer',
-    },
-    toInt: true,
-  },
-};
 
 router.get(
   '/:username/all',
@@ -135,8 +119,8 @@ router.get(
       [req.query.sort_by]: req.query.sort_order,
     };
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
     };
@@ -235,6 +219,23 @@ const buildQueryObject = ({
   return query_obj;
 };
 
+const assoc_body_schema = {
+  '*.source_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Source ID must be an integer',
+    },
+    toInt: true,
+  },
+  '*.derived_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Derived ID must be an integer',
+    },
+    toInt: true,
+  },
+};
+
 router.post(
   '/associations',
   isPermittedTo('update'),
@@ -296,6 +297,8 @@ router.get(
       };
     }
     const datasetRetrievalQuery = {
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
       include: {
@@ -306,14 +309,6 @@ router.get(
         states: req.query.include_states || false,
       },
     };
-
-    if (req.query.offset != null) {
-      datasetRetrievalQuery.skip = req.query.offset;
-    }
-
-    if (req.query.limit != null) {
-      datasetRetrievalQuery.take = req.query.limit;
-    }
 
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
@@ -373,11 +368,11 @@ router.post(
   validate([
     body('name').notEmpty(),
     body('type').isIn(config.get('dataset_types')),
-    body('origin_path').notEmpty(),
+    body('origin_path').trim().notEmpty(),
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').notEmpty().escape(),
+    body('origin_path').trim().notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -440,7 +435,7 @@ router.post(
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(createQuery);
+    const dataset = await datasetService.create(prisma, createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -542,8 +537,7 @@ router.post(
     const data = req.body.datasets
       .map((d) => datasetService.buildDatasetCreateQuery(d));
 
-    // create in separate transactions to avoid deadlocks
-    const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
+    const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
 
     // separate results into created and failed
     const created = [];
@@ -557,7 +551,7 @@ router.post(
         // P2002 - Unique constraint failed
         conflicted.push(_.pick(['name', 'type'])(data[index]));
       } else {
-        logger.warn('Error creating dataset', JSON.stringify({ dataset: data[index], error: result.reason }));
+        logger.warn(`Error creating dataset: ${JSON.stringify({ dataset: data[index], error: result.reason })}`);
         errored.push(_.pick(['name', 'type'])(data[index]));
       }
     });
@@ -603,7 +597,7 @@ router.patch(
       return next(createError(404));
     }
 
-    const { metadata, ...data } = req.body;
+    const { metadata, ...data } = _.omitBy(_.isUndefined)(req.body);
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
 
     if (req.body.bundle) {
@@ -887,8 +881,8 @@ router.get(
       await prisma.data_access_log.create({
         data: {
           access_type: 'BROWSER',
-          file_id: isFileDownload ? req.query.file_id : undefined,
-          dataset_id: !isFileDownload ? req.params.id : undefined,
+          file_id: isFileDownload ? req.query.file_id : Prisma.skip,
+          dataset_id: !isFileDownload ? req.params.id : Prisma.skip,
           user_id: req.user.id,
         },
       });
@@ -943,7 +937,7 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     query('name').default(''),
-    query('basepath').optional().default(''),
+    query('basepath').default(''),
     query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
@@ -957,10 +951,11 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
     const files = await datasetService.search_files({
       dataset_id: req.params.id,
       base: req.query.basepath,
-      ...req.query,
+      ..._.omitBy(_.isUndefined)(req.query),
     });
     res.json(files);
   }),
@@ -970,8 +965,8 @@ router.get(
 router.get(
   '/:datasetType/:name/exists',
   validate([
-    param('datasetType').escape().notEmpty(),
-    param('name').escape().notEmpty(),
+    param('datasetType').trim().notEmpty(),
+    param('name').trim().notEmpty(),
     query('deleted').toBoolean().default(false),
   ]),
   accessControl('dataset_name')('read'),

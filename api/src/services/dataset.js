@@ -1,5 +1,6 @@
 const assert = require('assert');
 const path = require('node:path');
+const { Prisma } = require('@prisma/client');
 
 const config = require('config');
 // const _ = require('lodash/fp');
@@ -137,7 +138,7 @@ async function create_workflow(dataset, wf_name, initiator_id) {
  */
 async function soft_delete(dataset, user_id) {
   if (dataset.archive_path) {
-    // if archived, starts a delete-archive workflow which will
+    // if archived, starts a delete archive workflow which will
     // mark the dataset as deleted on success.
     await create_workflow(dataset, 'delete', user_id);
   } else {
@@ -498,7 +499,7 @@ async function has_workflow_access({ workflow, dataset_id, user_id }) {
     return true;
   }
 
-  let user_has_workflow_access;
+  let user_has_workflow_access = false;
 
   if ([CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
     CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
@@ -741,13 +742,25 @@ async function add_files({ dataset_id, data }) {
 }
 
 /**
- * Creates a new dataset within a transaction.
+ * Creates a new dataset if one with the same name and type does not already exist.
  *
- * @param {Object} tx - Database transaction manager.
+ * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
+ *
+ * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
+ * This approach would also increment the sequence ID even if the dataset is not created,
+ * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
+ *
+ * The expected behavior is maintained even under concurrent transactions (default isolation level is read committed):
+ * txA: findFirst -> no dataset
+ * txB: findFirst -> no dataset
+ * txA: create -> dataset created
+ * txB: create -> unique constraint violation
+ *
+ * @param {Object} tx - Database client.
  * @param {Object} data - The data object containing details of the dataset to be created.
  * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
  */
-async function createDatasetInTransaction(tx, data) {
+async function create(tx, data) {
   // find if a dataset with the same name and type already exists
   const existingDataset = await tx.dataset.findFirst({
     where: {
@@ -763,31 +776,15 @@ async function createDatasetInTransaction(tx, data) {
     return;
   }
   // if it doesn't exist, create it
-  return tx.dataset.create({
-    data,
-  });
-}
-
-/**
- * Creates a new dataset if one with the same name and type does not already exist.
- *
- * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
- *
- * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
- * This approach would also increment the sequence ID even if the dataset is not created,
- * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
- *
- * The expected behavior is maintained even under concurrent transactions (default isolation level is 'Read Committed'):
- * txA: findFirst -> no dataset
- * txB: findFirst -> no dataset
- * txA: create -> dataset created
- * txB: create -> unique constraint violation
- *
- * @param {Object} data - The data object containing details of the dataset to be created.
- * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
- */
-function createDataset(data) {
-  return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
+  // console.log(`creating dataset`, JSON.stringify(data, null, 2));
+  try {
+    return await tx.dataset.create({
+      data,
+    });
+  } catch (e) {
+    console.error('Error creating dataset:', e);
+    throw e;
+  }
 }
 
 /**
@@ -1111,7 +1108,7 @@ const buildDatasetCreateQuery = (data) => {
     create_query.projects = {
       create: [{
         project_id,
-        assignor_id: user_id,
+        assignor_id: user_id ?? Prisma.skip,
       }],
     };
   }
@@ -1146,7 +1143,7 @@ const buildDatasetCreateQuery = (data) => {
       {
         action: 'create',
         create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        user_id,
+        user_id: user_id ?? Prisma.skip,
       },
     ],
   };
@@ -1235,24 +1232,23 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
 
 module.exports = {
   soft_delete,
+  get_dataset,
   create_workflow,
   create_filetree,
   files_ls,
   search_files,
   add_files,
+  create,
   get_bundle_name,
-  get_dataset,
-  createDataset,
-  createDatasetInTransaction,
   get_dataset_active_workflows,
-  buildDatasetCreateQuery,
-  buildDatasetsFetchQuery,
   get_dataset_creator,
-  getUploadedDatasetPath,
-  dataset_access_check,
-  workflow_access_check,
   has_dataset_assoc,
   has_workflow_access,
+  dataset_access_check,
+  workflow_access_check,
+  getUploadedDatasetPath,
+  buildDatasetCreateQuery,
+  buildDatasetsFetchQuery,
   normalize_name,
   initiateUploadWorkflow,
 };

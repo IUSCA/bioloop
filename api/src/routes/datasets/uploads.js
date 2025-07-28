@@ -158,7 +158,7 @@ router.post(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {

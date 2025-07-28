@@ -15,7 +15,7 @@ router.post(
   '/token',
   isPermittedTo('create'),
   validate([
-    body('file_name').notEmpty().escape(),
+    body('file_name').trim().notEmpty(),
   ]),
   asyncHandler(async (req, res) => {
     let token;
