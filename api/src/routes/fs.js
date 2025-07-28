@@ -27,16 +27,6 @@ function getBaseDir(req) {
   return config.filesystem.base_dir[base_dir_key];
 }
 
-function verifyFileSystemSearchEnabled(req, res, next) {
-  const isFileSystemSearchEnabledForUser = config.enabled_features.fs.enabled_for_roles.some(
-    (role) => req.user.roles.includes(role),
-  );
-  if (!isFileSystemSearchEnabledForUser) {
-    return next(createError.Forbidden('File system search is not enabled for this user'));
-  }
-  next();
-}
-
 function validatePath(req, res, next) {
   const query_path = req.query.path;
   if (!query_path) {
@@ -78,7 +68,6 @@ const get_mounted_search_dir = (req) => {
 
 router.get(
   '/',
-  verifyFileSystemSearchEnabled,
   validatePath,
   isPermittedTo('read'),
   query('dirs_only').default(false),
