@@ -110,8 +110,10 @@ router.get(
         },
       };
     }
-    where.user = {
-      username: req.params.username,
+    where.audit_log = {
+      user : {
+        username: req.params.username,
+      }
     };
 
     const filter_query = {
