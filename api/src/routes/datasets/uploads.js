@@ -26,7 +26,7 @@ router.get(
   '/',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').optional().trim().notEmpty(),
+    query('dataset_name').optional().trim().isLength({ min: 1 }),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
@@ -82,7 +82,7 @@ router.get(
   '/:username',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').optional().trim().notEmpty(),
+    query('dataset_name').optional().trim().isLength({ min: 1 }),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
     param('username').trim().notEmpty(),

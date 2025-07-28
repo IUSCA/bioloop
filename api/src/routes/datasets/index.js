@@ -372,7 +372,6 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').trim().notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
