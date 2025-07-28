@@ -84,7 +84,9 @@ const exports = {
     },
     downloads: true,
     signup: true,
-    uploads: true,
+    uploads: {
+      enabledForRoles: ["admin", "user"],
+    },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds

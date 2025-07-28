@@ -1,23 +1,23 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body,
 } = require('express-validator');
 const _ = require('lodash/fp');
+const { Prisma } = require('@prisma/client');
 const config = require('config');
 
-const asyncHandler = require('../../middleware/asyncHandler');
-const { accessControl } = require('../../middleware/auth');
-const { validate } = require('../../middleware/validators');
-const datasetService = require('../../services/dataset');
-const CONSTANTS = require('../../constants');
-const logger = require('../../services/logger');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const datasetService = require('@/services/dataset');
+const CONSTANTS = require('@/constants');
+const logger = require('@/services/logger');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('datasets');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Used by:
 //  - UI
@@ -26,7 +26,7 @@ router.get(
   '/',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').optional(),
+    query('dataset_name').optional().trim().notEmpty(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
@@ -39,20 +39,25 @@ router.get(
       status, dataset_name, offset, limit,
     } = req.query;
 
-    const query_obj = {
-      where: _.omitBy(_.isUndefined)({
-        status,
-        audit_log: {
-          dataset: {
-            name: { contains: dataset_name },
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (dataset_name) {
+      where.audit_log = {
+        dataset: {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
           },
         },
-      }),
-    };
+      };
+    }
+
     const filter_query = {
-      skip: offset,
-      take: limit,
-      ...query_obj,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
+      where,
       orderBy: {
         audit_log: {
           timestamp: 'desc',
@@ -65,7 +70,7 @@ router.get(
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.dataset_upload_log.count({ where }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -77,7 +82,7 @@ router.get(
   '/:username',
   validate([
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').optional(),
+    query('dataset_name').optional().trim().notEmpty(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
     param('username').trim().notEmpty(),
@@ -91,23 +96,28 @@ router.get(
       status, dataset_name, offset, limit,
     } = req.query;
 
-    const query_obj = {
-      where: _.omitBy(_.isUndefined)({
-        status,
-        audit_log: {
-          dataset: {
-            name: { contains: dataset_name },
-          },
-          user: {
-            username: req.params.username,
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (dataset_name) {
+      where.audit_log = {
+        dataset: {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
           },
         },
-      }),
+      };
+    }
+    where.user = {
+      username: req.params.username,
     };
+
     const filter_query = {
-      skip: offset,
-      take: limit,
-      ...query_obj,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
+      where,
       orderBy: {
         audit_log: {
           timestamp: 'desc',
@@ -120,7 +130,7 @@ router.get(
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.dataset_upload_log.count({ where }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -168,7 +178,7 @@ router.post(
               name: file.name,
               md5: file.checksum,
               num_chunks: file.num_chunks,
-              path: file.path,
+              path: file.path ?? Prisma.skip,
               status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
             })),
           },
@@ -229,8 +239,8 @@ router.patch(
     },
   ),
   validate([
+    body('status').optional().trim().isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)),
     param('id').isInt().toInt(),
-    body('status').optional().isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
