@@ -1,25 +1,24 @@
 const assert = require('assert');
 const path = require('node:path');
 
-const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
-
 const createError = require('http-errors');
+
+const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const workflowService = require('./workflow');
+const logger = require('./logger');
+
+const { log_axios_error } = require('../utils');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
 } = require('../constants');
-const workflowService = require('./workflow');
 const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
-const logger = require('./logger');
-
-const prisma = new PrismaClient();
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -260,8 +259,8 @@ function create_filetree(files) {
   };
 
   files.forEach((file) => {
-    const { path: relpath, ...rest } = file;
-    const pathObject = path.parse(relpath);
+    const { path: relPath, ...rest } = file;
+    const pathObject = path.parse(relPath);
     const parent_dir = pathObject.dir
       .split(path.sep)
       .reduce((parent, dir_name) => {
@@ -470,6 +469,7 @@ async function search_files({
   dataset_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
+  sort_order = null, sort_by = null,
 }) {
   // TODO: filter by extension, size, filetype, status
 
@@ -524,6 +524,16 @@ async function search_files({
     };
   }
 
+  let orderBy = {};
+  if (sort_order && sort_by) {
+    orderBy = {
+      [sort_by]: {
+        sort: sort_order,
+        nulls: 'last',
+      },
+    };
+  }
+
   return prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -534,6 +544,7 @@ async function search_files({
     },
     skip,
     take,
+    orderBy,
   });
 }
 
@@ -544,10 +555,10 @@ async function add_files({ dataset_id, data }) {
     ...f,
   }));
 
-  // create a file tree using graph datastructure
+  // create a file tree using graph data structure
   const graph = new FileGraph(files.map((f) => f.path));
 
-  // query non leaf nodes (directories) from the graph datastrucure
+  // query non leaf nodes (directories) from the graph data structure
   const directories = graph.non_leaf_nodes().map((p) => ({
     dataset_id,
     name: path.parse(p).base,
@@ -561,7 +572,7 @@ async function add_files({ dataset_id, data }) {
     skipDuplicates: true,
   });
 
-  // retrive all files and directories for this dataset to get their ids
+  // retrieve all files and directories for this dataset to get their ids
   const fileObjs = await prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -578,7 +589,7 @@ async function add_files({ dataset_id, data }) {
     return acc;
   }, {});
 
-  // query edges / parent-child relationships from the graph datastructure
+  // query edges / parent-child relationships from the graph data structure
   const edges = graph.edges().map(([src, dst]) => ({
     parent_id: path_to_ids[src],
     child_id: path_to_ids[dst],
@@ -587,34 +598,6 @@ async function add_files({ dataset_id, data }) {
   await prisma.dataset_file_hierarchy.createMany({
     data: edges,
     skipDuplicates: true,
-  });
-}
-
-/**
- * Creates a new dataset within a transaction.
- *
- * @param {Object} tx - Database transaction manager.
- * @param {Object} data - The data object containing details of the dataset to be created.
- * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
- */
-async function createDatasetInTransaction(tx, data) {
-  // find if a dataset with the same name and type already exists
-  const existingDataset = await tx.dataset.findFirst({
-    where: {
-      name: data.name,
-      type: data.type,
-      is_deleted: false,
-    },
-    select: {
-      id: true,
-    },
-  });
-  if (existingDataset) {
-    return;
-  }
-  // if it doesn't exist, create it
-  return tx.dataset.create({
-    data,
   });
 }
 
@@ -633,11 +616,35 @@ async function createDatasetInTransaction(tx, data) {
  * txA: create -> dataset created
  * txB: create -> unique constraint violation
  *
+ * @param {Object} tx - Database client.
  * @param {Object} data - The data object containing details of the dataset to be created.
- * @returns {Promise<Object|undefined>} The created dataset object or undefined if a dataset with the same name and type already exists.
+ * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
  */
-function createDataset(data) {
-  return prisma.$transaction(async (tx) => createDatasetInTransaction(tx, data));
+async function create(tx, data) {
+  // find if a dataset with the same name and type already exists
+  const existingDataset = await tx.dataset.findFirst({
+    where: {
+      name: data.name,
+      type: data.type,
+      is_deleted: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+  if (existingDataset) {
+    return;
+  }
+  // if it doesn't exist, create it
+  // console.log(`creating dataset`, JSON.stringify(data, null, 2));
+  try {
+    return await tx.dataset.create({
+      data,
+    });
+  } catch (e) {
+    console.error('Error creating dataset:', e);
+    throw e;
+  }
 }
 
 const get_dataset_active_workflows = async ({ dataset } = {}) => {
@@ -757,8 +764,7 @@ module.exports = {
   files_ls,
   search_files,
   add_files,
-  createDataset,
-  createDatasetInTransaction,
+  create,
   get_bundle_name,
   get_dataset_active_workflows,
   get_dataset_creator,

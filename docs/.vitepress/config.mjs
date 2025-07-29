@@ -5,7 +5,7 @@ import { withSidebar } from 'vitepress-sidebar';
 // https://vitepress.dev/reference/site-config
 let vitePressOptions =  {
   title: "Bioloop",
-  base: "/bioloop/docs/",
+  base: "/bioloop/",
   description: "Bioloop Documentation",
   head: [['link', { rel: 'icon', href: '/bioloop/docs/favicon.ico' }]],
   lastUpdated: true, // Enable last updated timestamp
@@ -13,32 +13,10 @@ let vitePressOptions =  {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'UI', link: '/ui/' },
-      { text: 'API', link: '/api/' },
-      { text: 'Workers', link: '/worker/' },
+      { text: 'UI', link: '/ui/overview' },
+      { text: 'API', link: '/api/introduction' },
+      { text: 'Workers', link: '/worker/overview' },
 
-    ],
-
-    sidebar: [
-      { text: 'Overview', link: '/', items: [
-        { text: 'Architecture', link: '/architecture' },
-        { text: 'Installation', items: [
-          {text: 'Docker', link: '/install-docker', },
-          {text: 'Local', link: '/install-local', },
-        ] },
-        { text: 'UI', link: '/ui/', items: [
-          { text: 'Auth', link: '/ui/auth_explained' },
-          { text: 'Util', link: '/ui/util_components' },
-        ] },
-        
-        { text: 'API', link: '/api/' },
-        { text: 'Worker', link: '/worker/' },
-        { text: 'Secure Download', link: '/secure_download' },
-        { text: 'Welcome Message', link: '/welcome-message' },
-        { text: 'Contributing', link: '/pull_request_template' },
-        { text: 'Template', link: '/template' }
-
-      ]}
     ],
 
     socialLinks: [
@@ -89,7 +67,8 @@ const vitePressSidebarOptions = {
   useTitleFromFrontmatter: true,
   useFolderTitleFromIndexFile: true,
   frontmatterOrderDefaultValue: 100,
-  sortMenusByFrontmatterOrder: true
+  sortMenusByFrontmatterOrder: true,
+  excludeFilesByFrontmatterFieldName: 'exclude'
 };
 
 export default defineConfig(withSidebar(vitePressOptions, vitePressSidebarOptions));

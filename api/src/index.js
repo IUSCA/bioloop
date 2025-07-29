@@ -1,3 +1,4 @@
+require('module-alias/register');
 const path = require('path');
 
 // __basedir is the path of the root directory

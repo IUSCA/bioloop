@@ -1,26 +1,22 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const {
-  query, body,
-} = require('express-validator');
+const { query, body } = require('express-validator');
 const _ = require('lodash/fp');
-
-// const logger = require('../services/logger');
 const createError = require('http-errors');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+
+// const logger = require('@/services/logger');
+const prisma = require('@/db');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
 
 const isPermittedTo = accessControl('notifications');
-
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('status').optional().escape().notEmpty(),
+    query('status').optional().trim().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
@@ -72,8 +68,8 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('label').escape().notEmpty(),
-    body('text').escape().notEmpty(),
+    body('label').trim().notEmpty(),
+    body('text').trim().notEmpty(),
     body('role_ids').isArray().optional(),
     body('user_ids').isArray().optional(),
   ]),
@@ -122,13 +118,14 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('status').optional().escape().notEmpty(),
+    query('status').optional().trim().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
     // #swagger.summary = Delete matching notifications
 
-    const queryParams = req.query;
+    // remove keys with undefined values
+    const queryParams = _.omitBy(_.isUndefined)(req.query);
 
     if (Object.keys(queryParams).length === 0) {
       res.send({

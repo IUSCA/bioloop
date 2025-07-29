@@ -25,3 +25,8 @@ require('dotenv').config({ path: '.env.default' })
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+module.exports = prisma;

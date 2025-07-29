@@ -40,7 +40,7 @@
 
   <!-- table -->
   <va-data-table
-    class="usertable"
+    class="user-table"
     :items="users"
     :columns="columns"
     v-model:sort-by="params.sortBy"
@@ -111,7 +111,7 @@
               size="small"
               preset="primary"
               color="info"
-              @click="openModaltoLogInAsUser(rowData)"
+              @click="openModalToLogInAsUser(rowData)"
             >
               <i-mdi-account-convert-outline class="" />
             </va-button>
@@ -144,6 +144,7 @@
     <div class="max-w-lg">
       <va-inner-loading :loading="modal_loading">
         <va-form class="flex flex-wrap gap-2 gap-y-4" ref="modifyFormRef">
+          <!-- name -->
           <va-input
             data-testid="user-name-input"
             class="w-full"
@@ -153,6 +154,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- email -->
           <va-input
             data-testid="user-email-input"
             v-model="editedUser.email"
@@ -162,6 +165,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- username -->
           <va-input
             data-testid="user-username-input"
             :modelValue="editedUser.username || autofill.username"
@@ -172,6 +177,8 @@
               (value) => (value && value.length > 0) || 'Field is required',
             ]"
           />
+
+          <!-- cas id -->
           <va-input
             data-testid="user-cas-id-input"
             :modelValue="editedUser.cas_id || autofill.cas_id"
@@ -183,6 +190,7 @@
             ]"
           />
 
+          <!-- status -->
           <div class="flex-[1_1_100%] flex items-center gap-3">
             <div class="flex items-center gap-3">
               <span
@@ -213,6 +221,7 @@
             </div>
           </div>
 
+          <!-- roles -->
           <div class="flex-[1_1_100%]">
             <span
               class="block text-xs font-semibold mb-3"
@@ -228,18 +237,18 @@
             />
           </div>
 
-          <!-- temporary view -->
-          <va-textarea
-            data-testid="user-metadata-input"
-            class="w-full text-sm"
-            :modelValue="JSON.stringify(editedUser.metadata || {}, null, 2)"
-            label="Metadata"
-            autosize
-            readonly
-            preset="solid"
-          />
-          <!-- <JSONTable v-model="editedUser.metadata" editable /> -->
+          <!-- metadata -->
+          <div class="flex-[1_1_100%]">
+            <span
+              class="block text-xs font-semibold mb-3"
+              style="color: var(--va-primary)"
+            >
+              METADATA
+            </span>
+            <KeyValueEditor v-model="editedUser.metadata" />
+          </div>
 
+          <!-- notes -->
           <va-textarea
             data-testid="user-notes-input"
             class="w-full"
@@ -512,7 +521,7 @@ function fetch_all_users() {
 
   const skip = (params.value.currentPage - 1) * params.value.itemsPerPage;
 
-  const queryparams = {
+  const queryParams = {
     forSelf: !auth.canOperate,
     search: params.value.search,
     take: params.value.itemsPerPage,
@@ -521,7 +530,7 @@ function fetch_all_users() {
     sort_order: params.value.sortingOrder,
   };
 
-  UserService.getAll(queryparams)
+  UserService.getAll(queryParams)
     .then((data) => {
       const { metadata, users: userList } = data;
       users.value = userList;
@@ -575,7 +584,7 @@ function resetEditModal() {
 const sudoModal = ref(null);
 const selected = ref({});
 
-function openModaltoLogInAsUser(rowData) {
+function openModalToLogInAsUser(rowData) {
   selected.value = rowData;
   sudoModal.value.show();
 }
@@ -714,7 +723,7 @@ fetch_all_users();
 </script>
 
 <style scoped>
-.usertable {
+.user-table {
   --va-data-table-cell-padding: 3px;
 }
 

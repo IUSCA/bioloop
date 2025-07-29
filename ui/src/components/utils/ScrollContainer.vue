@@ -3,7 +3,7 @@
     class="max-h-48 custom-scroll-container off-bottom"
     ref="scroll_container"
   >
-    <div class="scrollbox" ref="scroll_box" @scroll="setShadows">
+    <div class="scroll-box" ref="scroll_box" @scroll="setShadows">
       <v-slot></v-slot>
     </div>
     <div class="shadow shadow-top" aria-hidden="true"></div>
@@ -40,7 +40,7 @@ function setShadows(event) {
 .custom-scroll-container {
   overflow: hidden;
   position: relative;
-  .scrollbox {
+  .scroll-box {
     height: 100%;
     overflow: auto;
   }

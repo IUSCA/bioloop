@@ -49,7 +49,7 @@ async function updateResource({ id, data }, context = {}) {
 ## Handling Conflicts
 When a conflict occurs, the application should handle it gracefully. This can involve notifying the user, allowing them to retry the operation, or merging changes. 
 
-Conflict errors are handled globally in the application when not explicitly handled in the code. If a version conflict occues HTTP 409 is returned with a message indicating the conflict.
+Conflict errors are handled globally in the application when not explicitly handled in the code. If a version conflict occurs then HTTP 409 is returned with a message indicating the conflict.
 
 This is how to handle the error in UI:
 

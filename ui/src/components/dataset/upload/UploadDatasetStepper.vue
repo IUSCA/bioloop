@@ -62,7 +62,7 @@
                   Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
-                  Dara Product: Processed data derived from Raw Data
+                  Data Product: Processed data derived from Raw Data
                 </div>
               </template>
               <Icon icon="mdi:information" class="text-xl text-gray-500" />
@@ -276,21 +276,20 @@
 </template>
 
 <script setup>
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
 import Constants from "@/constants";
 import datasetService from "@/services/dataset";
+import instrumentService from "@/services/instrument";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { Icon } from "@iconify/vue";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
-import { Icon } from "@iconify/vue";
-import instrumentService from "@/services/instrument";
-import constants from "@/constants";
 
 const auth = useAuthStore();
 
@@ -454,7 +453,7 @@ const stepIsPristine = computed(() => {
 
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== constants.UPLOAD_STATUSES.UPLOADED,
+    (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
@@ -591,7 +590,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          // console.error(e);
+          console.error(e);
           reject();
         });
     }
@@ -979,7 +978,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
+  fileDetails.uploadStatus = Constants.UPLOAD_STATUSES.UPLOADING;
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
@@ -987,8 +986,8 @@ const uploadFile = async (fileDetails) => {
   }
 
   fileDetails.uploadStatus = uploaded
-    ? constants.UPLOAD_STATUSES.UPLOADED
-    : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
+    ? Constants.UPLOAD_STATUSES.UPLOADED
+    : Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
   if (!uploaded) {
     if (selectingDirectory.value) {
@@ -1030,7 +1029,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1066,7 +1065,7 @@ const postSubmit = () => {
       id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
         .id,
       data: {
-        status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
+        status: Constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
@@ -1074,15 +1073,15 @@ const postSubmit = () => {
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
-        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : constants.UPLOAD_STATUSES.UPLOADED,
+        ? Constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : Constants.UPLOAD_STATUSES.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
         datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
       });
   }
 };
@@ -1128,7 +1127,7 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: constants.UPLOAD_STATUSES.UPLOADING,
+        status: Constants.UPLOAD_STATUSES.UPLOADING,
       }
     : {
         ...uploadFormData.value,
@@ -1269,7 +1268,7 @@ onMounted(() => {
     })
     .catch((err) => {
       toast.error("Failed to load resources");
-      // console.error(err);
+      console.error(err);
     })
     .finally(() => {
       loading.value = false;
@@ -1474,7 +1473,7 @@ onBeforeUnmount(() => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;

@@ -58,7 +58,7 @@ Defaults:
   - click on directory row
   - click on file row
   - click on file navigation breadcrumb
-  - type in seach bar
+  - type in search bar
   - click on advanced search button
 - Modal
   - change in forms
