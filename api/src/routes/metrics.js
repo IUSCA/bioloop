@@ -1,6 +1,6 @@
 const express = require('express');
 const he = require('he');
-const { query } = require('express-validator');
+const { query, body } = require('express-validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { numericStringsToNumbers } = require('@/utils');
@@ -27,7 +27,7 @@ router.get(
   '/space-utilization-by-timestamp',
   isPermittedTo('read'),
   validate([
-    query('measurement').notEmpty().escape(),
+    query('measurement').notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
     const measurement = decodeURI(he.decode(req.query.measurement));
@@ -54,6 +54,9 @@ router.get(
 router.post(
   '/',
   isPermittedTo('create'),
+  validate([
+    body().isArray(),
+  ]),
   asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Metrics']
   // #swagger.summary = 'Insert new measurements'

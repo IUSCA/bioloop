@@ -2,6 +2,7 @@ const express = require('express');
 const _ = require('lodash/fp');
 const { query, body, param } = require('express-validator');
 const createError = require('http-errors');
+const { Prisma } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -86,7 +87,7 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
@@ -164,7 +165,7 @@ router.get(
   '/:id',
   isPermittedTo('read'),
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -219,11 +220,10 @@ router.get(
   '/:username/:id/datasets',
   isPermittedTo('read', { checkOwnership: true }),
   validate([
-    param('username').notEmpty().escape(),
+    param('username').trim().notEmpty(),
     query('staged').toBoolean().optional(),
     query('take').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional(),
-    query('name').notEmpty().escape().optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
     query('sortBy').isObject().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -272,13 +272,13 @@ router.get(
         contains: req.query.name,
         mode: 'insensitive', // case-insensitive search
       } : undefined,
-      is_staged: req.query.staged,
+      is_staged: req.query.staged ?? Prisma.skip,
     });
 
     const filterQuery = { where: query_obj };
     const datasetRetrievalQuery = {
-      skip: req.query.skip,
-      take: req.query.take,
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.skip,
       ...filterQuery,
       orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
@@ -348,8 +348,8 @@ router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnership: true }),
   validate([
-    query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('take').default(25).isInt({ min: 1 }).toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
@@ -450,7 +450,7 @@ router.get(
 router.get(
   '/:username/:id',
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -523,14 +523,14 @@ router.post(
     * #swagger.description = admin and operator roles are allowed and user role
     * is forbidden
     */
-    const { user_ids, dataset_ids, ...projectData } = req.body;
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
       _.omitBy(_.isNil),
-    ])(projectData);
+    ])(req.body);
     data.slug = await projectService.generate_slug({ name: data.name });
 
-    if ((user_ids || []).length > 0) {
+    const user_ids = (req.body.user_ids || []).filter((id) => id != null);
+    if (user_ids.length > 0) {
       data.users = {
         create: user_ids.map((id) => ({
           user_id: id,
@@ -539,7 +539,8 @@ router.post(
       };
     }
 
-    if ((dataset_ids || []).length > 0) {
+    const dataset_ids = (req.body.dataset_ids || []).filter((id) => id != null);
+    if (dataset_ids.length > 0) {
       data.datasets = {
         create: dataset_ids.map((id) => ({
           dataset_id: id,

@@ -1,4 +1,5 @@
 const express = require('express');
+const { Prisma } = require('@prisma/client');
 const config = require('config');
 const { query, param, checkSchema } = require('express-validator');
 const _ = require('lodash/fp');
@@ -166,7 +167,7 @@ router.post(
           pid,
           task_id,
           step,
-          tags,
+          tags: tags ?? Prisma.skip,
           hostname,
           workflow_id,
           ...(start_time ? { start_time } : {}),
@@ -180,11 +181,11 @@ router.post(
 // make sure that the request body is array of objects which at least will have
 // a "message" key
 const append_log_schema = {
-  '0.message': {
+  '*.message': {
     in: ['body'],
     notEmpty: true,
   },
-  '0.level': {
+  '*.level': {
     in: ['body'],
     default: 'stdout',
   },
@@ -224,7 +225,9 @@ router.post(
 router.get(
   '/processes',
   isPermittedTo('read'),
-  validate([query('pid').isInt().toInt().optional()]),
+  validate([
+    query('pid').isInt().toInt().optional(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -318,7 +321,7 @@ router.delete(
 
       const result = await prisma.worker_process.deleteMany({
         where: {
-          workflow_id: req.params.worker_process_id,
+          workflow_id: req.params.workflow_id,
         },
       });
       res.json(result);

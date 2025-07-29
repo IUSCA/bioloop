@@ -93,22 +93,6 @@ router.get(
 );
 
 // add hierarchy association
-const assoc_body_schema = {
-  '0.source_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Source ID must be an integer',
-    },
-    toInt: true,
-  },
-  '0.derived_id': {
-    in: ['body'],
-    isInt: {
-      errorMessage: 'Derived ID must be an integer',
-    },
-    toInt: true,
-  },
-};
 
 const buildUserRoleQueryObject = ({
   deleted, type, name, match_name_exact, username,
@@ -163,8 +147,8 @@ router.get(
       [req.query.sort_by]: req.query.sort_order,
     };
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
     };
@@ -186,7 +170,7 @@ const buildQueryObject = ({
   deleted, archived, staged, type, name, days_since_last_staged,
   has_workflows, has_derived_data, has_source_data,
   created_at_start, created_at_end, updated_at_start, updated_at_end,
-  match_name_exact,
+  match_name_exact, id,
 }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
@@ -251,7 +235,34 @@ const buildQueryObject = ({
     };
   }
 
+  // id filter
+  if (id) {
+    // if id is an array, use 'in' operator
+    if (Array.isArray(id)) {
+      query_obj.id = { in: id };
+    } else {
+      query_obj.id = id;
+    }
+  }
+
   return query_obj;
+};
+
+const assoc_body_schema = {
+  '*.source_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Source ID must be an integer',
+    },
+    toInt: true,
+  },
+  '*.derived_id': {
+    in: ['body'],
+    isInt: {
+      errorMessage: 'Derived ID must be an integer',
+    },
+    toInt: true,
+  },
 };
 
 router.post(
@@ -296,6 +307,7 @@ router.get(
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').toBoolean().optional(),
+    query('id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -308,9 +320,16 @@ router.get(
     const orderBy = {
       [req.query.sort_by]: req.query.sort_order,
     };
+    const optional_sort_columns = ['du_size', 'size', 'bundle_size'];
+    if (optional_sort_columns.includes(req.query.sort_by)) {
+      orderBy[req.query.sort_by] = {
+        nulls: 'last',
+        sort: req.query.sort_order,
+      };
+    }
     const datasetRetrievalQuery = {
-      skip: req.query.offset,
-      take: req.query.limit,
+      skip: req.query.offset ?? Prisma.skip,
+      take: req.query.limit ?? Prisma.skip,
       ...filterQuery,
       orderBy,
       include: {
@@ -402,8 +421,8 @@ router.get(
   '/uploads',
   verifyUploadEnabledForRole,
   validate([
+    query('dataset_name').optional().trim().notEmpty(),
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
   ]),
@@ -416,20 +435,25 @@ router.get(
       status, dataset_name, offset, limit,
     } = req.query;
 
-    const query_obj = {
-      where: _.omitBy(_.isUndefined)({
-        status,
-        audit_log: {
-          dataset: {
-            name: { contains: dataset_name },
+    const where = {};
+    if (status) {
+      where.status = status;
+    }
+    if (dataset_name) {
+      where.audit_log = {
+        dataset: {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
           },
         },
-      }),
-    };
+      };
+    }
+
     const filter_query = {
-      skip: offset,
-      take: limit,
-      ...query_obj,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
+      where,
       orderBy: {
         audit_log: {
           timestamp: 'desc',
@@ -442,7 +466,7 @@ router.get(
         ...filter_query,
         include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
       }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
+      prisma.dataset_upload_log.count({ where }),
     ]);
 
     res.json({ metadata: { count }, uploads: dataset_upload_logs });
@@ -454,11 +478,11 @@ router.get(
   '/:username/uploads',
   verifyUploadEnabledForRole,
   validate([
+    query('dataset_name').optional().trim().notEmpty(),
     query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('dataset_name').notEmpty().escape().optional(),
     query('limit').isInt({ min: 1 }).toInt().optional(),
     query('offset').isInt({ min: 0 }).toInt().optional(),
-    param('username').escape().notEmpty(),
+    param('username').trim().notEmpty(),
   ]),
   isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
@@ -474,7 +498,10 @@ router.get(
         status,
         audit_log: {
           dataset: {
-            name: { contains: dataset_name },
+            name: {
+              contains: dataset_name ?? Prisma.skip,
+              mode: 'insensitive',
+            },
           },
           user: {
             username: req.params.username,
@@ -483,8 +510,8 @@ router.get(
       }),
     };
     const filter_query = {
-      skip: offset,
-      take: limit,
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
       ...query_obj,
       orderBy: {
         audit_log: {
@@ -610,7 +637,7 @@ const getDatasetCreateQuery = (data) => {
     create_query.projects = {
       create: [{
         project_id,
-        assignor_id: user_id,
+        assignor_id: user_id ?? Prisma.skip,
       }],
     };
   }
@@ -645,7 +672,7 @@ const getDatasetCreateQuery = (data) => {
       {
         action: 'create',
         create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        user_id,
+        user_id: user_id ?? Prisma.skip,
       },
     ],
   };
@@ -661,11 +688,11 @@ router.post(
   validate([
     body('name').notEmpty(),
     body('type').isIn(config.get('dataset_types')),
-    body('origin_path').notEmpty(),
+    body('origin_path').trim().notEmpty(),
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').notEmpty().escape(),
+    body('origin_path').trim().notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -684,24 +711,24 @@ router.post(
                                           */
 
     const {
-      ingestion_space, create_method, project_id, src_instrument_id, src_dataset_id,
+      import_space, create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
     const decoded_origin_path = he.decode(origin_path);
 
-    if (ingestion_space) {
+    if (import_space) {
       // if dataset's origin_path is a restricted for dataset creation, throw error
-      const restricted_ingestion_dirs = config.restricted_ingestion_dirs[ingestion_space].split(',');
-      const is_origin_path_restricted = restricted_ingestion_dirs.some((glob) => {
+      const restricted_import_dirs = config.restricted_import_dirs[import_space].split(',');
+      const is_origin_path_restricted = restricted_import_dirs.some((glob) => {
         const isMatch = pm(glob);
         const matches = isMatch(decoded_origin_path, glob);
         return matches.isMatch;
       });
       if (is_origin_path_restricted) {
         return next(createError.Forbidden({
-          message: `Ingestion space ${ingestion_space} is restricted for dataset creation`,
+          message: `Import space ${import_space} is restricted for dataset creation`,
         }));
       }
     }
@@ -726,7 +753,7 @@ router.post(
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    const dataset = await datasetService.createDataset(createQuery);
+    const dataset = await datasetService.create(prisma, createQuery);
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -828,8 +855,7 @@ router.post(
     const data = req.body.datasets
       .map((d) => getDatasetCreateQuery(d));
 
-    // create in separate transactions to avoid deadlocks
-    const results = await Promise.allSettled(data.map((d) => datasetService.createDataset(d)));
+    const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
 
     // separate results into created and failed
     const created = [];
@@ -843,7 +869,7 @@ router.post(
         // P2002 - Unique constraint failed
         conflicted.push(_.pick(['name', 'type'])(data[index]));
       } else {
-        logger.warn('Error creating dataset', JSON.stringify({ dataset: data[index], error: result.reason }));
+        logger.warn(`Error creating dataset: ${JSON.stringify({ dataset: data[index], error: result.reason })}`);
         errored.push(_.pick(['name', 'type'])(data[index]));
       }
     });
@@ -889,7 +915,7 @@ router.patch(
       return next(createError(404));
     }
 
-    const { metadata, ...data } = req.body;
+    const { metadata, ...data } = _.omitBy(_.isUndefined)(req.body);
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
 
     if (req.body.bundle) {
@@ -1279,8 +1305,8 @@ router.get(
       await prisma.data_access_log.create({
         data: {
           access_type: 'BROWSER',
-          file_id: isFileDownload ? req.query.file_id : undefined,
-          dataset_id: !isFileDownload ? req.params.id : undefined,
+          file_id: isFileDownload ? req.query.file_id : Prisma.skip,
+          dataset_id: !isFileDownload ? req.params.id : Prisma.skip,
           user_id: req.user.id,
         },
       });
@@ -1335,24 +1361,25 @@ router.get(
   validate([
     param('id').isInt().toInt(),
     query('name').default(''),
-    query('basepath').optional().default(''),
+    query('basepath').default(''),
     query('filetype').isIn(['file', 'directory', 'symbolic link']).optional(),
     query('extension').optional(),
     query('min_file_size').isInt().toInt().optional(),
     query('max_file_size').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional()
-      .default(0),
-    query('take').isInt().toInt().optional()
-      .default(1000),
+    query('sort_by').default('name').isIn(['name', 'size']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('skip').default(0).isInt().toInt(),
+    query('take').default(1000).isInt().toInt(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
     const files = await datasetService.search_files({
       dataset_id: req.params.id,
       base: req.query.basepath,
-      ...req.query,
+      ..._.omitBy(_.isUndefined)(req.query),
     });
     res.json(files);
   }),
@@ -1362,8 +1389,8 @@ router.get(
 router.get(
   '/:datasetType/:name/exists',
   validate([
-    param('datasetType').escape().notEmpty(),
-    param('name').escape().notEmpty(),
+    param('datasetType').trim().notEmpty(),
+    param('name').trim().notEmpty(),
     query('deleted').toBoolean().default(false),
   ]),
   accessControl('dataset_name')('read'),
@@ -1402,8 +1429,8 @@ router.post(
   verifyUploadEnabledForRole,
   isPermittedTo('create'),
   validate([
-    body('type').escape().notEmpty().isIn(config.dataset_types),
-    body('name').escape().notEmpty().isLength({ min: 3 }),
+    body('type').trim().notEmpty().isIn(config.dataset_types),
+    body('name').trim().notEmpty().isLength({ min: 3 }),
     body('src_dataset_id').optional().isInt().toInt(),
     body('files_metadata').isArray(),
     body('project_id').optional(),
@@ -1427,7 +1454,7 @@ router.post(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.createDatasetInTransaction(tx, datasetCreateQuery);
+      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {
@@ -1437,7 +1464,7 @@ router.post(
               name: file.name,
               md5: file.checksum,
               num_chunks: file.num_chunks,
-              path: file.path,
+              path: file.path ?? Prisma.skip,
               status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
             })),
           },
@@ -1499,8 +1526,8 @@ router.patch(
     },
   ),
   validate([
+    body('status').optional().trim().notEmpty(),
     param('id').isInt().toInt(),
-    body('status').notEmpty().escape().optional(),
     body('files').isArray().optional(),
   ]),
   asyncHandler(async (req, res, next) => {

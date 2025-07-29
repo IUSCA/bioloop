@@ -7,9 +7,9 @@
           <span class="text-xl">Derived Datasets</span>
         </va-card-title>
         <va-card-content style="margin-top: -20px">
-          <assoc-dataset-list
+          <AssocDatasetList
             :dataset_ids="derived_datasets_meta.map((obj) => obj.derived_id)"
-          ></assoc-dataset-list>
+          ></AssocDatasetList>
         </va-card-content>
       </va-card>
     </div>
@@ -21,9 +21,9 @@
           <span class="text-xl">Source Datasets</span>
         </va-card-title>
         <va-card-content style="margin-top: -20px">
-          <assoc-dataset-list
+          <AssocDatasetList
             :dataset_ids="source_datasets_meta.map((obj) => obj.source_id)"
-          ></assoc-dataset-list>
+          ></AssocDatasetList>
         </va-card-content>
       </va-card>
     </div>
