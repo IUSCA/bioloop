@@ -8,6 +8,8 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 // attachments in
 const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
 
+const defaultDatasetType = 'Data Product';
+
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
   let fileChooser;
@@ -47,7 +49,7 @@ test.describe.serial('Dataset Upload Process', () => {
       const selectedValueElement = datasetTypeSelect.locator('.va-select-content__option');
       await expect(selectedValueElement).toBeVisible();
       const selectedValue = await selectedValueElement.textContent();
-      expect(selectedValue.trim()).toBe('Data Product');
+      expect(selectedValue.trim()).toBe(defaultDatasetType);
 
       // Verify that the "Assign source Raw Data" row is visible
       const assignSourceRawDataRow = page.getByTestId('upload-metadata-assign-source-row');
@@ -96,8 +98,46 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('should allow selecting values in the General-Info step\'s fields', async () => {
+      // Select Dataset Type
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
+      // open Dataset Type dropdown
+      await datasetTypeSelect.click();
+      // Wait for the dropdown options to appear
+      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
+      // Click the first option in the dropdown
+      const datasetTypeSelectFirstOption = await page.locator('.va-select-option').first();
+      const datasetTypeSelectFirstOptionText = (await datasetTypeSelectFirstOption.textContent())
+      // Vuestic inserts a check icon after the dropdown options' text, which
+      // will need to be removed.
+      // Remove trailing ' check' (and any preceding
+      // whitespace)
+        .replace(/\s+check$/, '')
+        .trim();
+      await datasetTypeSelectFirstOption.click();
+      // assert that the correct value was selected
+      let selectedValueElement = await datasetTypeSelect.locator('.va-select-content__option');
+      let selectedValue = (await selectedValueElement.textContent()).trim();
+      await expect(selectedValue.trim()).toBe(datasetTypeSelectFirstOptionText);
+      await expect(selectedValue.trim()).not.toBe(defaultDatasetType);
+
+      // reset `Dataset Type` field to default Dataset Type
+      await datasetTypeSelect.click();
+      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
+      // Click the second option in the dropdown
+      const datasetTypeSelectSecondOption = await page.locator('.va-select-option').nth(1);
+      const datasetTypeSelectSecondOptionText = (await datasetTypeSelectSecondOption.textContent())
+      // Vuestic inserts a check icon after the dropdown options' text, which
+      // will need to be removed.
+      // Remove trailing ' check' (and any preceding
+      // whitespace)
+        .replace(/\s+check$/, '')
+        .trim();
+      await datasetTypeSelectSecondOption.click();
+      selectedValueElement = await datasetTypeSelect.locator('.va-select-content__option');
+      selectedValue = await selectedValueElement.textContent();
+      expect(selectedValue.trim()).toBe(datasetTypeSelectSecondOptionText);
+      await expect(selectedValue.trim()).toBe(defaultDatasetType);
 
       // Select source Raw Data
       const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
