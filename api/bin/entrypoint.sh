@@ -39,12 +39,13 @@ npx prisma generate
 npx prisma migrate deploy
 
 echo "Checking if the database needs seeding..."
-if ! npx prisma db seed --preview-feature --dry-run | grep -q "No seeders found"; then
-  echo "Database needs seeding. Running the seed command..."
-  npx prisma db seed
-else
-  echo "Database is already seeded or no seeders are available."
-fi
+# if ! npx prisma db seed --preview-feature --dry-run | grep -q "No seeders found"; then
+#   echo "Database needs seeding. Running the seed command..."
+#   npx prisma db seed
+# else
+#   echo "Database is already seeded or no seeders are available."
+# fi
+npx prisma db seed
 
 echo "Checking if the required environment variables are set..."
 

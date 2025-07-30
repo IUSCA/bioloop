@@ -6,7 +6,7 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..');
 
 // Load environment variables and validate against .env.example
-require('dotenv').config({ path: '.env.default' })
+require('dotenv-safe').config({ example: '.env.default' });
 
 require('./db');
 const config = require('config');

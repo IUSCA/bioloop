@@ -119,6 +119,7 @@ services:
       - rhythm/.env.default # For all default settings
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
+      - ./rhythm/keys:/opt/sca/keys # This is where the keys are stored.  You can mount this to a local folder to use your own keys.
       - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
