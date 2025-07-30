@@ -1,4 +1,5 @@
 {  
+  "plugins": ["eslint-plugin-local-rules"],
   "settings": {
     "import/resolver": {
       "node": {
@@ -43,7 +44,8 @@
       }
     ],
     "max-len": ["error", { "ignoreComments": true, "code": 120 }],
-    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}]
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
+    "local-rules/no-original-prisma-inside-tx": "error"
   },
   "env": {
     "node": true,
