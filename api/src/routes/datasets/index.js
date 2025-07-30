@@ -13,6 +13,7 @@ const he = require('he');
 
 // const logger = require('@/services/logger');
 const path = require('path');
+const utils = require('../../utils');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -64,9 +65,9 @@ router.get(
       });
     } else {
       result = await prisma.$queryRaw`
-        select 
-          count(*) as "count", 
-          sum(du_size) as total_size, 
+        select
+          count(*) as "count",
+          sum(du_size) as total_size,
           SUM(
                 CASE
                     WHEN metadata -> 'num_genome_files' IS NOT NULL
@@ -74,7 +75,7 @@ router.get(
                     ELSE 0
                     END
             )        AS total_num_genome_files
-        from dataset 
+        from dataset
         where is_deleted = false;
       `;
 
@@ -94,35 +95,6 @@ router.get(
 
 // add hierarchy association
 
-const buildUserRoleQueryObject = ({
-  deleted, type, name, match_name_exact, username,
-}) => {
-  const query_obj = _.omitBy(_.isUndefined)({
-    is_deleted: deleted,
-    type,
-    name: name ? {
-      ...(match_name_exact ? { equals: name } : { contains: name }),
-      mode: 'insensitive', // case-insensitive search
-    } : undefined,
-    // Filter by projects assigned to this user
-    projects: {
-      some: {
-        project: {
-          users: {
-            some: {
-              user: {
-                username,
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return query_obj;
-};
-
 router.get(
   '/:username/all',
   isPermittedTo('read', { checkOwnership: true }),
@@ -138,7 +110,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    const query_obj = buildUserRoleQueryObject({ ...req.query, username: req.params.username });
+    const query_obj = datasetService.buildDatasetsFetchQuery({ ...req.query, username: req.params.username });
 
     const filterQuery = {
       where: query_obj,
@@ -162,7 +134,6 @@ router.get(
       metadata: { count },
       datasets,
     });
-    // res.json('/ user role');
   }),
 );
 
@@ -312,9 +283,7 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
 
-    // console.log('req.user.roles', req.user.roles);
-
-    const query_obj = buildQueryObject(req.query);
+    const query_obj = datasetService.buildDatasetsFetchQuery(req.query);
 
     const filterQuery = { where: query_obj };
     const orderBy = {
@@ -350,185 +319,6 @@ router.get(
       metadata: { count },
       datasets,
     });
-  }),
-);
-
-// todo - register routes specific to dataset uploads optionally based on verifyUploadEnabledForRole middleware
-function verifyUploadEnabledForRole(req, res, next) {
-  // Check if enabled_features is defined
-  if (!config.enabled_features) {
-    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
-    return next();
-  }
-
-  const upload_enabled = config.enabled_features.upload;
-
-  // Check if upload feature is defined
-  if (upload_enabled == null) {
-    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
-    return next();
-  }
-
-  // Check if upload feature is a boolean `true`
-  if (upload_enabled === true) {
-    logger.info('Upload feature is enabled');
-    return next(); // Allow all roles if upload is set to `true`
-  }
-
-  // Check if upload feature is boolean `false`
-  if (upload_enabled === false) {
-    logger.warn('Upload feature is disabled');
-    return next(createError.Forbidden());
-  }
-
-  // Check if upload feature is an object
-  if (typeof upload_enabled !== 'object') {
-    logger.error('Invalid config for enabling dataset uploads');
-    return next(createError.Forbidden());
-  }
-
-  const upload_enabled_for_roles = upload_enabled.enabled_for_roles;
-
-  // Check if enabled_for_roles is an array
-  if (!Array.isArray(upload_enabled_for_roles)) {
-    logger.error('Invalid config for enabling dataset uploads: enabled_for_roles is not an array');
-    return next(createError.Forbidden());
-  }
-
-  // Check if enabled_for_roles is empty
-  if (upload_enabled_for_roles.length === 0) {
-    logger.error('No roles specified for enabling dataset uploads');
-    return next(createError.Forbidden());
-  }
-
-  // Check if user has one of the allowed roles
-  const isUploadEnabledForUser = upload_enabled_for_roles.some(
-    (role) => req.user.roles.includes(role),
-  );
-
-  if (!isUploadEnabledForUser) {
-    logger.error('Upload feature is not enabled for this user');
-    return next(createError.Forbidden());
-  }
-
-  next();
-}
-
-// Used by:
-//  - UI
-//  - Workers
-router.get(
-  '/uploads',
-  verifyUploadEnabledForRole,
-  validate([
-    query('dataset_name').optional().trim().notEmpty(),
-    query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('limit').isInt({ min: 1 }).toInt().optional(),
-    query('offset').isInt({ min: 0 }).toInt().optional(),
-  ]),
-  isPermittedTo('read'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Retrieve past uploads'
-
-    const {
-      status, dataset_name, offset, limit,
-    } = req.query;
-
-    const where = {};
-    if (status) {
-      where.status = status;
-    }
-    if (dataset_name) {
-      where.audit_log = {
-        dataset: {
-          name: {
-            contains: dataset_name,
-            mode: 'insensitive',
-          },
-        },
-      };
-    }
-
-    const filter_query = {
-      skip: offset ?? Prisma.skip,
-      take: limit ?? Prisma.skip,
-      where,
-      orderBy: {
-        audit_log: {
-          timestamp: 'desc',
-        },
-      },
-    };
-
-    const [dataset_upload_logs, count] = await prisma.$transaction([
-      prisma.dataset_upload_log.findMany({
-        ...filter_query,
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-      }),
-      prisma.dataset_upload_log.count({ where }),
-    ]);
-
-    res.json({ metadata: { count }, uploads: dataset_upload_logs });
-  }),
-);
-
-// Used by UI
-router.get(
-  '/:username/uploads',
-  verifyUploadEnabledForRole,
-  validate([
-    query('dataset_name').optional().trim().notEmpty(),
-    query('status').isIn(Object.values(CONSTANTS.UPLOAD_STATUSES)).optional(),
-    query('limit').isInt({ min: 1 }).toInt().optional(),
-    query('offset').isInt({ min: 0 }).toInt().optional(),
-    param('username').trim().notEmpty(),
-  ]),
-  isPermittedTo('read', { checkOwnership: true }),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Retrieve past uploads for a specific user'
-
-    const {
-      status, dataset_name, offset, limit,
-    } = req.query;
-
-    const query_obj = {
-      where: _.omitBy(_.isUndefined)({
-        status,
-        audit_log: {
-          dataset: {
-            name: {
-              contains: dataset_name ?? Prisma.skip,
-              mode: 'insensitive',
-            },
-          },
-          user: {
-            username: req.params.username,
-          },
-        },
-      }),
-    };
-    const filter_query = {
-      skip: offset ?? Prisma.skip,
-      take: limit ?? Prisma.skip,
-      ...query_obj,
-      orderBy: {
-        audit_log: {
-          timestamp: 'desc',
-        },
-      },
-    };
-
-    const [dataset_upload_logs, count] = await prisma.$transaction([
-      prisma.dataset_upload_log.findMany({
-        ...filter_query,
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-      }),
-      prisma.dataset_upload_log.count({ ...query_obj }),
-    ]);
-
-    res.json({ metadata: { count }, uploads: dataset_upload_logs });
   }),
 );
 
@@ -570,116 +360,6 @@ router.get(
   }),
 );
 
-function normalize_name(name) {
-  // replace all character other than a-z, 0-9, _ and - with -
-  // replace consecutive hyphens with one -
-
-  return (name || '')
-    .replaceAll(/[\W]/g, '-')
-    .replaceAll(/-+/g, '-');
-}
-
-/**
- * Generates a Prisma query object for creating a new dataset.
- *
- * @function getDatasetCreateQuery
- * @param {Object} data - The data for creating the dataset.
- * @param {string} data.name - The name of the dataset.
- * @param {string} data.type - The type of the dataset.
- * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
- * @param {BigInt} [data.size] - The size of the dataset.
- * @param {string} data.origin_path - The origin path of the dataset.
- * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
- * @param {string} [data.workflow_id] - The ID of the associated workflow.
- * @param {string} [data.project_id] - The ID of the associated project.
- * @param {string} data.user_id - The ID of the user creating the dataset.
- * @param {string} [data.src_instrument_id] - The ID of the source instrument.
- * @param {string} [data.src_dataset_id] - The ID of the source dataset.
- * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
- * @param {string} [data.create_method=CONSTANTS.DATASET_CREATE_METHODS.SCAN] - The method used to create the dataset.
- * @param {Object} [data.metadata] - Additional metadata for the dataset.
- * @returns {Object} An object containing the query for creating a new dataset in the database.
- *
- * @description
- * This function prepares a query object for creating a new dataset in the database.
- * It normalizes the dataset name, sets up associations with workflows and projects,
- * connects to source instruments and datasets, sets the initial state,
- * and creates an audit log entry for the dataset creation.
- */
-const getDatasetCreateQuery = (data) => {
-  /* eslint-disable no-unused-vars */
-  const {
-    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
-  } = data;
-  /* eslint-disable no-unused-vars */
-
-  // gather non-null data to create a new dataset
-  const create_query = _.flow([
-    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
-    _.omitBy(_.isNil),
-  ])(data);
-
-  create_query.name = normalize_name(create_query.name); // normalize name
-
-  // create workflow association
-  if (workflow_id) {
-    create_query.workflows = {
-      create: [
-        {
-          id: workflow_id,
-        },
-      ],
-    };
-  }
-
-  if (project_id) {
-    create_query.projects = {
-      create: [{
-        project_id,
-        assignor_id: user_id ?? Prisma.skip,
-      }],
-    };
-  }
-
-  if (src_instrument_id) {
-    create_query.src_instrument = {
-      connect: {
-        id: src_instrument_id,
-      },
-    };
-  }
-
-  if (src_dataset_id) {
-    create_query.source_datasets = {
-      create: [{
-        source_id: src_dataset_id,
-      }],
-    };
-  }
-
-  // add a state
-  create_query.states = {
-    create: [
-      {
-        state: state || 'REGISTERED',
-      },
-    ],
-  };
-
-  create_query.audit_logs = {
-    create: [
-      {
-        action: 'create',
-        create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
-        user_id: user_id ?? Prisma.skip,
-      },
-    ],
-  };
-
-  return create_query;
-};
-
 // Create a new dataset
 // Used by - workers + UI
 router.post(
@@ -692,7 +372,6 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
-    body('origin_path').trim().notEmpty(),
     body('project_id').optional(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -704,11 +383,13 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Create a new dataset.'
-    /*
-                                          * #swagger.description = 'workflow_id is optional. If the request body has
-                                          * workflow_id, a new relation is created between dataset and given
-                                          * workflow_id'
-                                          */
+    /* eslint-disable */
+      /*
+        * #swagger.description = 'workflow_id is optional. If the request body has
+        * workflow_id, a new relation is created between dataset and given
+        * workflow_id'
+        */
+      /* eslint-enable */
 
     const {
       import_space, create_method, project_id, src_instrument_id, src_dataset_id,
@@ -733,7 +414,7 @@ router.post(
       }
     }
 
-    const createQuery = getDatasetCreateQuery({
+    const createQuery = datasetService.buildDatasetCreateQuery({
       name,
       type,
       du_size,
@@ -853,7 +534,7 @@ router.post(
       /* eslint-enable */
 
     const data = req.body.datasets
-      .map((d) => getDatasetCreateQuery(d));
+      .map((d) => datasetService.buildDatasetCreateQuery(d));
 
     const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
 
@@ -1033,85 +714,6 @@ router.delete(
   }),
 );
 
-/**
- * Initiates a workflow which either processes or cancels a dataset upload.
- *
- * @async
- * @function initiateUploadWorkflow
- * @param {Object} options - The options object.
- * @param {Object} options.dataset - The dataset to initiate the workflow on.
- * @param {string} options.requestedWorkflow - The name of the workflow to initiate.
- * @param {Object} options.user - The user initiating the workflow.
- * @returns {Promise<Object>} An object containing the initiated workflow and any error messages.
- * @property {Object|null} workflowInitiated - The initiated workflow object, or null if not initiated.
- * @property {string|null} workflowInitiationError - Error message if workflow initiation failed, or null if successful.
- *
- * @description
- * This function attempts to initiate either the 'process_dataset_upload' or the 'cancel_dataset_upload' workflow
- * on a given dataset.
- *
- * `process_dataset_upload` -> This workflow initiates the processing of a dataset upload,
- * which registers the dataset in the system. This workflow is triggered after the entirety of the dataset's contents
- * have been uploaded.
- *
- * `cancel_dataset_upload`  -> This workflow cancels an incomplete dataset upload.
- *  A dataset upload is considered incomplete if one of the following conditions is met:
- * - All files have not been uploaded
- * - All files have been uploaded but the `process_dataset_upload` has not been initiated.
- *
- * It is possible that the API may receive requests to initiate both of these workflows on the same dataset in
- * proximity, thus triggering both of these workflows in parallel, which would result in a conflict.
- * To avoid this:
- * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is
- * already in progress.
- * - Workflow `cancel_dataset_upload` should not be initiated if workflow `process_dataset_upload` is already
- * in progress.
- *
- * This function checks for a potential conflicting workflow that may already be in progress before initiating
- * the requested workflow. If a conflicting workflow is found, the function will not initiate the requested workflow
- * and will return an error message instead.
- */
-const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null, user = null } = {}) => {
-  // return {
-  //   workflowInitiated: true,
-  //   workflowInitiationError: null,
-  // };
-
-  logger.info(`Received request to initiate workflow ${requestedWorkflow} on dataset ${dataset.id}`);
-
-  const uploadedDataset = dataset;
-  uploadedDataset.workflows = await datasetService.get_dataset_active_workflows({ dataset });
-
-  let requestedWorkflowInitiated;
-  let workflowInitiationError;
-
-  const conflictingUploadWorkflow = requestedWorkflow === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-    ? CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD
-    : CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD;
-  logger.info(`Workflow ${requestedWorkflow} will not be started if conflicting workflow `
-      + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
-  logger.info(`Checking if conflicting workflow ${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
-  const foundConflictingUploadWorkflow = uploadedDataset.workflows.find(
-    (wf) => wf.name === conflictingUploadWorkflow,
-  );
-  if (!foundConflictingUploadWorkflow) {
-    logger.info(`Conflicting workflow ${conflictingUploadWorkflow} is not running on dataset ${dataset.id}`);
-    logger.info(`Starting workflow ${requestedWorkflow} on dataset ${dataset.id}`);
-    requestedWorkflowInitiated = await datasetService.create_workflow(
-      uploadedDataset,
-      requestedWorkflow,
-      user.id,
-    );
-  } else {
-    workflowInitiationError = `The workflow ${requestedWorkflow} cannot be started on dataset ${dataset.id} `
-        + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
-        + 'already in progress.';
-    logger.error(workflowInitiationError);
-  }
-
-  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
-};
-
 // Launch a workflow on the dataset - UI
 router.post(
   '/:id/workflow/:wf',
@@ -1123,14 +725,12 @@ router.post(
     param('wf').isIn([
       CONSTANTS.WORKFLOWS.INTEGRATED,
       CONSTANTS.WORKFLOWS.STAGE,
-      CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
-      CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
     ]),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and start a workflow and associate it.
-    // Allowed workflows are stage, integrated, process_dataset_upload, and cancel_dataset_upload.
+    // Allowed workflows are `Stage` and `Integrated`.
 
     const wf_name = req.params.wf;
 
@@ -1143,52 +743,27 @@ router.post(
       return next(createError(404, 'Dataset not found'));
     }
 
-    if (wf_name === CONSTANTS.WORKFLOWS.INTEGRATED
-          || wf_name === CONSTANTS.WORKFLOWS.STAGE) {
-      // If staging a dataset Log the staging attempt first.
-      if (wf_name === CONSTANTS.WORKFLOWS.STAGE) {
-        try {
-          await prisma.stage_request_log.create({
-            data: {
-              dataset_id: req.params.id,
-              user_id: req.user.id,
-            },
-          });
-        } catch (e) {
-          logger.error('Error creating stage request log', e);
-          return next(createError(500, 'Error creating stage request log'));
-          // console.log()
-        }
+    // if (wf_name === CONSTANTS.WORKFLOWS.INTEGRATED
+    //       || wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+    // If staging a dataset Log the staging attempt first.
+    if (wf_name === CONSTANTS.WORKFLOWS.STAGE) {
+      try {
+        await prisma.stage_request_log.create({
+          data: {
+            dataset_id: req.params.id,
+            user_id: req.user.id,
+          },
+        });
+      } catch (e) {
+        logger.error('Error creating stage request log', e);
+        return next(createError(500, 'Error creating stage request log'));
+        // console.log()
       }
-      logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
-      const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
-      return res.json(wf);
     }
-
-    if (wf_name === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
-          || wf_name === CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD) {
-      verifyUploadEnabledForRole(req, res, (err) => {
-        if (err) {
-          return next(err);
-        }
-        // Continue with the workflow initiation
-        initiateUploadWorkflow({
-          dataset,
-          requestedWorkflow: wf_name,
-          user: req.user,
-        }).then(({ workflowInitiated, workflowInitiationError }) => {
-          if (workflowInitiated) {
-            return res.json(workflowInitiated);
-          }
-          next(createError.InternalServerError(workflowInitiationError));
-        }).catch(next);
-      });
-      // return workflowInitiated
-      //   ? res.json(workflowInitiated)
-      //   : next(createError.InternalServerError(workflowInitiationError));
-    } else {
-      return next(createError(400, 'Invalid workflow type'));
-    }
+    logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+    return res.json(wf);
+    // }
   }),
 );
 
@@ -1400,7 +975,7 @@ router.get(
 
     // Upon registration, the name of a dataset is normalized. Hence, we need to normalize
     // the requested name before checking for the existence of a dataset with this name.
-    const normalizedName = normalize_name(req.params.name);
+    const normalizedName = datasetService.normalize_name(req.params.name);
 
     const matchingDataset = await prisma.dataset.findUnique({
       where: {
@@ -1412,174 +987,6 @@ router.get(
       },
     });
     res.json({ exists: !!matchingDataset });
-  }),
-);
-
-const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
-  config.upload.path,
-  datasetType.toLowerCase(),
-  `${datasetId}`,
-  'processed',
-);
-
-// - Register an uploaded dataset in the system
-// - Used by UI
-router.post(
-  '/upload',
-  verifyUploadEnabledForRole,
-  isPermittedTo('create'),
-  validate([
-    body('type').trim().notEmpty().isIn(config.dataset_types),
-    body('name').trim().notEmpty().isLength({ min: 3 }),
-    body('src_dataset_id').optional().isInt().toInt(),
-    body('files_metadata').isArray(),
-    body('project_id').optional(),
-    body('src_instrument_id').optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Register an uploaded dataset in the system'
-
-    const {
-      project_id, src_instrument_id, src_dataset_id, name, type, files_metadata,
-    } = req.body;
-
-    const datasetCreateQuery = getDatasetCreateQuery({
-      name,
-      type,
-      project_id,
-      user_id: req.user.id,
-      src_instrument_id,
-      src_dataset_id,
-    });
-
-    const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
-
-      const created_dataset_upload_log = await tx.dataset_upload_log.create({
-        data: {
-          status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
-          files: {
-            create: files_metadata.map((file) => ({
-              name: file.name,
-              md5: file.checksum,
-              num_chunks: file.num_chunks,
-              path: file.path ?? Prisma.skip,
-              status: CONSTANTS.UPLOAD_STATUSES.UPLOADING,
-            })),
-          },
-          audit_log: {
-            create: {
-              action: 'create',
-              create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-              dataset_id: createdDataset.id,
-              user_id: req.user.id,
-            },
-          },
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      await tx.dataset.update({
-        where: { id: createdDataset.id },
-        data: {
-          origin_path: getUploadedDatasetPath({ datasetId: createdDataset.id, datasetType: type }),
-        },
-      });
-
-      const updated_dataset_upload_log = await tx.dataset_upload_log.findUnique({
-        where: { id: created_dataset_upload_log.id },
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-      });
-      return updated_dataset_upload_log;
-    });
-
-    res.json(dataset_upload_log);
-  }),
-);
-
-// - Update the metadata related to a dataset upload event
-// - Used by UI, workers
-router.patch(
-  '/:id/upload',
-  verifyUploadEnabledForRole,
-  /**
-     * A user can only update metadata related to a dataset upload if one of the
-     * following two conditions are met:
-     *   - The user has either the `admin` or the `operator` role
-     *   - The user has the `user` role, and they are the one who uploaded this dataset.
-     * This is checked by the `isPermittedTo` middleware.
-     */
-  isPermittedTo(
-    'update',
-    { checkOwnership: true },
-    async (req, res, next) => { // resourceOwnerFn
-      try {
-        const dataset_creator = await datasetService.get_dataset_creator({ dataset_id: parseInt(req.params.id, 10) });
-        return dataset_creator.username;
-      } catch (error) {
-        logger.error(error);
-        return next(createError.InternalServerError());
-      }
-    },
-  ),
-  validate([
-    body('status').optional().trim().notEmpty(),
-    param('id').isInt().toInt(),
-    body('files').isArray().optional(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['uploads']
-    // #swagger.summary = 'Update the metadata related to a dataset upload event'
-
-    const { status, files = [] } = req.body;
-    const dataset_upload_log_update_query = _.omitBy(_.isUndefined)({
-      status,
-    });
-
-    const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const dataset_upload_audit_log = await tx.dataset_audit.findUniqueOrThrow({
-        where: {
-          dataset_id_create_method: {
-            dataset_id: req.params.id,
-            create_method: CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
-          },
-        },
-      });
-
-      let ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { audit_log_id: dataset_upload_audit_log.id },
-      });
-
-      if (Object.entries(dataset_upload_log_update_query).length > 0) {
-        await tx.dataset_upload_log.update({
-          where: { id: ds_upload_log.id },
-          data: dataset_upload_log_update_query,
-        });
-      }
-
-      if (files.length > 0) {
-        // eslint-disable-next-line no-restricted-syntax
-        for (const f of files) {
-          // eslint-disable-next-line no-await-in-loop
-          await tx.file_upload_log.update({
-            where: { id: f.id },
-            data: f.data,
-          });
-        }
-      }
-
-      ds_upload_log = await tx.dataset_upload_log.findUniqueOrThrow({
-        where: { id: ds_upload_log.id },
-        include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
-      });
-
-      return ds_upload_log;
-    });
-
-    res.json(dataset_upload_log);
   }),
 );
 

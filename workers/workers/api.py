@@ -275,7 +275,7 @@ def get_dataset_uploads():
 
 def update_dataset_upload(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
-        r = s.patch(f'datasets/{uploaded_dataset_id}/upload', json=log_data)
+        r = s.patch(f'datasets/uploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
 
 

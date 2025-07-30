@@ -16,7 +16,7 @@ router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('status').optional().trim().notEmpty(),
+    query('status').optional().trim().isLength({ min: 1 }),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
@@ -118,7 +118,7 @@ router.delete(
   '/',
   isPermittedTo('delete'),
   validate([
-    query('status').optional().trim().notEmpty(),
+    query('status').optional().trim().isLength({ min: 1 }),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
