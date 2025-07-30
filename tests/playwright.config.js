@@ -51,7 +51,7 @@ module.exports = {
       //   todo - organize tests by role type
       {
         name: 'admin_login',
-        testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
+        testMatch: path.join(__dirname, '/src/tests/setup/admin_login.setup.js'),
       },
       // {
       //   name: 'operator_login',
@@ -163,5 +163,5 @@ module.exports = {
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,
   ADMIN_STORAGE_STATE,
-  attachmentsDir: path.join(__dirname, 'tests', 'attachments'),
+  // attachmentsDir: path.join(__dirname, 'tests', 'attachments'),
 };
