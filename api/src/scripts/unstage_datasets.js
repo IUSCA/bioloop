@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();

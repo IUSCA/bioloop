@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon src/index.js",
     "start": "nodemon src/index.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore"
   },
