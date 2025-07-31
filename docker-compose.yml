@@ -137,8 +137,8 @@ services:
   secure_download:
     image: node:19
     restart: unless-stopped
-    expose:
-      - 3060
+    ports:
+      - "3060:3060"
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
