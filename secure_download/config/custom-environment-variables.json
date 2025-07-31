@@ -1,5 +1,9 @@
 {
   "auth": {
     "jwks_uri": "JWKS_URI"
+  },
+  "express": {
+    "port": "EXPRESS_PORT",
+    "host": "EXPRESS_HOST"
   }
 }
