@@ -62,6 +62,12 @@ const exports = {
         ],
       },
       {
+        icon: "mdi-chart-gantt",
+        title: "Tracks",
+        path: "/tracks",
+        test_id: "sidebar-tracks",
+      },
+      {
         icon: "mdi-table-account",
         title: "User Management",
         path: "/users",
