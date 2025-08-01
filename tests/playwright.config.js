@@ -122,7 +122,7 @@ module.exports = {
         dependencies: ['admin_login'],
         // testMatch:
         // '/view/authenticated/upload/next_previous_buttons.spec.js',
-        testMatch: '/view/authenticated/upload/*.spec.js',
+        testMatch: '/view/authenticated/upload/general_info_step.spec.js',
       },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },

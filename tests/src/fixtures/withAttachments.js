@@ -64,4 +64,3 @@ function withAttachments({ test, filePath, attachments: testAttachments }) {
 }
 
 export { withAttachments };
-// export { expect } from '@playwright/test';

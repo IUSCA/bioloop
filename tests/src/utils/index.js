@@ -17,10 +17,24 @@ const fillAndAssertText = async ({
   await expect(locator).toHaveValue(text);
 };
 
+/**
+ * Cleans dropdown option text from a Vuestic Select component by removing
+ * Vuestic's check icon suffix
+ * @param {string} text - The raw text content from a dropdown option
+ * @returns {string} The cleaned text without the check icon suffix
+ */
+function cleanDropdownOptionText(text) {
+  // Vuestic inserts a check icon after the dropdown options' text, which
+  // will need to be removed. Therefore, remove trailing ' check'
+  return text
+    .replace(/\s+check$/, '')
+    .trim();
+}
+
 module.exports = {
   testIdSelector,
   elementTestIdSelector,
   fillText,
   fillAndAssertText,
-
+  cleanDropdownOptionText,
 };

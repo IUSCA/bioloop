@@ -1,6 +1,12 @@
 import { expect, test as baseTest } from '@playwright/test';
 
 import { withAttachments } from '../../../../fixtures/withAttachments';
+import {
+  selectDatasetType,
+  selectProject,
+  selectSourceInstrument,
+  selectSourceRawData,
+} from '../../../../actions/datasetUpload';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -98,75 +104,20 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('should allow selecting values in the General-Info step\'s fields', async () => {
-      // Select Dataset Type
-      const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
-      await expect(datasetTypeSelect).toBeVisible();
-      // open Dataset Type dropdown
-      await datasetTypeSelect.click();
-      // Wait for the dropdown options to appear
-      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
-      // Click the first option in the dropdown
-      const datasetTypeSelectFirstOption = await page.locator('.va-select-option').first();
-      const datasetTypeSelectFirstOptionText = (await datasetTypeSelectFirstOption.textContent())
-      // Vuestic inserts a check icon after the dropdown options' text, which
-      // will need to be removed.
-      // Remove trailing ' check' (and any preceding
-      // whitespace)
-        .replace(/\s+check$/, '')
-        .trim();
-      await datasetTypeSelectFirstOption.click();
-      // assert that the correct value was selected
-      let selectedValueElement = await datasetTypeSelect.locator('.va-select-content__option');
-      let selectedValue = (await selectedValueElement.textContent()).trim();
-      await expect(selectedValue.trim()).toBe(datasetTypeSelectFirstOptionText);
-      await expect(selectedValue.trim()).not.toBe(defaultDatasetType);
+      // Change selected Dataset Type to Raw Data
+      await selectDatasetType({ page, datasetType: 'Raw Data' });
 
-      // reset `Dataset Type` field to default Dataset Type
-      await datasetTypeSelect.click();
-      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
-      // Click the second option in the dropdown
-      const datasetTypeSelectSecondOption = await page.locator('.va-select-option').nth(1);
-      const datasetTypeSelectSecondOptionText = (await datasetTypeSelectSecondOption.textContent())
-      // Vuestic inserts a check icon after the dropdown options' text, which
-      // will need to be removed.
-      // Remove trailing ' check' (and any preceding
-      // whitespace)
-        .replace(/\s+check$/, '')
-        .trim();
-      await datasetTypeSelectSecondOption.click();
-      selectedValueElement = await datasetTypeSelect.locator('.va-select-content__option');
-      selectedValue = await selectedValueElement.textContent();
-      expect(selectedValue.trim()).toBe(datasetTypeSelectSecondOptionText);
-      await expect(selectedValue.trim()).toBe(defaultDatasetType);
+      // Reset selected Dataset Type to its default value
+      await selectDatasetType({ page, datasetType: defaultDatasetType });
 
       // Select source Raw Data
-      const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
-      await expect(datasetSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Dataset search
-      await page.click('input[data-testid="upload-metadata-dataset-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-dataset-autocomplete--search-result-li-0').click();
+      await selectSourceRawData({ page });
 
       // Select Project
-      const projectSearchInput = page.getByTestId('upload-metadata-project-autocomplete');
-      await expect(projectSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Project search
-      await page.click('input[data-testid="upload-metadata-project-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-project-autocomplete--search-result-li-0').click();
+      await selectProject({ page });
 
       // Select Source Instrument
-      const sourceInstrumentSelect = page.getByTestId('upload-metadata-source-instrument-select');
-      await expect(sourceInstrumentSelect).toBeVisible();
-      await sourceInstrumentSelect.click();
-      // Wait for the dropdown to appear
-      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
-      // Click the first option in the dropdown
-      const sourceInstrumentFirstOption = page.locator('.va-select-option').first();
-      // Note: Here we are using `page.locator` instead of
-      // `sourceInstrumentSelect.locator` because the dropdown options are not
-      // children of the dropdown-select element in the DOM
-      await sourceInstrumentFirstOption.click();
+      await selectSourceInstrument({ page });
     });
 
     test('should allow clearing values in the General-Info step\'s fields', async () => {
@@ -182,5 +133,7 @@ test.describe.serial('Dataset Upload Process', () => {
       // Verify Project is cleared
       await expect(page.getByTestId('upload-metadata-project-autocomplete')).toHaveValue('');
     });
+
+    // test('should clear `Source Raw Data` field when `Dataset Type` is ')
   });
 });
