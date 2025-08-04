@@ -98,6 +98,12 @@ const exports = {
       },
     },
   ],
+  trackFileTypes: [
+    { name: 'BAM', id: 'bam' },
+    { name: 'BigWig', id: 'bigwig' },
+    { name: 'VCF', id: 'vcf' },
+    { name: 'BigWig (bw)', id: 'bw' },
+  ],
   restricted_ingestion_dirs: {
     slateScratch: {
       paths:

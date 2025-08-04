@@ -8,5 +8,10 @@
     "name": "Some Other Guy",
     "username": "someOtherGuy",
     "email": "someOtherGuy@iu.edu"
+  },
+  {
+    "name": "E2E User",
+    "username": "e2eUser",
+    "email": "e2eUser@iu.edu"
   }
 ]

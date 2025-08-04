@@ -53,7 +53,8 @@ async function is_slug_unique(slug, project_id) {
 }
 
 async function generate_slug({ name, project_id }) {
-  // normalizes the name and adds incremental suffixes until the combination is unique
+  // normalizes the name and adds incremental suffixes until the combination is
+  // unique
 
   const normalized_name = normalize_name(name);
 

@@ -20,11 +20,6 @@
     "email": "ryanlong@iu.edu"
   },
   {
-    "name": "E2E User",
-    "username": "e2eUser",
-    "email": "e2eUser@iu.edu"
-  },
-  {
     "name": "Admin User",
     "username": "admin",
     "email": "admin@iu.edu"
@@ -33,5 +28,10 @@
     "name": "Operator User",
     "username": "operator",
     "email": "operator@iu.edu"
+  },
+  {
+    "name": "E2E Admin",
+    "username": "e2eAdmin",
+    "email": "e2eAdmin@iu.edu"
   }
 ]

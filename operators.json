@@ -8,5 +8,10 @@
     "name": "Some Other Operator",
     "username": "someOtherOperator",
     "email": "someOtherOperator@iu.edu"
+  },
+  {
+    "name": "E2E Operator",
+    "username": "e2eOperator",
+    "email": "e2eOperator@iu.edu"
   }
 ]

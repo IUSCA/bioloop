@@ -68,12 +68,13 @@ function sanitize_timestamp(t) {
 }
 
 /**
- * Given an array, groups the elements of the array based on the grouping function provided,
- * aggregates values from the grouped elements by calling the aggregation function provided
- * on the collection of grouped elements, and returns an array, every element of which contains
- * the aggregated values produced from each grouping as well as the value used for producing
- * said groupings. The order of grouped values is determined by the order they occur in the array
- * provided.
+ * Given an array, groups the elements of the array based on the grouping
+ * function provided, aggregates values from the grouped elements by calling
+ * the aggregation function provided on the collection of grouped elements,
+ * and returns an array, every element of which contains the aggregated values
+ * produced from each grouping as well as the value used for producing said
+ * groupings. The order of grouped values is determined by the order they occur
+ * in the array provided.
  *
  * Example usage:
  * groupByAndAggregate(
@@ -90,20 +91,26 @@ function sanitize_timestamp(t) {
  * @param {[*]} arr                                    The array whose elements are to be grouped
  *                                                     and aggregated
  * @param {string} groupedByKey                        The key used for representing the values
- *                                                     (in the returned array) by which elements
- *                                                     in arr will be grouped
+ *                                                     (in the returned array)
+ *                                                     by which elements in arr
+ *                                                     will be grouped
  * @param {string} aggregatedResultKey                 The key used for representing the aggregation
- *                                                     results (in the returned array) per grouping
+ *                                                     results (in the returned
+ *                                                     array) per grouping
  * @param {Function} aggregationFn                     Callback used for aggregating the results in
  *                                                     each grouping
  * @param {Function} [groupByFn = (e) => e]            Optional callback used to group the elements
  *                                                     of arr
  * @param {Function} [groupedByValFormatFn = (e) => e] Optional callback used to format the values
- *                                                     (in the returned array) by which groupings
- *                                                     are produced
+ *                                                     (in the returned array)
+ *                                                     by which groupings are
+ *                                                     produced
  * @returns                                            An array, every element of which contains the
- *                                                     aggregated values produced from each grouping
- *                                                     as well as the values used for producing said
+ *                                                     aggregated values
+ *                                                     produced from each
+ *                                                     grouping as well as the
+ *                                                     values used for
+ *                                                     producing said
  *                                                     groupings.
  */
 function groupByAndAggregate(
@@ -126,16 +133,20 @@ function groupByAndAggregate(
 }
 
 /**
- * Given an array, attempts to convert the numeric strings in the array to Numbers. If the source
- * array consists of numeric strings, they will be converted to Numbers. If the source array
- * consists of objects containing numeric string values, the values corresponding to each key in
- * the numericStringFields will be converted to Numbers. The source array remains unchanged.
+ * Given an array, attempts to convert the numeric strings in the array to
+ * Numbers. If the source array consists of numeric strings,
+ * they will be converted to Numbers. If the source array consists of objects
+ * containing numeric string values, the values corresponding to each key in
+ * the numericStringFields will be converted to Numbers.
+ * The source array remains unchanged.
  *
- * Note - If arr is an array of objects, this method will only consider the values of objects at
- * the first level to be converted to numbers. For example, in array
- * [{ x1: "1", x2: "2", x3: { "y": "3" } }], only x1's and x2's values will be considered for
- * conversion, and x3's value, which contains a numeric string embedded in an object, will
- * be ignored.
+ * Note - If arr is an array of objects,
+ * this method will only consider the values of objects at the first level to
+ * be converted to numbers. For example,
+ * in array
+ * [{ x1: "1", x2: "2", x3: { "y": "3" } }],
+ * only x1's and x2's values will be considered for conversion, and x3's value,
+ * which contains a numeric string embedded in an object, will be ignored.
  *
  * Example usage:
  * numericStringsToNumbers(['1', '2', 3])
@@ -169,13 +180,18 @@ function groupByAndAggregate(
  *   },
  * ]
  * @param {[*]} arr                             Array containing 0 or more numeric strings to
- *                                              be converted to numbers. If the elements of arr are
- *                                              of any other type besides numbers or objects, they
- *                                              will be returned as is.
+ *                                              be converted to numbers.
+ *                                              If the elements of arr are of
+ *                                              any other type besides numbers
+ *                                              or objects,
+ *                                              they will be returned as is.
  * @param {[string]} [numericStringFields = []] If arr is an array of objects, each object will be
- *                                              searched for keys listed in the numericStringFields
- *                                              arg, and if the key's value is a numeric string,
- *                                              it will be converted to a number.
+ *                                              searched for keys listed in the
+ *                                              numericStringFields arg,
+ *                                              and if the key's value is a
+ *                                              numeric string,
+ *                                              it will be converted to a
+ *                                              number.
  * @returns Array containing values to be converted to numbers
  */
 function numericStringsToNumbers(arr, numericStringFields = []) {

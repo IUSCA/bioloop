@@ -77,9 +77,9 @@
 </template>
 
 <script setup>
-import {useTracksStore} from "@/stores/tracks";
-import {storeToRefs} from "pinia";
 import constants from "@/constants"; // const emit = defineEmits(["update"]);
+import { useTracksStore } from "@/stores/tracks";
+import { storeToRefs } from "pinia";
 // const emit = defineEmits(["update"]);
 
 // parent component can invoke these methods through the template ref
@@ -111,7 +111,7 @@ const genomeValues = computed(() => {
 
 function hide() {
   visible.value = false;
-}
+} 
 
 function show() {
   // update form with current filters
