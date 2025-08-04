@@ -1,5 +1,13 @@
-import { expect, test as baseTest } from '@playwright/test';
+import { test as baseTest, expect } from '@playwright/test';
 
+import {
+  navigateToNextStep,
+  selectFiles,
+  selectProject,
+  selectSourceInstrument,
+  selectSourceRawData,
+  trackSelectedFilesMetadata
+} from '../../../../actions/datasetUpload';
 import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -27,32 +35,15 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select a file
-      const [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        page.click('[data-testid="upload-file-select"]'),
-      ]);
-      // attach files
-      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
+      // Select files using the selectFiles method
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths });
     });
 
     test('Wait for the file upload table to be visible', async () => {
-      // Wait for the file upload table to be visible
-      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
-
-      // Get all rows in the table
-      const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
-
-      // For each row, extract the file name and size
-      const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
-        const nameElement = row.querySelector('[data-testid="file-name"]');
-        const sizeElement = row.querySelector('td:nth-child(2)');
-        return {
-          name: nameElement ? nameElement.textContent.trim() : '',
-          size: sizeElement ? sizeElement.textContent.trim() : '',
-        };
-      }));
-
+      // Track selected files metadata
+      const files = await trackSelectedFilesMetadata({ page });
+      
       // Store the selected files' information in state
       selectedFiles.push(...files);
     });
@@ -61,7 +52,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('General-Info selection step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
-      await page.click('[data-testid="upload-next-button"]');
+      await navigateToNextStep({ page });
     });
 
     test('should allow selecting values in the General-Info form\'s fields', async () => {
@@ -75,46 +66,20 @@ test.describe.serial('Dataset Upload Process', () => {
       selectedDatasetType = selectedDatasetType.trim();
 
       // Select source Raw Data
-      const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
-      await expect(datasetSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Dataset search
-      await page.click('input[data-testid="upload-metadata-dataset-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-dataset-autocomplete--search-result-li-0').click();
-      selectedRawDataName = await datasetSearchInput.inputValue();
+      selectedRawDataName = await selectSourceRawData({ page, resultIndex: 0, verify: true });
 
       // Select Project
-      const projectSearchInput = page.getByTestId('upload-metadata-project-autocomplete');
-      await expect(projectSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Project search
-      await page.click('input[data-testid="upload-metadata-project-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-project-autocomplete--search-result-li-0').click();
-      selectedProjectName = await projectSearchInput.inputValue();
+      selectedProjectName = await selectProject({ page, resultIndex: 0, verify: true });
 
       // Select Source Instrument
-      const sourceInstrumentSelect = page.getByTestId('upload-metadata-source-instrument-select');
-      await expect(sourceInstrumentSelect).toBeVisible();
-      await sourceInstrumentSelect.click();
-      // Wait for the dropdown to appear
-      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
-      // Click the first option in the dropdown
-      const sourceInstrumentFirstOption = page.locator('.va-select-option').first();
-      // Note: Above, we used page.locator instead of
-      // sourceInstrumentSelect.locator because the dropdown options are not
-      // children of the dropdown-select element in the DOM
-      await sourceInstrumentFirstOption.click();
-      // Get the selected value from the component
-      selectedInstrumentName = await sourceInstrumentSelect.locator('.va-select-content__option').textContent();
-      // Remove any leading/trailing whitespace
-      selectedInstrumentName = selectedInstrumentName.trim();
+      selectedInstrumentName = await selectSourceInstrument({ page, optionIndex: 0, verify: true });
     });
   });
 
   test.describe('Upload details step', () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the -Info step
-      await page.click('[data-testid="upload-next-button"]');
+      await navigateToNextStep({ page });
     });
 
     test('should show all the selected General-Info form\'s fields', async () => {

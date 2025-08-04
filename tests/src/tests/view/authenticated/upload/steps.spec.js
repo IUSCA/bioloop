@@ -1,5 +1,12 @@
-import { expect, test as baseTest } from '@playwright/test';
+import { test as baseTest, expect } from '@playwright/test';
 
+import {
+  navigateToNextStep,
+  selectFiles,
+  selectProject,
+  selectSourceInstrument,
+  selectSourceRawData,
+} from '../../../../actions/datasetUpload';
 import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -19,13 +26,9 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test.beforeAll(async ({ attachmentManager }) => {
-    // Select a file
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent('filechooser'),
-      page.click('[data-testid="upload-file-select"]'),
-    ]);
-    // attach files
-    await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
+    // Select files using the selectFiles method
+    const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+    await selectFiles({ page, filePaths });
   });
 
   test('should show all steps\' buttons with the correct labels', async () => {
@@ -53,26 +56,27 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File-selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select a file
-      const [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        page.click('[data-testid="upload-file-select"]'),
-      ]);
-      // attach files
-      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
+      // Select files using the selectFiles method
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths });
     });
 
     test('should show only the \'Select Files\' step\'s buttons as enabled', async () => {
-      await expect(page.getByTestId('step-button-0')).not.toBeDisabled();
-      await expect(page.getByTestId('step-button-1')).toBeDisabled();
-      await expect(page.getByTestId('step-button-2')).toBeDisabled();
+      const selectFilesStepButton = page.getByTestId('step-button-0');
+      await expect(selectFilesStepButton).not.toBeDisabled();
+
+      const generalInfoStepButton = page.getByTestId('step-button-1');
+      await expect(generalInfoStepButton).toBeDisabled();
+
+      const uploadStepButton = page.getByTestId('step-button-2');
+      await expect(uploadStepButton).toBeDisabled();
     });
   });
 
   test.describe('General-Info step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the General-Info step
-      await page.click('[data-testid="upload-next-button"]');
+      await navigateToNextStep({ page });
     });
 
     test('should show the \'Select Files\' and the \'General Info\' step\'s buttons as enabled', async () => {
@@ -91,40 +95,20 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(datasetTypeSelect).toBeVisible();
 
       // Select source Raw Data
-      const datasetSearchInput = page.getByTestId('upload-metadata-dataset-autocomplete');
-      await expect(datasetSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Dataset search
-      await page.click('input[data-testid="upload-metadata-dataset-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-dataset-autocomplete--search-result-li-0').click();
+      await selectSourceRawData({ page, resultIndex: 0 });
 
       // Select Project
-      const projectSearchInput = page.getByTestId('upload-metadata-project-autocomplete');
-      await expect(projectSearchInput).toBeVisible();
-      // Click the input field, which will trigger the Project search
-      await page.click('input[data-testid="upload-metadata-project-autocomplete"]');
-      // Select the first search result
-      await page.getByTestId('upload-metadata-project-autocomplete--search-result-li-0').click();
+      await selectProject({ page, resultIndex: 0 });
 
       // Select Source Instrument
-      const sourceInstrumentSelect = page.getByTestId('upload-metadata-source-instrument-select');
-      await expect(sourceInstrumentSelect).toBeVisible();
-      await sourceInstrumentSelect.click();
-      // Wait for the dropdown to appear
-      await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
-      // Click the first option in the dropdown
-      const sourceInstrumentFirstOption = page.locator('.va-select-option').first();
-      // Note: We just used page.locator instead of
-      // sourceInstrumentSelect.locator because the dropdown options are not
-      // children of the select element in the DOM
-      await sourceInstrumentFirstOption.click();
+      await selectSourceInstrument({ page, optionIndex: 0 });
     });
   });
 
   test.describe('Upload-details step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-details step
-      await page.click('[data-testid="upload-next-button"]');
+      await navigateToNextStep({ page });
     });
 
     test('should show all steps\' buttons as enabled', async () => {

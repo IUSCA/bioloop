@@ -164,6 +164,7 @@
                 color="primary"
                 label="Assign Project"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-project-checkbox"
               />
             </div>
           </div>
@@ -326,20 +327,19 @@
 
 <script setup>
 import config from "@/config";
-import Constants from "@/constants";
+import { default as Constants, default as constants } from "@/constants";
 import datasetService from "@/services/dataset";
+import instrumentService from "@/services/instrument";
+import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { Icon } from "@iconify/vue";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import { Icon } from "@iconify/vue";
-import instrumentService from "@/services/instrument";
-import constants from "@/constants";
-import projectService from "@/services/projects";
 
 const auth = useAuthStore();
 

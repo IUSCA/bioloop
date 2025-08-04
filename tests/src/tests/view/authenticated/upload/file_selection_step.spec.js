@@ -1,5 +1,6 @@
 import { expect, test as baseTest } from '@playwright/test';
 
+import { selectFiles, trackSelectedFilesMetadata } from '../../../../actions/datasetUpload';
 import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -10,7 +11,6 @@ const test = withAttachments({ test: baseTest, filePath: __filename, attachments
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
-  let fileChooser;
 
   const selectedFiles = []; // array of selected files
 
@@ -22,37 +22,18 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test.describe('File selection and deletion', () => {
-    test.beforeAll(async () => {
-      // Select files
-      [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        page.click('[data-testid="upload-file-select"]'),
-      ]);
-    });
-
     test('Should allow selecting files', async ({ attachmentManager }) => {
-      // attach files
-      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
+      // Select files using the selectFiles method
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths });
+
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
     });
 
     test('Should show the correct number of files in the table', async () => {
-      await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
-
-      // Get all rows in the table
-      const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
-
-      // For each row, extract the file name and size
-      const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
-        const nameElement = row.querySelector('[data-testid="file-name"]');
-        const sizeElement = row.querySelector('td:nth-child(2)');
-
-        return {
-          name: nameElement ? nameElement.textContent.trim() : '',
-          size: sizeElement ? sizeElement.textContent.trim() : '',
-        };
-      }));
+      // Track selected files metadata
+      const files = await trackSelectedFilesMetadata({ page });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
@@ -64,8 +45,6 @@ test.describe.serial('Dataset Upload Process', () => {
       await Promise.all(selectedFiles.map(async (file) => {
         await expect(page.getByText(file.name)).toBeVisible();
       }));
-
-      // await new Promise(() => {});
     });
 
     test('Should allow deleting selected files', async () => {
@@ -128,19 +107,18 @@ test.describe.serial('Dataset Upload Process', () => {
 
       const initialFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
 
-      /* eslint-disable no-await-in-loop */
-      for (let i = 0; i < initialFileCount; i += 1) {
+      // Delete all files
+      const deletePromises = Array.from({ length: initialFileCount }, async (_, i) => {
         await page.locator('[data-testid="delete-file-button"]').first().click();
 
-        // Wait for the current file to be removed from the list, before
-        // removing the next one
-        // eslint-disable-next-line no-loop-func
+        // Wait for the current file to be removed from the list
         await expect(async () => {
           const currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
           expect(currentFileCount).toBe(initialFileCount - i - 1);
         }).toPass();
-      }
-      /* eslint-disable no-await-in-loop */
+      });
+
+      await Promise.all(deletePromises);
 
       // Assert that the file table is no longer visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).not.toBeVisible();

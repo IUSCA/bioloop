@@ -1,12 +1,18 @@
 import { expect, test as baseTest } from '@playwright/test';
 
-import { withAttachments } from '../../../../fixtures/withAttachments';
 import {
+  assertAutoCompleteEmpty,
+  assertCheckboxState,
+  assertSelectValue,
+  clearAutoComplete,
+  navigateToNextStep,
   selectDatasetType,
+  selectFiles,
   selectProject,
   selectSourceInstrument,
   selectSourceRawData,
 } from '../../../../actions/datasetUpload';
+import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -18,7 +24,6 @@ const defaultDatasetType = 'Data Product';
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
-  let fileChooser;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -30,17 +35,13 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('General Info step', async () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
-      [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser'),
-        page.click('[data-testid="upload-file-select"]'),
-      ]);
-      // attach files
-      await fileChooser.setFiles(attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`));
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths });
     });
 
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the General-Info step
-      await page.click('[data-testid="upload-next-button"]');
+      await navigateToNextStep({ page });
     });
 
     test('should display General-Info form fields in their default states, with their default values', async () => {
@@ -52,48 +53,49 @@ test.describe.serial('Dataset Upload Process', () => {
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
       // Assert the default value
-      const selectedValueElement = datasetTypeSelect.locator('.va-select-content__option');
-      await expect(selectedValueElement).toBeVisible();
-      const selectedValue = await selectedValueElement.textContent();
-      expect(selectedValue.trim()).toBe(defaultDatasetType);
+      await assertSelectValue({
+        page,
+        testId: 'upload-metadata-dataset-type-select',
+        expectedValue: defaultDatasetType,
+      });
 
       // Verify that the "Assign source Raw Data" row is visible
       const assignSourceRawDataRow = page.getByTestId('upload-metadata-assign-source-row');
       await expect(assignSourceRawDataRow).toBeVisible();
       // Verify that the 'Assign source Raw Data' checkbox is checked by default
-      const assignSourceCheckboxWrapper = assignSourceRawDataRow.getByTestId('upload-metadata-assign-source-checkbox');
-      await expect(assignSourceCheckboxWrapper).toBeVisible();
-      const checkbox = assignSourceCheckboxWrapper.locator('input[type="checkbox"]');
-      await expect(checkbox).toBeChecked();
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        expectedState: true,
+      });
       // Verify that the 'Search Raw Data' input field is empty
-      const searchRawDataInput = assignSourceRawDataRow.getByTestId('upload-metadata-dataset-autocomplete');
-      await expect(searchRawDataInput).toBeVisible();
-      await expect(searchRawDataInput).toHaveValue('');
+      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
 
       // Verify that the "Assign Project" row is visible
       const assignProjectRow = page.getByTestId('upload-metadata-assign-project-row');
       await expect(assignProjectRow).toBeVisible();
+
       // Verify that the 'Assign Project' checkbox is checked by default
-      const assignProjectCheckboxWrapper = assignProjectRow.locator('.va-checkbox');
-      await expect(assignProjectCheckboxWrapper).toBeVisible();
-      // Find the actual checkbox input within the wrapper
-      const projectCheckbox = assignProjectCheckboxWrapper.locator('input[type="checkbox"]');
-      await expect(projectCheckbox).toBeChecked();
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-project-row',
+        expectedState: true,
+        isRowContainer: true,
+      });
       // Verify that the 'Search Projects' input field is empty
-      const searchProjectInput = assignProjectRow.getByTestId('upload-metadata-project-autocomplete');
-      await expect(searchProjectInput).toBeVisible();
-      await expect(searchProjectInput).toHaveValue('');
+      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-project-autocomplete' });
 
       // Verify that the "Assign source Instrument" row is visible
       const assignInstrumentRow = page.getByTestId('upload-metadata-assign-instrument-row');
       await expect(assignInstrumentRow).toBeVisible();
       // Verify that the 'Assign source Instrument' checkbox is checked by
       // default
-      const assignInstrumentCheckboxWrapper = assignInstrumentRow.locator('.va-checkbox');
-      await expect(assignInstrumentCheckboxWrapper).toBeVisible();
-      // Find the actual checkbox input within the wrapper
-      const instrumentCheckbox = assignInstrumentCheckboxWrapper.locator('input[type="checkbox"]');
-      await expect(instrumentCheckbox).toBeChecked();
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-instrument-row',
+        expectedState: true,
+        isRowContainer: true,
+      });
       // Verify that the 'Source Instrument' select field is visible and has the
       // correct placeholder
       const sourceInstrumentSelect = assignInstrumentRow.locator('.va-select__anchor');
@@ -105,33 +107,35 @@ test.describe.serial('Dataset Upload Process', () => {
 
     test('should allow selecting values in the General-Info step\'s fields', async () => {
       // Change selected Dataset Type to Raw Data
-      await selectDatasetType({ page, datasetType: 'Raw Data' });
+      await selectDatasetType({ page, datasetType: 'Raw Data', verify: true });
 
       // Reset selected Dataset Type to its default value
-      await selectDatasetType({ page, datasetType: defaultDatasetType });
+      await selectDatasetType({ page, datasetType: defaultDatasetType, verify: true });
 
       // Select source Raw Data
-      await selectSourceRawData({ page });
+      await selectSourceRawData({ page, verify: true });
 
       // Select Project
-      await selectProject({ page });
+      await selectProject({ page, verify: true });
 
       // Select Source Instrument
-      await selectSourceInstrument({ page });
+      await selectSourceInstrument({ page, optionIndex: 0, verify: true });
     });
 
     test('should allow clearing values in the General-Info step\'s fields', async () => {
       // Clear Source Raw Data
-      await page.locator('[data-testid="upload-metadata-dataset-autocomplete--container"] [aria-label="reset"]').click();
-
-      // Verify Source Raw Data is cleared
-      await expect(page.getByTestId('upload-metadata-dataset-autocomplete')).toHaveValue('');
+      await clearAutoComplete({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        verify: true,
+      });
 
       // Clear Project
-      await page.locator('[data-testid="upload-metadata-project-autocomplete--container"] [aria-label="reset"]').click();
-
-      // Verify Project is cleared
-      await expect(page.getByTestId('upload-metadata-project-autocomplete')).toHaveValue('');
+      await clearAutoComplete({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        verify: true,
+      });
     });
 
     // test('should clear `Source Raw Data` field when `Dataset Type` is ')
