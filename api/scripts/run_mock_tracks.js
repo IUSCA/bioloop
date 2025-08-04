@@ -10,7 +10,7 @@ main()
     console.log('   • 6 datasets (Data Products)');
     console.log('   • Multiple dataset files per dataset');
     console.log('   • Tracks for visualizable file types (bam, vcf, bigwig, bed, gtf)');
-    console.log('   • Project assignments for datasets and tracks');
+    console.log('   • Project assignments for datasets (tracks inherit access)');
     console.log('   • e2eUser assigned to all projects');
     console.log('\n🎯 You can now test the tracks feature with this comprehensive test data!');
     process.exit(0);

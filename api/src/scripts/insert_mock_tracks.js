@@ -294,31 +294,6 @@ async function assignDatasetsToProjects(datasets, projects, tx = prisma) {
   }));
 }
 
-async function assignTracksToProjects(tracks, projects, tx = prisma) {
-  console.log('Assigning tracks to projects...');
-  await Promise.all(tracks.map(async (track) => {
-    const numProjects = Math.floor(Math.random() * 2) + 1;
-    const selectedProjects = projects.sort(() => 0.5 - Math.random()).slice(0, numProjects);
-
-    await Promise.all(selectedProjects.map(async (project) => {
-      await tx.project_track.upsert({
-        where: {
-          project_id_track_id: {
-            project_id: project.id,
-            track_id: track.id,
-          },
-        },
-        update: {},
-        create: {
-          project_id: project.id,
-          track_id: track.id,
-          assignor_id: null, // Will be set when we assign users
-        },
-      });
-    }));
-  }));
-}
-
 async function assignUserToProjects(user, projects, tx = prisma) {
   console.log(`Assigning user ${user.username} to projects...`);
   await Promise.all(projects.map(async (project) => {
@@ -363,9 +338,6 @@ async function main() {
 
       // Assign datasets to projects
       await assignDatasetsToProjects(datasets, projects, tx);
-
-      // Assign tracks to projects
-      await assignTracksToProjects(tracks, projects, tx);
 
       // Assign e2eUser to all projects
       await assignUserToProjects(e2eUser, projects, tx);

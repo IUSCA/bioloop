@@ -7,7 +7,7 @@
         <va-input
           :model-value="params.inclusive_query"
           class="w-full"
-          placeholder="Search tracks"
+          placeholder="Search Tracks by name"
           outline
           clearable
           @update:model-value="handleMainFilter"
@@ -49,11 +49,15 @@
       </template>
 
       <template #cell(file_type)="{ value }">
-        <span class="font-mono text-sm">{{ value }}</span>
+        <va-chip size="small">{{  value }}</va-chip>
       </template>
 
-      <template #cell(genome)="{ rowData }">
-        <span>{{ rowData.genomeType }} {{ rowData.genomeValue }}</span>
+      <template #cell(genomeType)="{ rowData }">
+        <va-chip size="small" outline>{{ rowData.genomeType }}</va-chip>
+      </template>
+
+      <template #cell(genomeValue)="{ rowData }">
+        <va-chip size="small" outline>{{ rowData.genomeValue }}</va-chip>
       </template>
 
       <template #cell(dataset)="{ rowData }">
@@ -63,13 +67,6 @@
         >
           {{ rowData.dataset_file?.dataset?.name }}
         </router-link>
-      </template>
-
-      <template #cell(projects)="{ rowData }">
-        <span v-if="rowData.projects?.length">
-          {{ rowData.projects.map(p => p.project.name).join(', ') }}
-        </span>
-        <span v-else class="text-gray-500">None</span>
       </template>
 
       <template #cell(created_at)="{ value }">
@@ -168,37 +165,25 @@ const columns = [
     width: "10%",
     thAlign: "center",
     tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
-    key: "genome",
-    label: "Genome",
-    width: "12%",
+    key: "genomeType",
+    label: "Genome Type",
+    width: "10%",
     thAlign: "center",
-    tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    tdAlign: "center",    
+  },
+  {
+    key: "genomeValue",
+    label: "Genome Value",
+    width: "10%",
+    thAlign: "center",
+    tdAlign: "center",    
   },
   {
     key: "dataset",
     label: "Dataset",
     width: "20%",
-    thAlign: "center",
-    tdAlign: "center",
-    tdStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
-  {
-    key: "projects",
-    label: "Projects",
-    width: "18%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:

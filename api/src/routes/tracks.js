@@ -37,7 +37,7 @@ router.get(
       };
 
       // If user has admin/operator role, they can see all tracks.
-      // Otherwise, filter by user's project membership
+      // Otherwise, filter by user's project membership through datasets
       if (!req.permission.granted) {
         // Get user's project memberships
         const userProjects = await prisma.project_user.findMany({
@@ -47,9 +47,14 @@ router.get(
 
         const projectIds = userProjects.map((p) => p.project_id);
 
-        filter_query.projects = {
-          some: {
-            project_id: { in: projectIds },
+        // Filter tracks by datasets that belong to user's projects
+        filter_query.dataset_file = {
+          dataset: {
+            projects: {
+              some: {
+                project_id: { in: projectIds },
+              },
+            },
           },
         };
       }
@@ -68,9 +73,14 @@ router.get(
           }
         }
 
-        filter_query.projects = {
-          some: {
-            project_id,
+        // Filter tracks by datasets that belong to the specified project
+        filter_query.dataset_file = {
+          dataset: {
+            projects: {
+              some: {
+                project_id,
+              },
+            },
           },
         };
       }
@@ -111,16 +121,16 @@ router.get(
                     id: true,
                     name: true,
                     type: true,
-                  },
-                },
-              },
-            },
-            projects: {
-              select: {
-                project: {
-                  select: {
-                    id: true,
-                    name: true,
+                    projects: {
+                      select: {
+                        project: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -160,11 +170,10 @@ router.post(
     body('genome_type').isString().notEmpty().trim(),
     body('genome_value').isString().notEmpty().trim(),
     body('dataset_file_id').isInt().toInt(),
-    body('project_ids').isArray().optional(),
   ],
   asyncHandler(async (req, res) => {
     const {
-      name, file_type, genome_type, genome_value, dataset_file_id, project_ids,
+      name, file_type, genome_type, genome_value, dataset_file_id,
     } = req.body;
 
     try {
@@ -205,12 +214,6 @@ router.post(
           genomeType: genome_type,
           genomeValue: genome_value,
           dataset_file_id,
-          projects: project_ids ? {
-            create: project_ids.map((projectId) => ({
-              project_id: projectId,
-              assignor_id: req.user.id,
-            })),
-          } : undefined,
         },
         include: {
           dataset_file: {
@@ -225,16 +228,16 @@ router.post(
                   id: true,
                   name: true,
                   type: true,
-                },
-              },
-            },
-          },
-          projects: {
-            select: {
-              project: {
-                select: {
-                  id: true,
-                  name: true,
+                  projects: {
+                    select: {
+                      project: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -278,16 +281,16 @@ router.get(
                   id: true,
                   name: true,
                   type: true,
-                },
-              },
-            },
-          },
-          projects: {
-            select: {
-              project: {
-                select: {
-                  id: true,
-                  name: true,
+                  projects: {
+                    select: {
+                      project: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -301,7 +304,7 @@ router.get(
 
       // Check access control
       if (!req.permission.granted) {
-        const hasAccess = track.projects.some((pt) => has_project_assoc({
+        const hasAccess = track.dataset_file.dataset.projects.some((pt) => has_project_assoc({
           projectId: pt.project.id,
           userId: req.user.id,
         }));
@@ -343,7 +346,23 @@ router.patch(
       const existingTrack = await prisma.track.findUnique({
         where: { id },
         include: {
-          projects: true,
+          dataset_file: {
+            select: {
+              dataset: {
+                select: {
+                  projects: {
+                    select: {
+                      project: {
+                        select: {
+                          id: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -353,7 +372,7 @@ router.patch(
 
       // Check access control
       if (!req.permission.granted) {
-        const hasAccess = existingTrack.projects.some((pt) => has_project_assoc({
+        const hasAccess = existingTrack.dataset_file.dataset.projects.some((pt) => has_project_assoc({
           projectId: pt.project_id,
           userId: req.user.id,
         }));
@@ -386,16 +405,16 @@ router.patch(
                   id: true,
                   name: true,
                   type: true,
-                },
-              },
-            },
-          },
-          projects: {
-            select: {
-              project: {
-                select: {
-                  id: true,
-                  name: true,
+                  projects: {
+                    select: {
+                      project: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -433,7 +452,32 @@ router.delete(
       const existingTrack = await prisma.track.findUnique({
         where: { id },
         include: {
-          projects: true,
+          dataset_file: {
+            select: {
+              id: true,
+              name: true,
+              path: true,
+              size: true,
+              filetype: true,
+              dataset: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
+                  projects: {
+                    select: {
+                      project: {
+                        select: {
+                          id: true,
+                          name: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
 
@@ -502,14 +546,19 @@ router.get(
           return res.status(403).json({ error: 'User is not part of the project' });
         }
 
-        // filter tracks by the specified project_id
-        filter_query.projects = {
-          some: {
-            project_id,
+        // filter tracks by datasets that belong to the specified project_id
+        filter_query.dataset_file = {
+          dataset: {
+            projects: {
+              some: {
+                project_id,
+              },
+            },
           },
         };
       } else {
-        // Collect tracks across all Projects that the User belongs to
+        // Collect tracks across all Projects that the User belongs to through
+        // datasets
         const userProjects = await prisma.project_user.findMany({
           where: { user_id: user.id },
           select: { project_id: true },
@@ -517,9 +566,13 @@ router.get(
 
         const projectIds = userProjects.map((p) => p.project_id);
 
-        filter_query.projects = {
-          some: {
-            project_id: { in: projectIds },
+        filter_query.dataset_file = {
+          dataset: {
+            projects: {
+              some: {
+                project_id: { in: projectIds },
+              },
+            },
           },
         };
       }
@@ -560,16 +613,16 @@ router.get(
                     id: true,
                     name: true,
                     type: true,
-                  },
-                },
-              },
-            },
-            projects: {
-              select: {
-                project: {
-                  select: {
-                    id: true,
-                    name: true,
+                    projects: {
+                      select: {
+                        project: {
+                          select: {
+                            id: true,
+                            name: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },

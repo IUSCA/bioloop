@@ -17,8 +17,6 @@ export const useTracksStore = defineStore("tracks", () => {
       genome_type: null,
       genome_value: null,
       name: null,
-      created_at: null,
-      updated_at: null,
     };
   }
 
@@ -86,17 +84,6 @@ export const useTracksStore = defineStore("tracks", () => {
           ? { name: params.value.inclusive_query }
           : null),
       };
-      
-      if (filters_api.created_at) {
-        filters_api.created_at_start = filters_api.created_at.start;
-        filters_api.created_at_end = filters_api.created_at.end;
-        delete filters_api.created_at;
-      }
-      if (filters_api.updated_at) {
-        filters_api.updated_at_start = filters_api.updated_at.start;
-        filters_api.updated_at_end = filters_api.updated_at.end;
-        delete filters_api.updated_at;
-      }
 
       const offset = (params.value.query.page - 1) * params.value.query.page_size;
       

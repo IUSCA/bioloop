@@ -49,7 +49,6 @@ class TrackService {
    * @param {string} trackData.genome_type - Genome type (e.g., 'assembly', 'version')
    * @param {string} trackData.genome_value - Genome value (e.g., 'hg38', 'GRCh38')
    * @param {number} trackData.dataset_file_id - Dataset file ID
-   * @param {Array} trackData.project_ids - Optional array of project IDs
    * @returns {Promise} Created track object
    */
   create(trackData) {
