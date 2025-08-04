@@ -1,6 +1,6 @@
-import { mapValues } from "@/services/utils";
-import { defineStore } from "pinia";
-import { ref } from "vue";
+import {mapValues} from "@/services/utils";
+import {defineStore} from "pinia";
+import {ref} from "vue";
 
 export const useDatasetStore = defineStore("dataset", () => {
   function defaultFilters() {

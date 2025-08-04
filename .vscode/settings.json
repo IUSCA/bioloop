@@ -17,14 +17,15 @@
   "i18n-ally.sortKeys": true,
   "prettier.enable": false,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
+    "source.fixAll.eslint": "always",
     "source.organizeImports": "explicit"
   },
-  "eslint.validate": ["javascript"],
+  "eslint.validate": ["javascript", "vue"],
   "files.associations": {
     "*.css": "postcss"
   },
-  "editor.formatOnSave": false,
+  "eslint.run": "onSave",
+  "eslint.alwaysShowStatus": true,
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,
@@ -33,5 +34,5 @@
   },
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
-  "editor.insertSpaces": true
+  "editor.insertSpaces": true,
 }

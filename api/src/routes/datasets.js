@@ -1,6 +1,6 @@
 const fsPromises = require('fs/promises');
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const {PrismaClient} = require('@prisma/client');
 const createError = require('http-errors');
 const {
   query, param, body, checkSchema,
@@ -12,8 +12,8 @@ const pm = require('picomatch');
 
 // const logger = require('../services/logger');
 const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl, getPermission } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+const {accessControl, getPermission} = require('../middleware/auth');
+const {validate} = require('../middleware/validators');
 const datasetService = require('../services/dataset');
 const authService = require('../services/auth');
 const CONSTANTS = require('../constants');
@@ -109,17 +109,17 @@ const assoc_body_schema = {
 };
 
 const buildQueryObject = ({
-  deleted, archived, staged, type, name, days_since_last_staged,
-  has_workflows, has_derived_data, has_source_data,
-  created_at_start, created_at_end, updated_at_start, updated_at_end,
-  match_name_exact,
-}) => {
+                            deleted, archived, staged, type, name, days_since_last_staged,
+                            has_workflows, has_derived_data, has_source_data,
+                            created_at_start, created_at_end, updated_at_start, updated_at_end,
+                            match_name_exact,
+                          }) => {
   const query_obj = _.omitBy(_.isUndefined)({
     is_deleted: deleted,
     is_staged: staged,
     type,
     name: name ? {
-      ...(match_name_exact ? { equals: name } : { contains: name }),
+      ...(match_name_exact ? {equals: name} : {contains: name}),
       mode: 'insensitive', // case-insensitive search
     } : undefined,
   });
@@ -128,19 +128,19 @@ const buildQueryObject = ({
   // has_workflows=false: datasets with no workflows associated
   // has_workflows=undefined/null: no query based on workflow association
   if (!_.isNil(has_workflows)) {
-    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
+    query_obj.workflows = {[has_workflows ? 'some' : 'none']: {}};
   }
 
   if (!_.isNil(has_derived_data)) {
-    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
+    query_obj.derived_datasets = {[has_derived_data ? 'some' : 'none']: {}};
   }
 
   if (!_.isNil(has_source_data)) {
-    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
+    query_obj.source_datasets = {[has_source_data ? 'some' : 'none']: {}};
   }
 
   if (!_.isNil(archived)) {
-    query_obj.archive_path = archived ? { not: null } : null;
+    query_obj.archive_path = archived ? {not: null} : null;
   }
 
   // staged datasets where there is no STAGED state in last x days
@@ -216,8 +216,8 @@ router.get(
     query('created_at_end').isISO8601().optional(),
     query('updated_at_start').isISO8601().optional(),
     query('updated_at_end').isISO8601().optional(),
-    query('limit').isInt({ min: 1 }).toInt().optional(), // optional because watch script needs all datasets at once
-    query('offset').isInt({ min: 0 }).toInt().optional(),
+    query('limit').isInt({min: 1}).toInt().optional(), // optional because watch script needs all datasets at once
+    query('offset').isInt({min: 0}).toInt().optional(),
     query('sort_by').default('updated_at'),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
@@ -227,7 +227,7 @@ router.get(
 
     const query_obj = buildQueryObject(req.query);
 
-    const filterQuery = { where: query_obj };
+    const filterQuery = {where: query_obj};
     const orderBy = {
       [req.query.sort_by]: req.query.sort_order,
     };
@@ -245,12 +245,12 @@ router.get(
     };
 
     const [datasets, count] = await prisma.$transaction([
-      prisma.dataset.findMany({ ...datasetRetrievalQuery }),
-      prisma.dataset.count({ ...filterQuery }),
+      prisma.dataset.findMany({...datasetRetrievalQuery}),
+      prisma.dataset.count({...filterQuery}),
     ]);
 
     res.json({
-      metadata: { count },
+      metadata: {count},
       datasets,
     });
   }),
@@ -336,7 +336,7 @@ router.post(
       workflow_id, state, ingestion_space, data,
     } = req.body;
 
-    const { origin_path } = data;
+    const {origin_path} = data;
 
     // remove whitespaces from dataset name
     data.name = data.name.split(' ').join('-');
@@ -413,9 +413,11 @@ router.patch(
         id: req.params.id,
       },
     });
-    if (!datasetToUpdate) { return next(createError(404)); }
+    if (!datasetToUpdate) {
+      return next(createError(404));
+    }
 
-    const { metadata, ...data } = req.body;
+    const {metadata, ...data} = req.body;
     data.metadata = _.merge(datasetToUpdate?.metadata)(metadata); // deep merge
 
     if (req.body.bundle) {
@@ -458,7 +460,7 @@ router.post(
       size: BigInt(f.size),
       filetype: f.type,
     }));
-    datasetService.add_files({ dataset_id: req.params.id, data });
+    datasetService.add_files({dataset_id: req.params.id, data});
 
     res.sendStatus(200);
   }),
@@ -548,7 +550,7 @@ router.post(
     // allowed_wfs is an object with keys as workflow names and values as true
     // filter only works on objects not arrays, so we use an object with true
     // value
-    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+    const allowed_wfs = req.permission.filter({[req.params.wf]: true});
     if (allowed_wfs[req.params.wf]) {
       return next();
     }
@@ -623,7 +625,7 @@ router.put(
   validate([
     param('id').isInt().toInt(),
   ]),
-  multer({ storage: report_storage }).single('report'),
+  multer({storage: report_storage}).single('report'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Upload a QC report (html file) of this dataset

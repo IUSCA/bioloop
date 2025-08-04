@@ -65,6 +65,7 @@ model dataset_file {
   parents    dataset_file_hierarchy[] @relation("child")
   children   dataset_file_hierarchy[] @relation("parent")
   accesses   data_access_log[]
+  track      track?
 
   @@unique([path, dataset_id])
   @@index([dataset_id])
@@ -202,6 +203,7 @@ model user {
   uploads                    upload_log[]
   user_notifications         user_notification[]
   import_log                 import_log[]
+  project_track              project_track[]
 }
 
 model user_password {
@@ -323,6 +325,7 @@ model project {
   users           project_user[]
   datasets        project_dataset[]
   contacts        project_contact[]
+  tracks          project_track[]
 }
 
 model project_user {
@@ -390,6 +393,31 @@ model about {
   created_at         DateTime @default(now()) @db.Timestamp(6)
   last_updated_by    user     @relation(fields: [last_updated_by_id], references: [id])
   last_updated_by_id Int
+}
+
+model track {
+  id              Int             @id @default(autoincrement())
+  name            String
+  file_type       String?
+  genomeType      String
+  genomeValue     String
+  projects        project_track[]
+  dataset_file_id Int             @unique
+  dataset_file    dataset_file    @relation(fields: [dataset_file_id], references: [id], onDelete: Cascade)
+  created_at      DateTime        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime        @default(now()) @updatedAt @db.Timestamp(6)
+}
+
+model project_track {
+  project_id  String
+  track_id    Int
+  assignor_id Int?
+  project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  track       track    @relation(fields: [track_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+
+  @@id([project_id, track_id])
 }
 
 enum access_type {
