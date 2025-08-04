@@ -50,9 +50,9 @@ npx prisma db seed
 echo "Checking if the required environment variables are set..."
 
 # Check if the required environment variable is set
-if [ -z "${OAUTH_DOWNLOAD_CLIENT_ID}" ] || [ -z "${OAUTH_DOWNLOAD_CLIENT_SECRET}" ] || [ -z "${OAUTH_UPLOAD_CLIENT_ID}" ] || [ -z "${OAUTH_UPLOAD_CLIENT_SECRET}" ]; then
+if [ "${OAUTH_DOWNLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_DOWNLOAD_CLIENT_SECRET}" = "xxx" ] || [ "${OAUTH_UPLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_UPLOAD_CLIENT_SECRET}" = "xxx" ]; then
 
-  echo "One or more required environment variables are not set. Generating new OAuth client credentials..."
+  echo "One or more required environment variables are set to 'xxx'. Generating new OAuth client credentials..."
   response=$(curl --silent --request POST \
     --url http://signet:5050/create_client \
     --header 'Content-Type: application/x-www-form-urlencoded' \
