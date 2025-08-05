@@ -4,7 +4,7 @@ import fire
 import shutil
 import os
 import hashlib
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import time
 import traceback
 
@@ -21,11 +21,17 @@ class Registration:
                  dataset_type: str,
                  path: str,
                  project_id: str = None,
-                 description: str = None):
+                 description: str = None,
+                 prefix: str = None,
+                 suffix: str = None,
+                 ingest_parent_dir: bool = False):
         self.dataset_type = dataset_type
         self.path = path
         self.description = description
         self.project_id = project_id
+        self.prefix = prefix
+        self.suffix = suffix
+        self.ingest_parent_dir = ingest_parent_dir
         self.project = None
 
         if self.project_id:
@@ -40,38 +46,44 @@ class Registration:
         for subdir in all_subdirectories:
             print(f"Checking subdirectory {subdir.name}...")
             new_name = generate_dataset_new_name(
-                prefix=self.project.name if self.project else None,
+                prefix=self.prefix,
+                suffix=self.suffix,
                 dataset_name=subdir.name,
             )
             if not self.is_dataset_registered(dataset_name=new_name):
                 return False
         return True
 
-    def register_dataset(self,
-                         dir_path: str,
-                         # associating_project_id: str = None,
-                         description: str = None,
-                         dry_run: bool = False) -> None:
+    def get_parent_directory_dataset(self, dir_path: str, description: str = None) -> List[Tuple[str, Path]]:
         """
-        Idempotent method - will not register a duplicate Dataset.
-
-        :param dir_path:
-        :param description:
-        :param dry_run:
-        :return:
+        Get list of datasets to register when ingesting parent directory.
+        
+        Returns:
+            List of tuples containing (dataset_name, dataset_path)
         """
-
         directory_path: Path = Path(dir_path)
         directory_name: str = directory_path.name
-        print(f"Processing {str(directory_name)}")
+        
+        parent_new_name = generate_dataset_new_name(
+            prefix=self.prefix,
+            suffix=self.suffix,
+            dataset_name=directory_name,
+        )
+        
+        return [(parent_new_name, directory_path)]
 
+    def get_subdirectory_datasets(self, dir_path: str) -> List[Tuple[str, Path]]:
+        """
+        Get list of datasets to register when ingesting subdirectories.
+        
+        Returns:
+            List of tuples containing (dataset_name, dataset_path)
+        """
+        directory_path: Path = Path(dir_path)
         renamed_subdirectories_parent_dir: Path = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
+        datasets_to_register = []
 
         for subdirectory in directory_path.iterdir():
-            if dry_run:
-                print("Dry run: Skipping registration of subdirectory {str(subdirectory.name)}")
-                continue
-
             if not subdirectory.is_dir():
                 print(f"Skipping non-directory file {str(subdirectory)}")
                 continue
@@ -79,11 +91,17 @@ class Registration:
                 print(f"Skipping renamed-subdirectories' parent directory {str(subdirectory)}")
                 continue
 
-            subdirectory_new_name: str = generate_dataset_new_name(
-                prefix=self.project.name if self.project else None,
-                dataset_name=subdirectory.name,
-            )
-            renamed_subdirectory: Path = renamed_subdirectories_parent_dir / subdirectory_new_name
+            # Generate new name based on whether prefix or suffix is provided
+            if self.prefix or self.suffix:
+                subdirectory_new_name: str = generate_dataset_new_name(
+                    prefix=self.prefix,
+                    suffix=self.suffix,
+                    dataset_name=subdirectory.name,
+                )
+                renamed_subdirectory: Path = renamed_subdirectories_parent_dir / subdirectory_new_name
+            else:
+                subdirectory_new_name: str = subdirectory.name
+                renamed_subdirectory: Path = renamed_subdirectories_parent_dir / subdirectory_new_name
 
             print(f"Processing subdirectory: {str(subdirectory.name)}")
             print(f"Original subdirectory path: {str(subdirectory)}")
@@ -95,10 +113,8 @@ class Registration:
                 print("Moving on to the next subdirectory")
                 continue
             elif self.is_dataset_registering(dataset_name=renamed_subdirectory.name):
-                # todo - if the renamed subdir already exists, but the dataset is not 'registered' yet, it could mean that a previous run
-                #  could have initiated the registration of this subdirectory, and hence it should not be deleted
                 print(
-                    f"Renamed subdirectory {renamed_subdirectory.name} is not registered")
+                    f"Renamed subdirectory {renamed_subdirectory.name} is currently being registered")
 
             if renamed_subdirectory.exists():
                 print(f"Renamed subdirectory {renamed_subdirectory.name} already exists")
@@ -108,8 +124,6 @@ class Registration:
                     print("Moving on to the next subdirectory")
                     continue
                 else:
-                    # todo - if the renamed subdir already exists, but the dataset is not 'registered' yet, it could mean that a previous run
-                    #  could have initiated the registration of this subdirectory, and hence it should not be deleted
                     print(
                         f"Renamed subdirectory {renamed_subdirectory.name} is not registered")
                     # Delete the subdirectory that is renamed but not registered, since this
@@ -129,35 +143,103 @@ class Registration:
                 print(f"Moving on to the next subdirectory")
                 continue
 
+            # Copy the subdirectory to the renamed location
             shutil.copytree(subdirectory, renamed_subdirectory)
             print(f"Copied and renamed: {subdirectory.name} -> {renamed_subdirectory.name}")
+            
+            datasets_to_register.append((renamed_subdirectory.name, renamed_subdirectory))
 
-            print(
-                f"{renamed_subdirectory} does not exist. This subdirectory is currently not registered: {renamed_subdirectory.name}")
+        return datasets_to_register
+
+    def process_and_register_datasets(self, datasets_to_register: List[Tuple[str, Path]], 
+                                    dir_path: str, description: str = None, dry_run: bool = False) -> None:
+        """
+        Process and register a list of datasets.
+        
+        Args:
+            datasets_to_register: List of tuples containing (dataset_name, dataset_path)
+            dir_path: Original directory path for cleanup purposes
+            description: Optional description for datasets
+            dry_run: Whether to simulate the process without making changes
+        """
+        if dry_run:
+            print(f"Dry run: Would register {len(datasets_to_register)} datasets")
+            for dataset_name, dataset_path in datasets_to_register:
+                print(f"  - {dataset_name} from {dataset_path}")
+            return
+
+        # Register all datasets
+        for dataset_name, dataset_path in datasets_to_register:
             try:
-                print(f"Registering: {renamed_subdirectory.name}")
-                register_data_product(renamed_subdirectory.name, renamed_subdirectory, project_id, description)
+                print(f"Registering: {dataset_name}")
+                self.register_single_dataset(dataset_name, dataset_path, description)
             except Exception as e:
-                print(f"Error occurred during registration of {renamed_subdirectory.name}: {e}")
+                print(f"Error occurred during registration of {dataset_name}: {e}")
                 traceback.print_exc()
-                shutil.rmtree(path=renamed_subdirectory, ignore_errors=True)
-                print(f"Deleted renamed directory due to registration failure: {renamed_subdirectory}")
+                # Clean up renamed directory if it was created
+                if (self.prefix or self.suffix) and not self.ingest_parent_dir:
+                    directory_path = Path(dir_path)
+                    renamed_subdirectories_parent_dir = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
+                    renamed_subdirectory = renamed_subdirectories_parent_dir / dataset_name
+                    if renamed_subdirectory.exists():
+                        shutil.rmtree(path=renamed_subdirectory, ignore_errors=True)
+                        print(f"Deleted renamed directory due to registration failure: {renamed_subdirectory}")
 
         print("Processing and registration complete.")
 
-        print("Checking if all subdirectories have been processed and registered...")
-        if self.all_subdirectories_processed(dir_path, project_name):
-            print("All subdirectories processed and registered.")
-            # Once all subdirectories have been successfully processed,
-            # delete the `renamed_subdirectories` directory
-            if renamed_subdirectories_parent_dir.exists() and not dry_run:
-                shutil.rmtree(path=renamed_subdirectories_parent_dir)
-                print(f"Deleted renamed subdirectories' parent directory: {renamed_subdirectories_parent_dir}")
-            elif dry_run:
-                print(f"Dry run: Would have deleted renamed_subdirectories folder: {renamed_subdirectories_parent_dir}")
-            print("All subdirectories processed.")
+        # Clean up renamed_subdirectories folder if processing subdirectories
+        if not self.ingest_parent_dir:
+            directory_path = Path(dir_path)
+            print("Checking if all subdirectories have been processed and registered...")
+            if self.all_subdirectories_processed(directory_path):
+                print("All subdirectories processed and registered.")
+                # Once all subdirectories have been successfully processed,
+                # delete the `renamed_subdirectories` directory
+                renamed_subdirectories_parent_dir = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
+                if renamed_subdirectories_parent_dir.exists():
+                    shutil.rmtree(path=renamed_subdirectories_parent_dir)
+                    print(f"Deleted renamed subdirectories' parent directory: {renamed_subdirectories_parent_dir}")
+                print("All subdirectories processed.")
+            else:
+                print("Some subdirectories are still unprocessed.")
+
+    def register_dataset(self,
+                         dir_path: str,
+                         description: str = None,
+                         dry_run: bool = False) -> None:
+        """
+        Idempotent method - will not register a duplicate Dataset.
+
+        :param dir_path:
+        :param description:
+        :param dry_run:
+        :return:
+        """
+        directory_path: Path = Path(dir_path)
+        directory_name: str = directory_path.name
+        print(f"Processing {str(directory_name)}")
+
+        # Get list of datasets to register based on ingest mode
+        if self.ingest_parent_dir:
+            datasets_to_register = self.get_parent_directory_dataset(dir_path, description)
         else:
-            print("Some subdirectories are still unprocessed.")
+            datasets_to_register = self.get_subdirectory_datasets(dir_path)
+
+        # Process and register the datasets
+        self.process_and_register_datasets(datasets_to_register, dir_path, description, dry_run)
+
+    def register_single_dataset(self, dataset_name: str, dataset_path: Path, description: str = None) -> None:
+        """
+        Register a single dataset as either Raw Data or Data Product based on dataset_type.
+        
+        :param dataset_name: Name of the dataset to register
+        :param dataset_path: Path to the dataset directory
+        :param description: Optional description for the dataset
+        """
+        if self.dataset_type == 'RAW_DATA':
+            register_raw_data(dataset_name, dataset_path, self.project_id, description)
+        else:
+            register_data_product(dataset_name, dataset_path, self.project_id, description)
 
     def get_matching_dataset(self, dataset_name: str) -> Dict | None:
         matching_datasets: List[Dict] = api.get_all_datasets(dataset_type=self.dataset_type,
@@ -311,47 +393,108 @@ def register_data_product(new_name: str,
     print(f"Registered: {new_name}")
 
 
+def register_raw_data(new_name: str,
+                      new_path: Path,
+                      project_id: str = None,
+                      description: str = None) -> None:
+    dataset_type = 'RAW_DATA'
+
+    print(f'Dataset type: {dataset_type}')
+    print(f'Dataset name: {new_name}')
+    print(f'Dataset path: {str(new_path)}')
+    if project_id:
+        print(f'Project ID: {project_id}')
+    if description:
+        print(f'Description: {description}')
+
+    if not new_path.exists():
+        print(f'{new_path} does not exist')
+        return
+
+    reg = RegistrationManager(dataset_type)
+    reg.register_candidate(new_name, str(new_path), project_id, description)
+    print(f"Registered: {new_name}")
+
+
+def register_dataset(dir_path: str,
+                    dataset_type: str = 'DATA_PRODUCT',
+                    project_id: str = None,
+                    description: str = None,
+                    prefix: str = None,
+                    suffix: str = None,
+                    ingest_parent_dir: bool = False,
+                    dry_run: bool = False) -> None:
+    """
+    Main function to register datasets with enhanced options.
+    
+    Args:
+        dir_path: Path to the directory containing subdirectories to process
+        dataset_type: Type of dataset to register ('DATA_PRODUCT' or 'RAW_DATA')
+        project_id: Optional project ID to associate with datasets
+        description: Optional description for datasets
+        prefix: Optional prefix for renamed directories
+        suffix: Optional suffix for renamed directories
+        ingest_parent_dir: Whether to ingest the parent directory instead of subdirectories (default: False)
+        dry_run: Whether to simulate the process without making changes (default: False)
+    """
+    
+    reg = Registration(
+        dataset_type=dataset_type,
+        path=dir_path,
+        project_id=project_id,
+        description=description,
+        prefix=prefix,
+        suffix=suffix,
+        ingest_parent_dir=ingest_parent_dir
+    )
+    
+    reg.register_dataset(dir_path, description, dry_run)
+
+
 """
 This script processes subdirectories within a given directory, renames them according to
-a specific format, and registers them as data products.
+a specific format, and registers them as data products or raw data.
 
 What it does:
-1. Processes all subdirectories within the specified DIR_PATH.
-2. Renames directories to the format: {PROJECT_NAME}-{DIR_NAME}-{SUBDIRECTORY_NAME}.
-3. Copies renamed directories to a new 'renamed_directories' folder.
-4. Registers each new directory as a Data Product via the register_ondemand script.
-5. Assigns a description to each registered dataset.
-6. Assigns a Project ID to each registered dataset.
+1. Processes all subdirectories within the specified DIR_PATH (or the parent directory itself).
+2. Optionally renames directories to the format: {PREFIX}-{DIR_NAME}-{SUFFIX}.
+3. Copies renamed directories to a new 'renamed_directories' folder (if renaming).
+4. Registers each new directory as a Data Product or Raw Data via the register_ondemand script.
+5. Optionally assigns a description to each registered dataset.
+6. Optionally assigns a Project ID to each registered dataset.
 
 Usage:
-python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH PROJECT_NAME
+python -m workers.scripts.rename_and_register_ondemand [OPTIONS] DIR_PATH
 
 Arguments:
 DIR_PATH: The path to the directory containing subdirectories to process.
-PROJECT_NAME: The name of the project to use in the new directory names.
 
 Options:
---dry-run: If set to True (default), the script simulates the process without making
-           any actual changes. Set to False to perform actual renaming and registration.
---project-id: The ID of the project to associate with the registered datasets.
---description: A description to add to each registered dataset.
+--dataset-type: Type of dataset to register ('DATA_PRODUCT' or 'RAW_DATA', default: 'DATA_PRODUCT')
+--project-id: Optional ID of the project to associate with the registered datasets.
+--description: Optional description to add to each registered dataset.
+--prefix: Optional prefix to add to renamed directory names.
+--suffix: Optional suffix to add to renamed directory names.
+--rename-directories: Whether to rename directories (default: True).
+--ingest-parent-dir: Whether to ingest the parent directory instead of subdirectories (default: False).
+--dry-run: Whether to simulate the process without making changes (default: False).
 
 Example usage:
 1. Dry run (simulate without changes):
    python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --description="Sample dataset description" --dry-run=True
 
-2. Actually process and register:
-   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --dry-run=True --project-id=abc123
+2. Actually process and register with project ID:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --project-id=abc123 --dry-run=False
+
+3. Register as raw data with custom prefix:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --dataset-type=RAW_DATA --prefix=myproject --dry-run=False
+
+4. Ingest parent directory instead of subdirectories:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --ingest-parent-dir=True --dry-run=False
+
+5. Register without renaming directories:
+   python -m workers.scripts.rename_and_register_ondemand /path/to/data_directory --rename-directories=False --dry-run=False
 """
-# todo:
-# 1. remove project_xyz - instead, associate with project_id from the command line argument
-# 2. add optional prefix and suffix to the new directory name (for both renamed subdirs and parent dir)
-# 2. make renaming of subdirs and parent dir optional
-# 3. just because a project_id is provided doesn't mean that all subdirs/base dir should be renamed
-# 4. make project_id and description optional
-# 5. option to ingesting subdirs or ingest parent dir
-# 6. default dry_run to False
-# 7. Enable registering raw data as well
 
 if __name__ == "__main__":
     fire.Fire(register_dataset)
