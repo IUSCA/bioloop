@@ -26,11 +26,15 @@ RabbitMQ serves as the message broker for Celery in Bioloop. Its uses include:
 
 ### Hierarchical Config
 
+#### Overrides
 - The default & dev config goes into `workers/config/common.py`
 - The overrides for production goes into `workers/config/production.py`
+- The overrides for Docker containers goes into `workers/config/docker.py`
+
 - Based on the environment variable APP_ENV, config from that file is imported and merged with the common config.
   - Add APP_ENV=production to `.env` file which load_dotenv reads or
   - directly set it as `export APP_ENV=production`.
+  - For Docker containers, set APP_ENV=docker in docker-compose.yml
 - In project files, import config as `from workers.config import config`
 - Imported config is a [DotMap](https://pypi.org/project/dotmap/) object, which supports both `config[]` and `config.`
   access.

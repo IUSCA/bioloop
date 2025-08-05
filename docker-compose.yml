@@ -55,6 +55,7 @@ services:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
       - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
+      - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
   init_data_dirs:
