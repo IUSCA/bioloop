@@ -57,11 +57,21 @@ services:
       - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
+  init_data_dirs:
+    build:
+      context: ./workers
+    environment:
+      - APP_ENV=docker
+    volumes:
+      - landing_volume:/opt/sca/data
+    command: ["bin/init_dirs.sh"]
+
   celery_worker:
     build:
       context: ./workers
     environment:
       - WORKER_TYPE=celery_worker
+      - APP_ENV=docker
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
       - db/queue/.env.default # For RabbitMQ connection settings
@@ -72,6 +82,8 @@ services:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
       api:
         condition: service_healthy
       mongo:
@@ -79,6 +91,31 @@ services:
       queue:
         condition: service_started
 
+
+  watch:
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=watch
+      - APP_ENV=docker
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
 
   # Rhythm_api containers
   queue:
