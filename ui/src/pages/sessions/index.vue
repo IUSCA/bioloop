@@ -39,7 +39,7 @@
           icon="add"
           class="px-1"
           color="success"
-          @click="showCreateModal = true"
+          @click="router.push('/sessions/new')"
         >
           Create Session
         </va-button>
@@ -132,11 +132,7 @@
       @reset="resetFilters"
     />
 
-    <!-- Create Modal -->
-    <create-session-modal
-      v-model="showCreateModal"
-      @created="handleSessionCreated"
-    />
+
 
     <!-- Edit Modal -->
     <edit-session-modal
@@ -148,7 +144,6 @@
 </template>
 
 <script setup>
-import CreateSessionModal from '@/components/sessions/CreateSessionModal.vue';
 import EditSessionModal from '@/components/sessions/EditSessionModal.vue';
 import SessionSearchFilters from '@/components/sessions/SessionSearchFilters.vue';
 import SessionSearchModal from '@/components/sessions/SessionSearchModal.vue';
@@ -165,7 +160,6 @@ const auth = useAuthStore();
 
 // Reactive state
 const showSearchModal = ref(false);
-const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const editingSession = ref(null);
 const inclusive_query = ref('');
@@ -361,10 +355,7 @@ const deleteSession = async (session) => {
   }
 };
 
-const handleSessionCreated = () => {
-  showCreateModal.value = false;
-  fetchSessions(); // Refresh the list
-};
+
 
 const handleSessionUpdated = () => {
   showEditModal.value = false;

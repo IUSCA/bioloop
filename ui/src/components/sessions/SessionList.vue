@@ -144,7 +144,6 @@ import { useSessionsStore } from '@/stores/sessions';
 import { useDebounceFn } from '@vueuse/core';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import CreateSessionModal from './CreateSessionModal.vue';
 import EditSessionModal from './EditSessionModal.vue';
 import SessionSearchFilters from './SessionSearchFilters.vue';
 import SessionSearchModal from './SessionSearchModal.vue';

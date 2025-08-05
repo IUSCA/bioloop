@@ -14,7 +14,7 @@
         <div>
           <h1 class="text-3xl font-bold">{{ session.title }}</h1>
           <p class="text-gray-600 mt-2">
-            Created by {{ session.user?.name || session.user?.username }} on {{ formatDate(session.created_at) }}
+            Created by {{ session.user?.name || session.user?.username }} on {{ date(session.created_at) }}
           </p>
         </div>
         
@@ -140,7 +140,7 @@
 
 <script setup>
 import EditSessionModal from '@/components/sessions/EditSessionModal.vue';
-import { formatDate } from '@/services/datetime';
+import { date } from '@/services/datetime';
 import { useAuthStore } from '@/stores/auth';
 import { useSessionsStore } from '@/stores/sessions';
 import { computed, onMounted, ref } from 'vue';
