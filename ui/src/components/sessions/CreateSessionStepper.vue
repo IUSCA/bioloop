@@ -56,7 +56,7 @@
                 selectable
               >
                 <template #cell(name)="{ value }">
-                  <div class="font-medium text-sm">{{ value }}</div>
+                  <div class=" text-sm">{{ value }}</div>
                     <!-- <div class="text-xs text-gray-500">{{ item.file_type }}</div> -->
                 </template>
 
@@ -145,54 +145,58 @@
       <template #step-content-2>
         <div class="flex flex-col gap-6">
           <div class="">
-            <h3 class="text-lg font-medium">Session Summary</h3>
             
-            <va-card class="summary-card">
-              <va-card-content>
-                <div class="va-table-responsive">
-                  <table class="va-table">
-                    <tbody>
-                      <tr>
-                        <td class="font-medium">Session Name</td>
-                        <td>{{ form.session_name || 'Not specified' }}</td>
-                      </tr>
-                      <tr>
-                        <td class="font-medium">Genome Type</td>
-                        <td>{{ form.genome_type ? genomeTypeOptions.find(opt => opt.id === form.genome_type)?.name : 'Not specified' }}</td>
-                      </tr>
-                      <tr>
-                        <td class="font-medium">Genome</td>
-                        <td>{{ form.genome || 'Not specified' }}</td>
-                      </tr>
-                      <tr>
-                        <td class="font-medium">Public Session</td>
-                        <td>{{ form.is_public ? 'Yes' : 'No' }}</td>
-                      </tr>
-                      <tr>
-                        <td class="font-medium">Selected Tracks</td>
-                        <td>{{ selectedTracksTableData.length }} track(s)</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Left Column: Session Details -->
+              <va-card class="summary-card">
+                <va-card-content>
+                  <h4 class="  mb-4">Session Details</h4>
+                  <div class="va-table-responsive">
+                    <table class="va-table">
+                      <tbody>
+                        <tr>
+                          <td class="">Session Name</td>
+                          <td>{{ form.session_name || 'Not specified' }}</td>
+                        </tr>
+                        <tr>
+                          <td class="">Genome Type</td>
+                          <td>{{ form.genome_type ? genomeTypeOptions.find(opt => opt.id === form.genome_type)?.name : 'Not specified' }}</td>
+                        </tr>
+                        <tr>
+                          <td class="">Genome</td>
+                          <td>{{ form.genome || 'Not specified' }}</td>
+                        </tr>
+                        <tr>
+                          <td class="">Public Session</td>
+                          <td>{{ form.is_public ? 'Yes' : 'No' }}</td>
+                        </tr>
 
-                <!-- Selected tracks preview -->
-                <div v-if="selectedTracksTableData.length > 0" class="mt-4">
-                  <h4 class="text-sm font-medium text-gray-700 mb-2">Track Details</h4>
-                  <div class="space-y-2">
+                      </tbody>
+                    </table>
+                  </div>
+                </va-card-content>
+              </va-card>
+
+              <!-- Right Column: Selected Tracks -->
+              <va-card class="summary-card">
+                <va-card-content>
+                  <h4 class="  mb-4">Selected Tracks</h4>
+                  <div v-if="selectedTracksTableData.length > 0" class="space-y-2">
                     <div
                       v-for="track in selectedTracksTableData"
                       :key="track.id"
-                      class="flex items-center space-x-3 p-2 bg-gray-50 rounded"
+                      class="flex items-center space-x-3 p-2"
                     >
-                      
                       <span class="text-sm">{{ track.name }}</span>
-                      <span class="text-xs text-gray-500">({{ track.file_type }})</span>
+                      <span class="text-xs ">({{ track.file_type }})</span>
                     </div>
                   </div>
-                </div>
-              </va-card-content>
-            </va-card>
+                  <div v-else class=" text-sm">
+                    No tracks selected
+                  </div>
+                </va-card-content>
+              </va-card>
+            </div>
           </div>
         </div>
       </template>
