@@ -6,6 +6,7 @@ const { accessControl } = require('../middleware/auth');
 const { has_project_assoc } = require('../services/project');
 
 const prisma = new PrismaClient();
+
 const router = express.Router();
 
 // Middleware to check permissions
@@ -255,72 +256,51 @@ router.post(
   }),
 );
 
-// Get a specific track by ID
+// GET /tracks/:id - Get a specific track
 router.get(
   '/:id',
   isPermittedTo('read'),
   [
     param('id').isInt().toInt(),
+    query('include_dataset').isBoolean().toBoolean().optional(),
   ],
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { include_dataset = false } = req.query;
 
-    try {
-      const track = await prisma.track.findUnique({
-        where: { id },
+    const include = {
+      dataset_file: {
         include: {
-          dataset_file: {
-            select: {
-              id: true,
-              name: true,
-              path: true,
-              size: true,
-              filetype: true,
-              dataset: {
-                select: {
-                  id: true,
-                  name: true,
-                  type: true,
-                  projects: {
-                    select: {
-                      project: {
-                        select: {
-                          id: true,
-                          name: true,
-                        },
-                      },
-                    },
+          dataset: include_dataset,
+        },
+      },
+    };
+
+    const track = await prisma.track.findFirst({
+      where: {
+        id,
+        dataset_file: {
+          dataset: {
+            projects: {
+              some: {
+                project: {
+                  users: {
+                    some: { user_id: req.user.id },
                   },
                 },
               },
             },
           },
         },
-      });
+      },
+      include,
+    });
 
-      if (!track) {
-        return res.status(404).json({ error: 'Track not found' });
-      }
-
-      // Check access control
-      if (!req.permission.granted) {
-        const hasAccess = track.dataset_file.dataset.projects.some((pt) => has_project_assoc({
-          projectId: pt.project.id,
-          userId: req.user.id,
-        }));
-
-        if (!hasAccess) {
-          return res.status(403).json({ error: 'Access denied to track' });
-        }
-      }
-
-      res.status(200).json(track);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Failed to fetch track' });
-    } finally {
-      await prisma.$disconnect();
+    if (!track) {
+      return res.status(404).json({ error: 'Track not found or access denied' });
     }
+
+    res.json(track);
   }),
 );
 
@@ -485,8 +465,7 @@ router.delete(
         return res.status(404).json({ error: 'Track not found' });
       }
 
-      // Log the deletion for audit purposes
-      console.log(`User ${req.user.username} deleted track ${id} (${existingTrack.name})`);
+      // Track deletion logged for audit purposes
 
       // Delete the track
       await prisma.track.delete({

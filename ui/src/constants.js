@@ -68,6 +68,12 @@ const exports = {
         test_id: "sidebar-tracks",
       },
       {
+        icon: "mdi-eye",
+        title: "Sessions",
+        path: "/sessions",
+        test_id: "sidebar-sessions",
+      },
+      {
         icon: "mdi-table-account",
         title: "User Management",
         path: "/users",

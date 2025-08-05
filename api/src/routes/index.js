@@ -24,5 +24,6 @@ router.use('/fs', require('./fs'));
 router.use('/uploads', require('./uploads'));
 router.use('/datasetUploads', require('./datasetUploads'));
 router.use('/tracks', require('./tracks') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/sessions', require('./sessions') /* #swagger.security = [{"BearerAuth": []}] */);
 
 module.exports = router;

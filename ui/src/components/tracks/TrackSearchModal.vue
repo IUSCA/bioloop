@@ -86,11 +86,6 @@
 <script setup>
 import config from '@/config';
 import constants from '@/constants';
-import { useTracksStore } from '@/stores/tracks';
-import { storeToRefs } from 'pinia';
-
-const store = useTracksStore();
-const { filters } = storeToRefs(store);
 
 const visible = ref(false);
 
@@ -134,11 +129,11 @@ const genomeValueOptions = computed(() => {
 // Initialize form with current filters
 const initializeForm = () => {
   form.value = {
-    name: filters.value.name || '',
-    project_id: filters.value.project_id || '',
-    file_type: filters.value.file_type || null,
-    genome_type: filters.value.genome_type || null,
-    genome_value: filters.value.genome_value || null,
+    name: '',
+    project_id: '',
+    file_type: null,
+    genome_type: null,
+    genome_value: null,
   };
 };
 
@@ -152,8 +147,8 @@ watch(visible, (newValue) => {
 const emit = defineEmits(['search']);
 
 function applyFilters() {
-  // Update store filters
-  store.filters = {
+  // Emit filters to parent component
+  const filters = {
     name: form.value.name || null,
     project_id: form.value.project_id || null,
     file_type: form.value.file_type,
@@ -162,7 +157,7 @@ function applyFilters() {
   };
 
   visible.value = false;
-  emit('search');
+  emit('search', filters);
 }
 
 function resetForm() {

@@ -5,7 +5,7 @@
       <!-- search bar -->
       <div class="flex-1" v-if="activeFilters.length === 0">
         <va-input
-          :model-value="params.inclusive_query"
+          :model-value="query.inclusive_query"
           class="w-full"
           placeholder="Search Tracks by name"
           outline
@@ -28,8 +28,11 @@
       <TrackSearchFilters
         v-if="activeFilters.length > 0"
         class="flex-none"
+        :filters="filters"
         @search="handleSearch"
         @open="searchModal.show()"
+        @remove-filter="removeFilter"
+        @clear-all="clearFilters"
       />
     </div>
 
@@ -114,34 +117,79 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
+import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import trackService from "@/services/track";
 import { useAuthStore } from "@/stores/auth";
 import { useTracksStore } from "@/stores/tracks";
-import { storeToRefs } from "pinia";
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
 useSearchKeyShortcut();
 
+const router = useRouter();
 const store = useTracksStore();
-const { filters, query, params, activeFilters } = storeToRefs(store);
-
 const auth = useAuthStore();
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
+// Reactive data
 const tracks = ref([]);
 const data_loading = ref(false);
 const total_results = ref(0);
 const searchModal = ref(null);
 
-// used for OFFSET clause in the SQL used to retrieve the next paginated batch
-// of results
+// Query parameters
+const query = ref({
+  page: 1,
+  page_size: 25,
+  sort_by: 'created_at',
+  sort_order: 'desc',
+});
+
+// Filters
+const filters = ref({
+  project_id: null,
+  file_type: null,
+  genome_type: null,
+  genome_value: null,
+  name: null,
+});
+
+// Default values function for query persistence
+const defaultParams = () => ({
+  page: 1,
+  page_size: 25,
+  sort_by: 'created_at',
+  sort_order: 'desc',
+});
+
+const defaultFilters = () => ({
+  project_id: null,
+  file_type: null,
+  genome_type: null,
+  genome_value: null,
+  name: null,
+});
+
+// Active filters computed
+const activeFilters = computed(() => {
+  const active = [];
+  Object.entries(filters.value).forEach(([key, value]) => {
+    if (value && value !== '') {
+      active.push({ key, value });
+    }
+  });
+  return active;
+});
+
+// Offset for pagination
 const offset = computed(() => (query.value.page - 1) * query.value.page_size);
 
+// Query persistence
 useQueryPersistence({
-  refObject: params,
-  defaultValueFn: store.defaultParams,
+  refObject: query,
+  defaultValueFn: defaultParams,
   key: "q",
   history_push: true,
 });
@@ -220,111 +268,80 @@ const columns = [
   },
 ];
 
-function fetch_items() {
+async function fetch_items() {
   data_loading.value = true;
-  const filters_api = {
-    ...filters.value,
-    ...(params.value.inclusive_query
-      ? { name: params.value.inclusive_query }
-      : null),
+  
+  try {
+    const params = {
+      ...filters.value,
+      ...(query.value.inclusive_query ? { name: query.value.inclusive_query } : {}),
+      limit: query.value.page_size,
+      offset: offset.value,
+      sort_by: query.value.sort_by,
+      sort_order: query.value.sort_order,
+    };
+
+    const response = await store.fetchTracks(params);
+    tracks.value = response.tracks;
+    total_results.value = response.metadata.count;
+  } catch (error) {
+    console.error('Error fetching tracks:', error);
+    toast.error('Failed to fetch tracks');
+  } finally {
+    data_loading.value = false;
+  }
+}
+
+function handleMainFilter(value) {
+  query.value.inclusive_query = value;
+  query.value.page = 1; // Reset to first page when searching
+}
+
+function handleSearch(searchFilters) {
+  filters.value = { ...searchFilters };
+  query.value.page = 1; // Reset to first page when filtering
+}
+
+function removeFilter(key) {
+  filters.value[key] = '';
+  query.value.page = 1; // Reset to first page when removing filter
+}
+
+function clearFilters() {
+  filters.value = {
+    project_id: null,
+    file_type: null,
+    genome_type: null,
+    genome_value: null,
+    name: null,
   };
-  if (filters_api.created_at) {
-    filters_api.created_at_start = filters_api.created_at.start;
-    filters_api.created_at_end = filters_api.created_at.end;
-    delete filters_api.created_at;
-  }
-  if (filters_api.updated_at) {
-    filters_api.updated_at_start = filters_api.updated_at.start;
-    filters_api.updated_at_end = filters_api.updated_at.end;
-    delete filters_api.updated_at;
-  }
-  trackService.getAll({
-    limit: query.value.page_size,
-    offset: offset.value,
-    sort_by: query.value.sort_by,
-    sort_order: query.value.sort_order,
-    ...filters_api,
-  })
-    .then((res) => {
-      tracks.value = res.data?.tracks || [];
-      total_results.value = res.data?.metadata?.count || 0;
-    })
-    .finally(() => {
-      data_loading.value = false;
-    });
+  query.value.page = 1; // Reset to first page when clearing filters
 }
 
-onMounted(() => {
-  fetch_items();
-});
-
-// when sort by or sort order changes, set current page to 1 and fetch items
-// when page size changes, set current page to 1 and fetch items
-watch(
-  [
-    () => query.value.sort_by,
-    () => query.value.sort_order,
-    () => query.value.page_size,
-  ],
-  () => {
-    if (query.value.page === 1) {
-      fetch_items();
-    } else {
-      // change current page to 1 triggers the watch on currPage and fetches
-      // items
-      query.value.page = 1;
-    }
-  },
-);
-
-// when page changes, fetch items
-watch(() => query.value.page, fetch_items);
-
-// inclusive_query is changed from multiple locations, do not watch it directly
-// instead rely on VaInput's update:model-value event to fetch items
-const handleMainFilter = useDebounceFn((value) => {
-  params.value.inclusive_query = value;
-  if (query.value.page === 1) {
-    fetch_items();
-  } else {
-    // change current page to 1 triggers the watch on currPage and fetches items
-    query.value.page = 1;
-  }
-}, 300);
-
-function handleSearch() {
-  // clear the search input when search is emitted either from filter chips or
-  // from search modal
-  params.value.inclusive_query = null;
-  if (query.value.page === 1) {
-    fetch_items();
-  } else {
-    // change current page to 1 triggers the watch on currPage and fetches items
-    query.value.page = 1;
-  }
-}
-
-function viewTrack(track) {
-  // TODO: Implement track viewer/genome browser integration
-  console.log('View track:', track);
-}
-
-async function deleteTrack(trackId) {
-  // Check if user has admin/operator role
-  if (!auth.canOperate) {
-    toast.error('Admin/operator access required');
-    return;
-  }
-
+async function deleteTrack(id) {
   if (confirm('Are you sure you want to delete this track?')) {
     try {
-      await store.deleteTrack(trackId);
+      await store.deleteTrack(id);
       toast.success('Track deleted successfully');
-      fetch_items();
-    } catch (err) {
-      console.error('Failed to delete track:', err);
+      await fetch_items(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting track:', error);
       toast.error('Failed to delete track');
     }
   }
 }
+
+function viewTrack(track) {
+  router.push(`/tracks/${track.id}`);
+}
+
+// Watch for changes in query and filters
+watch([query, filters], () => {
+  fetch_items();
+}, { deep: true });
+
+// Initial load
+onMounted(() => {
+  fetch_items();
+});
 </script> 

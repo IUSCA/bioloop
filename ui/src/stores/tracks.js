@@ -1,213 +1,143 @@
-import trackService from "@/services/track";
-import { mapValues } from "@/services/utils";
-import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import api from '@/services/api'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
-export const useTracksStore = defineStore("tracks", () => {
+export const useTracksStore = defineStore('tracks', () => {
   // State
-  const tracks = ref([]);
-  const currentTrack = ref(null);
-  const loading = ref(false);
-  const error = ref(null);
+  const tracks = ref([])
+  const currentTrack = ref(null)
+  const loading = ref(false)
+  const error = ref(null)
+  const metadata = ref({
+    count: 0,
+    limit: 25,
+    offset: 0,
+    sort_by: 'created_at',
+    sort_order: 'desc',
+  })
 
-  function defaultFilters() {
-    return {
-      project_id: null,
-      file_type: null,
-      genome_type: null,
-      genome_value: null,
-      name: null,
-    };
-  }
-
-  function defaultQuery() {
-    return {
-      page: 1,
-      page_size: 25,
-      sort_by: "created_at",
-      sort_order: "desc",
-    };
-  }
-
-  function defaultParams() {
-    return {
-      filters: defaultFilters(),
-      query: defaultQuery(),
-      inclusive_query: null,
-    };
-  }
-
-  const params = ref({
-    filters: defaultFilters(),
-    query: defaultQuery(),
-    inclusive_query: null,
-  });
-
-  const filters = computed({
-    get: () => params.value.filters,
-    set: (newFilters) => {
-      params.value.filters = newFilters;
-    },
-  });
-
-  const query = computed({
-    get: () => params.value.query,
-    set: (newQuery) => {
-      params.value.query = newQuery;
-    },
-  });
-
-  // Computed
-  const filterStatus = computed(() => {
-    const defaults = defaultFilters();
-    return mapValues(
-      params.value.filters,
-      (key, value) => value !== defaults[key],
-    );
-  });
-
-  const activeFilters = computed(() => {
-    return Object.keys(filterStatus.value).filter(
-      (key) => filterStatus.value[key],
-    );
-  });
+  // Getters
+  const getTracks = computed(() => tracks.value)
+  const getCurrentTrack = computed(() => currentTrack.value)
+  const isLoading = computed(() => loading.value)
+  const getError = computed(() => error.value)
+  const getMetadata = computed(() => metadata.value)
 
   // Actions
-  async function fetchTracks() {
-    loading.value = true;
-    error.value = null;
+  const fetchTracks = async (params = {}) => {
+    loading.value = true
+    error.value = null
     
     try {
-      const filters_api = {
-        ...params.value.filters,
-        ...(params.value.inclusive_query
-          ? { name: params.value.inclusive_query }
-          : null),
-      };
-
-      const offset = (params.value.query.page - 1) * params.value.query.page_size;
-      
-      const response = await trackService.getAll({
-        ...filters_api,
-        limit: params.value.query.page_size,
-        offset: offset,
-        sort_by: params.value.query.sort_by,
-        sort_order: params.value.query.sort_order,
-      });
-      
-      tracks.value = response.data.tracks;
-      return response.data;
+      const response = await api.get('/tracks', { params })
+      tracks.value = response.data.tracks
+      metadata.value = response.data.metadata
+      return response.data
     } catch (err) {
-      error.value = err.message || 'Failed to fetch tracks';
-      throw err;
+      error.value = err.response?.data?.error || 'Failed to fetch tracks'
+      throw err
     } finally {
-      loading.value = false;
+      loading.value = false
     }
   }
 
-  async function fetchTrack(id) {
-    loading.value = true;
-    error.value = null;
+  const fetchTrack = async (id) => {
+    loading.value = true
+    error.value = null
     
     try {
-      const response = await trackService.getById(id);
-      currentTrack.value = response.data;
-      return response.data;
+      const response = await api.get(`/tracks/${id}`)
+      currentTrack.value = response.data
+      return response.data
     } catch (err) {
-      error.value = err.message || 'Failed to fetch track';
-      throw err;
+      error.value = err.response?.data?.error || 'Failed to fetch track'
+      throw err
     } finally {
-      loading.value = false;
+      loading.value = false
     }
   }
 
-  async function createTrack(trackData) {
-    loading.value = true;
-    error.value = null;
+  const createTrack = async (trackData) => {
+    loading.value = true
+    error.value = null
     
     try {
-      const response = await trackService.create(trackData);
-      tracks.value.unshift(response.data);
-      return response.data;
-    } catch (err) {
-      error.value = err.message || 'Failed to create track';
-      throw err;
-    } finally {
-      loading.value = false;
-    }
-  }
-
-  async function updateTrack(id, trackData) {
-    loading.value = true;
-    error.value = null;
-    
-    try {
-      const response = await trackService.update(id, trackData);
+      const response = await api.post('/tracks', trackData)
+      const newTrack = response.data
       
-      // Update in tracks array
-      const index = tracks.value.findIndex(track => track.id === id);
+      // Add to tracks list
+      tracks.value.unshift(newTrack)
+      metadata.value.count += 1
+      
+      return newTrack
+    } catch (err) {
+      error.value = err.response?.data?.error || 'Failed to create track'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const updateTrack = async (id, trackData) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await api.patch(`/tracks/${id}`, trackData)
+      const updatedTrack = response.data
+      
+      // Update in tracks list
+      const index = tracks.value.findIndex(t => t.id === id)
       if (index !== -1) {
-        tracks.value[index] = response.data;
+        tracks.value[index] = updatedTrack
       }
       
       // Update current track if it's the one being updated
-      if (currentTrack.value && currentTrack.value.id === id) {
-        currentTrack.value = response.data;
+      if (currentTrack.value?.id === id) {
+        currentTrack.value = updatedTrack
       }
       
-      return response.data;
+      return updatedTrack
     } catch (err) {
-      error.value = err.message || 'Failed to update track';
-      throw err;
+      error.value = err.response?.data?.error || 'Failed to update track'
+      throw err
     } finally {
-      loading.value = false;
+      loading.value = false
     }
   }
 
-  async function deleteTrack(id) {
-    loading.value = true;
-    error.value = null;
+  const deleteTrack = async (id) => {
+    loading.value = true
+    error.value = null
     
     try {
-      await trackService.delete(id);
+      await api.delete(`/tracks/${id}`)
       
-      // Remove from tracks array
-      const index = tracks.value.findIndex(track => track.id === id);
+      // Remove from tracks list
+      const index = tracks.value.findIndex(t => t.id === id)
       if (index !== -1) {
-        tracks.value.splice(index, 1);
+        tracks.value.splice(index, 1)
+        metadata.value.count -= 1
       }
       
       // Clear current track if it's the one being deleted
-      if (currentTrack.value && currentTrack.value.id === id) {
-        currentTrack.value = null;
+      if (currentTrack.value?.id === id) {
+        currentTrack.value = null
       }
     } catch (err) {
-      error.value = err.message || 'Failed to delete track';
-      throw err;
+      error.value = err.response?.data?.error || 'Failed to delete track'
+      throw err
     } finally {
-      loading.value = false;
+      loading.value = false
     }
   }
 
-  function resetFilters() {
-    params.value.filters = defaultFilters();
+  const clearError = () => {
+    error.value = null
   }
 
-  function resetQuery() {
-    params.value.query = defaultQuery();
-  }
-
-  function resetFilterByKey(key) {
-    const defaults = defaultFilters();
-    params.value.filters[key] = defaults[key];
-  }
-
-  function reset() {
-    resetFilters();
-    resetQuery();
-    tracks.value = [];
-    currentTrack.value = null;
-    error.value = null;
+  const clearCurrentTrack = () => {
+    currentTrack.value = null
   }
 
   return {
@@ -216,13 +146,14 @@ export const useTracksStore = defineStore("tracks", () => {
     currentTrack,
     loading,
     error,
-    params,
+    metadata,
     
-    // Computed
-    filters,
-    query,
-    filterStatus,
-    activeFilters,
+    // Getters
+    getTracks,
+    getCurrentTrack,
+    isLoading,
+    getError,
+    getMetadata,
     
     // Actions
     fetchTracks,
@@ -230,14 +161,7 @@ export const useTracksStore = defineStore("tracks", () => {
     createTrack,
     updateTrack,
     deleteTrack,
-    reset,
-    resetFilters,
-    resetQuery,
-    resetFilterByKey,
-    
-    // Defaults
-    defaultFilters,
-    defaultQuery,
-    defaultParams,
-  };
-});
+    clearError,
+    clearCurrentTrack,
+  }
+})

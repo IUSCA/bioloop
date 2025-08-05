@@ -5,9 +5,9 @@
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.name"
+      v-if="filters.name"
       @click="emit('open')"
-      @update:model-value="reset('name')"
+      @update:model-value="removeFilter('name')"
     >
       Name: &nbsp;
       <span class="font-semibold"> {{ filters.name }} </span>
@@ -18,9 +18,9 @@
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.project_id"
+      v-if="filters.project_id"
       @click="emit('open')"
-      @update:model-value="reset('project_id')"
+      @update:model-value="removeFilter('project_id')"
     >
       Project ID: &nbsp;
       <span class="font-semibold"> {{ filters.project_id }} </span>
@@ -31,9 +31,9 @@
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.file_type"
+      v-if="filters.file_type"
       @click="emit('open')"
-      @update:model-value="reset('file_type')"
+      @update:model-value="removeFilter('file_type')"
     >
       File Type: &nbsp;
       <span class="font-semibold"> {{ filters.file_type }} </span>
@@ -44,9 +44,9 @@
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.genome_type"
+      v-if="filters.genome_type"
       @click="emit('open')"
-      @update:model-value="reset('genome_type')"
+      @update:model-value="removeFilter('genome_type')"
     >
       Genome Type: &nbsp;
       <span class="font-semibold"> {{ filters.genome_type }} </span>
@@ -57,9 +57,9 @@
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.genome_value"
+      v-if="filters.genome_value"
       @click="emit('open')"
-      @update:model-value="reset('genome_value')"
+      @update:model-value="removeFilter('genome_value')"
     >
       Genome Value: &nbsp;
       <span class="font-semibold"> {{ filters.genome_value }} </span>
@@ -67,11 +67,11 @@
 
     <!-- reset search -->
     <va-button
-      @click="resetSearch"
+      @click="clearAll"
       preset="secondary"
       round
       class="flex-none ml-auto"
-      v-if="activeFilters.length > 0"
+      v-if="hasActiveFilters"
     >
       <span class="text-sm"> Reset </span>
     </va-button>
@@ -79,22 +79,35 @@
 </template>
 
 <script setup>
-import { useTracksStore } from "@/stores/tracks";
-import { storeToRefs } from "pinia";
+import { computed } from 'vue';
 
-const store = useTracksStore();
-const { filters, filterStatus, activeFilters } = storeToRefs(store);
+const props = defineProps({
+  filters: {
+    type: Object,
+    required: true,
+    default: () => ({
+      name: '',
+      project_id: '',
+      file_type: null,
+      genome_type: null,
+      genome_value: null,
+    }),
+  },
+});
 
-const emit = defineEmits(["search", "open"]);
+const emit = defineEmits(["search", "open", "remove-filter", "clear-all"]);
 
-// reset a single filter
-function reset(field) {
-  store.resetFilterByKey(field);
-  emit("search");
+// Computed
+const hasActiveFilters = computed(() => {
+  return Object.values(props.filters).some(value => value && value !== '');
+});
+
+// Methods
+function removeFilter(field) {
+  emit('remove-filter', field);
 }
 
-function resetSearch() {
-  store.resetFilters();
-  emit("search");
+function clearAll() {
+  emit('clear-all');
 }
 </script> 
