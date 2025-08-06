@@ -21,6 +21,3 @@ COPY . /opt/sca/app
 
 # Set the entrypoint
 # ENTRYPOINT ["bin/entrypoint.sh"]
-
-# Default command to run
-CMD ["workers/scripts/start_worker.sh"]

@@ -82,6 +82,7 @@ services:
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
       init_data_dirs:
         condition: service_completed_successfully
@@ -108,6 +109,7 @@ services:
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
       init_data_dirs:
         condition: service_completed_successfully

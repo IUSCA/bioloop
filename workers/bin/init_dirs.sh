@@ -9,16 +9,6 @@ set -e
 #   This script creates the required directory structure for the Bioloop
 #   data processing pipeline inside the Docker-managed landing_volume.
 #
-# Why These Directories Are Needed:
-#   The Bioloop system processes scientific datasets through a multi-stage pipeline:
-#   1. Datasets arrive in origin/ directories and are detected by the watch script
-#   2. Datasets are staged for processing and validation
-#   3. Processed datasets are archived by year for long-term storage
-#   4. Bundles are created for distribution and sharing
-#   5. Quality control ensures data integrity
-#   6. Downloads provide user access to processed data
-#   7. Scratch space handles temporary processing files
-#
 # Usage:
 #   This script is automatically executed by the init_data_dirs container
 #   during docker-compose startup to ensure all required directories exist
@@ -45,19 +35,6 @@ set -e
 #   ├── downloads/                # User-accessible download area
 #   └── scratch/                  # Temporary files and working directories
 #
-# Data Flow:
-#   origin/ → staged/ → archive/ (with bundles created for distribution)
-#   qc/ validates data at various stages
-#   downloads/ provides user access to final processed data
-#   scratch/ handles temporary processing files
-#
-# Dependencies:
-#   - Must be run inside a container with /opt/sca/data mounted
-#   - Requires write permissions to /opt/sca/data
-#
-# Idempotent:
-#   This script is safe to run multiple times - existing directories
-#   are detected and logged but not recreated.
 # =============================================================================
 
 echo "Initializing directory structure in /opt/sca/data..."
@@ -74,7 +51,7 @@ create_dir() {
     fi
 }
 
-# Create all directories required by the Bioloop workers framework
+# Create all directories required by the Bioloop worker framework
 
 # Origin directories - where new Datasets are picked up from
 create_dir "/opt/sca/data/origin/raw_data"        # RAW_DATA source directory
@@ -102,4 +79,4 @@ create_dir "/opt/sca/data/uploads"                # Temporary upload directory
 
 create_dir "/opt/sca/data/scratch"                # Temporary files and working directories
 
-echo "Directory structure initialization completed!" 
+echo "Directory structure initialization completed!"
