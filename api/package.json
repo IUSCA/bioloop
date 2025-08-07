@@ -7,7 +7,7 @@
     "node": ">=18.12.0"
   },
   "scripts": {
-    "start": "nodemon --ignore 'tests/**/*.js' src/index.js",
+    "dev": "nodemon --ignore 'tests/**/*.js' src/index.js",
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",

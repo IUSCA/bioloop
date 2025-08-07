@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
