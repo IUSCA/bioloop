@@ -7,6 +7,8 @@ import hashlib
 from typing import List, Tuple, Dict, Optional
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 
 from workers.scripts.register_dataset import RegistrationManager
 import workers.api as api
@@ -14,6 +16,7 @@ import workers.api as api
 CHECK_INTERVAL = 60  # 60 seconds
 
 RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME = "renamed_subdirectories"
+MAX_WORKERS = 4  # Limit concurrent operations to avoid overwhelming system
 
 
 class Registration:
@@ -24,7 +27,8 @@ class Registration:
                  description: str = None,
                  prefix: str = None,
                  suffix: str = None,
-                 ingest_parent_dir: bool = False):
+                 ingest_parent_dir: bool = False,
+                 max_workers: int = MAX_WORKERS):
         self.dataset_type = dataset_type
         self.path = path
         self.description = description
@@ -32,7 +36,9 @@ class Registration:
         self.prefix = prefix
         self.suffix = suffix
         self.ingest_parent_dir = ingest_parent_dir
+        self.max_workers = max_workers
         self.project = None
+        self._lock = threading.Lock()  # For thread-safe operations
 
         if self.project_id:
             self.project = api.get_project(project_id=self.project_id)
@@ -54,151 +60,232 @@ class Registration:
                 return False
         return True
 
-    def get_parent_directory_dataset(self, dir_path: str, description: str = None) -> List[Tuple[str, Path]]:
+    def should_process_candidate(self, candidate_name: str) -> bool:
         """
-        Get list of datasets to register when ingesting parent directory.
+        Check if a candidate should be processed (idempotence check).
+        Returns True if the candidate needs processing, False if already done.
+        """
+        # If already registered, skip
+        if self.is_dataset_registered(dataset_name=candidate_name):
+            print(f"Candidate {candidate_name} is already registered, skipping...")
+            return False
+        
+        # If currently registering, skip (let it finish)
+        if self.is_dataset_registering(dataset_name=candidate_name):
+            print(f"Candidate {candidate_name} is currently being registered, skipping...")
+            return False
+        
+        return True
+
+    def prepare_candidate_directory(self, original_path: Path, new_name: str, 
+                                  renamed_parent_dir: Path) -> Optional[Path]:
+        """
+        Prepare a candidate directory for registration using hard links to save space.
+        Returns the path to the prepared directory, or None if should be skipped.
+        """
+        new_dir_path = renamed_parent_dir / new_name
+        
+        # Check if we should process this candidate
+        if not self.should_process_candidate(new_name):
+            return None
+        
+        # If the new directory exists but candidate is not registered/registering, delete and recreate
+        if new_dir_path.exists():
+            print(f"New directory {new_name} exists but not registered, deleting and recreating...")
+            shutil.rmtree(path=new_dir_path, ignore_errors=True)
+            print(f"Deleted existing directory: {new_dir_path}")
+        
+        # Create the new directory using hard links to save space
+        print(f"Creating new directory with hard links: {original_path} -> {new_dir_path}")
+        self.create_hardlinked_directory(original_path, new_dir_path)
+        print(f"Successfully created with hard links: {new_dir_path}")
+        
+        return new_dir_path
+
+    def create_hardlinked_directory(self, src_path: Path, dst_path: Path) -> None:
+        """
+        Create a hard-linked copy of a directory structure.
+        This saves space by creating hard links instead of copying files.
+        """
+        # Create the destination directory
+        dst_path.mkdir(parents=True, exist_ok=True)
+        
+        # Walk through the source directory and create hard links
+        for root, dirs, files in os.walk(src_path):
+            # Calculate the relative path from source
+            rel_path = Path(root).relative_to(src_path)
+            dst_root = dst_path / rel_path
+            
+            # Create subdirectories
+            for dir_name in dirs:
+                (dst_root / dir_name).mkdir(exist_ok=True)
+            
+            # Create hard links for files
+            for file_name in files:
+                src_file = Path(root) / file_name
+                dst_file = dst_root / file_name
+                
+                try:
+                    # Create hard link (this will fail if dst_file already exists)
+                    os.link(src_file, dst_file)
+                except FileExistsError:
+                    # File already exists, skip it
+                    print(f"Hard link already exists for: {dst_file}")
+                except OSError as e:
+                    # If hard link fails (e.g., cross-device), fall back to copy
+                    print(f"Hard link failed for {src_file}, falling back to copy: {e}")
+                    shutil.copy2(src_file, dst_file)
+
+    def process_single_candidate(self, candidate_tuple: Tuple[str, Path], 
+                               renamed_parent_dir: Path, description: str) -> bool:
+        """
+        Process a single candidate (copy and register).
+        Returns True if successful, False otherwise.
+        """
+        candidate_name, original_path = candidate_tuple
+        
+        try:
+            # Prepare the directory
+            prepared_path = self.prepare_candidate_directory(original_path, candidate_name, renamed_parent_dir)
+            if prepared_path is None:
+                return True  # Skipped, but not an error
+            
+            # Register the dataset
+            print(f"Registering candidate: {candidate_name}")
+            self.register_single_dataset(candidate_name, prepared_path, description)
+            print(f"Successfully registered: {candidate_name}")
+            return True
+            
+        except Exception as e:
+            print(f"Error processing candidate {candidate_name}: {e}")
+            traceback.print_exc()
+            
+            # Clean up on failure
+            if prepared_path and prepared_path.exists():
+                shutil.rmtree(path=prepared_path, ignore_errors=True)
+                print(f"Cleaned up failed directory: {prepared_path}")
+            
+            return False
+
+    def get_eligible_candidates(self, dir_path: str) -> List[Tuple[str, Path]]:
+        """
+        Get list of eligible candidates to register based on ingest mode.
         
         Returns:
-            List of tuples containing (dataset_name, dataset_path)
+            List of tuples containing (dataset_name, original_path)
         """
         directory_path: Path = Path(dir_path)
         directory_name: str = directory_path.name
         
-        parent_new_name = generate_dataset_new_name(
-            prefix=self.prefix,
-            suffix=self.suffix,
-            dataset_name=directory_name,
-        )
-        
-        return [(parent_new_name, directory_path)]
+        if self.ingest_parent_dir:
+            # Return parent directory as single candidate
+            parent_dir_new_name = generate_dataset_new_name(
+                prefix=self.prefix,
+                suffix=self.suffix,
+                dataset_name=directory_name,
+            )
+            return [(parent_dir_new_name, directory_path)]
+        else:
+            # Return subdirectories as candidates
+            candidates = []
 
-    def get_subdirectory_datasets(self, dir_path: str) -> List[Tuple[str, Path]]:
-        """
-        Get list of datasets to register when ingesting subdirectories.
-        
-        Returns:
-            List of tuples containing (dataset_name, dataset_path)
-        """
-        directory_path: Path = Path(dir_path)
-        renamed_subdirectories_parent_dir: Path = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
-        datasets_to_register = []
-
-        for subdirectory in directory_path.iterdir():
-            if not subdirectory.is_dir():
-                print(f"Skipping non-directory file {str(subdirectory)}")
-                continue
-            elif subdirectory.name == RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME:
-                print(f"Skipping renamed-subdirectories' parent directory {str(subdirectory)}")
-                continue
-
-            # Generate new name based on whether prefix or suffix is provided
-            if self.prefix or self.suffix:
-                subdirectory_new_name: str = generate_dataset_new_name(
-                    prefix=self.prefix,
-                    suffix=self.suffix,
-                    dataset_name=subdirectory.name,
-                )
-                renamed_subdirectory: Path = renamed_subdirectories_parent_dir / subdirectory_new_name
-            else:
-                subdirectory_new_name: str = subdirectory.name
-                renamed_subdirectory: Path = renamed_subdirectories_parent_dir / subdirectory_new_name
-
-            print(f"Processing subdirectory: {str(subdirectory.name)}")
-            print(f"Original subdirectory path: {str(subdirectory)}")
-            print(f"Renamed subdirectory path: {str(renamed_subdirectory)}")
-
-            if self.is_dataset_registered(dataset_name=renamed_subdirectory.name):
-                print(
-                    f"Renamed subdirectory {renamed_subdirectory.name} is already registered as a {self.dataset_type}")
-                print("Moving on to the next subdirectory")
-                continue
-            elif self.is_dataset_registering(dataset_name=renamed_subdirectory.name):
-                print(
-                    f"Renamed subdirectory {renamed_subdirectory.name} is currently being registered")
-
-            if renamed_subdirectory.exists():
-                print(f"Renamed subdirectory {renamed_subdirectory.name} already exists")
-                if self.is_dataset_registered(dataset_name=renamed_subdirectory.name):
-                    print(
-                        f"Renamed subdirectory {renamed_subdirectory.name} is already registered as a {self.dataset_type}")
-                    print("Moving on to the next subdirectory")
+            for subdirectory in directory_path.iterdir():
+                if not subdirectory.is_dir():
+                    print(f"Skipping non-directory file {str(subdirectory)}")
                     continue
+                elif subdirectory.name == RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME:
+                    print(f"Skipping renamed-subdirectories' parent directory {str(subdirectory)}")
+                    continue
+
+                # Generate new name based on whether prefix or suffix is provided
+                if self.prefix or self.suffix:
+                    subdirectory_new_name: str = generate_dataset_new_name(
+                        prefix=self.prefix,
+                        suffix=self.suffix,
+                        dataset_name=subdirectory.name,
+                    )
                 else:
-                    print(
-                        f"Renamed subdirectory {renamed_subdirectory.name} is not registered")
-                    # Delete the subdirectory that is renamed but not registered, since this
-                    # could potentially be an incomplete or corrupted renamed subdirectory
-                    # from a previous run.
-                    print(
-                        f"Deleting {renamed_subdirectory.name} to avoid using a possibly corrupted subdirectory generated by a previous run")
-                    shutil.rmtree(path=renamed_subdirectory)
-                    print(
-                        f"Deleted renamed subdirectory {renamed_subdirectory}")
-            elif self.is_dataset_registered(dataset_name=renamed_subdirectory.name):
-                # If the renamed subdirectory does not exist, but a Dataset with the same name already exists,
-                # this means that the subdirectory was successfully registered by a previous run, and then deleted.
-                print(f"Renamed subdirectory {renamed_subdirectory.name} does not exist")
-                print(
-                    f"Renamed subdirectory {renamed_subdirectory.name} is already registered as a {self.dataset_type}.")
-                print(f"Moving on to the next subdirectory")
-                continue
+                    subdirectory_new_name: str = subdirectory.name
 
-            # Copy the subdirectory to the renamed location
-            shutil.copytree(subdirectory, renamed_subdirectory)
-            print(f"Copied and renamed: {subdirectory.name} -> {renamed_subdirectory.name}")
-            
-            datasets_to_register.append((renamed_subdirectory.name, renamed_subdirectory))
+                print(f"Found candidate: {subdirectory.name} -> {subdirectory_new_name}")
+                candidates.append((subdirectory_new_name, subdirectory))
 
-        return datasets_to_register
+            return candidates
 
-    def process_and_register_datasets(self, datasets_to_register: List[Tuple[str, Path]], 
+    def process_and_register_datasets(self, candidates: List[Tuple[str, Path]], 
                                     dir_path: str, description: str = None, dry_run: bool = False) -> None:
         """
-        Process and register a list of datasets.
+        Process and register a list of datasets with parallelization.
         
         Args:
-            datasets_to_register: List of tuples containing (dataset_name, dataset_path)
+            candidates: List of tuples containing (dataset_name, original_path)
             dir_path: Original directory path for cleanup purposes
             description: Optional description for datasets
             dry_run: Whether to simulate the process without making changes
         """
         if dry_run:
-            print(f"Dry run: Would register {len(datasets_to_register)} datasets")
-            for dataset_name, dataset_path in datasets_to_register:
-                print(f"  - {dataset_name} from {dataset_path}")
+            print(f"Dry run: Would register {len(candidates)} datasets")
+            for dataset_name, original_path in candidates:
+                print(f"  - {dataset_name} from {original_path}")
             return
 
-        # Register all datasets
-        for dataset_name, dataset_path in datasets_to_register:
-            try:
-                print(f"Registering: {dataset_name}")
-                self.register_single_dataset(dataset_name, dataset_path, description)
-            except Exception as e:
-                print(f"Error occurred during registration of {dataset_name}: {e}")
-                traceback.print_exc()
-                # Clean up renamed directory if it was created
-                if (self.prefix or self.suffix) and not self.ingest_parent_dir:
-                    directory_path = Path(dir_path)
-                    renamed_subdirectories_parent_dir = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
-                    renamed_subdirectory = renamed_subdirectories_parent_dir / dataset_name
-                    if renamed_subdirectory.exists():
-                        shutil.rmtree(path=renamed_subdirectory, ignore_errors=True)
-                        print(f"Deleted renamed directory due to registration failure: {renamed_subdirectory}")
+        # Filter candidates that need processing (idempotence)
+        candidates_to_process = []
+        for candidate_name, original_path in candidates:
+            if self.should_process_candidate(candidate_name):
+                candidates_to_process.append((candidate_name, original_path))
+            else:
+                print(f"Skipping already processed candidate: {candidate_name}")
 
-        print("Processing and registration complete.")
+        if not candidates_to_process:
+            print("No candidates need processing - all are already registered or being processed.")
+            return
+
+        print(f"Processing {len(candidates_to_process)} candidates...")
+
+        # Prepare the renamed parent directory
+        directory_path = Path(dir_path)
+        renamed_parent_dir = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
+        renamed_parent_dir.mkdir(exist_ok=True)
+
+        # Process candidates in parallel
+        successful_count = 0
+        failed_count = 0
+        
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Submit all tasks
+            future_to_candidate = {
+                executor.submit(self.process_single_candidate, candidate, renamed_parent_dir, description): candidate
+                for candidate in candidates_to_process
+            }
+            
+            # Process completed tasks
+            for future in as_completed(future_to_candidate):
+                candidate_name, _ = future_to_candidate[future]
+                try:
+                    success = future.result()
+                    if success:
+                        successful_count += 1
+                        print(f"✓ Completed: {candidate_name}")
+                    else:
+                        failed_count += 1
+                        print(f"✗ Failed: {candidate_name}")
+                except Exception as e:
+                    failed_count += 1
+                    print(f"✗ Exception for {candidate_name}: {e}")
+
+        print(f"Processing complete. Successful: {successful_count}, Failed: {failed_count}")
 
         # Clean up renamed_subdirectories folder if processing subdirectories
         if not self.ingest_parent_dir:
-            directory_path = Path(dir_path)
             print("Checking if all subdirectories have been processed and registered...")
             if self.all_subdirectories_processed(directory_path):
                 print("All subdirectories processed and registered.")
                 # Once all subdirectories have been successfully processed,
                 # delete the `renamed_subdirectories` directory
-                renamed_subdirectories_parent_dir = directory_path / RENAMED_SUBDIRECTORIES_PARENT_DIR_NAME
-                if renamed_subdirectories_parent_dir.exists():
-                    shutil.rmtree(path=renamed_subdirectories_parent_dir)
-                    print(f"Deleted renamed subdirectories' parent directory: {renamed_subdirectories_parent_dir}")
+                if renamed_parent_dir.exists():
+                    shutil.rmtree(path=renamed_parent_dir)
+                    print(f"Deleted renamed subdirectories' parent directory: {renamed_parent_dir}")
                 print("All subdirectories processed.")
             else:
                 print("Some subdirectories are still unprocessed.")
@@ -219,14 +306,11 @@ class Registration:
         directory_name: str = directory_path.name
         print(f"Processing {str(directory_name)}")
 
-        # Get list of datasets to register based on ingest mode
-        if self.ingest_parent_dir:
-            datasets_to_register = self.get_parent_directory_dataset(dir_path, description)
-        else:
-            datasets_to_register = self.get_subdirectory_datasets(dir_path)
+        # Get eligible candidates based on ingest mode
+        candidates = self.get_eligible_candidates(dir_path)
 
-        # Process and register the datasets
-        self.process_and_register_datasets(datasets_to_register, dir_path, description, dry_run)
+        # Process and register the candidates
+        self.process_and_register_datasets(candidates, dir_path, description, dry_run)
 
     def register_single_dataset(self, dataset_name: str, dataset_path: Path, description: str = None) -> None:
         """
@@ -423,7 +507,8 @@ def register_dataset(dir_path: str,
                     prefix: str = None,
                     suffix: str = None,
                     ingest_parent_dir: bool = False,
-                    dry_run: bool = False) -> None:
+                    dry_run: bool = False,
+                    max_workers: int = MAX_WORKERS) -> None:
     """
     Main function to register datasets with enhanced options.
     
@@ -436,6 +521,7 @@ def register_dataset(dir_path: str,
         suffix: Optional suffix for renamed directories
         ingest_parent_dir: Whether to ingest the parent directory instead of subdirectories (default: False)
         dry_run: Whether to simulate the process without making changes (default: False)
+        max_workers: Maximum number of concurrent operations (default: 4)
     """
     
     reg = Registration(
@@ -445,7 +531,8 @@ def register_dataset(dir_path: str,
         description=description,
         prefix=prefix,
         suffix=suffix,
-        ingest_parent_dir=ingest_parent_dir
+        ingest_parent_dir=ingest_parent_dir,
+        max_workers=max_workers
     )
     
     reg.register_dataset(dir_path, description, dry_run)
