@@ -1,25 +1,31 @@
 <template>
-  <div class="conversions-page">
+  <div class="flex flex-col gap-4">
     <div class="page-header">
-      <h1>Conversions</h1>
+      <h1 class="text-2xl font-bold mb-2">Conversions</h1>
       <p class="text-muted">Manage data conversion definitions and monitor conversion workflows</p>
     </div>
 
     <div class="conversions-content">
-      <div class="conversion-definitions-section">
-        <h2>Conversion Definitions</h2>
-        <ConversionDefinitionSelect />
-      </div>
+      <va-card>
+        <va-card-content>
+          <h2 class="text-xl font-bold mb-3">Conversion Definitions</h2>
+          <ConversionDefinitionSelect />
+        </va-card-content>
+      </va-card>
 
-      <div class="conversion-form-section">
-        <h2>Create New Conversion</h2>
-        <ConversionForm />
-      </div>
+      <va-card>
+        <va-card-content>
+          <h2 class="text-xl font-bold mb-3">Create New Conversion</h2>
+          <ConversionForm />
+        </va-card-content>
+      </va-card>
 
-      <div class="conversion-list-section">
-        <h2>Recent Conversions</h2>
-        <Conversion />
-      </div>
+      <va-card>
+        <va-card-content>
+          <h2 class="text-xl font-bold mb-3">Recent Conversions</h2>
+          <Conversion />
+        </va-card-content>
+      </va-card>
     </div>
   </div>
 </template>
@@ -31,18 +37,8 @@ import ConversionForm from '@/components/conversions/ConversionForm.vue';
 </script>
 
 <style scoped>
-.conversions-page {
-  padding: 2rem;
-}
-
 .page-header {
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  margin-bottom: 0.5rem;
-  font-size: 2rem;
-  font-weight: 600;
+  margin-bottom: 1rem;
 }
 
 .text-muted {
@@ -53,24 +49,6 @@ import ConversionForm from '@/components/conversions/ConversionForm.vue';
 .conversions-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-}
-
-.conversion-definitions-section,
-.conversion-form-section,
-.conversion-list-section {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.conversion-definitions-section h2,
-.conversion-form-section h2,
-.conversion-list-section h2 {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #333;
+  gap: 1rem;
 }
 </style>
