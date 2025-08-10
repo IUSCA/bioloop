@@ -1,0 +1,40 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["Sag 3D MP-RAGE"]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "AXIAL FLAIR"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-fdg",
+			"criteria": {
+				"SeriesDescription": {"any" : ["TR:BRAIN 3D:FDG:IR CTAC"]},
+				"Radiopharmaceutical": {"any" : ["*FDG*"]}
+
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-pib",
+			"criteria": {
+				"SeriesDescription": {"any" : ["TR:BRAIN 3D:PIB:IR CTAC"]},
+				"Radiopharmaceutical": {"any" : ["*PIB*"]}
+
+			}
+		}
+    ]
+}

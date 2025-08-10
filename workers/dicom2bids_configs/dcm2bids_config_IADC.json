@@ -1,0 +1,423 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["MPRAGE*", "*MPRAGE"]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": {"any" : ["FLAIR*", "*FLAIR","t2_spc_da-fl_sag_p2_iso_1.*"]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2w",  
+			"custom_entities": "acq-HighResHippo",
+			"criteria": {
+				"SeriesDescription": "HighResHippo*"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3_b0_PA",
+				"PhaseEncodingDirection": "j"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-AP_rec-ADC",
+			"criteria": {
+				"SeriesDescription": "*DTI*_ADC"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-AP_rec-TRACEW",
+			"criteria": {
+				"SeriesDescription": "*DTI*_TRACEW"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-AP_rec-FA",
+			"criteria": {
+				"SeriesDescription": "*DTI*_FA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-AP_rec-ColFA",
+			"criteria": {
+				"SeriesDescription": "*DTI*_ColFA"
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_AP_MB3"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv2bk","unwarp-sceneenc","unwarp-asl"]
+      			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_PA_MB3"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv2bk","unwarp-sceneenc","unwarp-asl"]
+      			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": "cmrr_mbep2d_bold_mb3_rest",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC"],
+					["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vv2bk",
+			"custom_entities": "task-vv2bk",
+			"criteria": {
+				"SeriesDescription": "cmrr_mbep2d_bold_mb3_vv2bk"
+			},
+			"sidecar_changes": {
+				"TaskName": "vv2bk"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc",
+			"criteria": {
+				"SeriesDescription": {"any" : ["cmrr_mbep2d_bold_mb3_scenc", "cmrr_mbep2d_bold_mb3_scenc3"]}
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc"
+			  }
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-HYDIb0_dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb3_HYDI_b0_ipat2_64CH",
+				"PhaseEncodingDirection": "j"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-HYDI_dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb3_HYDI_ipat2_64CH",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"id":"unwarp-asl",
+			"custom_entities": "acq-7Meas",
+			"criteria": {
+				"SeriesDescription": "tgse_pcasl_M0_7Meas_TF10*"
+			},
+			"sidecar_changes": {
+				"M0Type": "Included",
+				"PostLabelingDelay": 1.800,
+				"VascularCrushing": "false",
+				"BolusCutOffFlag": "true",
+				"BolusCutOffDelayTime": 1.79,
+				"BolusCutOffTechnique": "Q2TIPS",
+				"LabelingSlabThickness": 162,
+				"LabelingDuration": 1.5088,
+				"EchoSpacing": 0.00049,
+				"TotalReadoutTime": 0.0343,
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "acq-7Meas_proc-PerfWei",
+			"criteria": {
+				"SeriesDescription": "Perfusion_Weighted",
+				"ProtocolName": "tgse_pcasl_M0_7Meas_TF10*"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"id":"unwarp-asl",
+			"custom_entities": "acq-5delay",
+			"criteria": {
+				"SeriesDescription":"ASL_5delay"
+			},
+			"sidecar_changes": {
+				"M0Type": "Included",
+				"PostLabelingDelay": [
+					0,
+					0,
+					0.3,
+					0.3,
+					0.8,
+					0.8,
+					1.3,
+					1.3,
+					1.8,
+					1.8,
+					1.8,
+					1.8,
+					2.3,
+					2.3,
+					2.3,
+					2.3
+				],
+				"VascularCrushing": "false",
+				"BolusCutOffFlag": "true",
+				"BolusCutOffDelayTime": 1.79,
+				"BolusCutOffTechnique": "Q2TIPS",
+				"LabelingSlabThickness": 162,
+				"LabelingDuration": 0.7,
+				"EchoSpacing": 0.00049,
+				"TotalReadoutTime": 0.03038,
+				"PhaseEncodingDirection": "j-"
+			  }
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "acq-5delay_proc-PerfWei",
+			"criteria": {
+				"SeriesDescription": "Perfusion_Weighted",
+				"ProtocolName": "ASL_5delay"
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "swi",
+			"custom_entities": "acq-mIP_rec-norm",
+			"criteria": {
+				"SeriesDescription": "mIP_Images(SW)",
+				"ImageType": ["ORIGINAL", "PRIMARY", "MNIP", "ND", "NORM"]
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "swi",
+			"custom_entities": "acq-mIP",
+			"criteria": {
+				"SeriesDescription": "mIP_Images(SW)",
+				"ImageType": ["ORIGINAL", "PRIMARY", "MNIP", "ND"]
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "swi",
+			"custom_entities": "acq-swi_rec-norm",
+			"criteria": {
+				"SeriesDescription": "SWI_Images",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "SWI", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "SWI", "ND", "NORM", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "swi",
+			"custom_entities": "acq-swi",
+			"criteria": {
+				"SeriesDescription": "SWI_Images",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "SWI", "ND"],
+					["ORIGINAL", "PRIMARY", "M", "SWI", "ND", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-1_part-mag",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D"],
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D", "MAGNITUDE"]
+					]},
+				"EchoNumber": 1
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-2_part-mag",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D"],
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D", "MAGNITUDE"]
+					]},				
+				"EchoNumber": 2
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-3_part-mag",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D"],
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D", "MAGNITUDE"]
+					]},				
+				"EchoNumber": 3
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-4_part-mag",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D"],
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D", "MAGNITUDE"]
+					]},				
+				"EchoNumber": 4
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-5_part-mag",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D"],
+					["ORIGINAL", "PRIMARY", "M", "DIS3D", "DIS2D", "MAGNITUDE"]
+					]},				
+				"EchoNumber": 5
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-1_part-phase",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "DIS3D", "DIS2D", "PHASE"],
+				"EchoNumber": 1
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-2_part-phase",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "DIS3D", "DIS2D", "PHASE"],
+				"EchoNumber": 2
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-3_part-phase",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "DIS3D", "DIS2D", "PHASE"],
+				"EchoNumber": 3
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-4_part-phase",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "DIS3D", "DIS2D", "PHASE"],
+				"EchoNumber": 4
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2starw",
+			"custom_entities": "echo-5_part-phase",
+			"criteria": {
+				"SeriesDescription": "QSM",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "DIS3D", "DIS2D", "PHASE"],
+				"EchoNumber": 5
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2w",
+			"criteria": {
+				"SeriesDescription": {"any" : ["*T2W*", "T2w*","AX T2*"]},
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-CARDIIVIM_dir-AP",
+			"criteria": {
+				"SeriesDescription": "CARDIIVIM",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"criteria": {
+				"SeriesDescription": {"any" : ["*T1W*", "T1W*", "*T1W"]},
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]}			
+				}
+		}
+
+	]
+}

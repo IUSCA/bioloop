@@ -1,0 +1,85 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["MPRAGE*", "*MPRAGE"]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2w",  
+			"custom_entities": "acq-HighResHippo",
+			"criteria": {
+				"SeriesDescription": "HighResHippo*"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3_b0_PA",
+				"PhaseEncodingDirection": "j"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_AP_MB3"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv2bk","unwarp-sceneenc"]
+      			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_PA_MB3"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv2bk","unwarp-sceneenc"]
+      			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc",
+			"criteria": {
+				"SeriesDescription": "cmrr_mbep2d_bold_mb3_scenc*"
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc"
+			  }
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "t2_spc_da-fl_sag_p2_iso_1.0_176sl",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]}
+			}
+		}
+
+	]
+}

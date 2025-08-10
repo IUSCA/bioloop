@@ -1,0 +1,35 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["MPRAGE*", "*MPRAGE"]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": {"any" : ["FLAIR*", "*FLAIR"]}
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"criteria": {
+				"SeriesDescription": "Axial MB DTI"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": "Axial MB rsfMRI*"
+			}
+		}
+	]
+}

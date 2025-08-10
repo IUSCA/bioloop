@@ -1,5 +1,5 @@
 <template>
-  <VaCollapse v-model="collapseState" solid v-if="props.conversion">
+  <va-collapse v-model="collapseState" solid v-if="props.conversion">
     <template #header="{ value, attrs, iconAttrs }">
       <div
         v-bind="attrs"
@@ -7,11 +7,11 @@
       >
         <!-- collapse icon -->
         <div class="flex-none mr-2">
-          <VaIcon
-            name="va-arrow-down"
-            :class="value ? '' : 'rotate-[-90deg]'"
-            v-bind="iconAttrs"
-          />
+                  <va-icon
+          name="va-arrow-down"
+          :class="value ? '' : 'rotate-[-90deg]'"
+          v-bind="iconAttrs"
+        />
         </div>
 
         <!-- info -->
@@ -35,7 +35,7 @@
 
             <div class="text-sm flex gap-1 flex-wrap items-center">
               <span class="font-semibold"> Arguments: </span>
-              <VaChip
+              <va-chip
                 v-for="(arg, idx) in props.conversion.args_list"
                 :key="idx"
                 size="small"
@@ -44,7 +44,7 @@
                 :title="arg"
               >
                 <div class="max-w-[200px] truncate">{{ arg }}</div>
-              </VaChip>
+              </va-chip>
             </div>
           </div>
 
@@ -94,8 +94,8 @@
 
           <!-- actions: re-run, delete -->
           <div class="flex flex-col items-center gap-2">
-            <VaPopover message="Not yet implemented">
-              <VaButton
+            <va-popover message="Not yet implemented">
+              <va-button
                 size="small"
                 preset="secondary"
                 @click="emit('rerun')"
@@ -105,11 +105,11 @@
                   <i-mdi-replay class="text-lg" />
                   <span>Re-run</span>
                 </div>
-              </VaButton>
-            </VaPopover>
+              </va-button>
+            </va-popover>
 
-            <VaPopover message="Not yet implemented">
-              <VaButton
+            <va-popover message="Not yet implemented">
+              <va-button
                 size="small"
                 preset="secondary"
                 color="danger"
@@ -120,8 +120,8 @@
                   <i-mdi-delete class="text-lg" />
                   <span>Delete</span>
                 </div>
-              </VaButton>
-            </VaPopover>
+              </va-button>
+            </va-popover>
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@
         </div>
       </div>
     </template>
-  </VaCollapse>
+  </va-collapse>
 </template>
 
 <script setup>

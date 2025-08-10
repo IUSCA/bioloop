@@ -1,0 +1,92 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": "T1W",
+				"ImageType": { "any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]}
+				}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "T2-FLAIR"
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "fMRI fieldmap AP"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest-mag", "unwarp-rest-phase"]
+      		}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "fMRI fieldmap PA"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest", "unwarp-rest-phase", "unwarp-task", "unwarp-task-phase"]
+      		}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": "rs-fMRI",
+				"ImageType": ["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest-phase",
+			"custom_entities": "task-rest_part-phase",
+			"criteria": {
+				"SeriesDescription": "rs-fMRI",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "MB", "ND", "MOSAIC", "PHASE"]
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-task",
+			"custom_entities": "task-task",
+			"criteria": {
+				"SeriesDescription": "Tasked fMRI",
+				"ImageType": ["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+			},
+			"sidecar_changes": {
+				"TaskName": "task"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-task-phase",
+			"custom_entities": "task-task_part-phase",
+			"criteria": {
+				"SeriesDescription": "Tasked fMRI",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "MB", "ND", "MOSAIC", "PHASE"]
+			},
+			"sidecar_changes": {
+				"TaskName": "task-phase"
+			  }
+		}
+	]
+}

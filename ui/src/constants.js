@@ -39,11 +39,12 @@ const exports = {
       //   title: "Data Products",
       //   path: "/dataproducts",
       // },
-      // {
-      //   icon: "mdi-transition",
-      //   title: "Conversions",
-      //   path: "/conversions",
-      // },
+      {
+        icon: "mdi-transition",
+        title: "Conversions",
+        path: "/conversions",
+        test_id: "sidebar-conversions",
+      },
       // {
       //   icon: "mdi-folder-upload",
       //   title: "Data Uploader",

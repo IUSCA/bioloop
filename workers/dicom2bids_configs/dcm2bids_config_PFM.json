@@ -1,0 +1,120 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["T1w MPRAGE 0.8iso", "MPRAGE*", "*MPRAGE"]},
+				"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND", "MAGNITUDE"]
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T1w",  
+			"custom_entities": ["acq-mprage", "proc-norm"],
+			"criteria": {
+				"SeriesDescription": {"any" : ["T1w MPRAGE 0.8iso", "MPRAGE*", "*MPRAGE"]},
+				"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": {"any" : ["AX T2 FLAIR 1.0 x 1.0 x 1.5", "FLAIR*", "*FLAIR"]}
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_MB4_2.62_AP",
+				"PhaseEncodingDirection": "j-"
+			},
+			"sidecar_changes": {
+				"intendedFor": "unwarp-rest"
+      			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_MB4_2.62_PA",
+				"PhaseEncodingDirection": "j"
+			},
+			"sidecar_changes": {
+				"intendedFor": "unwarp-rest"
+      			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest", "echo-1", "dir-AP"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_AP",
+				"EchoNumber": 1,
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest", "echo-2", "dir-AP"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_AP",
+				"EchoNumber": 2,
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest","echo-3", "dir-AP"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_AP",
+				"EchoNumber": 3,
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest", "echo-1", "dir-PA"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_PA",
+				"EchoNumber": 1,
+				"PhaseEncodingDirection": "j"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest", "echo-2", "dir-PA"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_PA",
+				"EchoNumber": 2,
+				"PhaseEncodingDirection": "j"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": ["task-rest","echo-3", "dir-PA"],
+			"criteria": {
+				"SeriesDescription": "RestSSTRest_2.62_ISO_PA",
+				"EchoNumber": 3,
+				"PhaseEncodingDirection": "j"
+			}
+		}
+	]
+}

@@ -1,5 +1,5 @@
 <template>
-  <VaSelect
+  <va-select
     v-model="model"
     :options="definitions"
     text-by="name"
@@ -11,7 +11,7 @@
     id="conversion-definition-select"
     :loading="loading"
   >
-  </VaSelect>
+  </va-select>
 </template>
 
 <script setup>

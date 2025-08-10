@@ -285,5 +285,12 @@ def create_notification(payload: dict):
         r.raise_for_status()
 
 
+def get_conversion(conversion_id: int):
+    with APIServerSession() as s:
+        r = s.get(f'conversions/{conversion_id}')
+        r.raise_for_status()
+        return r.json()
+
+
 if __name__ == '__main__':
     pass

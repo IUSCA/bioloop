@@ -12,7 +12,7 @@
         {{ props.argument.description }}
       </span>
     </div>
-    <VaSelect
+    <va-select
       v-if="props.argument.allowed_values.length > 0"
       v-model="model"
       :options="argument.allowed_values"
@@ -22,12 +22,12 @@
       :id="`arg-${props.argument.id}`"
       preset="solid"
     />
-    <VaCheckbox
+    <va-checkbox
       v-else-if="is_checkbox(props.argument)"
       v-model="model"
       :id="`arg-${props.argument.id}`"
     />
-    <VaInput
+    <va-input
       v-else-if="
         props.argument.value_type === 'STRING' ||
         props.argument.value_type === 'NUMBER'
@@ -43,8 +43,8 @@
       >
         <i-mdi-function />
       </template>
-    </VaInput>
-    <VaPopover
+    </va-input>
+    <va-popover
       v-if="props.argument.dynamic_variable_name != null"
       placement="right"
     >
@@ -58,7 +58,7 @@
         </p>
       </template>
       <i-mdi-information-outline class="text-blue-500" />
-    </VaPopover>
+    </va-popover>
   </label>
 </template>
 

@@ -1,0 +1,314 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["MPRAGE*", "*MPRAGE"]}
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "magnitude1",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping",
+				"EchoNumber": 1
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vv2bk","unwarp-sceneenc","unwarp-scenerec"]
+      			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "magnitude2",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]},
+				"EchoNumber": 2			
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vv2bk","unwarp-sceneenc","unwarp-scenerec"]
+      			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "phasediff",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "ND", "PHASE"]	
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vv2bk","unwarp-sceneenc","unwarp-scenerec"]
+      			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-test",
+			"custom_entities": "task-test",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_testing",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MOSAIC"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vv2bk",
+			"custom_entities": "task-vv2bk",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_vv2bk"
+			},
+			
+			"sidecar_changes": {
+				"TaskName": "vv2bk"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc1",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_scenc1"
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc1"
+			  }
+		},	
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc2",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_scenc2"
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc2"
+			  }
+		},	
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc3",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_scenc3"
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc3"
+			  }
+		},	
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-scenerec",
+			"custom_entities": "task-scenerec1",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_screc1"
+			},
+			"sidecar_changes": {
+				"TaskName": "scenerec1"
+			  }
+		},	
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-scenerec",
+			"custom_entities": "task-scenerec2",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_screc2"
+			},
+			"sidecar_changes": {
+				"TaskName": "scenerec2"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-scenerec",
+			"custom_entities": "task-scenerec3",
+			"criteria": {
+				"SeriesDescription": "ep2d_bold_moco_p2_screc3"
+			},
+			"sidecar_changes": {
+				"TaskName": "scenerec3"
+			  }
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "t2_spc_da-fl_sag_p2_iso_1.0"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "m0scan",
+			"custom_entities": "acq-tgseSP2",
+			"criteria": {
+				"SeriesDescription": "tgse_pCASL_sp2_BS_M0",
+				"ProtocolName": "tgse_pCASL_sp2_BS_M0"
+			},
+			"sidecar_changes": {
+				"M0Type": "Included",
+				"PostLabelingDelay": 1.800,
+				"VascularCrushing": "false",
+				"BolusCutOffFlag": "true",
+				"BolusCutOffDelayTime": 1.49,
+				"BolusCutOffTechnique": "Q2TIPS",
+				"LabelingSlabThickness": 158.4,
+				"LabelingDuration": 0.0184
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "m0scan",
+			"custom_entities": "acq-tgseSP2_proc-PerfWei",
+			"criteria": {
+				"SeriesDescription": "Perfusion_Weighted",
+				"ProtocolName": "tgse_pCASL_sp2_BS_M0"
+			}
+		},
+
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "acq-tgseSP2",
+			"criteria": {
+				"SeriesDescription": "tgse_pCASL_sp2_BS",
+				"ProtocolName": "tgse_pCASL_sp2_BS"
+			},
+			"sidecar_changes": {
+				"M0Type": "Separate",
+				"PostLabelingDelay": 1.800,
+				"VascularCrushing": "false",
+				"BolusCutOffFlag": "true",
+				"BolusCutOffDelayTime": 1.49,
+				"BolusCutOffTechnique": "Q2TIPS",
+				"LabelingSlabThickness": 158.4,
+				"LabelingDuration": 1.5088
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "acq-tgseSP2_proc-PerfWei",
+			"criteria": {
+				"SeriesDescription": "Perfusion_Weighted",
+				"ProtocolName": "tgse_pCASL_sp2_BS"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_dir-AP",
+			"criteria": {
+				"SeriesDescription": "*_1B0",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-ADC",
+			"criteria": {
+				"SeriesDescription": "*_1B0_ADC"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-TRACEW",
+			"criteria": {
+				"SeriesDescription": "*_1B0_TRACEW"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-FA",
+			"criteria": {
+				"SeriesDescription": "*_1B0_FA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-ColFA",
+			"criteria": {
+				"SeriesDescription": "*_1B0_ColFA"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": {"any" : ["ep2d_bold_moco_p2_rest","ep2d_pace_moco_p2_rest"]}
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-multishell_dir-AP",
+			"criteria": {
+				"SeriesDescription": "ep2d_diff_SliceAcc3_PE2_D124",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-multishell_rec-ADC",
+			"criteria": {
+				"SeriesDescription": "ep2d_diff_SliceAcc3_PE2_D124_ADC"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-multishell_rec-TRACEW",
+			"criteria": {
+				"SeriesDescription": "ep2d_diff_SliceAcc3_PE2_D124_TRACEW"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-multishell_rec-FA",
+			"criteria": {
+				"SeriesDescription": "ep2d_diff_SliceAcc3_PE2_D124_FA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-multishell_rec-ColFA",
+			"criteria": {
+				"SeriesDescription": "ep2d_diff_SliceAcc3_PE2_D124_ColFA"
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2w",  
+			"custom_entities": "acq-HighResHippo",
+			"criteria": {
+				"SeriesDescription": "HighResHippo*"
+			}
+		}
+	]
+}

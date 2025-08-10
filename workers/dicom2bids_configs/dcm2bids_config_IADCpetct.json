@@ -1,0 +1,235 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-topo",
+			"criteria": {
+				"SeriesDescription": "Topogram*",
+				"ProtocolName": {"any" : ["*NEURACEQ*","*florbetaben*","*FLORBETABEN*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct",
+			"criteria": {
+				"SeriesDescription": "AC*CT Brain*",
+				"ProtocolName": {"any" : ["*NEURACEQ*","*florbetaben*","*FLORBETABEN*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-ct",
+			"criteria": {
+				"SeriesDescription": "CT Brain*",
+				"ProtocolName": {"any" : ["*NEURACEQ*","*florbetaben*","*FLORBETABEN*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-fbb",
+			"criteria": {
+				"SeriesDescription": {"any" : ["PET Brain","FLORBETABEN*RECON"]},
+				"Radiopharmaceutical": {"any" : ["NEURACEQ","Florbetaben","FLORBETABEN"]}
+
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-fbb_desc-nac",
+			"criteria": {
+				"SeriesDescription": "PET Brain NAC",
+				"Radiopharmaceutical": {"any" : ["NEURACEQ","Florbetaben","FLORBETABEN"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-static_trc-fbb",
+			"criteria": {
+				"SeriesDescription": {"any" : ["PET Brain READ*","FLORBETABEN*RECON*STATIC"]},
+				"ProtocolName": {"any" : ["*NEURACEQ*","*florbetaben*","*FLORBETABEN*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-topo",
+			"criteria": {
+				"SeriesDescription": "Topogram*",
+				"ProtocolName": {"any" : ["*TAU*","*AV1451*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct",
+			"criteria": {
+				"SeriesDescription": "AC*CT Brain*",
+				"ProtocolName": {"any" : ["*TAU*","*AV1451*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-ct",
+			"criteria": {
+				"SeriesDescription": "CT Brain*",
+				"ProtocolName": {"any" : ["*TAU*","*AV1451*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-av1451",
+			"criteria": {
+				"SeriesDescription": "PET Brain",   
+				"Radiopharmaceutical": "FLORTAUCIPIR",
+				"StationName": "GHVISION"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-av1451",
+			"criteria": {
+				"SeriesDescription": "ADNI2*AV1451*RECON",    
+				"Radiopharmaceutical": "AV-1451",
+				"StationName": "CT71271"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-av1451_desc-nac",
+			"criteria": {
+				"SeriesDescription": "PET Brain NAC",
+				"Radiopharmaceutical": {"any" : ["FLORTAUCIPIR","AV1451","*lortaucipir*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-static_trc-av1451",
+			"criteria": {
+				"SeriesDescription": "PET Brain READ*",
+				"Radiopharmaceutical": {"any" : ["FLORTAUCIPIR","AV1451","*lortaucipir*"]}
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-static_trc-av1451",
+			"criteria": {
+				"SeriesDescription": "PET Brain",    
+				"Radiopharmaceutical": "AV-1451",
+				"StationName": "CT71271"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-topo",
+			"criteria": {
+				"SeriesDescription": "Topogram*",
+				"ProtocolName": "*AV45*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct",
+			"criteria": {
+				"SeriesDescription": "AC*CT Brain*",
+				"ProtocolName": "*AV45*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-ct",
+			"criteria": {
+				"SeriesDescription": "CT Brain*",
+				"ProtocolName": "*AV45*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "pet",
+			"custom_entities": "acq-dyn_trc-av45",
+			"criteria": {
+				"SeriesDescription": "ADNI2*AV45*RECON",
+				"ProtocolName": "*AV45*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-topo",
+			"criteria": {
+				"SeriesDescription": "Topogram*",
+				"ProtocolName": "*_PBR28*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct_desc-chest1",
+			"criteria": {
+				"SeriesDescription" : {"any": ["Chest*1*PBR*AC*CT","AC*CT*Chest1*"]},
+				"ProtocolName": "*_PBR28*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct_desc-head",
+			"criteria": {
+				"SeriesDescription": {"any": ["HEAD*PBR*AC*CT","AC*CT*Head*"]},
+				"ProtocolName": "*_PBR28*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-acct_desc-chest1",
+			"criteria": {
+				"SeriesDescription": {"any": ["Chest*2*PBR*AC*CT","AC*CT*Chest2*"]},
+				"ProtocolName": "*_PBR28*"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-dyn_trc-pbr_desc-chest1",
+			"criteria": {
+				"SeriesDescription": { "any": ["CHEST1*PBR*PET*20MIN","FBP_PBR_Chest1_20min_200"]},
+				"Radiopharmaceutical": "PBR28"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-dyn_trc-pbr_desc-head",
+			"criteria": {
+				"SeriesDescription": { "any": ["HEAD*PBR*PET*25*min","FBP_PBR_Head_25min_200"]},
+				"Radiopharmaceutical": "PBR28"
+			}
+		},
+		{
+			"datatype": "pet",
+			"suffix": "ct",
+			"custom_entities": "acq-dyn_trc-pbr_desc-chest2",
+			"criteria": {
+				"SeriesDescription": { "any": ["Chest2*PBR*PET*5*min","FBP_PBR_Chest2_5min_200"]},
+				"Radiopharmaceutical": "PBR28"
+			}
+		}
+
+	]
+}

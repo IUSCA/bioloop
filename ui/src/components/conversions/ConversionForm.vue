@@ -29,40 +29,40 @@
         <!-- dataset types -->
         <div>
           <!-- <span class="font-semibold mr-2"> Runs on </span> -->
-          <VaChip
+          <va-chip
             v-for="dt in definition.dataset_types"
             :key="dt"
             size="small"
             square
           >
             <span class="uppercase"> {{ dt }} </span>
-          </VaChip>
+          </va-chip>
         </div>
 
         <!-- tags -->
         <div class="flex gap-2 items-center ml-auto">
           <!-- <span class="font-semibold mr-2"> Tags </span> -->
-          <VaChip
+          <va-chip
             v-for="tag in definition.tags"
             :key="tag"
             size="small"
             color="info"
           >
             <span class="uppercase"> {{ tag }} </span>
-          </VaChip>
+          </va-chip>
         </div>
       </div>
     </div>
 
     <!-- Program -->
-    <VaCard class="mt-5">
-      <VaCardContent>
+    <va-card class="mt-5">
+      <va-card-content>
         <ConversionProgramForm
           :program="definition.program"
           v-model="argValues"
         />
-      </VaCardContent>
-    </VaCard>
+      </va-card-content>
+    </va-card>
   </div>
 
   <div v-else>

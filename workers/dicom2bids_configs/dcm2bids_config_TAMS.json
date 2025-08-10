@@ -1,0 +1,109 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": "T1w MPRAGE 0.8iso",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "t2_spc_da-fl_sag_p2_iso_1.0_176sl"
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_MB5_2.5_AP"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv3bk","unwarp-sceneenc"]
+      		}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "epi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_SpinEchoFieldMap_MB5_2.5_PA"
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-vv3bk","unwarp-sceneenc"]
+      		}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vv3bk",
+			"custom_entities": "task-vv3bk",
+			"criteria": {
+				"SeriesDescription": "cmrr_mbep2d_bold_MB5_2.5_780_vv3bk"
+			},
+			"sidecar_changes": {
+				"TaskName": "vv3bk"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-sceneenc",
+			"custom_entities": "task-sceneenc",
+			"criteria": {
+				"SeriesDescription": {"any" : ["cmrr_mbep2d_bold_MB5_2.5_780_scenc2","cmrr_mbep2d_bold_MB5_2.5_780_scenc"]}
+			},
+			"sidecar_changes": {
+				"TaskName": "sceneenc"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": "cmrr_mbep2d_bold_MB5_2.5_780_rest",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC"],
+					["ORIGINAL", "PRIMARY", "M", "MB", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-b0_dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3_b0_PA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "dir-AP",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3_AP"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "dir-PA",
+			"criteria": {
+				"SeriesDescription": "cmrr_mb_DTI_ipat2_MB3_PA"
+			}
+		}
+
+
+	]
+}

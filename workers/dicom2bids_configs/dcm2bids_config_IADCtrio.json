@@ -1,0 +1,320 @@
+{
+	"dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+	"descriptions": [
+		{
+			"datatype": "anat",
+			"suffix": "T1w",
+			"custom_entities": "acq-mprage",
+			"criteria": {
+				"SeriesDescription": {"any" : ["MPRAGE*", "*MPRAGE"]}
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "magnitude1",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping_88",
+				"EchoNumber": 1
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vvsk",
+				"unwarp-vv2bk",
+				"unwarp-vvps"]      			
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "magnitude2",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping_88",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "MAGNITUDE"]
+					]},
+				"EchoNumber": 2			
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vvsk",
+				"unwarp-vv2bk",
+				"unwarp-vvps"]     			
+			}
+		},
+		{
+			"datatype": "fmap",
+			"suffix": "phasediff",
+			"criteria": {
+				"SeriesDescription": "gre_field_mapping_88",
+				"ImageType": ["ORIGINAL", "PRIMARY", "P", "ND", "PHASE"]	
+			},
+			"sidecar_changes": {
+				"IntendedFor": ["unwarp-rest","unwarp-test",
+				"unwarp-vvsk",
+				"unwarp-vv2bk",
+				"unwarp-vvps"]
+      			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-test",
+			"custom_entities": "task-test",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_epitest",
+				"ImageType": {"any":[
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MOSAIC"],
+					["ORIGINAL", "PRIMARY", "M", "ND", "NORM", "MOSAIC", "MAGNITUDE"]
+					]}
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvsk",
+			"custom_entities": "task-vvsk1",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvsk1"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvsk1"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvsk",
+			"custom_entities": "task-vvsk2",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvsk2"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvsk2"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvsk",
+			"custom_entities": "task-vvsk3",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvsk3"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvsk3"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvsk",
+			"custom_entities": "task-vvsk4",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvsk4"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvsk4"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vv2bk",
+			"custom_entities": "task-vv2bk",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vv2bk"
+			},
+			
+			"sidecar_changes": {
+				"TaskName": "vv2bk"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvps",
+			"custom_entities": "task-vvps1",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvps1"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvps1"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvps",
+			"custom_entities": "task-vvps2",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvps2"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvps2"
+			  }
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+			"id":"unwarp-vvps",
+			"custom_entities": "task-vvps3",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_vvps3"
+			},
+			"sidecar_changes": {
+				"TaskName": "vvps3"
+			  }
+		},		
+		{
+			"datatype": "anat",
+			"suffix": "FLAIR",
+			"criteria": {
+				"SeriesDescription": "t2_spc_irprep_SAG_p2_dark-fluid_100pfov"
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "PDw",
+			"custom_entities": "acq-tse2",
+			"criteria": {
+				"SeriesDescription": "Axial PD-T2 TSE",
+				"EchoNumber": 1
+			}
+		},
+		{
+			"datatype": "anat",
+			"suffix": "T2w",
+			"custom_entities": "acq-tse2",
+			"criteria": {
+				"SeriesDescription": "Axial PD-T2 TSE",
+				"EchoNumber": 2
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"criteria": {
+				"SeriesDescription": "PQ2T_*_7_16_*",
+				"ProtocolName": "PQ2T_*_7_16_*"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "rec-MoCo",
+			"criteria": {
+				"SeriesDescription": "MoCoSeries",
+				"ProtocolName": "PQ2T_*_7_16_*_MoCo"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "proc-PerfWei",
+			"criteria": {
+				"SeriesDescription": "Perfusion_Weighted",
+				"ProtocolName": "PQ2T_*_7_16_*_MoCo"
+			}
+		},
+		{
+			"datatype": "perf",
+			"suffix": "asl",
+			"custom_entities": "proc-relCBF",
+			"criteria": {
+				"SeriesDescription": "relCBF",
+				"ProtocolName": "PQ2T_*_7_16_*_MoCo"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_dir-AP",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_1B0",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-ADC",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_1B0_ADC"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-TRACEW",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_1B0_TRACEW"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-FA",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_1B0_FA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-1b0_rec-ColFA",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_1B0_ColFA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-8b0_dir-AP",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_8B0",
+				"PhaseEncodingDirection": "j-"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-8b0_rec-ADC",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_8B0_ADC"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-8b0_rec-TRACEW",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_8B0_TRACEW"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-8b0_rec-FA",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_8B0_FA"
+			}
+		},
+		{
+			"datatype": "dwi",
+			"suffix": "dwi",
+			"custom_entities": "acq-8b0_rec-ColFA",
+			"criteria": {
+				"SeriesDescription": "ep2d_*_8B0_ColFA"
+			}
+		},
+		{
+			"datatype": "func",
+			"suffix": "bold",
+      		"id":"unwarp-rest",
+			"custom_entities": "task-rest",
+			"criteria": {
+				"SeriesDescription": "ep2d_pace_stamp_rest"
+			}
+		}
+	]
+}
