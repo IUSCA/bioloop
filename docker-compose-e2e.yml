@@ -1,4 +1,4 @@
-name: bioloop
+name: bioloop-5-e2e
 services:
   ui:
     image: node:19
@@ -31,9 +31,9 @@ services:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
     expose:
-      - 3030
+      - 3031
     ports:
-      - 127.0.0.1:3030:3030
+      - 127.0.0.1:3031:3031
     working_dir: /opt/sca/app
     # entrypoint: ["tail", "-f", "/dev/null"]
     # command: sh -c "sleep infinity"
@@ -45,7 +45,7 @@ services:
         && npx prisma generate client \
         && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
     healthcheck:
-      test: ["CMD", "curl", "-f", "127.0.0.1:3030/health"]
+      test: ["CMD", "curl", "-f", "127.0.0.1:9001/health"]
     extra_hosts:
       - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
     depends_on:
@@ -64,9 +64,9 @@ services:
       - ./db/postgres/aux_scripts:/opt/sca/scripts
       - ./db/backups:/opt/sca/backups
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:9002:5432
     expose:
-      - 5432
+      - 9002
 
   nginx:
     image: nginx:1.25
