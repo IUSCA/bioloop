@@ -73,7 +73,11 @@ config = {
         'minimum_dataset_size': ONE_GIGABYTE,
         'wait_between_stability_checks_seconds': FIVE_MINUTES,
         'poll_interval_seconds': 10,
-        'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
+        'full_scan_every_n_scans': 90,  # every 90th scan will be a full scan / full scan every 15 minutes
+        'register_ondemand': {
+            'default_workers': 4,  # Default number of parallel workers
+            'max_workers': 8        # Maximum allowed workers (admin-controlled)
+        }
     },
     'service_user': 'bioloopuser',
     'stage': {

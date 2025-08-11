@@ -75,3 +75,23 @@ signet/signet
 db/mongo/data
 db/postgres/data
 db/db_postgres
+
+# Test directories
+test_rename_and_register/
+test_01_basic_registration/
+test_02_renaming_with_prefix_suffix/
+test_03_hard_linking/
+test_04_idempotency/
+test_05_large_dataset/
+test_06_mixed_content/
+test_07_error_handling/
+test_08_cleanup/
+
+# Test logs
+*.log
+
+# Test data
+test_*/data/
+test_*/expected/
+
+.cursorrules
