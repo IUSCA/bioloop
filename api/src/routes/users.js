@@ -1,6 +1,7 @@
 const express = require('express');
 const { query, body } = require('express-validator');
 const createError = require('http-errors');
+const { Prisma } = require('@prisma/client');
 
 // const logger = require('@/services/logger');
 const prisma = require('@/db');
@@ -28,8 +29,8 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('search').default(''),
-    query('skip').isInt({ min: 0 }).optional(),
-    query('take').isInt({ min: 1 }).optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
+    query('take').isInt({ min: 1 }).toInt().optional(),
     query('sortBy').default('username')
       .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
@@ -37,15 +38,15 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const {
-      search, sortBy, sort_order, skip, take,
+      search, sortBy, sort_order,
     } = req.query;
 
     const { users, count } = await userService.findAll({
       search,
       sortBy,
       sort_order,
-      skip: parseInt(skip, 10),
-      take: parseInt(take, 10),
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.take,
     });
     return res.json({
       metadata: { count },

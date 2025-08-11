@@ -27,7 +27,6 @@ api/.env
 api/config/auth*
 
 db/*.wt
-db/*
 dbdump
 
 cypress
@@ -69,3 +68,10 @@ todo.md
 db/postgres/data/
 
 .pm2
+
+rhythm_api/
+rhythm/rhythm_api
+signet/signet
+db/mongo/data
+db/postgres/data
+db/db_postgres

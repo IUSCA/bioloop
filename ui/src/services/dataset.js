@@ -136,6 +136,8 @@ class DatasetService {
     filetype,
     minSize,
     maxSize,
+    sortBy = null,
+    sortOrder = null,
   }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
@@ -147,6 +149,8 @@ class DatasetService {
         filetype,
         min_file_size: minSize,
         max_file_size: maxSize,
+        sort_by: sortBy,
+        sort_order: sortOrder,
       },
     });
   }
@@ -168,19 +172,23 @@ class DatasetService {
   }
 
   logDatasetUpload(data) {
-    return api.post(`/datasets/upload`, data);
+    return api.post(`/datasets/uploads`, data);
   }
 
   updateDatasetUploadLog(dataset_id, data) {
-    return api.patch(`/datasets/${dataset_id}/upload`, data);
+    return api.patch(`/datasets/uploads/${dataset_id}`, data);
   }
 
   processDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/process_dataset_upload`,
+    );
   }
 
   cancelDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/cancel_dataset_upload`,
+    );
   }
 
   getDatasetUploadLogs({
@@ -192,7 +200,7 @@ class DatasetService {
     username = null,
   } = {}) {
     const path = forSelf
-      ? `/datasets/${username}/uploads`
+      ? `/datasets/uploads/${username}`
       : `/datasets/uploads`;
     return api.get(path, {
       params: {

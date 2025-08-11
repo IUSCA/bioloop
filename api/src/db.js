@@ -1,4 +1,4 @@
-require('dotenv-safe').config();
+require('dotenv-safe').config({ example: '.env.default' });
 // const process = require('process');
 // const config = require('config');
 
