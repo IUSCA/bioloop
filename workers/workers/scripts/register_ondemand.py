@@ -44,18 +44,23 @@ class Registration:
             self.project = api.get_project(project_id=self.project_id)
 
 
-    def should_process_candidate(self, candidate_name: str) -> bool:
+    def should_process_candidate(self, candidate_name: str, dry_run: bool = False) -> bool:
         """
         Check if a candidate should be processed (idempotence check).
         Returns True if the candidate needs processing, False if already done.
         """
+        # In dry-run mode, always process candidates (skip API calls)
+        if dry_run:
+            print(f"DRY RUN: Would process candidate {candidate_name}")
+            return True
+        
         # If already registered, skip
-        if self.is_dataset_registered(dataset_name=candidate_name):
+        if self.is_registered(dataset_name=candidate_name):
             print(f"Candidate {candidate_name} is already registered, skipping...")
             return False
         
         # If currently registering, skip (let it finish)
-        if self.is_dataset_registering(dataset_name=candidate_name):
+        if self.registration_initiated(dataset_name=candidate_name):
             print(f"Candidate {candidate_name} is currently being registered, skipping...")
             return False
         
@@ -117,8 +122,8 @@ class Registration:
                     os.link(src_file, dst_file)
                 except OSError as e:
                     # If hard-link fails, fail the entire script
-                    print(f"❌ Hard-link failed for {src_file}: {e}")
-                    print(f"💥 Script will fail early due to hard-link creation error.")
+                    print(f"Hard-link failed for {src_file}: {e}")
+                    print(f"Script will fail early due to hard-link creation error.")
                     raise RuntimeError(f"Hard-link operation failed: {e}")
 
 
@@ -138,15 +143,15 @@ class Registration:
             
             # Check if directories exist
             if not src_path.exists() or not dst_path.exists():
-                print(f"❌ One or both directories don't exist")
+                print(f"One or both directories don't exist")
                 return False
             
             # Direct directory checksum comparison without using directories_are_equal
             if self.directories_checksum_equal(src_path, dst_path):
-                print(f"✅ Directory checksum verification passed: {src_path} == {dst_path}")
+                print(f"Directory checksum verification passed: {src_path} == {dst_path}")
                 return True
             else:
-                print(f"❌ Directory checksum verification failed: {src_path} != {dst_path}")
+                print(f"Directory checksum verification failed: {src_path} != {dst_path}")
                 return False
                 
         except Exception as e:
@@ -208,16 +213,16 @@ class Registration:
             checksum2 = self.calculate_directory_checksum(dir2)
             
             if not checksum1 or not checksum2:
-                print(f"❌ Failed to calculate checksums: dir1={checksum1}, dir2={checksum2}")
+                print(f"Failed to calculate checksums: dir1={checksum1}, dir2={checksum2}")
                 return False
             
             # Compare the directory checksums
             are_equal = checksum1 == checksum2
             
             if are_equal:
-                print(f"✅ Directory checksums match: {checksum1[:8]}... == {checksum2[:8]}...")
+                print(f"Directory checksums match: {checksum1[:8]}... == {checksum2[:8]}...")
             else:
-                print(f"❌ Directory checksums differ: {checksum1[:8]}... != {checksum2[:8]}...")
+                print(f"Directory checksums differ: {checksum1[:8]}... != {checksum2[:8]}...")
             
             return are_equal
             
@@ -243,11 +248,22 @@ class Registration:
             default_workers = common.config['registration']['register_ondemand']['default_workers']
             max_allowed_workers = common.config['registration']['register_ondemand']['max_workers']
             
+            # Validate worker configuration values
+            if default_workers <= 0:
+                print(f"ERROR: Invalid default_workers configuration: {default_workers}")
+                print("Default workers must be a positive integer. Using fallback value of 1.")
+                default_workers = 1
+                
+            if max_allowed_workers <= 0:
+                print(f"ERROR: Invalid max_workers configuration: {max_allowed_workers}")
+                print("Max workers must be a positive integer. Using fallback value of 1.")
+                max_allowed_workers = 1
+            
             # Calculate workers with upper limit enforcement
             calculated_workers = min(len(verification_tasks), default_workers)
             max_workers = min(calculated_workers, max_allowed_workers)
             
-            print(f"📊 Worker Configuration: {len(verification_tasks)} tasks, {default_workers} default, {max_allowed_workers} max allowed → Using {max_workers} workers")
+            print(f"Worker Configuration: {len(verification_tasks)} tasks, {default_workers} default, {max_allowed_workers} max allowed → Using {max_workers} workers")
             
             verification_results = {}
             failed_verifications = []
@@ -267,13 +283,13 @@ class Registration:
                         verification_results[candidate_name] = result
                         
                         if result:
-                            print(f"✅ Parallel verification completed for: {candidate_name}")
+                            print(f"Parallel verification completed for: {candidate_name}")
                         else:
-                            print(f"❌ Parallel verification failed for: {candidate_name}")
+                            print(f"Parallel verification failed for: {candidate_name}")
                             failed_verifications.append(candidate_name)
                             
                     except Exception as e:
-                        print(f"❌ Exception during parallel verification of {candidate_name}: {e}")
+                        print(f"Exception during parallel verification of {candidate_name}: {e}")
                         failed_verifications.append(candidate_name)
                         verification_results[candidate_name] = False
             
@@ -281,16 +297,16 @@ class Registration:
             successful_count = sum(1 for result in verification_results.values() if result)
             total_count = len(verification_results)
             
-            print(f"\n📊 Parallel Verification Summary:")
-            print(f"   Total directories: {total_count}")
-            print(f"   Successful: {successful_count}")
-            print(f"   Failed: {len(failed_verifications)}")
+            print(f"Parallel Verification Summary:")
+            print(f"    Total directories: {total_count}")
+            print(f"    Successful: {successful_count}")
+            print(f"    Failed: {len(failed_verifications)}")
             
             if failed_verifications:
-                print(f"   Failed directories: {', '.join(failed_verifications)}")
+                print(f"    Failed directories: {', '.join(failed_verifications)}")
                 return False
             else:
-                print(f"   ✅ All {total_count} directories verified successfully!")
+                print(f"    All {total_count} directories verified successfully!")
                 return True
                 
         except Exception as e:
@@ -335,7 +351,14 @@ class Registration:
             
             # Log non-directory files that won't be registered
             if non_directory_files:
-                print(f"⚠️  Non-directory files found (will not be registered as datasets): {', '.join(non_directory_files)}")
+                print("Non-directory files found (will not be registered as datasets):")
+                # Show first 10 files, then indicate if there are more
+                files_to_show = non_directory_files[:10]
+                for fname in files_to_show:
+                    print(fname)                
+                if len(non_directory_files) > 10:
+                    remaining_count = len(non_directory_files) - 10
+                    print(f"... (showing first 10 files, {remaining_count} more files not shown)")
 
             return candidates
 
@@ -358,7 +381,7 @@ class Registration:
         # Filter candidates that need processing
         candidates_to_process = []
         for candidate_name, original_path in candidates:
-            if self.should_process_candidate(candidate_name):
+            if self.should_process_candidate(candidate_name, dry_run):
                 candidates_to_process.append((candidate_name, original_path))            
         if not candidates_to_process:
             print("No candidates need processing - all are already registered or being processed.")
@@ -367,7 +390,7 @@ class Registration:
         print(f"Processing {len(candidates_to_process)} candidates...")
 
         # Prepare candidates (create hard-links if needed, use original paths otherwise)
-        prepared_candidates = self.prepare_candidates(candidates_to_process, dir_path)
+        prepared_candidates = self.prepare_candidates_for_registration(candidates_to_process, dir_path)
         if not prepared_candidates:
             print("No prepared candidates found. Early return: nothing to verify or register.")
             return
@@ -384,9 +407,9 @@ class Registration:
         self.cleanup(prepared_candidates, verification_tasks, dry_run)
 
 
-    def prepare_candidates(self, candidates_to_process: List[Tuple[str, Path]], 
+    def prepare_candidates_for_registration(self, candidates_to_process: List[Tuple[str, Path]], 
                                      dir_path: str) -> List[Tuple[str, Path, Path]]:
-        print(f"ℹ️ Preparing {len(candidates_to_process)} candidates for registration...")
+        print(f"Preparing {len(candidates_to_process)} candidates for registration...")
         
         # Determine if hard-linking is needed and prepare directory only if necessary
         need_hard_link_creation = any(
@@ -397,8 +420,18 @@ class Registration:
         if need_hard_link_creation:
             directory_path = Path(dir_path)
             self.renamed_hard_links_parent_dir = directory_path.parent / f".{directory_path.name}__renamed"
-            self.renamed_hard_links_parent_dir.mkdir(exist_ok=True)
-            print(f"Created hidden directory which will contain hard-links: {self.renamed_hard_links_parent_dir}")            
+            
+            try:
+                # Try to create the renamed directory parent
+                self.renamed_hard_links_parent_dir.mkdir(exist_ok=True)
+                print(f"Created hidden directory which will contain hard-links: {self.renamed_hard_links_parent_dir}")
+            except Exception as e:
+                # Early fail if directory cannot be created
+                print(f"ERROR: Cannot create renamed directory parent at: {self.renamed_hard_links_parent_dir}")
+                print(f"Reason: {e}")
+                print("Script will fail early due to directory creation error.")
+                raise RuntimeError(f"Failed to create renamed directory parent: {e}")
+            
             # Log which candidates require hard-linking
             hard_link_candidates = [(name, path) for name, path in candidates_to_process if name != path.name]
             print(f"Found {len(hard_link_candidates)} candidates requiring hard-linking")
@@ -419,19 +452,19 @@ class Registration:
                 prepared_path = self.prepare_candidate_hard_link(original_path, candidate_name)
                 if prepared_path:
                     prepared_candidates.append((candidate_name, prepared_path, original_path))
-                    print(f"✅ Prepared hard-link for: {candidate_name}")
+                    print(f"Prepared hard-link for: {candidate_name}")
                 else:
-                    print(f"⚠️ Skipped hard-link preparation for: {candidate_name}")
+                    print(f"Skipped hard-link preparation for: {candidate_name}")
                     
             except Exception as e:
-                print(f"❌ Error preparing hard-link for {candidate_name}: {e}")
+                print(f"Error preparing hard-link for {candidate_name}: {e}")
                 traceback.print_exc()
         
         # Add candidates that don't need hard-linking (use original paths directly)
         for candidate in original_path_candidates:
             candidate_name, original_path = candidate
             prepared_candidates.append((candidate_name, original_path, original_path))
-            print(f"ℹ️ Using original path for: {candidate_name} (no renaming needed)")
+            print(f"Using original path for: {candidate_name} (no renaming needed)")
 
         print(f"Prepared {len(prepared_candidates)} candidates for registration")
         return prepared_candidates
@@ -440,11 +473,11 @@ class Registration:
     def verify_hard_links_checksums(self, prepared_candidates: List[Tuple[str, Path, Path]]) -> Optional[List[Tuple[Path, Path, str]]]:
         """Verify all data-integrity of created hard-links before registration"""
         if self.skip_checksum_verification:
-            print(f"\n⚠️ Skipping checksum verification (disabled by user)")
-            print("⚠️  WARNING: Data integrity cannot be guaranteed without verification!")
+            print(f"Skipping checksum verification (disabled by user)")
+            print("WARNING: Data integrity cannot be guaranteed without checksum verification!")
             return []
             
-        print(f"\n🔍 Verifying {len(prepared_candidates)} hard-links...")
+        print(f"Verifying {len(prepared_candidates)} hard-links...")
         verification_tasks = []
         
         for candidate_name, prepared_path, original_path in prepared_candidates:
@@ -454,53 +487,52 @@ class Registration:
         if verification_tasks:
             verification_success = self.verify_hard_links_parallel(verification_tasks)
             if not verification_success:
-                print("❌ Hard-link verification failed. Cleaning up and aborting...")
-                # Clean up hard-linked directories on verification failure
+                print("Hard-link verification failed.")
+                # Log generated artifacts' details for developer review
                 if self.renamed_hard_links_parent_dir and self.renamed_hard_links_parent_dir.exists():
-                    shutil.rmtree(self.renamed_hard_links_parent_dir)
-                    print(f"Cleaned up hard-linked directories in {self.renamed_hard_links_parent_dir}")
+                    print(f"Generated artifacts preserved at: {self.renamed_hard_links_parent_dir}")
+                    print("    Review these directories and their checksums to diagnose verification issues.")
+                    print("    Artifacts will be automatically cleaned up on next successful run.")
+                    
+                    # List the generated artifacts for easy inspection
+                    artifact_dirs = [d for d in self.renamed_hard_links_parent_dir.iterdir() if d.is_dir()]
+                    if artifact_dirs:
+                        print(f"    Generated artifact directories:")
+                        for artifact_dir in artifact_dirs:
+                            print(f"        - {artifact_dir.name} -> {artifact_dir}")
+                    else:
+                        print(f"    No artifact directories found in {self.renamed_hard_links_parent_dir}")                    
                 return None
-            print("✅ All hard-links verified successfully!")
+            print("All hard-links verified successfully!")
         else:
-            print("ℹ️  No hard-links to verify - using original paths directly")
+            print("No hard-links to verify - using original paths directly")
             
         return verification_tasks
 
 
     def register_candidate_dirs(self, hard_link_preparations: List[Tuple[str, Path, Path]], 
                                    description: str, dry_run: bool) -> None:
-        """Phase 3: Register all datasets (using bulk endpoint if multiple)"""
+        """Register all datasets"""
         if dry_run:
-            print(f"\n📝 Phase 3: DRY RUN - Would register {len(hard_link_preparations)} datasets")
-            print("   (No actual API calls made in dry run mode)")
+            print(f"DRY RUN - Would register {len(hard_link_preparations)} datasets")
             
             # Log what would be registered
             for candidate_name, prepared_path, original_path in hard_link_preparations:
                 if prepared_path != original_path:
-                    print(f"   📁 Directory '{original_path.name}' would be registered as dataset '{candidate_name}'")
+                    print(f"    Directory '{original_path.name}' would be registered as dataset '{candidate_name}'")
                 else:
-                    print(f"   📁 Directory '{original_path.name}' would be registered as dataset '{candidate_name}' (no renaming)")
+                    print(f"    Directory '{original_path.name}' would be registered as dataset '{candidate_name}' (no renaming)")
         else:
-            print(f"\n📝 Phase 3: Registering {len(hard_link_preparations)} datasets...")
+            print(f"Registering {len(hard_link_preparations)} datasets...")
             
-            if len(hard_link_preparations) > 1:
-                # Use bulk endpoint for multiple datasets
-                print(f"📦 Using bulk registration endpoint for {len(hard_link_preparations)} datasets")
-                success = self.register_datasets_bulk(hard_link_preparations, description)
-                if success:
-                    print(f"✅ Bulk registration successful for all {len(hard_link_preparations)} datasets")
-                else:
-                    print(f"❌ Bulk registration failed")
-                    return
+            # Always use bulk endpoint for registration
+            print(f"Using bulk registration endpoint for {len(hard_link_preparations)} datasets")
+            success = self.register_datasets_bulk(hard_link_preparations, description)
+            if success:
+                print(f"Bulk registration successful for all {len(hard_link_preparations)} datasets")
             else:
-                # Single dataset registration
-                candidate_name, prepared_path, original_path = hard_link_preparations[0]
-                try:
-                    self.register_single_dataset(candidate_name, prepared_path, description)
-                    print(f"✅ Single registration successful: {candidate_name}")
-                except Exception as e:
-                    print(f"❌ Single registration failed for {candidate_name}: {e}")
-                    return
+                print(f"Bulk registration failed")
+                return
 
 
     def cleanup(self, hard_link_preparations: List[Tuple[str, Path, Path]], 
@@ -508,43 +540,43 @@ class Registration:
                                    dry_run: bool) -> None:
         """Final summary and cleanup operations"""
         if dry_run:
-            print(f"\n🎉 DRY RUN completed successfully!")
-            print(f"   Would prepare: {len(hard_link_preparations)}")
-            print(f"   Would verify: {len(verification_tasks)}")
-            print(f"   Would register: {len(hard_link_preparations)}")
-            print(f"   No actual changes made")
+            print(f"DRY RUN completed successfully!")
+            print(f"    Would prepare: {len(hard_link_preparations)}")
+            print(f"    Would verify: {len(verification_tasks)}")
+            print(f"    Would register: {len(hard_link_preparations)}")
+            print(f"    No actual changes made")
         else:
-            print(f"\n🎉 All phases completed successfully!")
-            print(f"   Prepared: {len(hard_link_preparations)}")
-            print(f"   Verified: {len(verification_tasks)}")
-            print(f"   Registered: {len(hard_link_preparations)}")
+            print(f"All operations completed successfully!")
+            print(f"    Prepared: {len(hard_link_preparations)}")
+            print(f"    Verified: {len(verification_tasks)}")
+            print(f"    Registered: {len(hard_link_preparations)}")
 
         # Clean up renamed directories
         if self.renamed_hard_links_parent_dir and self.renamed_hard_links_parent_dir.exists() and self.ingest_subdirs:
             if dry_run:
-                print(f"\n🧹 DRY RUN: Cleaning up test hard-links from {self.renamed_hard_links_parent_dir}")
-                print("   (Hard-links were created for testing - cleaning them up now)")
+                print(f"DRY RUN: Cleaning up test hard-links from {self.renamed_hard_links_parent_dir}")
+                print("    (Hard-links were created for testing - cleaning them up now)")
                 shutil.rmtree(path=self.renamed_hard_links_parent_dir)
-                print(f"🧹 Cleaned up test hard-links: {self.renamed_hard_links_parent_dir}")
+                print(f"Cleaned up test hard-links: {self.renamed_hard_links_parent_dir}")
             else:
-                print(f"\n🧹 Checking if cleanup is safe for {self.renamed_hard_links_parent_dir}...")
+                print(f"Checking if cleanup is safe for {self.renamed_hard_links_parent_dir}...")
                 
-                # Check if all datasets are in ARCHIVE state
-                all_archived = True
+                # Check if Integrated workflows have been initiated for all datasets
+                all_workflows_initiated = True
                 for candidate_name, prepared_path, original_path in hard_link_preparations:
-                    if not self.is_dataset_registered(dataset_name=candidate_name):
-                        all_archived = False
-                        print(f"⚠️  Dataset {candidate_name} not yet archived - skipping cleanup")
+                    if not self.registration_initiated(dataset_name=candidate_name):
+                        all_workflows_initiated = False
+                        print(f"Dataset {candidate_name} workflow not yet initiated - skipping cleanup")
                         break
                 
-                if all_archived:
-                    print("✅ All datasets archived - safe to clean up hard-linked directories")
+                if all_workflows_initiated:
+                    print("All Integrated workflows initiated - safe to clean up hard-linked directories")
                     shutil.rmtree(path=self.renamed_hard_links_parent_dir)
-                    print(f"🧹 Cleaned up renamed directory: {self.renamed_hard_links_parent_dir}")
+                    print(f"Cleaned up renamed directory: {self.renamed_hard_links_parent_dir}")
                 else:
-                    print("⏳ Some datasets not yet archived - leaving hard-linked directories for now")
-                    print(f"   Renamed directory preserved at: {self.renamed_hard_links_parent_dir}")
-                    print(f"   Cleanup will happen automatically when all datasets reach ARCHIVE state")
+                    print("Some workflows not yet initiated - leaving hard-linked directories for now")
+                    print(f"    Renamed directory preserved at: {self.renamed_hard_links_parent_dir}")
+                    print(f"    Cleanup will happen automatically when all workflows are initiated")
 
 
     def register_datasets(self,
@@ -603,13 +635,13 @@ class Registration:
             # Start the workflow
             wf.start(created_dataset['id'])
             
-            print(f"✅ Successfully registered and started workflow for: {dataset_name}")
+            print(f" Successfully registered and started workflow for: {dataset_name}")
             
         except api.DatasetAlreadyExistsError:
             print(f'{dataset_name} already exists')
             return
         except Exception as e:
-            print(f"❌ Error registering dataset {dataset_name}: {e}")
+            print(f" Error registering dataset {dataset_name}: {e}")
             raise
 
 
@@ -625,7 +657,7 @@ class Registration:
             bool: True if bulk registration successful, False otherwise
         """
         try:
-            print(f"📦 Preparing bulk registration for {len(hard_link_preparations)} datasets...")
+            print(f" Preparing bulk registration for {len(hard_link_preparations)} datasets...")
             
             # Prepare bulk registration data according to API specification
             bulk_data = []
@@ -642,47 +674,47 @@ class Registration:
                 bulk_data.append(dataset_info)
             
             # Call bulk registration endpoint
-            print(f"🚀 Calling bulk registration endpoint...")
-            from workers.api import bulk_create_datasets
-            
-            response = bulk_create_datasets(bulk_data)
+            print(f" Calling bulk registration API...")
+            response = api.bulk_create_datasets(bulk_data)
             
             # Process response
             created_count = len(response.get('created', []))
             conflicted_count = len(response.get('conflicted', []))
             errored_count = len(response.get('errored', []))
             
-            print(f"📊 Bulk registration results:")
-            print(f"   ✅ Created: {created_count}")
-            print(f"   ⚠️  Conflicted: {conflicted_count}")
-            print(f"   ❌ Errored: {errored_count}")
+            print(f"Bulk registration results:")
+            print(f"    Created: {created_count}")
+            print(f"    Conflicted: {conflicted_count}")
+            print(f"    Errored: {errored_count}")
             
             # Start workflows for successfully created datasets
             if created_count > 0:
-                print(f"🔄 Starting workflows for {created_count} created datasets...")
+                print(f"Starting workflows for {created_count} created datasets...")
                 for created_dataset in response['created']:
                     try:
                         # Use the dataset ID from the bulk response directly
                         wf_body = wf_utils.get_wf_body(wf_name='integrated')
                         wf = Workflow(celery_app=celery_app, **wf_body)
                         wf.start(created_dataset['id'])
-                        print(f"✅ Started workflow for: {created_dataset['name']} (ID: {created_dataset['id']})")
+                        print(f"Started workflow for: {created_dataset['name']} (ID: {created_dataset['id']})")
                     except Exception as e:
-                        print(f"❌ Failed to start workflow for {created_dataset['name']}: {e}")
+                        print(f"Failed to start workflow for {created_dataset['name']}: {e}")
             
             # Log conflicts and errors
             if conflicted_count > 0:
-                print(f"⚠️  Conflicted datasets (already exist): {[d['name'] for d in response['conflicted']]}")
+                print(f"Conflicted datasets (already exist): {[d['name'] for d in response['conflicted']]}")
             
             if errored_count > 0:
-                print(f"❌ Failed datasets: {[d['name'] for d in response['errored']]}")
+                print("Failed datasets:")
+                for d in response['errored']:
+                    print(d['name'])
             
             # Consider successful if all datasets were either created or conflicted (already exist)
             total_processed = created_count + conflicted_count
             return total_processed == len(hard_link_preparations) and errored_count == 0
             
         except Exception as e:
-            print(f"❌ Error in bulk registration: {e}")
+            print(f"Error in bulk registration: {e}")
             return False
 
 
@@ -694,7 +726,7 @@ class Registration:
             # Get existing dataset
             existing_dataset = self.get_matching_dataset(dataset_name)
             if not existing_dataset:
-                print(f"❌ Dataset {dataset_name} not found")
+                print(f"Dataset {dataset_name} not found")
                 return False
             
             # Create and start workflow
@@ -704,11 +736,11 @@ class Registration:
             # Start workflow on existing dataset
             wf.start(existing_dataset['id'])
             
-            print(f"✅ Successfully started Integrated workflow for existing dataset: {dataset_name}")
+            print(f"Successfully started Integrated workflow for existing dataset: {dataset_name}")
             return True
             
         except Exception as e:
-            print(f"❌ Error starting workflow for {dataset_name}: {e}")
+            print(f"Error starting workflow for {dataset_name}: {e}")
             return False
 
 
@@ -724,8 +756,7 @@ class Registration:
         return matching_datasets[0]
 
 
-    def is_dataset_registered(self,
-                              dataset_name: str) -> bool:
+    def is_registered(self, dataset_name: str) -> bool:
         """
         Dataset is considered registered if it has been successfully archived (i.e. it has reached state ARCHIVED).
         """
@@ -740,7 +771,7 @@ class Registration:
         return matching_dataset_is_archived
 
 
-    def is_dataset_registering(self, dataset_name: str) -> bool:
+    def registration_initiated(self, dataset_name: str) -> bool:
         """
         Dataset is considered to be in the middle of registration if the `Integrated` workflow has been initiated on the Dataset
         """
@@ -826,12 +857,12 @@ def main_register_dataset(dir_path: str,
     
     # Log checksum verification status
     if skip_checksum_verification:
-        print("⚠️  WARNING: You have opted out of checksum verification.")
-        print("   This can have serious consequences:")
-        print("   - Data integrity cannot be guaranteed")
-        print("   - Corrupted hard-links may not be detected")
-        print("   - Datasets may be registered with invalid data")
-        print("   - Use this option only if you understand the risks!")
+        print("WARNING: You have opted out of checksum verification.")
+        print("    This can have serious consequences:")
+        print("    - Data integrity cannot be guaranteed")
+        print("    - Corrupted hard-links may not be detected")
+        print("    - Datasets may be registered with invalid data")
+        print("    - Use this option only if you understand the risks!")
         print()
     
     reg = Registration(
@@ -846,14 +877,14 @@ def main_register_dataset(dir_path: str,
     )
     
     if dry_run:
-        print(f"⚠️ DRY RUN MODE")
+        print(f"DRY RUN MODE")
 
     reg.register_datasets(dir_path, description, dry_run)
 
 
 """
 This script processes subdirectories within a given directory, renames them according to
-a specific format, and registers them as data products or raw data.
+a specific format, and registers them as Data Products or Raw Data.
 
 What it does:
 1. Processes all subdirectories within the specified DIR_PATH (or the parent directory itself).
@@ -897,13 +928,13 @@ Example usage:
    python -m workers.scripts.register_ondemand /path/to/data_directory --description="Sample dataset description" --dry-run=True
 
 2. Actually process and register with project ID:
-   python -m workers.scripts.register_ondemand /path/to/data_directory --project-id=abc123 --dry-run=False
+   python -m workers.scripts.register_ondemand /path/to/data_directory --project-id=abc123
 
 3. Register as raw data with custom prefix:
-   python -m workers.scripts.register_ondemand /path/to/data_directory --dataset-type=RAW_DATA --prefix=myproject --dry-run=False
+   python -m workers.scripts.register_ondemand /path/to/data_directory --dataset-type=RAW_DATA --prefix=myproject
 
 4. Ingest subdirectories instead of parent directory:
-   python -m workers.scripts.register_ondemand /path/to/data_directory --ingest-subdirs=True --dry-run=False
+   python -m workers.scripts.register_ondemand /path/to/data_directory --ingest-subdirs=True
 """
 
 if __name__ == "__main__":
