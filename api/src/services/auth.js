@@ -63,6 +63,10 @@ const oAuth2SecureTransferClient = new OAuth2Client({
 });
 
 function get_download_token(file_path) {
+  console.log('oauth2 client creating');
+  // console.log(config.get('oauth.base_url'));
+  console.log(config.get('oauth.download.client_id'));
+  console.log(config.get('oauth.download.client_secret'));
   return oAuth2SecureTransferClient.clientCredentials({
     scope: [`${config.get('oauth.download.scope_prefix')}${file_path}`],
   });

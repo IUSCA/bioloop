@@ -12,3 +12,5 @@
 13. create single data dir of 500 mb for testing. verify that hardlink creation takes little to no time.
 14. idempotence - if hardlinks exist from previous runs, they are deleted and recreated.
 15. if the renamed dir parent dir cannot be created at the sibling level of the provided dir, log this and early fail.
+16. link to Project
+17. dry-run mode should not start actual workflows - verify that existing datasets without workflows are only simulated, not actually started
