@@ -120,6 +120,32 @@ services:
       queue:
         condition: service_started
 
+  conversion_worker:
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=conversion_worker
+      - APP_ENV=docker
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
+
   # Rhythm_api containers
   queue:
     # https://hub.docker.com/_/rabbitmq/

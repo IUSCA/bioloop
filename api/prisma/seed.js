@@ -13,6 +13,9 @@ const { random_files } = require('./seed_data/random_paths');
 const { generate_data_access_logs } = require('./seed_data/data_access_logs');
 const { generate_staged_logs } = require('./seed_data/staged_logs');
 const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
+const { conversionDefinitions } = require('./seed_data/conversion_definitions');
+const { cmdLinePrograms } = require('./seed_data/cmd_line_programs');
+const { argumentData } = require('./seed_data/arguments');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
@@ -262,7 +265,10 @@ async function main() {
   await put_dataset_files({ dataset_id: 8, num_files: 100 });
 
   // update the auto increment id's sequence numbers
-  const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];
+  const tables = [
+    'dataset', 'user', 'role', 'dataset_audit', 'contact',
+    'conversion_definition', 'cmd_line_program', 'argument', 'argument_value',
+  ];
   await Promise.all(tables.map(update_seq));
 
   // add metrics
@@ -304,6 +310,73 @@ async function main() {
       name: `Instrument ${i + 1}`,
       host: `instrument ${i + 1}.iu.edu`,
     })),
+  });
+
+  // delete pre-existing records
+  await prisma.cmd_line_program.deleteMany();
+  await prisma.conversion_definition.deleteMany();
+  await prisma.argument.deleteMany();
+
+  // create cmd_line_programs
+  await prisma.cmd_line_program.createMany({
+    data: cmdLinePrograms,
+  });
+
+  // Get the inserted programs to map their IDs
+  const programs = await prisma.cmd_line_program.findMany();
+  const programMap = {};
+  programs.forEach((program) => {
+    programMap[program.name] = program.id;
+  });
+
+  // Update conversion definitions with program_id references
+  const conversionDefinitionsWithPrograms = conversionDefinitions.map((def) => ({
+    ...def,
+    program_id: programMap[def.name],
+    author_id: 1, // Default to first user (admin)
+  }));
+
+  // create conversion definitions
+  await prisma.conversion_definition.createMany({
+    data: conversionDefinitionsWithPrograms,
+  });
+
+  // Update arguments with program_id references based on linking logic
+  const argumentDataWithPrograms = [];
+
+  // bcl2fastq links to all args
+  const bcl2fastqProgramId = programMap.bcl2fastq;
+  argumentData.forEach((arg) => {
+    argumentDataWithPrograms.push({
+      ...arg,
+      program_id: bcl2fastqProgramId,
+    });
+  });
+
+  // Other programs link to no lane splitting, delete undetermined, filter single index
+  const otherProgramNames = [
+    'bcl-convert', 'cellranger-v8.0.1', 'cellranger-v6.1.2', 'cellranger-v4.0.0',
+    'cellranger-arc', 'cellranger-arc-v2', 'cellranger-atac', 'spaceranger-v3.0.1',
+    'spaceranger-v1.3.1', 'spaceranger-v1.1.0',
+  ];
+
+  const conversionProgramsSharedArgs = argumentData.filter((arg) => ['--no-lane-splitting', '--delete-undetermined', '--filter-single-index'].includes(arg.name));
+
+  otherProgramNames.forEach((programName) => {
+    const programId = programMap[programName];
+    if (programId) {
+      conversionProgramsSharedArgs.forEach((arg) => {
+        argumentDataWithPrograms.push({
+          ...arg,
+          program_id: programId,
+        });
+      });
+    }
+  });
+
+  // create arguments
+  await prisma.argument.createMany({
+    data: argumentDataWithPrograms,
   });
 }
 

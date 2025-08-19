@@ -11,6 +11,7 @@ const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
 const FileGraph = require('./fileGraph');
+const conversionService = require('./conversion');
 const workflowService = require('./workflow');
 const logger = require('./logger');
 
@@ -196,6 +197,7 @@ async function get_dataset({
   bundle = false,
   includeProjects = false,
   initiator = false,
+  conversions = false,
   include_source_instrument = false,
 }) {
   const fileSelect = files ? {
@@ -219,6 +221,10 @@ async function get_dataset({
     },
   } : INCLUDE_WORKFLOWS;
 
+  const conversion_includes = {
+    include: conversionService.INCLUDE,
+  };
+
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id },
     include: {
@@ -229,6 +235,7 @@ async function get_dataset({
       bundle,
       source_datasets: true,
       derived_datasets: true,
+      conversions: conversions ? conversion_includes : false,
       projects: includeProjects,
       ...(include_source_instrument ? {
         src_instrument: {
@@ -268,6 +275,13 @@ async function get_dataset({
       log.user = log.user ? userService.transformUser(log.user) : null;
     }
   });
+
+  if (conversions) {
+    dataset.conversions = (dataset.conversions || []).map((c) => {
+      const args_list = conversionService.getArgsList(c);
+      return { ...c, args_list };
+    });
+  }
 
   return dataset;
 }

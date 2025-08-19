@@ -108,7 +108,7 @@
                 <span class="text-lg">Actions</span>
               </va-card-title>
               <va-card-content>
-                <div class="flex justify-start gap-3">
+                <div class="flex flex-wrap justify-start gap-3">
                   <!-- Stage Action Button-->
                   <va-button
                     v-if="dataset.archive_path"
@@ -137,6 +137,7 @@
                     Delete Archive
                   </va-button>
 
+                  <!-- Download Button -->
                   <va-button
                     :disabled="
                       !dataset.is_staged || !auth.isFeatureEnabled('downloads')
@@ -150,6 +151,12 @@
                     <i-mdi-download class="pr-2 text-2xl" />
                     Download
                   </va-button>
+
+                  <!-- New Conversion -->
+                  <NewConversionButton
+                    :dataset="dataset"
+                    @update="fetch_dataset(true)"
+                  />
                 </div>
               </va-card-content>
             </va-card>

@@ -161,7 +161,7 @@ config = {
     },
     'workflow': {
         'purge': {
-            'types': ['integrated', 'stage', 'delete'],
+            'types': ['integrated', 'stage', 'delete', 'conversion'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
