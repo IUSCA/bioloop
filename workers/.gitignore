@@ -95,6 +95,8 @@ celery_worker.state
 
 # celery worker pid file
 celery_worker.pid
+conversion_worker.pid
+conversion_worker.state
 
 # poetry
 # generated with "poetry export --without-hashes --format=requirements.txt > requirements.txt"
