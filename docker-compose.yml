@@ -73,6 +73,7 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
+      - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
