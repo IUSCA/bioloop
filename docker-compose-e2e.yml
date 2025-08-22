@@ -1,87 +1,319 @@
+# This is the docker-compose file for the Bioloop project
+# Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
+# We use the command to run a script that runs any commands that need to run after the containers are up.
 name: bioloop
 services:
   ui:
-    image: node:19
-    volumes:
-      - ./ui/:/opt/sca/app
-      - ui_modules:/opt/sca/app/node_modules
+    image: node:21
     ports:
       - 127.0.0.1:443:443
+    env_file:
+      - ui/.env.default
+    volumes:
+      - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
-    # command: sh -c "npm install && exec /opt/sca/app/node_modules/.bin/vite --host"
-    # entrypoint: [ "tail", "-f", "/dev/null" ]
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install && exec /opt/sca/app/node_modules/.bin/vite --host
+    entrypoint: ["bin/entrypoint.sh"]
+    command: ["npm", "run", "dev"] 
 
   api:
-    image: node:19
-    # user: ${APP_UID}:${APP_GID}
-    # build:
-      # context: ./api
-      # args:
-        # APP_UID: ${APP_UID} # read from .env file
-        # APP_GID: ${APP_GID} # read from .env file
-    # environment:
-    #   - APP_UID=APP_UID
-    #   - APP_GID=APP_GID
-    volumes:
-      - ./api/:/opt/sca/app
-      - api_modules:/opt/sca/app/node_modules
+    image: node:21
+    restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
-    ports:
-      - 127.0.0.1:3030:3030
+    env_file:
+      - tests/.env.default # Variables needed for testing user information
+      - db/postgres/.env.default # For Postgres connection settings
+      - api/.env.default  # For all default settings
+      # - api/.env? # For keys made after the first run
+    volumes:
+      - ./api:/opt/sca/app
+      - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
-    # entrypoint: ["tail", "-f", "/dev/null"]
-    # command: sh -c "sleep infinity"
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install \
-        && npx prisma generate client \
-        && exec /opt/sca/app/node_modules/.bin/nodemon --signal SIGTERM src/index.js
+    entrypoint: ["bin/entrypoint.sh"] 
+    command: ["npm", "run", "dev"] 
     healthcheck:
-      test: ["CMD", "curl", "-f", "127.0.0.1:3030/health"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
-     - postgres
+      signet:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      rhythm:
+        condition: service_healthy
 
   postgres:
     image: postgres:14.5
-    # restart: unless-stopped
-    environment:
-      - POSTGRES_USER=appuser
-      - POSTGRES_PASSWORD=example
-      - POSTGRES_DB=app
-    volumes:
-      - ./db/db_postgres:/var/lib/postgresql/data
-      - ./db/postgres/scripts:/docker-entrypoint-initdb.d
-      - ./db/postgres/aux_scripts:/opt/sca/scripts
-      - ./db/backups:/opt/sca/backups
-    ports:
-      - 127.0.0.1:5432:5432
     expose:
       - 5432
-
-  nginx:
-    image: nginx:1.25
     ports:
-        - 8000:8000
+      - 127.0.0.1:5432:5432
+    env_file:
+      - db/postgres/.env.default # For Postgres connection settings
     volumes:
-        - ./nginx/src:/usr/share/nginx/html
-        - ./nginx/conf:/etc/nginx/conf.d
-        - ./data:/opt/sca/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway" # for connecting to services running on localhost of the host network
+      - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
+      - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
+
+# Workers
+  init_data_dirs:
+    build:
+      context: ./workers
+    environment:
+      - APP_ENV=docker
+    volumes:
+      - landing_volume:/opt/sca/data
+    command: ["bin/init_dirs.sh"]
+
+  celery_worker:
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=celery_worker
+      - APP_ENV=docker
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
+
+
+  watch:
+    build:
+      context: ./workers
+    environment:
+      - WORKER_TYPE=watch
+      - APP_ENV=docker
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
+
+  # Rhythm_api containers
+  queue:
+    # https://hub.docker.com/_/rabbitmq/
+    image: rabbitmq:4-management
+    expose:
+      - 5672
+    ports:
+      - 127.0.0.1:15672:15672
+    env_file:
+      - db/queue/.env.default # For RabbitMQ connection settings
+    volumes:
+      - queue_volume:/var/lib/rabbitmq/
+
+
+  mongo:
+    # https://hub.docker.com/_/mongo
+    image: mongo:5
+    expose:
+      - 27017
+    ports:
+      - 127.0.0.1:27017:27017
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+    volumes:
+      - ./db/mongo/data:/data/db
+      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
+
+  # You must clone the rhythm_api repo and place it in the rhythm folder
+  rhythm:
+    restart: unless-stopped
+    image: harbor.sca.iu.edu/rhythm/api:latest
+    expose:
+      - 5001
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - rhythm/.env.default # For all default settings
+    volumes:
+      - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
+      - ./rhythm/keys:/opt/sca/keys # This is where the keys are stored.  You can mount this to a local folder to use your own keys.
+      - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
+    working_dir: /app
+    entrypoint: ["/opt/bin/entrypoint.sh"]
+    command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      - queue
+      - mongo
+
+  # Secure_download container
+  secure_download:
+    image: node:19
+    restart: unless-stopped
+    expose:
+      - 3060
+    env_file:
+      - secure_download/.env.default # For all default settings
+    volumes:
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.  
+      - ./secure_download/:/opt/sca/app
+    working_dir: /opt/sca/app
+    entrypoint: ["bin/entrypoint.sh"]
+    command: ["npm", "run", "dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# Signet containers
+  # You must clone the signet repo and place it in the signet folder
+  signet:
+    restart: unless-stopped
+    image: harbor.sca.iu.edu/signet/signet:latest
+    expose:
+      - 5050
+    env_file:
+      - signet/.env.default # For all default settings
+    volumes:
+      - ./signet/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
+    entrypoint: ["/opt/bin/entrypoint.sh"]
+    command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      signet_db:
+        condition: service_healthy
+
+
+  # For ease of startup we just do another postgres container for signet.  You can use the same one as the api if you want, but this is easier to manage.
+  signet_db:
+    image: postgres:14.5
+    expose:
+      - 5432
+    restart: unless-stopped
+    env_file:
+      - signet/.env.default # For Postgres connection settings
+    volumes:
+      - signet_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "appuser"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# Dev containers
+  docs:
+    image: node:21
+    volumes:
+      - ./package.json:/opt/sca/app/package.json
+      - ./package-lock.json:/opt/sca/app/package-lock.json
+      - ./docs/:/opt/sca/app/docs
+      - docs_modules:/opt/sca/app/node_modules
+    ports:
+      - 127.0.0.1:5173:5173
+    working_dir: /opt/sca/app
+    entrypoint:
+      - sh
+      - -c
+      - |
+        npm install && exec /opt/sca/app/node_modules/.bin/vitepress dev docs --host
+
+# cspell: ignore darkbluestudios jovyan ijavascript
+  jupyter_ijs:
+    image: darkbluestudios/jupyter-ijavascript-utils:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./api/notebooks:/home/jovyan/work/notebooks
+      - ./api/node_modules:/home/jovyan/work/node_modules
+      - ./api/package.json:/home/jovyan/work/package.json:ro
+    # stdin_open: true
+    # tty: true
+    profiles:
+      - repl
+
+# Metrics containers
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://appuser:default@postgres:5432/app?sslmode=disable"
+    depends_on:
+      - postgres
+    volumes:
+      - ./metrics/postgres_exporter/queries.yml:/etc/postgres_exporter/queries.yml
+    command:
+      - "--extend.query-path=/etc/postgres_exporter/queries.yml"
+    profiles:
+      - metrics
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./metrics/prometheus/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus  # Mount the volume for Prometheus data
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    profiles:
+      - metrics
+
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana                   # Mount for Grafana data (dashboards, plugins)
+      - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
+      - ./api/keys/auth.pub:/etc/grafana/auth.pub
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      prometheus:
+        condition: service_started
+      api:
+        condition: service_healthy
+    profiles:
+      - metrics
+
 
 
   e2e:
     build: tests
+    env_file:
+      - tests/.env.default
+    environment:
+      - CI=true
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules
@@ -96,13 +328,18 @@ services:
         condition: service_healthy
     network_mode: "host"
 
-
 volumes:
-  ui_modules:
+  grafana_data:
     external: false
-
-  api_modules:
+  prometheus_data:
     external: false
-
+  queue_volume:
+    external: false
+  signet_db:
+    external: false
+  landing_volume:
+    external: false
+  docs_modules:
+    external: false
   test_modules:
     external: false

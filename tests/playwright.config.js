@@ -16,15 +16,18 @@ const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.jso
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
+const HEADFUL = !!process.env.SHOW_BROWSER;
+// set SHOW_BROWSER=1 locally if you want to see the browser
+
 module.exports = {
   ...defineConfig({
     testDir: './tests',
     /* Run tests in files in parallel */
     fullyParallel: true,
     /**
-   * Fail the build on CI if you accidentally left test.only in the source
-   * code.
-   */
+    * Fail the build on CI if you accidentally left test.only in the source
+    * code.
+    */
     forbidOnly: !!process.env.CI,
     /* Retry on CI only */
     retries: process.env.CI ? 2 : 0,
@@ -35,11 +38,12 @@ module.exports = {
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-      baseURL: 'https://localhost',
+      // baseURL: 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
-      headless: true,
+      headless: !HEADFUL,
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
