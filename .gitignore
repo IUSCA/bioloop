@@ -74,5 +74,6 @@ db/mongo/data
 db/postgres/data
 
 curl_cmds
-*.log
 .cursorrules
+
+*.log

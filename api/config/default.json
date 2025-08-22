@@ -2,14 +2,14 @@
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
-    "port": 9001,
+    "port": 3030,
     "host": "localhost"
   },
   "logger": {
     "level": "debug"
   },
   "workflow_server": {
-    "base_url": "http://127.0.0.1:9005",
+    "base_url": "http://127.0.0.1:5001",
     "auth_token": ""
   },
   "auth": {
