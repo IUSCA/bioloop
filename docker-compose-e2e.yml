@@ -312,8 +312,6 @@ services:
     build: tests
     env_file:
       - tests/.env.default
-    environment:
-      - CI=true
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules

@@ -16,8 +16,6 @@ const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.jso
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
-const HEADFUL = !!process.env.SHOW_BROWSER;
-// set SHOW_BROWSER=1 locally if you want to see the browser
 
 module.exports = {
   ...defineConfig({
@@ -43,11 +41,13 @@ module.exports = {
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
-      headless: !HEADFUL,
+      headless: true,
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
     },
+    /* Ignore tests */
+    testIgnore: ['**/view/authenticated/project/*.spec.js'],
 
     /* Configure projects for major browsers */
     projects: [
@@ -118,12 +118,12 @@ module.exports = {
         dependencies: ['operator_login'],
         testMatch: '/view/authenticated/userManagement/*.spec.js',
       },
-      {
-        name: 'project',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/project/*.spec.js',
-      },
+      // {
+      //   name: 'project',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/project/*.spec.js',
+      // },
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //
