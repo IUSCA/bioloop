@@ -59,7 +59,7 @@
       <va-card-content>
         <ConversionProgramForm
           :program="definition.program"
-          v-model="argValues"
+          v-model:argValues="argValues"
         />
       </va-card-content>
     </va-card>
@@ -77,5 +77,4 @@
 <script setup>
 const definition = defineModel("definition");
 const argValues = defineModel("argValues");
-// const props = defineProps({});
 </script>

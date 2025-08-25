@@ -16,6 +16,17 @@ fi
 
 echo ".env file is ready. Starting the worker..."
 
+# Remove stale PID files, if they exist
+if [ "$WORKER_TYPE" = "celery_worker" ] && [ -f celery_worker.pid ]; then
+  echo "Removing stale celery_worker.pid file"
+  rm celery_worker.pid
+fi
+
+if [ "$WORKER_TYPE" = "conversion_worker" ] && [ -f conversion_worker.pid ]; then
+  echo "Removing stale conversion_worker.pid file"
+  rm conversion_worker.pid
+fi
+
 # Start the appropriate worker based on the container invoking this entrypoint script
 if [ "$WORKER_TYPE" = "celery_worker" ]; then
   echo "Starting Celery Worker"
@@ -39,7 +50,7 @@ elif [ "$WORKER_TYPE" = "conversion_worker" ]; then
     --pidfile conversion_worker.pid \
     --hostname 'bioloop-celery-w1@%h' \
     --autoscale 8,3 \
-    --queues 'bioloop-dev.sca.iu.edu.q'
+    --queues 'conversion.bioloop-dev.sca.iu.edu.q'
       # --detach
 elif [ "$WORKER_TYPE" = "watch" ]; then
   echo "Starting Watch Worker"

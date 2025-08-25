@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const createError = require('http-errors');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 
 // const logger = require('../services/logger');
@@ -29,7 +29,7 @@ router.get(
     const conversions = await prisma.conversion.findMany({
       where: {
         name: {
-          contains: req.query.name,
+          contains: req.query.name ?? Prisma.skip,
           mode: 'insensitive',
         },
       },
@@ -77,6 +77,16 @@ router.get(
 //       values: 'true',
 //     },
 //   ],
+//   user_argument_values: [
+//     {
+//       argument_name: '--no-lane-splitting',
+//       value: 'true',
+//     },
+//     {
+//       argument_name: '--barcode-mismatches',
+//       value: '1',
+//     },
+//   ],
 // };
 router.post(
   '/',
@@ -85,6 +95,15 @@ router.post(
     body('definition_id').isInt().toInt(),
     body('dataset_id').isInt().toInt(),
     body('argument_values').default([]).isArray(),
+    body('user_argument_values').default([]).isArray().custom((value) => value.every((item) => typeof item === 'object'
+          && item !== null
+          && 'argument_name' in item
+          && 'value' in item
+          && typeof item.argument_name === 'string'
+          && typeof item.value === 'string'))
+      .withMessage(
+        'user_argument_values must be an array of objects with argument_name and value fields',
+      ),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Conversions']
@@ -114,11 +133,13 @@ router.post(
       return next(createError(400, `Conversion definition does not support dataset type ${dataset.type}`));
     }
 
+    const conversion_program_arguments = conversionDefinition.program.arguments;
+
     // validate if argument_values are correct
     // associate argument_values with the argument definition
     const argVals = {};
     req.body.argument_values.forEach((argumentValue) => {
-      const argument = conversionDefinition.program.arguments.find((arg) => arg.id === argumentValue.argument_id);
+      const argument = conversion_program_arguments.find((arg) => arg.id === argumentValue.argument_id);
       if (!argument) {
         return next(createError(400, `Argument with id ${argumentValue.argument_id} not found in the definition`));
       }
@@ -134,7 +155,7 @@ router.post(
 
     // add arguments that are required and not provided by the user that have default values or are dynamic
     const providedArgumentIds = Object.keys(argVals);
-    conversionDefinition.program.arguments.forEach((arg) => {
+    conversion_program_arguments.forEach((arg) => {
       // if arg is not provided by the user
       // and arg is required or positional
       // and arg has a default value or is dynamic
@@ -162,7 +183,7 @@ router.post(
 
     // check if all required arguments are provided
     // if not, add values for missing arguments with default values
-    const requiredArguments = conversionDefinition.program.arguments.filter((arg) => arg.is_required || arg.position);
+    const requiredArguments = conversion_program_arguments.filter((arg) => arg.is_required || arg.position);
     const missingArguments = requiredArguments.filter((arg) => {
       const { value } = argVals[arg.id.toString()];
       return value == null || value === '';
@@ -191,11 +212,12 @@ router.post(
           dataset_id: req.body.dataset_id,
           initiator_id: req.user.id,
           argument_values: {
-            create: Object.entries(argVals).map(([argument_id, { value }]) => ({
+            create: Object.entries(argVals).map(([argument_id, { value, definition }]) => ({
               argument_id: Number(argument_id),
-              value,
+              value: conversionService.convertValueForStorage(value, definition),
             })),
           },
+          additional_args: req.body.user_argument_values.length > 0 ? req.body.user_argument_values : null,
         },
       });
 
@@ -231,8 +253,46 @@ router.post(
   }),
 );
 
-async function validateAndCreateConversion(conversionDefinition, dataset_id, _argVals, initiator_id) {
-  const argVals = _.cloneDeep(_argVals);
+/**
+ * Validates and creates a conversion with proper argument handling and workflow creation.
+ *
+ * @param {Object} params - The parameters object
+ * @param {Object} params.conversionDefinition - The conversion definition object containing program and dataset type info
+ * @param {number} params.dataset_id - The ID of the dataset to convert
+ * @param {Object} params.argument_values - Object mapping argument IDs to their values and definitions
+ * @param {number} params.initiator_id - The ID of the user initiating the conversion
+ * @param {Array<Object>} [params.user_argument_values=[]] - Array of user-provided additional arguments
+ * @param {string} params.user_argument_values[].argument_name - The argument name (e.g., '--verbose')
+ * @param {string} params.user_argument_values[].value - The argument value (e.g., 'true')
+ *
+ * @returns {Promise<Object>} The created conversion object with workflow association
+ *
+ * @throws {Error} When dataset type is not supported by the conversion definition
+ * @throws {Error} When required arguments are missing
+ * @throws {Error} When dynamic argument resolution fails
+ *
+ * @example
+ * const conversion = await validateAndCreateConversion({
+ *   conversionDefinition: { program: { arguments: [] }, dataset_types: ['FASTQ'] },
+ *   dataset_id: 123,
+ *   argument_values: { '1': { value: 'input.fastq', definition: { id: 1 } } },
+ *   initiator_id: 456,
+ *   user_argument_values: [
+ *     { argument_name: '--verbose', value: 'true' },
+ *     { argument_name: '--threads', value: '4' }
+ *   ]
+ * });
+ */
+async function validateAndCreateConversion(
+  {
+    conversionDefinition,
+    dataset_id,
+    argument_values,
+    initiator_id,
+    user_argument_values = [],
+  } = {},
+) {
+  const argVals = _.cloneDeep(argument_values);
   // handle error or use prisma.findUnique and check for null
   const dataset = await datasetService.get_dataset({
     id: dataset_id,
@@ -267,6 +327,8 @@ async function validateAndCreateConversion(conversionDefinition, dataset_id, _ar
   }
 
   return prisma.$transaction(async (tx) => {
+    console.log('initiator_id', initiator_id);
+
     // eslint-disable-next-line no-shadow
     let conversion = await tx.conversion.create({
       data: {
@@ -274,11 +336,12 @@ async function validateAndCreateConversion(conversionDefinition, dataset_id, _ar
         dataset_id,
         initiator_id,
         argument_values: {
-          create: Object.entries(argVals).map(([argument_id, { value }]) => ({
+          create: Object.entries(argVals).map(([argument_id, { value, definition }]) => ({
             argument_id: Number(argument_id),
-            value,
+            value: conversionService.convertValueForStorage(value, definition),
           })),
         },
+        additional_args: user_argument_values.length > 0 ? user_argument_values : null,
       },
     });
 
@@ -318,6 +381,7 @@ router.post(
     body('definition_id').isInt(),
     body('dataset_ids').isArray().custom((array) => array.every(Number.isInteger)),
     body('argument_values').default([]).isArray(),
+    body('user_argument_values').default([]).isArray(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Conversions']
@@ -382,7 +446,15 @@ router.post(
       // allSettled will always resolve
       // eslint-disable-next-line no-await-in-loop
       const results = await Promise.allSettled(
-        batch.map((dataset_id) => validateAndCreateConversion(conversionDefinition, dataset_id, argVals, req.user.id)),
+        batch.map((dataset_id) => validateAndCreateConversion(
+          {
+            conversionDefinition,
+            dataset_id,
+            initiator_id: req.user.id,
+            argument_values: argVals,
+            user_argument_values: req.body.user_argument_values,
+          },
+        )),
       );
 
       // aggregate the results of the promises

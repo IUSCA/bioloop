@@ -35,7 +35,44 @@ function getArgsList(conversion) {
   return positionalArgList.concat(argsList);
 }
 
+/**
+ * Converts argument values to the appropriate type for database storage.
+ *
+ * This function ensures that NUMBER type arguments are stored as strings in the database
+ * to maintain consistency with the existing schema where argument values are stored as strings.
+ *
+ * @param {any} value - The argument value to convert
+ * @param {Object} argumentDefinition - The argument definition object
+ * @param {string} argumentDefinition.value_type - The type of the argument (STRING, NUMBER, BOOLEAN)
+ * @param {string} [argumentDefinition.name] - The name of the argument (for debugging)
+ *
+ * @returns {string|any} The converted value ready for database storage
+ *
+ * @example
+ * // NUMBER type argument - converts to string
+ * convertValueForStorage(42, { value_type: 'NUMBER', name: '--threads' })
+ * // Returns: "42"
+ *
+ * // STRING type argument - no conversion needed
+ * convertValueForStorage("hello", { value_type: 'STRING', name: '--input' })
+ * // Returns: "hello"
+ *
+ * // BOOLEAN type argument - converts to boolean
+ * convertValueForStorage(true, { value_type: 'BOOLEAN', name: '--verbose' })
+ * // Returns: "true"
+ */
+function convertValueForStorage(value, argumentDefinition) {
+  if (argumentDefinition.value_type === 'NUMBER' && typeof value === 'number') {
+    return value.toString();
+  }
+  if (argumentDefinition.value_type === 'BOOLEAN' && typeof value === 'boolean') {
+    return value ? 'true' : 'false';
+  }
+  return value;
+}
+
 module.exports = {
   INCLUDE,
   getArgsList,
+  convertValueForStorage,
 };

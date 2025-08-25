@@ -1256,6 +1256,7 @@ module.exports = {
   get_bundle_name,
   get_dataset_active_workflows,
   get_dataset_creator,
+  get_wf_body,
   has_dataset_assoc,
   has_workflow_access,
   dataset_access_check,

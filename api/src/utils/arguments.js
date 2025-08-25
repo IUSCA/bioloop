@@ -50,8 +50,12 @@ function validateSingleValue(val, argument) {
   }
 
   // Check if value is in the allowed values list
-  if (allowed_values && allowed_values.length > 0 && !allowed_values.includes(val)) {
-    return `Error: ${name} should be one of the following values: ${allowed_values.join(', ')}.`;
+  if (allowed_values && allowed_values.length > 0) {
+    // For allowed_values comparison, convert the value to string since allowed_values are stored as strings
+    const valForComparison = value_type === 'NUMBER' ? val.toString() : val;
+    if (!allowed_values.includes(valForComparison)) {
+      return `Error: ${name} should be one of the following values: ${allowed_values.join(', ')}.`;
+    }
   }
 
   return true;
@@ -121,9 +125,9 @@ async function resolveDynamicArgumentValue(arg, datasetId) {
   const dataset = await datasetService.get_dataset({
     id: datasetId,
   });
-  if (arg.dynamic_variable_name === 'CONFIG_FILE_PATH') {
-    return dataset.config_file_path;
-  }
+
+  // TODO: this is where dynamic variables are resolved.
+
   assert.fail(`Dynamic argument value ${arg.default_value} not supported.`);
 }
 

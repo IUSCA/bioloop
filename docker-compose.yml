@@ -34,7 +34,7 @@ services:
     command: ["npm", "run", "dev"] 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -64,6 +64,7 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
+      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
@@ -139,6 +140,14 @@ services:
     depends_on:
       init_data_dirs:
         condition: service_completed_successfully
+      bcl2fastq_setup:
+        condition: service_completed_successfully
+      # bcl_convert_setup:
+      #   condition: service_completed_successfully
+      # cellranger_setup:
+      #   condition: service_completed_successfully
+      # spaceranger_setup:
+      #   condition: service_completed_successfully
       api:
         condition: service_healthy
       mongo:
@@ -192,7 +201,7 @@ services:
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -215,7 +224,7 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
 
@@ -234,7 +243,7 @@ services:
     command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -254,7 +263,7 @@ services:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
 
@@ -331,6 +340,64 @@ services:
         condition: service_healthy
     profiles:
       - metrics
+
+  # Conversion tool setup services
+  bcl2fastq_setup:
+    image: zymoresearch/bcl2fastq:latest
+    platform: linux/amd64
+    volumes:
+      - landing_volume:/opt/sca/data
+    entrypoint: ["sh", "-c"]
+    command: >
+      "cp /usr/local/bin/bcl2fastq /opt/sca/data/conversion/bcl2fastq/bin/ && chmod +x /opt/sca/data/conversion/bcl2fastq/bin/bcl2fastq && echo 'bcl2fastq installed successfully' && ls -la /opt/sca/data/conversion/bcl2fastq/bin/"
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+
+  # bcl_convert_setup:
+  #   image: illumina/bcl-convert:latest
+  #   volumes:
+  #     - landing_volume:/opt/sca/data
+  #   command: >
+  #     sh -c "
+  #       cp /usr/local/bin/bcl-convert /opt/sca/data/conversion/bcl-convert/bin/ &&
+  #       chmod +x /opt/sca/data/conversion/bcl-convert/bin/bcl-convert &&
+  #       echo 'bcl-convert installed successfully' &&
+  #       ls -la /opt/sca/data/conversion/bcl-convert/bin/
+  #     "
+  #   depends_on:
+  #     init_data_dirs:
+  #       condition: service_completed_successfully
+
+  # cellranger_setup:
+  #   image: 10xgenomics/cellranger:7.1.0
+  #   volumes:
+  #     - landing_volume:/opt/sca/data
+  #   command: >
+  #     sh -c "
+  #       cp /usr/local/bin/cellranger /opt/sca/data/conversion/cellranger-v8.0.1/bin/ &&
+  #       chmod +x /opt/sca/data/conversion/cellranger-v8.0.1/bin/cellranger &&
+  #       echo 'cellranger v8.0.1 installed successfully' &&
+  #       ls -la /opt/sca/data/conversion/cellranger-v8.0.1/bin/
+  #     "
+  #   depends_on:
+  #     init_data_dirs:
+  #       condition: service_completed_successfully
+
+  # spaceranger_setup:
+  #   image: 10xgenomics/spaceranger:2.1.0
+  #   volumes:
+  #     - landing_volume:/opt/sca/data
+  #   command: >
+  #     sh -c "
+  #       cp /usr/local/bin/spaceranger /opt/sca/data/conversion/spaceranger-v3.0.1/bin/ &&
+  #       chmod +x /opt/sca/data/conversion/spaceranger-v3.0.1/bin/spaceranger &&
+  #       echo 'spaceranger v3.0.1 installed successfully' &&
+  #       ls -la /opt/sca/data/conversion/spaceranger-v3.0.1/bin/
+  #     "
+  #   depends_on:
+  #     init_data_dirs:
+  #       condition: service_completed_successfully
 
 volumes:
   grafana_data:

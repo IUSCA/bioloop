@@ -61,19 +61,33 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
-    sda_dir = wf_utils.get_archive_dir(dataset['type'])
-    sda_bundle_path = f'{sda_dir}/{bundle.name}'
-
-    wf_utils.upload_file_to_sda(local_file_path=bundle,
-                                sda_file_path=sda_bundle_path,
-                                celery_task=celery_task)
+    # Use local archive directory instead of SDA
+    local_archive_dir = Path(f'/opt/sca/data/archive/{dataset["type"].lower()}')
+    local_archive_dir.mkdir(parents=True, exist_ok=True)
+    
+    local_archive_path = local_archive_dir / bundle.name
+    
+    # Copy the bundle to the local archive location
+    logger.info(f'Copying bundle {bundle} to local archive at {local_archive_path}')
+    shutil.copy2(bundle, local_archive_path)
+    
+    # Verify the copy was successful
+    if not local_archive_path.exists():
+        raise Exception(f'Failed to copy bundle to local archive: {local_archive_path}')
+    
+    # Verify checksum of archived file
+    archived_checksum = utils.checksum(local_archive_path)
+    if archived_checksum != bundle_checksum:
+        raise Exception(f'Checksum mismatch after archiving. Original: {bundle_checksum}, Archived: {archived_checksum}')
+    
+    logger.info(f'Successfully archived bundle to local storage: {local_archive_path}')
 
     if delete_local_file:
-        # file successfully uploaded to SDA, delete the local copy
-        print("deleting local bundle")
+        # file successfully archived locally, delete the local copy
+        logger.info("Deleting local bundle after successful archiving")
         bundle.unlink()
 
-    return sda_bundle_path, bundle_attrs
+    return str(local_archive_path), bundle_attrs
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):

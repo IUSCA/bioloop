@@ -263,7 +263,6 @@ import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
-import BulkConversionModal from "./BulkConversionModal.vue";
 
 useSearchKeyShortcut();
 

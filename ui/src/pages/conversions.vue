@@ -30,12 +30,6 @@
   </div>
 </template>
 
-<script setup>
-import Conversion from '@/components/conversions/Conversion.vue';
-import ConversionDefinitionSelect from '@/components/conversions/ConversionDefinitionSelect.vue';
-import ConversionForm from '@/components/conversions/ConversionForm.vue';
-</script>
-
 <style scoped>
 .page-header {
   margin-bottom: 1rem;

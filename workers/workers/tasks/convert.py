@@ -17,8 +17,14 @@ def run_conversion(celery_task, conversion_id, **kwargs):
     argsList = conversion['argsList']
     definition = conversion['definition']
     program = definition['program']
+    
+    print(f"argsList: {argsList}")
+    print(f"program: {program}")
 
     cwd_str = program['executable_directory']
+
+    print(f"cwd_str: {cwd_str}")
+
     if cwd_str:
         cwd = Path(cwd_str).resolve()
         if not cwd.exists():
@@ -28,15 +34,23 @@ def run_conversion(celery_task, conversion_id, **kwargs):
         cwd = None
         executable_path = Path(program['executable_path']).resolve()
 
+    print(f"executable_path: {executable_path}")
+    print(f"cwd: {cwd}")
+
     if not executable_path.exists():
         raise ConversionException(f"Executable {executable_path} does not exist")
     if not executable_path.is_file():
         raise ConversionException(f"Executable {executable_path} is not a file")
 
-    args = [program['executable_path']] + argsList
+    # Filter out None values from argsList
+    filtered_args = [arg for arg in argsList if arg is not None]
+    args = [program['executable_path']] + filtered_args
+    print(f"args: {args}")
+    print(f"cwd type: {type(cwd)}, cwd value: {cwd}")
+    
     if definition.get('capture_logs', False):
-        cmd.execute_with_log_tracking(cmd=args, celery_task=celery_task, cwd=(str(cwd) if cwd else None))
+        cmd.execute_with_log_tracking(cmd=args, celery_task=celery_task, cwd=str(cwd) if cwd else None)
     else:
-        cmd.execute(cmd=args, cwd=(str(cwd) if cwd else None))
+        cmd.execute(cmd=args, cwd=str(cwd) if cwd else None)
 
     return dataset_id,

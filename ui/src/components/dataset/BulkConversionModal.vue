@@ -5,7 +5,7 @@
     fixed-layout
     hide-default-actions
   >
-    <VaInnerLoading :loading="loading" class="h-full">
+    <va-inner-loading :loading="loading" class="h-full">
       <div class="min-h-[calc(100vh-15rem)]">
         <ConversionForm
           v-if="results === null"
@@ -50,7 +50,7 @@
           Convert {{ num_datasets }} Datasets
         </va-button>
       </div>
-    </VaInnerLoading>
+    </va-inner-loading>
   </va-modal>
 </template>
 
@@ -90,7 +90,8 @@ function convert_datasets() {
     .createBulk({
       definition_id: definition.value.id,
       dataset_ids: props.datasetIds,
-      argument_values: argValues.value,
+      argument_values: removeNullValues(argValues.value.argument_values),
+      user_argument_values: argValues.value.user_argument_values,
     })
     .then((res) => {
       // res.data: type: {dataset_id: [status, conversion_object | {name, message}]}
@@ -172,6 +173,10 @@ function convert_datasets() {
     .finally(() => {
       loading.value = false;
     });
+}
+
+function removeNullValues(argValues) {
+  return argValues.filter(arg => arg.value != null);
 }
 
 function close() {

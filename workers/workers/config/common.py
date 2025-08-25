@@ -143,6 +143,16 @@ config = {
                     'task': 'cancel_dataset_upload'
                 }
             ]
+        },
+        "conversion": {
+          "name": "Conversion",
+          "steps": [
+            {
+              "name": "convert",
+              "task": "convert_dataset",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            }
+          ]
         }
     },
     'celery': {

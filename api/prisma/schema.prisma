@@ -472,7 +472,7 @@ model conversion {
   dataset         dataset               @relation(fields: [dataset_id], references: [id])
   definition      conversion_definition @relation(fields: [definition_id], references: [id])
   initiator       user                  @relation(fields: [initiator_id], references: [id])
-  additional_args Json?                 // e.g., {"flags": ["--no-lane-splitting"], "options": {"--threads": "8"}}
+  additional_args Json?                 // e.g., { [ {"--no-lane-splitting": "true" }, {"--barcode-mismatches": "1"} ] }
 }
 
 model dynamic_variable {
