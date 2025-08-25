@@ -11,10 +11,14 @@ import sys
 import subprocess
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
-sys.path.append('/opt/sca/workers')
+# Load environment variables from .env file
+load_dotenv()
+
+sys.path.append('/opt/sca/app')
 import workers.api as api
-from generate_test_datasets import generate_datasets
+from workers.scripts.register_ondemand_test_cases.generate_test_datasets import generate_datasets
 
 # Setup logging
 logging.basicConfig(
@@ -34,19 +38,19 @@ def run_test():
     logger.info("Starting Test Case 1: RAW_DATA with current directory (.)")
     logger.info("=" * 60)
     
+    original_cwd = os.getcwd()
+        
     try:
         # Step 1: Generate test datasets (multiple datasets)
         logger.info("Step 1: Generating test datasets...")
         container_path = generate_datasets(
             dataset_type='RAW_DATA',
             size_mb=2.0,  # Small size for faster testing
-            single_dataset=False,  # Create multiple datasets
             container_name='test_case_01'
         )
         
         # Step 2: Change to the container directory
         logger.info(f"Step 2: Changing to directory: {container_path}")
-        original_cwd = os.getcwd()
         os.chdir(container_path)
         
         # Step 3: List contents before registration
@@ -59,12 +63,12 @@ def run_test():
         cmd = [
             'python', '-m', 'workers.scripts.register_ondemand',
             '--dataset-type', 'RAW_DATA',
-            '--ingest-subdirs', 'true',
-            '.'  # Current directory
+            '--ingest-subdirs',
+            '.'
         ]
         
         logger.info(f"Executing command: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/workers')
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/app')
         
         # Step 5: Log results
         logger.info("Step 5: Command output:")

@@ -10,6 +10,10 @@ import sys
 import subprocess
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Setup logging
 logging.basicConfig(
@@ -39,7 +43,7 @@ def run_test_case(test_case_number: int, description: str) -> bool:
     try:
         result = subprocess.run([
             'python', str(script_path)
-        ], capture_output=True, text=True, cwd='/opt/sca/workers')
+        ], capture_output=True, text=True, cwd='/opt/sca/app')
         
         # Log the output
         if result.stdout:
@@ -86,6 +90,9 @@ def main():
         (8, "data_product_suffix"),
         (9, "data_product_prefix_suffix"),
         (10, "data_product_description"),
+        (11, "naming_conflicts"),
+        (12, "invalid_dataset_type"),
+        (13, "crash_recovery"),
     ]
     
     # Run all test cases

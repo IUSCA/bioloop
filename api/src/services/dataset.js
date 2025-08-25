@@ -1058,6 +1058,7 @@ const buildDatasetsFetchQuery = ({
  * @param {string} data.name - The name of the dataset.
  * @param {string} data.type - The type of the dataset.
  * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
+ * @param {string} [data.description] - The description of the dataset.
  * @param {BigInt} [data.size] - The size of the dataset.
  * @param {string} data.origin_path - The origin path of the dataset.
  * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
@@ -1080,14 +1081,14 @@ const buildDatasetsFetchQuery = ({
 const buildDatasetCreateQuery = (data) => {
   /* eslint-disable no-unused-vars */
   const {
-    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
+    name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
     project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
   // gather non-null data to create a new dataset
   const create_query = _.flow([
-    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'description']),
     _.omitBy(_.isNil),
   ])(data);
 

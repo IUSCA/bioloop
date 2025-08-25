@@ -13,7 +13,6 @@ const he = require('he');
 
 // const logger = require('@/services/logger');
 const path = require('path');
-const utils = require('../../utils');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -22,6 +21,7 @@ const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
+const utils = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -282,6 +282,7 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+    logger.info('req.user', JSON.stringify(req.user));
 
     const query_obj = datasetService.buildDatasetsFetchQuery(req.query);
 
@@ -453,6 +454,17 @@ router.post(
     body('datasets.*.name').notEmpty(),
     body('datasets.*.type').isIn(config.get('dataset_types')),
     body('datasets.*.origin_path').notEmpty(),
+    body('datasets.*.du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
+    body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.project_id').optional(),
+    body('datasets.*.src_instrument_id').optional(),
+    body('datasets.*.src_dataset_id').optional(),
+    body('datasets.*.create_method').optional(),
+    body('datasets.*.workflow_id').optional(),
+    body('datasets.*.state').optional(),
+    body('datasets.*.metadata').optional(),
+    body('datasets.*.description').optional().notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
     /* eslint-disable */

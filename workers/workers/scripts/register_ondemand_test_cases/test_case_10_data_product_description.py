@@ -11,21 +11,32 @@ import sys
 import subprocess
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
-sys.path.append('/opt/sca/workers')
+# Load environment variables from .env file
+load_dotenv()
+
 import workers.api as api
-from generate_test_datasets import generate_datasets
+from workers.scripts.register_ondemand_test_cases.generate_test_datasets import generate_datasets
 
 # Setup logging
+# Setup logging AFTER importing workers modules to avoid conflicts
+# Clear any existing handlers first
+root_logger = logging.getLogger()
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler('/opt/sca/logs/register_ondemand/test_case_10.log'),
         logging.StreamHandler()
-    ]
+    ],
+    force=True  # Force reconfiguration
 )
 logger = logging.getLogger(__name__)
+
 
 
 def run_test():
@@ -61,13 +72,13 @@ def run_test():
         cmd = [
             'python', '-m', 'workers.scripts.register_ondemand',
             '--dataset-type', 'DATA_PRODUCT',
-            '--ingest-subdirs', 'true',
+            '--ingest-subdirs',
             '--description', test_description,
-            str(container_path)  # Absolute path
+            str(container_path)
         ]
         
         logger.info(f"Executing command: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/workers')
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/app')
         
         # Step 5: Log results
         logger.info("Step 5: Command output:")
@@ -86,7 +97,7 @@ def run_test():
             logger.info(f"Checking if dataset '{subdir_name}' was created with correct description...")
             
             try:
-                datasets = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=subdir_name)
+                datasets = api.get_all_datasets(dataset_type='DATA_PRODUCT', name=subdir_name, match_name_exact=True)
                 if datasets:
                     logger.info(f"✅ Dataset '{subdir_name}' found in database")
                     dataset = datasets[0]

@@ -29,7 +29,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/opt/sca/logs/register_ondemand/test_case_05.log'),
+        logging.FileHandler('/opt/sca/logs/register_ondemand/test_case_12.log'),
         logging.StreamHandler()
     ],
     force=True  # Force reconfiguration
@@ -49,14 +49,14 @@ def run_test():
         container_path = generate_datasets(
             dataset_type='DATA_PRODUCT',  # Any type is fine for this test
             size_mb=1.0,  # Small size since we're testing error handling
-            container_name='test_case_05',
+            container_name='test_case_12',
         )
         
         # Step 2: Run register_ondemand WITHOUT dataset-type parameter
         logger.info("Step 2: Running register_ondemand script without --dataset-type...")
         cmd = [
             'python', '-m', 'workers.scripts.register_ondemand',
-            # '--dataset-type', 'INVALID_TYPE',
+            '--dataset-type', 'INVALID_TYPE',
             str(container_path)
         ]
         

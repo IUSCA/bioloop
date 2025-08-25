@@ -11,8 +11,12 @@ import sys
 import subprocess
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
-sys.path.append('/opt/sca/workers')
+# Load environment variables from .env file
+load_dotenv()
+
+sys.path.append('/opt/sca/app')
 import workers.api as api
 from generate_test_datasets import generate_datasets
 
@@ -40,7 +44,6 @@ def run_test():
         container_path = generate_datasets(
             dataset_type='DATA_PRODUCT',
             size_mb=2.0,  # Small size for faster testing
-            single_dataset=False,  # Create multiple subdirectories to test that parent is registered
             container_name='test_case_02'
         )
         
@@ -63,12 +66,11 @@ def run_test():
         cmd = [
             'python', '-m', 'workers.scripts.register_ondemand',
             '--dataset-type', 'DATA_PRODUCT',
-            '--ingest-subdirs', 'false',
-            '.'  # Current directory
+            str(container_path)  # current directory
         ]
         
         logger.info(f"Executing command: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/workers')
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/app')
         
         # Step 5: Log results
         logger.info("Step 5: Command output:")

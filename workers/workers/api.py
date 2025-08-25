@@ -71,6 +71,11 @@ class APIServerSession(requests.Session):
         self.timeout = (config['api']['conn_timeout'], config['api']['read_timeout'])
         self.auth_token = config['api']['auth_token']
 
+        # logger.info('base_url', self.base_url)
+        # logger.info('timeout', self.timeout)
+        # logger.info('config[api][auth_token]')
+        # logger.info(config['api']['auth_token'])
+
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
         if 'timeout' not in kwargs:
@@ -132,7 +137,8 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=None,
-        bundle=False):
+        bundle=False,
+        match_name_exact=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -141,6 +147,7 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
+            'match_name_exact': match_name_exact,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -284,6 +291,25 @@ def create_notification(payload: dict):
         r = s.post('notifications', json=payload)
         r.raise_for_status()
 
+
+
+def get_all_project_ids():
+    with APIServerSession() as s:
+        r = s.get('projects/all')
+        r.raise_for_status()
+        projects = r.json()['projects']
+        return [project['id'] for project in projects]
+
+
+def get_project(project_id: str,
+                include_datasets: bool = False):
+    with APIServerSession() as s:
+        r = s.get(f'projects/{project_id}',
+                  params={
+                      'include_datasets': include_datasets,
+                  })
+        r.raise_for_status()
+        return r.json()
 
 if __name__ == '__main__':
     pass
