@@ -125,6 +125,13 @@ config = {
                 {
                     'name': 'setup_download',
                     'task': 'setup_dataset_download'
+                },
+                {
+                    'name': 'delete source',
+                    'task': 'delete_source',
+                    'kwargs': {
+                        'launch_wf': True
+                    }
                 }
             ]
         },

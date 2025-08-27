@@ -13,7 +13,6 @@ const he = require('he');
 
 // const logger = require('@/services/logger');
 const path = require('path');
-const utils = require('../../utils');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -22,6 +21,7 @@ const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
+const utils = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -726,6 +726,7 @@ router.post(
       CONSTANTS.WORKFLOWS.INTEGRATED,
       CONSTANTS.WORKFLOWS.STAGE,
     ]),
+    body('overrides').optional().isObject().withMessage('overrides must be an object'),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -761,7 +762,7 @@ router.post(
       }
     }
     logger.info(`Starting workflow ${wf_name} on dataset ${dataset.id}`);
-    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id);
+    const wf = await datasetService.create_workflow(dataset, wf_name, req.user.id, req.body.overrides);
     return res.json(wf);
     // }
   }),

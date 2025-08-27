@@ -1,0 +1,92 @@
+# Bioloop Project Rules for AI Agents
+
+Before working on this project, please read the AI_MEMORY.md file in the project root to understand:
+- Project overview and architecture
+- Authentication & authorization patterns
+- API design conventions
+- UI/UX patterns
+- Component structure
+- Database & API patterns
+- Security considerations
+- Worker development conventions
+
+This is a microservice architecture with separate UI, API, and Worker components. Always consider the impact of changes across all services.
+
+Key patterns to remember:
+- Use `auth.canAdmin` and `auth.canOperate` instead of `auth.hasRole(['admin', 'operator'])`
+- User-specific endpoints use `/:username` pattern with `checkOwnership: true`
+- Use transactions for data consistency
+- Page components should be minimal, delegating to list components
+- Use icons instead of buttons for actions
+- Always check permissions before allowing operations 
+
+# Allowlisted Commands (Read-Only + Safe)
+
+## System Information
+- whoami
+- uname -a
+- lsb_release -a
+- cat /etc/os-release
+- df -h
+- du -sh *
+- free -h
+- top -n 1
+- uptime
+- date
+- env
+- printenv
+
+## Directory & File Inspection
+- ls -al
+- ls -lh
+- tree
+- pwd
+- stat
+- file
+- head -n 50
+- tail -n 50
+- cat
+- less
+- more
+- wc -l
+- grep
+- find . -type f
+- find . -type d
+
+## Networking (Read-Only)
+- ifconfig
+- ip addr
+- ip route
+- netstat -tulpn
+- ss -tulpn
+- ping -c 4
+- curl -I
+- wget --spider
+
+## Git & Repo Status
+- git status
+- git log --oneline
+- git diff
+- git branch
+- git remote -v
+- git show
+
+## Docker (Read-Only) – with sudo
+- sudo docker ps
+- sudo docker ps -a
+- sudo docker images
+- sudo docker logs --tail 50
+- sudo docker network ls
+- sudo docker volume ls
+- sudo docker inspect
+
+## Node.js & NPM (Read-Only)
+- node -v
+- npm -v
+- npm list --depth=0
+
+## Python & Pip (Read-Only)
+- python3 --version
+- pip --version
+- pip list
+

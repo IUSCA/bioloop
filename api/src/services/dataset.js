@@ -53,14 +53,54 @@ const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) =
 );
 
 /**
+ * Deep merges an override object into a target object.
+ *
+ * @function deepMerge
+ * @param {Object} target - The target object to merge into.
+ * @param {Object} override - The override object to merge from.
+ * @returns {Object} The merged object.
+ */
+function deepMerge(target, override) {
+  const result = { ...target };
+
+  Object.keys(override).forEach((key) => {
+    if (override[key] && typeof override[key] === 'object' && !Array.isArray(override[key])) {
+      result[key] = deepMerge(target[key] || {}, override[key]);
+    } else {
+      result[key] = override[key];
+    }
+  });
+
+  return result;
+}
+
+/**
+ * Applies overrides to workflow steps based on step name matching.
+ *
+ * @function applyStepOverrides
+ * @param {Array} steps - The original workflow steps.
+ * @param {Object} stepOverrides - The step overrides keyed by step name.
+ * @returns {Array} The modified workflow steps.
+ */
+function applyStepOverrides(steps, stepOverrides) {
+  return steps.map((step) => {
+    if (stepOverrides[step.name]) {
+      return deepMerge(step, stepOverrides[step.name]);
+    }
+    return step;
+  });
+}
+
+/**
  * Retrieves and prepares the workflow body for a given workflow name.
  *
  * @function get_wf_body
  * @param {string} wf_name - The name of the workflow for which the workflow body is to be constructed.
+ * @param {Object} [overrides] - Optional workflow configuration overrides.
  * @throws {AssertionError} Throws an error if the workflow is not registered in the configuration.
  * @returns {Object} The constructed workflow body for the requested workflow.
  */
-function get_wf_body(wf_name) {
+function get_wf_body(wf_name, overrides = null) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
 
   // create a deep copy of the config object because it is immutable
@@ -72,6 +112,26 @@ function get_wf_body(wf_name) {
     ...step,
     queue: step.queue || `${config.app_id}.q`,
   }));
+
+  console.log('wf_body before overrides');
+  console.dir(wf_body, { depth: null });
+
+  // Apply runtime overrides if provided
+  if (overrides) {
+    // Apply step-specific overrides
+    if (overrides.steps) {
+      wf_body.steps = applyStepOverrides(wf_body.steps, overrides.steps);
+      console.log('wf_body after step overrides');
+      console.dir(wf_body, { depth: null });
+    }
+
+    // // Apply any other top-level overrides (excluding steps to avoid conflicts)
+    // const { steps: _excludeSteps, ...otherOverrides } = overrides;
+    // wf_body = deepMerge(wf_body, otherOverrides);
+    // console.log('wf_body after overrides');
+    // console.dir(wf_body, { depth: null });
+  }
+
   return wf_body;
 }
 
@@ -83,19 +143,21 @@ function get_wf_body(wf_name) {
  * @param {Object} dataset - The dataset object for which the workflow is being created.
  * @param {string} wf_name - The name of the workflow to be created.
  * @param {number} initiator_id - The ID of the user initiating the workflow.
+ * @param {Object} [overrides] - Optional workflow configuration overrides.
  * @throws {AssertionError} Throws an error if a workflow with the same name is already running or pending for the dataset.
  * @returns {Promise<Object>} The created workflow object.
  *
  * @description
  * This function performs the following steps:
  * 1. Retrieves the workflow body for the provided workflow name.
- * 2. Checks if there's already an active workflow with the same name for the given dataset.
- * 3. If no active workflow exists, it creates a new workflow using the workflow service.
- * 4. Associates the newly created workflow with the dataset in the database.
- * 5. Returns the created workflow object.
+ * 2. Applies any runtime overrides to the workflow configuration.
+ * 3. Checks if there's already an active workflow with the same name for the given dataset.
+ * 4. If no active workflow exists, it creates a new workflow using the workflow service.
+ * 5. Associates the newly created workflow with the dataset in the database.
+ * 6. Returns the created workflow object.
  */
-async function create_workflow(dataset, wf_name, initiator_id) {
-  const wf_body = get_wf_body(wf_name);
+async function create_workflow(dataset, wf_name, initiator_id, overrides = null) {
+  const wf_body = get_wf_body(wf_name, overrides);
 
   // check if a workflow with the same name is not already running / pending on
   // this dataset
