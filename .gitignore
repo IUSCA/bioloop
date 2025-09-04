@@ -65,8 +65,6 @@ db/backups/*.sql
 db/backups/*.psql
 todo.md
 
-db/postgres/data/
-
 .pm2
 
 rhythm_api/
@@ -74,4 +72,8 @@ rhythm/rhythm_api
 signet/signet
 db/mongo/data
 db/postgres/data
-db/db_postgres
+
+curl_cmds
+.cursorrules
+
+*.log

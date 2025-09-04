@@ -34,7 +34,7 @@ services:
     command: ["npm", "run", "dev"] 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -64,6 +64,7 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
+      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
@@ -77,12 +78,12 @@ services:
       - db/mongo/.env.default # For MongoDB connection settings
       - db/queue/.env.default # For RabbitMQ connection settings
       - workers/.env.default # For all default settings
-      # - workers/.env? # For keys made after the first run
+      # - workers/.env # For keys made after the first run
     working_dir: /opt/sca/app
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
-    entrypoint: [ "bin/entrypoint.sh" ]
+    entrypoint: [ "sh", "-c", "tail -f /dev/null" ]
     depends_on:
       init_data_dirs:
         condition: service_completed_successfully
@@ -109,7 +110,8 @@ services:
     volumes:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
-    entrypoint: [ "bin/entrypoint.sh" ]
+    # entrypoint: [ "bin/entrypoint.sh" ]
+    entrypoint: [ "sh", "-c", "tail -f /dev/null" ]
     depends_on:
       init_data_dirs:
         condition: service_completed_successfully
@@ -166,7 +168,7 @@ services:
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -177,8 +179,8 @@ services:
   secure_download:
     image: node:19
     restart: unless-stopped
-    expose:
-      - 3060
+    ports:
+      - 3060:3060
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -189,7 +191,7 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
 
@@ -208,7 +210,7 @@ services:
     command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
     depends_on:
@@ -228,7 +230,7 @@ services:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
       retries: 5
 

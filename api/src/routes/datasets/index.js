@@ -13,7 +13,6 @@ const he = require('he');
 
 // const logger = require('@/services/logger');
 const path = require('path');
-const utils = require('../../utils');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -22,6 +21,7 @@ const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
+const utils = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -278,10 +278,12 @@ router.get(
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').toBoolean().optional(),
+    query('include_audit_logs').toBoolean().optional(),
     query('id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
+    logger.info('req.user', JSON.stringify(req.user));
 
     const query_obj = datasetService.buildDatasetsFetchQuery(req.query);
 
@@ -307,6 +309,7 @@ router.get(
         derived_datasets: true,
         bundle: req.query.bundle || false,
         states: req.query.include_states || false,
+        ...(req.query.include_audit_logs ? CONSTANTS.INCLUDE_AUDIT_LOGS : {}),
       },
     };
 
@@ -453,6 +456,17 @@ router.post(
     body('datasets.*.name').notEmpty(),
     body('datasets.*.type').isIn(config.get('dataset_types')),
     body('datasets.*.origin_path').notEmpty(),
+    body('datasets.*.du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
+    body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.project_id').optional(),
+    body('datasets.*.src_instrument_id').optional(),
+    body('datasets.*.src_dataset_id').optional(),
+    body('datasets.*.create_method').optional(),
+    body('datasets.*.workflow_id').optional(),
+    body('datasets.*.state').optional(),
+    body('datasets.*.metadata').optional(),
+    body('datasets.*.description').optional().notEmpty().escape(),
   ]),
   asyncHandler(async (req, res, next) => {
     /* eslint-disable */
@@ -537,7 +551,10 @@ router.post(
       /* eslint-enable */
 
     const data = req.body.datasets
-      .map((d) => datasetService.buildDatasetCreateQuery(d));
+      .map((d) => datasetService.buildDatasetCreateQuery({
+        ...d,
+        user_id: req.user.id,
+      }));
 
     const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
 

@@ -8,8 +8,6 @@ from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
 from workers.config import config
-from datetime import datetime
-import json
 
 logger = logging.getLogger(__name__)
 
@@ -97,20 +95,10 @@ def int_to_str(d: dict, key: str):
     return d
 
 
-def convert_dates(obj: dict, date_keys: list[str], date_format: str = '%Y-%m-%dT%H:%M:%S.%fZ'):
-    if obj is None:
-        return obj
-
-    for date_key in date_keys:
-        date_str = glom(obj, date_key, default=None)
-        if date_str is not None:
-            try:
-                glom_assign(obj, date_key, datetime.strptime(date_str, date_format))
-            except ValueError:  # unable to parse date string
-                glom_assign(obj, date_key, None)
-
-
 def dataset_getter(dataset: dict):
+    date_format = '%Y-%m-%dT%H:%M:%S.%fZ'
+    date_keys = ['created_at', 'updated_at']
+
     # convert du_size and size from string to int
     if dataset is None:
         return dataset
@@ -120,7 +108,14 @@ def dataset_getter(dataset: dict):
     dataset['files'] = [str_to_int(f, 'size') for f in dataset.get('files', [])]
 
     # convert date strings to date objects
-    return convert_dates(dataset, ['created_at', 'updated_at'])
+    for date_key in date_keys:
+        date_str = glom(dataset, date_key, default=None)
+        if date_str is not None:
+            try:
+                glom_assign(dataset, date_key, datetime.strptime(date_str, date_format))
+            except ValueError:  # unable to parse date string
+                glom_assign(dataset, date_key, None)
+    return dataset
 
 
 def dataset_setter(dataset: dict):
@@ -131,18 +126,6 @@ def dataset_setter(dataset: dict):
     return dataset
 
 
-def project_getter(project: dict):
-    # convert date strings to date objects
-    return convert_dates(project, ['created_at', 'updated_at'])
-
-
-def get_project(project_id: str):
-    with APIServerSession() as s:
-        r = s.get(f'projects/{project_id}')
-        r.raise_for_status()
-        return project_getter(r.json())
-
-
 def get_all_datasets(
         dataset_type=None,
         name=None,
@@ -150,7 +133,8 @@ def get_all_datasets(
         deleted=False,
         archived=None,
         bundle=False,
-        include_states=False):
+        match_name_exact=False,
+        include_audit_logs=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -159,7 +143,8 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
-            'include_states': include_states,
+            'match_name_exact': match_name_exact,
+            'include_audit_logs': include_audit_logs,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -285,13 +270,6 @@ def get_all_workflows():
         return r.json()
 
 
-def get_dataset_workflows(dataset_id: int):
-    with APIServerSession() as s:
-        r = s.get(f'workflows/{dataset_id}')
-        r.raise_for_status()
-        return r.json()
-
-
 def get_dataset_uploads():
     with APIServerSession() as s:
         r = s.get(f'datasets/uploads')
@@ -309,6 +287,33 @@ def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)
         r.raise_for_status()
+
+
+
+def get_all_projects():
+    with APIServerSession() as s:
+        r = s.get('projects/all')
+        r.raise_for_status()
+        projects = r.json()['projects']
+        return projects
+
+
+def get_project(project_id: str,
+                include_datasets: bool = False):
+    with APIServerSession() as s:
+        r = s.get(f'projects/{project_id}',
+                  params={
+                      'include_datasets': include_datasets,
+                  })
+        r.raise_for_status()
+        return r.json()
+
+
+def initiate_workflow(dataset_id: int, workflow_name: str):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/workflow/{workflow_name}')
+        r.raise_for_status()
+        return r.json()
 
 
 if __name__ == '__main__':

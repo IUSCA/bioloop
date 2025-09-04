@@ -2,6 +2,8 @@ import datetime
 import itertools
 import time
 from pathlib import Path
+import json
+from datetime import datetime, date
 
 from celery import Celery
 from celery.utils.log import get_task_logger
@@ -15,6 +17,12 @@ logger = get_task_logger(__name__)
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
+
+class NoDateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return str(obj)  # Convert to string instead of full datetime
+        return super().default(obj)
 
 def dir_last_modified_time(dataset_path: Path) -> float:
     """
@@ -42,7 +50,7 @@ def dir_last_modified_time(dataset_path: Path) -> float:
 
 
 def update_progress(celery_task, mod_time, time_remaining_sec):
-    d1 = datetime.datetime.utcfromtimestamp(mod_time)
+    d1 = datetime.utcfromtimestamp(mod_time)
     prog_obj = {
         'name': d1.isoformat(),
         'time_remaining_sec': time_remaining_sec,
@@ -52,6 +60,7 @@ def update_progress(celery_task, mod_time, time_remaining_sec):
 
 def await_stability(celery_task, dataset_id, wait_seconds: int = None, recency_threshold=None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
+    
     origin_path = Path(dataset['origin_path'])
     dataset_type = dataset['type']
 

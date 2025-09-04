@@ -5,6 +5,7 @@ YEAR = datetime.datetime.now().year
 TEN_MEGABYTES = 10 * 1024 * 1024
 
 config = {
+    'mode': 'docker',
     'paths': {
         'scratch': '/opt/sca/data/scratch',
         'RAW_DATA': {
@@ -35,7 +36,18 @@ config = {
         'DATA_PRODUCT': {
             'source_dir': '/opt/sca/data/origin/data_products',
         },
-        'recency_threshold_seconds': 0,
+        'recency_threshold_seconds': 10,
         'minimum_dataset_size': TEN_MEGABYTES,
     },
+    'register_ondemand': {
+        'RAW_DATA': {
+            'source_dir': '/opt/sca/data/register_ondemand/raw_data',
+        },
+        'DATA_PRODUCT': {
+            'source_dir': '/opt/sca/data/register_ondemand/data_products',
+        },
+    },
+    'logs': {
+        'register_ondemand': '/opt/sca/logs/register_ondemand'
+    }
 }
