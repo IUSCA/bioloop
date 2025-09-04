@@ -107,13 +107,13 @@ const accessControl = _.curry((
 });
 
 function getPermission({
-                         resource,
-                         action,
-                         requester_roles,
-                         checkOwnership = false,
-                         requester,
-                         resourceOwner,
-                       }) {
+  resource,
+  action,
+  requester_roles,
+  checkOwnership = false,
+  requester,
+  resourceOwner,
+}) {
   const actions = buildActions(action);
   // filter user roles that match defined roles
   const roles = [...setIntersection(ac.getRoles(), requester_roles || [])];
