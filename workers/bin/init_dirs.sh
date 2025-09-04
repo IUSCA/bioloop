@@ -57,6 +57,10 @@ create_dir() {
 create_dir "/opt/sca/data/origin/raw_data"        # RAW_DATA source directory
 create_dir "/opt/sca/data/origin/data_products"   # DATA_PRODUCT source directory
 
+create_dir "/opt/sca/data/register_ondemand/raw_data"        # RAW_DATA source directory
+create_dir "/opt/sca/data/register_ondemand/data_products"   # DATA_PRODUCT source directory
+create_dir "/opt/sca/logs/register_ondemand"
+
 # Archive directory - Datasets's archival storage location
 create_dir "/opt/sca/data/archive"                # Base archive directory 
 
