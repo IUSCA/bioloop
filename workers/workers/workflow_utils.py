@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import time
-import shutil
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -35,7 +34,7 @@ def get_wf_body(wf_name: str) -> dict:
 
 def get_archive_dir(dataset_type: str) -> str:
     sda_dir = config["paths"][dataset_type]["archive"]
-    # sda.ensure_directory(sda_dir)  # create the directory if it does not exist
+    sda.ensure_directory(sda_dir)  # create the directory if it does not exist
     return sda_dir
 
 
@@ -78,34 +77,38 @@ def upload_file_to_sda(local_file_path: Path,
                        verify_checksum: bool = True,
                        preflight_check: bool = True) -> None:
     """
-    Copy directory from local_file_path to sda_file_path.
-    
-    @param local_file_path: Local directory path to copy from
-    @param sda_file_path: SDA directory path to copy to
-    @param celery_task: Celery task for progress tracking (unused in simplified version)
-    @param verify_checksum: Whether to verify checksum (unused in simplified version)
-    @param preflight_check: Whether to perform preflight checks (unused in simplified version)
+
+    @param local_file_path:
+    @param sda_file_path:
+    @param celery_task:
+    @param verify_checksum:
+    @param preflight_check:
     """
-    logger.info(f'upload_file_to_sda: copying from {local_file_path} to {sda_file_path}')
-    
-    # Ensure the destination directory exists
-    sda_path = Path(sda_file_path)
-    sda_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Remove destination if it exists (whether file or directory)
-    if sda_path.exists():
-        if sda_path.is_dir():
-            shutil.rmtree(sda_path)
-        else:
-            sda_path.unlink()
-    
-    # Copy the file/directory contents
-    if local_file_path.is_dir():
-        shutil.copytree(local_file_path, sda_file_path, dirs_exist_ok=True)
+    local_digest = None
+    sda_digest = None
+
+    if preflight_check:
+        sda_digest = sda.get_hash(sda_file_path, missing_ok=True)
+        if sda_digest is not None:
+            logger.info(f'computing checksum of local file {local_file_path} to compare with sda_digest')
+            local_digest = utils.checksum(local_file_path)
+
+    if sda_digest is not None and local_digest is not None and sda_digest == local_digest:
+        logger.warning(f'The checksums of local file {local_file_path} and SDA file {sda_file_path} match - not '
+                       f'uploading')
     else:
-        shutil.copy2(local_file_path, sda_file_path)
-    
-    logger.info(f'upload_file_to_sda: successfully copied to {sda_file_path}')
+        if celery_task is not None:
+            local_file_size = local_file_path.stat().st_size
+            cm = track_progress_parallel(celery_task=celery_task,
+                                         name='sda put',
+                                         progress_fn=lambda: sda.get_size(sda_file_path),
+                                         total=local_file_size,
+                                         units='bytes')
+        else:
+            cm = utils.empty_context_manager()
+        with cm:
+            logging.info(f'putting {local_file_path} on SDA at {sda_file_path}')
+            sda.put(local_file=str(local_file_path), sda_file=sda_file_path, verify_checksum=verify_checksum)
 
 
 def download_file_from_sda(sda_file_path: str,
@@ -115,26 +118,41 @@ def download_file_from_sda(sda_file_path: str,
                            verify_checksum: bool = True,
                            preflight_check: bool = False) -> None:
     """
-    Copy directory from sda_file_path to local_file_path.
-    
-    @param sda_file_path: SDA directory path to copy from
-    @param local_file_path: Local directory path to copy to
-    @param celery_task: Celery task for progress tracking (unused in simplified version)
-    @param verify_checksum: Whether to verify checksum (unused in simplified version)
-    @param preflight_check: Whether to perform preflight checks (unused in simplified version)
+    Before downloading, check if the file exists and the checksums match.
+    If not, download from SDA and validate if the checksums match.
+    @param sda_file_path:
+    @param local_file_path:
+    @param celery_task:
+    @param verify_checksum:
+    @param preflight_check:
     """
-    logger.info(f'copying directory from {sda_file_path} to {local_file_path}')
-    
-    # Ensure the destination directory exists
-    local_path = Path(local_file_path)
-    local_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Copy the directory contents
-    sda_path = Path(sda_file_path)
-    if sda_path.is_dir():
-        shutil.copytree(sda_file_path, local_file_path, dirs_exist_ok=True)
-    else:
-        # If it's a file, copy it directly
-        shutil.copy2(sda_file_path, local_file_path)
-    
-    logger.info(f'successfully copied from {sda_file_path} to {local_file_path}')
+    file_exists = False
+
+    if preflight_check:
+        sda_digest = sda.get_hash(sda_path=sda_file_path)
+        if local_file_path.exists() and local_file_path.is_file():
+            # if local file exists, validate checksum against SDA
+            logger.info(f'computing checksum of local file {local_file_path}')
+            local_digest = utils.checksum(local_file_path)
+            if sda_digest == local_digest:
+                file_exists = True
+                logger.warning(f'local file exists and the checksums match - not getting from the SDA')
+
+    if not file_exists:
+        logger.info('getting file from SDA')
+
+        # delete the local file if possible
+        local_file_path.unlink(missing_ok=True)
+
+        if celery_task is not None:
+            source_size = sda.get_size(sda_file_path)
+            cm = track_progress_parallel(celery_task=celery_task,
+                                         name='sda get',
+                                         progress_fn=lambda: local_file_path.stat().st_size,
+                                         total=source_size,
+                                         units='bytes')
+        else:
+            cm = utils.empty_context_manager()
+        with cm:
+            logger.info(f'getting file from SDA {sda_file_path} to {local_file_path}')
+            sda.get(sda_file=sda_file_path, local_file=str(local_file_path), verify_checksum=verify_checksum)

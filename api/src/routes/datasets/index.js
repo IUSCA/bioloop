@@ -21,7 +21,6 @@ const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
-const utils = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -283,7 +282,6 @@ router.get(
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    logger.info('req.user', JSON.stringify(req.user));
 
     const query_obj = datasetService.buildDatasetsFetchQuery(req.query);
 

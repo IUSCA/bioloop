@@ -27,19 +27,13 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
     @return:
     """
     logger.info(f'creating tar of {source_dir} at {tar_path}')
-    
     # if the tar file already exists, delete it
     if tar_path.exists():
         tar_path.unlink()
-    
-    # Check source directory exists and is accessible
-    source_path = Path(source_dir)
-    if not source_path.exists():
-        raise FileNotFoundError(f'Source directory not found: {source_dir}')
 
     with wf_utils.track_progress_parallel(celery_task=celery_task,
                                           name='tar',
-                                          progress_fn=lambda: tar_path.stat().st_size if tar_path.exists() else 0,
+                                          progress_fn=lambda: tar_path.stat().st_size,
                                           total=source_size,
                                           units='bytes'):
         # using python to create tar files does not support --sparse
@@ -52,23 +46,13 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
     # Tar the dataset directory and compute checksum
-    bundle_path_str = f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar'
-    bundle = Path(bundle_path_str)
-    
-    # Ensure bundle directory exists
-    bundle.parent.mkdir(parents=True, exist_ok=True)
+    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
                  source_dir=dataset['origin_path'],
                  source_size=dataset['du_size'])
 
-    # Validate bundle was created as a file
-    if not bundle.exists():
-        raise FileNotFoundError(f'Bundle file {bundle} was not created')
-    if bundle.is_dir():
-        raise RuntimeError(f'Bundle path {bundle} is a directory, not a tar file')
-    
     bundle_size = bundle.stat().st_size
     bundle_checksum = utils.checksum(bundle)
     bundle_attrs = {
@@ -80,7 +64,6 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     sda_dir = wf_utils.get_archive_dir(dataset['type'])
     sda_bundle_path = f'{sda_dir}/{bundle.name}'
 
-    # Upload to SDA
     wf_utils.upload_file_to_sda(local_file_path=bundle,
                                 sda_file_path=sda_bundle_path,
                                 celery_task=celery_task)
@@ -96,12 +79,10 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
     sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
-    
     update_data = {
         'archive_path': sda_bundle_path,
         'bundle': bundle_attrs
     }
-    
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
     api.add_state_to_dataset(dataset_id=dataset_id, state='ARCHIVED')
 

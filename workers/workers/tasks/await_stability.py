@@ -2,8 +2,6 @@ import datetime
 import itertools
 import time
 from pathlib import Path
-import json
-from datetime import datetime, date
 
 from celery import Celery
 from celery.utils.log import get_task_logger
@@ -18,12 +16,6 @@ app = Celery("tasks")
 app.config_from_object(celeryconfig)
 
 
-class NoDateTimeEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            return str(obj)  # Convert to string instead of full datetime
-        return super().default(obj)
-
 def dir_last_modified_time(dataset_path: Path) -> float:
     """
     Obtain the most recent modification time for a directory and all its contents in a recursive manner.
@@ -32,7 +24,7 @@ def dir_last_modified_time(dataset_path: Path) -> float:
 
     If the copy process is configured to preserve the metadata of the source file, it will update the m_time
     of the target file after the copy process. This will update the c_time of the target file. In these cases,
-    c_time will be bigger than m_time. So, we will consider the maximum of c_time and m_time of the file / directory 
+    c_time will be bigger than m_time. So, we will consider the maximum of c_time and m_time of the file / directory
     as the last modified time.
 
 
@@ -50,7 +42,7 @@ def dir_last_modified_time(dataset_path: Path) -> float:
 
 
 def update_progress(celery_task, mod_time, time_remaining_sec):
-    d1 = datetime.utcfromtimestamp(mod_time)
+    d1 = datetime.datetime.utcfromtimestamp(mod_time)
     prog_obj = {
         'name': d1.isoformat(),
         'time_remaining_sec': time_remaining_sec,
@@ -60,7 +52,6 @@ def update_progress(celery_task, mod_time, time_remaining_sec):
 
 def await_stability(celery_task, dataset_id, wait_seconds: int = None, recency_threshold=None, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    
     origin_path = Path(dataset['origin_path'])
     dataset_type = dataset['type']
 

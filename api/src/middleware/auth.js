@@ -13,24 +13,14 @@ const asyncHandler = require('./asyncHandler');
 
 function authenticate(req, res, next) {
   const authHeader = req.headers.authorization || '';
-
-  if (!authHeader) {
-    logger.info('Authentication failed. Token not found.');
-    return next(createError.Unauthorized('Authentication failed. Token not found.'));
-  }
+  if (!authHeader) return next(createError.Unauthorized('Authentication failed. Token not found.'));
 
   const err = createError.Unauthorized('Authentication failed. Token is not valid.');
-  if (!authHeader.startsWith('Bearer ')) {
-    logger.info('Authentication failed. Token does not start with Bearer.');
-    return next(err);
-  }
+  if (!authHeader.startsWith('Bearer ')) { return next(err); }
   const token = authHeader.split(' ')[1];
 
   const auth = authService.checkJWT(token);
-  if (!auth) {
-    logger.info('Authentication failed. Token is not valid.');
-    return next(err);
-  }
+  if (!auth) return next(err);
 
   req.user = auth.profile;
   next();
@@ -117,13 +107,13 @@ const accessControl = _.curry((
 });
 
 function getPermission({
-  resource,
-  action,
-  requester_roles,
-  checkOwnership = false,
-  requester,
-  resourceOwner,
-}) {
+                         resource,
+                         action,
+                         requester_roles,
+                         checkOwnership = false,
+                         requester,
+                         resourceOwner,
+                       }) {
   const actions = buildActions(action);
   // filter user roles that match defined roles
   const roles = [...setIntersection(ac.getRoles(), requester_roles || [])];

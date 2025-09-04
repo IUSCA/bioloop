@@ -17,10 +17,10 @@ def str_func_call(func, args, kwargs):
     return f"{func.__name__}({args_str})"
 
 
-def checksum(fname: Path | str, block_size: int = 4096):
+def checksum(fname: Path | str):
     m = hashlib.md5()
     with open(str(fname), "rb") as f:
-        for chunk in iter(lambda: f.read(block_size), b""):
+        for chunk in iter(lambda: f.read(4096), b""):
             m.update(chunk)
     return m.hexdigest()
 

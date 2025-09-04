@@ -72,8 +72,3 @@ rhythm/rhythm_api
 signet/signet
 db/mongo/data
 db/postgres/data
-
-curl_cmds
-.cursorrules
-
-*.log

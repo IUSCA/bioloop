@@ -2,12 +2,9 @@ const express = require('express');
 const createError = require('http-errors');
 const config = require('config');
 const { param } = require('express-validator');
-const fs = require('fs');
-const path = require('path');
 
 const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
-const logger = require('../services/logger');
 
 const router = express.Router();
 
@@ -23,7 +20,7 @@ router.get(
     param('bundle_name').escape().notEmpty(),
   ]),
   asyncHandler(async (req, res, next) => {
-    logger.info('inside /download/:bundle_name');
+    console.log('inside /download/:bundle_name');
     const SCOPE_PREFIX = config.get('scope_prefix');
 
     const scopes = (req.token?.scope || '').split(' ');
@@ -37,42 +34,6 @@ router.get(
     const req_path = remove_leading_slash(req.path);
 
     if (req_path === token_file_path) {
-      logger.info('req_path === token_file_path');
-      logger.info(`req_path: ${req_path}`);
-      logger.info(`token_file_path: ${token_file_path}`);
-
-      // Get and print the size of the token file path
-      const fullFilePath = path.join('/opt/sca/data/downloads/', token_file_path);
-      try {
-        const stats = fs.statSync(fullFilePath);
-        logger.info(`File size: ${stats.size} bytes`);
-
-        // Check if we're in Docker mode (NODE_ENV === 'docker')
-        if (process.env.NODE_ENV === 'docker') {
-          logger.info('Docker mode detected, serving file directly with Express');
-
-          // Set headers for file download
-          res.set('content-type', 'application/octet-stream; charset=utf-8');
-
-          // Create read stream and pipe to response
-          const fileStream = fs.createReadStream(fullFilePath);
-          fileStream.pipe(res);
-
-          fileStream.on('error', (error) => {
-            logger.error(`Error streaming file: ${error.message}`);
-            if (!res.headersSent) {
-              res.status(500).send('Error streaming file');
-            }
-          });
-
-          return; // Exit early, don't send X-Accel-Redirect
-        }
-      } catch (error) {
-        logger.error(`Error getting file size: ${error.message}`);
-      }
-
-      // Production mode: use nginx X-Accel-Redirect
-      logger.info('Production mode detected, using nginx X-Accel-Redirect');
       res.set('X-Accel-Redirect', `/data/${token_file_path}`);
 
       // make browser download response instead of attempting to render it
