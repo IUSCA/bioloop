@@ -38,4 +38,5 @@ config = {
         'recency_threshold_seconds': 0,
         'minimum_dataset_size': TEN_MEGABYTES,
     },
+    'delete_after_archive': True,
 }

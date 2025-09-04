@@ -168,5 +168,6 @@ config = {
     },
     'inspect': {
         'file_metadata_batch_size': 25000
-    }
+    },
+    'delete_after_archive': False,
 }
