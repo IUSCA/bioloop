@@ -8,3 +8,7 @@ class ValidationFailed(Exception):
 
 class InspectionFailed(Exception):
     pass
+
+
+class ConversionException(Exception):
+    pass

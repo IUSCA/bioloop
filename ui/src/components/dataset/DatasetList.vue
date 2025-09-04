@@ -18,6 +18,37 @@
         </va-input>
       </div>
 
+      <!-- Conversions button -->
+      <VaButtonGroup>
+        <va-button
+          @click="handleConvertClick"
+          preset="primary"
+          color="info"
+          class="flex-none"
+          :disabled="
+            selectable &&
+            (selectedIds.length < 1 ||
+              selectedIds.length > MAX_DATASET_CONVERSIONS)
+          "
+        >
+          <i-mdi-orbit-variant class="mr-1" />
+          <span> Convert </span>
+          <span v-if="selectedIds?.length > 0">({{ selectedIds.length }})</span>
+        </va-button>
+        <va-button
+          v-if="selectable"
+          @click="
+            selectable = false;
+            selectedIds = [];
+          "
+          preset="primary"
+          color="info"
+          class="flex-none"
+        >
+          <i-mdi-close />
+        </va-button>
+      </VaButtonGroup>
+
       <!-- Filter button -->
       <va-button @click="searchModal.show()" preset="primary" class="flex-none">
         <i-mdi-filter />
@@ -34,107 +65,114 @@
     </div>
 
     <!-- table -->
-    <va-data-table
-      :items="datasets"
-      :columns="columns"
-      v-model:sort-by="query.sort_by"
-      v-model:sorting-order="query.sort_order"
-      disable-client-side-sorting
-      :loading="data_loading"
-    >
-      <template #cell(name)="{ rowData }">
-        <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
-          rowData.name
-        }}</router-link>
-      </template>
+        <!-- table -->
+    <div class="overflow-x-auto" style="max-width: calc(100vw - 250px)">
+      <va-data-table
+        v-model="selectedIds"
+        items-track-by="id"
+        :items="datasets"
+        :columns="columns"
+        v-model:sort-by="query.sort_by"
+        v-model:sorting-order="query.sort_order"
+        disable-client-side-sorting
+        hoverable
+        :loading="data_loading"
+        :selectable="selectable"
+      >
+        <template #cell(name)="{ rowData }">
+          <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
+            rowData.name
+          }}</router-link>
+        </template>
 
-      <template #cell(created_at)="{ value }">
-        <span>{{ datetime.date(value) }}</span>
-      </template>
+        <template #cell(created_at)="{ value }">
+          <span>{{ datetime.date(value) }}</span>
+        </template>
 
-      <template #cell(archived)="{ source }">
-        <span v-if="source" class="flex justify-center">
-          <i-mdi-check-circle-outline class="text-green-700" />
-        </span>
-      </template>
+        <template #cell(archived)="{ source }">
+          <span v-if="source" class="flex justify-center">
+            <i-mdi-check-circle-outline class="text-green-700" />
+          </span>
+        </template>
 
-      <template #cell(staged)="{ source }">
-        <span v-if="source" class="flex justify-center">
-          <i-mdi-check-circle-outline class="text-green-700" />
-        </span>
-      </template>
+        <template #cell(staged)="{ source }">
+          <span v-if="source" class="flex justify-center">
+            <i-mdi-check-circle-outline class="text-green-700" />
+          </span>
+        </template>
 
-      <!-- <template #cell(num_genome_files)="{ rowData }">
-        <Maybe :data="rowData?.metadata?.num_genome_files" />
-      </template> -->
+        <!-- <template #cell(num_genome_files)="{ rowData }">
+          <Maybe :data="rowData?.metadata?.num_genome_files" />
+        </template> -->
 
-      <template #cell(source_datasets)="{ source }">
-        <Maybe :data="source?.length" :default="0" />
-      </template>
+        <template #cell(source_datasets)="{ source }">
+          <Maybe :data="source?.length" :default="0" />
+        </template>
 
-      <template #cell(derived_datasets)="{ source }">
-        <Maybe :data="source?.length" :default="0" />
-      </template>
+        <template #cell(derived_datasets)="{ source }">
+          <Maybe :data="source?.length" :default="0" />
+        </template>
 
-      <template #cell(updated_at)="{ value }">
-        <span>{{ datetime.fromNow(value) }}</span>
-      </template>
+        <template #cell(updated_at)="{ value }">
+          <span>{{ datetime.fromNow(value) }}</span>
+        </template>
 
-      <template #cell(du_size)="{ source }">
-        <span>{{ source != null ? formatBytes(source) : "" }}</span>
-      </template>
+        <template #cell(du_size)="{ source }">
+          <span>{{ source != null ? formatBytes(source) : "" }}</span>
+        </template>
 
-      <template #cell(workflows)="{ source }">
-        <span>{{ source?.length || 0 }}</span>
-      </template>
+        <template #cell(workflows)="{ source }">
+          <span>{{ source?.length || 0 }}</span>
+        </template>
 
-      <template #cell(actions)="{ rowData }">
-        <div class="flex gap-2">
-          <va-popover
-            message="Archive"
-            placement="left"
-            v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
-          >
-            <va-button
-              class="flex-initial"
-              size="small"
-              preset="primary"
-              @click="
-                launch_modal.visible = true;
-                launch_modal.selected = rowData;
+        <template #cell(actions)="{ rowData }">
+          <div class="flex gap-2">
+            <va-popover
+              message="Archive"
+              placement="left"
+              v-if="(rowData?.workflows?.length || 0) == 0 && !rowData.is_deleted"
+            >
+              <va-button
+                class="flex-initial"
+                size="small"
+                preset="primary"
+                @click="
+                  launch_modal.visible = true;
+                  launch_modal.selected = rowData;
+                "
+              >
+                <i-mdi-rocket-launch />
+              </va-button>
+            </va-popover>
+
+            <!-- Delete button -->
+            <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
+            <va-popover
+              message="Delete entry"
+              placement="left"
+              v-if="
+                (rowData?.workflows?.length || 0) == 0 &&
+                !rowData.is_deleted &&
+                !rowData.is_archived
               "
             >
-              <i-mdi-rocket-launch />
-            </va-button>
-          </va-popover>
-
-          <!-- Delete button -->
-          <!-- Only show when the dataset has no workflows, is not archived, and has no workflows -->
-          <va-popover
-            message="Delete entry"
-            placement="left"
-            v-if="
-              (rowData?.workflows?.length || 0) == 0 &&
-              !rowData.is_deleted &&
-              !rowData.is_archived
-            "
-          >
-            <va-button
-              size="small"
-              preset="primary"
-              color="danger"
-              class="flex-initial"
-              @click="
-                delete_modal.visible = true;
-                delete_modal.selected = rowData;
-              "
-            >
-              <i-mdi-delete />
-            </va-button>
-          </va-popover>
-        </div>
-      </template>
-    </va-data-table>
+              <va-button
+                size="small"
+                preset="primary"
+                color="danger"
+                class="flex-initial"
+                @click="
+                  delete_modal.visible = true;
+                  delete_modal.selected = rowData;
+                "
+              >
+                <i-mdi-delete />
+              </va-button>
+            </va-popover>
+          </div>
+        </template>
+      </va-data-table>
+    </div>
 
     <!-- pagination -->
     <Pagination
@@ -202,6 +240,17 @@
     </va-modal>
 
     <DatasetSearchModal ref="searchModal" @search="handleSearch" />
+
+    <BulkConversionModal
+      ref="conversionModal"
+      :dataset-ids="selectedIds"
+      @done="
+        selectable = false;
+        selectedIds = [];
+      "
+    />
+
+    
   </div>
 </template>
 
@@ -228,6 +277,7 @@ const { filters, query, params, activeFilters } = storeToRefs(store);
 const auth = useAuthStore();
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const MAX_DATASET_CONVERSIONS = 10000;
 
 const datasets = ref([]);
 const data_loading = ref(false);
@@ -241,6 +291,9 @@ const delete_modal = ref({
 });
 const searchModal = ref(null);
 const total_results = ref(0);
+const selectable = ref(false);
+const selectedIds = ref([]);
+const conversionModal = ref(null);
 
 // used for OFFSET clause in the SQL used to retrieve the next paginated batch
 // of results
@@ -354,11 +407,16 @@ function fetch_items() {
     filters_api.updated_at_end = filters_api.updated_at.end;
     delete filters_api.updated_at;
   }
+  let sort_by = query.value.sort_by;
+  let sort_order = query.value.sort_order;
+  if (!sort_order) {
+    sort_by = null;
+  }
   DatasetService.getAll({
     limit: query.value.page_size,
     offset: offset.value,
-    sort_by: query.value.sort_by,
-    sort_order: query.value.sort_order,
+    sort_by,
+    sort_order,
     ...filters_api,
   })
     .then((res) => {
@@ -449,5 +507,13 @@ function delete_dataset(id) {
     .finally(() => {
       data_loading.value = false;
     });
+}
+
+function handleConvertClick() {
+  if (selectable.value) {
+    conversionModal.value.show();
+  } else {
+    selectable.value = true;
+  }
 }
 </script>

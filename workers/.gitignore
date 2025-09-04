@@ -94,6 +94,10 @@ celery_state*
 
 # celery worker pid file
 celery_worker.pid
+conversion_worker.pid
+
+celery_worker.state
+conversion_worker.state
 
 # poetry
 # generated with "poetry export --without-hashes --format=requirements.txt > requirements.txt"
@@ -101,3 +105,4 @@ requirements.txt
 
 workers/scripts/get_size.py
 workers/config/production.py
+

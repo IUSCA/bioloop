@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["strictUndefinedChecks"]
 }
 
@@ -38,6 +38,8 @@ model dataset {
   bundle            bundle?
   src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
+  conversions       conversion[]
+  derived_from_conversions conversion_derived_dataset[]
 
   @@unique([name, type, is_deleted])
 }
@@ -160,32 +162,34 @@ model stage_request_log {
 }
 
 model user {
-  id                         Int                 @id @default(autoincrement())
-  username                   String              @unique @db.VarChar(100)
-  name                       String?             @db.VarChar(100)
-  email                      String              @unique @db.VarChar(100)
-  cas_id                     String?             @unique @db.VarChar(100)
+  id                         Int                     @id @default(autoincrement())
+  username                   String                  @unique @db.VarChar(100)
+  name                       String?                 @db.VarChar(100)
+  email                      String                  @unique @db.VarChar(100)
+  cas_id                     String?                 @unique @db.VarChar(100)
   notes                      String?
-  created_at                 DateTime            @default(now()) @db.Timestamp(6)
-  updated_at                 DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  is_deleted                 Boolean             @default(false)
+  created_at                 DateTime                @default(now()) @db.Timestamp(6)
+  updated_at                 DateTime                @default(now()) @updatedAt @db.Timestamp(6)
+  is_deleted                 Boolean                 @default(false)
   metadata                   Json?
   user_role                  user_role[]
   settings                   user_settings?
   contacts                   contact[]
   dataset_audit              dataset_audit[]
-  projects                   project_user[]      @relation("project_user_user")
+  projects                   project_user[]          @relation("project_user_user")
   password                   user_password?
   login                      user_login?
   accesses                   data_access_log[]
   stage_requests             stage_request_log[]
   about_edits                about[]
-  project_users_assigned     project_user[]      @relation("project_user_assignor")
+  project_users_assigned     project_user[]          @relation("project_user_assignor")
   project_datasets_assigned  project_dataset[]
   project_contacts_assigned  project_contact[]
-  initiated_workflows        workflow[]          @relation("initiated_workflows")
+  initiated_workflows        workflow[]              @relation("initiated_workflows")
   acknowledged_notifications notification[]
   user_notifications         user_notification[]
+  conversion_definitions     conversion_definition[]
+  conversions                conversion[]
   // created_datasets           dataset_create_log[]
 }
 
@@ -394,6 +398,105 @@ model instrument {
   sourced_datasets dataset[]
 }
 
+model conversion_definition {
+  id               Int      @id @default(autoincrement())
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  name             String   @unique
+  description      String?
+  enabled          Boolean  @default(false)
+  author_id        Int
+  dataset_types    String[] // can run on only these datatypes
+  tags             String[] // tags for searching
+  program_id       Int
+  output_directory String?
+  logs_directory   String?
+  capture_logs     Boolean  @default(false)
+  program     cmd_line_program @relation(fields: [program_id], references: [id])
+  author      user             @relation(fields: [author_id], references: [id])
+  conversions conversion[]
+}
+
+model cmd_line_program {
+  id                    Int                     @id @default(autoincrement())
+  name                  String                  @unique
+  executable_path       String
+  executable_directory  String?
+  arguments             argument[]
+  allow_additional_args Boolean                 @default(false) // Whether additional arguments are allowed
+  created_at            DateTime                @default(now()) @db.Timestamp(6)
+  updated_at            DateTime                @default(now()) @updatedAt @db.Timestamp(6)
+  conversion_definition conversion_definition[]
+  // additional_args_rules Json?   // e.g., {"allowed_flags": ["--no-lane-splitting", "--force"], "forbidden_patterns": ["--output-dir"]}
+
+  @@unique([name, executable_path])
+}
+
+model argument {
+  id                    Int                 @id @default(autoincrement())
+  name                  String? // Name of the argument (e.g., "--verbose")
+  value_type            argument_value_type // Type of value the argument can have
+  allowed_values        String[] // Optional list of allowed values (e.g., ["fast", "safe"])
+  is_required           Boolean             @default(false) // Whether the argument is required or optional
+  default_value         String? // Default value for the argument
+  is_flag               Boolean             @default(false) // Whether the argument is a flag (boolean) without a value
+  description           String? // Optional description of the argument
+  min_value             Float? // Optional minimum value (for numeric types)
+  max_value             Float? // Optional maximum value (for numeric types)
+  min_length            Int? // Optional minimum length (for string types)
+  max_length            Int? // Optional maximum length (for string types)
+  position              Int? // Position index for positional arguments, null for named arguments
+  dynamic_variable_name String? // Name of the dynamic variable (if any)
+  dynamic_variable      dynamic_variable?   @relation(fields: [dynamic_variable_name], references: [name])
+  program_id            Int // Foreign key to cmd_line_program
+  program               cmd_line_program @relation(fields: [program_id], references: [id])
+  argument_values       argument_value[]
+}
+
+model argument_value {
+  id            Int        @id @default(autoincrement())
+  argument_id   Int // Foreign key to Argument
+  conversion_id Int // Foreign key to Execution
+  value         String?
+  argument      argument   @relation(fields: [argument_id], references: [id])
+  conversion    conversion @relation(fields: [conversion_id], references: [id])
+}
+
+model conversion {
+  id              Int                   @id @default(autoincrement())
+  initiated_at    DateTime              @default(now()) @db.Timestamp(6)
+  definition_id   Int
+  workflow_id     String?
+  dataset_id      Int
+  initiator_id    Int
+  argument_values argument_value[]
+  dataset         dataset               @relation(fields: [dataset_id], references: [id])
+  definition      conversion_definition @relation(fields: [definition_id], references: [id])
+  initiator       user                  @relation(fields: [initiator_id], references: [id])
+  additional_args Json?                 // e.g., { [ {"--no-lane-splitting": "true" }, {"--barcode-mismatches": "1"} ] }
+  derived_datasets conversion_derived_dataset[]
+}
+
+model conversion_derived_dataset {
+  conversion_id  Int
+  dataset_id     Int
+  created_at     DateTime @default(now()) @db.Timestamp(6)
+  updated_at     DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  metadata       Json?    // Additional metadata about the derived dataset process
+  conversion     conversion @relation(fields: [conversion_id], references: [id], onDelete: Cascade)
+  dataset        dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+
+  @@id([conversion_id, dataset_id])
+}
+
+model dynamic_variable {
+  name        String     @id
+  description String?
+  created_at  DateTime   @default(now()) @db.Timestamp(6)
+  updated_at  DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+  argument    argument[]
+}
+
 enum access_type {
   BROWSER
   SLATE_SCRATCH
@@ -425,4 +528,10 @@ enum DATASET_CREATE_METHOD {
   UPLOAD
   IMPORT
   SCAN
+}
+
+enum argument_value_type {
+  STRING
+  NUMBER
+  BOOLEAN
 }

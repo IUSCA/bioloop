@@ -146,8 +146,42 @@
           "task": "cancel_dataset_upload"
         }
       ]
+    },
+    "conversion": {
+      "name": "Conversion",
+      "steps": [
+        {
+          "name": "convert",
+          "task": "convert_dataset",
+          "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+        }
+      ]
+    },
+    "genomic_conversion": {
+      "name": "Genomic Conversion",
+      "steps": [
+        {
+          "name": "convert",
+          "task": "convert_genomic",
+          "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+        },
+        {
+          "name": "generate qc",
+          "task": "generate_qc",
+          "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+        },
+        {
+          "name": "copy reports",
+          "task": "copy_conversion_reports",
+          "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+        },
+        {
+          "name": "derive data products",
+          "task": "derive_data_products",
+          "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+        }
+      ]
     }
-
   },
   "dataset_types": [
     "RAW_DATA",
@@ -194,5 +228,18 @@
     "Internal Academic",
     "Non-profit",
     "Other"
+  ],
+  "genomic_conversion_programs": [
+    "bcl2fastq",
+    "bcl-convert",
+    "cellranger-v8.0.1",
+    "cellranger-v6.1.2",
+    "cellranger-v4.0.0",
+    "cellranger-arc",
+    "cellranger-arc-v2",
+    "cellranger-atac",
+    "spaceranger-v3.0.1",
+    "spaceranger-v1.3.1",
+    "spaceranger-v1.1.0"
   ]
 }

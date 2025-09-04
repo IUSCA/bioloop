@@ -71,6 +71,8 @@ class APIServerSession(requests.Session):
         self.timeout = (config['api']['conn_timeout'], config['api']['read_timeout'])
         self.auth_token = config['api']['auth_token']
 
+        # logger.info('self.auth_token', self.auth_token)
+
     def request(self, method, url, *args, **kwargs):
         joined_url = urljoin(self.base_url, url)
         if 'timeout' not in kwargs:
@@ -132,7 +134,8 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=None,
-        bundle=False):
+        bundle=False,
+        match_name_exact=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -141,6 +144,7 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
+            'match_name_exact': match_name_exact,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -151,12 +155,14 @@ def get_all_datasets(
 def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
-                workflows: bool = False):
+                workflows: bool = False,
+                include_conversions: bool = False):
     with APIServerSession() as s:
         payload = {
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
+            'include_conversions': include_conversions,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
 
@@ -185,6 +191,14 @@ def bulk_create_datasets(datasets):
         })
         r.raise_for_status()
         return r.json()
+
+
+def create_dataset_hierarchy(hierarchy_data):
+    """Create dataset hierarchy relationship (source -> derived)"""
+    with APIServerSession() as s:
+        r = s.post('datasets/associations', json=hierarchy_data)
+        r.raise_for_status()
+        return
 
 
 def update_dataset(dataset_id, update_data):
@@ -282,6 +296,20 @@ def update_dataset_upload(uploaded_dataset_id: int, log_data: dict):
 def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)
+        r.raise_for_status()
+
+
+def get_conversion(conversion_id: int, include_dataset: bool = False):
+    with APIServerSession() as s:
+        r = s.get(f'conversions/{conversion_id}', 
+                    params={'include_dataset': include_dataset})
+        r.raise_for_status()
+        return r.json()
+
+
+def post_conversion_derived_datasets(derivation_data: dict):
+    with APIServerSession() as s:
+        r = s.post('conversions/derived_datasets', json=derivation_data)
         r.raise_for_status()
 
 

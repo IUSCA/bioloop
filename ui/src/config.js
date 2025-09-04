@@ -115,6 +115,19 @@ const exports = {
   upload: {
     scope_prefix: "upload_file:",
   },
+  genomic_conversion_programs: [
+    "bcl2fastq",
+    "bcl-convert",
+    "cellranger-v8.0.1",
+    "cellranger-v6.1.2",
+    "cellranger-v4.0.0",
+    "cellranger-arc",
+    "cellranger-arc-v2",
+    "cellranger-atac",
+    "spaceranger-v3.0.1",
+    "spaceranger-v1.3.1",
+    "spaceranger-v1.1.0",
+  ],
 };
 
 export default exports;

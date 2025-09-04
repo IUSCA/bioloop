@@ -26,6 +26,9 @@ config = {
             },
         },
         'download_dir': '/opt/sca/data/downloads',
+        'conversion': {
+          'reports': '/opt/sca/data/conversion/reports',
+        },
         'root': '/opt/sca/data'
     },
     'registration': {

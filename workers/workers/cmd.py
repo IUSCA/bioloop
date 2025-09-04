@@ -110,6 +110,10 @@ def log_object(log):
 
 
 def execute_with_log_tracking(cmd: list[str], celery_task: WorkflowTask, cwd: str = None, blocking_delay: float = 5.0):
+    # Handle None cwd by defaulting to current working directory
+    # if not cwd:
+    #     cwd = os.getcwd()
+    
     with subprocess.Popen(cmd,
                           cwd=cwd,
                           stdout=subprocess.PIPE,

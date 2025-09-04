@@ -23,6 +23,9 @@ function authenticate(req, res, next) {
   if (!auth) return next(err);
 
   req.user = auth.profile;
+
+  // console.log('req.user', JSON.stringify(req.user));
+
   next();
 }
 

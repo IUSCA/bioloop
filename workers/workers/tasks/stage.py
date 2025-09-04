@@ -60,14 +60,14 @@ def extract_tarfile(tar_path: Path, target_dir: Path, override_arcname=False):
 
 def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     """
-    gets the tar from SDA and extracts it
+    gets the tar from local archive and extracts it
 
     input: dataset['name'], dataset['archive_path'] should exist
     returns: stage_path
     """
     staging_dir, alias = compute_staging_path(dataset)
 
-    sda_bundle_path = dataset['archive_path']
+    local_archive_path = dataset['archive_path']
     alias_dir = staging_dir.parent
     alias_dir.mkdir(parents=True, exist_ok=True)
 
@@ -75,13 +75,23 @@ def stage(celery_task: WorkflowTask, dataset: dict) -> (str, str):
     bundle_md5 = bundle["md5"]
     bundle_download_path = Path(get_bundle_staged_path(dataset=dataset))
 
-    wf_utils.download_file_from_sda(sda_file_path=sda_bundle_path,
-                                    local_file_path=bundle_download_path,
-                                    celery_task=celery_task)
+    # Copy from local archive instead of downloading from SDA
+    logger.info(f'Copying bundle from local archive {local_archive_path} to {bundle_download_path}')
+    
+    # Ensure the archive file exists
+    if not Path(local_archive_path).exists():
+        raise FileNotFoundError(f'Archive file not found at: {local_archive_path}')
+    
+    # Copy the file from archive to staging
+    shutil.copy2(local_archive_path, bundle_download_path)
+    
+    # Verify the copy was successful
+    if not bundle_download_path.exists():
+        raise Exception(f'Failed to copy bundle from archive to staging: {bundle_download_path}')
 
     evaluated_checksum = utils.checksum(bundle_download_path)
     if evaluated_checksum != bundle_md5:
-        raise exc.ValidationFailed(f'Expected checksum of downloaded file to be {bundle_md5},'
+        raise exc.ValidationFailed(f'Expected checksum of copied file to be {bundle_md5},'
                                    f' but evaluated checksum was {evaluated_checksum}')
 
     # extract the tar file to stage directory

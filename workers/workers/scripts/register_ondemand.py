@@ -63,3 +63,5 @@ if __name__ == '__main__':
 
     reg = Registration(dataset_type)
     reg.register_candidate(dataset_name, str(dataset_path))
+
+# create a script which will be invoked by workers/bin/entrypoint.sh. Call it start_conversion_worker.sh. It will install all of the binaries for pipelines referenced in conversion_definitions.js

@@ -13,7 +13,6 @@ const he = require('he');
 
 // const logger = require('@/services/logger');
 const path = require('path');
-const utils = require('../../utils');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -22,6 +21,7 @@ const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
+const utils = require('../../utils');
 
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
@@ -335,6 +335,7 @@ router.get(
     query('bundle').optional().toBoolean(),
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
+    query('include_conversions').toBoolean().default(false),
     query('include_source_instrument').toBoolean().optional(),
   ]),
   datasetService.dataset_access_check,
@@ -353,6 +354,7 @@ router.get(
       bundle: req.query.bundle || false,
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
+      include_conversions: req.query.include_conversions || false,
       include_source_instrument: req.query.include_source_instrument || false,
     });
 

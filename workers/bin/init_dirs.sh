@@ -70,8 +70,36 @@ create_dir "/opt/sca/data/bundle/raw_data/staging"         # RAW_DATA bundles re
 create_dir "/opt/sca/data/bundle/data_products/generation" # DATA_PRODUCT bundle creation workspace
 create_dir "/opt/sca/data/bundle/data_products/staging"    # DATA_PRODUCT bundles ready for distribution
 
-# Quality control directory
+# Conversion directories - for conversion programs
+create_dir "/opt/sca/data/conversion"                      # Base conversion directory
+create_dir "/opt/sca/data/conversion/bcl2fastq/bin"
+create_dir "/opt/sca/data/conversion/bcl2fastq/execute"
+create_dir "/opt/sca/data/conversion/bcl-convert/bin"
+create_dir "/opt/sca/data/conversion/bcl-convert/execute"
+create_dir "/opt/sca/data/conversion/cellranger-v8.0.1/bin"
+create_dir "/opt/sca/data/conversion/cellranger-v8.0.1/execute"
+create_dir "/opt/sca/data/conversion/cellranger-v6.1.2/bin"
+create_dir "/opt/sca/data/conversion/cellranger-v6.1.2/execute"
+create_dir "/opt/sca/data/conversion/cellranger-v4.0.0/bin"
+create_dir "/opt/sca/data/conversion/cellranger-v4.0.0/execute"
+create_dir "/opt/sca/data/conversion/cellranger-arc/bin"
+create_dir "/opt/sca/data/conversion/cellranger-arc/execute"
+create_dir "/opt/sca/data/conversion/cellranger-arc-v2/bin"
+create_dir "/opt/sca/data/conversion/cellranger-arc-v2/execute"
+create_dir "/opt/sca/data/conversion/cellranger-atac/bin"
+create_dir "/opt/sca/data/conversion/cellranger-atac/execute"
+create_dir "/opt/sca/data/conversion/spaceranger-v3.0.1/bin"
+create_dir "/opt/sca/data/conversion/spaceranger-v3.0.1/execute"
+create_dir "/opt/sca/data/conversion/spaceranger-v1.3.1/bin"
+create_dir "/opt/sca/data/conversion/spaceranger-v1.3.1/execute"
+create_dir "/opt/sca/data/conversion/spaceranger-v1.1.0/bin"
+create_dir "/opt/sca/data/conversion/spaceranger-v1.1.0/execute"
+create_dir "/opt/sca/data/conversion/reports/"     # Conversion reports directory
+
+# Quality control directories
 create_dir "/opt/sca/data/qc/raw_data"            # Quality control files's generation place
+create_dir "/opt/sca/data/qc/fastqc/bin"          # FastQC executable location
+create_dir "/opt/sca/data/qc/multiqc/bin"         # MultiQC executable location
 
 # User-facing directories
 create_dir "/opt/sca/data/downloads"              # User-accessible download area

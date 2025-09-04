@@ -67,6 +67,7 @@ def generate_qc(celery_task, dataset_id, **kwargs):
     dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
     staged_path = Path(dataset['staged_path'])
 
+    # todo: ensure fastqc is being run at the same path in CMG
     report_id = create_report(
         celery_task=celery_task,
         dataset_dir=staged_path,

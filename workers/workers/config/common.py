@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
+# print(f'APP_API_TOKEN: {APP_API_TOKEN}')
+
 API_BASE_URL = os.environ['API_BASE_URL']
 
 QUEUE_URL = os.environ['QUEUE_URL']
@@ -58,6 +60,9 @@ config = {
             },
         },
         'download_dir': '/path/to/download_dir',
+        'conversion': {
+          'reports': '/path/to/conversion_reports',
+        },
         'root': '/path/to/root'
     },
     'registration': {
@@ -143,6 +148,42 @@ config = {
                     'task': 'cancel_dataset_upload'
                 }
             ]
+        },
+        "conversion": {
+          "name": "Conversion",
+          "steps": [
+            {
+              "name": "convert",
+              "task": "convert_dataset",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            },
+
+          ]
+        },
+        "genomic_conversion": {
+          "name": "Genomic Conversion",
+          "steps": [
+            {
+              "name": "convert",
+              "task": "convert_genomic",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            },
+            {
+              "name": "generate qc",
+              "task": "generate_qc",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            },
+            {
+              "name": "copy reports",
+              "task": "copy_conversion_reports",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            },
+            {
+              "name": "derive data products",
+              "task": "derive_data_products",
+              "queue": "conversion.bioloop-dev.sca.iu.edu.q"
+            }
+          ]
         }
     },
     'celery': {
@@ -161,12 +202,18 @@ config = {
     },
     'workflow': {
         'purge': {
-            'types': ['integrated', 'stage', 'delete'],
+            'types': ['integrated', 'stage', 'delete', 'conversion'],
             'age_threshold_seconds': 86400,
             'max_purge_count': 10
         }
     },
     'inspect': {
         'file_metadata_batch_size': 25000
-    }
+    },
+    'genomic_conversion_programs': [
+        'bcl2fastq', 'bcl-convert', 'cellranger-v8.0.1', 'cellranger-v6.1.2', 
+        'cellranger-v4.0.0', 'cellranger-arc', 'cellranger-arc-v2', 
+        'cellranger-atac', 'spaceranger-v3.0.1', 'spaceranger-v1.3.1', 
+        'spaceranger-v1.1.0'
+    ]
 }

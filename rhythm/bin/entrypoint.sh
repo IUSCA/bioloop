@@ -23,21 +23,17 @@ fi
 
 
 
-# Check if the string exists in the file
+# Always overwrite WORKFLOW_AUTH_TOKEN if .env exists
 api_token="WORKFLOW_AUTH_TOKEN"
 echo "Checking if the string '${api_token}' exists in the file '$api_env'..."
 if grep -q "^${api_token}=" "$api_env"; then
-  value=$(grep "^${api_token}=" "$api_env" | cut -d'=' -f2)
-  if [ -n "$value" ]; then
-    echo "The file contains the string '${api_token}' with a value: $value"
-  else
-    echo "The string '${api_token}' exists but has no value."
-    sed -i '/^WORKFLOW_AUTH_TOKEN/d' $api_env
-    echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> $api_env
-  fi
+  echo "The string '${api_token}' exists. Overwriting with new token..."
+  # Use grep -v to exclude the line and write to temp file, then move
+  grep -v "^${api_token}=" "$api_env" > "${api_env}.tmp" && mv "${api_env}.tmp" "$api_env"
 else
   echo "The string '${api_token}' does not exist in the file."
-  echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> $api_env
 fi
+echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> $api_env
+echo "WORKFLOW_AUTH_TOKEN has been set/updated in $api_env"
 
 $*

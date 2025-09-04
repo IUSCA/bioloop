@@ -34,7 +34,7 @@ services:
     command: ["npm", "run", "dev"] 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
+      interval: 2s
       timeout: 10s
       retries: 5
     depends_on:
@@ -61,17 +61,49 @@ services:
   init_data_dirs:
     build:
       context: ./workers
+    platform: linux/amd64
     environment:
       - APP_ENV=docker
     volumes:
+      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
   celery_worker:
     build:
       context: ./workers
+    platform: linux/amd64
     environment:
       - WORKER_TYPE=celery_worker
+      - APP_ENV=docker
+    env_file:
+      - db/mongo/.env.default # For MongoDB connection settings
+      - db/queue/.env.default # For RabbitMQ connection settings
+      - workers/.env.default # For all default settings
+      # - workers/.env? # For keys made after the first run
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    entrypoint: [ "bin/entrypoint.sh" ]
+    # command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      queue:
+        condition: service_started
+
+
+  watch:
+    build:
+      context: ./workers
+    platform: linux/amd64
+    environment:
+      - WORKER_TYPE=watch
       - APP_ENV=docker
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
@@ -93,13 +125,14 @@ services:
       queue:
         condition: service_started
 
-
-  watch:
+  conversion_worker:
     build:
       context: ./workers
+    platform: linux/amd64
     environment:
-      - WORKER_TYPE=watch
+      - WORKER_TYPE=conversion_worker
       - APP_ENV=docker
+      - PATH=/opt/sca/data/conversion/bcl2fastq/bin:$PATH
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
       - db/queue/.env.default # For RabbitMQ connection settings
@@ -110,8 +143,11 @@ services:
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     entrypoint: [ "bin/entrypoint.sh" ]
+    # command: ["tail", "-f", "/dev/null"]
     depends_on:
       init_data_dirs:
+        condition: service_completed_successfully
+      bcl2fastq_setup:
         condition: service_completed_successfully
       api:
         condition: service_healthy
@@ -166,7 +202,7 @@ services:
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
+      interval: 2s
       timeout: 10s
       retries: 5
     depends_on:
@@ -179,6 +215,8 @@ services:
     restart: unless-stopped
     expose:
       - 3060
+    ports:
+      - 127.0.0.1:3060:3060
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -189,7 +227,7 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 30s
+      interval: 2s
       timeout: 10s
       retries: 5
 
@@ -208,11 +246,13 @@ services:
     command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
+      interval: 2s
       timeout: 10s
       retries: 5
     depends_on:
       signet_db:
+        condition: service_healthy
+      rhythm:
         condition: service_healthy
 
 
@@ -228,7 +268,7 @@ services:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 30s
+      interval: 2s
       timeout: 10s
       retries: 5
 
@@ -305,6 +345,22 @@ services:
         condition: service_healthy
     profiles:
       - metrics
+
+  # Conversion tool setup services
+  bcl2fastq_setup:
+    image: nfcore/bcl2fastq:2.20.0.422
+    platform: linux/amd64
+    volumes:
+      - landing_volume:/opt/sca/data
+    entrypoint: ["sh", "-c"]
+    command: >
+      "cp /usr/local/bin/bcl2fastq /opt/sca/data/conversion/bcl2fastq/bin/ && chmod +x /opt/sca/data/conversion/bcl2fastq/bin/bcl2fastq && echo 'bcl2fastq installed successfully' && /opt/sca/data/conversion/bcl2fastq/bin/bcl2fastq --version && ls -la /opt/sca/data/conversion/bcl2fastq/bin/"
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+
+
+
 
 volumes:
   grafana_data:
