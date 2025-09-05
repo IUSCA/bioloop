@@ -1,9 +1,21 @@
 const { PrismaClient } = require('@prisma/client');
+const crypto = require('node:crypto');
+const _ = require('lodash/fp');
+const userService = require('./user');
 
 const prisma = new PrismaClient();
 
+const PROJECT_ASSOCIATION_ERRORS = {
+  noProjectUserAssociation: 'User is not associated with the specified project',
+  noAssociatingUserId: 'Id of the User associating the Project is required',
+};
+
+const PROJECT_CREATION_ERRORS = {
+  projectIdProvidedWhenCreatingNewProject: 'Cannot create a new Project when Project ID is provided',
+};
+
 function normalize_name(name) {
-  // conver to lowercase
+  // convert to lowercase
   // replace all character other than a-z, 0-9, and - with -
   // replace consecutive hyphens with one -
 
@@ -34,6 +46,7 @@ function identifier_suffix_gen(identifiers) {
       i += 1;
     }
   }
+
   return gen;
 }
 
@@ -88,8 +101,236 @@ async function has_project_assoc({
   return projectUserAssociations.length > 0;
 }
 
+/**
+ * Builds a Prisma include object for fetching entities associated with projects.
+ *
+ * @param {Object} options - The options for building the include object.
+ * @param {boolean} [options.include_users=true] - Whether to include Users associated with the project.
+ * @param {boolean} [options.include_datasets=true] - Whether to include Datasets associated with the project.
+ * @param {boolean} [options.include_contacts=true] - Whether to include Contact included with the project.
+ * @returns {Object} An object specifying which associations to include in the Prisma query.
+ *
+ * @description
+ * This function generates an include object for Prisma queries, allowing selective inclusion
+ * of data associated with Projects being retrieved.
+ *
+ */
+const build_include_object = ({
+  include_users = true,
+  include_datasets = true,
+  include_contacts = true,
+} = {}) => _.omitBy(_.isUndefined)({
+  users: include_users ? {
+    select: {
+      user: true,
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+  datasets: include_datasets ? {
+    select: {
+      dataset: {
+        include: {
+          workflows: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+  contacts: include_contacts ? {
+    select: {
+      contact: true,
+      assigned_at: true,
+      assignor: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+        },
+      },
+    },
+  } : undefined,
+});
+
+/**
+ * Generates a name for an automatically created project.
+ *
+ * @param {Object} options - The options for generating the project name.
+ * @param {string} [options.prefix] - An optional prefix to prepend to the project name.
+ * @param {string} [options.suffix] - An optional suffix to append to the project name.
+ * @returns {string} The generated project name.
+ *
+ * @description
+ * This function generates a project name using the following format:
+ * - If both prefix and suffix are provided: "{prefix}-{randomString}-{suffix}"
+ * - If only suffix is provided: "{prefix}-{randomString}"
+ * - If only prefix is provided: "{randomString}-{suffix}"
+ * - If neither is provided: "{randomString}"
+ *
+ * The randomString is a 16-character hexadecimal string generated using cryptographically strong random bytes.
+ */
+function generate_project_name({ prefix, suffix } = {}) {
+  const randomStr = crypto.randomBytes(8).toString('hex'); // Generate 16 random characters
+
+  let projectName = '';
+  projectName = (prefix && typeof prefix === 'string' && prefix.trim() !== '') ? `${prefix}-${randomStr}` : randomStr;
+  if (suffix && typeof suffix === 'string' && suffix.trim() !== '') {
+    projectName = `${projectName}-${suffix}`;
+  }
+
+  return projectName;
+}
+
+// todo - test existing endpoints
+async function buildCreationQuery({
+  user_ids = [], dataset_ids = [], assignor_id, ...projectData
+} = {}) {
+  const data = _.flow([
+    _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
+    _.omitBy(_.isNil),
+  ])(projectData);
+
+  if (!data.name || data.name.trim() === '') {
+    data.name = generate_project_name();
+  }
+
+  data.slug = await generate_slug({ name: data.name });
+
+  if ((user_ids || []).length > 0) {
+    data.users = {
+      create: user_ids.map((id) => ({
+        user_id: id,
+        ...(assignor_id && { assignor_id }),
+      })),
+    };
+  }
+
+  if ((dataset_ids || []).length > 0) {
+    data.datasets = {
+      create: dataset_ids.map((id) => ({
+        dataset_id: id,
+        ...(assignor_id && { assignor_id }),
+      })),
+    };
+  }
+
+  return data;
+}
+
+const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+  const nullable_order_by_fields = ['du_size', 'size'];
+
+  if (!field || !sortOrder) {
+    return {};
+  }
+  if (nullable_order_by_fields.includes(field)) {
+    return {
+      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
+    };
+  }
+  return {
+    [field]: sortOrder,
+  };
+};
+
+const buildDatasetAssociationQuery = async ({
+  project_id,
+  dataset_ids = [],
+  assignor_id,
+} = {}) => {
+  if (dataset_ids.length === 0) {
+    return null; // There are no datasets to associate
+  }
+
+  return dataset_ids.map((dataset_id) => ({
+    project_id,
+    dataset_id,
+    ...(assignor_id && { assignor_id }),
+  }));
+};
+
+const create_project = async ({
+  tx,
+  include,
+  ...data
+}) => {
+  const transactionManager = tx || prisma;
+
+  const projectCreationQuery = await buildCreationQuery({
+    ...data,
+  });
+  return transactionManager.project.create({
+    data: projectCreationQuery,
+    include: include || undefined,
+  });
+};
+
+const assign_datasets = async ({
+  tx,
+  include,
+  ...data
+}) => {
+  const transactionManager = tx || prisma;
+
+  if (!data.assignor_id) { // ID of user who is associating datasets with the project
+    throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
+  }
+
+  const assignorRoles = await userService.getUserRoles({ user_id: data.assignor_id });
+
+  // ensure that the user associating Datasets to the Project has access to the Project
+  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
+  const userAssociation = await transactionManager.project_user.findUnique({
+    where: {
+      project_id_user_id: {
+        project_id: data.project_id,
+        user_id: data.assignor_id,
+      },
+    },
+  });
+  isAuthorized = isAuthorized || !!userAssociation;
+
+  if (!isAuthorized) {
+    throw new Error(PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation);
+  }
+
+  const projectAssociationQuery = await buildDatasetAssociationQuery({
+    ...data,
+  });
+  return transactionManager.project_dataset.createMany({
+    data: projectAssociationQuery,
+    include: include || undefined,
+  });
+};
+
 module.exports = {
   normalize_name,
   generate_slug,
   has_project_assoc,
+  generate_project_name,
+  buildCreationQuery,
+  build_include_object,
+  buildOrderByObject,
+  buildDatasetAssociationQuery,
+  create_project,
+  assign_datasets,
+  PROJECT_ASSOCIATION_ERRORS,
+  PROJECT_CREATION_ERRORS,
 };

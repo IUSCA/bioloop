@@ -8,7 +8,8 @@ const config = require('config');
 const createError = require('http-errors');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
+// const projectService = require('./project');
+const { log_axios_error, isFeatureEnabledForRole } = require('../utils');
 const FileGraph = require('./fileGraph');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS,
@@ -18,6 +19,7 @@ const CONSTANTS = require('../constants');
 const asyncHandler = require('../middleware/asyncHandler');
 const { getPermission, accessControl } = require('../middleware/auth');
 const logger = require('./logger');
+const projectService = require('./project');
 
 const prisma = new PrismaClient();
 
@@ -174,7 +176,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -269,7 +273,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);
@@ -618,6 +622,31 @@ async function createDatasetInTransaction(tx, data) {
   });
 }
 
+async function assignProject({ tx, data, createNew = false }) {
+  if (createNew && data.project_id == null) {
+    // If Project ID is not provided, associate created dataset with a new project
+    await projectService.create_project({
+      tx,
+      user_ids: data.assignee_user_ids,
+      dataset_ids: data.assignee_dataset_ids,
+      assignor_id: data.assignor_id,
+      description: data.description || 'Auto-generated during Dataset creation',
+      ...data,
+    });
+  } else if (createNew && data.project_id != null) {
+    throw new Error(projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject);
+  } else {
+    // Else, associate created Dataset with an existing Project
+    await projectService.assign_datasets({
+      tx,
+      project_id: data.id,
+      dataset_ids: data.assignee_dataset_ids,
+      assignor_id: data.assignor_id,
+      ...data,
+    });
+  }
+}
+
 /**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
@@ -766,4 +795,5 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
+  assignProject,
 };

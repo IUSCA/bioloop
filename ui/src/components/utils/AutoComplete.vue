@@ -15,6 +15,7 @@
           @clear="onClear"
           :disabled="props.disabled"
           :label="props.label"
+          :messages="props.messages"
         >
           <template #prependInner>
             <slot name="prependInner"></slot>
@@ -164,9 +165,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  error: {
-    type: Boolean,
-    default: false,
+  messages: {
+    type: Array,
+    default: () => [],
   },
   loading: {
     type: Boolean,
@@ -174,6 +175,7 @@ const props = defineProps({
   },
   dataTestId: {
     type: String,
+    default: "autocomplete",
   },
 });
 

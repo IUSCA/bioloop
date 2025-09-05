@@ -5,27 +5,37 @@
     :items="props.files"
     :columns="columns"
     virtual-scroller
+    data-testid="file-table"
   >
     <template #cell(name)="{ rowData }">
-      <div class="flex items-center gap-1 text-left">
+      <div
+        class="flex items-center gap-1 text-left"
+        data-testid="file-table-row-name"
+      >
         <Icon
           v-if="rowData.type === 'directory'"
           icon="mdi-folder"
           class="text-xl flex-none text-gray-700"
+          data-testid="folder-icon"
         />
-        <FileTypeIcon v-else :filename="rowData.name" />
-        <span> {{ rowData.name }} </span>
+        <FileTypeIcon
+          v-else
+          :filename="rowData.name"
+          data-testid="file-type-icon"
+        />
+        <span data-testid="file-name"> {{ rowData.name }} </span>
       </div>
     </template>
 
     <template #cell(actions)="{ rowIndex }">
-      <div class="flex justify-end">
+      <div class="flex justify-end" data-testid="file-table-actions">
         <va-button
           preset="plain"
           icon="delete"
           color="danger"
           @click="removeFile(rowIndex)"
           :disabled="(props.files || []).length < 1"
+          data-testid="delete-file-button"
         />
       </div>
     </template>

@@ -180,8 +180,11 @@
     "slateScratch": ""
   },
   "enabled_features": {
-    "upload": {
+    "ingestion": {
       "enabled_for_roles": ["admin"]
+    },
+    "upload": {
+      "enabled_for_roles": ["admin", "user"]
     },
     "fs": {
       "enabled_for_roles": ["admin"]

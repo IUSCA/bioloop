@@ -3,12 +3,12 @@
     v-model="datasetNameInput"
     :placeholder="'Dataset name'"
     class="w-full"
-    :messages="'Name for the uploaded dataset'"
     :disabled="props.inputDisabled"
+    :data-testid="props.dataTestId"
   />
-
-  <div class="va-text-danger text-xs" v-if="props.showDatasetNameError">
-    {{ props.datasetNameError }}
+  <!-- Only one of error and hint are shown at a time -->
+  <div class="va-text-danger text-xs dataset-name-input" v-if="props.error">
+    {{ props.error }}
   </div>
 </template>
 
@@ -22,13 +22,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  showDatasetNameError: {
-    type: Boolean,
-    default: false,
-  },
-  datasetNameError: {
+  error: {
     type: String,
     default: "",
+  },
+  dataTestId: {
+    type: String,
+    default: "dataset-name-input",
   },
 });
 
@@ -42,4 +42,28 @@ const datasetNameInput = computed({
     emit("update:populatedDatasetName", value);
   },
 });
+
+// const hintsState = computed(() => {
+//   let ret = props.error
+//     ? {
+//         error: true,
+//         errorMessages: props.error,
+//       }
+//     : {
+//         messages: "Name of the uploaded dataset",
+//       };
+//   console.log("hintsState:", ret);
+//   return ret;
+// });
+//
+// onMounted(() => {
+//   console.log("Mounted DatasetNameInput");
+//   console.log("props.error:", props.error);
+// });
 </script>
+
+<style scoped>
+.dataset-name-input {
+  font-size: 13px;
+}
+</style>
