@@ -132,7 +132,9 @@ def get_all_datasets(
         days_since_last_staged=None,
         deleted=False,
         archived=None,
-        bundle=False):
+        bundle=False,
+        match_name_exact=False,
+        include_audit_logs=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -141,6 +143,8 @@ def get_all_datasets(
             'deleted': deleted,
             'archived': archived,
             'bundle': bundle,
+            'match_name_exact': match_name_exact,
+            'include_audit_logs': include_audit_logs,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -283,6 +287,33 @@ def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)
         r.raise_for_status()
+
+
+
+def get_all_projects():
+    with APIServerSession() as s:
+        r = s.get('projects/all')
+        r.raise_for_status()
+        projects = r.json()['projects']
+        return projects
+
+
+def get_project(project_id: str,
+                include_datasets: bool = False):
+    with APIServerSession() as s:
+        r = s.get(f'projects/{project_id}',
+                  params={
+                      'include_datasets': include_datasets,
+                  })
+        r.raise_for_status()
+        return r.json()
+
+
+def initiate_workflow(dataset_id: int, workflow_name: str):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/workflow/{workflow_name}')
+        r.raise_for_status()
+        return r.json()
 
 
 if __name__ == '__main__':
