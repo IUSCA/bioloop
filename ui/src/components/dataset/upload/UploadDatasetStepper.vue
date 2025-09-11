@@ -78,7 +78,11 @@
                   - Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
+<<<<<<< HEAD
                   - Data Product: Processed data derived from Raw Data
+=======
+                  Data Product: Processed data derived from Raw Data
+>>>>>>> origin/main
                 </div>
               </template>
               <Icon
@@ -326,11 +330,15 @@
 </template>
 
 <script setup>
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
 import { default as Constants, default as constants } from "@/constants";
 import datasetService from "@/services/dataset";
 import instrumentService from "@/services/instrument";
+<<<<<<< HEAD
 import projectService from "@/services/projects";
+=======
+>>>>>>> origin/main
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
@@ -581,7 +589,7 @@ const isNextButtonDisabled = computed(() => {
 // List of files whose uploads are pending or in progress
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== constants.UPLOAD_STATUSES.UPLOADED,
+    (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
@@ -742,7 +750,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          // console.error(e);
+          console.error(e);
           reject();
         });
     }
@@ -1170,7 +1178,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
+  fileDetails.uploadStatus = Constants.UPLOAD_STATUSES.UPLOADING;
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
@@ -1178,8 +1186,8 @@ const uploadFile = async (fileDetails) => {
   }
 
   fileDetails.uploadStatus = uploaded
-    ? constants.UPLOAD_STATUSES.UPLOADED
-    : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
+    ? Constants.UPLOAD_STATUSES.UPLOADED
+    : Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
   if (!uploaded) {
     if (selectingDirectory.value) {
@@ -1239,7 +1247,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1275,7 +1283,7 @@ const postSubmit = () => {
       id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
         .id,
       data: {
-        status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
+        status: Constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
@@ -1283,15 +1291,15 @@ const postSubmit = () => {
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
-        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : constants.UPLOAD_STATUSES.UPLOADED,
+        ? Constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : Constants.UPLOAD_STATUSES.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
         datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
       });
   }
 };
@@ -1342,7 +1350,7 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: constants.UPLOAD_STATUSES.UPLOADING,
+        status: Constants.UPLOAD_STATUSES.UPLOADING,
       }
     : {
         ...uploadFormData.value,
@@ -1745,6 +1753,7 @@ watch(
  */
 onMounted(async () => {
   loading.value = true;
+<<<<<<< HEAD
 
   try {
     // Load Instruments that will be available for assignment to the Dataset being uploaded.
@@ -1756,6 +1765,19 @@ onMounted(async () => {
     // assignment to the Dataset being uploaded. If not, the `Assign Raw Data` checkbox will always be disabled.
     const onLoadRawDataOptionsResponse = await datasetService.getAll({
       type: config.dataset.types.RAW_DATA.key,
+=======
+  instrumentService
+    .getAll()
+    .then((res) => {
+      sourceInstrumentOptions.value = res.data;
+    })
+    .catch((err) => {
+      toast.error("Failed to load resources");
+      console.error(err);
+    })
+    .finally(() => {
+      loading.value = false;
+>>>>>>> origin/main
     });
     noRawDataToAssign.value =
       onLoadRawDataOptionsResponse.data.datasets.length === 0;
@@ -1884,7 +1906,7 @@ onBeforeUnmount(() => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;

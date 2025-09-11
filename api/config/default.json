@@ -153,6 +153,9 @@
     "RAW_DATA",
     "DATA_PRODUCT"
   ],
+  "system_user": {
+    "username": "svc_tasks"
+  },
   "e2e": {
     "users": {
       "admin": {
@@ -176,19 +179,13 @@
       "slateScratch": ""
     }
   },
-  "restricted_ingestion_dirs": {
+  "restricted_import_dirs": {
     "slateScratch": ""
   },
   "enabled_features": {
-    "ingestion": {
-      "enabled_for_roles": ["admin"]
-    },
-    "upload": {
-      "enabled_for_roles": ["admin", "user"]
-    },
-    "fs": {
-      "enabled_for_roles": ["admin"]
-    },
+    "ingestion": true,
+    "upload": true,
+    "fs": true,
     "downloads": true,
     "signup": true
   },

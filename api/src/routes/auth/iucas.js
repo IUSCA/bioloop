@@ -1,18 +1,16 @@
 const express = require('express');
 const { query, body } = require('express-validator');
-const IULoginHelper = require('@iusca/iulogin-helper');
+const IULoginHelper = require('@iusca/iulogin-helper'); // cspell: disable-line
 const config = require('config');
 
 const createError = require('http-errors');
-const { validate } = require('../../middleware/validators');
-const asyncHandler = require('../../middleware/asyncHandler');
-const { loginHandler } = require('../../middleware/auth');
-const logger = require('../../services/logger');
-
-const authService = require('../../services/auth');
+const { validate } = require('@/middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { loginHandler } = require('@/middleware/auth');
+const logger = require('@/services/logger');
+const authService = require('@/services/auth');
 
 const router = express.Router();
-
 const IULogin = new IULoginHelper({
   protocol: 'CAS',
   mode: config.get('auth.mode'),

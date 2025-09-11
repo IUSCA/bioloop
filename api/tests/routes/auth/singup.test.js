@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const { request, getAuthRequest } = require('../../request');
 const { issueToken, issueSignupToken } = require('../../../src/services/auth');
-const nonceSerive = require('../../../src/services/nonce');
+const nonceService = require('../../../src/services/nonce');
 
 let authRequest;
 const prefix = 'test';
@@ -51,10 +51,10 @@ describe('POST /auth/signup', () => {
 
   it('should create user', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-newuser${Date.now()}`;
+    const username = `${prefix}-new-user${Date.now()}`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
@@ -85,11 +85,11 @@ describe('POST /auth/signup', () => {
   it('should return 401 when email in body is not same as email in token', async () => {
     const token = issueSignupToken({
       email: 'user2@example.com',
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email: 'user@example.com',
-      username: 'newuser',
+      username: 'new-user',
       full_name: 'New User',
       institution_name: 'Test Institution',
       institution_type: 'Other',
@@ -104,10 +104,10 @@ describe('POST /auth/signup', () => {
 
   it('should prevent replay attacks', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-newuser${Date.now()}`;
+    const username = `${prefix}-new-user${Date.now()}`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
@@ -138,10 +138,10 @@ describe('POST /auth/signup', () => {
   it('should create a unique username', async () => {
     // create a user
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-newuser${Date.now()}`;
+    const username = `${prefix}-new-user${Date.now()}`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
@@ -160,7 +160,7 @@ describe('POST /auth/signup', () => {
     const email2 = `${prefix}_user2_${Date.now()}@example.com`;
     const token2 = issueSignupToken({
       email: email2,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData2 = {
       email: email2,
@@ -192,11 +192,11 @@ describe('POST /auth/signup', () => {
     const email = `user${Date.now()}@example.com`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
-      username: 'newuser',
+      username: 'new-user',
       full_name: 'New User',
       institution_name: 'Test Institution',
       institution_type: 'Other',
@@ -213,11 +213,11 @@ describe('POST /auth/signup', () => {
     const email = `user${Date.now()}@example.com`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
-      username: 'newuser',
+      username: 'new-user',
       full_name: 'New User',
       institution_name: 'Test Institution',
       institution_type: 'Other',
@@ -230,7 +230,7 @@ describe('POST /auth/signup', () => {
 
     const token2 = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const response2 = await request.post('/auth/signup')
       .set('Authorization', `Bearer ${token2}`)
@@ -248,7 +248,7 @@ describe('POST /auth/signup', () => {
     const username = `${prefix}-NewUser${Date.now()}`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,
@@ -272,10 +272,10 @@ describe('POST /auth/signup', () => {
 
   it('should handle concurrent signup requests gracefully', async () => {
     const email = `${prefix}_user_${Date.now()}@example.com`;
-    const username = `${prefix}-newuser${Date.now()}`;
+    const username = `${prefix}-new-user${Date.now()}`;
     const token = issueSignupToken({
       email,
-      nonce: await nonceSerive.createNonce(),
+      nonce: await nonceService.createNonce(),
     });
     const userData = {
       email,

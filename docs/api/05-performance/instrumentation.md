@@ -12,7 +12,7 @@ The `metricsMiddleware` is a middleware function provided by the `express-prom-b
 
 The `metricsMiddleware` is configured in the `core/metrics.js` file. Key configurations include:
 
-- **Autoregister**: Automatically registers metrics unless clustering is enabled.
+- **Auto-register**: Automatically registers metrics unless clustering is enabled.
 - **Include Method**: Captures the HTTP method (e.g., GET, POST).
 - **Include Path**: Captures the request path.
 - **Normalize Path**: Normalizes paths to avoid high cardinality (e.g., `/users/:id` instead of `/users/123`).
@@ -43,7 +43,7 @@ http_request_duration_seconds_count{status_code="2xx",method="GET",path="/datase
 Default metrics about node.js process are also collected. To view all metrics:
 
 ```bash
-api> curl locahost:9999/metrics > metrics.prom
+api> curl localhost:9999/metrics > metrics.prom
 ```
 
 ### Usage

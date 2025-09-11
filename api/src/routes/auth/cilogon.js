@@ -5,13 +5,12 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 
 const createError = require('http-errors');
-const { validate } = require('../../middleware/validators');
-const asyncHandler = require('../../middleware/asyncHandler');
-const { loginHandler } = require('../../middleware/auth');
-const logger = require('../../services/logger');
-
-const authService = require('../../services/auth');
-const utils = require('../../utils');
+const { validate } = require('@/middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { loginHandler } = require('@/middleware/auth');
+const logger = require('@/services/logger');
+const authService = require('@/services/auth');
+const utils = require('@/utils');
 
 const router = express.Router();
 

@@ -8,7 +8,6 @@ Roles in this application:
 - user
 - operator
 - admin
-- superadmin
 
 Each role defines CRUD permissions on resources with two scopes: "own" and "any". These are configured in [services/accesscontrols.js](src/services/accesscontrols.js).
 
@@ -16,7 +15,7 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
 
 ### A simple use case: 
 
-**Objective**: Users with `user` role are only permitted to read and update thier own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+**Objective**: Users with `user` role are only permitted to read and update their own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
 
 **Role design**:
 - roles: `admin`, `user`
@@ -44,7 +43,7 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
 
 **Permission check**:
 
-Code to check if the requester to is authorized to `GET /users/dduck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
+Code to check if the requester to is authorized to `GET /users/duck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
 
 ```javascript
 const { authenticate } = require('../middleware/auth');
@@ -79,14 +78,14 @@ readOwn permission is verified against user roles if the requester and resource 
 
 [accessControl](src/middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
 
-The above code can be written consicely with the help of accessControl middleware.
+The above code can be written concisely with the help of accessControl middleware.
 
 `routes/*.js`
 ```javascript
 // import middleware
 const { authenticate, accessControl } = require('../middleware/auth');
 
-// configre the middleware to authorize requests to user resource
+// configure the middleware to authorize requests to user resource
 // resource ownership is checked by default
 // throws 403 if not authorized
 const isPermittedTo = accessControl('user');

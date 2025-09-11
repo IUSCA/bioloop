@@ -27,16 +27,16 @@
 
     <!-- three state filters -->
     <va-chip
-      v-for="fkey in ['archived', 'staged'].filter((k) => filterStatus[k])"
-      :key="fkey"
+      v-for="key in ['archived', 'staged'].filter((k) => filterStatus[k])"
+      :key="key"
       class="flex-none"
       closeable
       outline
       @click="emit('open')"
-      @update:model-value="reset(fkey)"
+      @update:model-value="reset(key)"
     >
       <span class="capitalize">
-        {{ filters[fkey] ? "" : "Not" }} {{ fkey }}
+        {{ filters[key] ? "" : "Not" }} {{ key }}
       </span>
     </va-chip>
 
@@ -90,21 +90,19 @@
 
     <!-- created_at and updated_at date filters -->
     <va-chip
-      v-for="fkey in ['created_at', 'updated_at'].filter(
-        (k) => filterStatus[k],
-      )"
-      :key="fkey"
+      v-for="key in ['created_at', 'updated_at'].filter((k) => filterStatus[k])"
+      :key="key"
       class="flex-none"
       closeable
       outline
       @click="emit('open')"
-      @update:model-value="reset(fkey)"
+      @update:model-value="reset(key)"
     >
-      <span class="capitalize"> {{ fkey.split("_").join(" ") }}: &nbsp; </span>
+      <span class="capitalize"> {{ key.split("_").join(" ") }}: &nbsp; </span>
       <span class="font-semibold">
-        {{ datetime.date(filters[fkey].start) }}
+        {{ datetime.date(filters[key].start) }}
         <span class="font-normal"> to </span>
-        {{ datetime.date(filters[fkey].end) }}
+        {{ datetime.date(filters[key].end) }}
       </span>
     </va-chip>
 

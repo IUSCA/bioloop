@@ -1,15 +1,15 @@
 const express = require('express');
 const { query, body } = require('express-validator');
 const createError = require('http-errors');
-const { PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
-// const logger = require('../services/logger');
-const userService = require('../services/user');
-const { validate } = require('../middleware/validators');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+// const logger = require('@/services/logger');
+const prisma = require('@/db');
+const userService = require('@/services/user');
+const { validate } = require('@/middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
 
-const prisma = new PrismaClient();
 const isPermittedTo = accessControl('user');
 const router = express.Router();
 
@@ -29,8 +29,8 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('search').default(''),
-    query('skip').isInt({ min: 0 }).optional(),
-    query('take').isInt({ min: 1 }).optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
+    query('take').isInt({ min: 1 }).toInt().optional(),
     query('sortBy').default('username')
       .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
@@ -38,15 +38,15 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const {
-      search, sortBy, sort_order, skip, take,
+      search, sortBy, sort_order,
     } = req.query;
 
     const { users, count } = await userService.findAll({
       search,
       sortBy,
       sort_order,
-      skip: parseInt(skip, 10),
-      take: parseInt(take, 10),
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.take,
     });
     return res.json({
       metadata: { count },
@@ -114,7 +114,7 @@ router.patch(
     }
 
     if (!can_update) {
-      return next(createError.Forbidden('Insufficient privilages to update user'));
+      return next(createError.Forbidden('Insufficient privileges to update user'));
     }
 
     const updatedUser = await userService.updateUser(req.params.username, updates);

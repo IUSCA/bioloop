@@ -6,7 +6,7 @@ class VerboseHTTPRequestHandler(BaseHTTPRequestHandler):
         self.log_verbose_request()
         self.send_verbose_response()
 
-    def __paylod_method(self):
+    def __payload_method(self):
         self.log_verbose_request()
         content_length = int(self.headers.get('Content-Length', 0))
         data = self.rfile.read(content_length) if content_length else b''
@@ -16,17 +16,17 @@ class VerboseHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_verbose_response()
 
     def do_POST(self):
-        self.__paylod_method()
+        self.__payload_method()
 
     def do_PUT(self):
-        self.__paylod_method()
+        self.__payload_method()
 
     def do_DELETE(self):
         self.log_verbose_request()
         self.send_verbose_response()
 
     def do_PATCH(self):
-        self.__paylod_method()
+        self.__payload_method()
         
 
     def log_verbose_request(self):

@@ -105,7 +105,7 @@ const store = useFileBrowserStore();
 const loading = ref(false);
 const visible = ref(false);
 
-// use in component state to not update the store's filter for evey keystroke
+// use in component state to not update the store's filter for every keystroke
 const filters = ref(store.defaultFilters());
 
 function hide() {
