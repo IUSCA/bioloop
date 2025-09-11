@@ -77,3 +77,5 @@ signet/signet
 db/mongo/data
 db/postgres/data
 db/db_postgres
+
+.cursorrules

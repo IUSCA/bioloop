@@ -54,7 +54,7 @@ if [ "${OAUTH_DOWNLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_DOWNLOAD_CLIENT_SECRE
 
   echo "One or more required environment variables are set to 'xxx'. Generating new OAuth client credentials..."
   response=$(curl --silent --request POST \
-    --url http://signet:5050/create_client \
+    --url http://signet:9007/create_client \
     --header 'Content-Type: application/x-www-form-urlencoded' \
     --data client_name=localhost_download \
     --data scope=download_file\ upload_file \
