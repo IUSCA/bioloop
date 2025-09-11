@@ -9,6 +9,7 @@ class WorkflowService {
     workflow_id = null,
     dataset_id = null,
     dataset_name = null,
+    workflow_name = null,
     status = null,
     skip = 0,
     limit = 10,
@@ -24,6 +25,7 @@ class WorkflowService {
         limit,
         dataset_id,
         dataset_name,
+        workflow_name,
         initiator,
       },
       paramsSerializer: {

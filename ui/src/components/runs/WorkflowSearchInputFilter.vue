@@ -44,6 +44,10 @@ const search_by_options = [
     label: "Workflow ID",
     key: "workflow_id",
   },
+  {
+    label: "Workflow Name",
+    key: "workflow_name",
+  },
 ];
 
 function getSearchByLabel(key) {
