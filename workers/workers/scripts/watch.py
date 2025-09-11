@@ -55,7 +55,7 @@ class Register:
         #  Track datasets without workflows on the UI and trigger a workflow manually.
         #  Option 1: infer from the dataset state
         #  - Avoid datasets that are just created
-        #  - Avoid datasets that are already processed but their associated workflows are deleted (updateed date will be recent)
+        #  - Avoid datasets that are already processed but their associated workflows are deleted (updated date will be recent)
         #  Option 2:
         #   - keep track of failures
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')

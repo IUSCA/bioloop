@@ -1,5 +1,6 @@
 ---
 title: Welcome Message
+exclude: true
 ---
 
 **Subject:** Your Research Data is Now Available

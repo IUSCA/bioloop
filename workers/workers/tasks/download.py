@@ -56,7 +56,7 @@ def setup_download(celery_task, dataset_id, **kwargs):
 
     download_dir = Path(config['paths']['download_dir']).resolve()
     download_path = download_dir / alias
-    bundle_download_path = download_dir / get_bundle_name(dataset) 
+    bundle_download_path = download_dir / get_bundle_name(dataset)
 
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)

@@ -1,9 +1,9 @@
-const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
-const userService = require('./user');
+const { Prisma } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+const prisma = require('@/db');
+const userService = require('./user');
 
 const PROJECT_ASSOCIATION_ERRORS = {
   noProjectUserAssociation: 'User is not associated with the specified project',
@@ -58,7 +58,7 @@ async function is_slug_unique(slug, project_id) {
     where: {
       slug,
       NOT: {
-        id: project_id,
+        id: project_id ?? Prisma.skip,
       },
     },
   });

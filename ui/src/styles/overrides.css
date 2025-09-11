@@ -39,7 +39,7 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
 }
 
 /* 
- * For some reason, overrided list item label color takes precendence over va-list-item-label-caption-color
+ * For some reason, overridden list item label color takes precedence over va-list-item-label-caption-color
  * Copied the same style here from the source, to increase precedence so that the caption does not have 
  * the same color as the label.
 */

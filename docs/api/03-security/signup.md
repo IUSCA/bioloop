@@ -137,7 +137,7 @@ Response from the backend after verifying the OAuth2 code and extracting the ema
   Authorization: Bearer <signup_token>
   {
     email: "user@example.com",
-    username: "newuser",
+    username: "new-user",
     name: "Jane Doe",
     accepted_terms: true,
   }
@@ -196,7 +196,7 @@ Name & Institution Name
 
 - Institution Name and Type: If we let users specify institution details, how do we validate them?
   - Should we allow free-form input or a dropdown of known institutions? Free-form could lead to typos or duplicates.
-- Captcha: Should we implement a captcha challenge during signup to prevent bot signups? signup is partly protected by OAuth2 provider's consent flow. Only users authenticated with Oauth2 provider can access signup.
+- Captcha: Should we implement a captcha challenge during signup to prevent bot signup? signup is partly protected by OAuth2 provider's consent flow. Only users authenticated with Oauth2 provider can access signup.
   - Where should we place the captcha in the flow? Security vs. user experience tradeoff.
     - login step
     - signup step

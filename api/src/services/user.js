@@ -1,10 +1,10 @@
-const { Prisma, PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 const usernameRegex = require('regex-username')();
 const usernameBlacklist = require('the-big-username-blacklist');
 const config = require('config');
 
-const prisma = new PrismaClient();
+const prisma = require('@/db');
 
 let systemUser = null;
 
@@ -49,8 +49,8 @@ const transformUser = _.flow([
 ]);
 
 async function findRoles(roles, _prisma) {
-  const __primsa = _prisma || prisma;
-  return __primsa.role.findMany({
+  const __prisma = _prisma || prisma;
+  return __prisma.role.findMany({
     where: {
       OR: roles.map((role) => ({
         name: {
@@ -74,7 +74,10 @@ async function setPassword({ user_id, password, _prisma }) {
 async function findUserBy(key, value, { is_deleted = null } = {}) {
   // do not throw error if no results are found, instead return null
   // findFirst return null if no results are found
-  if (!key || !value) {
+  if (!key) {
+    return null;
+  }
+  if (value === undefined) {
     return null;
   }
   const user = await prisma.user.findFirst({
@@ -220,7 +223,7 @@ async function hardDeleteUser(username) {
 
 async function updateUser(username, data) {
   const updates = _.flow([
-    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted']),
+    _.pick(['username', 'name', 'email', 'cas_id', 'notes', 'is_deleted', 'metadata']),
     _.omitBy(_.isNil),
   ])(data);
 

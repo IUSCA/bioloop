@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
-
 const config = require('config');
+
 const logger = require('../services/logger');
 
 function renameKey(oldKey, newKey) {
@@ -244,8 +244,8 @@ function readUsersFromJSON(fname) {
 
 class TransactionRetryError extends Error {
   constructor(maxRetries, message = 'Transaction failed after maximum retries') {
-    const _mesage = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
-    super(_mesage);
+    const _message = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
+    super(_message);
     this.name = 'TransactionRetryError';
   }
 }

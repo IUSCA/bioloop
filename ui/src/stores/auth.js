@@ -88,7 +88,7 @@ export const useAuthStore = defineStore("auth", () => {
               return res.data.status;
             }
           }
-          // not an expcected response
+          // not an expected response
           console.error("Unexpected response from the verify API", res);
           onLogout();
           return Promise.reject();
@@ -124,7 +124,7 @@ export const useAuthStore = defineStore("auth", () => {
           const delay =
             expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
           console.log(
-            "auth store: refreshTokenBeforeExpiry: trigerring refreshToken in ",
+            "auth store: refreshTokenBeforeExpiry: triggering refreshToken in ",
             delay / 1000,
             "seconds",
           );

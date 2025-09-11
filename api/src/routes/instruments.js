@@ -1,13 +1,10 @@
 const express = require('express');
 
-const { PrismaClient } = require('@prisma/client');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('instruments');
-
-const prisma = new PrismaClient();
-
 const router = express.Router();
 
 router.get(

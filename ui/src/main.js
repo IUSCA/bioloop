@@ -1,4 +1,4 @@
-import "@fontsource/audiowide";
+import "@fontsource/audiowide"; // cspell: disable-line
 import { createPinia } from "pinia";
 import { createApp } from "vue";
 import { createVuestic } from "vuestic-ui";
@@ -16,7 +16,7 @@ import "./styles/overrides.css";
 import "./styles/footer.css";
 import "./styles/main.css";
 
-// import "material-design-icons-iconfont/dist/material-design-icons.min.css";
+// import "material-design-icons-iconfont/dist/material-design-icons.min.css"; // cspell: disable-line
 
 import router from "@/router";
 import App from "./App.vue";

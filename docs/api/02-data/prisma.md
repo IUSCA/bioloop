@@ -13,6 +13,32 @@ The `DATABASE_URL` environment variable is used to connect to the database. This
   - `npx prisma db seed`: Seeds the database with initial data.
 - **Initialization**: The `db.js` file contains the setup for the Prisma client.
 
+## Importing Prisma Client in Routers and Services
+
+To avoid exhausting database connections in long-running applications (like Express servers), instantiate `PrismaClient` once in a central file (e.g., `db.js`) and import this instance wherever needed.
+
+**`src/db.js`**
+```js
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+module.exports = prisma;
+```
+
+**Usage in Routers/Services:**
+```js
+const prisma = require('@/db');
+
+// Example usage in a route handler
+router.get('/users', async (req, res) => {
+  const users = await prisma.user.findMany();
+  res.json(users);
+});
+```
+
+For one-off scripts (e.g., seeding), you can instantiate `PrismaClient` directly in the script.
+
+Refer to the [official documentation](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/databases-connections#long-running-processes) for best practices.
+
 ## Gotchas
 
 ### Auto Timestamp

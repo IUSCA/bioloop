@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
@@ -96,7 +97,7 @@ async function main() {
 
   await Promise.all(promises);
 
-  console.log(`created ${admins.length} adminstrators`);
+  console.log(`created ${admins.length} administrators`);
   console.log(`created ${operators.length} operators`);
   console.log(`created ${users.length} users`);
 

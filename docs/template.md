@@ -1,5 +1,6 @@
 ---
 title: Project Template
+exclude: true
 ---
 
 # Create a repository

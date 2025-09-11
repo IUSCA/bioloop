@@ -1,4 +1,4 @@
-require('dotenv-safe').config();
+require('dotenv-safe').config({ example: '.env.default' });
 // const process = require('process');
 // const config = require('config');
 
@@ -25,3 +25,8 @@ require('dotenv-safe').config();
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+module.exports = prisma;

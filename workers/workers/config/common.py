@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()  # take environment variables from .env.
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
+API_BASE_URL = os.environ['API_BASE_URL']
 
 QUEUE_URL = os.environ['QUEUE_URL']
 QUEUE_USER = os.environ['QUEUE_USER']
@@ -27,10 +28,11 @@ FIVE_MINUTES = 5 * 60
 
 config = {
     'app_id': 'bioloop-dev.sca.iu.edu',
+    # cspell: disable-next-line
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
                           '.vcf.gz.tbi', '.vcf'],
     'api': {
-        'base_url': 'http://localhost:3030',
+        'base_url': API_BASE_URL,
         'auth_token': APP_API_TOKEN,
         'conn_timeout': 5,  # seconds
         'read_timeout': 30  # seconds
@@ -47,6 +49,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
+            'upload': '/opt/sca/data',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {

@@ -2,12 +2,12 @@ const express = require('express');
 const config = require('config');
 const createError = require('http-errors');
 
-const asyncHandler = require('../../middleware/asyncHandler');
-const { authenticate } = require('../../middleware/auth');
-const { accessControl } = require('../../middleware/auth');
-
-const userService = require('../../services/user');
-const authService = require('../../services/auth');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { isFeatureEnabled } = require('@/services/features');
+const { authenticate } = require('@/middleware/auth');
+const { accessControl } = require('@/middleware/auth');
+const userService = require('@/services/user');
+const authService = require('@/services/auth');
 
 const isPermittedTo = accessControl('auth');
 const router = express.Router();
@@ -17,7 +17,6 @@ const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
 const microsoftRouter = require('./microsoft');
 const signupRouter = require('./signup');
-const { isFeatureEnabled } = require('../../services/features');
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']

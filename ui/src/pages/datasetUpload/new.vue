@@ -40,6 +40,5 @@ nav.setNavItems([
 
 <route lang="yaml">
 meta:
-title: Dataset Uploads
-requiresRoles: ["operator", "admin", "user"]
+  title: Dataset Uploads
 </route>

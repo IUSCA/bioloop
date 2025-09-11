@@ -1,1 +1,0 @@
-import{_ as e,c as t,o as a}from"./chunks/framework.C9SxlbOG.js";const l=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"api/01-core/events.md","filePath":"api/01-core/events.md","lastUpdated":null}'),r={name:"api/01-core/events.md"};function s(n,o,c,p,i,d){return a(),t("div")}const m=e(r,[["render",s]]);export{l as __pageData,m as default};
