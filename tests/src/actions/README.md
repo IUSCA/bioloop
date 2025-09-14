@@ -18,7 +18,7 @@ Low-level actions that interact with individual UI elements:
 - `trackSelectedFilesMetadata()` - Track selected files metadata from the upload table
 - `navigateToNextStep()` - Navigate to next step
 - `navigateToPreviousStep()` - Navigate to previous step
-- `fillDatasetName()` - Fill dataset name in upload details
+- `typeInputValue()` - Fill dataset name in upload details
 - `selectFiles()` - Select files for upload
 - `verifyStepButtonState()` - Verify step button enabled/disabled state
 - `verifyFormError()` - Verify form validation errors
@@ -39,7 +39,7 @@ import {
   trackSelectedFilesMetadata,
   navigateToNextStep,
   selectFiles,
-  fillDatasetName,
+  typeInputValue,
 } from '../actions/datasetUpload';
 
 // Select dataset type by name
@@ -119,7 +119,7 @@ await selectFiles({
 });
 
 // Fill dataset name
-await fillDatasetName({
+await typeInputValue({
   page,
   datasetName: 'My Test Dataset',
   verify: true
@@ -145,7 +145,7 @@ await selectSourceInstrument({ page, optionIndex: 0, verify: true });
 await navigateToNextStep({ page });
 
 // Step 3: Upload Details
-await fillDatasetName({ page, datasetName: 'Test Dataset', verify: true });
+await typeInputValue({ page, datasetName: 'Test Dataset', verify: true });
 ```
 
 ## Best Practices

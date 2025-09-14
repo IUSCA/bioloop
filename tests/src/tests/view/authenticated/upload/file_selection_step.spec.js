@@ -1,4 +1,4 @@
-import { expect, test as baseTest } from '@playwright/test';
+import { test as baseTest, expect } from '@playwright/test';
 
 import { selectFiles, trackSelectedFilesMetadata } from '../../../../actions/datasetUpload';
 import { withAttachments } from '../../../../fixtures/withAttachments';
@@ -101,7 +101,7 @@ test.describe.serial('Dataset Upload Process', () => {
       );
     });
 
-    test('Should hide the file table when all files are deleted', async () => {
+    test('Should hide the selected-files table when all files are deleted', async () => {
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 

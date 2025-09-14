@@ -1,6 +1,7 @@
 import { test as baseTest, expect } from '@playwright/test';
 
 import {
+  assertAutoCompleteDisabled,
   assertAutoCompleteEmpty,
   assertCheckboxState,
   assertSelectValue,
@@ -107,21 +108,45 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(selectedOption).toHaveCount(0);
     });
 
+    // todo - tests for how fields being interated with affect other fields
     test('should allow selecting values in the General-Info step\'s fields', async () => {
       // Change selected Dataset Type to Raw Data
-      await selectDropdownOption({ page, testId: 'upload-metadata-dataset-type-select', optionToSelect: 'Raw Data', verify: true });
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-dataset-type-select',
+        optionToSelect: 'Raw Data',
+        verify: true,
+      });
 
       // Reset selected Dataset Type to its default value
-      await selectDropdownOption({ page, testId: 'upload-metadata-dataset-type-select', optionToSelect: defaultDatasetType, verify: true });
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-dataset-type-select',
+        optionToSelect: defaultDatasetType,
+        verify: true,
+      });
 
       // Select source Raw Data
-      await selectAutocompleteResult({ page, testId: 'upload-metadata-dataset-autocomplete', verify: true });
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        verify: true,
+      });
 
       // Select Project
-      await selectAutocompleteResult({ page, testId: 'upload-metadata-project-autocomplete', verify: true });
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        verify: true,
+      });
 
       // Select Source Instrument
-      await selectDropdownOption({ page, testId: 'upload-metadata-source-instrument-select', optionIndex: 0, verify: true });
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        optionIndex: 0,
+        verify: true,
+      });
     });
 
     test('should allow clearing values in the General-Info step\'s fields', async () => {
@@ -140,6 +165,59 @@ test.describe.serial('Dataset Upload Process', () => {
       });
     });
 
-    // test('should clear `Source Raw Data` field when `Dataset Type` is ')
+    test('should disable or clear `Source Raw Data` fields when `Dataset Type` is changed to "Raw Data"', async () => {
+      // assert that the `Source Raw Data` checkbox is enabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        expectedState: true,
+      });
+
+      // assert that the `Source Raw Data` input field is empty
+      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+
+      // select an option in the `Source Raw Data` input field
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        verify: true,
+      });
+
+      // Change selected Dataset Type to Raw Data
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-dataset-type-select',
+        optionToSelect: 'Raw Data',
+        verify: true,
+      });
+
+      // assert that the `Source Raw Data` checkbox is disabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        expectedState: false,
+      });
+
+      // assert that the `Source Raw Data` input field is empty
+      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+
+      // assert that the `Source Raw Data` input field is disabled
+      await assertAutoCompleteDisabled({ page, testId: 'upload-metadata-dataset-autocomplete' });
+    });
+
+    test('should enable the `Source Raw Data` fields when `Dataset Type` is changed to "Data Product"', async () => {
+      // assert that the `Source Raw Data` checkbox is disabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        expectedState: false,
+      });
+
+      // assert that the `Source Raw Data` input field is empty
+      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+
+      // assert that the `Source Raw Data` input field is disabled
+      await assertAutoCompleteDisabled({ page, testId: 'upload-metadata-dataset-autocomplete' });
+    });
   });
 });

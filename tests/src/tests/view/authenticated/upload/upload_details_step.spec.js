@@ -2,6 +2,7 @@ import { test as baseTest, expect } from '@playwright/test';
 
 import {
   selectAutocompleteResult,
+  selectDropdownOption,
 } from '../../../../actions';
 import {
   selectFiles,
@@ -45,7 +46,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test('Wait for the file upload table to be visible', async () => {
       // Track selected files metadata
       const files = await trackSelectedFilesMetadata({ page });
-      
+
       // Store the selected files' information in state
       selectedFiles.push(...files);
     });
@@ -68,19 +69,34 @@ test.describe.serial('Dataset Upload Process', () => {
       selectedDatasetType = selectedDatasetType.trim();
 
       // Select source Raw Data
-      selectedRawDataName = await selectAutocompleteResult({ page, testId: 'upload-metadata-dataset-autocomplete', resultIndex: 0, verify: true });
+      selectedRawDataName = await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        resultIndex: 0,
+        verify: true,
+      });
 
       // Select Project
-      selectedProjectName = await selectAutocompleteResult({ page, testId: 'upload-metadata-project-autocomplete', resultIndex: 0, verify: true });
+      selectedProjectName = await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        resultIndex: 0,
+        verify: true,
+      });
 
       // Select Source Instrument
-      selectedInstrumentName = await selectDropdownOption({ page, testId: 'upload-metadata-source-instrument-select', optionIndex: 0, verify: true });
+      selectedInstrumentName = await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        optionIndex: 0,
+        verify: true,
+      });
     });
   });
 
-  test.describe('Upload details step', () => {
+  test.describe('Upload-Details step', () => {
     test.beforeAll(async () => {
-      // Click the "Next" button to proceed to the -Info step
+      // Click the "Next" button to proceed to the Upload-Details step
       await navigateToNextStep({ page });
     });
 
@@ -88,7 +104,6 @@ test.describe.serial('Dataset Upload Process', () => {
     // Check Dataset Type
       const datasetTypeChip = page.getByTestId('upload-details-dataset-type-chip');
       await expect(datasetTypeChip).toBeVisible();
-      // console.log('Dataset Type:', selectedDatasetType);
       await expect(datasetTypeChip).toHaveText(selectedDatasetType);
 
       // Check Source Raw Data

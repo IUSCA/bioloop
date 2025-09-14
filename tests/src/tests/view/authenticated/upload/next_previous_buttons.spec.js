@@ -72,7 +72,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await Promise.all([
         // Check if the Previous button is now enabled
         expect(page.getByTestId('previous-button')).toBeEnabled(),
-
+        
         // Check if the Next button is disabled (as no selections have been
         // made yet in the General-Info form)
         expect(page.getByTestId('upload-next-button')).toBeDisabled(),

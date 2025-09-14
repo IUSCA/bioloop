@@ -6,7 +6,7 @@ services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
+      - 127.0.0.1:9443:443
     env_file:
       - ui/.env.default
     volumes:
@@ -324,7 +324,6 @@ services:
         condition: service_healthy
     profiles:
       - metrics
-
 
 
   e2e:
