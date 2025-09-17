@@ -381,6 +381,5 @@ export {
   navigateBackSafely,
   setIntersection,
   union,
-  validateEmail
+  validateEmail,
 };
-
