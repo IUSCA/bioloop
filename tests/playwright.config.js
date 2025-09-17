@@ -128,6 +128,12 @@ module.exports = {
         // '/view/authenticated/upload/next_previous_buttons.spec.js',
         testMatch: '/view/authenticated/upload/general_info_step.spec.js',
       },
+      {
+        name: 'upload_step3',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/upload/upload_*_*.spec.js',
+      },
       // {
       //   name: 'notifications',
       //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
