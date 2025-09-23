@@ -111,9 +111,9 @@ router.get(
       };
     }
     where.audit_log = {
-      user : {
+      user: {
         username: req.params.username,
-      }
+      },
     };
 
     const filter_query = {

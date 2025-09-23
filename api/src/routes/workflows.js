@@ -14,18 +14,32 @@ const isPermittedTo = accessControl('workflow');
 const router = express.Router();
 
 router.get(
+  '/names',
+  isPermittedTo('read'),
+  asyncHandler(
+    async (req, res, next) => {
+      const workflows_names = Object.keys(config.workflow_registry);
+      res.json(workflows_names);
+    },
+  ),
+);
+
+router.get(
   '/',
   isPermittedTo('read'),
   validate([
     query('dataset_id').isInt().toInt().optional(),
     query('dataset_name').isString().optional().notEmpty(),
     query('workflow_id').isString().optional().notEmpty(),
+    query('workflow_name').isString().optional().notEmpty(),
   ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
 
-      const { dataset_id, dataset_name, workflow_id } = req.query;
+      const {
+        dataset_id, dataset_name, workflow_id, workflow_name,
+      } = req.query;
       let workflow_ids = null;
 
       // if workflow_id is provided, then ignore dataset_id and dataset_name
@@ -76,6 +90,7 @@ router.get(
         skip: req.query.skip,
         limit: req.query.limit,
         workflow_ids,
+        workflow_name,
       });
 
       // for each workflow, get initiator details from the app db
