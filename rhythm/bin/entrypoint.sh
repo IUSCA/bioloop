@@ -34,10 +34,12 @@ if grep -q "^${api_token}=" "$api_env"; then
     echo "The string '${api_token}' exists but has no value."
     sed -i '/^WORKFLOW_AUTH_TOKEN/d' $api_env
     echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> $api_env
+    echo "created WORKFLOW_AUTH_TOKEN"
   fi
 else
   echo "The string '${api_token}' does not exist in the file."
   echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> $api_env
+  echo "created WORKFLOW_AUTH_TOKEN"
 fi
 
 $*

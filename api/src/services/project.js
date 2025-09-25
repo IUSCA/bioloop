@@ -3,16 +3,6 @@ const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
-const userService = require('./user');
-
-const PROJECT_ASSOCIATION_ERRORS = {
-  noProjectUserAssociation: 'User is not associated with the specified project',
-  noAssociatingUserId: 'Id of the User associating the Project is required',
-};
-
-const PROJECT_CREATION_ERRORS = {
-  projectIdProvidedWhenCreatingNewProject: 'Cannot create a new Project when Project ID is provided',
-};
 
 function normalize_name(name) {
   // convert to lowercase
@@ -89,6 +79,13 @@ async function generate_slug({ name, project_id }) {
   }
 }
 
+/**
+ * Checks if a user has an association with a project.
+ *
+ * @param {string} projectId - The ID of the project.
+ * @param {string} userId - The ID of the user.
+ * @returns {boolean} True if the user has an association with the project, false otherwise.
+ */
 async function has_project_assoc({
   projectId, userId,
 }) {
@@ -99,6 +96,21 @@ async function has_project_assoc({
     },
   });
   return projectUserAssociations.length > 0;
+}
+
+/**
+ * Gets the owner of a project.
+ *
+ * @param {string} projectId - The ID of the project.
+ * @returns {string} The ID of the owner of the project.
+ */
+async function get_project_owner({ projectId }) {
+  const project = await prisma.project.findUniqueOrThrow({
+    where: {
+      id: projectId,
+    },
+  });
+  return project.owner_id;
 }
 
 /**
@@ -250,22 +262,6 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   };
 };
 
-const buildDatasetAssociationQuery = async ({
-  project_id,
-  dataset_ids = [],
-  assignor_id,
-} = {}) => {
-  if (dataset_ids.length === 0) {
-    return null; // There are no datasets to associate
-  }
-
-  return dataset_ids.map((dataset_id) => ({
-    project_id,
-    dataset_id,
-    ...(assignor_id && { assignor_id }),
-  }));
-};
-
 const create_project = async ({
   tx,
   include,
@@ -282,55 +278,14 @@ const create_project = async ({
   });
 };
 
-const assign_datasets = async ({
-  tx,
-  include,
-  ...data
-}) => {
-  const transactionManager = tx || prisma;
-
-  if (!data.assignor_id) { // ID of user who is associating datasets with the project
-    throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
-  }
-
-  const assignorRoles = await userService.getUserRoles({ user_id: data.assignor_id });
-
-  // ensure that the user associating Datasets to the Project has access to the Project
-  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
-  const userAssociation = await transactionManager.project_user.findUnique({
-    where: {
-      project_id_user_id: {
-        project_id: data.project_id,
-        user_id: data.assignor_id,
-      },
-    },
-  });
-  isAuthorized = isAuthorized || !!userAssociation;
-
-  if (!isAuthorized) {
-    throw new Error(PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation);
-  }
-
-  const projectAssociationQuery = await buildDatasetAssociationQuery({
-    ...data,
-  });
-  return transactionManager.project_dataset.createMany({
-    data: projectAssociationQuery,
-    include: include || undefined,
-  });
-};
-
 module.exports = {
   normalize_name,
   generate_slug,
   has_project_assoc,
+  get_project_owner,
   generate_project_name,
   buildCreationQuery,
   build_include_object,
   buildOrderByObject,
-  buildDatasetAssociationQuery,
   create_project,
-  assign_datasets,
-  PROJECT_ASSOCIATION_ERRORS,
-  PROJECT_CREATION_ERRORS,
 };

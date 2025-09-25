@@ -22,6 +22,7 @@ const authService = require('@/services/auth');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 const projectService = require('@/services/project');
+const userService = require('@/services/user');
 const utils = require('@/utils');
 
 const isPermittedTo = accessControl('datasets');
@@ -408,17 +409,9 @@ router.post(
     body('du_size').optional().notEmpty().customSanitizer(BigInt), // convert to BigInt
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('project_id').optional(),
+    body('assign_to_new_project').optional().toBoolean(),
     body('origin_path').notEmpty().escape(),
-    body('project_data').optional().isObject(),
-    body('project_data.name').optional().escape().notEmpty(),
-    body('project_data.id').optional().escape().notEmpty(),
-    body('project_data.description').optional().escape().notEmpty(),
-    body('project_data.project_name').optional().escape().notEmpty(),
-    body('project_data.browser_enabled').optional().isBoolean(),
-    body('project_data.assignee_user_ids')
-      .optional()
-      .isArray()
-      .custom((e) => e.every((id) => Number.isInteger(id))),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
     body('create_method').optional(),
@@ -437,8 +430,9 @@ router.post(
       /* eslint-enable */
 
     const {
-      import_space, create_method, project_data, src_instrument_id, src_dataset_id,
+      import_space, create_method, project_id, assign_to_new_project, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
+      description,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
@@ -459,66 +453,77 @@ router.post(
       }
     }
 
-    let createQuery;
-    try {
-      createQuery = datasetService.buildDatasetCreateQuery({
-        name,
-        type,
-        du_size,
-        origin_path: decoded_origin_path,
-        size,
-        bundle_size,
-        workflow_id,
-        // Todo - updates usages of project_id to project_data.id
-        project_id: project_data?.id,
-        user_id: req.user.id,
-        src_instrument_id,
-        src_dataset_id,
-        state,
-        create_method,
-        metadata,
-      });
-    } catch (error) {
-      if (error.message === projectService.PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation) {
-        next(createError.Forbidden(error.message));
-      } else {
-        next(error);
+    // If Project ID is provided, the Dataset being created will be assigned to an existing Project
+    if (project_id) {
+      // if the user is trying to assign the Dataset to both an existing Project and a new Project, throw an error
+      if (assign_to_new_project) {
+        return next(createError.BadRequest({
+          message: 'Cannot assign Dataset to both an existing Project and a new Project.'
+         + ' Please provide either a project_id, or assign_to_new_project.',
+        }));
+      }
+      // check if the user is authorized to associate the Dataset being created to the Project. User is authorized if:
+      //  - EITHER, user is an admin or operator
+      //  - OR, user is associated with the Project, and is the owner of the Project
+      const assignorRoles = await userService.getUserRoles({ user_id: req.user.id });
+      let is_authorized_for_project_assignment = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
+      if (!is_authorized_for_project_assignment) {
+        const project_owner = await projectService.get_project_owner({ projectId: project_id });
+        const has_project_association = await projectService.has_project_assoc({
+          projectId: project_id,
+          userId: req.user.id,
+        });
+        is_authorized_for_project_assignment = project_owner === req.user.id && has_project_association;
+      }
+      if (!is_authorized_for_project_assignment) {
+        return next(createError.Forbidden({
+          message: `You are not permitted to assign Datasets to Project ${project_id}.`,
+        }));
       }
     }
 
-    const dataset = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.create(tx, createQuery);
-
-      if (project_data && accessControl('projects')('create')) {
-        try {
-          await datasetService.assignProject({
-            tx,
-            data: {
-              assignee_dataset_ids: [createdDataset.id],
-              assignor_id: req.user.id,
-              ...project_data,
-            },
-            createNew: true,
-          });
-        } catch (error) {
-          if (error.message === projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject) {
-            next(createError.BadRequest(error.message));
-          } else {
-            next(error);
-          }
-        }
-      }
-
-      return createdDataset;
+    const createQuery = datasetService.buildDatasetCreateQuery({
+      name,
+      type,
+      du_size,
+      origin_path: decoded_origin_path,
+      size,
+      bundle_size,
+      workflow_id,
+      project_id,
+      user_id: req.user.id,
+      src_instrument_id,
+      src_dataset_id,
+      state,
+      create_method,
+      metadata,
+      description,
     });
-    if (dataset) res.json(dataset);
 
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    // const dataset = await datasetService.createDataset(createQuery);
+    let dataset;
+    if (assign_to_new_project) {
+      if (isPermittedTo('create')('projects')) {
+        dataset = await datasetService.create_with_project({
+          tx: prisma,
+          dataset_payload: createQuery,
+          project_payload: {
+            owner_id: req.user.id,
+          },
+        });
+      } else {
+        return next(createError.Forbidden({
+          message: 'You are not permitted to create a new project.',
+        }));
+      }
+    } else {
+      dataset = await datasetService.create(prisma, createQuery);
+    }
 
-    // else next(createError.Conflict('Unique constraint failed'));
+    if (dataset) res.json(dataset);
+    else next(createError.Conflict('Unique constraint failed'));
   }),
 );
 

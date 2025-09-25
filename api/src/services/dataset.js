@@ -12,6 +12,7 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const FileGraph = require('./fileGraph');
 const workflowService = require('./workflow');
+const projectService = require('./project');
 const logger = require('./logger');
 
 const { log_axios_error } = require('../utils');
@@ -741,31 +742,6 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
-async function assignProject({ tx, data, createNew = false }) {
-  if (createNew && data.project_id == null) {
-    // If Project ID is not provided, associate created dataset with a new project
-    await projectService.create_project({
-      tx,
-      user_ids: data.assignee_user_ids,
-      dataset_ids: data.assignee_dataset_ids,
-      assignor_id: data.assignor_id,
-      description: data.description || 'Auto-generated during Dataset creation',
-      ...data,
-    });
-  } else if (createNew && data.project_id != null) {
-    throw new Error(projectService.PROJECT_CREATION_ERRORS.projectIdProvidedWhenCreatingNewProject);
-  } else {
-    // Else, associate created Dataset with an existing Project
-    await projectService.assign_datasets({
-      tx,
-      project_id: data.id,
-      dataset_ids: data.assignee_dataset_ids,
-      assignor_id: data.assignor_id,
-      ...data,
-    });
-  }
-}
-
 /**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
@@ -810,6 +786,45 @@ async function create(tx, data) {
     console.error('Error creating dataset:', e);
     throw e;
   }
+}
+
+async function create_with_project({ tx, dataset_payload, project_payload }) {
+  let dataset = await create(tx, dataset_payload);
+
+  await projectService.create_project({
+    tx,
+    data: {
+      // todo: generate better name
+      name: `Project--${dataset.name}-${dataset.id}`,
+      description: `Project created for dataset ${dataset.name}`,
+      // browser_enabled: config.get('browser_enabled') || false,
+      owner_id: project_payload.owner_id,
+      dataset_ids: [dataset.id],
+      user_ids: [project_payload.owner_id],
+    },
+  });
+
+  dataset = await tx.dataset.findUnique({
+    where: {
+      id: dataset.id,
+    },
+    include: {
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          browser_enabled: true,
+          funding: true,
+          metadata: true,
+          created_at: true,
+          updated_at: true,
+        },
+      },
+    },
+  });
+  return dataset;
 }
 
 /**
@@ -1106,7 +1121,8 @@ const buildDatasetCreateQuery = (data) => {
   /* eslint-disable no-unused-vars */
   const {
     name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    // project_id,
+    user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -1129,14 +1145,14 @@ const buildDatasetCreateQuery = (data) => {
     };
   }
 
-  if (project_id) {
-    create_query.projects = {
-      create: [{
-        project_id,
-        assignor_id: user_id ?? Prisma.skip,
-      }],
-    };
-  }
+  // if (project_id) {
+  //   create_query.projects = {
+  //     create: [{
+  //       project_id,
+  //       assignor_id: user_id ?? Prisma.skip,
+  //     }],
+  //   };
+  // }
 
   if (src_instrument_id) {
     create_query.src_instrument = {
@@ -1264,6 +1280,7 @@ module.exports = {
   search_files,
   add_files,
   create,
+  create_with_project,
   get_bundle_name,
   get_dataset_active_workflows,
   get_dataset_creator,
@@ -1271,7 +1288,6 @@ module.exports = {
   has_workflow_access,
   dataset_access_check,
   workflow_access_check,
-  assignProject,
   getUploadedDatasetPath,
   buildDatasetCreateQuery,
   buildDatasetsFetchQuery,
