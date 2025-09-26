@@ -592,40 +592,16 @@ const someFilesPendingUpload = computed(
 );
 
 /**
- * Request payload for associating the Dataset being uploaded to a new or existing Project.
- * Sent along with the network request used to create an entry for the Dataset being uploaded in the database.
- *
- * - If user has no Projects to assign to the Dataset being uploaded, a new Project will be auto-created for them,
- * if this feature is enabled.
- */
-const getProjectCreationPayload = () => {
-  let project_data;
-  if (willCreateNewProject.value) {
-    // If a new Project is to be created, the current user will be assigned to it.
-    project_data = {
-      assign_to_new_project: true,
-    };
-  } else {
-    project_data = projectSelected.value && {
-      project_id: projectSelected.value.id,
-    };
-  }
-  return project_data;
-};
-
-/**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
  */
 const uploadFormData = computed(() => {
-  let project_data = getProjectCreationPayload();
-
   return {
     name: uploadedDatasetName.value,
     type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(project_data && { project_data }),
+    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
     }),

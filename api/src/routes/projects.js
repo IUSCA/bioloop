@@ -487,8 +487,10 @@ router.post(
       /* eslint-enable */
 
     const project = await projectService.create_project({
-      ...req.body,
-      assignor_id: req.user.id,
+      data: {
+        ...req.body,
+        assignor_id: req.user.id,
+      },
       include: projectService.build_include_object(),
     });
     res.json(project);
@@ -498,6 +500,7 @@ router.post(
 router.post(
   '/merge/:src',
   isPermittedTo('update'),
+  accessControl('project_datasets')('update'),
   validate([
     body('target_project_ids').exists(),
     body('delete_merged').toBoolean().default(false),
@@ -515,7 +518,7 @@ router.post(
       where: {
         id: req.params.src,
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     // get target projects
@@ -525,7 +528,7 @@ router.post(
           in: req.body.target_project_ids,
         },
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     // assemble all unique dataset_ids associated with the target projects
@@ -729,7 +732,7 @@ router.patch(
 
 router.patch(
   '/:id',
-  isPermittedTo('update'),
+  accessControl('project_datasets')('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),

@@ -111,9 +111,9 @@ router.get(
       };
     }
     where.audit_log = {
-      user : {
+      user: {
         username: req.params.username,
-      }
+      },
     };
 
     const filter_query = {
@@ -170,7 +170,7 @@ router.post(
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
+      const createdDataset = await datasetService.create({ tx, data: datasetCreateQuery, requester_id: req.user.id });
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {

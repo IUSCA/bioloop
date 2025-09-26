@@ -79,13 +79,6 @@ async function generate_slug({ name, project_id }) {
   }
 }
 
-/**
- * Checks if a user has an association with a project.
- *
- * @param {string} projectId - The ID of the project.
- * @param {string} userId - The ID of the user.
- * @returns {boolean} True if the user has an association with the project, false otherwise.
- */
 async function has_project_assoc({
   projectId, userId,
 }) {
@@ -102,15 +95,31 @@ async function has_project_assoc({
  * Gets the owner of a project.
  *
  * @param {string} projectId - The ID of the project.
- * @returns {string} The ID of the owner of the project.
+ * @returns {Object} The owner of the project.
  */
 async function get_project_owner({ projectId }) {
   const project = await prisma.project.findUniqueOrThrow({
     where: {
       id: projectId,
     },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          cas_id: true,
+          notes: true,
+          created_at: true,
+          updated_at: true,
+          is_deleted: true,
+          metadata: true,
+        },
+      },
+    },
   });
-  return project.owner_id;
+  return project.owner;
 }
 
 /**
@@ -210,12 +219,19 @@ function generate_project_name({ prefix, suffix } = {}) {
   return projectName;
 }
 
-// todo - test existing endpoints
 async function buildCreationQuery({
-  user_ids = [], dataset_ids = [], assignor_id, ...projectData
+  user_ids = [], dataset_ids = [], assignor_id, owner_id, ...projectData
 } = {}) {
+  console.log('buildCreationQuery', {
+    user_ids,
+    dataset_ids,
+    assignor_id,
+    owner_id,
+    projectData,
+  });
+
   const data = _.flow([
-    _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
+    _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata', 'owner_id']),
     _.omitBy(_.isNil),
   ])(projectData);
 
@@ -265,13 +281,11 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
 const create_project = async ({
   tx,
   include,
-  ...data
+  data,
 }) => {
   const transactionManager = tx || prisma;
 
-  const projectCreationQuery = await buildCreationQuery({
-    ...data,
-  });
+  const projectCreationQuery = await buildCreationQuery(data);
   return transactionManager.project.create({
     data: projectCreationQuery,
     include: include || undefined,

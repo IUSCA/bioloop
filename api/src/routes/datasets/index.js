@@ -380,13 +380,7 @@ router.get(
  * @param {BigInt} [req.body.du_size] - The disk usage size of the dataset.
  * @param {BigInt} [req.body.size] - The size of the dataset.
  * @param {BigInt} [req.body.bundle_size] - The size of the dataset bundle.
- * @param {Object} [req.body.project_data] - Optional project data to associate with the dataset.
- * @param {string} [req.body.project_data.name] - The name of the project to associate with the dataset.
- * @param {string} [req.body.project_data.id] - The ID of an existing project to associate with the dataset.
- * @param {string} [req.body.project_data.description] - A description of the project.
- * @param {string} [req.body.project_data.project_name] - An alternative name for the project (if different from 'name').
- * @param {boolean} [req.body.project_data.browser_enabled] - Whether the project is enabled for browser view.
- * @param {number[]} [req.body.project_data.assignee_user_ids] - An array of user IDs to assign to the project.
+ * @param {string} [req.body.project_id] - The ID of an existing project to associate with the dataset.
  * @param {string} [req.body.src_instrument_id] - The ID of the source instrument.
  * @param {string} [req.body.src_dataset_id] - The ID of the source dataset.
  * @param {string} [req.body.create_method] - The method used to create the dataset.
@@ -410,7 +404,6 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('project_id').optional(),
-    body('assign_to_new_project').optional().toBoolean(),
     body('origin_path').notEmpty().escape(),
     body('src_instrument_id').optional(),
     body('src_dataset_id').optional(),
@@ -430,7 +423,7 @@ router.post(
       /* eslint-enable */
 
     const {
-      import_space, create_method, project_id, assign_to_new_project, src_instrument_id, src_dataset_id,
+      import_space, create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
       description,
     } = req.body;
@@ -449,35 +442,6 @@ router.post(
       if (is_origin_path_restricted) {
         return next(createError.Forbidden({
           message: `Import space ${import_space} is restricted for dataset creation`,
-        }));
-      }
-    }
-
-    // If Project ID is provided, the Dataset being created will be assigned to an existing Project
-    if (project_id) {
-      // if the user is trying to assign the Dataset to both an existing Project and a new Project, throw an error
-      if (assign_to_new_project) {
-        return next(createError.BadRequest({
-          message: 'Cannot assign Dataset to both an existing Project and a new Project.'
-         + ' Please provide either a project_id, or assign_to_new_project.',
-        }));
-      }
-      // check if the user is authorized to associate the Dataset being created to the Project. User is authorized if:
-      //  - EITHER, user is an admin or operator
-      //  - OR, user is associated with the Project, and is the owner of the Project
-      const assignorRoles = await userService.getUserRoles({ user_id: req.user.id });
-      let is_authorized_for_project_assignment = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
-      if (!is_authorized_for_project_assignment) {
-        const project_owner = await projectService.get_project_owner({ projectId: project_id });
-        const has_project_association = await projectService.has_project_assoc({
-          projectId: project_id,
-          userId: req.user.id,
-        });
-        is_authorized_for_project_assignment = project_owner === req.user.id && has_project_association;
-      }
-      if (!is_authorized_for_project_assignment) {
-        return next(createError.Forbidden({
-          message: `You are not permitted to assign Datasets to Project ${project_id}.`,
         }));
       }
     }
@@ -503,24 +467,11 @@ router.post(
     // idempotence: creates dataset or returns error 409 on repeated requests
     // If many concurrent transactions are trying to create the same dataset, only one will succeed
     // will return dataset if successful, otherwise will return 409 so that client can handle next steps accordingly
-    let dataset;
-    if (assign_to_new_project) {
-      if (isPermittedTo('create')('projects')) {
-        dataset = await datasetService.create_with_project({
-          tx: prisma,
-          dataset_payload: createQuery,
-          project_payload: {
-            owner_id: req.user.id,
-          },
-        });
-      } else {
-        return next(createError.Forbidden({
-          message: 'You are not permitted to create a new project.',
-        }));
-      }
-    } else {
-      dataset = await datasetService.create(prisma, createQuery);
-    }
+    const dataset = await datasetService.create({
+      tx: prisma,
+      data: createQuery,
+      requester_id: req.user.id,
+    });
 
     if (dataset) res.json(dataset);
     else next(createError.Conflict('Unique constraint failed'));
@@ -622,7 +573,11 @@ router.post(
     const data = req.body.datasets
       .map((d) => datasetService.buildDatasetCreateQuery(d));
 
-    const results = await Promise.allSettled(data.map((d) => datasetService.create(prisma, d)));
+    const results = await Promise.allSettled(data.map((d) => datasetService.create({
+      tx: prisma,
+      data: d,
+      requester_id: req.user.id,
+    })));
 
     // separate results into created and failed
     const created = [];
