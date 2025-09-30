@@ -42,7 +42,7 @@ module.exports = {
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
-      headless: false,
+      headless: true,
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
@@ -69,10 +69,15 @@ module.exports = {
       //   ),
       // },
 
-      // {
-      //   name: 'user_login',
-      // testMatch: path.join(__dirname,
-      // '/src/tests/setup/user_login.setup.js'), }, { name: 'unauthenticated',
+      {
+        name: 'user_login',
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/user_login.setup.js',
+        ),
+      },
+
+      // , { name: 'unauthenticated',
       // use: { ...devices['Desktop Chrome'] }, testMatch:
       // '/view/unauthenticated/test.spec.js', }, { name: 'admin_sidebar', use:
       // { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
@@ -128,24 +133,25 @@ module.exports = {
       //   testMatch: '/view/authenticated/project/*.spec.js',
       // },
 
-      // {
-      //   name: 'upload',
-      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
-      // }, dependencies: ['admin_login'], testMatch:
-      // '/view/authenticated/upload/initiate_upload.spec.js', },
-
-      // {
-      //   name: 'upload--project_association--user_role',
-      // use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE
-      // }, dependencies: ['user_login'], testMatch:
-      // '/view/authenticated/upload/project_association/user_role/association.spec.js',
-      // },
+      {
+        name: 'upload',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/upload/*.spec.js',
+      },
 
       {
         name: 'upload--project_association--non_user_roles',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/upload/project_association/non_user_roles/association.spec.js',
+        testMatch:
+      '/view/authenticated/upload/project_association/non_user_roles/association.spec.js',
+      }, {
+        name: 'upload--project_association--user_role',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch:
+      '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
 
       // {

@@ -1,10 +1,10 @@
 import { test as baseTest, expect } from '@playwright/test';
 
 import {
-  selectAutocompleteResult,
+  selectAutocompleteResult, selectDropdownOption,
 } from '../../../../actions';
 import {
-  selectFiles
+  selectFiles,
 } from '../../../../actions/datasetUpload';
 import {
   navigateToNextStep,

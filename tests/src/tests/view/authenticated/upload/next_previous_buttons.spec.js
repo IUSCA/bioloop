@@ -30,7 +30,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
     // Check the Previous button
-    const previousButton = page.getByTestId('previous-button');
+    const previousButton = page.getByTestId('upload-previous-button');
     await expect(previousButton).toBeDisabled();
 
     // Check the Next button
@@ -54,7 +54,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(nextButton).toBeEnabled();
 
       // Check if the Previous button is still disabled
-      const previousButton = page.getByTestId('previous-button');
+      const previousButton = page.getByTestId('upload-previous-button');
       await expect(previousButton).toBeDisabled();
     });
   });
@@ -71,7 +71,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
       await Promise.all([
         // Check if the Previous button is now enabled
-        expect(page.getByTestId('previous-button')).toBeEnabled(),
+        expect(page.getByTestId('upload-previous-button')).toBeEnabled(),
 
         // Check if the Next button is disabled (as no selections have been
         // made yet in the General-Info form)
@@ -101,7 +101,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(nextButton).toBeEnabled();
 
       // check if the Previous button is still enabled
-      const previousButton = page.getByTestId('previous-button');
+      const previousButton = page.getByTestId('upload-previous-button');
       await expect(previousButton).toBeEnabled();
     });
 
@@ -113,13 +113,13 @@ test.describe.serial('Dataset Upload Process', () => {
       });
       // check buttons
       await expect(page.getByTestId('upload-next-button')).toBeDisabled();
-      await expect(page.getByTestId('previous-button')).toBeEnabled();
+      await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
 
       // Refill Raw Data
       await selectAutocompleteResult({ page, testId: 'upload-metadata-dataset-autocomplete', resultIndex: 0 });
       // check buttons again
       await expect(page.getByTestId('upload-next-button')).toBeEnabled();
-      await expect(page.getByTestId('previous-button')).toBeEnabled();
+      await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
 
       // Clear Project and check Next/Previous buttons
       await clearAutoComplete({
@@ -128,13 +128,13 @@ test.describe.serial('Dataset Upload Process', () => {
       });
       // check buttons
       await expect(page.getByTestId('upload-next-button')).toBeDisabled();
-      await expect(page.getByTestId('previous-button')).toBeEnabled();
+      await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
 
       // Refill Project
       await selectAutocompleteResult({ page, testId: 'upload-metadata-project-autocomplete', resultIndex: 0 });
       // check buttons again
       await expect(page.getByTestId('upload-next-button')).toBeEnabled();
-      await expect(page.getByTestId('previous-button')).toBeEnabled();
+      await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
     });
   });
 });

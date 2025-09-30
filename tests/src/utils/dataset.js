@@ -1,3 +1,4 @@
+const { randomUUID } = require('crypto');
 const { datasetExists } = require('../api/dataset');
 
 async function generate_unique_dataset_name({
@@ -11,14 +12,10 @@ async function generate_unique_dataset_name({
   const _selected_dataset_type = selectedDatasetType.toUpperCase().split(' ').join('_');
   console.log('_selected_dataset_type', _selected_dataset_type);
 
-  let attempt = 0;
-
-  console.log('before loop');
+  console.log('generating unique dataset name');
   while (true) {
-    console.log('attempt', attempt);
-    const suffix = attempt === 0 ? '' : `_${attempt}`;
-    console.log('suffix', suffix);
-    const candidate = `${baseName}_${suffix}`;
+    const uuid = randomUUID();
+    const candidate = `${baseName}_${uuid}`;
     console.log('candidate', candidate);
 
     const response = await datasetExists({
@@ -44,12 +41,7 @@ async function generate_unique_dataset_name({
       return candidate;
     }
 
-    console.log('attempt += 1', 'attempt: ', attempt);
-    attempt += 1;
-
-    // if (attempt === 10) {
-    // throw new Error('Unable to generate a unique dataset name after multiple
-    // attempts.'); }
+    console.log('uuid collision detected, generating new uuid');
   }
 }
 
