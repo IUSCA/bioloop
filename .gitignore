@@ -64,6 +64,7 @@ backup
 !db/backups
 db/backups/*.sql
 db/backups/*.psql
+db/postgres/data/
 todo.md
 
 .pm2
