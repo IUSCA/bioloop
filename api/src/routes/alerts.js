@@ -25,21 +25,24 @@ router.get(
     query('label').optional().isString(),
     query('message').optional().isString(),
     query('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    query('start_time').optional().isISO8601(),
-    query('start_time_operator').optional().isIn(['lt', 'lte', 'gt', 'gte']),
-    query('end_time').optional().isISO8601(),
-    query('end_time_operator').optional().isIn(['lt', 'lte', 'gt', 'gte']),
-    query('active').optional().isBoolean().toBoolean(),
+    query('start_time[lt]').optional().isISO8601(),
+    query('start_time[lte]').optional().isISO8601(),
+    query('start_time[gt]').optional().isISO8601(),
+    query('start_time[gte]').optional().isISO8601(),
+    query('end_time[lt]').optional().isISO8601(),
+    query('end_time[lte]').optional().isISO8601(),
+    query('end_time[gt]').optional().isISO8601(),
+    query('end_time[gte]').optional().isISO8601(),
+    query('is_active').optional().isBoolean().toBoolean(),
     query('limit').optional().isInt(),
     query('offset').optional().isInt({ min: 0 }),
     query('sort_by').optional().isString(),
     query('sort_order').optional().default('desc').isIn(['asc', 'desc']),
-
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, message, type, start_time, start_time_operator, end_time, end_time_operator,
-      active, limit, offset,
+      label, message, type,
+      limit, offset, is_active,
     } = req.query;
 
     const sort_by = req.query.sort_by || 'created_at';
@@ -49,36 +52,32 @@ router.get(
       ...(label && { label: { contains: label, mode: 'insensitive' } }),
       ...(message && { message: { contains: message, mode: 'insensitive' } }),
       ...(type && { type }),
+      ...(is_active != null && { is_active }),
     };
 
-    let time_range_filters = {};
-    const currentTime = new Date();
+    const time_range_filters = {};
 
-    if (active === true) {
-      time_range_filters = {
-        start_time: { lte: currentTime },
-        OR: [
-          { end_time: { gte: currentTime } },
-          { end_time: null },
-        ],
-      };
-    } else if (active === false) {
-      time_range_filters = {
-        OR: [
-          { start_time: { gt: currentTime } },
-          { end_time: { lt: currentTime } },
-        ],
-      };
-    } else {
-      if (start_time) {
-        const operator = start_time_operator || 'gte';
-        time_range_filters.start_time = { [operator]: new Date(start_time) };
+    // Parse start_time operators
+    ['lt', 'lte', 'gt', 'gte'].forEach((operator) => {
+      const value = req.query[`start_time[${operator}]`];
+      if (value) {
+        if (!time_range_filters.start_time) {
+          time_range_filters.start_time = {};
+        }
+        time_range_filters.start_time[operator] = new Date(value);
       }
-      if (end_time) {
-        const operator = end_time_operator || 'lte';
-        time_range_filters.end_time = { [operator]: new Date(end_time) };
+    });
+
+    // Parse end_time operators
+    ['lt', 'lte', 'gt', 'gte'].forEach((operator) => {
+      const value = req.query[`end_time[${operator}]`];
+      if (value) {
+        if (!time_range_filters.end_time) {
+          time_range_filters.end_time = {};
+        }
+        time_range_filters.end_time[operator] = new Date(value);
       }
-    }
+    });
 
     where = { ...where, ...time_range_filters };
 
@@ -123,12 +122,13 @@ router.post(
     body('message').optional({ nullable: true }).isString().trim()
       .escape(),
     body('type').isIn(Object.values(CONSTANTS.ALERT_TYPES)),
-    body('start_time').isISO8601(),
+    body('start_time').optional({ nullable: true }).isISO8601(),
     body('end_time').optional({ nullable: true }).isISO8601(),
+    body('is_active').optional({ nullable: true }).isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res) => {
     const {
-      label, message, type, start_time, end_time,
+      label, message, type, start_time, end_time, is_active,
     } = req.body;
 
     const created_by_id = req.user.id;
@@ -142,6 +142,7 @@ router.post(
           created_by_id,
           ...(start_time && { start_time: new Date(start_time) }),
           ...(end_time && { end_time: new Date(end_time) }),
+          ...(is_active != null && { is_active }),
         },
       });
       res.status(201).json(newAlert);
@@ -165,11 +166,12 @@ router.patch(
     body('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     body('start_time').optional({ nullable: true }).isISO8601(),
     body('end_time').optional({ nullable: true }).isISO8601(),
+    body('is_active').optional({ nullable: true }).isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
     const {
-      label, message, type, start_time, end_time,
+      label, message, type, start_time, end_time, is_active,
     } = req.body;
 
     console.log('typeof start_time:', typeof start_time);
@@ -198,6 +200,7 @@ router.patch(
           type,
           ...start_time_updates,
           ...end_time_updates,
+          ...(is_active != null && { is_active }),
         },
       });
       res.json(updatedAlert);

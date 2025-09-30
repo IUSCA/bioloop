@@ -1,7 +1,7 @@
-import { defineStore } from "pinia";
-import { useLocalStorage } from "@vueuse/core";
 import alertService from "@/services/alert";
 import { mapValues } from "@/services/utils";
+import { useLocalStorage } from "@vueuse/core";
+import { defineStore } from "pinia";
 
 export const useAlertStore = defineStore("alert", () => {
   // Any active alerts that have been created in the system

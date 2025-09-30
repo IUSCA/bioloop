@@ -401,11 +401,12 @@ model alert {
   updated_at    DateTime   @default(now()) @updatedAt @db.Timestamp(6)
   created_by_id Int?
   created_by    user?      @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
-  label         String
+  label         String?
   message       String?
   type          ALERT_TYPE
-  start_time    DateTime   @default(now()) @db.Timestamp(6)
+  start_time    DateTime?  @db.Timestamp(6)
   end_time      DateTime?  @db.Timestamp(6)
+  is_active     Boolean?
 }
 
 enum access_type {

@@ -56,7 +56,7 @@
     :loading="loading"
   >
     <template #cell(start_time)="{ value }">
-      <span>{{ datetime.displayDateTime(value) }}</span>
+      <span>{{ value ? datetime.displayDateTime(value) : null }}</span>
     </template>
 
     <template #cell(end_time)="{ value }">
@@ -67,8 +67,8 @@
       <va-badge :text="value" :color="alertService.getAlertColor(value)" />
     </template>
 
-    <template #cell(active)="{ rowData }">
-      <span v-if="isAlertActive(rowData)" class="flex justify-center">
+    <template #cell(is_active)="{ value }">
+      <span v-if="value" class="flex justify-center">
         <i-mdi-check-circle-outline class="text-green-700" />
       </span>
     </template>
@@ -86,11 +86,11 @@
     <template #cell(actions)="{ rowData }">
       <div class="flex gap-3 flex-nowrap justify-end">
         <va-popover
-          :message="isAlertActive(rowData) ? 'Disable Alert' : 'Enable Alert'"
+          :message="rowData.is_active ? 'Disable Alert' : 'Enable Alert'"
         >
           <va-button preset="plain" @click="toggleAlertStatus(rowData)">
             <div>
-              <i-mdi-eye v-if="isAlertActive(rowData)" />
+              <i-mdi-eye v-if="rowData.is_active" />
               <i-mdi-eye-off v-else />
             </div>
           </va-button>
@@ -138,13 +138,11 @@
 </template>
 
 <script setup>
+import alertService from "@/services/alert";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import alertService from "@/services/alert";
 import { useAlertStore } from "@/stores/alert";
 import { storeToRefs } from "pinia";
-import DisableAlertModal from "@/components/alerts/DisableAlertModal.vue";
-import EnableAlertModal from "@/components/alerts/EnableAlertModal.vue";
 import { VaPopover } from "vuestic-ui";
 
 const columns = [
@@ -257,7 +255,7 @@ const disableAlertModal = ref(null);
 const enableAlertModal = ref(null);
 
 const toggleAlertStatus = (alert) => {
-  if (isAlertActive(alert)) {
+  if (alert.is_active) {
     disableAlertModal.value.showModal(alert);
   } else {
     enableAlertModal.value.showModal(alert);
@@ -320,15 +318,7 @@ const showSearchModal = () => {
 };
 
 const trimAlertMessage = (message) => {
-  return message.length > 80 ? `${message.substring(0, 100)}...` : message;
-};
-
-const isAlertActive = (alert) => {
-  const now = new Date();
-  return (
-    new Date(alert.start_time) <= now &&
-    (!alert.end_time || new Date(alert.end_time) > now)
-  );
+  return message.length > 80 ? `${message.substring(0, 80)}...` : message;
 };
 
 const handleSearch = useDebounceFn(() => {
