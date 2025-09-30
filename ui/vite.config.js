@@ -4,8 +4,8 @@ import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import AutoImport from "unplugin-auto-import/vite";
 import Components from "unplugin-vue-components/vite";
-import { defineConfig, loadEnv } from "vite";
 import VueRouter from "unplugin-vue-router/vite";
+import { defineConfig, loadEnv } from "vite";
 import Layouts from "vite-plugin-vue-layouts";
 // import basicSsl from "@vitejs/plugin-basic-ssl";
 import { visualizer } from "rollup-plugin-visualizer";
@@ -53,7 +53,7 @@ export default defineConfig(({ command, mode }) => {
           // https://github.com/antfu/unplugin-icons#auto-importing
           IconsResolver(),
 
-          // auto import Icon - iconify vue compoenet
+          // auto import Icon - iconify vue component
           // https://docs.iconify.design/icon-components/vue/
           (componentName) => {
             if (componentName == "Icon")
@@ -99,13 +99,13 @@ export default defineConfig(({ command, mode }) => {
       // as the primary web / dev server
       proxy: {
         "/api": {
-          target: env.VITE_API_REDIRECT_URL,
+          target: "http://api:9001",
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
         "/grafana": {
-          target: env.VITE_GRAFANA_REDIRECT_URL,
+          target: "http://localhost:9011",
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/grafana/, ""),
@@ -124,6 +124,11 @@ export default defineConfig(({ command, mode }) => {
               proxyReq.setHeader("X-Forwarded-Proto", "https");
             });
           },
+        },
+        "/upload": {
+          target: "http://localhost:9006",
+          changeOrigin: true,
+          secure: false,
         },
       },
     },

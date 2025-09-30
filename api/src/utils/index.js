@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
-
 const config = require('config');
+
 const logger = require('../services/logger');
 
 function renameKey(oldKey, newKey) {
@@ -244,8 +244,8 @@ function readUsersFromJSON(fname) {
 
 class TransactionRetryError extends Error {
   constructor(maxRetries, message = 'Transaction failed after maximum retries') {
-    const _mesage = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
-    super(_mesage);
+    const _message = maxRetries ? `${message}. Maximum retries: ${maxRetries}` : message;
+    super(_message);
     this.name = 'TransactionRetryError';
   }
 }
@@ -321,12 +321,14 @@ function base64urlEncode(buf) {
 }
 
 function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
+  logger.info(`Checking if feature ${feature} is empty or defined`);
   if (!feature) {
     return true;
   }
 
   // Check if enabled_features is defined
   if (!config.enabled_features) {
+    logger.info('enabled_features is not defined in the config. Feature will be enabled by default');
     return true;
   }
 
@@ -334,16 +336,20 @@ function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
 
   // Check if upload feature is defined
   if (feature_enabled == null) {
+    logger.info('Upload feature is not defined in the config. Feature will be enabled by default');
     return true;
   }
 
   // Check if upload feature is a boolean `true`
   if (typeof feature_enabled === 'boolean') {
+    logger.info('Upload feature is enabled, boolean');
+    logger.info(feature_enabled);
     return feature_enabled;
   }
 
   // Check if upload feature is an object
   if (typeof feature_enabled !== 'object') {
+    // logger.error('Invalid config for enabling dataset uploads');
     return false;
   }
 
@@ -351,11 +357,13 @@ function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
 
   // Check if enabled_for_roles is an array
   if (!Array.isArray(feature_enabled_for_roles)) {
+    // logger.error('Invalid config for enabling dataset uploads: enabled_for_roles is not an array');
     return false;
   }
 
   // Check if enabled_for_roles is empty
   if (feature_enabled_for_roles.length === 0) {
+    // logger.error('No roles specified for enabling dataset uploads');
     return false;
   }
 
@@ -364,7 +372,9 @@ function isFeatureEnabledForRole({ feature = '', roles = [] } = {}) {
     (role) => roles.includes(role),
   );
   if (!is_feature_enabled_for_user) {
+    // logger.info('Upload feature is not enabled for this user');
   } else {
+    // logger.info('Upload feature is enabled for this user');
   }
 
   return is_feature_enabled_for_user;

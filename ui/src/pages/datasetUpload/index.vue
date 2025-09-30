@@ -1,5 +1,6 @@
 <template>
   <va-alert
+    data-testid="upload-feature-disabled-alert"
     color="warning"
     icon="warning"
     v-if="!auth.isFeatureEnabled('uploads')"
@@ -12,6 +13,7 @@
       <!-- search bar -->
       <div class="flex-1">
         <va-input
+          data-testid="dataset-upload-search-input"
           v-model="filterInput"
           class="w-full"
           placeholder="Type / to search Dataset Uploads"
@@ -20,7 +22,11 @@
           input-class="search-input"
         >
           <template #prependInner>
-            <Icon icon="material-symbols:search" class="text-xl" />
+            <Icon
+              data-testid="search-icon"
+              icon="material-symbols:search"
+              class="text-xl"
+            />
           </template>
         </va-input>
       </div>
@@ -28,6 +34,7 @@
       <!-- create button -->
       <div class="flex-none">
         <va-button
+          data-testid="upload-dataset-button"
           icon="add"
           class="px-1"
           color="success"
@@ -39,41 +46,55 @@
     </div>
 
     <!-- table -->
-    <va-data-table :items="pastUploads" :columns="columns">
+    <va-data-table
+      data-testid="uploaded-datasets-table"
+      :items="pastUploads"
+      :columns="columns"
+    >
       <template #cell(status)="{ value }">
-        <va-chip size="small" :color="getStatusChipColor(value)">
-          {{ value }}
+        <va-chip
+          data-testid="status-chip"
+          size="small"
+          :color="getStatusChipColor(value)"
+        >
+          <!-- convert to lowercase, split on `_`, capitalize all but first letter of each word, separate words with space -->
+          {{ snakeCaseToTitleCase(value) }}
         </va-chip>
       </template>
 
       <template #cell(uploaded_dataset)="{ rowData }">
-        <div v-if="!auth.canOperate">
+        <div v-if="!auth.canOperate" data-testid="uploaded-dataset-name">
           {{ rowData.uploaded_dataset.name }}
         </div>
         <router-link
           v-else
           :to="`/datasets/${rowData.uploaded_dataset.id}`"
           class="va-link"
+          data-testid="uploaded-dataset-link"
         >
           {{ rowData.uploaded_dataset.name }}
         </router-link>
       </template>
 
       <template #cell(uploaded_dataset_type)="{ value }">
-        <va-chip size="small" outline>
-          {{ value }}
-        </va-chip>
+        <va-chip
+          data-testid="upload-details-dataset-type-chip"
+          size="small"
+          outline
+          >{{ snakeCaseToTitleCase(value) }}</va-chip
+        >
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
         <div v-if="rowData.source_dataset">
-          <div v-if="!auth.canOperate">
+          <div data-testid="source-dataset" v-if="!auth.canOperate">
             {{ rowData.source_dataset.name }}
           </div>
           <router-link
             v-else
             :to="`/datasets/${rowData.source_dataset.id}`"
             class="va-link"
+            data-testid="source-dataset-link"
           >
             {{ rowData.source_dataset.name }}
           </router-link>
@@ -81,17 +102,20 @@
       </template>
 
       <template #cell(user)="{ rowData }">
-        <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
+        <span data-testid="uploaded-by">
+          {{ rowData.user.name }} ({{ rowData.user.username }})
+        </span>
       </template>
 
       <template #cell(initiated_at)="{ value }">
-        <span class="text-sm lg:text-base">
+        <span data-testid="uploaded-on" class="text-sm lg:text-base">
           {{ datetime.date(value) }}
         </span>
       </template>
     </va-data-table>
 
     <Pagination
+      data-testid="pagination-component"
       v-model:page="currentPageIndex"
       v-model:page_size="pageSize"
       :total_results="total_results"
@@ -110,6 +134,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
 import constants from "@/constants";
+import { snakeCaseToTitleCase } from "@/services/utils";
 
 const nav = useNavStore();
 const router = useRouter();
@@ -271,6 +296,5 @@ watch(filter_query, (newQuery, oldQuery) => {
 
 <route lang="yaml">
 meta:
-title: Dataset Uploads
-requiresRoles: ["operator", "admin", "user"]
+  title: Dataset Uploads
 </route>

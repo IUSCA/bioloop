@@ -1,3 +1,4 @@
+# cspell:ignore relid relname schemaname statio
 pg_table_size:
   query: |
     SELECT

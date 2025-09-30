@@ -48,4 +48,5 @@ Promise.all([
 <route lang="yaml">
 meta:
   title: Project's Datasets
+  requiresRoles: ["operator", "admin"]
 </route>

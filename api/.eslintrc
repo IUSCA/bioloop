@@ -1,4 +1,18 @@
-{
+{  
+  "plugins": ["eslint-plugin-local-rules"],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".json"]
+      },
+      "module-alias": {
+        "alias": {
+          "@": "./src"
+        },
+        "extensions": [".js", ".json"]
+      }
+    }
+  },
   "rules": {
     "no-underscore-dangle": 0,
     "no-unused-vars": ["error", { "argsIgnorePattern": "next" }],
@@ -30,7 +44,8 @@
       }
     ],
     "max-len": ["error", { "ignoreComments": true, "code": 120 }],
-    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}]
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
+    "local-rules/no-original-prisma-inside-tx": "error"
   },
   "env": {
     "node": true,

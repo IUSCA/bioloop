@@ -1,10 +1,15 @@
 <template>
-  <va-inner-loading :loading="loading" class="h-full">
+  <va-inner-loading
+    :loading="loading"
+    class="h-full"
+    data-testid="inner-loading"
+  >
     <va-stepper
       v-model="step"
       :steps="steps"
       controlsHidden
       class="h-full create-data-product-stepper"
+      data-testid="stepper"
     >
       <!-- Step icons and labels -->
       <template
@@ -21,31 +26,41 @@
           @click="setStep(i)"
           :disabled="isStepperButtonDisabled(i)"
           preset="secondary"
+          :data-testid="`step-button-${i}`"
         >
           <div class="flex flex-col items-center">
-            <Icon :icon="s.icon" />
-            <span class="hidden sm:block"> {{ s.label }} </span>
+            <Icon :icon="s.icon" data-testid="step-icon" />
+            <span class="hidden sm:block" data-testid="step-label">
+              {{ s.label }}
+            </span>
           </div>
         </va-button>
       </template>
 
+      <!-- Step 0 content -->
       <template #step-content-0>
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-testid="step-content-0">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
             @files-added="onFilesAdded"
             @directory-added="onDirectoryAdded"
+            data-testid="select-file-buttons"
           />
-          <va-divider />
+          <va-divider data-testid="divider-step-0" />
           <SelectedFilesTable
             @file-removed="removeFile"
             :files="displayedFilesToUpload"
+            data-testid="upload-selected-files-table"
           />
         </div>
       </template>
 
+      <!-- Step 1 content -->
       <template #step-content-1>
-        <div class="flex w-full pb-6 items-center">
+        <div
+          class="flex w-full pb-6 items-center"
+          data-testid="upload-metadata-dataset-type-row"
+        >
           <va-select
             v-model="selectedDatasetType"
             :text-by="'label'"
@@ -54,23 +69,31 @@
             label="Dataset Type"
             placeholder="Select dataset type"
             class="flex-grow"
+            data-testid="upload-metadata-dataset-type-select"
           />
           <div class="flex items-center ml-2">
             <va-popover>
               <template #body>
-                <div class="w-96">
+                <div class="w-96" data-testid="dataset-type-help-text">
                   - Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
                   - Data Product: Processed data derived from Raw Data
                 </div>
               </template>
-              <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="text-xl text-gray-500"
+                data-testid="dataset-type-help-icon"
+              />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-source-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -80,11 +103,15 @@
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-source-checkbox"
               />
             </div>
           </div>
 
-          <div class="flex-grow flex items-center">
+          <div
+            class="flex-grow flex items-center"
+            data-testid="upload-metadata-dataset-autocomplete-row"
+          >
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
@@ -97,23 +124,31 @@
               class="flex-grow"
               :label="'Dataset'"
               :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+              data-test-id="upload-metadata-dataset-autocomplete"
             >
             </DatasetSelectAutoComplete>
             <va-popover>
               <template #body>
-                <div class="w-96">
+                <div class="w-96" data-testid="raw-data-help-text">
                   Associating a Data Product with a source Raw Data establishes
                   a clear lineage between the original data and its processed
                   form. This linkage helps to trace the origins of processed
                   data
                 </div>
               </template>
-              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="ml-2 text-xl text-gray-500"
+                data-testid="raw-data-help-icon"
+              />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-project-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -129,6 +164,7 @@
                 color="primary"
                 label="Assign Project"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-project-checkbox"
               />
             </div>
           </div>
@@ -145,6 +181,7 @@
               class="flex-grow"
               :label="'Project'"
               :messages="noProjectsToAssign ? 'No Projects to select' : null"
+              data-test-id="upload-metadata-project-autocomplete"
             >
             </ProjectAsyncAutoComplete>
             <va-popover>
@@ -163,7 +200,10 @@
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-instrument-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
@@ -196,6 +236,7 @@
               :messages="
                 noInstrumentsToAssign ? 'No Instruments to select' : null
               "
+              data-testid="upload-metadata-source-instrument-select"
             />
             <div class="flex items-center ml-2">
               <va-popover>
@@ -213,7 +254,7 @@
 
       <template #step-content-2>
         <div class="flex flex-row" v-if="selectingFiles || selectingDirectory">
-          <div class="flex-1">
+          <div class="flex-1" data-testid="uploaded-dataset-details">
             <va-card class="upload-details">
               <va-card-title>
                 <div class="flex flex-nowrap items-center w-full">
@@ -245,13 +286,13 @@
           </div>
 
           <va-divider vertical />
-          <div class="flex-1">
+
+          <div class="flex-1" data-testid="dataset-upload-table">
             <DatasetFileUploadTable :files="displayedFilesToUpload" />
           </div>
         </div>
       </template>
 
-      <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
           <va-button
@@ -264,6 +305,7 @@
               }
             "
             :disabled="isPreviousButtonDisabled"
+            data-testid="upload-previous-button"
           >
             Previous
           </va-button>
@@ -272,6 +314,7 @@
             @click="onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
+            data-testid="upload-next-button"
           >
             <!--            {{ isLastStep ? (submitAttempted ? "Retry" : "Upload") : "Next" }}-->
             {{ isLastStep ? "Upload" : "Next" }}
@@ -283,21 +326,21 @@
 </template>
 
 <script setup>
+import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
-import Constants from "@/constants";
+import { default as Constants } from "@/constants";
 import datasetService from "@/services/dataset";
+import instrumentService from "@/services/instrument";
+import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
+import { Icon } from "@iconify/vue";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 import SparkMD5 from "spark-md5";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import { Icon } from "@iconify/vue";
-import instrumentService from "@/services/instrument";
-import constants from "@/constants";
-import projectService from "@/services/projects";
 
 const auth = useAuthStore();
 
@@ -539,7 +582,7 @@ const isNextButtonDisabled = computed(() => {
 // List of files whose uploads are pending or in progress
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
-    (e) => e.uploadStatus !== constants.UPLOAD_STATUSES.UPLOADED,
+    (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
@@ -549,42 +592,16 @@ const someFilesPendingUpload = computed(
 );
 
 /**
- * Request payload for associating the Dataset being uploaded to a new or existing Project.
- * Sent along with the network request used to create an entry for the Dataset being uploaded in the database.
- *
- * - If user has no Projects to assign to the Dataset being uploaded, a new Project will be auto-created for them,
- * if this feature is enabled.
- */
-const getProjectCreationPayload = () => {
-  let project_data;
-  if (willCreateNewProject.value) {
-    // If a new Project is to be created, the current user will be assigned to it.
-    project_data = {
-      browser_enabled: auth.isFeatureEnabled("genomeBrowser"),
-      assignee_user_ids: [auth.user.id],
-      name: `Project-${uploadedDatasetName.value}`,
-    };
-  } else {
-    project_data = projectSelected.value && {
-      id: projectSelected.value.id,
-    };
-  }
-  return project_data;
-};
-
-/**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
  */
 const uploadFormData = computed(() => {
-  let project_data = getProjectCreationPayload();
-
   return {
     name: uploadedDatasetName.value,
     type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(project_data && { project_data }),
+    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
     }),
@@ -700,7 +717,7 @@ const validateIfExists = (value) => {
           resolve(res.data.exists);
         })
         .catch((e) => {
-          // console.error(e);
+          console.error(e);
           reject();
         });
     }
@@ -1012,15 +1029,15 @@ const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
     !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
     uploadingFilesState.value[fileUploadLogId][
       "resumeFileUploadAtChunkIndex"
-    ] === chunkIndex
+      ] === chunkIndex
   );
 };
 
 const postChunkUploadAttempt = ({
-  fileUploadLogId,
-  chunkIndex,
-  isChunkUploaded,
-} = {}) => {
+                                  fileUploadLogId,
+                                  chunkIndex,
+                                  isChunkUploaded,
+                                } = {}) => {
   if (isChunkUploaded) {
     totalUploadedChunkCount.value += 1;
     uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
@@ -1089,7 +1106,7 @@ const uploadFileChunks = async (fileDetails) => {
     });
     let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
       "uploadedChunks"
-    ].includes(chunkData.get("index"));
+      ].includes(chunkData.get("index"));
     const willUploadChunk =
       !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
 
@@ -1111,7 +1128,7 @@ const uploadFileChunks = async (fileDetails) => {
       if (selectingDirectory.value) {
         selectedDirectory.value.progress = Math.trunc(
           (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
-            100,
+          100,
         );
       } else {
         fileDetails.progress = Math.trunc(
@@ -1128,7 +1145,7 @@ const uploadFileChunks = async (fileDetails) => {
 };
 
 const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = constants.UPLOAD_STATUSES.UPLOADING;
+  fileDetails.uploadStatus = Constants.UPLOAD_STATUSES.UPLOADING;
 
   const uploaded = await uploadFileChunks(fileDetails);
   if (!uploaded) {
@@ -1136,8 +1153,8 @@ const uploadFile = async (fileDetails) => {
   }
 
   fileDetails.uploadStatus = uploaded
-    ? constants.UPLOAD_STATUSES.UPLOADED
-    : constants.UPLOAD_STATUSES.UPLOAD_FAILED;
+    ? Constants.UPLOAD_STATUSES.UPLOADED
+    : Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
 
   if (!uploaded) {
     if (selectingDirectory.value) {
@@ -1197,7 +1214,7 @@ const onSubmit = async () => {
         }
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
         submissionStatus.value = Constants.UPLOAD_STATUSES.PROCESSING_FAILED;
         submissionAlert.value =
           "There was an error. Please try submitting again.";
@@ -1233,7 +1250,7 @@ const postSubmit = () => {
       id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
         .id,
       data: {
-        status: constants.UPLOAD_STATUSES.UPLOAD_FAILED,
+        status: Constants.UPLOAD_STATUSES.UPLOAD_FAILED,
       },
     };
   });
@@ -1241,15 +1258,15 @@ const postSubmit = () => {
   if (datasetUploadLog.value) {
     createOrUpdateUploadLog({
       status: someFilesPendingUpload.value
-        ? constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : constants.UPLOAD_STATUSES.UPLOADED,
+        ? Constants.UPLOAD_STATUSES.UPLOAD_FAILED
+        : Constants.UPLOAD_STATUSES.UPLOADED,
       files: failedFileUpdates,
     })
       .then((res) => {
         datasetUploadLog.value = res.data;
       })
       .catch((err) => {
-        // console.error(err);
+        console.error(err);
       });
   }
 };
@@ -1259,8 +1276,8 @@ const handleSubmit = () => {
     .then(() => {
       return !uploadCancelled.value
         ? datasetService.processDatasetUpload(
-            datasetUploadLog.value.audit_log.dataset.id,
-          )
+          datasetUploadLog.value.audit_log.dataset.id,
+        )
         : Promise.reject();
     })
     .catch((e) => {
@@ -1300,11 +1317,11 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: constants.UPLOAD_STATUSES.UPLOADING,
-      }
+      status: Constants.UPLOAD_STATUSES.UPLOADING,
+    }
     : {
-        ...uploadFormData.value,
-      };
+      ...uploadFormData.value,
+    };
 
   try {
     const res = await createOrUpdateUploadLog(logData);
@@ -1328,9 +1345,9 @@ const createOrUpdateUploadLog = (data) => {
     return !datasetUploadLog.value
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
-          datasetUploadLog.value?.audit_log?.dataset.id,
-          data,
-        );
+        datasetUploadLog.value?.audit_log?.dataset.id,
+        data,
+      );
   } else {
     return Promise.reject();
   }
@@ -1778,9 +1795,9 @@ onBeforeRouteLeave(() => {
   // Before navigating to a different route, show user a confirmation dialog
   return isUploadIncomplete.value
     ? window.confirm(
-        "Leaving this page before all files have been uploaded will" +
-          " cancel the upload. Do you wish to continue?",
-      )
+      "Leaving this page before all files have been uploaded will" +
+      " cancel the upload. Do you wish to continue?",
+    )
     : true;
 });
 
@@ -1842,7 +1859,7 @@ onBeforeUnmount(() => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element to below its calculated min-height of children
     display: flex;
     flex-direction: column;
     flex: 1;

@@ -103,17 +103,18 @@
 </template>
 
 <script setup>
-import { useNavStore } from "@/stores/nav";
-import aboutService from "@/services/about";
-import markdownit from "markdown-it";
-import { useForm } from "vuestic-ui";
-import DOMPurify from "dompurify";
-import toast from "@/services/toast";
-import { useAuthStore } from "@/stores/auth";
+// cspell:ignore commonmark dompurify linkify markdownit
 import Edit from "@/pages/about/Edit.vue";
 import Preview from "@/pages/about/Preview.vue";
-import TurndownService from "turndown";
+import aboutService from "@/services/about";
+import toast from "@/services/toast";
+import { useAuthStore } from "@/stores/auth";
+import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
+import DOMPurify from "dompurify";
+import markdownit from "markdown-it";
+import TurndownService from "turndown";
+import { useForm } from "vuestic-ui";
 
 const nav = useNavStore();
 const ui = useUIStore();
@@ -242,10 +243,8 @@ watch(latestRecord, () => {
 
 div.banner {
   height: 250px;
-  background-image: linear-gradient(
-      rgba(0, 0, 0, 0.3),
-      rgba(255, 255, 255, 0.6)
-    ),
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.6)),
     url("/colorful_helix.jpg");
   background-position: 30% 60%;
 }

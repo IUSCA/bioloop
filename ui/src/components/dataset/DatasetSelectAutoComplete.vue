@@ -16,6 +16,7 @@
     :disabled="props.disabled"
     :label="props.label"
     :messages="props.messages"
+    :data-test-id="props.dataTestId"
   />
 </template>
 
@@ -48,6 +49,10 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => [],
+  },
+  dataTestId: {
+    type: String,
+    default: "dataset-autocomplete",
   },
 });
 
@@ -89,11 +94,6 @@ const loadNextPage = () => {
   page.value += 1; // increase page value for offset recalculation
   return searchDatasets({ appendToCurrentResults: true });
 };
-
-// const trimName = (val) =>
-//   val.length > NAME_TRIM_THRESHOLD
-//     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
-//     : val;
 
 const filterQuery = computed(() => {
   let query;

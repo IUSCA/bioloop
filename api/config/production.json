@@ -4,8 +4,8 @@
   "express": {
     "host": "0.0.0.0"
   },
-  "workflow_server": {
-    "base_url": "http://172.19.0.4:5001"
+  "rhythm": {
+    "base_url": "http://172.19.0.4:9005"
   },
   "auth": {
     "mode": "prod",

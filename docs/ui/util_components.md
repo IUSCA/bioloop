@@ -228,7 +228,7 @@ onMounted(() => {
 - data: Array of Objects - data to search and display
 - filter-by: String - property of data object to use with case-insensitive search
 - display-by: String - property of data object to use to show search results
-- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on enetered
+- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on entered
   text value
 - async: Boolean - Can be used in combination with `search-text` to enable asynchronous search for results. Defaults to `false`.
 - paginated: Boolean - Enables fetching results in pages
@@ -916,7 +916,7 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 - status: Boolean (0-off, 1-on)
 - icons - Array of 2 elements (off icon, on icon)
 - labels - Array of 2 element (off label, on label)
-  - default: `['disbaled', 'enabled']`
+  - default: `['disabled', 'enabled']`
 
 ## EnvAlert
 

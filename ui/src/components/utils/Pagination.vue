@@ -2,8 +2,12 @@
   <div
     class="flex flex-wrap justify-center xl:justify-between items-center gap-3 xl:gap-5"
     v-if="props.curr_items > 0"
+    data-testid="pagination-container"
   >
-    <div class="flex-1 order-2 xl:flex-none xl:order-1">
+    <div
+      class="flex-1 order-2 xl:flex-none xl:order-1"
+      data-testid="pagination-summary"
+    >
       <span>
         Showing {{ skip + 1 }}-{{ skip + props.curr_items }} of
         {{ props.total_results }}
@@ -13,6 +17,7 @@
     <!-- on smaller screen occupy 100% of the width and force other two elements to the row below -->
     <div
       class="flex-[1_1_100%] order-1 xl:flex-none xl:order-2 flex justify-center"
+      data-testid="pagination-control"
     >
       <va-pagination
         class="flex-none"
@@ -20,17 +25,19 @@
         v-model="page"
         :pages="total_page_count"
         :visible-pages="visiblePages"
+        data-testid="pagination-component"
       />
     </div>
 
     <!-- fixed width on all screens -->
-    <div class="w-36 order-3 flex-none">
+    <div class="w-36 order-3 flex-none" data-testid="results-per-page">
       <VaSelect
         label="Results per page"
         v-model="page_size"
         :options="props.page_size_options"
         placeholder="Select an option"
         :inner-label="true"
+        data-testid="results-per-page-dropdown"
       />
     </div>
   </div>
@@ -64,14 +71,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:page", "update:page_size"]);
-
-// page_size - internal state - v-model
-// page - internal state - v-model
-// total_count - props
-// page_size_options - props
-// visible-pages - props
-// total_page_count - computed
-// skip - computed
 
 const page = computed({
   get() {

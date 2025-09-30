@@ -1,4 +1,4 @@
-const AccessControl = require('accesscontrol');
+const AccessControl = require('accesscontrol'); // cspell: disable-line
 
 const CONSTANTS = require('../constants');
 
@@ -32,6 +32,12 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     projects: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    project_datasets: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
@@ -89,6 +95,9 @@ const grantsObject = {
     dataset_name: {
       'read:any': ['*'],
     },
+    project_datasets: {
+      'create:own': ['*'], // can only add Datasets to Projects that the user owns
+    },
     project_dataset_files: {
       'read:own': ['*'],
     },
@@ -142,6 +151,12 @@ const grantsObject = {
       'read:any': ['*'],
     },
     projects: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    project_datasets: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

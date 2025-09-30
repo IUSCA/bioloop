@@ -1,5 +1,5 @@
 {
-  "baseURL": "https://localhost",
+  "baseURL": "https://localhost:9443",
   "apiPrefix": "/api",
   "e2e": {
     "users": {

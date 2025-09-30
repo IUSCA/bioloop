@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-row">
+  <div class="flex flex-row" data-testid="upload-container">
     <va-file-upload
       class="w-full"
       label="File"
@@ -8,11 +8,13 @@
       dropZoneText=""
       :disabled="props.disabled"
       @file-added="onFileSelection"
+      data-testid="upload-file-select"
     />
 
     <div
       class="va-file-upload va-file-upload--dropzone w-full folder-upload--container"
       style="background-color: rgba(51, 114, 240, 0.08)"
+      data-testid="folder-upload-container"
     >
       <div class="va-file-upload__field">
         <div class="va-file-upload__field__text">
@@ -31,6 +33,7 @@
                 onDirectorySelection(e);
               }
             "
+            data-testid="folder-upload-input"
           />
           <va-button
             :disabled="props.disabled"
@@ -39,6 +42,7 @@
                 folderUploadInput.click();
               }
             "
+            data-testid="select-folder-button"
           >
             Select Directory
           </va-button>

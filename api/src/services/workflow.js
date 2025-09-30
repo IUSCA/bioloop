@@ -14,6 +14,7 @@ function getAll({
   skip = null,
   limit = null,
   workflow_ids = null,
+  workflow_name = null,
 } = {}) {
   return wfApi.get('/workflows', {
     params: {
@@ -24,6 +25,7 @@ function getAll({
       skip,
       limit,
       workflow_id: workflow_ids,
+      workflow_name,
     },
     paramsSerializer: {
       // to create workflow_id=123&workflow_id=456

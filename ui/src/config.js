@@ -5,13 +5,15 @@ const exports = {
   apiBasePath: "/api",
   uploadApiBasePath:
     import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
-  casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
+  casReturn:
+    import.meta.env.VITE_CAS_RETURN || "https://localhost:9443/auth/iucas",
   googleReturn:
-    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
+    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost:9443/auth/google",
   cilogonReturn:
-    import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+    import.meta.env.VITE_CILOGON_RETURN || "https://localhost:9443/auth/cil",
   microsoftReturn:
-    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
+    import.meta.env.VITE_MICROSOFT_RETURN ||
+    "https://localhost:9443/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
     uploadToken: 20,
@@ -79,11 +81,11 @@ const exports = {
     notifications: {
       enabledForRoles: [],
     },
-    ingestion: {
+    import: {
       enabledForRoles: ["admin"],
     },
     downloads: true,
-    signup: true,
+    signup: false,
     uploads: {
       enabledForRoles: ["admin", "user"],
     },
@@ -107,10 +109,10 @@ const exports = {
       },
     },
   ],
-  restricted_ingestion_dirs: {
+  restricted_import_dirs: {
     slateScratch: {
       paths:
-        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        import.meta.env.VITE_SCRATCH_IMPORT_RESTRICTED_DIRS ||
         "/scratch/space/restricted",
       key: "scratch",
     },

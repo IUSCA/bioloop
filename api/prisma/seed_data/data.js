@@ -24,30 +24,30 @@ const admins = [
 
 const operators = [
   {
-    username: 'arodriguez',
+    username: 'arodriguez', // cspell: disable-line
     name: 'Alex Rodriguez',
   },
   {
-    username: 'bfoster',
+    username: 'bfoster', // cspell: disable-line
     name: 'Benjamin Foster',
   },
   {
-    username: 'ejohnson',
+    username: 'ejohnson', // cspell: disable-line
     name: 'Emma Johnson',
   },
 ];
 
 const users = [
   {
-    username: 'ajohnson',
+    username: 'ajohnson', // cspell: disable-line
     name: 'Alice Johnson',
   },
   {
-    username: 'sdavis',
+    username: 'sdavis', // cspell: disable-line
     name: 'Samuel Davis',
   },
   {
-    username: 'ethompson',
+    username: 'ethompson', // cspell: disable-line
     name: 'Emily Thompson',
   },
 ];
@@ -194,7 +194,7 @@ const additional_datasets = [11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24,
 
 const datasets = _datasets.concat(additional_datasets);
 
-const dataset_heirarchical_association = [{
+const dataset_hierarchical_association = [{
   source_id: 1,
   derived_id: 7,
 }, {
@@ -256,45 +256,45 @@ const projects = [
 ];
 
 const project_user_assoc = [
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 1,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 2,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 3,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 5,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 6,
-  },
+  // {
+  //   project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+  //   user_id: 1,
+  // },
+  // {
+  //   project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+  //   user_id: 2,
+  // },
+  // {
+  //   project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+  //   user_id: 3,
+  // },
+  // {
+  //   project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+  //   user_id: 5,
+  // },
+  // {
+  //   project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+  //   user_id: 6,
+  // },
 ];
 
 const project_dataset_assoc = [
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    dataset_id: 3,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    dataset_id: 8,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    dataset_id: 7,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    dataset_id: 8,
-  },
+  // {
+  //   project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+  //   dataset_id: 3,
+  // },
+  // {
+  //   project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
+  //   dataset_id: 8,
+  // },
+  // {
+  //   project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+  //   dataset_id: 7,
+  // },
+  // {
+  //   project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+  //   dataset_id: 8,
+  // },
 ];
 
 const project_contact_assoc = [
@@ -333,7 +333,7 @@ module.exports = {
   operators,
   users,
   datasets,
-  dataset_heirarchical_association,
+  dataset_hierarchical_association,
   metrics,
   dataset_audit_data,
   contacts,

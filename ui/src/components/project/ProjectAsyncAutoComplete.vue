@@ -16,6 +16,7 @@
     :disabled="props.disabled"
     :label="props.label"
     :messages="props.messages"
+    :data-test-id="props.dataTestId"
   />
 </template>
 
@@ -46,6 +47,10 @@ const props = defineProps({
   messages: {
     type: Array,
     default: () => [],
+  },
+  dataTestId: {
+    type: String,
+    default: "project-autocomplete",
   },
 });
 

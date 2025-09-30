@@ -63,7 +63,7 @@ app.use(notFound);
 app.use(prismaNotFoundHandler);
 app.use(prismaConstraintFailedHandler);
 
-// handle asserions errors and send 400
+// handle assertions errors and send 400
 app.use(assertionErrorHandler);
 
 // handle axios errors

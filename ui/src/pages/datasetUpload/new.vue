@@ -3,14 +3,18 @@
     color="warning"
     icon="warning"
     v-if="!auth.isFeatureEnabled('uploads')"
+    data-testid="upload-feature-disabled-alert"
   >
     This feature is currently disabled
   </va-alert>
 
-  <div v-else class="w-full flex justify-center">
-    <va-card class="flex-auto md:max-w-5xl md:h-[calc(85vh)]">
-      <va-card-content class="h-full">
-        <UploadDatasetStepper />
+  <div v-else class="w-full flex justify-center" data-testid="upload-container">
+    <va-card
+      class="flex-auto md:max-w-5xl md:h-[calc(85vh)]"
+      data-testid="upload-card"
+    >
+      <va-card-content class="h-full" data-testid="upload-card-content">
+        <UploadDatasetStepper data-testid="upload-dataset-stepper" />
       </va-card-content>
     </va-card>
   </div>
@@ -36,6 +40,5 @@ nav.setNavItems([
 
 <route lang="yaml">
 meta:
-title: Dataset Uploads
-requiresRoles: ["operator", "admin", "user"]
+  title: Dataset Uploads
 </route>

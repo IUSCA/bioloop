@@ -1,18 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
-const userService = require('./user');
+const { Prisma } = require('@prisma/client');
 
-const prisma = new PrismaClient();
-
-const PROJECT_ASSOCIATION_ERRORS = {
-  noProjectUserAssociation: 'User is not associated with the specified project',
-  noAssociatingUserId: 'Id of the User associating the Project is required',
-};
-
-const PROJECT_CREATION_ERRORS = {
-  projectIdProvidedWhenCreatingNewProject: 'Cannot create a new Project when Project ID is provided',
-};
+const prisma = require('@/db');
 
 function normalize_name(name) {
   // convert to lowercase
@@ -58,7 +48,7 @@ async function is_slug_unique(slug, project_id) {
     where: {
       slug,
       NOT: {
-        id: project_id,
+        id: project_id ?? Prisma.skip,
       },
     },
   });
@@ -90,15 +80,46 @@ async function generate_slug({ name, project_id }) {
 }
 
 async function has_project_assoc({
-  projectId, userId,
+  project_id, user_id,
 }) {
   const projectUserAssociations = await prisma.project_user.findMany({
     where: {
-      project_id: projectId,
-      user_id: userId,
+      project_id,
+      user_id,
     },
   });
   return projectUserAssociations.length > 0;
+}
+
+/**
+ * Gets the owner of a project.
+ *
+ * @param {string} project_id - The ID of the project.
+ * @returns {Object} The owner of the project.
+ */
+async function get_project_owner({ project_id }) {
+  const project = await prisma.project.findUniqueOrThrow({
+    where: {
+      id: project_id,
+    },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          email: true,
+          cas_id: true,
+          notes: true,
+          created_at: true,
+          updated_at: true,
+          is_deleted: true,
+          metadata: true,
+        },
+      },
+    },
+  });
+  return project.owner;
 }
 
 /**
@@ -198,28 +219,26 @@ function generate_project_name({ prefix, suffix } = {}) {
   return projectName;
 }
 
-/**
- * Builds a query object for creating a new project.
- *
- * @async
- * @param {Object} options - The options for building the creation query.
- * @param {string[]} [options.user_ids=[]] - Array of user IDs to associate with the project.
- * @param {string[]} [options.dataset_ids=[]] - Array of dataset IDs to associate with the project.
- * @param {string} [options.assignor_id] - ID of the user assigning users/datasets to the project.
- * @param {string} [options.name] - The name of the project.
- * @param {string} [options.description] - The description of the project.
- * @param {boolean} [options.browser_enabled] - Whether the project is enabled for Genome Browser.
- * @param {Object} [options.funding] - Funding information for the project.
- * @param {Object} [options.metadata] - Additional metadata for the project.
- * @returns {Promise<Object>} An object containing the data for creating a project.
- */
-async function buildCreationQuery({
-  user_ids = [], dataset_ids = [], assignor_id, ...projectData
+async function build_creation_query({
+  user_ids = [], dataset_ids = [], assignor_id,
+  // owner_id,
+  ...payload
+
 } = {}) {
+  console.log('build_creation_query', {
+    user_ids,
+    dataset_ids,
+    assignor_id,
+    // owner_id,
+    payload,
+  });
+
   const data = _.flow([
-    _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
+    _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata', 'owner_id']),
     _.omitBy(_.isNil),
-  ])(projectData);
+  ])(payload);
+
+  // console.log('data.owner_id', data.owner_id);
 
   if (!data.name || data.name.trim() === '') {
     data.name = generate_project_name();
@@ -245,10 +264,11 @@ async function buildCreationQuery({
     };
   }
 
+  console.log('data.owner_id', data.owner_id);
   return data;
 }
 
-const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
+const build_order_by_object = (field, sortOrder, nullsLast = true) => {
   const nullable_order_by_fields = ['du_size', 'size'];
 
   if (!field || !sortOrder) {
@@ -264,113 +284,20 @@ const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
   };
 };
 
-/**
- * Builds a query object for associating datasets with a project.
- *
- * @async
- * @param {Object} options - The options for building the dataset association query.
- * @param {string} options.project_id - The ID of the project to associate datasets with.
- * @param {string[]} [options.dataset_ids=[]] - Array of dataset IDs to associate with the project.
- * @param {string} [options.assignor_id] - ID of the user assigning the datasets.
- * @returns {Promise<Object[]|null>} An array of objects for creating project-dataset associations, or null if no datasets to associate.
- */
-const buildDatasetAssociationQuery = async ({
-  project_id,
-  dataset_ids = [],
-  assignor_id,
-} = {}) => {
-  if (dataset_ids.length === 0) {
-    return null; // There are no datasets to associate
-  }
-
-  return dataset_ids.map((dataset_id) => ({
-    project_id,
-    dataset_id,
-    ...(assignor_id && { assignor_id }),
-  }));
-};
-
-/**
- * Creates a new project in the database.
- *
- * @async
- * @param {Object} options - The options for creating the project.
- * @param {import('@prisma/client').PrismaClient} [options.tx] - The Prisma transaction object.
- * @param {Object} [options.include] - Specifies which related records to include in the query result.
- * @param {string} [options.name] - The name of the project.
- * @param {string} [options.description] - The description of the project.
- * @param {boolean} [options.browser_enabled] - Whether the Project has Genome Browser enabled.
- * @param {Object} [options.funding] - Funding information for the project.
- * @param {Object} [options.metadata] - Additional metadata for the project.
- * @param {string[]} [options.user_ids] - Array of user IDs to associate with the project.
- * @param {string[]} [options.dataset_ids] - Array of dataset IDs to associate with the project.
- * @param {string} [options.assignor_id] - ID of the user assigning users/datasets to the project.
- * @returns {Promise<Object>} The created project object.
- * @throws {Error} If there's an issue creating the project.
- */
 const create_project = async ({
   tx,
   include,
-  ...data
+  data,
 }) => {
+  console.log('create_project', {
+    owner_id: data.owner_id,
+  });
   const transactionManager = tx || prisma;
 
-  const projectCreationQuery = await buildCreationQuery({
-    ...data,
-  });
+  const projectCreationQuery = await build_creation_query(data);
+  console.log('projectCreationQuery.owner_id', projectCreationQuery.owner_id);
   return transactionManager.project.create({
     data: projectCreationQuery,
-    include: include || undefined,
-  });
-};
-
-/**
- * Assigns datasets to an existing project.
- *
- * @async
- * @param {Object} options - The options for assigning datasets.
- * @param {import('@prisma/client').PrismaClient} [options.tx] - The Prisma transaction object.
- * @param {Object} [options.include] - Specifies which related records to include in the query result.
- * @param {string} options.project_id - The ID of the project to assign datasets to.
- * @param {string[]} options.dataset_ids - Array of dataset IDs to assign to the project.
- * @param {string} options.assignor_id - ID of the user assigning the datasets.
- * @returns {Promise<Object>} The result of the dataset assignment operation.
- * @throws {Error} If the assignor doesn't have permission or if there's an issue assigning datasets.
- */
-const assign_datasets = async ({
-  tx,
-  include,
-  ...data
-}) => {
-  const transactionManager = tx || prisma;
-
-  if (!data.assignor_id) { // ID of user who is associating datasets with the project
-    throw new Error(PROJECT_ASSOCIATION_ERRORS.noAssociatingUserId);
-  }
-
-  const assignorRoles = await userService.getUserRoles({ user_id: data.assignor_id });
-
-  // ensure that the user associating Datasets to the Project has access to the Project
-  let isAuthorized = assignorRoles.some((role) => ['admin', 'operator'].includes(role));
-  const userAssociation = await transactionManager.project_user.findUnique({
-    where: {
-      project_id_user_id: {
-        project_id: data.project_id,
-        user_id: data.assignor_id,
-      },
-    },
-  });
-  isAuthorized = isAuthorized || !!userAssociation;
-
-  if (!isAuthorized) {
-    throw new Error(PROJECT_ASSOCIATION_ERRORS.noProjectUserAssociation);
-  }
-
-  const projectAssociationQuery = await buildDatasetAssociationQuery({
-    ...data,
-  });
-  return transactionManager.project_dataset.createMany({
-    data: projectAssociationQuery,
     include: include || undefined,
   });
 };
@@ -379,13 +306,10 @@ module.exports = {
   normalize_name,
   generate_slug,
   has_project_assoc,
+  get_project_owner,
   generate_project_name,
-  buildCreationQuery,
+  build_creation_query,
   build_include_object,
-  buildOrderByObject,
-  buildDatasetAssociationQuery,
+  build_order_by_object,
   create_project,
-  assign_datasets,
-  PROJECT_ASSOCIATION_ERRORS,
-  PROJECT_CREATION_ERRORS,
 };

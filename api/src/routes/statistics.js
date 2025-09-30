@@ -1,17 +1,16 @@
-// const { date_minus_months } = require('../utils');
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const dayjs = require('dayjs');
 const { query } = require('express-validator');
+const { Prisma } = require('@prisma/client');
 
-const { accessControl } = require('../middleware/auth');
-const asyncHandler = require('../middleware/asyncHandler');
-const { validate } = require('../middleware/validators');
-const { groupByAndAggregate, numericStringsToNumbers } = require('../utils');
+const { accessControl } = require('@/middleware/auth');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { validate } = require('@/middleware/validators');
+const { groupByAndAggregate, numericStringsToNumbers } = require('@/utils');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('statistics');
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Retrieves the starting and ending extremes of the date range across which any files or datasets
 // have been accessed.
@@ -44,7 +43,7 @@ router.get(
   validate([
     query('start_date').isISO8601(),
     query('end_date').isISO8601(),
-    query('by_access_type').isBoolean().toBoolean().optional(),
+    query('by_access_type').default(false).isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     const start_date = dayjs(req.query.start_date).toDate();
@@ -118,8 +117,8 @@ router.get(
   '/most-accessed-data',
   isPermittedTo('read'),
   validate([
-    query('limit').isInt().toInt().optional(),
-    query('include_datasets').isBoolean().toBoolean().optional(),
+    query('limit').default(100).isInt({ min: 1 }).toInt(),
+    query('include_datasets').default(false).isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     const most_accessed_files = await prisma.$queryRaw`
@@ -227,7 +226,7 @@ router.get(
   '/most-staged-datasets',
   isPermittedTo('read'),
   validate([
-    query('limit').isInt().toInt().optional(),
+    query('limit').default(100).isInt({ min: 1 }).toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     const most_staged_datasets = await prisma.$queryRaw`
@@ -298,7 +297,7 @@ router.get(
   '/users-by-bandwidth',
   isPermittedTo('read'),
   validate([
-    query('limit').isInt().toInt(),
+    query('limit').isInt({ min: 1 }).toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     const users_by_bandwidth = await prisma.$queryRaw`
@@ -328,7 +327,7 @@ router.post(
   '/data-access-log',
   isPermittedTo('create'),
   validate([
-    query('access_type').notEmpty().escape(),
+    query('access_type').trim().notEmpty(),
     query('file_id').isInt().toInt().optional(),
     query('dataset_id').isInt().toInt().optional(),
   ]),
@@ -336,8 +335,8 @@ router.post(
     await prisma.data_access_log.create({
       data: {
         access_type: req.query.access_type,
-        file_id: req.query.file_id,
-        dataset_id: req.query.dataset_id,
+        file_id: req.query.file_id ?? Prisma.skip,
+        dataset_id: req.query.dataset_id ?? Prisma.skip,
         user_id: req.user.id,
       },
     });

@@ -175,6 +175,7 @@ const props = defineProps({
   },
   dataTestId: {
     type: String,
+    default: "autocomplete",
   },
 });
 

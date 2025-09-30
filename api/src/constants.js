@@ -123,6 +123,15 @@ const WORKFLOWS = {
   CANCEL_DATASET_UPLOAD: 'cancel_dataset_upload',
 };
 
+const DATASET_STATES = {
+  READY: 'READY',
+  ARCHIVED: 'ARCHIVED',
+  REGISTERED: 'REGISTERED',
+  FETCHED: 'FETCHED',
+  STAGED: 'STAGED',
+  DELETED: 'DELETED',
+};
+
 const auth = {
   verify: {
     response: {
@@ -146,4 +155,5 @@ module.exports = {
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
   WORKFLOWS,
+  DATASET_STATES,
 };

@@ -2,14 +2,14 @@
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
-    "port": 3030,
+    "port": 9001,
     "host": "localhost"
   },
   "logger": {
     "level": "debug"
   },
   "workflow_server": {
-    "base_url": "http://127.0.0.1:5001",
+    "base_url": "http://127.0.0.1:9005",
     "auth_token": ""
   },
   "auth": {
@@ -153,6 +153,9 @@
     "RAW_DATA",
     "DATA_PRODUCT"
   ],
+  "system_user": {
+    "username": "svc_tasks"
+  },
   "e2e": {
     "users": {
       "admin": {
@@ -176,21 +179,16 @@
       "slateScratch": ""
     }
   },
-  "restricted_ingestion_dirs": {
+  "restricted_import_dirs": {
     "slateScratch": ""
   },
   "enabled_features": {
-    "ingestion": {
-      "enabled_for_roles": ["admin"]
-    },
-    "upload": {
-      "enabled_for_roles": ["admin", "user"]
-    },
-    "fs": {
-      "enabled_for_roles": ["admin"]
-    },
+    "import": true,
+    "upload": true,
+    "fs": true,
     "downloads": true,
-    "signup": true
+    "signup": true,
+    "auto_create_project_on_dataset_creation": true
   },
   "institution_types": [
     "Commercial",

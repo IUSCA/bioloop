@@ -39,6 +39,7 @@
         defaultSortOrder = attrs.sortingOrder;
       }
     "
+    data-testid="project-datasets-table"
   >
     <template #cell(name)="{ rowData }">
       <router-link
@@ -459,7 +460,9 @@ function openModalToStageProject(dataset) {
   stageModal.value.show();
 }
 
-function getCurrentProjAssoc(assocs) {
-  return assocs?.filter((obj) => obj.project_id === props.project.id)?.[0];
+function getCurrentProjAssoc(associations) {
+  return associations?.filter(
+    (obj) => obj.project_id === props.project.id,
+  )?.[0];
 }
 </script>

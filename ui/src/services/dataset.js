@@ -1,9 +1,16 @@
 import config from "@/config";
 import toast from "@/services/toast";
-import api from "./api";
 import { useAuthStore } from "@/stores/auth";
+import qs from "qs";
+import api from "./api";
 
 const auth = useAuthStore();
+
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v !== null && v !== undefined),
+  );
+}
 
 class DatasetService {
   /**
@@ -25,11 +32,18 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    const url = !auth.canOperate
+    const url = !(auth.canOperate || auth.canAdmin)
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
+    // What qs.stringify does?
+    // Before: /datasets?id[]=1&id[]=2&id[]=3
+    // After: /datasets?id=1&id=2&id=3
+    // qs.stringify preserves the parameters which are null/undefined. API doesn't expect null/undefined to be sent,
+    // so we need to clean the parameters (removes keys which have null/undefined value).
     return api.get(url, {
-      params,
+      params: cleanParams(params),
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: "repeat" }),
     });
   }
 
@@ -122,6 +136,8 @@ class DatasetService {
     filetype,
     minSize,
     maxSize,
+    sortBy = null,
+    sortOrder = null,
   }) {
     return api.get(`/datasets/${id}/files/search`, {
       params: {
@@ -133,6 +149,8 @@ class DatasetService {
         filetype,
         min_file_size: minSize,
         max_file_size: maxSize,
+        sort_by: sortBy,
+        sort_order: sortOrder,
       },
     });
   }
@@ -154,19 +172,23 @@ class DatasetService {
   }
 
   logDatasetUpload(data) {
-    return api.post(`/datasets/upload`, data);
+    return api.post(`/datasets/uploads`, data);
   }
 
   updateDatasetUploadLog(dataset_id, data) {
-    return api.patch(`/datasets/${dataset_id}/upload`, data);
+    return api.patch(`/datasets/uploads/${dataset_id}`, data);
   }
 
   processDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/process_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/process_dataset_upload`,
+    );
   }
 
   cancelDatasetUpload(dataset_id) {
-    return api.post(`/datasets/${dataset_id}/workflow/cancel_dataset_upload`);
+    return api.post(
+      `/datasets/uploads/${dataset_id}/workflow/cancel_dataset_upload`,
+    );
   }
 
   getDatasetUploadLogs({
@@ -178,7 +200,7 @@ class DatasetService {
     username = null,
   } = {}) {
     const path = forSelf
-      ? `/datasets/${username}/uploads`
+      ? `/datasets/uploads/${username}`
       : `/datasets/uploads`;
     return api.get(path, {
       params: {
