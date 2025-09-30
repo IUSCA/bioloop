@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
+require('module-alias/register');
 const path = require('path');
 const assert = require('assert');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
-require('dotenv-safe').config();
+require('dotenv-safe').config({ example: '.env.default' });
 require('../db');
 
 const userService = require('../services/user');

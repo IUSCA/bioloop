@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["strictUndefinedChecks"]
 }
 
 datasource db {
@@ -438,6 +439,7 @@ enum DATASET_CREATE_METHOD {
   UPLOAD
   IMPORT
   SCAN
+  ON_DEMAND
 }
 
 // todo - to metadata column

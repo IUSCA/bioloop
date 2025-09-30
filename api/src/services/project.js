@@ -1,9 +1,9 @@
-const { PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+const prisma = require('@/db');
 
 function normalize_name(name) {
-  // conver to lowercase
+  // convert to lowercase
   // replace all character other than a-z, 0-9, and - with -
   // replace consecutive hyphens with one -
 
@@ -45,7 +45,7 @@ async function is_slug_unique(slug, project_id) {
     where: {
       slug,
       NOT: {
-        id: project_id,
+        id: project_id ?? Prisma.skip,
       },
     },
   });

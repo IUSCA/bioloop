@@ -34,4 +34,5 @@ DatasetService.getById({ id: props.datasetId }).then((res) => {
 <route lang="yaml">
 meta:
   title: Dataset Details
+  requiresRoles: ["operator", "admin"]
 </route>

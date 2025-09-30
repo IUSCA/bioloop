@@ -21,6 +21,7 @@
     "austenc.tailwind-docs",
     "foxundermoon.shell-format",
     "tamasfe.even-better-toml",
-    "ahmadalli.vscode-nginx-conf"
+    "ahmadalli.vscode-nginx-conf",
+    "streetsidesoftware.code-spell-checker"
   ]
 }

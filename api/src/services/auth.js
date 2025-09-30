@@ -1,3 +1,4 @@
+// cspell:ignore jsonwt
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -5,13 +6,11 @@ const crypto = require('crypto');
 const jsonwt = require('jsonwebtoken');
 const _ = require('lodash/fp');
 const config = require('config');
-const { OAuth2Client } = require('@badgateway/oauth2-client');
-const { PrismaClient } = require('@prisma/client');
+const { OAuth2Client } = require('@badgateway/oauth2-client'); // cspell: disable-line
 
+const prisma = require('@/db');
 const logger = require('./logger');
 const userService = require('./user');
-
-const prisma = new PrismaClient();
 
 const key = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')));
 const pub = fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.pub')));

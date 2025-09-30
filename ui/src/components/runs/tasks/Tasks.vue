@@ -7,7 +7,7 @@
       </span>
     </VaCardTitle>
     <VaCardContent>
-      <VaAccordion v-model="accordian" class="max-w-[1080px]" multiple>
+      <VaAccordion v-model="accordion" class="max-w-[1080px]" multiple>
         <!-- Steps -->
         <VaCollapse
           v-for="[step_name, tasks] in Object.entries(tasks_by_step)"
@@ -48,7 +48,7 @@ function default_tasks_by_step() {
 const tasks_by_step = ref(default_tasks_by_step());
 const last_updated = ref(null);
 
-const accordian = computed({
+const accordion = computed({
   get: () => {
     return Object.keys(tasks_by_step.value).map((step) => {
       return tasks_by_step.value[step]?.length > 0;

@@ -24,7 +24,7 @@ The `registerCronJobs` function in the `/api/src/core/cron.js` file is responsib
    - Use the `cron.schedule` method to define the schedule and link the task.
 
    ```javascript
-   // filepath: /Users/deduggi/Documents/SCA/bioloop/api/src/core/cron.js
+   // filepath: bioloop/api/src/core/cron.js
    const cron = require('node-cron');
    const { createTaskLogger } = require('./logger');
 

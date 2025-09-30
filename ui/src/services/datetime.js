@@ -153,6 +153,5 @@ export {
   fromNow,
   getMidnightNextDay,
   readableDuration,
-  time
+  time,
 };
-

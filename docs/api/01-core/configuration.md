@@ -43,7 +43,7 @@ The application uses the `dotenv-safe` module to load environment variables from
 
 ### Example `.env` File
 
-```env
+```bash
 DATABASE_PASSWORD=your_database_password
 WORKFLOW_AUTH_TOKEN=your_auth_token
 OAUTH_BASE_URL=https://example.com/oauth
@@ -94,7 +94,7 @@ Ensure that a `.env.example` file exists to document required variables and thei
 
 4. **Create a `.env` File**:
    Define the required environment variables in a `.env` file:
-   ```env
+   ```bash
    EXPRESS_PORT=3030
    ```
 

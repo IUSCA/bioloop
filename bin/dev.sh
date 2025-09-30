@@ -9,7 +9,7 @@ set -o pipefail
 
 } || {
 
-  echo "Failed to find the provided user and group; defaulting to the user and group of the current directory's onwer."
+  echo "Failed to find the provided user and group; defaulting to the user and group of the current directory's owner."
   APP_UID=$(ls -ldn `pwd` | awk '{print $3}') &&
   APP_GID=$(ls -ldn `pwd` | awk '{print $4}')
 }
