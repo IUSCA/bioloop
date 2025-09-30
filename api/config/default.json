@@ -2,14 +2,14 @@
   "mode": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
-    "port": 3030,
+    "port": 9001,
     "host": "localhost"
   },
   "logger": {
     "level": "debug"
   },
   "workflow_server": {
-    "base_url": "http://127.0.0.1:5001",
+    "base_url": "http://127.0.0.1:9005",
     "auth_token": ""
   },
   "auth": {
@@ -183,10 +183,12 @@
     "slateScratch": ""
   },
   "enabled_features": {
+    "import": true,
     "upload": true,
     "fs": true,
     "downloads": true,
-    "signup": true
+    "signup": true,
+    "auto_create_project_on_dataset_creation": true
   },
   "institution_types": [
     "Commercial",

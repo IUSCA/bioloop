@@ -1,25 +1,34 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-2
 services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
-    env_file:
-      - ui/.env.default
+      - 127.0.0.1:9443:443
+    environment:
+      - VITE_API_REDIRECT_URL=http://localhost:9001
+      - VITE_GRAFANA_REDIRECT_URL=http://localhost:9011
+      - VITE_UPLOAD_API_URL=http://localhost:9006
+      - VITE_CAS_RETURN=https://localhost:9443/auth/iucas
+      - VITE_GOOGLE_RETURN=https://localhost:9443/auth/google
+      - VITE_CILOGON_RETURN=https://localhost:9443/auth/cil
+      - VITE_MICROSOFT_RETURN=https://localhost:9443/auth/microsoft
+      - VITE_UPLOAD_API_BASE_PATH=https://localhost:9443
     volumes:
       - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"] 
+    command: ["npm", "run", "dev"]
 
   api:
     image: node:21
     restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
-      - 3030
+      - 9001
+    ports:
+      - 127.0.0.1:9001:9001
     env_file:
       - tests/.env.default # Variables needed for testing user information
       - db/postgres/.env.default # For Postgres connection settings
@@ -30,10 +39,10 @@ services:
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"] 
-    command: ["npm", "run", "dev"] 
+    entrypoint: ["bin/entrypoint.sh"]
+    command: ["npm", "run", "dev"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9001/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -48,9 +57,9 @@ services:
   postgres:
     image: postgres:14.5
     expose:
-      - 5432
+      - 9002
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:9002:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -64,7 +73,6 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
-      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
@@ -126,9 +134,9 @@ services:
     # https://hub.docker.com/_/rabbitmq/
     image: rabbitmq:4-management
     expose:
-      - 5672
+      - 9003
     ports:
-      - 127.0.0.1:15672:15672
+      - 127.0.0.1:9003:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -139,9 +147,9 @@ services:
     # https://hub.docker.com/_/mongo
     image: mongo:5
     expose:
-      - 27017
+      - 9004
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:9004:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
@@ -153,7 +161,9 @@ services:
     restart: unless-stopped
     image: harbor.sca.iu.edu/rhythm/api:latest
     expose:
-      - 5001
+      - 9005
+    ports:
+      - 127.0.0.1:9005:9005
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
       - db/queue/.env.default # For RabbitMQ connection settings
@@ -164,9 +174,9 @@ services:
       - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
-    command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
+    command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "9005", "--root-path", "/rhythm"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9005/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -179,17 +189,19 @@ services:
     image: node:19
     restart: unless-stopped
     expose:
-      - 3060
+      - 9006
+    ports:
+      - 127.0.0.1:9006:9006
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
-      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.  
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9006/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -200,15 +212,17 @@ services:
     restart: unless-stopped
     image: harbor.sca.iu.edu/signet/signet:latest
     expose:
-      - 5050
+      - 9007
+    ports:
+      - 127.0.0.1:9007:9007
     env_file:
       - signet/.env.default # For all default settings
     volumes:
       - ./signet/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
     entrypoint: ["/opt/bin/entrypoint.sh"]
-    command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
+    command: ["exec", "gunicorn", "--bind", ":9007", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:9007/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -221,7 +235,7 @@ services:
   signet_db:
     image: postgres:14.5
     expose:
-      - 5432
+      - 9008
     restart: unless-stopped
     env_file:
       - signet/.env.default # For Postgres connection settings
@@ -242,7 +256,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:9009:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh
@@ -254,7 +268,7 @@ services:
   jupyter_ijs:
     image: darkbluestudios/jupyter-ijavascript-utils:latest
     ports:
-      - "8888:8888"
+      - "9010:8888"
     volumes:
       - ./api/notebooks:/home/jovyan/work/notebooks
       - ./api/node_modules:/home/jovyan/work/node_modules
@@ -268,7 +282,7 @@ services:
   postgres_exporter:
     image: prometheuscommunity/postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://appuser:default@postgres:5432/app?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://appuser:default@postgres:9002/app?sslmode=disable"
     depends_on:
       - postgres
     volumes:
@@ -295,7 +309,7 @@ services:
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
     ports:
-      - "3000:3000"
+      - "9011:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin

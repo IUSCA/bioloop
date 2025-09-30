@@ -19,7 +19,7 @@ const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.jso
 
 module.exports = {
   ...defineConfig({
-    testDir: './tests',
+    testDir: './src/tests',
     /* Run tests in files in parallel */
     fullyParallel: true,
     /**
@@ -32,16 +32,17 @@ module.exports = {
     /* Opt out of parallel tests on CI. */
     workers: process.env.CI ? 1 : undefined,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-    reporter: 'html',
+    // reporter: 'html',
+    // timeout: 30000,
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
       // baseURL: 'https://localhost',
-      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || 'https://localhost:9443',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
-      headless: true,
+      headless: false,
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
@@ -54,70 +55,129 @@ module.exports = {
       //   todo - organize tests by role type
       {
         name: 'admin_login',
-        testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
-      },
-      {
-        name: 'operator_login',
-        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
-      },
-      {
-        name: 'user_login',
-        testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
-      },
-      {
-        name: 'unauthenticated',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/project.spec.js',
-      },
-      {
-        name: 'admin_sidebar',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/admin_login.setup.js',
+        ),
       },
 
+      // {
+      //   name: 'operator_login',
+      //   testMatch: path.join(
+      //     __dirname,
+      //     '/tests/setup/operator_login.setup.js',
+      //   ),
+      // },
+
+      // {
+      //   name: 'user_login',
+      // testMatch: path.join(__dirname,
+      // '/src/tests/setup/user_login.setup.js'), }, { name: 'unauthenticated',
+      // use: { ...devices['Desktop Chrome'] }, testMatch:
+      // '/view/unauthenticated/test.spec.js', }, { name: 'admin_sidebar', use:
+      // { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      // dependencies: ['admin_login'], testMatch:
+      // '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js', },
+
+      // {
+      //   name: 'operator_sidebar',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['operator_login'],
+      //   testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
+      // },
+      // {
+      //   name: 'user_sidebar',
+      //   use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+      //   dependencies: ['user_login'],
+      //   testMatch: '/view/authenticated/sidebar/user_role_sidebar_view.spec.js',
+      // },
+      // {
+      //   name: 'admin_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+      // },
+      // {
+      //   name: 'operator_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['admin_notifications', 'operator_login'],
+      //   testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+      // },
+      // {
+      //   name: 'user_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+      //   dependencies: ['user_login'],
+      //   testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+      // },
+      // {
+      //   name: 'admin_user_management',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/userManagement/*.spec.js',
+      // },
+      // {
+      //   name: 'operator_user_management',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['operator_login'],
+      //   testMatch: '/view/authenticated/userManagement/*.spec.js',
+      // },
+      // {
+      //   name: 'project',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/project/*.spec.js',
+      // },
+
+      // {
+      //   name: 'upload',
+      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
+      // }, dependencies: ['admin_login'], testMatch:
+      // '/view/authenticated/upload/initiate_upload.spec.js', },
+
+      // {
+      //   name: 'upload--project_association--user_role',
+      // use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE
+      // }, dependencies: ['user_login'], testMatch:
+      // '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      // },
+
       {
-        name: 'operator_sidebar',
-        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
-      },
-      {
-        name: 'user_sidebar',
-        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
-        dependencies: ['user_login'],
-        testMatch: '/view/authenticated/sidebar/user_role_sidebar_view.spec.js',
-      },
-      {
-        name: 'admin_notifications',
+        name: 'upload--project_association--non_user_roles',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: '/view/authenticated/upload/project_association/non_user_roles/association.spec.js',
       },
-      {
-        name: 'operator_notifications',
-        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['admin_notifications', 'operator_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
-      },
-      {
-        name: 'user_notifications',
-        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
-        dependencies: ['user_login'],
-        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
-      },
-      {
-        name: 'admin_user_management',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/userManagement/*.spec.js',
-      },
-      {
-        name: 'operator_user_management',
-        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/userManagement/*.spec.js',
-      },
+
+      // {
+      //   name: 'notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/notifications/.spec.js',
+      // },
+      // {
+      //   name: 'operator_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['admin_notifications', 'operator_login'],
+      //   testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+      // },
+      // {
+      //   name: 'user_notifications',
+      //   use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+      //   dependencies: ['user_login'],
+      //   testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+      // },
+      // {
+      //   name: 'admin_user_management',
+      //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+      //   dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/userManagement/*.spec.js',
+      // },
+      // {
+      //   name: 'operator_user_management',
+      //   use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+      //   dependencies: ['operator_login'],
+      //   testMatch: '/view/authenticated/userManagement/*.spec.js',
+      // },
       // {
       //   name: 'project',
       //   use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
@@ -163,4 +223,5 @@ module.exports = {
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,
   ADMIN_STORAGE_STATE,
+  // attachmentsDir: path.join(__dirname, 'tests', 'attachments'),
 };

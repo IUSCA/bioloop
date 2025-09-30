@@ -21,7 +21,7 @@ result_backend = mongo_uri
 
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#database-backend-settings
 # https://stackoverflow.com/questions/69952488/celery-task-result-in-postgres-database-is-in-byte-format
-# result_backend = 'db+postgresql://username:password@localhost:5432/celery'
+# result_backend = 'db+postgresql://username:password@localhost:9002/celery'
 
 # If enabled, backend will try to retry on the event of recoverable exceptions instead of propagating the exception.
 # It will use an exponential backoff sleep time between 2 retries.

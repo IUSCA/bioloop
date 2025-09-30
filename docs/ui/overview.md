@@ -258,7 +258,7 @@ If you have a use-case to display in formats other than above in more than one c
 
 ## Feature Flags
 
-Features can be enabled or disabled at the UI level. Components can determine whether a feature is enabled by reading it from `./config.js`, which in turn reads this config from `./.env`.
+Features can be enabled or disabled at the UI level. Components can determine whether a feature is enabled by reading it from `../../ui/src/config.js`.
 
 ```
 // ./config.js

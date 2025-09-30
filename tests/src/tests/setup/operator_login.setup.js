@@ -1,6 +1,6 @@
 import { expect, test as setup } from '@playwright/test';
 // eslint-disable-next-line import/named
-import { OPERATOR_STORAGE_STATE } from '../../playwright.config';
+import { OPERATOR_STORAGE_STATE } from '../../../playwright.config';
 
 // import config from 'config';
 const config = require('config');

@@ -1,0 +1,175 @@
+import { test as baseTest, expect } from '@playwright/test';
+
+import {
+  selectAutocompleteResult,
+  selectDropdownOption,
+} from '../../../../actions';
+import {
+  selectFiles,
+  trackSelectedFilesMetadata,
+} from '../../../../actions/datasetUpload';
+import {
+  navigateToNextStep,
+} from '../../../../actions/stepper';
+import { withAttachments } from '../../../../fixtures/withAttachments';
+import { generate_unique_dataset_name } from '../../../../utils/dataset';
+
+const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
+
+async function read_progress_percentage(locator) {
+  const textContent = await locator.evaluate((el) => el.textContent ?? '');
+  const normalized = textContent.replace(/\s+/g, ' ').trim();
+  const match = normalized.match(/(\d+)\s*%/);
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+// Set up attachments for this test and a temporary directory to store these
+// attachments in
+const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
+
+test.describe.serial('Dataset Upload Process', () => {
+  let page; // Playwright page instance to be shared across all tests in this describe block
+
+  let uploadedDatasetName;
+  let selectedDatasetType;
+
+  const selectedFiles = []; // array of selected files
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage();
+
+    // Visit the dataset uploads page
+    await page.goto('/datasetUpload/new');
+  });
+
+  test.describe('Upload initiation step', () => {
+    // Fill all form fields
+    test.beforeAll(async ({ attachmentManager }) => {
+      // Select files using the selectFiles method
+      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
+      await selectFiles({ page, filePaths });
+      // Track selected files metadata
+      const files = await trackSelectedFilesMetadata({ page });
+
+      // Store the selected files' information in state
+      selectedFiles.push(...files);
+
+      // Click the "Next" button to proceed to the Upload-Details step
+      await navigateToNextStep({ page });
+
+      const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
+      await expect(datasetTypeSelect).toBeVisible();
+      // Get the selected value from the component without clicking
+      selectedDatasetType = await datasetTypeSelect.locator('.va-select-content__option').textContent();
+      // Remove any leading/trailing whitespace
+      selectedDatasetType = selectedDatasetType.trim();
+
+      // Select source Raw Data
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        resultIndex: 0,
+        verify: true,
+      });
+
+      // Select Project
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        resultIndex: 0,
+        verify: true,
+      });
+
+      // Select Source Instrument
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        optionIndex: 0,
+        verify: true,
+      });
+
+      // Navigate to next step
+      await navigateToNextStep({ page });
+
+      // Set the name of the dataset being uploaded
+      const token = await page.evaluate(() => localStorage.getItem('token'));
+      uploadedDatasetName = await generate_unique_dataset_name({
+        requestContext: page.request,
+        token,
+        selectedDatasetType,
+      });
+
+      // console.log('using dataset name', uploadedDatasetName);
+      await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
+
+      // console.log('filled dataset name input');
+
+      // upload_button_enabled = await
+      // page.getByTestId('upload-next-button').isEnabled(); console.log('Upload
+      // button enabled: ', upload_button_enabled);
+
+      // console.log('will click Upload button ');
+
+      // Click the "Upload" button
+      await navigateToNextStep({ page });
+      // console.log('clicked Upload button');
+
+      // await page.getByTestId('upload-next-button').click();
+    });
+
+    // Assert that "Processing" status is shown when Upload button is clicked
+    // (to indicate that checksum-computation is in progress)
+    test('Should show `Processing` status when Upload button is clicked', async () => {
+      const statusRow = page.getByTestId('status-row');
+      await expect(statusRow).toBeVisible();
+      const statusChip = statusRow.getByTestId('chip-processing');
+      await expect(statusChip).toBeVisible();
+      await expect(statusChip).toHaveText('Processing');
+    });
+
+    // Assert that after checksum-computation is complete, "Uploading" status
+    // is shown
+    test('Should show `Uploading` status after checksum-computation is complete', async () => {
+      const statusRow = page.getByTestId('status-row');
+      await expect(statusRow).toBeVisible();
+      const statusChip = statusRow.getByTestId('chip-uploading');
+      await expect(statusChip).toBeVisible();
+      await expect(statusChip).toHaveText('Uploading');
+    });
+
+    test('should show file-upload progress reaching 100% for each file', async () => {
+      console.log('verifying per-file progress to 100%');
+      const fileUploadTable = page.getByTestId('file-upload-table');
+      await expect(fileUploadTable).toBeVisible();
+
+      const progressCells = fileUploadTable.getByTestId('file-progress');
+      await expect(progressCells).toHaveCount(selectedFiles.length);
+      console.log('progress cells count', await progressCells.count());
+
+      await Promise.all(selectedFiles.map(async (_, index) => {
+        const progressCell = progressCells.nth(index);
+
+        await expect
+          .poll(() => read_progress_percentage(progressCell))
+          .toBeGreaterThan(0);
+
+        const currentProgress = await read_progress_percentage(progressCell);
+        console.log(`row ${index} current progress: ${currentProgress}%`);
+
+        expect(currentProgress).not.toBeNull();
+        expect(currentProgress).toBeGreaterThan(0);
+        expect(currentProgress).toBeLessThanOrEqual(100);
+
+        if (currentProgress < 100) {
+          await expect
+            .poll(() => read_progress_percentage(progressCell))
+            .toBe(100);
+        }
+
+        const finalProgress = await read_progress_percentage(progressCell);
+        console.log(`row ${index} final progress: ${finalProgress}%`);
+        expect(finalProgress).toBe(100);
+      }));
+    });
+  });
+});
