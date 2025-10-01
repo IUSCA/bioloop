@@ -71,7 +71,10 @@ router.post(
     // operators can create a new user but cannot specify a role
     // if the roles is unset, set the roles as ['user']
     // clears the roles attribute when requester has no admin role
+    console.log('req.body', req.body);
     const user_data = req.permission.filter(req.body);
+
+    console.log('user_data', user_data);
     user_data.roles = user_data.roles || ['user'];
 
     const user = await userService.createUser(user_data);

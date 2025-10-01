@@ -47,6 +47,18 @@ const patch = async ({
   });
 };
 
+const put = async ({
+  requestContext, token, url, data,
+}) => {
+  const context = await getContext(requestContext);
+  return context.put(absoluteUrl(url), {
+    data,
+    headers: {
+      ...(token && { Authorization: authHeader(token) }),
+    },
+  });
+};
+
 const deleteApi = async ({
   requestContext, token, url, params,
 }) => {
@@ -63,5 +75,6 @@ module.exports = {
   get,
   post,
   patch,
+  put,
   deleteApi,
 };

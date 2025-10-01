@@ -3,10 +3,10 @@ import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
+import { generate_unique_dataset_name } from '../../../../../../api/dataset';
 import { createTestUser } from '../../../../../../api/user';
 import { expect, test } from '../../../../../../fixtures';
 import { getTokenByRole } from '../../../../../../fixtures/auth';
-import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const config = require('config');
 
@@ -26,7 +26,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   const selectedFiles = []; // array of selected files
 
-  test.describe('Upload initiation step', () => {
+  test.describe('Upload-initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ browser, attachmentManager }) => {
       const adminToken = await getTokenByRole({ role: 'admin' });
@@ -68,15 +68,15 @@ test.describe.serial('Dataset Upload Process', () => {
         verify: true,
       });
 
-      // // Navigate to next step
+      // Navigate to next step
       await navigateToNextStep({ page });
 
-      // // Set the name of the dataset being uploaded
+      // Set the name of the dataset being uploaded
       const token = await page.evaluate(() => localStorage.getItem('token'));
       uploadedDatasetName = await generate_unique_dataset_name({
         requestContext: page.request,
         token,
-        selectedDatasetType,
+        type: selectedDatasetType,
       });
 
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);

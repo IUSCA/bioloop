@@ -1,3 +1,4 @@
+const { randomUUID } = require('node:crypto');
 const { post, get } = require('./index');
 
 const createTestUser = async ({
@@ -5,7 +6,7 @@ const createTestUser = async ({
 } = {}) => {
   const payload = {};
   payload.username = !data.username
-    ? await generateUniqueUsername({ requestContext, token })
+    ? await generateUniqueUsername({ requestContext, token, baseUsername: role })
     : data.username;
   payload.email = !data.email ? `${payload.username}@iu.edu` : data.email;
   payload.name = !data.name ? payload.username : data.name;
@@ -25,31 +26,30 @@ const createTestUser = async ({
 };
 
 const generateUniqueUsername = async ({
-  requestContext, token,
+  requestContext, token, baseUsername = 'testUser',
 }) => {
-  let username = 'test_user';
-  let suffix = 1;
+  const candidate = baseUsername ? `${baseUsername}-${randomUUID()}` : randomUUID();
 
-  while (true) {
-    const response = await get({
-      requestContext,
-      url: `/users/${username}`,
-      token,
-    });
+  const response = await get({
+    requestContext,
+    url: `/users/${candidate}`,
+    token,
+  });
 
-    // If user doesn't exist (404), username is available
-    if (response.status() === 404) {
-      return username;
-    }
-
-    // user exists, try next username
-    if (response.ok()) {
-      username = `${username}_${suffix}`;
-      suffix += 1;
-    } else {
-      throw new Error(`Failed to check username availability (status: ${response.status()})`);
-    }
+  // If user doesn't exist (404), username is available
+  if (response.status() === 404) {
+    return candidate;
   }
+
+  throw new Error(`Could not generate unique username. Generated name ${candidate} already exists.`);
+};
+
+const getRole = async ({ requestContext, token, role }) => {
+  const response = await get({
+    requestContext,
+    url: `/users/${role}`,
+    token,
+  });
 };
 
 module.exports = {

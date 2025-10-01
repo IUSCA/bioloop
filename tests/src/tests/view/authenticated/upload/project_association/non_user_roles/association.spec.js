@@ -3,8 +3,8 @@ import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
+import { generate_unique_dataset_name } from '../../../../../../api/dataset';
 import { expect, test } from '../../../../../../fixtures';
-import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -25,7 +25,7 @@ test.describe.serial('Dataset Upload Process', () => {
     await page.goto('/datasetUpload/new');
   });
 
-  test.describe('Upload initiation step', () => {
+  test.describe('Upload-initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
@@ -79,7 +79,7 @@ test.describe.serial('Dataset Upload Process', () => {
       uploadedDatasetName = await generate_unique_dataset_name({
         requestContext: page.request,
         token,
-        selectedDatasetType,
+        type: selectedDatasetType,
       });
 
       // console.log('using dataset name', uploadedDatasetName);

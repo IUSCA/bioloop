@@ -52,14 +52,13 @@ module.exports = {
 
     /* Configure projects for major browsers */
     projects: [
-      //   todo - organize tests by role type
-      {
-        name: 'admin_login',
-        testMatch: path.join(
-          __dirname,
-          '/src/tests/setup/admin_login.setup.js',
-        ),
-      },
+      // {
+      //   name: 'admin_login',
+      //   testMatch: path.join(
+      //     __dirname,
+      //     '/src/tests/setup/admin_login.setup.js',
+      //   ),
+      // },
 
       // {
       //   name: 'operator_login',
@@ -133,13 +132,27 @@ module.exports = {
       //   testMatch: '/view/authenticated/project/*.spec.js',
       // },
 
+      // {
+      //   name: 'upload',
+      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
+      // }, dependencies: ['admin_login'], testMatch:
+      // '/view/authenticated/upload/initiate_upload.spec.js', },
+
       {
-        name: 'upload',
-        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
-        dependencies: ['admin_login'],
+        name: 'upload--project_association--user_role--access',
+        use: {
+          ...devices['Desktop Chrome'],
+        },
         testMatch:
-      '/view/authenticated/upload/initiate_upload.spec.js',
+      '/view/authenticated/upload/project_association/user_role/access.spec.js',
       },
+
+      // {
+      //   name: 'upload--project_association--user_role--access',
+      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
+      // }, dependencies: ['admin_login'], testMatch:
+      // '/view/authenticated/upload/project_association/user_role/access.spec.js',
+      // },
 
       // {
       //   name: 'upload--project_association--non_user_roles',

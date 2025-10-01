@@ -1,4 +1,16 @@
-const { patch, get } = require('./index');
+const {
+  get, patch, post, put,
+} = require('./index');
+
+const createProject = async ({
+  requestContext, token, data,
+}) => {
+  const response = await post({
+    requestContext, url: '/projects', token, data,
+  });
+  const body = await response.json();
+  return body;
+};
 
 const getProjectById = async ({
   requestContext, token, id,
@@ -14,12 +26,13 @@ const editProjectDatasets = async ({
 
 const editProjectUsers = async ({
   requestContext, token, id, data,
-}) => patch({
+}) => put({
   requestContext, url: `/projects/${id}/users`, token, data,
 });
 
 module.exports = {
   editProjectDatasets,
   editProjectUsers,
+  createProject,
   getProjectById,
 };

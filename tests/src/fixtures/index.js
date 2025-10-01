@@ -1,11 +1,12 @@
 import { test as base, expect } from '@playwright/test';
 import { getTokenByRole } from './auth';
 
-const { attachmentFixture } = require('./withAttachments');
+const { attachmentFixture } = require('./attachment');
 
 // Compose all fixtures
 const test = base.extend({
 
+  // Token-retrieval fixtures
   /* eslint-disable */
   adminToken: async ({}, use) => {
     await use(await getTokenByRole({ role: 'admin' }));
@@ -18,7 +19,7 @@ const test = base.extend({
   },
   /* eslint-enable */
 
-  // Attachments fixture
+  // Attachment fixture
   ...attachmentFixture(),
 });
 

@@ -3,6 +3,44 @@ import { cleanDropdownOptionText } from '../utils';
 const { expect } = require('../fixtures');
 
 /**
+ * Asserts that a Select (dropdown) field has the expected value
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The test ID of the select field
+ * @param {string} params.expectedValue - The expected value to be displayed in the select field
+ * @returns {Promise<void>}
+ */
+export async function assertSelectValue({ page, testId, expectedValue }) {
+  const selectField = page.getByTestId(testId);
+  await expect(selectField).toBeVisible();
+  const selectedValueElement = selectField.locator('.va-select-content__option');
+  await expect(selectedValueElement).toBeVisible();
+  const selectedValue = await selectedValueElement.textContent();
+  expect(selectedValue.trim()).toBe(expectedValue);
+}
+
+/**
+ * Asserts that a checkbox is in the expected state
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The test ID of the checkbox wrapper
+ * @param {boolean} params.expectedState - Whether the checkbox should be checked (true) or
+ * unchecked (false)
+ * @returns {Promise<void>}
+ */
+export async function assertCheckboxState({ page, testId, expectedState }) {
+  const checkboxWrapper = page.getByTestId(testId);
+  await expect(checkboxWrapper).toBeVisible();
+  const checkbox = checkboxWrapper.locator('input[type="checkbox"]');
+
+  if (expectedState) {
+    await expect(checkbox).toBeChecked();
+  } else {
+    await expect(checkbox).not.toBeChecked();
+  }
+}
+
+/**
  * Selects a result from an autocomplete dropdown
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
@@ -50,41 +88,33 @@ export async function selectAutocompleteResult({
 }
 
 /**
- * Asserts that a Select (dropdown) field has the expected value
+ * Gets all results from an autocomplete dropdown
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {string} params.testId - The test ID of the select field
- * @param {string} params.expectedValue - The expected value to be displayed in the select field
- * @returns {Promise<void>}
+ * @param {string} params.testId - The test ID of the autocomplete field
+ * @returns {Promise<string[]>} Array of result texts
  */
-export async function assertSelectValue({ page, testId, expectedValue }) {
-  const selectField = page.getByTestId(testId);
-  await expect(selectField).toBeVisible();
-  const selectedValueElement = selectField.locator('.va-select-content__option');
-  await expect(selectedValueElement).toBeVisible();
-  const selectedValue = await selectedValueElement.textContent();
-  expect(selectedValue.trim()).toBe(expectedValue);
-}
+export async function getAutoCompleteResults({ page, testId }) {
+  // Click to open the autocomplete dropdown
+  const autocomplete = page.getByTestId(testId);
+  await autocomplete.click();
 
-/**
- * Asserts that a checkbox is in the expected state
- * @param {Object} params - Parameters object
- * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {string} params.testId - The test ID of the checkbox wrapper
- * @param {boolean} params.expectedState - Whether the checkbox should be checked (true) or
- * unchecked (false)
- * @returns {Promise<void>}
- */
-export async function assertCheckboxState({ page, testId, expectedState }) {
-  const checkboxWrapper = page.getByTestId(testId);
-  await expect(checkboxWrapper).toBeVisible();
-  const checkbox = checkboxWrapper.locator('input[type="checkbox"]');
+  // Wait for results to appear
+  await page.waitForSelector(`[data-testid="${testId}--search-results-ul"]`);
 
-  if (expectedState) {
-    await expect(checkbox).toBeChecked();
-  } else {
-    await expect(checkbox).not.toBeChecked();
-  }
+  // Get all result items (excluding the count li and load-more li)
+  const resultItems = await page.locator(`[data-testid^="${testId}--search-result-li-"]`).all();
+
+  // Extract text from each button inside the li elements
+  const results = await Promise.all(
+    resultItems.map(async (item) => {
+      const button = item.locator('button');
+      const text = await button.textContent();
+      return text.trim();
+    }),
+  );
+
+  return results;
 }
 
 /**
@@ -217,7 +247,9 @@ export async function selectDropdownOption({
  */
 export async function typeInputValue({
   page,
-  testId, value, verify = false,
+  testId,
+  value,
+  verify = false,
 }) {
   const inputElement = page.getByTestId(testId);
   await expect(inputElement).toBeVisible();
