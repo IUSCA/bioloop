@@ -1,15 +1,12 @@
-import { expect, test } from '../../../../../../fixtures';
-import { getTokenByRole } from '../../../../../../fixtures/auth';
-
 import { selectAutocompleteResult, selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
-
-import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
-
 import { getDatasets } from '../../../../../../api/dataset';
+import { expect, test } from '../../../../../../fixtures';
+import { getTokenByRole } from '../../../../../../fixtures/auth';
+import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -90,7 +87,10 @@ test.describe.serial('Dataset Upload Process', () => {
     test('should not associate the uploaded Dataset with any Project', async () => {
       // Verify that the uploaded Dataset is associated with the selected
       // any Project
+
+      // Get token for admin role which will be used to call the datasets API
       const adminToken = await getTokenByRole({ role: 'admin' });
+
       const response = await getDatasets({
         token: adminToken,
         params: {

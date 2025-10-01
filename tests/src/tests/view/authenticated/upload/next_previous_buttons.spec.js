@@ -1,15 +1,13 @@
-import { expect, test } from '../../../../fixtures';
-
 import {
   clearAutoComplete,
   selectAutocompleteResult,
   selectDropdownOption,
 } from '../../../../actions';
-
 import {
   selectFiles,
 } from '../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../actions/stepper';
+import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}` }));
 

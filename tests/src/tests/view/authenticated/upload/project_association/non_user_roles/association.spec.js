@@ -1,10 +1,9 @@
-import { expect, test } from '../../../../../../fixtures';
-
 import { selectAutocompleteResult, selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
+import { expect, test } from '../../../../../../fixtures';
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));

@@ -1,5 +1,3 @@
-import { expect, test } from '../../../../fixtures';
-
 import {
   selectAutocompleteResult,
   selectDropdownOption,
@@ -11,6 +9,7 @@ import {
 import {
   navigateToNextStep,
 } from '../../../../actions/stepper';
+import { expect, test } from '../../../../fixtures';
 import { generate_unique_dataset_name } from '../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -124,13 +123,11 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('should show file-upload progress reaching 100% for each file', async () => {
-      console.log('verifying per-file progress to 100%');
       const fileUploadTable = page.getByTestId('file-upload-table');
       await expect(fileUploadTable).toBeVisible();
 
       const progressCells = fileUploadTable.getByTestId('file-progress');
       await expect(progressCells).toHaveCount(selectedFiles.length);
-      console.log('progress cells count', await progressCells.count());
 
       await Promise.all(selectedFiles.map(async (_, index) => {
         const progressCell = progressCells.nth(index);
@@ -140,7 +137,6 @@ test.describe.serial('Dataset Upload Process', () => {
           .toBeGreaterThan(0);
 
         const currentProgress = await read_progress_percentage(progressCell);
-        console.log(`row ${index} current progress: ${currentProgress}%`);
 
         expect(currentProgress).not.toBeNull();
         expect(currentProgress).toBeGreaterThan(0);

@@ -133,19 +133,20 @@ module.exports = {
       //   testMatch: '/view/authenticated/project/*.spec.js',
       // },
 
-      // {
-      //   name: 'upload',
-      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
-      // }, dependencies: ['admin_login'], testMatch:
-      // '/view/authenticated/upload/initiate_upload.spec.js', },
-
       {
-        name: 'upload--project_association--non_user_roles',
+        name: 'upload',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch:
-      '/view/authenticated/upload/project_association/non_user_roles/no_association.spec.js',
+      '/view/authenticated/upload/initiate_upload.spec.js',
       },
+
+      // {
+      //   name: 'upload--project_association--non_user_roles',
+      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
+      // }, dependencies: ['admin_login'], testMatch:
+      // '/view/authenticated/upload/project_association/non_user_roles/no_association.spec.js',
+      // },
 
       // {
       //   name: 'upload--project_association--user_role',

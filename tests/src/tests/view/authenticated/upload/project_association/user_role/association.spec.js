@@ -1,14 +1,11 @@
-import { expect, test } from '../../../../../../fixtures';
-import { getTokenByRole } from '../../../../../../fixtures/auth';
-
 import { selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
-
 import { createTestUser } from '../../../../../../api/user';
-
+import { expect, test } from '../../../../../../fixtures';
+import { getTokenByRole } from '../../../../../../fixtures/auth';
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const config = require('config');

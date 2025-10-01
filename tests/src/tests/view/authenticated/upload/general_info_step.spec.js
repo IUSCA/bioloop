@@ -1,5 +1,3 @@
-import { expect, test } from '../../../../fixtures';
-
 import {
   assertAutoCompleteDisabled,
   assertAutoCompleteEmpty,
@@ -15,6 +13,7 @@ import {
 import {
   navigateToNextStep,
 } from '../../../../actions/stepper';
+import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -199,10 +198,6 @@ test.describe.serial('Dataset Upload Process', () => {
 
       // assert that the `Source Raw Data` input field is disabled
       await assertAutoCompleteDisabled({ page, testId: 'upload-metadata-dataset-autocomplete' });
-    });
-
-    test('should enable the `Source Raw Data` fields when `Dataset Type` is changed to "Data Product"', async () => {
-      // todo - add test
     });
   });
 });
