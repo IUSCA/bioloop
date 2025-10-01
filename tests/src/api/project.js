@@ -12,7 +12,14 @@ const editProjectDatasets = async ({
   requestContext, url: `/projects/${id}/datasets`, token, data,
 });
 
+const editProjectUsers = async ({
+  requestContext, token, id, data,
+}) => patch({
+  requestContext, url: `/projects/${id}/users`, token, data,
+});
+
 module.exports = {
   editProjectDatasets,
+  editProjectUsers,
   getProjectById,
 };

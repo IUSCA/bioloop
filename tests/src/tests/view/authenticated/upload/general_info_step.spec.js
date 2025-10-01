@@ -1,4 +1,4 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { expect, test } from '../../../../fixtures';
 
 import {
   assertAutoCompleteDisabled,
@@ -15,13 +15,10 @@ import {
 import {
   navigateToNextStep,
 } from '../../../../actions/stepper';
-import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
-// Set up attachments for this test and a temporary directory to store these
-// attachments in
-const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
+test.use({ attachments });
 
 const defaultDatasetType = 'Data Product';
 

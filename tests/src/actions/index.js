@@ -1,5 +1,6 @@
-import { expect } from '@playwright/test';
 import { cleanDropdownOptionText } from '../utils';
+
+const { expect } = require('../fixtures');
 
 /**
  * Selects a result from an autocomplete dropdown

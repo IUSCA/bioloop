@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+const { expect } = require('../fixtures');
 
 /**
  * Tracks selected files metadata from the upload table
@@ -6,7 +6,7 @@ import { expect } from '@playwright/test';
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @returns {Promise<Array>} Array of file objects with name and size properties
  */
-export async function trackSelectedFilesMetadata({ page }) {
+async function trackSelectedFilesMetadata({ page }) {
   // Wait for the file upload table to be visible
   await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
@@ -34,7 +34,7 @@ export async function trackSelectedFilesMetadata({ page }) {
  * @param {string[]} params.filePaths - Array of file paths to upload
  * @returns {Promise<void>}
  */
-export async function selectFiles({ page, filePaths }) {
+async function selectFiles({ page, filePaths }) {
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
     page.click('[data-testid="upload-file-select"]'),

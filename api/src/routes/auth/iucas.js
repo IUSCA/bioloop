@@ -30,13 +30,16 @@ router.get(
 
 router.post(
   '/verify',
-  validate([
-    body('ticket').notEmpty(),
-    body('service').notEmpty(),
-  ]),
+  // validate([
+  // body('ticket').notEmpty(),
+  // body('service').optional().notEmpty(),
+  // ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Auth']
     // eslint-disable-next-line no-unused-vars
+    console.log('req.body', req.body);
+    console.log('req.query', req.query);
+
     const login = async (cas_id) => {
       if (!cas_id) {
         logger.error('CAS login failed: no cas_id');
@@ -56,9 +59,12 @@ router.post(
     };
 
     if (config.mode === 'ci') {
-      const test_user = await authService.find_or_create_test_user({ role: req.body.ticket });
+      const test_user = await authService.find_or_create_test_user({ identifier: req.body.ticket });
       await login(test_user.cas_id);
     } else {
+      if (!req.body.service) {
+        return next(createError.BadRequest('Service is required'));
+      }
       IULogin.validate(req.body.ticket, req.body.service, false, async (err, cas_id) => {
         if (err) return next(err);
         try {

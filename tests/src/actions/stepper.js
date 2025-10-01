@@ -1,7 +1,4 @@
-import { expect } from '@playwright/test';
-
-
-
+const { expect } = require('../fixtures');
 
 /**
  * Navigates to the next step in the upload process
@@ -9,7 +6,7 @@ import { expect } from '@playwright/test';
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @returns {Promise<void>}
  */
-export async function navigateToNextStep({ page }) {
+async function navigateToNextStep({ page }) {
   const nextButton = page.getByTestId('upload-next-button');
   await expect(nextButton).toBeVisible();
   await nextButton.click();
@@ -21,7 +18,7 @@ export async function navigateToNextStep({ page }) {
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @returns {Promise<void>}
  */
-export async function navigateToPreviousStep({ page }) {
+async function navigateToPreviousStep({ page }) {
   const previousButton = page.getByTestId('upload-previous-button');
   await expect(previousButton).toBeVisible();
   await previousButton.click();
@@ -35,10 +32,10 @@ export async function navigateToPreviousStep({ page }) {
  * @param {boolean} params.shouldBeEnabled - Whether the button should be enabled
  * @returns {Promise<void>}
  */
-export async function verifyStepButtonState({ page, stepIndex, shouldBeEnabled }) {
+async function verifyStepButtonState({ page, stepIndex, shouldBeEnabled }) {
   const stepButton = page.getByTestId(`step-button-${stepIndex}`);
   await expect(stepButton).toBeVisible();
-  
+
   if (shouldBeEnabled) {
     await expect(stepButton).not.toBeDisabled();
   } else {

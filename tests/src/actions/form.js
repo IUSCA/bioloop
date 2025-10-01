@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+const { expect } = require('../fixtures');
 
 /**
  * Verifies that form validation errors are displayed
@@ -8,7 +8,7 @@ import { expect } from '@playwright/test';
  * @param {string} [params.errorSelector] - Custom selector for the error element
  * @returns {Promise<void>}
  */
-export async function verifyFormError({ page, errorMessage, errorSelector = '.va-text-danger' }) {
+async function verifyFormError({ page, errorMessage, errorSelector = '.va-text-danger' }) {
   const errorElement = page.locator(errorSelector);
   await expect(errorElement).toBeVisible();
   await expect(errorElement).toHaveText(errorMessage);

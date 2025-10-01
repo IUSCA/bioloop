@@ -1,13 +1,10 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { expect, test } from '../../../../fixtures';
 
 import { selectFiles, trackSelectedFilesMetadata } from '../../../../actions/datasetUpload';
-import { withAttachments } from '../../../../fixtures/withAttachments';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
-// Set up attachments for this test and a temporary directory to store these
-// attachments in
-const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
+test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block

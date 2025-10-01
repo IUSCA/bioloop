@@ -4,8 +4,7 @@ const config = require('config');
 
 const { createNotification, deleteNotifications } = require('../../../../api/notification');
 
-// These tests will be skipped if
-// config.enabledFeatures.notifications.enabledRoles === []
+// These tests will be skipped if notifications feature is not enabled.
 
 const NUMBER_OF_NOTIFICATIONS = 2;
 const NOTIFICATION_LABELS = _.range(NUMBER_OF_NOTIFICATIONS)

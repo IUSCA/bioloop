@@ -68,9 +68,22 @@ function get_download_token(file_path) {
   });
 }
 
-const find_or_create_test_user = async ({ role }) => {
-  const test_user_config = config.e2e.users[role];
-  const test_user_username = test_user_config.username;
+/**
+ * Find or create a test user.
+ *
+ * - If `identifier` is a role ('admin', 'operator', or 'user'), retrieve the corresponding test user.
+ * - If `identifier` is a username, retrieve the corresponding test user.
+ * - If `identifier` is not a role or a username, create a new test user with the given identifier.
+ *
+ * @param {Object} options - The options for finding or creating a test user.
+ * @param {string} options.identifier - The identifier for the test user. Can be a role or a username.
+ * @returns {Promise<Object>} The test user.
+ */
+const find_or_create_test_user = async ({ identifier }) => {
+  const is_test_user = ['admin', 'operator', 'user'].includes(identifier);
+
+  const test_user_config = is_test_user ? config.e2e.users[identifier] : null;
+  const test_user_username = test_user_config ? test_user_config.username : identifier;
 
   let test_user = await prisma.user.findUnique({
     where: {
@@ -81,7 +94,7 @@ const find_or_create_test_user = async ({ role }) => {
   if (!test_user) {
     const requested_role = await prisma.role.findFirstOrThrow({
       where: {
-        name: role,
+        name: identifier,
       },
     });
 

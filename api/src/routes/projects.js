@@ -627,6 +627,58 @@ router.put(
   }),
 );
 
+router.patch(
+  '/:id/users',
+  isPermittedTo('update'),
+  validate([
+    body('add_user_ids').isArray().optional(),
+    body('remove_user_ids').isArray().optional(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Projects']
+    // #swagger.summary = associate users to, or remove users from a project
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are
+      // allowed and user role is forbidden
+      /* eslint-enable                                                             */
+
+    // get project or send 404 if not found
+    await prisma.project.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
+    });
+
+    const add_user_ids = req.body.add_user_ids || [];
+    const remove_user_ids = req.body.remove_user_ids || [];
+
+    const create_data = add_user_ids.map((user_id) => ({
+      project_id: req.params.id,
+      user_id,
+      assignor_id: req.user.id,
+    }));
+    const delete_data = remove_user_ids.map((user_id) => ({
+      project_id: req.params.id,
+      user_id,
+    }));
+
+    // create new associations
+    const add_assocs = prisma.project_user.createMany({
+      data: create_data,
+    });
+      // delete existing associations
+    const delete_assocs = prisma.project_user.deleteMany({
+      where: {
+        OR: delete_data,
+      },
+    });
+
+    await prisma.$transaction([delete_assocs, add_assocs]);
+
+    res.send();
+  }),
+);
+
 router.put(
   '/:id/contacts',
   isPermittedTo('update'),

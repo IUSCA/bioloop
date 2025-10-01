@@ -1,23 +1,23 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { expect, getToken, test } from '../../../../../../fixtures';
 
 import { selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
-import { withAttachments } from '../../../../../../fixtures/withAttachments';
+import { createTestUser } from '../../../../../../api/user';
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
-// const require = createRequire(import.meta.url);
+const config = require('config');
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
-// Set up attachments for this test and a temporary directory to store these
-// attachments in
-const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
+test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
+
+  let testUser;
 
   let selectedDatasetType;
   let uploadedDatasetName;
@@ -26,18 +26,22 @@ test.describe.serial('Dataset Upload Process', () => {
 
   const selectedFiles = []; // array of selected files
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-
-    // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
-  });
-
-  // todo - before the test, verify that user has no Projects associated with
-  // them
   test.describe('Upload initiation step', () => {
     // Fill all form fields
-    test.beforeAll(async ({ attachmentManager }) => {
+    test.beforeAll(async ({ browser, attachmentManager }) => {
+      const adminToken = await getToken({ role: 'admin' });
+      testUser = await createTestUser({ role: 'user', token: adminToken });
+
+      // Login as the test user
+      page = await browser.newPage();
+      await page.goto(`${config.baseURL}/auth/iucas?ticket=${testUser.username}`);
+
+      // Visit the dataset uploads page
+      await page.goto('/datasetUpload/new');
+
+      // Create a new User to ensure that the user is not associated with any
+      // Projects
+
       // Select files using the selectFiles method
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });

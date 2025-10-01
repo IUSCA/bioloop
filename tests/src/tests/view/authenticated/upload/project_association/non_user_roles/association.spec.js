@@ -1,18 +1,15 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { expect, test } from '../../../../../../fixtures';
 
 import { selectAutocompleteResult, selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
-import { withAttachments } from '../../../../../../fixtures/withAttachments';
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
-// Set up attachments for this test and a temporary directory to store these
-// attachments in
-const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
+test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
@@ -29,8 +26,6 @@ test.describe.serial('Dataset Upload Process', () => {
     await page.goto('/datasetUpload/new');
   });
 
-  // todo - before the test, verify that user has no Projects associated with
-  // them
   test.describe('Upload initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ attachmentManager }) => {
@@ -91,15 +86,6 @@ test.describe.serial('Dataset Upload Process', () => {
       // console.log('using dataset name', uploadedDatasetName);
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
-      // console.log('filled dataset name input');
-
-      // upload_button_enabled = await
-      // page.getByTestId('upload-next-button').isEnabled(); console.log('Upload
-      // button enabled: ', upload_button_enabled);
-
-      // console.log('will click Upload button ');
-
-      // Click the "Upload" button
       await navigateToNextStep({ page });
     });
 

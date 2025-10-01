@@ -1,4 +1,4 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { expect, test } from '../../../../fixtures';
 
 import {
   selectAutocompleteResult,
@@ -11,10 +11,11 @@ import {
 import {
   navigateToNextStep,
 } from '../../../../actions/stepper';
-import { withAttachments } from '../../../../fixtures/withAttachments';
 import { generate_unique_dataset_name } from '../../../../utils/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
+
+test.use({ attachments });
 
 async function read_progress_percentage(locator) {
   const textContent = await locator.evaluate((el) => el.textContent ?? '');
@@ -22,10 +23,6 @@ async function read_progress_percentage(locator) {
   const match = normalized.match(/(\d+)\s*%/);
   return match ? Number.parseInt(match[1], 10) : null;
 }
-
-// Set up attachments for this test and a temporary directory to store these
-// attachments in
-const test = withAttachments({ test: baseTest, filePath: __filename, attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance to be shared across all tests in this describe block
