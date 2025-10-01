@@ -13,7 +13,7 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   let selectedDatasetType;
 
@@ -28,7 +28,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
     });
@@ -57,6 +57,15 @@ test.describe.serial('Dataset Upload Process', () => {
       selectedDatasetType = await datasetTypeSelect.locator('.va-select-content__option').textContent();
       // Remove any leading/trailing whitespace
       selectedDatasetType = selectedDatasetType.trim();
+
+      // Uncheck "Assign Source Raw Data" to skip Source Raw Data association
+      await page.getByTestId('upload-metadata-assign-source-checkbox').click();
+
+      // Uncheck "Assign Project" to skip Project association
+      await page.getByTestId('upload-metadata-assign-project-checkbox').click();
+
+      // Uncheck "Assign Instrument" to skip Instrument association
+      await page.getByTestId('upload-metadata-assign-instrument-checkbox').click();
     });
   });
 

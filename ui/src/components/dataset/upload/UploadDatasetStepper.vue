@@ -219,6 +219,7 @@
                 color="primary"
                 label="Assign source Instrument"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-instrument-checkbox"
               />
             </div>
           </div>

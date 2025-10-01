@@ -1,11 +1,14 @@
-import { expect, getToken, test } from '../../../../../../fixtures';
+import { expect, test } from '../../../../../../fixtures';
+import { getTokenByRole } from '../../../../../../fixtures/auth';
 
 import { selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
+
 import { createTestUser } from '../../../../../../api/user';
+
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
 
 const config = require('config');
@@ -15,7 +18,7 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   let testUser;
 
@@ -29,7 +32,9 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ browser, attachmentManager }) => {
-      const adminToken = await getToken({ role: 'admin' });
+      const adminToken = await getTokenByRole({ role: 'admin' });
+      // Create a new User to ensure that the user is not associated with any
+      // Projects
       testUser = await createTestUser({ role: 'user', token: adminToken });
 
       // Login as the test user
@@ -39,10 +44,7 @@ test.describe.serial('Dataset Upload Process', () => {
       // Visit the dataset uploads page
       await page.goto('/datasetUpload/new');
 
-      // Create a new User to ensure that the user is not associated with any
-      // Projects
-
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
       // Track selected files metadata
@@ -79,8 +81,6 @@ test.describe.serial('Dataset Upload Process', () => {
         token,
         selectedDatasetType,
       });
-
-      console.log('uploadedDatasetName', uploadedDatasetName);
 
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 

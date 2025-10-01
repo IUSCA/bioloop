@@ -7,7 +7,7 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   const selectedFiles = []; // array of selected files
 
@@ -20,7 +20,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File selection and deletion', () => {
     test('Should allow selecting files', async ({ attachmentManager }) => {
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
 

@@ -53,13 +53,13 @@ module.exports = {
     /* Configure projects for major browsers */
     projects: [
       //   todo - organize tests by role type
-      // {
-      //   name: 'admin_login',
-      //   testMatch: path.join(
-      //     __dirname,
-      //     '/src/tests/setup/admin_login.setup.js',
-      //   ),
-      // },
+      {
+        name: 'admin_login',
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/admin_login.setup.js',
+        ),
+      },
 
       // {
       //   name: 'operator_login',
@@ -69,13 +69,13 @@ module.exports = {
       //   ),
       // },
 
-      {
-        name: 'user_login',
-        testMatch: path.join(
-          __dirname,
-          '/src/tests/setup/user_login.setup.js',
-        ),
-      },
+      // {
+      //   name: 'user_login',
+      //   testMatch: path.join(
+      //     __dirname,
+      //     '/src/tests/setup/user_login.setup.js',
+      //   ),
+      // },
 
       // , { name: 'unauthenticated',
       // use: { ...devices['Desktop Chrome'] }, testMatch:
@@ -139,19 +139,20 @@ module.exports = {
       // }, dependencies: ['admin_login'], testMatch:
       // '/view/authenticated/upload/initiate_upload.spec.js', },
 
-      // {
-      //   name: 'upload--project_association--non_user_roles',
-      // use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE
-      // }, dependencies: ['admin_login'], testMatch:
-      // '/view/authenticated/upload/project_association/non_user_roles/association.spec.js',
-      // },
-
       {
-        name: 'upload--project_association--user_role',
-        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
-        dependencies: ['user_login'],
-        testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+        name: 'upload--project_association--non_user_roles',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch:
+      '/view/authenticated/upload/project_association/non_user_roles/no_association.spec.js',
       },
+
+      // {
+      //   name: 'upload--project_association--user_role',
+      // use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE
+      // }, dependencies: ['user_login'], testMatch:
+      // '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      // },
 
       // {
       //   name: 'notifications',

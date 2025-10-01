@@ -15,9 +15,7 @@ class AttachmentManager {
   }
 
   async teardown() {
-    console.log('tearing down attachments directory... :', this.testAttachmentsDir);
     await fs.rm(this.testAttachmentsDir, { recursive: true, force: true });
-    console.log('Directory deleted.');
   }
 
   async createFile(fileName, content) {

@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import { getToken } from './auth';
+import { getTokenByRole } from './auth';
 
 const { attachmentFixture } = require('./withAttachments');
 
@@ -8,13 +8,13 @@ const test = base.extend({
 
   /* eslint-disable */
   adminToken: async ({}, use) => {
-    await use(await getToken({ role: 'admin' }));
+    await use(await getTokenByRole({ role: 'admin' }));
   },
   operatorToken: async ({}, use) => {
-    await use(await getToken({ role: 'operator' }));
+    await use(await getTokenByRole({ role: 'operator' }));
   },
   userToken: async ({}, use) => {
-    await use(await getToken({ role: 'user' }));
+    await use(await getTokenByRole({ role: 'user' }));
   },
   /* eslint-enable */
 
@@ -22,4 +22,4 @@ const test = base.extend({
   ...attachmentFixture(),
 });
 
-export { expect, getToken, test };
+export { expect, test };

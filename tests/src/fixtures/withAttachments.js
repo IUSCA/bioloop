@@ -19,12 +19,10 @@ function attachmentFixture() {
 
       const attachmentsToCreate = attachments.length > 0
         ? attachments
-        : [
-          {
-            name: 'default_attachment.txt',
-            content: 'This is a default attachment',
-          },
-        ];
+        : [{
+          name: 'default_attachment.txt',
+          content: 'This is a default attachment',
+        }];
 
       await Promise.all(
         attachmentsToCreate.map(({ name, content = `Content for ${name}` }) => manager.createFile(name, content)),

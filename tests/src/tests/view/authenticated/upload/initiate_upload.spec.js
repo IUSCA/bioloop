@@ -25,7 +25,7 @@ async function read_progress_percentage(locator) {
 }
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   let uploadedDatasetName;
   let selectedDatasetType;
@@ -42,7 +42,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
       // Track selected files metadata
@@ -99,19 +99,8 @@ test.describe.serial('Dataset Upload Process', () => {
       // console.log('using dataset name', uploadedDatasetName);
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
-      // console.log('filled dataset name input');
-
-      // upload_button_enabled = await
-      // page.getByTestId('upload-next-button').isEnabled(); console.log('Upload
-      // button enabled: ', upload_button_enabled);
-
-      // console.log('will click Upload button ');
-
       // Click the "Upload" button
       await navigateToNextStep({ page });
-      // console.log('clicked Upload button');
-
-      // await page.getByTestId('upload-next-button').click();
     });
 
     // Assert that "Processing" status is shown when Upload button is clicked
@@ -164,7 +153,6 @@ test.describe.serial('Dataset Upload Process', () => {
         }
 
         const finalProgress = await read_progress_percentage(progressCell);
-        console.log(`row ${index} final progress: ${finalProgress}%`);
         expect(finalProgress).toBe(100);
       }));
     });

@@ -124,9 +124,6 @@ router.get(
       orderBy,
     };
 
-    console.log('datasetRetrievalQuery');
-    console.dir(datasetRetrievalQuery, { depth: null });
-
     const [datasets, count] = await prisma.$transaction([
       prisma.dataset.findMany({ ...datasetRetrievalQuery }),
       prisma.dataset.count({ ...filterQuery }),
@@ -199,6 +196,7 @@ router.get(
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').toBoolean().optional(),
     query('include_audit_logs').toBoolean().optional(),
+    query('include_projects').toBoolean().optional(),
     query('id').isInt().toInt().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
@@ -229,6 +227,7 @@ router.get(
         bundle: req.query.bundle || false,
         states: req.query.include_states || false,
         ...(req.query.include_audit_logs ? CONSTANTS.INCLUDE_AUDIT_LOGS : {}),
+        ...(req.query.include_projects ? CONSTANTS.INCLUDE_PROJECTS : {}),
       },
     };
 

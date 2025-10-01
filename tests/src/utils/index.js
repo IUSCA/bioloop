@@ -1,6 +1,4 @@
 const { expect } = require('@playwright/test');
-const fs = require('fs').promises;
-const path = require('path');
 
 const testIdSelector = (testId) => `[data-testid=${testId}]`;
 
@@ -32,10 +30,38 @@ function cleanDropdownOptionText(text) {
     .trim();
 }
 
+const base64UrlToBase64 = (value) => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const paddingLength = (4 - (normalized.length % 4)) % 4;
+  return normalized.padEnd(normalized.length + paddingLength, '=');
+};
+
+const extractTokenPayload = (token) => {
+  if (!token) {
+    return null;
+  }
+
+  const [, payload = ''] = token.split('.');
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(
+      base64UrlToBase64(payload),
+      'base64',
+    ).toString('utf8'));
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+};
+
 module.exports = {
   testIdSelector,
   elementTestIdSelector,
   fillText,
   fillAndAssertText,
   cleanDropdownOptionText,
+  extractTokenPayload,
 };

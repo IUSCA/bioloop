@@ -15,7 +15,7 @@ const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}`
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -25,7 +25,7 @@ test.describe.serial('Dataset Upload Process', () => {
   });
 
   test.beforeAll(async ({ attachmentManager }) => {
-    // Select files using the selectFiles method
+    // Select files
     const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
     await selectFiles({ page, filePaths });
   });
@@ -55,7 +55,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File-selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
     });

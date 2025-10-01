@@ -11,8 +11,6 @@ const createTestUser = async ({
   payload.name = !data.name ? payload.username : data.name;
   payload.cas_id = !data.cas_id ? payload.username : data.cas_id;
 
-  // console.log('payload', payload);
-
   const response = await post({
     requestContext,
     url: '/users',

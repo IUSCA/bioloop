@@ -17,7 +17,7 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
-  let page; // Playwright page instance to be shared across all tests in this describe block
+  let page; // Playwright page instance
 
   let selectedDatasetType;
   let selectedRawDataName;
@@ -35,7 +35,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
   test.describe('File selection step', () => {
     test.beforeAll(async ({ attachmentManager }) => {
-      // Select files using the selectFiles method
+      // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page, filePaths });
     });
@@ -122,14 +122,6 @@ test.describe.serial('Dataset Upload Process', () => {
       const datasetNameInput = page.getByTestId('upload-details-dataset-name-input');
       await expect(datasetNameInput).toBeVisible();
       await expect(datasetNameInput).toHaveValue('');
-
-      // Check that there's an error message for the empty Dataset Name
-      // const datasetNameRow =
-      // page.getByTestId('upload-details-dataset-name-row'); const
-      // datasetNameError =
-      // datasetNameRow.locator('.va-text-danger.text-xs.dataset-name-input');
-      // await expect(datasetNameError).toBeVisible(); await
-      // expect(datasetNameError).toHaveText('Dataset name cannot be empty');
     });
 
     test('should show all the selected files and their details', async () => {

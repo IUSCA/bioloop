@@ -4,7 +4,7 @@ import config from 'config';
 /**
  * Get a token for a user with a given role
  */
-async function getToken({ role }) {
+async function getTokenByRole({ role }) {
   const apiContext = await baseRequest.newContext({
     baseURL: config.apiBaseURL,
   });
@@ -15,4 +15,4 @@ async function getToken({ role }) {
   return body.token;
 }
 
-export { getToken };
+export { getTokenByRole };

@@ -1,11 +1,15 @@
 import { expect, test } from '../../../../../../fixtures';
+import { getTokenByRole } from '../../../../../../fixtures/auth';
 
 import { selectAutocompleteResult, selectDropdownOption } from '../../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
+
 import { generate_unique_dataset_name } from '../../../../../../utils/dataset';
+
+import { getDatasets } from '../../../../../../api/dataset';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -56,13 +60,8 @@ test.describe.serial('Dataset Upload Process', () => {
         verify: true,
       });
 
-      // Select Project
-      await selectAutocompleteResult({
-        page,
-        testId: 'upload-metadata-project-autocomplete',
-        resultIndex: 0,
-        verify: true,
-      });
+      // Uncheck "Assign Project" to skip Project association
+      await page.getByTestId('upload-metadata-assign-project-checkbox').click();
 
       // Select Source Instrument
       await selectDropdownOption({
@@ -83,49 +82,32 @@ test.describe.serial('Dataset Upload Process', () => {
         selectedDatasetType,
       });
 
-      // console.log('using dataset name', uploadedDatasetName);
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
       await navigateToNextStep({ page });
     });
 
-    test('should associate the uploaded Dataset with the selected Project', async () => {
+    test('should not associate the uploaded Dataset with any Project', async () => {
       // Verify that the uploaded Dataset is associated with the selected
-      // Project
-      // - Visit the Project page
-      const projectLink = page.getByTestId('upload-details-project-link');
-      await expect(projectLink).toBeVisible();
-      await expect(projectLink).not.toHaveText('');
-
-      const projectHref = await projectLink.getAttribute('href');
-      expect(projectHref).toBeTruthy();
-
-      // Navigate to the selected Project's page
-      // - Create a new Page  instance for the Project view, since the Project
-      // view opens in a new tab
-      const [projectPage] = await Promise.all([
-        page.context().waitForEvent('page'),
-        projectLink.click(),
-      ]);
-
-      // Wait for the Project page to load
-      await projectPage.waitForLoadState('domcontentloaded');
-      await projectPage.waitForURL((url) => {
-        try {
-          return new URL(url).pathname === projectHref;
-        } catch (error) {
-          return false;
-        }
+      // any Project
+      const adminToken = await getTokenByRole({ role: 'admin' });
+      const response = await getDatasets({
+        token: adminToken,
+        params: {
+          name: uploadedDatasetName,
+          type: selectedDatasetType.split(' ').join('_').toUpperCase(),
+          include_projects: true,
+        },
       });
-
-      // Verify that the uploaded Dataset is listed in the Project's datasets
-      // table
-      const projectDatasetsTable = projectPage.getByTestId('project-datasets-table');
-      await expect(projectDatasetsTable).toBeVisible();
-      const datasetRow = projectDatasetsTable.locator('tbody tr').filter({ hasText: uploadedDatasetName });
-      await expect(datasetRow.first()).toBeVisible();
-
-      await projectPage.close();
+      const body = await response.json();
+      if (!body || !body.datasets || body.datasets.length === 0) {
+        throw new Error(`No datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()} `);
+      }
+      if (body.datasets.length > 1) {
+        throw new Error(`Multiple datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()}`);
+      }
+      const matching_dataset = body.datasets[0];
+      expect(matching_dataset.projects).toHaveLength(0);
     });
   });
 });

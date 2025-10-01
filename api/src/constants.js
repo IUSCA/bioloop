@@ -58,6 +58,27 @@ const INCLUDE_AUDIT_LOGS = {
   },
 };
 
+const INCLUDE_PROJECTS = {
+  projects: {
+    select: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          browser_enabled: true,
+          funding: true,
+          metadata: true,
+          created_at: true,
+          updated_at: true,
+          owner_id: true,
+        },
+      },
+    },
+  },
+};
+
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
   audit_log: {
     select: {
@@ -156,4 +177,5 @@ module.exports = {
   UPLOAD_STATUSES,
   WORKFLOWS,
   DATASET_STATES,
+  INCLUDE_PROJECTS,
 };
