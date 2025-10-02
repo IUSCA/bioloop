@@ -139,12 +139,13 @@ module.exports = {
       // '/view/authenticated/upload/initiate_upload.spec.js', },
 
       {
-        name: 'upload--project_association--user_role--access',
+        name: 'upload--source_dataset_access',
         use: {
           ...devices['Desktop Chrome'],
+          // storageState: ADMIN_STORAGE_STATE,
         },
-        testMatch:
-      '/view/authenticated/upload/project_association/user_role/access.spec.js',
+        // dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/upload/project_access.spec.js',
       },
 
       // {

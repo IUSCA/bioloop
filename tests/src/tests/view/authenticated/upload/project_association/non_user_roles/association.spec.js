@@ -3,7 +3,7 @@ import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../../actions/stepper';
-import { generate_unique_dataset_name } from '../../../../../../api/dataset';
+import { generateUniqueDatasetName } from '../../../../../../api/dataset';
 import { expect, test } from '../../../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
@@ -76,7 +76,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
       // Set the name of the dataset being uploaded
       const token = await page.evaluate(() => localStorage.getItem('token'));
-      uploadedDatasetName = await generate_unique_dataset_name({
+      uploadedDatasetName = await generateUniqueDatasetName({
         requestContext: page.request,
         token,
         type: selectedDatasetType,

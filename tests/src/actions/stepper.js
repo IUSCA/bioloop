@@ -32,7 +32,11 @@ async function navigateToPreviousStep({ page }) {
  * @param {boolean} params.shouldBeEnabled - Whether the button should be enabled
  * @returns {Promise<void>}
  */
-async function verifyStepButtonState({ page, stepIndex, shouldBeEnabled }) {
+async function verifyStepButtonState({
+  page,
+  stepIndex,
+  shouldBeEnabled,
+}) {
   const stepButton = page.getByTestId(`step-button-${stepIndex}`);
   await expect(stepButton).toBeVisible();
 

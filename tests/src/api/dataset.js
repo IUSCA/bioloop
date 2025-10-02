@@ -4,10 +4,30 @@ const { get, post } = require('./index');
 const { extractTokenPayload } = require('../utils');
 
 const createDataset = async ({
-  requestContext, token, data,
-}) => post({
-  requestContext, url: '/datasets', token, data,
-});
+  requestContext, token, data = {},
+} = {}) => {
+  const payload = { ...data };
+  if (!data.name) {
+    payload.name = await generateUniqueDatasetName({
+      requestContext,
+      token,
+    });
+  }
+  if (!data.type) {
+    payload.type = 'DATA_PRODUCT';
+  }
+  if (!data.origin_path) {
+    payload.origin_path = `/path/to/${payload.name}`;
+  }
+  const response = await post({
+    requestContext,
+    url: '/datasets',
+    token,
+    data: payload,
+  });
+  const body = await response.json();
+  return body;
+};
 
 const getDatasets = async ({
   requestContext, token, params,
@@ -35,12 +55,12 @@ const datasetExists = async ({
   });
 };
 
-async function generate_unique_dataset_name({
+const generateUniqueDatasetName = async ({
   requestContext,
   token,
-  baseName = 'test_dataset',
+  baseName = 'TestDataset',
   type = 'DATA_PRODUCT',
-}) {
+}) => {
   if (!['Raw Data', 'Data Product', 'RAW_DATA', 'DATA_PRODUCT'].includes(type)) {
     throw new Error(`Invalid dataset type: ${type}`);
   }
@@ -67,11 +87,11 @@ async function generate_unique_dataset_name({
     return candidate;
   }
   throw new Error(`Could not generate unique dataset name. Generated name ${candidate} already exists.`);
-}
+};
 
 module.exports = {
   createDataset,
   datasetExists,
-  generate_unique_dataset_name,
+  generateUniqueDatasetName,
   getDatasets,
 };

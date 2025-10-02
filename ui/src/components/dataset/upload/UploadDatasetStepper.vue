@@ -72,7 +72,7 @@
             data-testid="upload-metadata-dataset-type-select"
           />
           <div class="flex items-center ml-2">
-            <va-popover>
+            <va-popover data-testid="upload-metadata-dataset-type-popover">
               <template #body>
                 <div class="w-96" data-testid="dataset-type-help-text">
                   - Raw Data: Original, unprocessed data collected from
@@ -127,7 +127,7 @@
               data-test-id="upload-metadata-dataset-autocomplete"
             >
             </DatasetSelectAutoComplete>
-            <va-popover>
+            <va-popover data-testid="upload-metadata-dataset-autocomplete-popover">
               <template #body>
                 <div class="w-96" data-testid="raw-data-help-text">
                   Associating a Data Product with a source Raw Data establishes
@@ -184,7 +184,7 @@
               data-test-id="upload-metadata-project-autocomplete"
             >
             </ProjectAsyncAutoComplete>
-            <va-popover>
+            <va-popover data-testid="upload-metadata-project-autocomplete-popover">
               <template #body>
                 <div class="w-96">
                   Assigning a dataset to a project establishes a connection
@@ -240,7 +240,7 @@
               data-testid="upload-metadata-source-instrument-select"
             />
             <div class="flex items-center ml-2">
-              <va-popover>
+              <va-popover data-testid="upload-metadata-source-instrument-popover">
                 <template #body>
                   <div class="w-72">
                     Source instrument where this data was collected from.

@@ -10,7 +10,11 @@ const { expect } = require('../fixtures');
  * @param {string} params.expectedValue - The expected value to be displayed in the select field
  * @returns {Promise<void>}
  */
-export async function assertSelectValue({ page, testId, expectedValue }) {
+export async function assertSelectValue({
+  page,
+  testId,
+  expectedValue,
+}) {
   const selectField = page.getByTestId(testId);
   await expect(selectField).toBeVisible();
   const selectedValueElement = selectField.locator('.va-select-content__option');
@@ -28,7 +32,11 @@ export async function assertSelectValue({ page, testId, expectedValue }) {
  * unchecked (false)
  * @returns {Promise<void>}
  */
-export async function assertCheckboxState({ page, testId, expectedState }) {
+export async function assertCheckboxState({
+  page,
+  testId,
+  expectedState,
+}) {
   const checkboxWrapper = page.getByTestId(testId);
   await expect(checkboxWrapper).toBeVisible();
   const checkbox = checkboxWrapper.locator('input[type="checkbox"]');
@@ -41,46 +49,109 @@ export async function assertCheckboxState({ page, testId, expectedState }) {
 }
 
 /**
- * Selects a result from an autocomplete dropdown
+ * Selects a result from an Autocomplete dropdown
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {number} [params.resultIndex=0] - The index of the search result to select (0-based)
+ * @param {string} params.testId - The test ID of the autocomplete field
+ * @param {number} [params.resultIndex] - The index of the search result to select (0-based)
+ * @param {string} [params.resultText] - The text of the search result to select
  * @param {boolean} [params.verify=false] - Whether to verify the selection was successful
  * @returns {Promise<string|void>} The text of the selected option if verify is true, otherwise void
  */
 export async function selectAutocompleteResult({
   page,
   testId,
-  resultIndex = 0,
+  resultIndex,
+  resultText,
   verify = false,
 }) {
-  // Validate that resultIndex is provided
-  if (resultIndex == null) {
-    throw new Error('Must provide resultIndex parameter');
+  console.log('testId', testId);
+  console.log('resultIndex', resultIndex);
+  console.log('resultText', resultText);
+  console.log('verify', verify);
+
+  // Validate that exactly one selection method is provided
+  if ((resultIndex != null && resultText != null)
+      || (resultIndex == null && resultText == null)) {
+    throw new Error('Must provide either resultIndex or resultText, but not both');
   }
 
   const searchInput = page.getByTestId(testId);
+  console.log('searchInput', searchInput);
   await expect(searchInput).toBeVisible();
 
   // Click the input field, which will trigger the Project search
   await page.click(`input[data-testid="${testId}"]`);
+  console.log('clicked input field');
 
-  // Capture the text of the search result before clicking it
-  const searchResultLocator = page.getByTestId(`${testId}--search-result-li-${resultIndex}`);
+  // Wait for results to be visible
+  await page.waitForSelector(`[data-testid="${testId}--search-results-ul"]`);
+  console.log('results to be visible');
+
+  let searchResultLocator;
   let selectedOptionText;
 
-  if (verify) {
-    // Wait for the search result to be visible and capture its text
-    await expect(searchResultLocator).toBeVisible();
-    selectedOptionText = (await searchResultLocator.textContent()).trim();
+  if (resultIndex != null) {
+    console.log('selection by index');
+    // Selection by index: Directly locate the result at the specified index
+    searchResultLocator = page.getByTestId(`${testId}--search-result-li-${resultIndex}`);
+    if (verify) {
+      await expect(searchResultLocator).toBeVisible();
+      selectedOptionText = (await searchResultLocator.textContent()).trim();
+    }
+  } else {
+    console.log('selection by text');
+    // Selection by text: Find the first matching result by exact text match
+    // Get all search result items from the autocomplete dropdown
+    const resultItems = await page.locator(`[data-testid^="${testId}--search-result-li-"]`).all();
+    console.log('resultItems', resultItems);
+
+    let matchingIndex = -1;
+    const matchingIndices = [];
+
+    // Iterate through all results to find matches
+    for (let i = 0; i < resultItems.length; i += 1) {
+      console.log('processing result item', i);
+      const button = resultItems[i].locator('button');
+      console.log('button', button);
+      /* eslint-disable-next-line no-await-in-loop */
+      const text = (await button.textContent()).trim();
+      console.log('text', text);
+      // Check for exact text match
+      if (text === resultText) {
+        console.log('exact text match');
+        matchingIndices.push(i);
+        // Store the first matching index
+        if (matchingIndex === -1) {
+          console.log('storing first matching index', i);
+          matchingIndex = i;
+        }
+      }
+    }
+
+    if (matchingIndex === -1) {
+      throw new Error(`No autocomplete result found with text "${resultText}"`);
+    }
+
+    // ambiguous selection
+    if (matchingIndices.length > 1) {
+      throw new Error(`Multiple autocomplete results (${matchingIndices.length}) found with text "${resultText}". Use resultIndex instead.`);
+    }
+
+    // Use the matching index to locate the result element
+    searchResultLocator = page.getByTestId(`${testId}--search-result-li-${matchingIndex}`);
+    console.log('searchResultLocator', searchResultLocator);
+    selectedOptionText = resultText;
+    console.log('selectedOptionText', selectedOptionText);
   }
 
-  // Select the search result at the specified index
+  // Select the search result
   await searchResultLocator.click();
+  const selectedOption = await searchResultLocator.textContent();
+  console.log('selected search result', selectedOption);
 
-  // Verify that the correct value was selected if requested
+  // Verify that the value was selected, if requested
   if (verify) {
-    // Wait for the input to be populated with the selected value
     const inputElement = page.locator(`input[data-testid="${testId}"]`);
     await expect(inputElement).toHaveValue(selectedOptionText);
     return selectedOptionText;
@@ -94,7 +165,10 @@ export async function selectAutocompleteResult({
  * @param {string} params.testId - The test ID of the autocomplete field
  * @returns {Promise<string[]>} Array of result texts
  */
-export async function getAutoCompleteResults({ page, testId }) {
+export async function getAutoCompleteResults({
+  page,
+  testId,
+}) {
   // Click to open the autocomplete dropdown
   const autocomplete = page.getByTestId(testId);
   await autocomplete.click();
@@ -102,7 +176,7 @@ export async function getAutoCompleteResults({ page, testId }) {
   // Wait for results to appear
   await page.waitForSelector(`[data-testid="${testId}--search-results-ul"]`);
 
-  // Get all result items (excluding the count li and load-more li)
+  // Get all result items (excluding the 'Count' li and 'Load More' li)
   const resultItems = await page.locator(`[data-testid^="${testId}--search-result-li-"]`).all();
 
   // Extract text from each button inside the li elements
@@ -114,6 +188,10 @@ export async function getAutoCompleteResults({ page, testId }) {
     }),
   );
 
+  // Click on the help icon of the autocomplete, to close the autocomplete.
+  //  - TODO: find a better way to close the autocomplete.
+  await page.getByTestId(`${testId}-popover`).click();
+
   return results;
 }
 
@@ -124,7 +202,10 @@ export async function getAutoCompleteResults({ page, testId }) {
  * @param {string} params.testId - The test ID of the autocomplete field
  * @returns {Promise<void>}
  */
-export async function assertAutoCompleteEmpty({ page, testId }) {
+export async function assertAutoCompleteEmpty({
+  page,
+  testId,
+}) {
   const inputField = page.getByTestId(testId);
   await expect(inputField).toHaveValue('');
 }
@@ -136,7 +217,10 @@ export async function assertAutoCompleteEmpty({ page, testId }) {
  * @param {string} params.testId - The test ID of the autocomplete field
  * @returns {Promise<void>}
  */
-export async function assertAutoCompleteDisabled({ page, testId }) {
+export async function assertAutoCompleteDisabled({
+  page,
+  testId,
+}) {
   const inputField = page.getByTestId(testId);
   await expect(inputField).toBeDisabled();
 }
@@ -149,7 +233,11 @@ export async function assertAutoCompleteDisabled({ page, testId }) {
  * @param {boolean} [params.verify=false] - Whether to verify the field was cleared
  * @returns {Promise<void>}
  */
-export async function clearAutoComplete({ page, testId, verify = false }) {
+export async function clearAutoComplete({
+  page,
+  testId,
+  verify = false,
+}) {
   const resetButton = page.locator(`[data-testid="${testId}--container"] [aria-label="reset"]`);
   await expect(resetButton).toBeVisible();
   await resetButton.click();
@@ -227,7 +315,7 @@ export async function selectDropdownOption({
   const targetOption = options.nth(targetOptionIndex);
   await targetOption.click();
 
-  // Verify that the correct value was selected
+  // Verify that the value was selected
   if (verify) {
     const selectedValueElement = dropdownSelect.locator('.va-select-content__option');
     const selectedValue = (await selectedValueElement.textContent()).trim();
@@ -242,7 +330,7 @@ export async function selectDropdownOption({
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string} params.testId - The test ID of the input field
  * @param {string} params.value - The value to enter into the input field
- * @param {boolean} [params.verify=false] - Whether to verify the name was entered correctly
+ * @param {boolean} [params.verify=false] - Whether to verify the name was entered
  * @returns {Promise<void>}
  */
 export async function typeInputValue({

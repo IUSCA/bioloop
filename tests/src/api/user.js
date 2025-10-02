@@ -2,7 +2,10 @@ const { randomUUID } = require('node:crypto');
 const { post, get } = require('./index');
 
 const createTestUser = async ({
-  requestContext, token, role, data = {},
+  requestContext,
+  token,
+  role,
+  data = {},
 } = {}) => {
   const payload = {};
   payload.username = !data.username
@@ -26,7 +29,9 @@ const createTestUser = async ({
 };
 
 const generateUniqueUsername = async ({
-  requestContext, token, baseUsername = 'testUser',
+  requestContext,
+  token,
+  baseUsername = 'testUser',
 }) => {
   const candidate = baseUsername ? `${baseUsername}-${randomUUID()}` : randomUUID();
 

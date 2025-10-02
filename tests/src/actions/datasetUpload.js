@@ -34,7 +34,10 @@ async function trackSelectedFilesMetadata({ page }) {
  * @param {string[]} params.filePaths - Array of file paths to upload
  * @returns {Promise<void>}
  */
-async function selectFiles({ page, filePaths }) {
+async function selectFiles({
+  page,
+  filePaths,
+}) {
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
     page.click('[data-testid="upload-file-select"]'),

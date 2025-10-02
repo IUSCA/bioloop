@@ -7,14 +7,17 @@ const normalizeUrl = (url) => (url.startsWith('/') ? url : `/${url}`);
 
 const absoluteUrl = (url) => `${config.apiBaseURL}${normalizeUrl(url)}`;
 
-const getContext = async (requestContext) => requestContext || request.newContext({
+const getRequestContext = async (requestContext) => requestContext || request.newContext({
   baseURL: config.apiBaseURL,
 });
 
 const get = async ({
-  requestContext, token, url, params,
+  requestContext,
+  token,
+  url,
+  params,
 }) => {
-  const context = await getContext(requestContext);
+  const context = await getRequestContext(requestContext);
   return context.get(absoluteUrl(url), {
     params,
     headers: {
@@ -24,9 +27,12 @@ const get = async ({
 };
 
 const post = async ({
-  requestContext, token, url, data,
+  requestContext,
+  token,
+  url,
+  data,
 }) => {
-  const context = await getContext(requestContext);
+  const context = await getRequestContext(requestContext);
   return context.post(absoluteUrl(url), {
     data,
     headers: {
@@ -36,9 +42,12 @@ const post = async ({
 };
 
 const patch = async ({
-  requestContext, token, url, data,
+  requestContext,
+  token,
+  url,
+  data,
 }) => {
-  const context = await getContext(requestContext);
+  const context = await getRequestContext(requestContext);
   return context.patch(absoluteUrl(url), {
     data,
     headers: {
@@ -48,9 +57,12 @@ const patch = async ({
 };
 
 const put = async ({
-  requestContext, token, url, data,
+  requestContext,
+  token,
+  url,
+  data,
 }) => {
-  const context = await getContext(requestContext);
+  const context = await getRequestContext(requestContext);
   return context.put(absoluteUrl(url), {
     data,
     headers: {
@@ -60,9 +72,12 @@ const put = async ({
 };
 
 const deleteApi = async ({
-  requestContext, token, url, params,
+  requestContext,
+  token,
+  url,
+  params,
 }) => {
-  const context = await getContext(requestContext);
+  const context = await getRequestContext(requestContext);
   return context.delete(absoluteUrl(url), {
     params,
     headers: {
