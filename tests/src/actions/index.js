@@ -28,23 +28,78 @@ export async function assertSelectValue({
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string} params.testId - The test ID of the checkbox wrapper
- * @param {boolean} params.expectedState - Whether the checkbox should be checked (true) or
+ * @param {boolean} params.state - Whether the checkbox should be checked (true) or
  * unchecked (false)
  * @returns {Promise<void>}
  */
 export async function assertCheckboxState({
   page,
   testId,
-  expectedState,
+  state,
 }) {
+  if (typeof state !== 'boolean') {
+    throw new Error('state must be a boolean');
+  }
+
+  if (state == null) {
+    throw new Error('state must be provided');
+  }
+
   const checkboxWrapper = page.getByTestId(testId);
   await expect(checkboxWrapper).toBeVisible();
   const checkbox = checkboxWrapper.locator('input[type="checkbox"]');
 
-  if (expectedState) {
-    await expect(checkbox).toBeChecked();
-  } else {
-    await expect(checkbox).not.toBeChecked();
+  const isCurrentlyChecked = (await checkbox.getAttribute('aria-checked')) === 'true';
+
+  expect(isCurrentlyChecked).toBe(state);
+}
+
+/**
+ * Sets the state of a checkbox
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The test ID of the checkbox wrapper
+ * @param {boolean} params.state - The state to set the checkbox to
+ * @param {boolean} [params.verify=false] - Whether to verify the checkbox state was set
+ * @returns {Promise<void>}
+ */
+export async function setCheckboxState({
+  page,
+  testId,
+  state,
+  verify = false,
+}) {
+  if (state == null) {
+    throw new Error('state must be provided');
+  }
+
+  if (typeof state !== 'boolean') {
+    throw new Error('state must be a boolean');
+  }
+
+  const checkboxWrapper = page.getByTestId(testId);
+  await expect(checkboxWrapper).toBeVisible();
+  const checkbox = checkboxWrapper.locator('input[type="checkbox"]');
+
+  const isCurrentlyChecked = (await checkbox.getAttribute('aria-checked')) === 'true';
+
+  // Checkbox should be toggled if:
+  // - requested state is 'checked', and checkbox is currently unchecked
+  // - requested state is 'unchecked', and checkbox is currently checked
+  const shouldToggleCheckboxState = (state && !isCurrentlyChecked)
+   || (!state && isCurrentlyChecked);
+
+  if (shouldToggleCheckboxState) {
+    const label = checkboxWrapper.locator('label.va-checkbox__label');
+    await label.click();
+  }
+
+  if (verify) {
+    await assertCheckboxState({
+      page,
+      testId,
+      state,
+    });
   }
 }
 
@@ -64,66 +119,55 @@ export async function selectAutocompleteResult({
   resultIndex,
   resultText,
   verify = false,
-}) {
-  console.log('testId', testId);
-  console.log('resultIndex', resultIndex);
-  console.log('resultText', resultText);
-  console.log('verify', verify);
-
+} = {}) {
+  let _resultIndex;
   // Validate that exactly one selection method is provided
-  if ((resultIndex != null && resultText != null)
-      || (resultIndex == null && resultText == null)) {
-    throw new Error('Must provide either resultIndex or resultText, but not both');
+  if ((resultIndex != null && resultText != null)) {
+    throw new Error('Must not provide both resultIndex and resultText');
+  }
+
+  // If no selection method is provided, default to the first result
+  if (resultIndex == null && resultText == null) {
+    _resultIndex = 0;
   }
 
   const searchInput = page.getByTestId(testId);
-  console.log('searchInput', searchInput);
   await expect(searchInput).toBeVisible();
 
   // Click the input field, which will trigger the Project search
   await page.click(`input[data-testid="${testId}"]`);
-  console.log('clicked input field');
 
   // Wait for results to be visible
   await page.waitForSelector(`[data-testid="${testId}--search-results-ul"]`);
-  console.log('results to be visible');
 
   let searchResultLocator;
   let selectedOptionText;
 
-  if (resultIndex != null) {
-    console.log('selection by index');
+  if (_resultIndex != null) {
     // Selection by index: Directly locate the result at the specified index
-    searchResultLocator = page.getByTestId(`${testId}--search-result-li-${resultIndex}`);
+    searchResultLocator = page.getByTestId(`${testId}--search-result-li-${_resultIndex}`);
     if (verify) {
       await expect(searchResultLocator).toBeVisible();
       selectedOptionText = (await searchResultLocator.textContent()).trim();
     }
   } else {
-    console.log('selection by text');
     // Selection by text: Find the first matching result by exact text match
     // Get all search result items from the autocomplete dropdown
     const resultItems = await page.locator(`[data-testid^="${testId}--search-result-li-"]`).all();
-    console.log('resultItems', resultItems);
 
     let matchingIndex = -1;
     const matchingIndices = [];
 
     // Iterate through all results to find matches
     for (let i = 0; i < resultItems.length; i += 1) {
-      console.log('processing result item', i);
       const button = resultItems[i].locator('button');
-      console.log('button', button);
       /* eslint-disable-next-line no-await-in-loop */
       const text = (await button.textContent()).trim();
-      console.log('text', text);
       // Check for exact text match
       if (text === resultText) {
-        console.log('exact text match');
         matchingIndices.push(i);
         // Store the first matching index
         if (matchingIndex === -1) {
-          console.log('storing first matching index', i);
           matchingIndex = i;
         }
       }
@@ -135,20 +179,16 @@ export async function selectAutocompleteResult({
 
     // ambiguous selection
     if (matchingIndices.length > 1) {
-      throw new Error(`Multiple autocomplete results (${matchingIndices.length}) found with text "${resultText}". Use resultIndex instead.`);
+      throw new Error(`Multiple autocomplete results (${matchingIndices.length}) found with text "${resultText}".`);
     }
 
     // Use the matching index to locate the result element
     searchResultLocator = page.getByTestId(`${testId}--search-result-li-${matchingIndex}`);
-    console.log('searchResultLocator', searchResultLocator);
     selectedOptionText = resultText;
-    console.log('selectedOptionText', selectedOptionText);
   }
 
   // Select the search result
   await searchResultLocator.click();
-  const selectedOption = await searchResultLocator.textContent();
-  console.log('selected search result', selectedOption);
 
   // Verify that the value was selected, if requested
   if (verify) {
@@ -196,13 +236,13 @@ export async function getAutoCompleteResults({
 }
 
 /**
- * Asserts that an autocomplete field is empty
+ * Asserts that an autocomplete field has a value
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string} params.testId - The test ID of the autocomplete field
  * @returns {Promise<void>}
  */
-export async function assertAutoCompleteEmpty({
+export async function assertAutoCompleteHasValue({
   page,
   testId,
 }) {
@@ -211,18 +251,34 @@ export async function assertAutoCompleteEmpty({
 }
 
 /**
- * Asserts that an autocomplete field is disabled
+ * Asserts that an autocomplete field is in the expected state (disabled or enabled)
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string} params.testId - The test ID of the autocomplete field
+ * @param {boolean} [params.disabled=false] - Whether the autocomplete field should be disabled.
+ *    If true, the autocomplete field should be enabled.
+ *    If false, the autocomplete field should be disabled.
  * @returns {Promise<void>}
  */
-export async function assertAutoCompleteDisabled({
+export async function assertAutoCompleteState({
   page,
   testId,
-}) {
+  disabled,
+} = {}) {
+  if (disabled == null) {
+    throw new Error('disabled must be provided');
+  }
+
+  if (typeof disabled !== 'boolean') {
+    throw new Error('disabled must be a boolean');
+  }
+
   const inputField = page.getByTestId(testId);
-  await expect(inputField).toBeDisabled();
+  if (disabled) {
+    await expect(inputField).toBeDisabled();
+  } else {
+    await expect(inputField).not.toBeDisabled();
+  }
 }
 
 /**
@@ -243,7 +299,7 @@ export async function clearAutoComplete({
   await resetButton.click();
 
   if (verify) {
-    await assertAutoCompleteEmpty({ page, testId });
+    await assertAutoCompleteHasValue({ page, testId });
   }
 }
 
@@ -321,6 +377,53 @@ export async function selectDropdownOption({
     const selectedValue = (await selectedValueElement.textContent()).trim();
     await expect(selectedValue).toBe(selectedOptionText);
     return selectedOptionText;
+  }
+}
+
+/**
+ * Asserts that a select field is in the expected state (disabled or enabled)
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The test ID of the select field
+ * @param {boolean} [params.disabled=false] - Whether the select field should be disabled.
+ * @returns {Promise<void>}
+ */
+export async function assertSelectState({
+  page,
+  testId,
+  disabled,
+}) {
+  const selectField = page.getByTestId(testId);
+  await expect(selectField).toBeVisible();
+
+  if (disabled) {
+    await expect(selectField).toBeDisabled();
+  } else {
+    await expect(selectField).not.toBeDisabled();
+  }
+}
+
+/**
+ * Asserts that a select field has a value
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The test ID of the select field
+ * @param {boolean} params.hasValue - Whether the select field should have a value
+ * @returns {Promise<void>}
+ */
+export async function assertSelectHasValue({ page, testId, hasValue }) {
+  const selectField = page.getByTestId(testId);
+  const option = selectField.locator('.va-select-content__option');
+  const placeholder = selectField.locator('.va-select-content__placeholder');
+
+  if (hasValue) {
+    // Ensure option is present and non-empty
+    await expect(option).toHaveCount(1);
+    await expect(option).not.toHaveText('');
+  } else {
+    // Ensure no option is present, and placeholder is visible
+    await expect(option).toHaveCount(0);
+    await expect(placeholder).toBeVisible();
   }
 }
 

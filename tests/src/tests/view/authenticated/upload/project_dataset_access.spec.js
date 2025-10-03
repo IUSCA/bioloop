@@ -113,7 +113,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await setup();
     });
 
-    test.describe('`user` role should only be able to choose options from Projects and Datasets that they have access to', () => {
+    test.describe('`user` role access to Projects and Datasets', () => {
       test.beforeAll(async ({ browser, attachmentManager }) => {
         // Create a new browser instance for logging-in as `user` role User
         userPage = await browser.newPage();
@@ -168,7 +168,7 @@ test.describe.serial('Dataset Upload Process', () => {
       });
     });
 
-    test.describe('`operator` role should be able to choose any Datasets as Source Raw Data, and any Project', () => {
+    test.describe('`operator` role access to Projects and Datasets', () => {
       test.beforeAll(async ({ browser, attachmentManager }) => {
         // Create a new browser instance for logging-in as `operator` role User
         operatorPage = await browser.newPage();
@@ -226,7 +226,7 @@ test.describe.serial('Dataset Upload Process', () => {
       });
     });
 
-    test.describe('`admin` role should be able to choose any Datasets as Source Raw Data, and any Project', async () => {
+    test.describe('`admin` role access to Projects and Datasets', async () => {
       test.beforeAll(async ({ browser, attachmentManager }) => {
         // Create a new browser instance for logging-in as `admin` role User
         adminPage = await browser.newPage();

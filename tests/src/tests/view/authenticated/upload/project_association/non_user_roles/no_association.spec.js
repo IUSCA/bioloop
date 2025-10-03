@@ -77,10 +77,10 @@ test.describe.serial('Dataset Upload Process', () => {
         token,
         type: selectedDatasetType,
       });
-
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
-      await navigateToNextStep({ page });
+      // Click the "Upload" button
+      await page.getByTestId('upload-next-button').click();
     });
 
     test('should not associate the uploaded Dataset with any Project', async () => {

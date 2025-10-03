@@ -1,11 +1,14 @@
 import {
-  assertAutoCompleteDisabled,
-  assertAutoCompleteEmpty,
+  assertAutoCompleteHasValue,
+  assertAutoCompleteState,
   assertCheckboxState,
+  assertSelectHasValue,
+  assertSelectState,
   assertSelectValue,
   clearAutoComplete,
   selectAutocompleteResult,
   selectDropdownOption,
+  setCheckboxState,
 } from '../../../../actions';
 import {
   selectFiles,
@@ -65,10 +68,10 @@ test.describe.serial('Dataset Upload Process', () => {
       await assertCheckboxState({
         page,
         testId: 'upload-metadata-assign-source-checkbox',
-        expectedState: true,
+        state: true,
       });
       // Verify that the 'Search Raw Data' input field is empty
-      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-dataset-autocomplete' });
 
       // Verify that the "Assign Project" row is visible
       const assignProjectRow = page.getByTestId('upload-metadata-assign-project-row');
@@ -78,11 +81,11 @@ test.describe.serial('Dataset Upload Process', () => {
       await assertCheckboxState({
         page,
         testId: 'upload-metadata-assign-project-row',
-        expectedState: true,
+        state: true,
         isRowContainer: true,
       });
       // Verify that the 'Search Projects' input field is empty
-      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-project-autocomplete' });
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-project-autocomplete' });
 
       // Verify that the "Assign source Instrument" row is visible
       const assignInstrumentRow = page.getByTestId('upload-metadata-assign-instrument-row');
@@ -92,7 +95,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await assertCheckboxState({
         page,
         testId: 'upload-metadata-assign-instrument-row',
-        expectedState: true,
+        state: true,
         isRowContainer: true,
       });
       // Verify that the 'Source Instrument' select field is visible and has the
@@ -165,11 +168,11 @@ test.describe.serial('Dataset Upload Process', () => {
       await assertCheckboxState({
         page,
         testId: 'upload-metadata-assign-source-checkbox',
-        expectedState: true,
+        state: true,
       });
 
       // assert that the `Source Raw Data` input field is empty
-      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-dataset-autocomplete' });
 
       // select an option in the `Source Raw Data` input field
       await selectAutocompleteResult({
@@ -190,14 +193,176 @@ test.describe.serial('Dataset Upload Process', () => {
       await assertCheckboxState({
         page,
         testId: 'upload-metadata-assign-source-checkbox',
-        expectedState: false,
+        state: false,
       });
 
       // assert that the `Source Raw Data` input field is empty
-      await assertAutoCompleteEmpty({ page, testId: 'upload-metadata-dataset-autocomplete' });
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-dataset-autocomplete' });
 
       // assert that the `Source Raw Data` input field is disabled
-      await assertAutoCompleteDisabled({ page, testId: 'upload-metadata-dataset-autocomplete' });
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        disabled: true,
+      });
+    });
+
+    test('should disable and clear `Source Raw Data` field when `Assign Source Raw Data` is unchecked', async () => {
+      // select an option in the `Source Raw Data` input field
+      // - first, reset the Dataset Type to its default value, so that a Source
+      // Raw Data can be assigned
+      await selectDropdownOption({
+        page,
+        testId: 'upload-metadata-dataset-type-select',
+        optionToSelect: defaultDatasetType,
+        verify: true,
+      });
+      // - then, verify that the `Assign Source Raw Data` checkbox is enabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        state: true,
+      });
+      // - then, verify that the Source Raw Data Autocomplete is enabled
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        disabled: false,
+      });
+      // - then, select an option in the `Source Raw Data` input field
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        verify: true,
+      });
+
+      // uncheck the `Assign Source Raw Data` checkbox
+      await setCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        state: false,
+        verify: true,
+      });
+
+      // assert that the `Source Raw Data` input field is empty
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-dataset-autocomplete' });
+
+      // assert that the `Source Raw Data` input field is disabled
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        disabled: true,
+      });
+
+      // check the `Assign Source Raw Data` checkbox
+      await setCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-source-checkbox',
+        state: true,
+        verify: true,
+      });
+
+      // assert that the `Source Raw Data` input field is empty
+      await assertAutoCompleteHasValue({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+      });
+
+      // assert that the `Source Raw Data` input field is not disabled
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
+        disabled: false,
+      });
+    });
+
+    test('should disable and clear `Project` field when `Assign Project` checkbox is unchecked', async () => {
+      // assert that the `Assign Project` checkbox is enabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-project-checkbox',
+        state: true,
+      });
+
+      // select an option in the `Project` input field
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        verify: true,
+      });
+
+      // uncheck the `Assign Project` checkbox
+      await setCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-project-checkbox',
+        state: false,
+        verify: true,
+      });
+
+      // assert that the `Project` input field is empty
+      await assertAutoCompleteHasValue({ page, testId: 'upload-metadata-project-autocomplete' });
+
+      // assert that the `Project` input field is disabled
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        disabled: true,
+      });
+
+      // check the `Assign Project` checkbox
+      await setCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-project-checkbox',
+        state: true,
+        verify: true,
+      });
+
+      // assert that the `Project` input field is empty
+      await expect(page.getByTestId('upload-metadata-project-autocomplete')).toHaveValue('');
+
+      // assert that the `Project` input field is not disabled
+      await assertAutoCompleteState({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        disabled: false,
+      });
+    });
+
+    test('should disable and clear `Source Instrument` field when `Assign Source Instrument` checkbox is unchecked', async () => {
+      // assert that the `Assign Source Instrument` checkbox is enabled
+      await assertCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-instrument-checkbox',
+        state: true,
+      });
+      // assert that the `Source Instrument` select field is not empty
+      await assertSelectHasValue({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        hasValue: true,
+      });
+
+      // uncheck the `Assign Source Instrument` checkbox
+      await setCheckboxState({
+        page,
+        testId: 'upload-metadata-assign-instrument-checkbox',
+        state: false,
+        verify: true,
+      });
+
+      // assert that the `Source Instrument` select field is disabled
+      await assertSelectState({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        disabled: true,
+      });
+
+      // assert that the `Source Instrument` select field is empty
+      await assertSelectHasValue({
+        page,
+        testId: 'upload-metadata-source-instrument-select',
+        hasValue: false,
+      });
     });
   });
 });

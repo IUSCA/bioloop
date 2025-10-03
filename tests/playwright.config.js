@@ -33,7 +33,7 @@ module.exports = {
     workers: process.env.CI ? 1 : undefined,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     // reporter: 'html',
-    // timeout: 30000,
+    timeout: 5000,
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -52,13 +52,13 @@ module.exports = {
 
     /* Configure projects for major browsers */
     projects: [
-      // {
-      //   name: 'admin_login',
-      //   testMatch: path.join(
-      //     __dirname,
-      //     '/src/tests/setup/admin_login.setup.js',
-      //   ),
-      // },
+      {
+        name: 'admin_login',
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/admin_login.setup.js',
+        ),
+      },
 
       // {
       //   name: 'operator_login',
@@ -139,14 +139,24 @@ module.exports = {
       // '/view/authenticated/upload/initiate_upload.spec.js', },
 
       {
-        name: 'upload--source_dataset_access',
+        name: 'upload--general_info_step',
         use: {
           ...devices['Desktop Chrome'],
-          // storageState: ADMIN_STORAGE_STATE,
+          storageState: ADMIN_STORAGE_STATE,
         },
-        // dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/upload/project_access.spec.js',
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/upload/general_info_step.spec.js',
       },
+
+      // {
+      //   name: 'upload--source_dataset_access',
+      //   use: {
+      //     ...devices['Desktop Chrome'],
+      //     // storageState: ADMIN_STORAGE_STATE,
+      //   },
+      //   // dependencies: ['admin_login'],
+      //   testMatch: '/view/authenticated/upload/project_access.spec.js',
+      // },
 
       // {
       //   name: 'upload--project_association--user_role--access',

@@ -87,7 +87,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(projectText).toContainText(NEW_PROJECT_TEXT);
 
       // Click the "Upload" button
-      await navigateToNextStep({ page });
+      await page.getByTestId('upload-next-button').click();
     });
 
     test('should create a new Project', async () => {

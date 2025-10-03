@@ -99,7 +99,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
       // Click the "Upload" button
-      await navigateToNextStep({ page });
+      await page.getByTestId('upload-next-button').click();
     });
 
     // Assert that "Processing" status is shown when Upload button is clicked

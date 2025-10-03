@@ -85,7 +85,8 @@ test.describe.serial('Dataset Upload Process', () => {
       // console.log('using dataset name', uploadedDatasetName);
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
-      await navigateToNextStep({ page });
+      // Click the "Upload" button
+      await page.getByTestId('upload-next-button').click();
     });
 
     test('should associate the uploaded Dataset with the selected Project', async () => {
