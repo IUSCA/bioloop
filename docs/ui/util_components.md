@@ -813,6 +813,57 @@ Events
 - `update:searchTerm` - emitted when the `searchTerm` v-model is to be updated
 - `scroll-end` - emitted when user scrolls to the end of the current batch of results
 
+## OutlinedAlert
+
+A customizable alert component.
+
+### Primary Features:
+- Can be outlined (bordered)
+  - Vuestic's `va-alert` component, when used with the `outline` prop, changes the background color inside the alert. If this is not desirable, this component can serve as an alternative.
+- Can include an icon preceding the alert text
+- Can be customized in terms of size, text-color, border, padding-direction, padding-amount, the icon displayed and the icon's size.
+
+### Basic Usage
+
+```html
+<template>
+  <OutlinedAlert
+    icon="info"
+    color="primary"
+    border="left"
+  >
+    This is an alert message.
+  </OutlinedAlert>
+  
+  <OutlinedAlert 
+    icon="warning" 
+    color="danger" 
+    border="all" 
+    padding-direction="left" 
+    padding-amount="lg" 
+    size="large"
+  >
+    Warning: This is a more customized alert message.
+  </OutlinedAlert>
+</template>
+```
+
+### Props
+- size: String - Overall size of the alert. Options: "small", "medium", "large". Default: "medium"
+- icon: String - The icon to be displayed. Default: "info"
+- iconSize: String - Size of the icon. Options: "small", "medium", "large". Default: "medium"
+- border: String - Border style. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- color: String - Color of the alert. Default: "primary"
+- paddingDirection: String - Direction of padding. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- paddingAmount: String | Number - Amount of padding. Options: "none", "xs", "sm", "md", "lg", "xl", "2xl", "default", or a number (px) or string (custom value). Default: "default"
+
+### Slots
+- default: The content of the alert
+
+### Styling
+- Uses Tailwind classes
+
+
 ## Maybe
 
 Show data if it is neither null or undefined, else show default (provided it is also not null or undefined)

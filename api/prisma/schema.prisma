@@ -186,6 +186,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
   user_notifications         user_notification[]
+  owned_projects project[]
   // created_datasets           dataset_create_log[]
 }
 
@@ -305,6 +306,8 @@ model project {
   metadata        Json?
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   updated_at      DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  owner_id        Int?
+  owner           user?             @relation(fields: [owner_id], references: [id], onDelete: SetNull)
   users           project_user[]
   datasets        project_dataset[]
   contacts        project_contact[]
