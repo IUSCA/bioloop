@@ -6,7 +6,7 @@ global.__basedir = path.join(__dirname, '..');
 const request = require('supertest');
 const issueToken = require('../src/scripts/issue_token');
 
-const server = 'http://localhost:9001';
+const server = 'http://localhost:3030';
 let token = null;
 
 async function getAuthRequest() {
