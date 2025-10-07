@@ -115,8 +115,6 @@ function show() {
 }
 
 function handleSearch() {
-  console.log("AlertSearchModal handleSearch called");
-  console.log("form.value: ", form.value);
   const newFilters = { ...form.value };
 
   if (newFilters.active !== null) {
@@ -125,17 +123,14 @@ function handleSearch() {
   }
 
   filters.value = newFilters;
-  console.log("filters.value after reset: ", filters.value);
 
   hide();
-  // console.log("AlertSearchModal handleSearch called");
   emit("search");
 }
 
 function handleReset() {
   form.value = {
     ...store.defaultFilters(),
-    // date_range: null,
   };
 }
 
@@ -148,11 +143,6 @@ watch(
     }
   },
 );
-
-onMounted(() => {
-  console.log("AlertSearchModal mounted");
-  console.log("filters.value: ", filters.value);
-});
 
 defineExpose({
   show,

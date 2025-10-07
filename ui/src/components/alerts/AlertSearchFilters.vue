@@ -69,10 +69,7 @@ function getFilterDisplay(filter) {
 }
 
 function removeFilter(key) {
-  console.log("Removing filter:", key);
-  console.log("filters before removal:", filters.value);
   filters.value[key] = null;
-  console.log("filters after removal:", filters.value);
   delete chipStates.value[key];
   emit("search");
 }
@@ -80,13 +77,8 @@ function removeFilter(key) {
 watch(
   chipStates,
   (newStates) => {
-    // console.log("chipStates changed: oldStates", oldStates);
-    // console.log("chipStates changed: newStates", newStates);
     Object.keys(newStates).forEach((key) => {
-      if (
-        newStates[key] === false
-        // && oldStates[key] === true
-      ) {
+      if (newStates[key] === false) {
         removeFilter(key);
       }
     });

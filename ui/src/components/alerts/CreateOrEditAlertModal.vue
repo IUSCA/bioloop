@@ -78,6 +78,7 @@ const getDefaultAlert = () => ({
   type: "INFO",
   start_time: null,
   end_time: null,
+  is_hidden: false,
 });
 
 const alertData = ref(getDefaultAlert());
@@ -92,9 +93,9 @@ const showModal = (alert = null) => {
       type: alert.type,
       start_time: alert.start_time ? new Date(alert.start_time) : null,
       end_time: alert.end_time ? new Date(alert.end_time) : null,
+      is_hidden: alert.is_hidden ?? false,
     };
   } else {
-    // console.log("else (new alert)");
     alertData.value = getDefaultAlert();
   }
 };
@@ -102,15 +103,10 @@ const showModal = (alert = null) => {
 defineExpose({ showModal });
 
 const handleSubmit = async () => {
-  console.log("handleSubmit() called");
   const isFormValid = await validate();
-  console.log("isFormValid", isFormValid);
   if (isFormValid) {
     await saveAlert();
-    // refresh store's alerts
     await alertStore.fetchAlerts();
-  } else {
-    // toast.error("Please fill in all required fields correctly");
   }
 };
 
@@ -120,8 +116,6 @@ const hideModal = () => {
 
 const saveAlert = async () => {
   loading.value = true;
-
-  console.log("Saving alert:", alertData.value);
 
   try {
     if (alertData.value.id) {
@@ -139,8 +133,4 @@ const saveAlert = async () => {
     loading.value = false;
   }
 };
-
-// const validateForm = () => {
-//   validate();
-// };
 </script>

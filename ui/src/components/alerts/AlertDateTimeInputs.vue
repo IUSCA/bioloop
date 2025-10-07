@@ -51,7 +51,6 @@ const props = defineProps({
 const emit = defineEmits([
   "update:startTime",
   "update:endTime",
-  // "validateForm",
 ]);
 
 const now = new Date();
@@ -71,14 +70,12 @@ function getDefaultEndTime() {
 const updateDateTime = (currentValue, newDate, newTime) => {
   const updatedDateTime = new Date(newDate);
   updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
-  console.log("Updated DateTime:", updatedDateTime);
   return updatedDateTime;
 };
 
 const updateTime = (currentValue, newTime) => {
   const updatedDateTime = new Date(currentValue);
   updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes(), 0, 0);
-  console.log("Updated Time:", updatedDateTime);
   return updatedDateTime;
 };
 
@@ -153,33 +150,6 @@ const validateStartDateTime = () => {
   return true;
 };
 
-// const validateStartTime = (value) => {
-//   if (!value) return true;
-//   const now = new Date();
-//   const selectedDateTime = new Date(internalStartTime.value);
-//   return (
-//     selectedDateTime.getTime() > now.getTime() ||
-//     "Start time must be in the future"
-//   );
-// };
-//
-// const validateStartDate = (value) => {
-//   if (!value) return true;
-//   const today = new Date();
-//   today.setHours(0, 0, 0, 0);
-//   return (
-//     new Date(value) >= today || "Start date must be today or in the future"
-//   );
-// };
-
-// watch(internalStartTime, () => {
-//   validateEndDateTime();
-// });
-
-// watch(start_date, () => {
-//   validateStartTime(internalStartTime.value);
-// });
-
 watch(
   () => props.startTime,
   (newValue) => {
@@ -201,23 +171,11 @@ watch(
 );
 
 const emitDefaultValues = () => {
-  console.log("Emitting default values");
-  // console.log("Start Time:", start_time.value);
-  // console.log("End Time:", end_time.value);
-  console.log("internalStartTime:", internalStartTime.value);
-  console.log("internalEndTime:", internalEndTime.value);
-
   emit("update:startTime", internalStartTime.value);
-
   emit("update:endTime", internalEndTime.value);
-  // }
 };
 
 onMounted(() => {
   emitDefaultValues();
 });
-
-// watch([start_date, start_time, end_date, end_time], () => {
-//   emit("validateForm");
-// });
 </script>

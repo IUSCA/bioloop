@@ -20,8 +20,6 @@ export const useAlertStore = defineStore("alert", () => {
   const filters = computed({
     get: () => params.value.filters,
     set: (newFilters) => {
-      console.log("filters changed, updating refObject");
-      console.log("new filters:", newFilters);
       params.value.filters = newFilters;
     },
   });
@@ -69,7 +67,6 @@ export const useAlertStore = defineStore("alert", () => {
     return {
       filters: defaultFilters(),
       query: defaultQuery(),
-      // inclusive_query: null,
     };
   }
 
@@ -92,13 +89,11 @@ export const useAlertStore = defineStore("alert", () => {
   }
 
   async function fetchAlerts() {
-    // const currentTime = new Date().toISOString();
     try {
       const response = await alertService.getAll({
         active: true,
       });
       alerts.value = response.data.alerts;
-      // alerts.value = []
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
     }
@@ -128,14 +123,6 @@ export const useAlertStore = defineStore("alert", () => {
       pollingInterval.value = null;
     }
   }
-
-  // async function setPollingFrequency(frequency) {
-  //   pollingFrequency.value = frequency;
-  //   if (pollingInterval.value) {
-  //     stopPolling();
-  //     await startPolling();
-  //   }
-  // }
 
   function dismissAlert(alertId) {
     dismissedAlerts.value[alertId] = {
@@ -189,6 +176,5 @@ export const useAlertStore = defineStore("alert", () => {
     isAlertDismissed,
     startPolling,
     stopPolling,
-    // setPollingFrequency,
   };
 });

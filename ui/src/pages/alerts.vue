@@ -68,9 +68,18 @@
     </template>
 
     <template #cell(is_active)="{ value }">
-      <span v-if="value" class="flex justify-center">
-        <i-mdi-check-circle-outline class="text-green-700" />
-      </span>
+      <div class="flex justify-center">
+        <va-badge
+          v-if="value"
+          text="Active"
+          color="success"
+        />
+        <va-badge
+          v-else
+          text="Inactive"
+          color="gray"
+        />
+      </div>
     </template>
 
     <template #cell(message)="{ value }">
@@ -129,7 +138,6 @@
     ref="disableAlertModal"
     @confirm="
       async (alert) => {
-        console.log('confirming disable alert...');
         await confirmDisableAlert(alert);
       }
     "
@@ -264,7 +272,7 @@ const toggleAlertStatus = (alert) => {
 
 const confirmDisableAlert = async (alert) => {
   try {
-    const updatedAlert = { ...alert, end_time: new Date().toISOString() };
+    const updatedAlert = { ...alert, is_hidden: true };
     await alertService.update(alert.id, updatedAlert);
     toast.success("Alert disabled successfully");
     fetchAlerts();
@@ -277,14 +285,14 @@ const confirmEnableAlert = async (alert, newStartTime, newEndTime) => {
   try {
     const updatedAlert = {
       ...alert,
-      start_time: newStartTime?.toISOString(),
-      end_time: newEndTime?.toISOString(),
+      is_hidden: false,
+      start_time: newStartTime?.toISOString() || null,
+      end_time: newEndTime?.toISOString() || null,
     };
     await alertService.update(alert.id, updatedAlert);
     toast.success("Alert enabled successfully");
     fetchAlerts();
   } catch (error) {
-    console.error("Failed to enable alert", error);
     toast.error("Failed to enable alert");
   }
 };
@@ -293,14 +301,12 @@ const fetchAlerts = async () => {
   loading.value = true;
   try {
     const response = await alertService.getAll(filter_query.value);
-    // console.log(response);
     alerts.value = response.data.alerts;
     totalAlertsCount.value = response.data.metadata.count;
   } catch (error) {
     toast.error("Failed to fetch alerts");
   } finally {
     loading.value = false;
-    // refresh store's alerts
     await alertStore.fetchAlerts();
   }
 };
@@ -326,11 +332,6 @@ const handleSearch = useDebounceFn(() => {
   fetchAlerts();
 }, 500);
 
-// const handleFilterChange = () => {
-//   params.value.page = 1;
-//   fetchAlerts();
-// };
-
 const onSave = async () => {
   await fetchAlerts();
 };
@@ -351,17 +352,6 @@ watch(
 );
 
 watch(() => params.value.query.page, fetchAlerts);
-
-// watch(filter_query, () => {
-//   params.value.query.page = 1;
-// });
-
-// watch(
-//   () => activeFilters.value,
-//   () => {
-//     console.log("filters changed");
-//   },
-// );
 
 onMounted(fetchAlerts);
 </script>

@@ -39,13 +39,7 @@ const { validate } = useForm("form");
 const emit = defineEmits(["confirm"]);
 
 const showModal = (alert) => {
-  console.log("showModal", alert);
-
   currentAlert.value = alert;
-
-  // startTime.value = new Date(Date.now() + 10 * 60000);
-  // endTime.value = new Date(Date.now() + 70 * 60000);
-
   visible.value = true;
 };
 
@@ -61,12 +55,4 @@ const cancel = () => {
 };
 
 defineExpose({ showModal });
-
-// const logUpdateStartTime = (newStartTime) => {
-//   console.log("logUpdateStartTime", newStartTime);
-// };
-//
-// const logUpdateEndTime = (newEndTime) => {
-//   console.log("logUpdateEndTime", newEndTime);
-// };
 </script>

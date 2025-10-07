@@ -1,15 +1,23 @@
 <template>
-  <va-alert
-    v-model="isVisible"
-    class="y-padding-0 w-full square-corners bold-title"
-    :icon="alertService.getAlertIcon(props.type)"
-    :color="alertService.getAlertColor(props.type)"
-    :title="props.label"
-    :closeable="props.dismissable"
-    dense
+  <div
+    class="flex items-center justify-center gap-3 px-4 py-2 w-full"
+    :class="getAlertClasses(props.type)"
   >
-    {{ props.message }}
-  </va-alert>
+    <va-icon
+      :name="alertService.getAlertIcon(props.type)"
+      :color="getIconColor(props.type)"
+      size="1.25rem"
+    />
+    <div class="flex-1 text-center" v-html="props.message || props.label"></div>
+    <va-button
+      v-if="props.dismissable"
+      preset="plain"
+      size="small"
+      icon="close"
+      @click="handleClose"
+      class="flex-shrink-0"
+    />
+  </div>
 </template>
 
 <script setup>
@@ -35,26 +43,36 @@ const props = defineProps({
 
 const emit = defineEmits(["close"]);
 
-const isVisible = ref(true);
+const handleClose = () => {
+  emit("close");
+};
 
-watch(isVisible, (newValue) => {
-  if (!newValue) {
-    console.log("Alert closed");
-    emit("close");
+const getAlertClasses = (type) => {
+  switch (type) {
+    case "ERROR":
+      return "bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 border-l-4 border-red-500";
+    case "WARNING":
+      return "bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-200 border-l-4 border-amber-500";
+    case "INFO":
+      return "bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 border-l-4 border-blue-500";
+    default:
+      return "bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-200 border-l-4 border-blue-500";
   }
-});
+};
+
+const getIconColor = (type) => {
+  switch (type) {
+    case "ERROR":
+      return "#ef4444";
+    case "WARNING":
+      return "#f59e0b";
+    case "INFO":
+      return "#3b82f6";
+    default:
+      return "#3b82f6";
+  }
+};
 </script>
 
 <style scoped>
-.y-padding-0 {
-  --va-alert-margin-y: 0;
-}
-
-.square-corners {
-  border-radius: 0;
-}
-
-.bold-title :deep(.va-alert__title) {
-  font-weight: bold;
-}
 </style>
