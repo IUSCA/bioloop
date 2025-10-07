@@ -149,7 +149,13 @@ module.exports = {
         name: 'upload',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/upload/*.spec.js',
+        testMatch: '/view/authenticated/upload/**/*.spec.js',
+        testIgnore: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      },
+      {
+        name: 'upload--project_association--user_role--association',
+        use: { ...devices['Desktop Chrome'] },
+        testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
 
       // { name: 'firefox', use: {
