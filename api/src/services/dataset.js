@@ -801,6 +801,7 @@ async function _handle_project_association({
       return;
     }
 
+    // (When creating a Dataset) new Projects are only created for `user` role
     if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
       return;
     }
@@ -811,8 +812,10 @@ async function _handle_project_association({
       action: 'create',
       requester_roles,
     });
+    if (!requester_project_creation_permission.granted) {
+      throw new Error('You are not permitted to create a new Project.');
+    }
 
-    // todo - make this feature configurable
     const associating_dataset = await tx.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
     await projectService.create_project({
       tx,
