@@ -1,13 +1,13 @@
 {
   "express": {
-    "port": 9006,
-    "host": "0.0.0.0"
-  },
-  "oauth": {
-    "jwks_uri": "http://127.0.0.1:9007/oauth/jwks"
+    "port": 3060,
+    "host": "localhost"
   },
   "logger": {
     "level": "debug"
+  },
+  "auth": {
+    "jwks_uri": "http://127.0.0.1:5050/oauth/jwks"
   },
   "scope_prefix": "download_file:",
   "upload_scope": "upload_file"

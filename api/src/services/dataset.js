@@ -746,20 +746,10 @@ async function add_files({ dataset_id, data }) {
 async function _handle_project_association({
   tx, dataset_id, project_id, requester_id,
 }) {
-  console.log('will handle project association');
-  console.log('requester_id', requester_id);
-  console.log('project_id', project_id);
-  console.log('dataset_id', dataset_id);
-
   const requester = await tx.user.findUniqueOrThrow({ where: { id: requester_id } });
-  console.log('requester', requester.username, 'requester_id', requester_id);
   const requester_roles = await userService.getUserRoles({ user_id: requester_id });
-  console.log('requester_roles', requester_roles);
 
-  console.log('project_id', project_id);
   if (project_id) {
-    console.log('associating dataset with project', project_id);
-
     let is_permitted_to_assign_dataset_to_project = false;
     // Associate the Dataset with the Project.
     // Check if the user is authorized to associate Datasets to the requested Project. User is authorized if:
@@ -769,7 +759,6 @@ async function _handle_project_association({
       is_permitted_to_assign_dataset_to_project = true;
     } else {
       const associating_project_owner = await projectService.get_project_owner({ project_id });
-      console.log('associating_project_owner', associating_project_owner.username);
       const requester_project_association_permission = getPermission({
         resource: 'project_datasets',
         action: 'create',
@@ -779,14 +768,12 @@ async function _handle_project_association({
         resourceOwner: associating_project_owner.username,
       });
       is_permitted_to_assign_dataset_to_project = requester_project_association_permission.granted;
-      console.log('requester_project_association_permission', requester_project_association_permission.granted);
       is_permitted_to_assign_dataset_to_project = is_permitted_to_assign_dataset_to_project
        && await projectService.has_project_assoc({
          project_id,
          user_id: requester_id,
        });
     }
-    console.log('is_permitted_to_assign_dataset_to_project', is_permitted_to_assign_dataset_to_project);
     if (!is_permitted_to_assign_dataset_to_project) {
       throw new Error(`You are not permitted to assign Datasets to Project ${project_id}.`);
     }
@@ -797,7 +784,6 @@ async function _handle_project_association({
         assignor_id: requester_id,
       },
     });
-    console.log('Dataset associated with Project', project_id);
 
     return;
   }
@@ -808,20 +794,14 @@ async function _handle_project_association({
       user_id: requester_id,
     },
   });
-  console.log('requester_projects', requester_projects.length, 'IDs', requester_projects.map((p) => p.project_id));
 
   const will_create_project = requester_projects.length === 0;
-  console.log('will_create_project', will_create_project);
   if (will_create_project) {
-    console.log('creating new project');
-
     if (!featureService.isFeatureEnabled({ key: 'auto_create_project_on_dataset_creation' })) {
-      console.log('auto_create_project_on_dataset_creation feature is not enabled');
       return;
     }
 
     if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
-      console.log('requester has admin or operator role, will not create project');
       return;
     }
 
@@ -831,7 +811,6 @@ async function _handle_project_association({
       action: 'create',
       requester_roles,
     });
-    console.log('requester_project_creation_permission', requester_project_creation_permission.granted);
 
     // todo - make this feature configurable
     const associating_dataset = await tx.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
@@ -845,7 +824,6 @@ async function _handle_project_association({
         assignor_id: requester_id,
       },
     });
-    console.log('new project created');
   }
 }
 
@@ -871,11 +849,6 @@ async function _handle_project_association({
 async function create({
   tx, data, requester_id = null, project_id = null,
 } = {}) {
-  console.log('creating dataset');
-  console.log('data', data);
-  console.log('requester_id', requester_id);
-  console.log('project_id', project_id);
-
   // find if a dataset with the same name and type already exists
   const existingDataset = await tx.dataset.findFirst({
     where: {
@@ -900,7 +873,6 @@ async function create({
     created_dataset = await tx.dataset.create({
       data,
     });
-    console.log('created_dataset', created_dataset.name, 'created_dataset_id', created_dataset.id);
 
     await _handle_project_association({
       tx,
@@ -912,7 +884,6 @@ async function create({
     console.error('Error creating dataset:', e);
     throw e;
   }
-  console.log('created_dataset', created_dataset.name, 'created_dataset_id', created_dataset.id);
   return created_dataset;
 }
 
@@ -1209,7 +1180,7 @@ const buildDatasetsFetchQuery = ({
 const buildDatasetCreateQuery = (data) => {
   /* eslint-disable no-unused-vars */
   const {
-    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
+    name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
     user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */

@@ -8,4 +8,4 @@ scrape_configs:
   # - job_name: "api"
   #   metrics_path: "/prom-metrics"
   #   static_configs:
-  #     - targets: ["host.docker.internal:9001"]
+  #     - targets: ["host.docker.internal:3030"]

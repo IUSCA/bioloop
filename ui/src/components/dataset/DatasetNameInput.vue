@@ -42,24 +42,6 @@ const datasetNameInput = computed({
     emit("update:populatedDatasetName", value);
   },
 });
-
-// const hintsState = computed(() => {
-//   let ret = props.error
-//     ? {
-//         error: true,
-//         errorMessages: props.error,
-//       }
-//     : {
-//         messages: "Name of the uploaded dataset",
-//       };
-//   console.log("hintsState:", ret);
-//   return ret;
-// });
-//
-// onMounted(() => {
-//   console.log("Mounted DatasetNameInput");
-//   console.log("props.error:", props.error);
-// });
 </script>
 
 <style scoped>

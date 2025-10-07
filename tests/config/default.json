@@ -1,6 +1,6 @@
 {
-  "baseURL": "https://localhost:9443",
-  "apiBaseURL": "http://localhost:9001",
+  "baseURL": "https://localhost",
+  "apiBaseURL": "http://localhost",
   "e2e": {
     "users": {
       "admin": {

@@ -99,13 +99,13 @@ export default defineConfig(({ command, mode }) => {
       // as the primary web / dev server
       proxy: {
         "/api": {
-          target: "http://api:9001",
+          target: env.VITE_API_REDIRECT_URL,
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
         "/grafana": {
-          target: "http://localhost:9011",
+          target: env.VITE_GRAFANA_REDIRECT_URL,
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/grafana/, ""),
@@ -126,7 +126,7 @@ export default defineConfig(({ command, mode }) => {
           },
         },
         "/upload": {
-          target: "http://localhost:9006",
+          target: env.VITE_UPLOAD_API_URL,
           changeOrigin: true,
           secure: false,
         },

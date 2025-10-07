@@ -63,19 +63,17 @@ backup
 !db/backups
 db/backups/*.sql
 db/backups/*.psql
+db/db_postgres
 db/postgres/data/
+db/mongo/data
 
 todo.md
 
 .pm2
 
-.cursorrules
-
 rhythm_api/
 rhythm/rhythm_api
+
 signet/signet
-db/mongo/data
-db/postgres/data
-db/db_postgres
 
 .cursorrules

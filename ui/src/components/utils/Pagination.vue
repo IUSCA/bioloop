@@ -72,6 +72,14 @@ const props = defineProps({
 
 const emit = defineEmits(["update:page", "update:page_size"]);
 
+// page_size - internal state - v-model
+// page - internal state - v-model
+// total_count - props
+// page_size_options - props
+// visible-pages - props
+// total_page_count - computed
+// skip - computed
+
 const page = computed({
   get() {
     return props.page;

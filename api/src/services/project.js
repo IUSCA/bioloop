@@ -220,25 +220,16 @@ function generate_project_name({ prefix, suffix } = {}) {
 }
 
 async function build_creation_query({
-  user_ids = [], dataset_ids = [], assignor_id,
-  // owner_id,
+  user_ids = [],
+  dataset_ids = [],
+  assignor_id,
   ...payload
 
 } = {}) {
-  console.log('build_creation_query', {
-    user_ids,
-    dataset_ids,
-    assignor_id,
-    // owner_id,
-    payload,
-  });
-
   const data = _.flow([
     _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata', 'owner_id']),
     _.omitBy(_.isNil),
   ])(payload);
-
-  // console.log('data.owner_id', data.owner_id);
 
   if (!data.name || data.name.trim() === '') {
     data.name = generate_project_name();
@@ -264,7 +255,6 @@ async function build_creation_query({
     };
   }
 
-  console.log('data.owner_id', data.owner_id);
   return data;
 }
 
@@ -289,13 +279,9 @@ const create_project = async ({
   include,
   data,
 }) => {
-  console.log('create_project', {
-    owner_id: data.owner_id,
-  });
   const transactionManager = tx || prisma;
 
   const projectCreationQuery = await build_creation_query(data);
-  console.log('projectCreationQuery.owner_id', projectCreationQuery.owner_id);
   return transactionManager.project.create({
     data: projectCreationQuery,
     include: include || undefined,

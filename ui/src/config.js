@@ -5,15 +5,13 @@ const exports = {
   apiBasePath: "/api",
   uploadApiBasePath:
     import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
-  casReturn:
-    import.meta.env.VITE_CAS_RETURN || "https://localhost:9443/auth/iucas",
+  casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
-    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost:9443/auth/google",
+    import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
-    import.meta.env.VITE_CILOGON_RETURN || "https://localhost:9443/auth/cil",
+    import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
   microsoftReturn:
-    import.meta.env.VITE_MICROSOFT_RETURN ||
-    "https://localhost:9443/auth/microsoft",
+    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
     uploadToken: 20,
@@ -87,7 +85,7 @@ const exports = {
     downloads: true,
     signup: false,
     uploads: {
-      enabledForRoles: ["admin", "operator", "user"],
+      enabledForRoles: ["admin"],
     },
     auto_create_project_on_dataset_creation: {
       enabledForRoles: ["user"],

@@ -277,10 +277,6 @@ router.get(
       include_source_instrument: req.query.include_source_instrument || false,
     });
 
-    // if (true) {
-    //   throw new Error('Failed to fetch datasets');
-    // }
-
     res.json(dataset);
   }),
 );

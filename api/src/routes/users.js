@@ -61,9 +61,6 @@ router.post(
   validate([
     body('username').isLength({ max: 100 }),
     body('email').isEmail(),
-    // body('roles').isArray(),
-    // body('name').isString(),
-    // body('cas_id').isString(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
@@ -71,15 +68,11 @@ router.post(
     // operators can create a new user but cannot specify a role
     // if the roles is unset, set the roles as ['user']
     // clears the roles attribute when requester has no admin role
-    console.log('req.body', req.body);
     const user_data = req.permission.filter(req.body);
 
-    console.log('user_data', user_data);
     user_data.roles = user_data.roles || ['user'];
 
     const user = await userService.createUser(user_data);
-
-    console.log('user', user);
 
     res.json(user);
   }),
