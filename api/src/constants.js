@@ -103,16 +103,7 @@ const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
           },
           projects: {
             select: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              browser_enabled: true,
-              funding: true,
-              metadata: true,
-              created_at: true,
-              updated_at: true,
-              owner_id: true,
+              project: true,
             },
           },
         },
