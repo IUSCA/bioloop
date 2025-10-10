@@ -3,6 +3,7 @@ const _ = require('lodash/fp');
 const { query, body, param } = require('express-validator');
 const createError = require('http-errors');
 const { Prisma } = require('@prisma/client');
+const { validate: validateUuid } = require('uuid');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
@@ -120,16 +121,18 @@ router.get(
     // and user role is forbidden
     const { include_datasets } = req.query;
 
+    const whereConditions = [];
+    
+    // Check if provided ID is a valid UUID
+    if (validateUuid(req.params.id)) {
+      whereConditions.push({ id: req.params.id });
+    }
+    
+    whereConditions.push({ slug: req.params.id });
+
     const project = await prisma.project.findFirstOrThrow({
       where: {
-        OR: [
-          {
-            id: req.params.id,
-          },
-          {
-            slug: req.params.id,
-          },
-        ],
+        OR: whereConditions,
       },
       include: projectService.build_include_object({ include_datasets }),
     });
@@ -389,23 +392,23 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username
-    /* eslint-disable */
-      // #swagger.description = user role:
-      // can only see their project. operator, admin:
-      // can see anyone's project
-      /* eslint-enable */
+    /* #swagger.description = user role: can only see their project.
+      operator, admin: can see anyone's project
+    */
     const { include_datasets } = req.query;
+
+    const whereConditions = [];
+    
+    // Check if provided ID is a valid UUID
+    if (validateUuid(req.params.id)) {
+      whereConditions.push({ id: req.params.id });
+    }
+    
+    whereConditions.push({ slug: req.params.id });
 
     const project = await prisma.project.findFirstOrThrow({
       where: {
-        OR: [
-          {
-            id: req.params.id,
-          },
-          {
-            slug: req.params.id,
-          },
-        ],
+        OR: whereConditions,
         users: {
           some: {
             user: {
