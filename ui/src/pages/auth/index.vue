@@ -18,7 +18,7 @@
         <p
           class="w-full text-center text-xl font-semibold mb-4 tracking-normal"
         >
-          <span v-if="isFeatureEnabled({ featureKey: 'signup' })">
+          <span v-if="auth.isFeatureEnabled('signup')">
             Sign Up or Log In
           </span>
           <span v-else>Log In with</span>
@@ -140,7 +140,9 @@
 
 <script setup>
 import config from "@/config";
-import { isFeatureEnabled } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 </script>
 
 <route lang="yaml">

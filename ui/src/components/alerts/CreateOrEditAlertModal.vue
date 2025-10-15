@@ -97,26 +97,12 @@ const alertData = ref(getDefaultAlert());
 const visible = ref(false);
 const loading = ref(false);
 const alertTypes = ref([]);
-const alertStatuses = ref([]);
 const isNewAlert = ref(false);
 
-const alertStatusOptions = computed(() => {
-  console.log("---------- alertStatusOptions() BEGIN ---------");
-  console.log("isNewAlert:", isNewAlert.value);
-  console.log("---------- alertStatusOptions() END ---------");
-  return isNewAlert.value ?
-    alertStatuses.value.filter((status) => status !== constants.alerts.statuses.EXPIRED) :
-    alertStatuses.value;
-})
-
 const showModal = (alert = null) => {
-  console.log("--------- showModal() BEGIN ---------");
-  console.log("alert:", alert);
-
   visible.value = true;
    
   if (alert) { // editing an alert
-    console.log("editing an alert");
     alertData.value = {
       ...(alert.id && { id: alert.id }),
       label: alert.label,
@@ -128,15 +114,9 @@ const showModal = (alert = null) => {
       is_hidden: alert.is_hidden,
     };
   } else { // creating a new alert
-    console.log("creating a new alert");
     alertData.value = getDefaultAlert();
     isNewAlert.value = true;
   }
-
-  console.log("alertData:", alertData.value);
-  console.log('isNewAlert:', isNewAlert.value);
-
-  console.log("--------- showModal() END ---------");
 };
 
 defineExpose({ showModal });
@@ -174,18 +154,11 @@ const saveAlert = async () => {
 };
 
 onMounted(async () => {
-  console.log("--------- onMounted() BEGIN ---------");
   Promise.all([
     alertService.getTypes(),
-    alertService.getStatuses(),
-  ]).then(([res1, res2]) => {
+  ]).then(([res1]) => {
     const types = res1.data;
-    const statuses = res2.data;
     alertTypes.value = types;
-    alertStatuses.value = statuses;
-    console.log("alertTypes:", alertTypes.value);
-    console.log("alertStatuses:", alertStatuses.value);
-    console.log("--------- onMounted() END ---------");
   });
 });
 </script>

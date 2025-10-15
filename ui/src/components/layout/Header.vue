@@ -40,7 +40,10 @@
         <env-alert icon="warning" />
       </va-navbar-item>
 
-      <va-navbar-item class="flex items-center">
+      <va-navbar-item
+        class="flex items-center"
+        v-if="auth.isFeatureEnabled('alerts')"
+      >
         <AlertDropdown />
       </va-navbar-item>
 

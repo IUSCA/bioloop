@@ -101,13 +101,6 @@ function show() {
 
 function handleSearch() {
   const newFilters = { ...form.value };
-
-  // Remove the active field logic that was deleting start_time/end_time
-  // if (newFilters.active !== null) {
-  //   delete newFilters.start_time;
-  //   delete newFilters.end_time;
-  // }
-
   filters.value = newFilters;
 
   hide();

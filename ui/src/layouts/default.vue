@@ -6,7 +6,7 @@
   </Header>
 
   <!-- Show any active alerts in the system  -->
-  <Alerts />
+  <Alerts v-if="auth.isFeatureEnabled('alerts')" />
 
   <div class="flex flex-row h-screen">
     <nav
@@ -26,11 +26,13 @@
 </template>
 
 <script setup>
+import { useAlertStore } from "@/stores/alert";
+import { useAuthStore } from "@/stores/auth";
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
-import { useAlertStore } from "@/stores/alert";
 
+const auth = useAuthStore();
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const alertStore = useAlertStore();

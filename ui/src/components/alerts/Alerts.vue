@@ -37,7 +37,7 @@ const sortedAlerts = computed(() => {
   });
 });
 
-// Show configurable number of alerts based on config
+// Show max number of alerts allowed by config
 const displayedAlerts = computed(() => {
   const maxCount = config.alerts?.maxDisplayCount || 1;
   return sortedAlerts.value.slice(0, maxCount);
