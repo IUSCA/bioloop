@@ -731,7 +731,6 @@ router.patch(
 
 router.patch(
   '/:id',
-  isPermittedTo('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
