@@ -85,8 +85,6 @@ router.get(
       label, message, type, limit, offset, is_hidden, status,
     } = req.query;
 
-    console.log('req.query', req.query);
-
     const sort_by = req.query.sort_by || 'created_at';
     const sort_order = req.query.sort_order || 'desc';
 
@@ -104,8 +102,6 @@ router.get(
         });
       }
     });
-
-    console.log('time_range_filters', time_range_filters);
 
     // Status and date fields cannot be used together
     if (status && (Object.keys(time_range_filters).length > 0)) {
@@ -142,21 +138,16 @@ router.get(
       ...(is_hidden != null && { is_hidden }),
     };
 
-    console.log('where', where);
-
     // Add status-based filtering logic
     if (status) {
-      console.log('status', status);
       const now = new Date();
 
       switch (status) {
         case CONSTANTS.ALERT_STATUSES.ACTIVE:
-          console.log('CONSTANTS.ALERT_STATUSES.ACTIVE');
           // ACTIVE: start_time <= now AND (end_time > now OR end_time is null)
           where.AND = [
             {
               OR: [
-                { start_time: null },
                 { start_time: { lte: now } },
               ],
             },
@@ -169,23 +160,19 @@ router.get(
           ];
           break;
         case CONSTANTS.ALERT_STATUSES.SCHEDULED:
-          console.log('CONSTANTS.ALERT_STATUSES.SCHEDULED');
           // SCHEDULED: start_time > now
           where.start_time = { gt: now };
           break;
         case CONSTANTS.ALERT_STATUSES.EXPIRED:
-          console.log('CONSTANTS.ALERT_STATUSES.EXPIRED');
           // EXPIRED: end_time < now
           where.end_time = { lt: now };
           break;
         default:
-          console.log('default');
           break;
       }
     }
 
     where = { ...where, ...time_range_filters };
-    console.log('where', where);
 
     const [alerts, count] = await Promise.all([
       prisma.alert.findMany({
@@ -206,11 +193,7 @@ router.get(
       prisma.alert.count({ where }),
     ]);
 
-    console.log('alerts', alerts);
-
     const alertsWithStatus = addStatusToAlerts(alerts);
-
-    console.log('alertsWithStatus', alertsWithStatus);
 
     res.json({
       alerts: alertsWithStatus,
