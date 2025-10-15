@@ -106,7 +106,16 @@
 
     <!-- Actions -->
     <template #cell(actions)="{ rowData }">
-      <div class="flex gap-3 flex-nowrap justify-end">
+      <div class="flex gap-2 flex-nowrap justify-end">
+        <!-- View Alert -->
+        <va-popover message="View Alert">
+          <va-button preset="plain" @click="showViewAlertModal(rowData)">
+            <div>
+              <i-mdi-arrow-expand />
+            </div>
+          </va-button>
+        </va-popover>
+        <!-- Edit Alert -->
         <va-popover message="Edit Alert">
           <va-button preset="plain" @click="showEditAlertModal(rowData)">
             <div>
@@ -118,6 +127,7 @@
     </template>
   </va-data-table>
 
+  <!-- pagination -->
   <Pagination
     class="mt-4 px-1 lg:px-3"
     v-model:page="params.query.page"
@@ -127,11 +137,19 @@
     :page_size_options="PAGE_SIZE_OPTIONS"
   />
 
+  <!-- create or edit alert modal -->
   <CreateOrEditAlertModal 
     ref="createOrEditModal"
     @save="onSave"
   />
+
+  <!-- view alert modal -->
+  <ViewAlertModal
+    ref="viewAlertModal"
+    @update="fetchAlerts"
+  />
   
+  <!-- Search alerts modal -->
   <AlertSearchModal
     ref="alertsFilterModal"
     @search="handleSearch"
@@ -269,6 +287,7 @@ const totalAlertsCount = ref(0);
 const searchQuery = ref("");
 
 const createOrEditModal = ref(null);
+const viewAlertModal = ref(null);
 const alertsFilterModal = ref(null);
 
 const fetchAlerts = async () => {
@@ -291,6 +310,10 @@ const showNewAlertModal = () => {
 
 const showEditAlertModal = (alert) => {
   createOrEditModal.value.showModal(alert);
+};
+
+const showViewAlertModal = (alert) => {
+  viewAlertModal.value.show(alert);
 };
 
 const showFilterAlertsModal = () => {

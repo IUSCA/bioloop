@@ -1,6 +1,7 @@
 import config from "@/config";
 import axios from "axios";
 import dayjs from "dayjs";
+import DOMPurify from "dompurify";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 
@@ -333,6 +334,108 @@ function navigateBackSafely(router, fallback = "/") {
   }, 300);
 }
 
+/**
+ * Sanitizes user-provided HTML content to prevent XSS attacks while preserving
+ * the most-commonly needed HTML elements.
+ *
+ * @param {string} content - The user-provided content to sanitize
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.autoLink - Whether to automatically convert URLs to links (default: true)
+ * @param {boolean} options.autoEmail - Whether to automatically convert emails to mailto links (default: true)
+ * @param {string[]} options.classes - CSS classes to use on sanitized element
+ * @param {string[]} options.allowedTags - Additional HTML tags to allow beyond the defaults
+ * @param {string[]} options.allowedAttributes - Additional HTML attributes to allow beyond the defaults
+ * @returns {string} Sanitized HTML content safe for rendering
+ */
+function sanitize(content, options = {}) {
+  if (!content || typeof content !== "string") {
+    return "";
+  }
+
+  const {
+    autoLink = true,
+    autoEmail = true,
+    allowedTags = [],
+    allowedAttributes = [],
+    classes = [],
+  } = options;
+
+  let processed = content;
+
+  // Convert URLs into clickable links if enabled
+  if (autoLink) {
+    processed = processed.replace(
+      /(https?:\/\/[^\s<>"']+)/g,
+      `<a href="$1" target="_blank" rel="noopener noreferrer" class="${classes.join(" ")}">$1</a>`,
+    );
+  }
+
+  // Convert email addresses into mailto links if enabled
+  if (autoEmail) {
+    processed = processed.replace(
+      /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+      `<a href="mailto:$1" class="${classes.join(" ")}">$1</a>`,
+    );
+  }
+
+  // Default allowed tags for common safe HTML elements
+  const defaultAllowedTags = [
+    "a", // Links
+    "p", // Paragraphs
+    "br", // Line breaks
+    "strong",
+    "b", // Bold text
+    "em",
+    "i", // Italic text
+    "u", // Underlined text
+    "code", // Inline code
+    "pre", // Preformatted text
+    "ul",
+    "ol",
+    "li", // Lists
+    "blockquote", // Quotes
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6", // Headings
+  ];
+
+  // Default allowed attributes for safe HTML
+  const defaultAllowedAttributes = [
+    "href", // For links
+    "target", // For link targets
+    "rel", // For link relationships
+    "class", // For styling
+    "title", // For tooltips
+    "alt", // For accessibility
+    "id", // For anchoring (with restrictions)
+  ];
+
+  // Combine default and custom allowed tags/attributes
+  const finalAllowedTags = [
+    ...new Set([...defaultAllowedTags, ...allowedTags]),
+  ];
+  const finalAllowedAttributes = [
+    ...new Set([...defaultAllowedAttributes, ...allowedAttributes]),
+  ];
+
+  // Sanitize to prevent XSS while preserving allowed elements
+  return DOMPurify.sanitize(processed, {
+    ALLOWED_TAGS: finalAllowedTags,
+    ALLOWED_ATTR: finalAllowedAttributes,
+    // Additional security configurations
+    ALLOW_DATA_ATTR: false, // Disable data-* attributes
+    ALLOW_UNKNOWN_PROTOCOLS: false, // Only allow known protocols
+    SANITIZE_DOM: true, // Clean up DOM clobbering
+    KEEP_CONTENT: true, // Keep text content even if tags are removed
+    // Ensure links are safe
+    ADD_ATTR: ["target", "rel"], // Always add these to links
+    FORBID_ATTR: ["style", "on*"], // Forbid inline styles and event handlers
+  });
+}
+
 export {
   arrayEquals,
   capitalize,
@@ -355,6 +458,7 @@ export {
   mapValues,
   maybePluralize,
   navigateBackSafely,
+  sanitize,
   setIntersection,
   snakeCaseToTitleCase,
   union,

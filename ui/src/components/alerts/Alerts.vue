@@ -1,5 +1,5 @@
 <template>
-  <div v-if="displayedAlerts.length > 0" class="w-full space-y-2">
+  <div v-if="displayedAlerts.length > 0" class="w-full space-y-0.5">
     <Alert
       v-for="alert in displayedAlerts"
       :key="alert.id"

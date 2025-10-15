@@ -36,7 +36,7 @@
 <script setup>
 import alertService from "@/services/alert";
 import * as datetime from "@/services/datetime";
-import DOMPurify from "dompurify";
+import { sanitize } from "@/services/utils";
 
 const props = defineProps({
   alert: {
@@ -54,29 +54,19 @@ const emit = defineEmits(["close"]);
 // Get dark mode state
 const isDark = useDark();
 
-// Configure rendered message to style hyperlinks and mailto elements.
+// Configure rendered message to sanitize hyperlinks and mailto elements.
 const renderedMessage = computed(() => {
   if (!props.alert.message) return "";
   
-  let processed = props.alert.message;
-  
-  // Convert URLs into clickable links
-  processed = processed.replace(
-    /(https?:\/\/[^\s]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="alert-link">$1</a>'
-  );
-
-  // Convert email addresses into mailto links
-  processed = processed.replace(
-    /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-    '<a href="mailto:$1" class="alert-link">$1</a>'
-  );
-    
-  // Sanitize to prevent XSS
-  return DOMPurify.sanitize(processed, {
-    ALLOWED_TAGS: ['a'],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class']
-  });
+  // Sanitize user content and convert URLs/emails to links with custom class  
+  return sanitize(
+    props.alert.message,
+      {
+        allowedTags: ["a"],
+        allowedAttributes: ["href", "target", "rel", "class"],
+        classes: ["alert-link"],
+      }
+    )
 });
 
 const handleClose = () => {
@@ -107,7 +97,7 @@ const getAlertClasses = (type) => {
 /* Custom link styling for better contrast in alerts */
 :deep(.alert-link) {
   text-decoration: underline;
-  font-weight: 500;
+  font-weight: 600;
   transition: opacity 0.2s ease;
 }
 
