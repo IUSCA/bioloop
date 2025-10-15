@@ -8,59 +8,40 @@
   >
     <div class="w-full">
       <va-form class="flex flex-col gap-3 md:gap-5">
-        <!-- active filter -->
+        <!-- Status filter -->
         <va-select
-          v-model="form.active"
-          :options="[
-            { name: 'All', id: null },
-            { name: 'Active', id: true },
-            { name: 'Inactive', id: false },
-          ]"
-          text-by="name"
-          value-by="id"
+          v-model="form.status"
+          :options="alertStatuses"
+          :text-by="(str) => str.toLowerCase()"
           label="Status"
           placeholder="Choose a status"
-          :messages="
-            form.active !== null && [
-              'Start/End Date will be ignored when searching by active status',
-            ]
-          "
+          clearable
         >
         </va-select>
 
-        <div class="flex gap-3 md:gap-5">
-          <!-- Start time filter -->
-          <va-date-input
-            v-model="form.start_time"
-            placeholder="Start Date after"
-            label="Start Date"
-            :disabled="areDateFieldsDisabled"
-          />
+        <!-- Type filter -->
+        <va-select
+          v-model="form.type"
+          :options="alertTypes"
+          :text-by="(str) => str.toLowerCase()"
+          label="Type"
+          placeholder="Choose a type"
+          clearable
+        >
+        </va-select>
 
-          <!-- End time filter -->
-          <va-date-input
-            v-model="form.end_time"
-            placeholder="End Date before"
-            label="End Date"
+        <!-- Date/Time Range Filter -->
+        <div class="flex flex-col gap-3">
+          <StartEndDatetimeInputs
+            v-model:startTime="form.start_time"
+            v-model:endTime="form.end_time"
             :disabled="areDateFieldsDisabled"
+            :validate-dates="false"
           />
         </div>
 
-        <!-- type filter -->
-        <va-select
-          v-model="form.type"
-          :options="[
-            { name: 'All', id: null },
-            { name: 'Info', id: 'INFO' },
-            { name: 'Warning', id: 'WARNING' },
-            { name: 'Error', id: 'ERROR' },
-          ]"
-          text-by="name"
-          value-by="id"
-          label="Type"
-          placeholder="Choose a type"
-        >
-        </va-select>
+        <!-- Is Hidden filter -->
+        <va-checkbox v-model="form.is_hidden" label="Is Hidden" />
       </va-form>
     </div>
 
@@ -89,6 +70,7 @@
 </template>
 
 <script setup>
+import alertService from "@/services/alert";
 import { useAlertStore } from "@/stores/alert";
 import { storeToRefs } from "pinia";
 
@@ -98,10 +80,13 @@ const store = useAlertStore();
 const { filters } = storeToRefs(store);
 
 const visible = ref(false);
+const alertTypes = ref([]);
+const alertStatuses = ref([]);
 
 const form = ref(store.defaultFilters());
 
-const areDateFieldsDisabled = computed(() => form.value.active !== null);
+// Date/Time fields are disabled when status is selected
+const areDateFieldsDisabled = computed(() => !!form.value.status);
 
 function hide() {
   visible.value = false;
@@ -115,49 +100,52 @@ function show() {
 }
 
 function handleSearch() {
-  console.log("AlertSearchModal handleSearch called");
-  console.log("form.value: ", form.value);
   const newFilters = { ...form.value };
 
-  if (newFilters.active !== null) {
-    delete newFilters.start_time;
-    delete newFilters.end_time;
-  }
+  // Remove the active field logic that was deleting start_time/end_time
+  // if (newFilters.active !== null) {
+  //   delete newFilters.start_time;
+  //   delete newFilters.end_time;
+  // }
 
   filters.value = newFilters;
-  console.log("filters.value after reset: ", filters.value);
 
   hide();
-  // console.log("AlertSearchModal handleSearch called");
   emit("search");
 }
 
 function handleReset() {
   form.value = {
     ...store.defaultFilters(),
-    // date_range: null,
   };
 }
 
+// Clear date fields when status is selected
 watch(
-  () => form.value.active,
+  () => form.value.status,
   (newValue) => {
-    if (newValue !== null) {
+    if (newValue) {
+      // Status selected - clear date fields
       form.value.start_time = null;
       form.value.end_time = null;
     }
   },
 );
 
-onMounted(() => {
-  console.log("AlertSearchModal mounted");
-  console.log("filters.value: ", filters.value);
-});
-
 defineExpose({
   show,
   hide,
 });
-</script>
 
-<style scoped></style>
+onMounted(async () => {
+  Promise.all([
+    alertService.getTypes(),
+    alertService.getStatuses(),
+  ]).then(([res1, res2]) => {
+    const types = res1.data;
+    const statuses = res2.data;
+    alertTypes.value = types;
+    alertStatuses.value = statuses;
+  });
+});
+</script>

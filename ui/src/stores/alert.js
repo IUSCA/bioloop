@@ -1,10 +1,11 @@
-import { defineStore } from "pinia";
-import { useLocalStorage } from "@vueuse/core";
+import constants from "@/constants";
 import alertService from "@/services/alert";
 import { mapValues } from "@/services/utils";
+import { useLocalStorage } from "@vueuse/core";
+import { defineStore } from "pinia";
 
 export const useAlertStore = defineStore("alert", () => {
-  // Any active alerts that have been created in the system
+  // Any alerts that have been created in the system
   const alerts = ref([]);
 
   // Alerts which are not currently shown in the portal, since they have been dismissed by the current user
@@ -20,8 +21,6 @@ export const useAlertStore = defineStore("alert", () => {
   const filters = computed({
     get: () => params.value.filters,
     set: (newFilters) => {
-      console.log("filters changed, updating refObject");
-      console.log("new filters:", newFilters);
       params.value.filters = newFilters;
     },
   });
@@ -49,10 +48,11 @@ export const useAlertStore = defineStore("alert", () => {
 
   function defaultFilters() {
     return {
-      active: null,
+      is_hidden: null,
       type: null,
       start_time: null,
       end_time: null,
+      status: null,
     };
   }
 
@@ -69,7 +69,6 @@ export const useAlertStore = defineStore("alert", () => {
     return {
       filters: defaultFilters(),
       query: defaultQuery(),
-      // inclusive_query: null,
     };
   }
 
@@ -92,13 +91,12 @@ export const useAlertStore = defineStore("alert", () => {
   }
 
   async function fetchAlerts() {
-    // const currentTime = new Date().toISOString();
     try {
       const response = await alertService.getAll({
-        active: true,
+        is_hidden: false,
+        status: constants.alerts.statuses.ACTIVE,
       });
       alerts.value = response.data.alerts;
-      // alerts.value = []
     } catch (error) {
       console.error("Failed to fetch alerts:", error);
     }
@@ -128,14 +126,6 @@ export const useAlertStore = defineStore("alert", () => {
       pollingInterval.value = null;
     }
   }
-
-  // async function setPollingFrequency(frequency) {
-  //   pollingFrequency.value = frequency;
-  //   if (pollingInterval.value) {
-  //     stopPolling();
-  //     await startPolling();
-  //   }
-  // }
 
   function dismissAlert(alertId) {
     dismissedAlerts.value[alertId] = {
@@ -169,6 +159,10 @@ export const useAlertStore = defineStore("alert", () => {
     return alerts.value.filter((alert) => !isAlertDismissed(alert));
   }
 
+  function getDismissedAlerts() {
+    return alerts.value.filter((alert) => isAlertDismissed(alert));
+  }
+
   return {
     alerts,
     dismissedAlerts,
@@ -186,9 +180,9 @@ export const useAlertStore = defineStore("alert", () => {
     fetchAlerts,
     dismissAlert,
     getNonDismissedAlerts,
+    getDismissedAlerts,
     isAlertDismissed,
     startPolling,
     stopPolling,
-    // setPollingFrequency,
   };
 });

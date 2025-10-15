@@ -1,43 +1,57 @@
 <template>
   <va-modal
     v-model="visible"
-    :title="id ? 'Edit Alert' : 'New Alert'"
+    :title="alertData.id ? 'Edit Alert' : 'New Alert'"
     hide-default-actions
     @ok="handleSubmit"
     @cancel="hideModal"
     :loading="loading"
   >
+    <!-- Create or Edit Alert Form -->
     <va-form
       @submit.prevent="saveAlert"
       ref="alertForm"
       class="flex flex-col gap-6"
     >
+      <!-- Label -->
       <div class="flex flex-row gap-4">
         <va-input
           v-model="alertData.label"
           label="Label"
-          class="flex-grow"
+          class="w-full"
           :rules="[(v) => !!v || 'Label is required']"
-        />
-        <va-select
-          v-model="alertData.type"
-          label="Type"
-          class="w-1/3"
-          :options="['INFO', 'WARNING', 'ERROR']"
         />
       </div>
 
-      <AlertDateTimeInputs
+      <!-- Type -->
+      <div>
+        <va-select
+          v-model="alertData.type"
+          label="Type"
+          :options="alertTypes"
+          class="w-full"
+          clearable
+        />
+      </div>
+
+      <!-- Start Time and End Time -->
+      <StartEndDatetimeInputs
         v-model:startTime="alertData.start_time"
         v-model:endTime="alertData.end_time"
-        :isNewAlert="!alertData.id"
       />
 
+      <!-- Alert Message -->
       <va-textarea
         v-model="alertData.message"
         label="Message"
         class="w-full"
         rows="4"
+      />
+
+      <!-- Is Hidden? -->
+      <va-switch
+        v-model="alertData.is_hidden"
+        label="Hidden"
       />
     </va-form>
 
@@ -48,7 +62,7 @@
           Cancel
         </va-button>
         <va-button @click="handleSubmit" :loading="loading">
-          {{ id ? "Update" : "Create" }}
+          {{ alertData.id ? "Update" : "Create" }}
         </va-button>
       </div>
     </template>
@@ -56,16 +70,13 @@
 </template>
 
 <script setup>
+import constants from "@/constants";
 import alertService from "@/services/alert";
 import toast from "@/services/toast";
-import { useForm } from "vuestic-ui";
-import { cloneDeep } from "lodash";
 import { useAlertStore } from "@/stores/alert";
+import { useForm } from "vuestic-ui";
 
 const emit = defineEmits(["save"]);
-
-const visible = ref(false);
-const loading = ref(false);
 
 const { validate } = useForm("alertForm");
 
@@ -75,16 +86,38 @@ const getDefaultAlert = () => ({
   id: null,
   label: "",
   message: null,
-  type: "INFO",
+  type: constants.alerts.types.INFO,
   start_time: null,
   end_time: null,
+  status: constants.alerts.statuses.SCHEDULED,
+  is_hidden: false,
 });
 
 const alertData = ref(getDefaultAlert());
 
+const visible = ref(false);
+const loading = ref(false);
+const alertTypes = ref([]);
+const alertStatuses = ref([]);
+const isNewAlert = ref(false);
+
+const alertStatusOptions = computed(() => {
+  console.log("---------- alertStatusOptions() BEGIN ---------");
+  console.log("isNewAlert:", isNewAlert.value);
+  console.log("---------- alertStatusOptions() END ---------");
+  return isNewAlert.value ?
+    alertStatuses.value.filter((status) => status !== constants.alerts.statuses.EXPIRED) :
+    alertStatuses.value;
+})
+
 const showModal = (alert = null) => {
+  console.log("--------- showModal() BEGIN ---------");
+  console.log("alert:", alert);
+
   visible.value = true;
-  if (alert) {
+   
+  if (alert) { // editing an alert
+    console.log("editing an alert");
     alertData.value = {
       ...(alert.id && { id: alert.id }),
       label: alert.label,
@@ -92,25 +125,28 @@ const showModal = (alert = null) => {
       type: alert.type,
       start_time: alert.start_time ? new Date(alert.start_time) : null,
       end_time: alert.end_time ? new Date(alert.end_time) : null,
+      status: alert.status,
+      is_hidden: alert.is_hidden,
     };
-  } else {
-    // console.log("else (new alert)");
+  } else { // creating a new alert
+    console.log("creating a new alert");
     alertData.value = getDefaultAlert();
+    isNewAlert.value = true;
   }
+
+  console.log("alertData:", alertData.value);
+  console.log('isNewAlert:', isNewAlert.value);
+
+  console.log("--------- showModal() END ---------");
 };
 
 defineExpose({ showModal });
 
 const handleSubmit = async () => {
-  console.log("handleSubmit() called");
   const isFormValid = await validate();
-  console.log("isFormValid", isFormValid);
   if (isFormValid) {
     await saveAlert();
-    // refresh store's alerts
     await alertStore.fetchAlerts();
-  } else {
-    // toast.error("Please fill in all required fields correctly");
   }
 };
 
@@ -120,8 +156,6 @@ const hideModal = () => {
 
 const saveAlert = async () => {
   loading.value = true;
-
-  console.log("Saving alert:", alertData.value);
 
   try {
     if (alertData.value.id) {
@@ -140,7 +174,19 @@ const saveAlert = async () => {
   }
 };
 
-// const validateForm = () => {
-//   validate();
-// };
+onMounted(async () => {
+  console.log("--------- onMounted() BEGIN ---------");
+  Promise.all([
+    alertService.getTypes(),
+    alertService.getStatuses(),
+  ]).then(([res1, res2]) => {
+    const types = res1.data;
+    const statuses = res2.data;
+    alertTypes.value = types;
+    alertStatuses.value = statuses;
+    console.log("alertTypes:", alertTypes.value);
+    console.log("alertStatuses:", alertStatuses.value);
+    console.log("--------- onMounted() END ---------");
+  });
+});
 </script>

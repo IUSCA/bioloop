@@ -163,14 +163,15 @@ router.post(
     const datasetCreateQuery = datasetService.buildDatasetCreateQuery({
       name,
       type,
-      project_id,
       user_id: req.user.id,
       src_instrument_id,
       src_dataset_id,
     });
 
     const dataset_upload_log = await prisma.$transaction(async (tx) => {
-      const createdDataset = await datasetService.create(tx, datasetCreateQuery);
+      const createdDataset = await datasetService.create({
+        tx, data: datasetCreateQuery, project_id, requester_id: req.user.id,
+      });
 
       const created_dataset_upload_log = await tx.dataset_upload_log.create({
         data: {

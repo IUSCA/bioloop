@@ -18,7 +18,7 @@
     </div>
 
     <!-- Filter button -->
-    <va-button @click="showSearchModal" preset="primary" class="flex-none">
+    <va-button @click="showFilterAlertsModal" preset="primary" class="flex-none">
       <i-mdi-filter />
       <span>
         Filters
@@ -28,14 +28,14 @@
       </span>
     </va-button>
 
-    <!-- active filters -->
+    <!-- Currently active filters -->
     <AlertSearchFilters
       v-if="activeFilters.length > 0"
       class="flex-1"
       @search="handleSearch"
     />
-    <!--    @open="showSearchModal"-->
 
+    <!-- New Alert button -->
     <va-button
       icon="add"
       class="px-1"
@@ -55,47 +55,58 @@
     hoverable
     :loading="loading"
   >
+    <!-- Start/End Time -->
     <template #cell(start_time)="{ value }">
-      <span>{{ datetime.displayDateTime(value) }}</span>
+      <span>{{ value ? datetime.displayDateTime(value) : null }}</span>
     </template>
-
     <template #cell(end_time)="{ value }">
       <span>{{ value ? datetime.displayDateTime(value) : null }}</span>
     </template>
 
+    <!-- Type -->
     <template #cell(type)="{ value }">
       <va-badge :text="value" :color="alertService.getAlertColor(value)" />
     </template>
 
-    <template #cell(active)="{ rowData }">
-      <span v-if="isAlertActive(rowData)" class="flex justify-center">
-        <i-mdi-check-circle-outline class="text-green-700" />
+    <!-- Is alert hidden? -->
+    <template #cell(is_hidden)="{ value }">
+      <va-popover :message="strToBool(value) ? 'Hidden' : 'Visible'">
+      <span v-if="strToBool(value)" class="flex justify-center">
+        <i-mdi-eye-off-outline class="va-text-secondary" />
       </span>
+      <span v-else class="flex justify-center">
+        <i-mdi-eye-outline  class="va-text-primary" />
+      </span>
+    </va-popover>
     </template>
 
+    <!-- Status -->
+    <template #cell(status)="{ value }">
+      <va-badge :text="value" :color="alertService.getStatusColor(value)" />
+    </template>
+
+    <!-- Message -->
     <template #cell(message)="{ value }">
-      {{ trimAlertMessage(value) }}
-    </template>
-
-    <template #cell(created_by)="{ rowData }">
-      <span
-        >{{ rowData.created_by.name }} ({{ rowData.created_by.username }})</span
+      <va-popover
+        v-if="value && value.length > 80"
+        :message="value"
+        placement="top"
+        trigger="hover"
+        keep-anchor-width
       >
+        <span class="cursor-help">{{ trimAlertMessage(value) }}</span>
+      </va-popover>
+      <span v-else>{{ value || '' }}</span>
     </template>
 
+    <!-- Created By -->
+    <template #cell(created_by)="{ rowData }">
+      <span>{{ rowData.created_by.name }} ({{ rowData.created_by.username }})</span>
+    </template>
+
+    <!-- Actions -->
     <template #cell(actions)="{ rowData }">
       <div class="flex gap-3 flex-nowrap justify-end">
-        <va-popover
-          :message="isAlertActive(rowData) ? 'Disable Alert' : 'Enable Alert'"
-        >
-          <va-button preset="plain" @click="toggleAlertStatus(rowData)">
-            <div>
-              <i-mdi-eye v-if="isAlertActive(rowData)" />
-              <i-mdi-eye-off v-else />
-            </div>
-          </va-button>
-        </va-popover>
-
         <va-popover message="Edit Alert">
           <va-button preset="plain" @click="showEditAlertModal(rowData)">
             <div>
@@ -116,41 +127,29 @@
     :page_size_options="PAGE_SIZE_OPTIONS"
   />
 
-  <CreateOrEditAlertModal ref="createOrEditModal" @save="onSave" />
+  <CreateOrEditAlertModal 
+    ref="createOrEditModal"
+    @save="onSave"
+  />
+  
   <AlertSearchModal
-    ref="searchModal"
-    @search="
-      () => {
-        handleSearch();
-      }
-    "
+    ref="alertsFilterModal"
+    @search="handleSearch"
   />
-  <DisableAlertModal
-    ref="disableAlertModal"
-    @confirm="
-      async (alert) => {
-        console.log('confirming disable alert...');
-        await confirmDisableAlert(alert);
-      }
-    "
-  />
-  <EnableAlertModal ref="enableAlertModal" @confirm="confirmEnableAlert" />
 </template>
 
 <script setup>
+import alertService from "@/services/alert";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import alertService from "@/services/alert";
 import { useAlertStore } from "@/stores/alert";
 import { storeToRefs } from "pinia";
-import DisableAlertModal from "@/components/alerts/DisableAlertModal.vue";
-import EnableAlertModal from "@/components/alerts/EnableAlertModal.vue";
 import { VaPopover } from "vuestic-ui";
 
 const columns = [
   {
     key: "label",
-    width: "15%",
+    width: "7%",
     sortable: true,
     thAlign: "left",
     tdAlign: "left",
@@ -178,8 +177,17 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
-    key: "active",
-    width: "10%",
+    key: "status",
+    width: "5%",
+    thAlign: "center",
+    tdAlign: "center",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "is_hidden",
+    label: "Visible",
+    width: "8%",
     thAlign: "center",
     tdAlign: "center",
     thStyle:
@@ -188,7 +196,7 @@ const columns = [
   {
     key: "start_time",
     label: "Start Time",
-    width: "7%",
+    width: "11%",
     sortable: true,
     thAlign: "center",
     tdAlign: "center",
@@ -200,7 +208,7 @@ const columns = [
   {
     key: "end_time",
     label: "End Time",
-    width: "7%",
+    width: "11%",
     sortable: true,
     thAlign: "center",
     tdAlign: "center",
@@ -221,7 +229,7 @@ const columns = [
   },
   {
     key: "actions",
-    width: "5%",
+    width: "6%",
     sortable: false,
     thAlign: "right",
     tdAlign: "right",
@@ -235,74 +243,44 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 const alertStore = useAlertStore();
 const { filters, query, params, activeFilters } = storeToRefs(alertStore);
 
-const filter_query = computed(() => ({
-  ...query.value,
-  ...filters.value,
-  label: searchQuery.value,
-  offset: (params.value.query.page - 1) * params.value.query.pageSize,
-  limit: params.value.query.pageSize,
-}));
+const filter_query = computed(() => {
+  const baseQuery = {
+    ...query.value,
+    ...filters.value,
+    label: searchQuery.value,
+    offset: (params.value.query.page - 1) * params.value.query.pageSize,
+    limit: params.value.query.pageSize,
+  };
+
+  // Convert simple date objects to operator objects
+  if (baseQuery.start_time && baseQuery.start_time instanceof Date) {
+    baseQuery.start_time = { gte: baseQuery.start_time };
+  }
+  if (baseQuery.end_time && baseQuery.end_time instanceof Date) {
+    baseQuery.end_time = { lte: baseQuery.end_time };
+  }
+
+  return baseQuery;
+});
 
 const loading = ref(false);
-
 const alerts = ref([]);
 const totalAlertsCount = ref(0);
-
 const searchQuery = ref("");
 
 const createOrEditModal = ref(null);
-const searchModal = ref(null);
-
-const disableAlertModal = ref(null);
-const enableAlertModal = ref(null);
-
-const toggleAlertStatus = (alert) => {
-  if (isAlertActive(alert)) {
-    disableAlertModal.value.showModal(alert);
-  } else {
-    enableAlertModal.value.showModal(alert);
-  }
-};
-
-const confirmDisableAlert = async (alert) => {
-  try {
-    const updatedAlert = { ...alert, end_time: new Date().toISOString() };
-    await alertService.update(alert.id, updatedAlert);
-    toast.success("Alert disabled successfully");
-    fetchAlerts();
-  } catch (error) {
-    toast.error("Failed to disable alert");
-  }
-};
-
-const confirmEnableAlert = async (alert, newStartTime, newEndTime) => {
-  try {
-    const updatedAlert = {
-      ...alert,
-      start_time: newStartTime?.toISOString(),
-      end_time: newEndTime?.toISOString(),
-    };
-    await alertService.update(alert.id, updatedAlert);
-    toast.success("Alert enabled successfully");
-    fetchAlerts();
-  } catch (error) {
-    console.error("Failed to enable alert", error);
-    toast.error("Failed to enable alert");
-  }
-};
+const alertsFilterModal = ref(null);
 
 const fetchAlerts = async () => {
   loading.value = true;
   try {
     const response = await alertService.getAll(filter_query.value);
-    // console.log(response);
     alerts.value = response.data.alerts;
     totalAlertsCount.value = response.data.metadata.count;
   } catch (error) {
     toast.error("Failed to fetch alerts");
   } finally {
     loading.value = false;
-    // refresh store's alerts
     await alertStore.fetchAlerts();
   }
 };
@@ -315,20 +293,12 @@ const showEditAlertModal = (alert) => {
   createOrEditModal.value.showModal(alert);
 };
 
-const showSearchModal = () => {
-  searchModal.value.show();
+const showFilterAlertsModal = () => {
+  alertsFilterModal.value.show();
 };
 
 const trimAlertMessage = (message) => {
-  return message.length > 80 ? `${message.substring(0, 100)}...` : message;
-};
-
-const isAlertActive = (alert) => {
-  const now = new Date();
-  return (
-    new Date(alert.start_time) <= now &&
-    (!alert.end_time || new Date(alert.end_time) > now)
-  );
+  return message.length > 80 ? `${message.substring(0, 80)}...` : message;
 };
 
 const handleSearch = useDebounceFn(() => {
@@ -336,13 +306,12 @@ const handleSearch = useDebounceFn(() => {
   fetchAlerts();
 }, 500);
 
-// const handleFilterChange = () => {
-//   params.value.page = 1;
-//   fetchAlerts();
-// };
-
 const onSave = async () => {
   await fetchAlerts();
+};
+
+const strToBool = (value) => {
+  return value === "true" || value === "True";
 };
 
 watch(
@@ -362,21 +331,8 @@ watch(
 
 watch(() => params.value.query.page, fetchAlerts);
 
-// watch(filter_query, () => {
-//   params.value.query.page = 1;
-// });
-
-// watch(
-//   () => activeFilters.value,
-//   () => {
-//     console.log("filters changed");
-//   },
-// );
-
 onMounted(fetchAlerts);
 </script>
-
-<style scoped></style>
 
 <route lang="yaml">
 meta:

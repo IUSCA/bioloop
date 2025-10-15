@@ -186,6 +186,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
   user_notifications         user_notification[]
+  owned_projects project[]
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
 }
@@ -306,6 +307,8 @@ model project {
   metadata        Json?
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   updated_at      DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  owner_id        Int?
+  owner           user?             @relation(fields: [owner_id], references: [id], onDelete: SetNull)
   users           project_user[]
   datasets        project_dataset[]
   contacts        project_contact[]
@@ -401,11 +404,12 @@ model alert {
   updated_at    DateTime   @default(now()) @updatedAt @db.Timestamp(6)
   created_by_id Int?
   created_by    user?      @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
-  label         String
+  label         String?
   message       String?
   type          ALERT_TYPE
-  start_time    DateTime   @default(now()) @db.Timestamp(6)
+  start_time    DateTime?  @db.Timestamp(6)
   end_time      DateTime?  @db.Timestamp(6)
+  is_hidden     Boolean? @default(false)
 }
 
 enum access_type {

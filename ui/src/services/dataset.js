@@ -32,7 +32,7 @@ class DatasetService {
    * @returns          Object containing matching datasets, and count of matching datasets
    */
   getAll(params) {
-    const url = !auth.canOperate
+    const url = !(auth.canOperate || auth.canAdmin)
       ? `/datasets/${auth.user.username}/all`
       : "/datasets";
     // What qs.stringify does?

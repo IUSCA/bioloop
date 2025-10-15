@@ -147,6 +147,18 @@ const exports = {
       },
     },
   },
+  alerts: {
+    types: {
+      INFO: "INFO",
+      WARNING: "WARNING",
+      ERROR: "ERROR",
+    },
+    statuses: {
+      SCHEDULED: "SCHEDULED",
+      ACTIVE: "ACTIVE",
+      EXPIRED: "EXPIRED",
+    },
+  },
 };
 
 export default exports;

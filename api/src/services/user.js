@@ -109,6 +109,7 @@ async function updateLastLogin({ id, method }) {
     },
   });
 }
+
 /**
  * The function `findAll` is used to retrieve a list of users from the database
  * with various filtering, sorting, and pagination options.
@@ -118,15 +119,15 @@ async function findAll({
 }) {
   const sort_sql = Prisma.raw(`"${sortBy}" ${sort_order}`);
   /**
- * Constructs a SQL query to:
- * 1. Join `user`, `user_login`, `user_role`,
- * and `role` tables to retrieve user details, roles, and last login info. 2.
- * Filter users based on the search term.
- * 3. Group results by user ID and login method.
- * 4. Sort results by the specified column and order, with nulls last.
- * 5. Apply pagination using limit and offset.
- * Executes the query and returns the total user count and details.
- */
+   * Constructs a SQL query to:
+   * 1. Join `user`, `user_login`, `user_role`,
+   * and `role` tables to retrieve user details, roles, and last login info. 2.
+   * Filter users based on the search term.
+   * 3. Group results by user ID and login method.
+   * 4. Sort results by the specified column and order, with nulls last.
+   * 5. Apply pagination using limit and offset.
+   * Executes the query and returns the total user count and details.
+   */
   const sql = Prisma.sql`
   with results as (
       select u.*, ul.last_login, ul."method", array_agg(r."name") as roles from "user" u
@@ -256,8 +257,10 @@ async function updateUser(username, data) {
 async function canUpdateUser(username, requester) {
   if (
     requester.username === username
-    || requester.roles.includes('admin')
-  ) { return true; }
+      || requester.roles.includes('admin')
+  ) {
+    return true;
+  }
   const resource = transformUser(
     await prisma.user.findUniqueOrThrow(
       {
@@ -310,6 +313,38 @@ function validateUsernameOrThrow(username) {
   return true;
 }
 
+/**
+ * Retrieves the roles associated with a user.
+ *
+ * @async
+ * @function getUserRoles
+ * @param {Object} params - The parameters for the function.
+ * @param {number} params.user_id - The unique identifier of the user whose roles are to be retrieved.
+ * @returns {Promise<string[]>} A promise that resolves to an array of roles assigned to the user.
+ *
+ * @example
+ * const roles = await getUserRoles({ user_id: 123 });
+ * console.log(roles); // ['admin', 'user']
+ */
+const getUserRoles = async ({ user_id }) => {
+  const user = await prisma.user.findUnique({
+    where: { id: user_id },
+    select: {
+      user_role: {
+        select: {
+          roles: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return user.user_role.map((u) => u.roles.name);
+};
+
 module.exports = {
   transformUser,
   findActiveUserBy,
@@ -328,4 +363,5 @@ module.exports = {
   generateUniqueUsername,
   validateUsernameOrThrow,
   getSystemUser,
+  getUserRoles,
 };

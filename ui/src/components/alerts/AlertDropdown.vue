@@ -1,5 +1,9 @@
 <template>
-  <va-menu placement="left-bottom" v-if="activeAlerts.length > 0">
+  <!-- Only shown if there is at least one dismissed alert -->
+  <va-menu
+    v-if="dismissedAlerts.length > 0"
+    placement="left-bottom"
+  >
     <template #anchor>
       <va-badge :offset="[-3, 10]" :text="activeAlerts.length" overlap>
         <va-button class="alert-bell" plain>
@@ -12,9 +16,7 @@
       <va-menu-item v-for="alert in activeAlerts" :key="alert.id">
         <Alert
           :key="alert.id"
-          :type="alert.type"
-          :message="alert.message"
-          :label="alert.label"
+          :alert="alert"
           :dismissable="false"
         />
       </va-menu-item>
@@ -27,11 +29,10 @@ import { useAlertStore } from "@/stores/alert";
 
 const alertStore = useAlertStore();
 
-const activeAlerts = computed(() => alertStore.alerts);
+const { getDismissedAlerts } = alertStore;
 
-// onMounted(() => {
-//   alertStore.fetchAlerts();
-// });
+const activeAlerts = computed(() => alertStore.alerts);
+const dismissedAlerts = computed(() => getDismissedAlerts());
 </script>
 
 <style scoped>

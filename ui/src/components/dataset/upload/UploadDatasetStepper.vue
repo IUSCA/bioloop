@@ -1,10 +1,15 @@
 <template>
-  <va-inner-loading :loading="loading" class="h-full">
+  <va-inner-loading
+    :loading="loading"
+    class="h-full"
+    data-testid="inner-loading"
+  >
     <va-stepper
       v-model="step"
       :steps="steps"
       controlsHidden
       class="h-full create-data-product-stepper"
+      data-testid="stepper"
     >
       <!-- Step icons and labels -->
       <template
@@ -21,31 +26,41 @@
           @click="setStep(i)"
           :disabled="isStepperButtonDisabled(i)"
           preset="secondary"
+          :data-testid="`step-button-${i}`"
         >
           <div class="flex flex-col items-center">
-            <Icon :icon="s.icon" />
-            <span class="hidden sm:block"> {{ s.label }} </span>
+            <Icon :icon="s.icon" data-testid="step-icon" />
+            <span class="hidden sm:block" data-testid="step-label">
+              {{ s.label }}
+            </span>
           </div>
         </va-button>
       </template>
 
+      <!-- Step 0 content -->
       <template #step-content-0>
-        <div class="flex flex-col">
+        <div class="flex flex-col" data-testid="step-content-0">
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
             @files-added="onFilesAdded"
             @directory-added="onDirectoryAdded"
+            data-testid="select-file-buttons"
           />
-          <va-divider />
+          <va-divider data-testid="divider-step-0" />
           <SelectedFilesTable
             @file-removed="removeFile"
             :files="displayedFilesToUpload"
+            data-testid="upload-selected-files-table"
           />
         </div>
       </template>
 
+      <!-- Step 1 content -->
       <template #step-content-1>
-        <div class="flex w-full pb-6 items-center">
+        <div
+          class="flex w-full pb-6 items-center"
+          data-testid="upload-metadata-dataset-type-row"
+        >
           <va-select
             v-model="selectedDatasetType"
             :text-by="'label'"
@@ -54,41 +69,53 @@
             label="Dataset Type"
             placeholder="Select dataset type"
             class="flex-grow"
+            data-testid="upload-metadata-dataset-type-select"
           />
           <div class="flex items-center ml-2">
-            <va-popover>
+            <va-popover data-testid="upload-metadata-dataset-type-popover">
               <template #body>
-                <div class="w-96">
-                  Raw Data: Original, unprocessed data collected from
+                <div class="w-96" data-testid="dataset-type-help-text">
+                  - Raw Data: Original, unprocessed data collected from
                   instruments.
                   <br />
-                  Data Product: Processed data derived from Raw Data
+                  - Data Product: Processed data derived from Raw Data
                 </div>
               </template>
-              <Icon icon="mdi:information" class="text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="text-xl text-gray-500"
+                data-testid="dataset-type-help-icon"
+              />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-source-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedSourceRawData"
+                v-model="willAssignSourceRawData"
                 @update:modelValue="resetRawDataSearch"
-                :disabled="willUploadRawData"
+                :disabled="submitAttempted || isRawDataCheckboxDisabled"
                 color="primary"
                 label="Assign source Raw Data"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-source-checkbox"
               />
             </div>
           </div>
 
-          <div class="flex-grow flex items-center">
+          <div
+            class="flex-grow flex items-center"
+            data-testid="upload-metadata-dataset-autocomplete-row"
+          >
             <DatasetSelectAutoComplete
               v-model:selected="selectedRawData"
               v-model:search-term="datasetSearchText"
-              :disabled="submitAttempted || !isAssignedSourceRawData"
+              :disabled="submitAttempted || !isRawDataSearchEnabled"
               :dataset-type="config.dataset.types.RAW_DATA.key"
               placeholder="Search Raw Data"
               @clear="resetRawDataSearch"
@@ -96,27 +123,36 @@
               @close="onRawDataSearchClose"
               class="flex-grow"
               :label="'Dataset'"
+              :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+              data-test-id="upload-metadata-dataset-autocomplete"
             >
             </DatasetSelectAutoComplete>
-            <va-popover>
+            <va-popover data-testid="upload-metadata-dataset-autocomplete-popover">
               <template #body>
-                <div class="w-96">
+                <div class="w-96" data-testid="raw-data-help-text">
                   Associating a Data Product with a source Raw Data establishes
                   a clear lineage between the original data and its processed
                   form. This linkage helps to trace the origins of processed
                   data
                 </div>
               </template>
-              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+              <Icon
+                icon="mdi:help-circle"
+                class="ml-2 text-xl text-gray-500"
+                data-testid="raw-data-help-icon"
+              />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-project-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedProject"
+                v-model="willAssignProject"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
@@ -124,9 +160,11 @@
                     }
                   }
                 "
+                :disabled="submitAttempted || isProjectCheckboxDisabled"
                 color="primary"
                 label="Assign Project"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-project-checkbox"
               />
             </div>
           </div>
@@ -135,16 +173,18 @@
             <ProjectAsyncAutoComplete
               v-model:selected="projectSelected"
               v-model:search-term="projectSearchText"
-              :disabled="submitAttempted || !isAssignedProject"
+              :disabled="submitAttempted || !isProjectSearchEnabled"
               placeholder="Search Projects"
               @clear="resetProjectSearch"
               @open="onProjectSearchOpen"
               @close="onProjectSearchClose"
               class="flex-grow"
               :label="'Project'"
+              :messages="noProjectsToAssign ? 'No Projects to select' : null"
+              data-test-id="upload-metadata-project-autocomplete"
             >
             </ProjectAsyncAutoComplete>
-            <va-popover>
+            <va-popover data-testid="upload-metadata-project-autocomplete-popover">
               <template #body>
                 <div class="w-96">
                   Assigning a dataset to a project establishes a connection
@@ -155,16 +195,19 @@
                   members working on the same project.
                 </div>
               </template>
-              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
+              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
             </va-popover>
           </div>
         </div>
 
-        <div class="flex w-full pb-6">
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-instrument-row"
+        >
           <div class="w-60 flex flex-shrink-0 mr-4">
             <div class="flex items-center">
               <va-checkbox
-                v-model="isAssignedSourceInstrument"
+                v-model="willAssignSourceInstrument"
                 @update:modelValue="
                   (val) => {
                     if (!val) {
@@ -172,9 +215,11 @@
                     }
                   }
                 "
+                :disabled="submitAttempted || isInstrumentsCheckboxDisabled"
                 color="primary"
                 label="Assign source Instrument"
                 class="flex-grow"
+                data-testid="upload-metadata-assign-instrument-checkbox"
               />
             </div>
           </div>
@@ -183,21 +228,25 @@
             <va-select
               v-model="selectedSourceInstrument"
               :options="sourceInstrumentOptions"
-              :disabled="!isAssignedSourceInstrument"
+              :disabled="submitAttempted || !isInstrumentSelectionEnabled"
               label="Source Instrument"
               placeholder="Select Source Instrument"
               class="flex-grow"
               :text-by="'name'"
               :track-by="'id'"
+              :messages="
+                noInstrumentsToAssign ? 'No Instruments to select' : null
+              "
+              data-testid="upload-metadata-source-instrument-select"
             />
             <div class="flex items-center ml-2">
-              <va-popover>
+              <va-popover data-testid="upload-metadata-source-instrument-popover">
                 <template #body>
                   <div class="w-72">
                     Source instrument where this data was collected from.
                   </div>
                 </template>
-                <Icon icon="mdi:information" class="text-xl text-gray-500" />
+                <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
               </va-popover>
             </div>
           </div>
@@ -206,7 +255,7 @@
 
       <template #step-content-2>
         <div class="flex flex-row" v-if="selectingFiles || selectingDirectory">
-          <div class="flex-1">
+          <div class="flex-1" data-testid="uploaded-dataset-details">
             <va-card class="upload-details">
               <va-card-title>
                 <div class="flex flex-nowrap items-center w-full">
@@ -216,15 +265,15 @@
               <va-card-content>
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
-                  v-model:populated-dataset-name="populatedDatasetName"
+                  v-model:populated-dataset-name="uploadedDatasetName"
                   :dataset="datasetUploadLog?.audit_log.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
-                  :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
-                  :show-uploaded-dataset-error="
-                    !!formErrors[STEP_KEYS.UPLOAD] && !stepIsPristine
+                  :dataset-name-error="
+                    !stepIsPristine && formErrors[STEP_KEYS.UPLOAD]
                   "
-                  :project="projectSelected"
+                  :project="projectSelected || projectCreated"
+                  :creating-new-project="willCreateNewProject"
                   :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
@@ -238,13 +287,13 @@
           </div>
 
           <va-divider vertical />
-          <div class="flex-1">
+
+          <div class="flex-1" data-testid="dataset-upload-table">
             <DatasetFileUploadTable :files="displayedFilesToUpload" />
           </div>
         </div>
       </template>
 
-      <!-- custom controls -->
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
           <va-button
@@ -257,6 +306,7 @@
               }
             "
             :disabled="isPreviousButtonDisabled"
+            data-testid="upload-previous-button"
           >
             Previous
           </va-button>
@@ -265,6 +315,7 @@
             @click="onNextClick(nextStep)"
             :color="isLastStep ? 'success' : 'primary'"
             :disabled="isNextButtonDisabled"
+            data-testid="upload-next-button"
           >
             <!--            {{ isLastStep ? (submitAttempted ? "Retry" : "Upload") : "Next" }}-->
             {{ isLastStep ? "Upload" : "Next" }}
@@ -278,9 +329,10 @@
 <script setup>
 import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
 import config from "@/config";
-import Constants from "@/constants";
+import { default as Constants } from "@/constants";
 import datasetService from "@/services/dataset";
 import instrumentService from "@/services/instrument";
+import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import uploadService from "@/services/upload";
 import { formatBytes } from "@/services/utils";
@@ -299,6 +351,7 @@ const STEP_KEYS = {
   UPLOAD: "upload",
 };
 
+// Various errors that may be shown to the user during the process of uploading a dataset.
 const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
 const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
@@ -314,6 +367,7 @@ const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
 const blobSlice =
   File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
+// The various steps that the user will taken through during the process of uploading a dataset.
 const steps = [
   {
     key: STEP_KEYS.SELECT_FILES,
@@ -332,6 +386,7 @@ const steps = [
   },
 ];
 
+// Types of Datasets available to upload
 const datasetTypes = [
   {
     label: config.dataset.types.RAW_DATA.label,
@@ -343,62 +398,139 @@ const datasetTypes = [
   },
 ];
 
+// Whether individual files are being uploaded, or a single directory is being uploaded.
 const FILE_TYPE = {
   FILE: "file",
   DIRECTORY: "directory",
 };
 
+// An object containing the form validation errors for each step.
 const formErrors = ref({
   [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.SELECT_FILES]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
+
+// Bearer token used to send requests to the File-Upload API
 const uploadToken = ref(useLocalStorage("uploadToken", ""));
-const isAssignedSourceInstrument = ref(true);
-const isAssignedSourceRawData = ref(true);
-const selectedRawData = ref(null);
+
+// Search-text for Dataset Search
 const datasetSearchText = ref("");
+// Search-text for Project search
 const projectSearchText = ref("");
-const isAssignedProject = ref(true);
-const submissionSuccess = ref(false);
+
+// Options available to choose from in the `Dataset Type` dropdown.
 const datasetTypeOptions = ref(datasetTypes);
+
+// The type of Dataset that the user has selected to upload.
 const selectedDatasetType = ref(
+  // By default, it is assumed that user will upload a Data Product.
   datasetTypes.find((e) => e.value === config.dataset.types.DATA_PRODUCT.key),
 );
-// `willUploadRawData` determines whether the user will upload a Raw Data or a
-// Data Product. By default, the user will upload a Data Product.
-const willUploadRawData = ref(false);
-// `stepPristineStates` tracks if a step's form fields are pristine (i.e. not
-// touched by user) or not. Errors are only shown when a step's form fields are
-// not pristine.
+
+/**
+ * `stepPristineStates` tracks if a step's form fields are pristine (i.e. not touched by user) or not.
+ * Errors are only shown when a step's form fields are not pristine.
+ */
 const stepPristineStates = ref([
   { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.SELECT_FILES]: true },
   { [STEP_KEYS.UPLOAD]: true },
 ]);
+// `stepIsPristine` determines whether any of the fields in the current step have been interacted with by the user.
+const stepIsPristine = computed(() => {
+  return !!Object.values(stepPristineStates.value[step.value])[0];
+});
+
 const loading = ref(false);
 const validatingForm = ref(false);
-const selectedSourceInstrument = ref(null);
-const sourceInstrumentOptions = ref([]);
-const projectSelected = ref(null);
+
+// `datasetUploadLog` stores information about the uploaded Dataset that is persisted to the Database.
 const datasetUploadLog = ref(null);
+
+// Various values related to the submission process.
+const submissionSuccess = ref(false);
 const submissionStatus = ref(Constants.UPLOAD_STATUSES.UNINITIATED);
 const statusChipColor = ref("");
 const submissionAlert = ref(""); // For handling network errors before upload begins
 const submissionAlertColor = ref("");
 const isSubmissionAlertVisible = ref(false);
 const submitAttempted = ref(false);
+
+// The files selected by the user for uploading.
 const filesToUpload = ref([]);
-const displayedFilesToUpload = ref([]);
+// The directory selected by the user for uploading.
 const selectedDirectory = ref(null);
+// The list of files being uploaded that are displayed to the user.
+const displayedFilesToUpload = ref([]);
+
+// Determine if the user has selected any files to upload.
+const noFilesSelected = computed(() => {
+  return filesToUpload.value?.length === 0;
+});
+
 const selectedDirectoryChunkCount = ref(0);
 const totalUploadedChunkCount = ref(0);
+
 const uploadingFilesState = ref({});
+
+// Determines if a file has been selected to upload
 const selectingFiles = ref(false);
+// Determines if a directory has been selected to upload
 const selectingDirectory = ref(false);
-const populatedDatasetName = ref("");
+
+/**
+ * Name given to the dataset that the user will upload. This can either be pre-populated by the form,
+ * or set by the user.
+ * - If a directory is selected for uploading, this value is pre-populated by setting it to the name of the directory.
+ * - Is a file is selected for uploading, this value is not set.
+ *
+ * In both of the above cases, the user can select a name of their choosing before initiating the upload.
+ */
+const uploadedDatasetName = ref("");
+
+// Current step index
 const step = ref(0);
+
+const isLastStep = computed(() => {
+  return step.value === steps.length - 1;
+});
+
 const uploadCancelled = ref(false);
+
+// The list of available Instruments for assigning to the Dataset being uploaded.
+const sourceInstrumentOptions = ref([]);
+
+// The Raw Data that will be assigned to the Dataset being uploaded.
+const selectedRawData = ref(null);
+// The (existing) Project that will be assigned to the Dataset being ingested.
+const projectSelected = ref(null);
+// The (new) Project that will be assigned to the Dataset being ingested.
+const projectCreated = ref(null);
+// The Instrument that will be assigned to the Dataset being uploaded.
+const selectedSourceInstrument = ref(null);
+
+// determines whether there are any Raw Data options to choose from
+const noRawDataToAssign = ref(false);
+// determines whether there are any Project options to choose from
+const noProjectsToAssign = ref(false);
+// determines whether there are any Instrument options to choose from
+const noInstrumentsToAssign = ref(false);
+
+// Determines whether the Dataset being uploaded is of type Raw Data or some other type.
+const willUploadRawData = computed(() => {
+  return (
+    selectedDatasetType.value["value"] === config.dataset.types.RAW_DATA.key
+  );
+});
+
+// Determines whether a new Project will be created and associated with the Dataset being uploaded.
+const willCreateNewProject = computed(() => {
+  return (
+    noProjectsToAssign.value &&
+    auth.isFeatureEnabled("auto_create_project_on_dataset_creation")
+  );
+});
 
 /**
  * Determines if the upload process has been completed.
@@ -414,6 +546,7 @@ const isUploadIncomplete = computed(() => {
   );
 });
 
+// Determines whether the current step has form-validation errors.
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.SELECT_FILES];
@@ -447,35 +580,32 @@ const isNextButtonDisabled = computed(() => {
   );
 });
 
-const stepIsPristine = computed(() => {
-  return !!Object.values(stepPristineStates.value[step.value])[0];
-});
-
+// List of files whose uploads are pending or in progress
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
     (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
+// Determines whether there are any files whose uploads are pending or in progress.
 const someFilesPendingUpload = computed(
   () => filesNotUploaded.value.length > 0,
 );
 
-const isLastStep = computed(() => {
-  return step.value === steps.length - 1;
-});
-
+/**
+ * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
+ */
 const uploadFormData = computed(() => {
   return {
-    name: populatedDatasetName.value,
+    name: uploadedDatasetName.value,
     type: selectedDatasetType.value["value"],
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    project_id: projectSelected.value ? projectSelected.value.id : null,
-    src_instrument_id: selectedSourceInstrument.value
-      ? selectedSourceInstrument.value.id
-      : null,
+    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
+    ...(selectedSourceInstrument.value && {
+      src_instrument_id: selectedSourceInstrument.value.id,
+    }),
     files_metadata: filesToUpload.value.map((e) => {
       return {
         name: e.name,
@@ -487,10 +617,12 @@ const uploadFormData = computed(() => {
   };
 });
 
-const noFilesSelected = computed(() => {
-  return filesToUpload.value?.length === 0;
-});
-
+/**
+ * Handler invoked when the user selects one or files that are to be uploaded.
+ * - Clears the directory to be uploaded if one was set before, along with the files in it.
+ * - Sets the new list files to be uploaded.
+ * @param files The list of files selected by the user to be uploaded.
+ */
 const onFilesAdded = (files) => {
   clearSelectedDirectoryToUpload();
   setFiles(files);
@@ -498,6 +630,14 @@ const onFilesAdded = (files) => {
   setUploadedFileType(FILE_TYPE.FILE);
 };
 
+/**
+ * Handler invoked when the user selects a directory that is to be uploaded.
+ * - Clears the files to be uploaded if some were set before.
+ * - Sets the new directory be uploaded, along with the list of files in it.
+ * @param directoryDetails Information about the files selected by the user.
+ * @param {File[]} directoryDetails.files - Array of File objects representing the files in the directory.
+ * @param {string} directoryDetails.directoryName - The name of the directory being uploaded.
+ */
 const onDirectoryAdded = (directoryDetails) => {
   clearSelectedFilesToUpload();
   setDirectory(directoryDetails);
@@ -505,29 +645,9 @@ const onDirectoryAdded = (directoryDetails) => {
   setUploadedFileType(FILE_TYPE.DIRECTORY);
 };
 
-const clearSelectedRawData = () => {
+const resetRawDataSearch = () => {
   selectedRawData.value = null;
   datasetSearchText.value = "";
-};
-
-const resetProjectSearch = () => {
-  projectSelected.value = null;
-  projectSearchText.value = "";
-};
-
-const resetRawDataSearch = (val) => {
-  clearSelectedRawData();
-  if (!val) {
-    datasetTypeOptions.value = datasetTypes;
-  } else {
-    datasetTypeOptions.value = datasetTypes.filter(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
-    );
-    selectedDatasetType.value = datasetTypeOptions.value.find(
-      (e) => e.value === config.dataset.types.DATA_PRODUCT.key,
-    );
-    willUploadRawData.value = false;
-  }
 };
 
 const onRawDataSearchOpen = () => {
@@ -540,6 +660,11 @@ const onRawDataSearchClose = () => {
   }
 };
 
+const resetProjectSearch = () => {
+  projectSelected.value = null;
+  projectSearchText.value = "";
+};
+
 const onProjectSearchOpen = () => {
   projectSelected.value = null;
 };
@@ -550,6 +675,7 @@ const onProjectSearchClose = () => {
   }
 };
 
+// Determines whether the stepper button should be disabled for any given step.
 const isStepperButtonDisabled = (stepIndex) => {
   return (
     submitAttempted.value ||
@@ -560,6 +686,7 @@ const isStepperButtonDisabled = (stepIndex) => {
   );
 };
 
+// Handler invoked when a file that is currently selected for upload is removed from the list of files to be uploaded.
 const removeFile = (fileIndex) => {
   if (selectingDirectory.value) {
     selectingDirectory.value = false;
@@ -572,6 +699,7 @@ const removeFile = (fileIndex) => {
   }
 };
 
+// Async function to check if a Dataset already exists in the system for a given name and type.
 const validateIfExists = (value) => {
   return new Promise((resolve, reject) => {
     // Vuestic claims that it should not run async validation if synchronous
@@ -597,25 +725,26 @@ const validateIfExists = (value) => {
   });
 };
 
-const resetFormErrors = () => {
-  formErrors.value = {
-    [STEP_KEYS.GENERAL_INFO]: null,
-    [STEP_KEYS.SELECT_FILES]: null,
-    [STEP_KEYS.UPLOAD]: null,
-  };
-};
-
+/**
+ * Async function to check if a name selected for the Dataset being uploaded is valid.
+ *
+ * Conditions to consider a name valid:
+ * - Not empty
+ * - Minimum length of 3 characters
+ * - No spaces
+ * - Does not already exist in the system
+ */
 const validateDatasetName = async () => {
-  if (!populatedDatasetName.value) {
+  if (!uploadedDatasetName.value) {
     return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (populatedDatasetName.value?.length < 3) {
+  } else if (uploadedDatasetName.value?.length < 3) {
     return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
-  } else if (populatedDatasetName.value?.indexOf(" ") > -1) {
+  } else if (uploadedDatasetName.value?.indexOf(" ") > -1) {
     return { isNameValid: false, error: DATASET_NAME_HAS_SPACES_ERROR };
   }
 
   validatingForm.value = true;
-  return validateIfExists(populatedDatasetName.value)
+  return validateIfExists(uploadedDatasetName.value)
     .then((res) => {
       const datasetExistsError = (datasetType) => {
         const datasetTypeLabel = datasetTypes.find(
@@ -636,31 +765,35 @@ const validateDatasetName = async () => {
     });
 };
 
-const clearSelectedDirectoryToUpload = ({
-  clearDirectoryFiles = true,
-} = {}) => {
+// Clears any details related to the directory that is currently selected for upload, and the files within it.
+const clearSelectedDirectoryToUpload = () => {
   // clear files within the directory being removed
-  if (clearDirectoryFiles) {
-    clearSelectedFilesToUpload();
-  }
+  clearSelectedFilesToUpload();
   // clear directory being removed
   selectedDirectory.value = null;
 };
 
+// Clears the list of files that are currently selected for upload.
 const clearSelectedFilesToUpload = () => {
   displayedFilesToUpload.value = [];
 };
 
+// Sets the type of content that is to be uploaded (individual files or a single directory).
 const setUploadedFileType = (fileType) => {
-  if (fileType === FILE_TYPE.FILE) {
-    selectingFiles.value = true;
-    selectingDirectory.value = false;
-  } else if (fileType === FILE_TYPE.DIRECTORY) {
-    selectingDirectory.value = true;
-    selectingFiles.value = false;
-  }
+  selectingFiles.value = fileType === FILE_TYPE.FILE;
+  selectingDirectory.value = fileType === FILE_TYPE.DIRECTORY;
 };
 
+// Reset form errors across all steps.
+const resetFormErrors = () => {
+  formErrors.value = {
+    [STEP_KEYS.GENERAL_INFO]: null,
+    [STEP_KEYS.SELECT_FILES]: null,
+    [STEP_KEYS.UPLOAD]: null,
+  };
+};
+
+// Set form-validation errors for the current step's fields.
 const setFormErrors = async () => {
   resetFormErrors();
 
@@ -673,9 +806,9 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (isAssignedSourceRawData.value && !selectedRawData.value) ||
-      (isAssignedProject.value && !projectSelected.value) ||
-      (isAssignedSourceInstrument.value && !selectedSourceInstrument.value)
+      (willAssignSourceRawData.value && !selectedRawData.value) ||
+      (willAssignProject.value && !projectSelected.value) ||
+      (willAssignSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
       return;
@@ -693,6 +826,26 @@ const setFormErrors = async () => {
   }
 };
 
+/**
+ * Evaluates the checksums for a given file by reading it in chunks.
+ *
+ * @param {File} file - The file to evaluate checksums for.
+ * @returns {Promise<Object>} A promise that resolves to an object containing:
+ *   - fileChecksum: The MD5 checksum of the entire file.
+ *   - chunkChecksums: An array of MD5 checksums for each chunk of the file.
+ *
+ * @description
+ * This function performs the following steps:
+ * 1. Initializes a FileReader and a SparkMD5 instance for checksum calculation.
+ * 2. Calculates the total number of chunks based on the file size and a predefined CHUNK_SIZE.
+ * 3. Reads the file in chunks:
+ *    - For each chunk, it calculates and stores its individual MD5 checksum.
+ *    - It also appends each chunk to the SparkMD5 instance for the full file checksum.
+ * 4. Once all chunks are processed, it finalizes the full file checksum.
+ * 5. Returns both the full file checksum and an array of individual chunk checksums.
+ *
+ * @throws Will reject the promise if there's an error during file reading or checksum calculation.
+ */
 const evaluateFileChecksums = (file) => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
@@ -785,6 +938,24 @@ const evaluateChecksums = (filesToUpload) => {
   });
 };
 
+/**
+ * Updates the bearer token used to send requests to the File-Upload API.
+ *
+ * @async
+ * @function updateUploadToken
+ * @param {string} fileName - The name of the file currently being uploaded.
+ * @returns {Promise<void>} A promise that resolves when the token has been updated.
+ *
+ * @description
+ * 1. This function decodes the current bearer token and extracts the last uploaded file name from the
+ * token's scope.
+ * 2. It then calls the auth service to refresh the bearer token if necessary,
+ * and explicitly requests the auth service to provide a new token if the current token was generated for a different
+ * file.
+ * 3. It updates the upload service with the new token.
+ *
+ * @throws Will throw an error if the token refresh operation fails.
+ */
 const updateUploadToken = async (fileName) => {
   const currentToken = uploadToken.value;
   const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null;
@@ -799,8 +970,11 @@ const updateUploadToken = async (fileName) => {
   uploadService.setToken(uploadToken.value);
 };
 
-// Uploads a chunk. Retries to upload chunk upto 5 times in case of network
-// errors.
+/**
+ * Uploads a single chunk of a file. Retries to upload chunk upto 5 times in case of network errors.
+ * @param {FormData} chunkData - The FormData object containing the chunk and its metadata.
+ * @returns {Promise<boolean>} A promise that resolves to true if the chunk was uploaded successfully, false otherwise.
+ */
 const uploadChunk = async (chunkData) => {
   const upload = async () => {
     if (uploadCancelled.value) {
@@ -808,15 +982,9 @@ const uploadChunk = async (chunkData) => {
     }
 
     let chunkUploaded = false;
-
     try {
       // update upload token if needed
       await updateUploadToken(chunkData.get("name"));
-      // console.log("token updated for: ", chunkData.get("name"));
-      // console.log(
-      //   "calling uploadService.uploadFile(chunkData) for: ",
-      //   chunkData.get("name"),
-      // );
       await uploadService.uploadFile(chunkData);
       chunkUploaded = true;
     } catch (e) {
@@ -862,15 +1030,15 @@ const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
     !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
     uploadingFilesState.value[fileUploadLogId][
       "resumeFileUploadAtChunkIndex"
-    ] === chunkIndex
+      ] === chunkIndex
   );
 };
 
 const postChunkUploadAttempt = ({
-  fileUploadLogId,
-  chunkIndex,
-  isChunkUploaded,
-} = {}) => {
+                                  fileUploadLogId,
+                                  chunkIndex,
+                                  isChunkUploaded,
+                                } = {}) => {
   if (isChunkUploaded) {
     totalUploadedChunkCount.value += 1;
     uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
@@ -939,7 +1107,7 @@ const uploadFileChunks = async (fileDetails) => {
     });
     let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
       "uploadedChunks"
-    ].includes(chunkData.get("index"));
+      ].includes(chunkData.get("index"));
     const willUploadChunk =
       !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
 
@@ -961,7 +1129,7 @@ const uploadFileChunks = async (fileDetails) => {
       if (selectingDirectory.value) {
         selectedDirectory.value.progress = Math.trunc(
           (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
-            100,
+          100,
         );
       } else {
         fileDetails.progress = Math.trunc(
@@ -1000,6 +1168,24 @@ const uploadFile = async (fileDetails) => {
   return uploaded;
 };
 
+/**
+ * Handles the submission of the dataset upload form.
+ * This function is called when the user clicks the "Upload" button on the final step of the stepper.
+ *
+ * @async
+ * @function onSubmit
+ *
+ * @description
+ * This function performs the following steps:
+ * 1. Sets the submission attributes to indicate that an upload is in progress.
+ * 2. Before initiating the upload, evaluates file checksums, and registers the Dataset to be uploaded in the database.
+ * 3. Sequentially uploads any files that have not been uploaded yet.
+ * 4. Once all files have been uploaded, or if the upload is interrupted, it sets appropriate error messages and status.
+ *
+ * @throws {Error} If there's an issue with dataset creation or file upload.
+ *
+ * @returns {Promise<void>}
+ */
 const onSubmit = async () => {
   if (filesToUpload.value.length === 0) {
     await setFormErrors();
@@ -1091,11 +1277,12 @@ const handleSubmit = () => {
     .then(() => {
       return !uploadCancelled.value
         ? datasetService.processDatasetUpload(
-            datasetUploadLog.value.audit_log.dataset.id,
-          )
+          datasetUploadLog.value.audit_log.dataset.id,
+        )
         : Promise.reject();
     })
-    .catch(() => {
+    .catch((e) => {
+      // console.error(e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";
@@ -1121,36 +1308,47 @@ const onNextClick = (nextStep) => {
   }
 };
 
-// Evaluates selected file checksums, logs the upload
+/**
+ * This function:
+ * 1. evaluates the checksums of the files to be uploaded.
+ * 2. Logs any upload-related information that needs to be persisted in the database.
+ */
 const preUpload = async () => {
   await evaluateChecksums(filesNotUploaded.value);
 
   const logData = datasetUploadLog.value?.id
     ? {
-        status: Constants.UPLOAD_STATUSES.UPLOADING,
-      }
+      status: Constants.UPLOAD_STATUSES.UPLOADING,
+    }
     : {
-        ...uploadFormData.value,
-      };
+      ...uploadFormData.value,
+    };
 
   try {
     const res = await createOrUpdateUploadLog(logData);
     datasetUploadLog.value = res.data;
+    if ((datasetUploadLog.value.audit_log.dataset.projects || []).length > 0) {
+      projectCreated.value =
+        datasetUploadLog.value.audit_log.dataset.projects[0]?.project;
+    }
   } catch (err) {
     // console.error(err);
     throw new Error("Error logging dataset upload");
   }
 };
 
-// Log (or update) upload status
+/**
+ * Creates a log entry for this Dataset's upload in the database, or updates an existing log.
+ * @param data
+ */
 const createOrUpdateUploadLog = (data) => {
   if (!uploadCancelled.value) {
     return !datasetUploadLog.value
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
-          datasetUploadLog.value?.audit_log?.dataset.id,
-          data,
-        );
+        datasetUploadLog.value?.audit_log?.dataset.id,
+        data,
+      );
   } else {
     return Promise.reject();
   }
@@ -1168,6 +1366,11 @@ const uploadFiles = async (files) => {
   return uploaded;
 };
 
+/**
+ * Persists the details of the files selected for uploading in this component's state.
+ *
+ * @param {File[]} files - Array of File objects representing the files in the directory.
+ */
 const setFiles = (files) => {
   _.range(0, files.length).forEach((i) => {
     const file = files.item(i);
@@ -1182,6 +1385,13 @@ const setFiles = (files) => {
   displayedFilesToUpload.value = filesToUpload.value;
 };
 
+/**
+ * Persists the details of the files contained inside the directory selected for uploading in this component's state.
+ *
+ * @param {Object} directoryDetails - Details of the directory selected for uploading.
+ * @param {File[]} directoryDetails.files - Array of File objects representing the files in the directory.
+ * @param {string} directoryDetails.directoryName - The name of the directory has been selected for uploading.
+ */
 const setDirectory = (directoryDetails) => {
   const directoryFiles = directoryDetails.files;
   let directorySize = 0;
@@ -1207,25 +1417,263 @@ const setDirectory = (directoryDetails) => {
   displayedFilesToUpload.value = [selectedDirectory.value];
 };
 
-watch(selectedDatasetType, (newVal) => {
-  if (newVal["value"] === config.dataset.types.RAW_DATA.key) {
-    isAssignedSourceRawData.value = false;
-    clearSelectedRawData();
-    willUploadRawData.value = true;
-  } else {
-    willUploadRawData.value = false;
-  }
-});
-
-watch(selectingFiles, () => {
-  if (selectingFiles.value) {
-    populatedDatasetName.value = "";
-  }
-});
-
+// If a user is uploading a directory, the name of the Dataset to be uploaded will be pre-populated to be the same as
+// the name of the directory they have selected for uploading.
 watch(selectingDirectory, () => {
   if (selectingDirectory.value) {
-    populatedDatasetName.value = selectedDirectory.value.name;
+    uploadedDatasetName.value = selectedDirectory.value.name;
+  }
+});
+
+// If a user is uploading individual files, the name of the Dataset to be uploaded will be entered by them. Therefore,
+// clear the name, if it is already pre-populated.
+watch(selectingFiles, () => {
+  if (selectingFiles.value) {
+    uploadedDatasetName.value = "";
+  }
+});
+
+/**
+ * ## Instrument checkbox and selection behavior
+ *
+ * This section explains the behavior of the "Assign Source Instrument" checkbox and select fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Instruments available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Instrument select is disabled
+ * - If Instrument is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Instrument select is enabled
+ *
+ * State changes:
+ * - User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
+/**
+ * `Assign Source Instrument` checkbox is disabled if:
+ * - There are no Instrument options to choose from
+ */
+const isInstrumentsCheckboxDisabled = computed(() => {
+  return noInstrumentsToAssign.value;
+});
+/**
+ * Instrument selection is enabled if:
+ * - `Assign Source Instrument` checkbox is enabled, AND
+ * - `Assign Source Instrument` checkbox is checked
+ */
+const isInstrumentSelectionEnabled = computed(() => {
+  return (
+    !isInstrumentsCheckboxDisabled.value && willAssignSourceInstrument.value
+  );
+});
+/**
+ * `instrumentsCheckboxInternalState`: Internal checked/unchecked state for the `Assign Source Instrument` checkbox.
+ * - Used as the default state of the checkbox
+ * - Used to update the state of the checkbox
+ */
+const instrumentsCheckboxInternalState = ref(true);
+/**
+ * `willAssignSourceInstrument`: Determines whether the user wants to assign an Instrument to the Dataset being
+ * uploaded.
+ * - This is a writable Computed property that manages the checked/unchecked state of the 'Assign
+ * Source Instruments' checkbox.
+ *
+ * @property {Function} get - Getter function for the checkbox state.
+ *   - Returns `false` if there are no Instruments to choose from.
+ *   - Otherwise, returns the internal checkbox state.
+ *
+ * @property {Function} set - Setter function for the checkbox state.
+ *   - Updates the internal checkbox state only if there are some Instrument options to choose from.
+ *
+ * @returns {boolean} The current checked/unchecked state of the 'Assign Source Instrument' checkbox.
+ */
+const willAssignSourceInstrument = computed({
+  get: () => {
+    if (noInstrumentsToAssign.value) {
+      return false;
+    }
+    return instrumentsCheckboxInternalState.value;
+  },
+  set: (newValue) => {
+    if (!noInstrumentsToAssign.value) {
+      instrumentsCheckboxInternalState.value = newValue;
+    }
+  },
+});
+
+/**
+ * ## Project checkbox and search behavior
+ *
+ * This section explains the behavior of the "Assign Project" checkbox and search fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Project available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Project search is disabled
+ * - If Project is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Project search is enabled
+ *
+ * State changes:
+ * - User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
+/**
+ * `Assign Project` checkbox is disabled if:
+ * - There are no Project options to choose from
+ */
+const isProjectCheckboxDisabled = computed(() => {
+  return noProjectsToAssign.value;
+});
+/**
+ * Project search field is enabled if:
+ * - `Assign Project` checkbox is enabled, AND
+ * - `Assign Project` checkbox is checked
+ */
+const isProjectSearchEnabled = computed(() => {
+  return !isProjectCheckboxDisabled.value && willAssignProject.value;
+});
+/**
+ * `projectCheckboxInternalState`: Internal checked/unchecked state for the `Assign Project` checkbox.
+ * - Used as the default state of the checkbox
+ * - Used to update the state of the checkbox
+ */
+const projectCheckboxInternalState = ref(true);
+/**
+ * `willAssignProject` determines whether the user wants to assign a Project to the Dataset being uploaded.
+ * - This is a writable Computed property that manages the checked/unchecked state of the 'Assign
+ * Project' checkbox.
+ *
+ * @property {Function} get - Getter function for the checkbox state.
+ *   - Returns `false` if there are no Projects to choose from.
+ *   - Otherwise, returns the internal checkbox state.
+ *
+ * @property {Function} set - Setter function for the checkbox state.
+ *   - Updates the internal checkbox state only if there are some Project option to choose from.
+ *
+ * @returns {boolean} The current checked/unchecked state of the 'Assign Project' checkbox.
+ */
+const willAssignProject = computed({
+  get: () => {
+    if (noProjectsToAssign.value) {
+      return false;
+    }
+    return projectCheckboxInternalState.value;
+  },
+  set: (newValue) => {
+    if (!noProjectsToAssign.value) {
+      projectCheckboxInternalState.value = newValue;
+    }
+  },
+});
+
+/**
+ * ## Source Raw Data checkbox and search behavior
+ *
+ * This section explains the behavior of the "Assign Raw Data" checkbox and search fields.
+ * The state is managed through refs, computed properties and watchers.
+ *
+ * Initial State:
+ * - If no Raw Data available to assign:
+ *   - Checkbox is unchecked and disabled
+ *   - Raw Data search is disabled
+ * - If Raw Data is available to assign:
+ *   - Checkbox is checked and enabled
+ *   - Raw Data search is enabled
+ *
+ * State changes:
+ * 1. When type of Dataset to be uploaded changes:
+ *    - If new type is Raw Data:
+ *      - Checkbox becomes unchecked and disabled (since a Raw Data cannot be assigned as the source of another Raw
+ *      Data)
+ *      - Search field is disabled
+ *    - If new type is not Raw Data:
+ *      - Checkbox becomes checked and enabled
+ *      - Search field is enabled
+ * 2. User interaction with checkbox:
+ *    - If user unchecks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes disabled
+ *    - If user checks:
+ *      - Checkbox remains enabled
+ *      - Search field becomes enabled
+ */
+/**
+ * `Assign Raw Data` checkbox is disabled if:
+ * - There are no Raw Data options to choose from, OR,
+ * - The Dataset being uploaded is a Raw Data
+ */
+const isRawDataCheckboxDisabled = computed(() => {
+  return noRawDataToAssign.value || willUploadRawData.value;
+});
+/**
+ * Raw Data search field is enabled if:
+ * - `Assign Raw Data` checkbox is enabled, AND,
+ * - `Assign Raw Data` checkbox is checked
+ */
+const isRawDataSearchEnabled = computed(() => {
+  return !isRawDataCheckboxDisabled.value && willAssignSourceRawData.value;
+});
+/**
+ * `rawDataCheckboxInternalState`: Internal checked/unchecked state for the `Assign Raw Data` checkbox.
+ * - Used as the default state of the checkbox
+ * - Used to update the state of the checkbox
+ */
+const rawDataCheckboxInternalState = ref(true);
+/**
+ * `willAssignSourceRawData` determines whether the user wants to assign a source Raw Data to the Dataset being
+ * uploaded.
+ * - This is a writable Computed property that manages the checked/unchecked state of the 'Assign
+ * Raw Data' checkbox.
+ *
+ * @property {Function} get - Getter function for the checkbox state.
+ *   - Returns `false` if there are no Raw Data to choose from, or if the type of the Dataset being uploaded is a Raw
+ *   Data.
+ *   - Otherwise, returns the internal checkbox state.
+ *
+ * @property {Function} set - Setter function for the checkbox state.
+ *   - Updates the internal checkbox state only if there are some Raw Data options to choose from,
+ *   and the type of the Dataset being uploaded is not a Raw Data.
+ *
+ * @returns {boolean} The current checked/unchecked state of the 'Assign Raw Data' checkbox.
+ */
+const willAssignSourceRawData = computed({
+  get: () => {
+    if (noRawDataToAssign.value || willUploadRawData.value) {
+      return false;
+    }
+    return rawDataCheckboxInternalState.value;
+  },
+  set: (newValue) => {
+    if (!noRawDataToAssign.value && !willUploadRawData.value) {
+      rawDataCheckboxInternalState.value = newValue;
+    }
+  },
+});
+/**
+ * Handler for when the type of the Dataset to be uploaded changes.
+ * - Resets the search query for the Raw Data search field
+ * - Updates the internal state of the `Assign Raw Data` checkbox to `true` (checked) if:
+ *   - The Dataset to be uploaded is not of type Raw Data, AND
+ *   - There are Raw Data options to choose from for assignment to the uploaded Dataset
+ */
+watch(selectedDatasetType, () => {
+  resetRawDataSearch();
+  if (!willUploadRawData.value && !noRawDataToAssign.value) {
+    rawDataCheckboxInternalState.value = true;
   }
 });
 
@@ -1234,13 +1682,13 @@ watch(selectingDirectory, () => {
 watch(
   [
     step,
-    populatedDatasetName,
+    uploadedDatasetName,
     projectSelected,
-    isAssignedProject,
+    willAssignProject,
     selectedRawData,
-    isAssignedSourceRawData,
+    willAssignSourceRawData,
     selectedSourceInstrument,
-    isAssignedSourceInstrument,
+    willAssignSourceInstrument,
     selectingFiles,
     selectingDirectory,
     filesToUpload,
@@ -1249,7 +1697,7 @@ watch(
     // Mark step's form fields as not pristine, for fields' errors to be shown
     const stepKey = Object.keys(stepPristineStates.value[step.value])[0];
     if (stepKey === STEP_KEYS.UPLOAD) {
-      // `1` corresponds to `populatedDatasetName`
+      // `1` corresponds to `uploadedDatasetName`
       stepPristineStates.value[step.value][stepKey] = !oldVals[1] && newVals[1];
     } else {
       stepPristineStates.value[step.value][stepKey] = false;
@@ -1259,22 +1707,54 @@ watch(
   },
 );
 
-onMounted(() => {
+/**
+ * When first mounted, load the resources which will be needed in the rest of the form.
+ * - Load resources are:
+ *  - A list of Instruments that Datasets originate from
+ *  - A list of Raw Data that may be assigned to the Dataset being uploaded
+ *  - A list of Projects that may be assigned to the Dataset being uploaded
+ *
+ *  Only a subset of the entirety of the Raw Data and Projects available to the user for assignment are loaded at this
+ *  point. If a user has access to more Raw Data and Projects to choose from, they will be lazily-loaded later.
+ *  This initial load of a subset of options is done only to permanently disable the "Raw Data" and "Project"
+ *  search fields if the user has zero options to choose from.
+ */
+onMounted(async () => {
   loading.value = true;
-  instrumentService
-    .getAll()
-    .then((res) => {
-      sourceInstrumentOptions.value = res.data;
-    })
-    .catch((err) => {
-      toast.error("Failed to load resources");
-      console.error(err);
-    })
-    .finally(() => {
-      loading.value = false;
+
+  try {
+    // Load Instruments that will be available for assignment to the Dataset being uploaded.
+    const onLoadInstrumentResponse = await instrumentService.getAll();
+    sourceInstrumentOptions.value = onLoadInstrumentResponse.data;
+    noInstrumentsToAssign.value = sourceInstrumentOptions.value.length === 0;
+
+    // Do an initial load of Raw Data to verify whether the user has access to any Raw Data to choose from for
+    // assignment to the Dataset being uploaded. If not, the `Assign Raw Data` checkbox will always be disabled.
+    const onLoadRawDataOptionsResponse = await datasetService.getAll({
+      type: config.dataset.types.RAW_DATA.key,
     });
+    noRawDataToAssign.value =
+      onLoadRawDataOptionsResponse.data.datasets.length === 0;
+
+    // Do an initial load of Projects to verify whether the user has access to any Projects to choose from for
+    // assignment to the Dataset being uploaded. If not, the `Assign Project` checkbox will always be disabled.
+    const onLoadProjectOptionsResponse = await projectService.getAll({
+      forSelf: !(auth.canOperate || auth.canAdmin),
+    });
+    noProjectsToAssign.value =
+      onLoadProjectOptionsResponse.data.projects.length === 0;
+  } catch (error) {
+    console.error("Error loading resources:", error);
+    toast.error("An error occurred. Please refresh the page to try again.");
+  }
+
+  loading.value = false;
 });
 
+/**
+ * Evaluate form-validation errors when first mounted, to make sure any form-buttons are disabled until all
+ * form-validations are passing.
+ */
 onMounted(() => {
   setFormErrors();
 });
@@ -1312,14 +1792,13 @@ onMounted(() => {
  *    - If upload is incomplete, sends a request to cancel the upload
  *
  */
-
 onBeforeRouteLeave(() => {
   // Before navigating to a different route, show user a confirmation dialog
   return isUploadIncomplete.value
     ? window.confirm(
-        "Leaving this page before all files have been uploaded will" +
-          " cancel the upload. Do you wish to continue?",
-      )
+      "Leaving this page before all files have been uploaded will" +
+      " cancel the upload. Do you wish to continue?",
+    )
     : true;
 });
 
@@ -1342,7 +1821,8 @@ onBeforeUnmount(() => {
  * - Checks if an upload is incomplete using the `isUploadIncomplete` computed property.
  * - If an upload is incomplete:
  *   - Sets the `returnValue` of the event to `true`, which prompts the browser to show a confirmation dialog.
- * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an upload.
+ * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an
+ * upload.
  *
  */
 const onBeforeUnload = (e) => {
@@ -1358,99 +1838,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("beforeunload", onBeforeUnload);
 });
-
-/* eslint-disable */
-// /**
-//  * Browser Tab Closure Handling Mechanism
-//  *
-//  * This mechanism is designed to handle the scenario when a user attempts to close the browser tab
-//  * during an incomplete upload process. It uses a combination of browser events and a local storage
-//  * flag to determine whether to cancel the upload.
-//  *
-//  * Key Components:
-//  *
-//  * 1. `isClosingBrowserTab`:
-//  *    A reactive variable stored in local storage that indicates whether the browser tab is about to be closed.
-//  *
-//  * 2. `onBeforeUnload`:
-//  *    Event handler triggered when the user attempts to close the tab. It shows a browser
-//  *    confirmation dialog asking the user if they want to leave. If the upload is incomplete at this point,
-//  *    a flag (`isClosingBrowserTab`) is set to track this, with a reset-timeout.
-//  *
-//  * 3. `onUnload`:
-//  *    Event handler triggered if the user confirms that they wish to close the tab.
-//  *    - if the user confirms closing the tab within a short delay (500ms):
-//  *      - It checks if the upload is incomplete, and if so, cancels the upload
-//  *    - if the user takes longer than 500ms to confirm closing the tab:
-//  *      - The upload is not cancelled. In this case the system will end up with an incomplete upload,
-//  *        which can be cleaned up later.
-//  *
-//  * 4. Event Listeners:
-//  *    Added on component mount and removed on unmount to ensure proper cleanup of an incomplete upload.
-//  *
-//  * Flow:
-//  * 1. User attempts to close tab
-//  * 2. `onBeforeUnload` is triggered
-//  *    - Shows confirmation dialog
-//  *    - Sets the `isClosingBrowserTab` flag to `true`
-//  *    - Starts a 500ms timeout after which the flag is reset
-//  * 3. If user confirms that they wish to close the tab, `onUnload` is triggered
-//  *    - Checks `isClosingBrowserTab` and `isUploadIncomplete`
-//  *    - Cancels upload if both are true
-//  * 4. If user doesn't confirm within 500ms, the `isClosingBrowserTab` flag is reset
-//  *
-//  */
-//
-// // Used to indicate if the user intends to close the current browser tab.
-// const isClosingBrowserTab = ref(false);
-//
-// const onBeforeUnload = (e) => {
-//   debugger;
-//   if (isUploadIncomplete.value) {
-//     console.log(
-//         "Show user a browser alert to get confirmation before leaving the page",
-//     );
-//     e.returnValue = true; // this shows the browser alert before user leaves the page
-//     isClosingBrowserTab.value = true;
-//
-//     // If user hasn't confirmed or cancelled the browser alert within a short
-//     // delay, assume they are not leaving the page.
-//     // setTimeout(() => {
-//     //   console.log("500 ms elapsed. Assume user won't leave the page.");
-//     //   isClosingBrowserTab.value = false;
-//     // }, 500);
-//   }
-// };
-//
-// const onUnload = () => {
-//   if (isClosingBrowserTab.value) {
-//     console.log(
-//         "User confirmed that they are leaving page. Upload is incomplete, and will be cancelled.",
-//     );
-//     datasetService.cancelDatasetUpload(
-//         datasetUploadLog.value.audit_log.dataset.id,
-//     );
-//   } else {
-//     console.log(
-//         "User did not confirm leaving page within 500 ms. Upload is incomplete, but will not be cancelled.",
-//     );
-//   }
-//   isClosingBrowserTab.value = false;
-// };
-//
-// onMounted(() => {
-//   window.addEventListener("beforeunload", onBeforeUnload);
-//   window.addEventListener("unload", onUnload);
-// });
-//
-// onBeforeUnmount(() => {
-//   window.removeEventListener("beforeunload", onBeforeUnload);
-//   window.removeEventListener("unload", onUnload);
-//   // once the `onUnload` handler is finished, the `isClosingBrowserTab` flag
-//   // can be reset
-//   isClosingBrowserTab.value = false;
-// });
-/* eslint-enable */
 </script>
 
 <style lang="scss">

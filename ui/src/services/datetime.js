@@ -39,7 +39,7 @@ function displayDateTime(value) {
    * date("2023-06-14T01:18:40.501Z") -> "Jun 14 2023, 01:18:40 AM"
    */
   if (value == null) return null;
-  return dayjs(value).format("MMM D YYYY, HH:mm A");
+  return dayjs(value).format("MMM D YYYY, hh:mm A");
 }
 
 function absolute(value, timezoneOffset = true) {
@@ -153,5 +153,6 @@ export {
   fromNow,
   getMidnightNextDay,
   readableDuration,
-  time,
+  time
 };
+

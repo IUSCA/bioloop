@@ -13,9 +13,9 @@
 </template>
 
 <script setup>
+import * as datetime from "@/services/datetime";
 import { useAlertStore } from "@/stores/alert";
 import { storeToRefs } from "pinia";
-import * as datetime from "@/services/datetime";
 
 const emit = defineEmits(["search"]);
 
@@ -25,18 +25,18 @@ const { filters } = storeToRefs(store);
 const chipStates = ref({});
 
 const activeFilters = computed(() => {
-  const active = Object.entries(filters.value)
+  const _activeFilters = Object.entries(filters.value)
     .filter(([_, value]) => value !== null)
     .map(([key, value]) => ({ key, value }));
 
   // Initialize chip states
-  active.forEach((filter) => {
+  _activeFilters.forEach((filter) => {
     if (!(filter.key in chipStates.value)) {
       chipStates.value[filter.key] = true;
     }
   });
 
-  return active;
+  return _activeFilters;
 });
 
 function formatFilterLabel(key) {
@@ -44,6 +44,8 @@ function formatFilterLabel(key) {
     start_time: "Start Date",
     end_time: "End Date",
     type: "Type",
+    status: "Status",
+    is_hidden: "Hidden",
   };
   return labels[key] || key.charAt(0).toUpperCase() + key.slice(1);
 }
@@ -69,10 +71,7 @@ function getFilterDisplay(filter) {
 }
 
 function removeFilter(key) {
-  console.log("Removing filter:", key);
-  console.log("filters before removal:", filters.value);
   filters.value[key] = null;
-  console.log("filters after removal:", filters.value);
   delete chipStates.value[key];
   emit("search");
 }
@@ -80,13 +79,8 @@ function removeFilter(key) {
 watch(
   chipStates,
   (newStates) => {
-    // console.log("chipStates changed: oldStates", oldStates);
-    // console.log("chipStates changed: newStates", newStates);
     Object.keys(newStates).forEach((key) => {
-      if (
-        newStates[key] === false
-        // && oldStates[key] === true
-      ) {
+      if (newStates[key] === false) {
         removeFilter(key);
       }
     });

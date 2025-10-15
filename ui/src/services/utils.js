@@ -4,6 +4,14 @@ import dayjs from "dayjs";
 import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
 
+const snakeCaseToTitleCase = (value) => {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 function formatBytes(bytes, decimals = 2) {
   bytes = parseInt(bytes);
   if (bytes === 0) return "0 Bytes";
@@ -348,6 +356,8 @@ export {
   maybePluralize,
   navigateBackSafely,
   setIntersection,
+  snakeCaseToTitleCase,
   union,
-  validateEmail,
+  validateEmail
 };
+

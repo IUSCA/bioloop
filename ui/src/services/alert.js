@@ -6,11 +6,10 @@ class AlertService {
    * @param type       Field to filter alerts by `type`. One of 'INFO', 'WARNING' or 'ERROR'
    * @param label       Field to filter alerts by `name`
    * @param message     Field to filter alerts by `message`
-   * @param active      If true, only active alerts (i.e. alerts with start_time in the past and end_time in the future) will be returned
-   * @param start_time ISO 8601 string representing the start time to filter alerts starting after this time
-   * @param start_time_operator Operator to use for comparing alert's `start_time` (lt, lte, gt, gte) with the `start_time` provided
-   * @param end_time   ISO 8601 string representing the end time to filter alerts ending before this time
-   * @param end_time_operator Operator to use for comparing alert's `end_time` (lt, lte, gt, gte) with the `end_time` provided
+   * @param status      Field to filter alerts by `status`. One of 'SCHEDULED', 'ACTIVE', or 'EXPIRED'
+   * @param is_hidden   Field to filter alerts by `is_hidden`. If true, only hidden alerts will be returned
+   * @param start_time  Object containing the start time to filter alerts starting after/before this time
+   * @param end_time    Object containing the end time to filter alerts ending after/before this time
    * @param limit      The number of alerts to be retrieved
    * @param offset     Database offset starting at which results will be retrieved
    * @param sort_by     Property to sort alerts by
@@ -21,32 +20,45 @@ class AlertService {
     label = "",
     message = "",
     type = null,
-    active = false,
     start_time = null,
-    start_time_operator = null,
     end_time = null,
-    end_time_operator = null,
+    is_hidden = false,
+    status = null,
     limit = null,
     offset = null,
     sort_by = null,
     sort_order = null,
   } = {}) {
-    return api.get(`/alerts`, {
-      params: {
-        label,
-        message,
-        type,
-        active,
-        start_time,
-        start_time_operator,
-        end_time,
-        end_time_operator,
-        limit,
-        offset,
-        sort_by,
-        sort_order,
-      },
-    });
+    const params = {
+      label,
+      message,
+      type,
+      is_hidden,
+      status,
+      limit,
+      offset,
+      sort_by,
+      sort_order,
+    };
+
+    // Add date filters with operators
+    if (start_time && typeof start_time === "object") {
+      Object.keys(start_time).forEach((operator) => {
+        if (start_time[operator]) {
+          params[`start_time[${operator}]`] =
+            start_time[operator].toISOString();
+        }
+      });
+    }
+    if (end_time && typeof end_time === "object") {
+      Object.keys(end_time).forEach((operator) => {
+        if (end_time[operator]) {
+          params[`end_time[${operator}]`] = end_time[operator].toISOString();
+        }
+      });
+    }
+
+    return api.get(`/alerts`, { params });
   }
 
   /**
@@ -87,6 +99,14 @@ class AlertService {
   //   return api.delete(`/alerts/${id}`);
   // }
 
+  getTypes() {
+    return api.get("/alerts/types");
+  }
+
+  getStatuses() {
+    return api.get("/alerts/statuses");
+  }
+
   getAlertIcon(alertType) {
     switch (alertType) {
       case "ERROR":
@@ -110,6 +130,32 @@ class AlertService {
         return "info";
       default:
         return "info";
+    }
+  }
+
+  getStatusColor(status) {
+    switch (status) {
+      case "SCHEDULED":
+        return "secondary";
+      case "ACTIVE":
+        return "primary";
+      case "EXPIRED":
+        return "warning";
+      default:
+        return "secondary";
+    }
+  }
+
+  getIconColor(type) {
+    switch (type) {
+      case "ERROR":
+        return "#ef4444";
+      case "WARNING":
+        return "#f59e0b";
+      case "INFO":
+        return "#3b82f6";
+      default:
+        return "#3b82f6";
     }
   }
 }

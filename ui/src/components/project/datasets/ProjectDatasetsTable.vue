@@ -39,6 +39,7 @@
         defaultSortOrder = attrs.sortingOrder;
       }
     "
+    data-testid="project-datasets-table"
   >
     <template #cell(name)="{ rowData }">
       <router-link
