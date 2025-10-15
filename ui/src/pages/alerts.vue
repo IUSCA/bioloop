@@ -149,7 +149,7 @@ import { VaPopover } from "vuestic-ui";
 const columns = [
   {
     key: "label",
-    width: "7%",
+    width: "10%",
     sortable: true,
     thAlign: "left",
     tdAlign: "left",
@@ -187,7 +187,7 @@ const columns = [
   {
     key: "is_hidden",
     label: "Visible",
-    width: "8%",
+    width: "5%",
     thAlign: "center",
     tdAlign: "center",
     thStyle:

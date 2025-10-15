@@ -80,7 +80,7 @@ const exports = {
         test_id: "sidebar-workflows",
       },
       {
-        icon: "mdi:alert-circle",
+        icon: "mdi:alert-outline",
         title: "Alerts",
         path: "/alerts",
         test_id: "sidebar-alerts",

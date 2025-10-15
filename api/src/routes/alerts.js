@@ -224,7 +224,7 @@ router.post(
   '/',
   isPermittedTo('create'),
   validate([
-    body('label').notEmpty().isString().trim()
+    body('label').optional({ nullable: true }).isString().trim()
       .escape(),
     body('message').optional({ nullable: true }).isString().trim()
       .escape(),
@@ -263,10 +263,8 @@ router.patch(
   isPermittedTo('update'),
   validate([
     param('id').isInt(),
-    body('label').notEmpty().escape().optional({ nullable: true }),
-    body('message').optional({ nullable: true })
-      .isString().trim()
-      .escape(),
+    body('label').optional({ nullable: true }).isString().trim(),
+    body('message').optional({ nullable: true }).isString().trim(),
     body('type').optional().isIn(Object.values(CONSTANTS.ALERT_TYPES)),
     body('start_time').optional({ nullable: true }).isISO8601(),
     body('end_time').optional({ nullable: true }).isISO8601(),

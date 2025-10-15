@@ -19,7 +19,6 @@
           v-model="alertData.label"
           label="Label"
           class="w-full"
-          :rules="[(v) => !!v || 'Label is required']"
         />
       </div>
 
