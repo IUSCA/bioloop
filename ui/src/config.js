@@ -96,7 +96,7 @@ const exports = {
     pollingInterval: 5000, // milliseconds
   },
   alerts: {
-    maxDisplayCount: 3, // Maximum number of alerts to display at once
+    maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   filesystem_search_spaces: [
     {
