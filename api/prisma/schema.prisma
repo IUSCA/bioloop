@@ -446,7 +446,6 @@ enum DATASET_CREATE_METHOD {
   ON_DEMAND
 }
 
-// todo - to metadata column
 enum ALERT_TYPE {
   INFO
   WARNING

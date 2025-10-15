@@ -7,11 +7,12 @@ CREATE TABLE "alert" (
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_by_id" INTEGER,
-    "label" TEXT NOT NULL,
+    "label" TEXT,
     "message" TEXT,
     "type" "ALERT_TYPE" NOT NULL,
-    "start_time" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "start_time" TIMESTAMP(6),
     "end_time" TIMESTAMP(6),
+    "is_hidden" BOOLEAN DEFAULT false,
 
     CONSTRAINT "alert_pkey" PRIMARY KEY ("id")
 );
