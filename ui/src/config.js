@@ -90,9 +90,13 @@ const exports = {
     auto_create_project_on_dataset_creation: {
       enabledForRoles: ["user"],
     },
+    alerts: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
+  },
+  alerts: {
+    maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   filesystem_search_spaces: [
     {

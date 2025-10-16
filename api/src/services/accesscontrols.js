@@ -75,6 +75,12 @@ const grantsObject = {
     upload: {
       'create:any': ['*'],
     },
+    alerts: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -121,6 +127,9 @@ const grantsObject = {
       'create:any': ['*'],
     },
     fs: {
+      'read:any': ['*'],
+    },
+    alerts: {
       'read:any': ['*'],
     },
   },
@@ -188,6 +197,12 @@ const grantsObject = {
     },
     upload: {
       'create:any': ['*'],
+    },
+    alerts: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
     },
   },
 };

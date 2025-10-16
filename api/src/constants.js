@@ -165,6 +165,18 @@ const auth = {
   },
 };
 
+const ALERT_STATUSES = {
+  SCHEDULED: 'SCHEDULED',
+  ACTIVE: 'ACTIVE',
+  EXPIRED: 'EXPIRED',
+};
+
+const ALERT_TYPES = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  ERROR: 'ERROR',
+};
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -176,6 +188,8 @@ module.exports = {
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
   WORKFLOWS,
+  ALERT_TYPES,
+  ALERT_STATUSES,
   DATASET_STATES,
   INCLUDE_PROJECTS,
 };
