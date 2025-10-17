@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["strictUndefinedChecks"]
 }
 
@@ -186,7 +186,7 @@ model user {
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
   user_notifications         user_notification[]
-  owned_projects project[]
+  owned_projects             project[]
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
 }
@@ -409,7 +409,7 @@ model alert {
   type          ALERT_TYPE
   start_time    DateTime?  @db.Timestamp(6)
   end_time      DateTime?  @db.Timestamp(6)
-  is_hidden     Boolean? @default(false)
+  is_hidden     Boolean?   @default(false)
 }
 
 enum access_type {
