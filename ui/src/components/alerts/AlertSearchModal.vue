@@ -131,14 +131,13 @@ defineExpose({
 });
 
 onMounted(async () => {
-  Promise.all([
-    alertService.getTypes(),
-    alertService.getStatuses(),
-  ]).then(([res1, res2]) => {
-    const types = res1.data;
-    const statuses = res2.data;
-    alertTypes.value = types;
-    alertStatuses.value = statuses;
-  });
+  Promise.all([alertService.getTypes(), alertService.getStatuses()]).then(
+    ([res1, res2]) => {
+      const types = res1.data;
+      const statuses = res2.data;
+      alertTypes.value = types;
+      alertStatuses.value = statuses;
+    },
+  );
 });
 </script>

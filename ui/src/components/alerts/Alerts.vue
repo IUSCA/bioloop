@@ -48,5 +48,4 @@ const handleDismiss = (alertId) => {
 };
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

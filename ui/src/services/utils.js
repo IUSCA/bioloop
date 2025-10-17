@@ -462,6 +462,5 @@ export {
   setIntersection,
   snakeCaseToTitleCase,
   union,
-  validateEmail
+  validateEmail,
 };
-
