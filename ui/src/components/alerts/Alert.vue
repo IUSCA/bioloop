@@ -18,7 +18,7 @@
 
     <!-- Alert created-at -->
     <div class="text-sm va-text-secondary">
-      {{ datetime.displayDateTime(props.alert.created_at) }}
+      {{ datetime.displayDateTime(props.alert.start_time) }}
     </div>
 
     <!-- Close Button -->
