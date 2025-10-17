@@ -1,9 +1,6 @@
 <template>
   <!-- Only shown if there is at least one dismissed alert -->
-  <va-menu
-    v-if="dismissedAlerts.length > 0"
-    placement="left-bottom"
-  >
+  <va-menu v-if="dismissedAlerts.length > 0" placement="left-bottom">
     <template #anchor>
       <va-badge :offset="[-3, 10]" :text="activeAlerts.length" overlap>
         <va-button class="alert-bell" plain>
@@ -14,11 +11,7 @@
 
     <div class="max-w-md max-h-96 overflow-y-auto" style="min-width: 300px">
       <va-menu-item v-for="alert in activeAlerts" :key="alert.id">
-        <Alert
-          :key="alert.id"
-          :alert="alert"
-          :dismissable="false"
-        />
+        <Alert :key="alert.id" :alert="alert" :dismissable="false" />
       </va-menu-item>
     </div>
   </va-menu>

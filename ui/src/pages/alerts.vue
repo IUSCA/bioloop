@@ -18,7 +18,11 @@
     </div>
 
     <!-- Filter button -->
-    <va-button @click="showFilterAlertsModal" preset="primary" class="flex-none">
+    <va-button
+      @click="showFilterAlertsModal"
+      preset="primary"
+      class="flex-none"
+    >
       <i-mdi-filter />
       <span>
         Filters
@@ -71,13 +75,13 @@
     <!-- Is alert hidden? -->
     <template #cell(is_hidden)="{ value }">
       <va-popover :message="strToBool(value) ? 'Hidden' : 'Visible'">
-      <span v-if="strToBool(value)" class="flex justify-center">
-        <i-mdi-eye-off-outline class="va-text-secondary" />
-      </span>
-      <span v-else class="flex justify-center">
-        <i-mdi-eye-outline  class="va-text-primary" />
-      </span>
-    </va-popover>
+        <span v-if="strToBool(value)" class="flex justify-center">
+          <i-mdi-eye-off-outline class="va-text-secondary" />
+        </span>
+        <span v-else class="flex justify-center">
+          <i-mdi-eye-outline class="va-text-primary" />
+        </span>
+      </va-popover>
     </template>
 
     <!-- Status -->
@@ -96,12 +100,14 @@
       >
         <span class="cursor-help">{{ trimAlertMessage(value) }}</span>
       </va-popover>
-      <span v-else>{{ value || '' }}</span>
+      <span v-else>{{ value || "" }}</span>
     </template>
 
     <!-- Created By -->
     <template #cell(created_by)="{ rowData }">
-      <span>{{ rowData.created_by.name }} ({{ rowData.created_by.username }})</span>
+      <span
+        >{{ rowData.created_by.name }} ({{ rowData.created_by.username }})</span
+      >
     </template>
 
     <!-- Actions -->
@@ -138,22 +144,13 @@
   />
 
   <!-- create or edit alert modal -->
-  <CreateOrEditAlertModal 
-    ref="createOrEditModal"
-    @save="onSave"
-  />
+  <CreateOrEditAlertModal ref="createOrEditModal" @save="onSave" />
 
   <!-- view alert modal -->
-  <ViewAlertModal
-    ref="viewAlertModal"
-    @update="fetchAlerts"
-  />
-  
+  <ViewAlertModal ref="viewAlertModal" @update="fetchAlerts" />
+
   <!-- Search alerts modal -->
-  <AlertSearchModal
-    ref="alertsFilterModal"
-    @search="handleSearch"
-  />
+  <AlertSearchModal ref="alertsFilterModal" @search="handleSearch" />
 </template>
 
 <script setup>

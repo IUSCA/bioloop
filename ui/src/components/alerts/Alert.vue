@@ -11,14 +11,11 @@
     />
 
     <!-- Alert Message -->
-    <div 
-      class="flex-1 text-center"
-      v-html="renderedMessage"
-    ></div>
+    <div class="flex-1 text-center" v-html="renderedMessage"></div>
 
     <!-- Alert created-at -->
     <div class="text-sm va-text-secondary">
-      {{ datetime.displayDateTime(props.alert.created_at) }}
+      {{ datetime.displayDateTime(props.alert.start_time) }}
     </div>
 
     <!-- Close Button -->
@@ -57,16 +54,13 @@ const isDark = useDark();
 // Configure rendered message to sanitize hyperlinks and mailto elements.
 const renderedMessage = computed(() => {
   if (!props.alert.message) return "";
-  
-  // Sanitize user content and convert URLs/emails to links with custom class  
-  return sanitize(
-    props.alert.message,
-      {
-        allowedTags: ["a"],
-        allowedAttributes: ["href", "target", "rel", "class"],
-        classes: ["alert-link"],
-      }
-    )
+
+  // Sanitize user content and convert URLs/emails to links with custom class
+  return sanitize(props.alert.message, {
+    allowedTags: ["a"],
+    allowedAttributes: ["href", "target", "rel", "class"],
+    classes: ["alert-link"],
+  });
 });
 
 const handleClose = () => {
@@ -74,7 +68,13 @@ const handleClose = () => {
 };
 
 const getAlertClasses = (type) => {
-  const getTypeStyles = ({lightBg, darkBg, lightText, darkText, borderColor}) => {
+  const getTypeStyles = ({
+    lightBg,
+    darkBg,
+    lightText,
+    darkText,
+    borderColor,
+  }) => {
     const bg = isDark.value ? darkBg : lightBg;
     const text = isDark.value ? darkText : lightText;
     return `${bg} ${text} border-l-4 ${borderColor}`;
@@ -82,13 +82,37 @@ const getAlertClasses = (type) => {
 
   switch (type) {
     case "ERROR":
-      return getTypeStyles({lightBg: "bg-red-50", darkBg: "bg-red-950", lightText: "text-red-800", darkText: "text-red-200", borderColor: "border-red-500"});
+      return getTypeStyles({
+        lightBg: "bg-red-50",
+        darkBg: "bg-red-950",
+        lightText: "text-red-800",
+        darkText: "text-red-200",
+        borderColor: "border-red-500",
+      });
     case "WARNING":
-      return getTypeStyles({lightBg: "bg-amber-50", darkBg: "bg-amber-950", lightText: "text-amber-800", darkText: "text-amber-200", borderColor: "border-amber-500"});
+      return getTypeStyles({
+        lightBg: "bg-amber-50",
+        darkBg: "bg-amber-950",
+        lightText: "text-amber-800",
+        darkText: "text-amber-200",
+        borderColor: "border-amber-500",
+      });
     case "INFO":
-      return getTypeStyles({lightBg: "bg-blue-50", darkBg: "bg-blue-950", lightText: "text-blue-800", darkText: "text-blue-200", borderColor: "border-blue-500"});
+      return getTypeStyles({
+        lightBg: "bg-blue-50",
+        darkBg: "bg-blue-950",
+        lightText: "text-blue-800",
+        darkText: "text-blue-200",
+        borderColor: "border-blue-500",
+      });
     default:
-      return getTypeStyles({lightBg: "bg-blue-50", darkBg: "bg-blue-950", lightText: "text-blue-800", darkText: "text-blue-200", borderColor: "border-blue-500"});
+      return getTypeStyles({
+        lightBg: "bg-blue-50",
+        darkBg: "bg-blue-950",
+        lightText: "text-blue-800",
+        darkText: "text-blue-200",
+        borderColor: "border-blue-500",
+      });
   }
 };
 </script>
@@ -107,7 +131,7 @@ const getAlertClasses = (type) => {
 
 /* INFO alerts: in light mode, use darker color for better contrast */
 .text-blue-800 :deep(.alert-link) {
-   color: #1e40af; /* blue-800 - darker than the text */
+  color: #1e40af; /* blue-800 - darker than the text */
 }
 
 /* INFO alerts: in dark mode, use lighter color for better contrast */

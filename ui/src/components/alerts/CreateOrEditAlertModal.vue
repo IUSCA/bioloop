@@ -15,11 +15,7 @@
     >
       <!-- Label -->
       <div class="flex flex-row gap-4">
-        <va-input
-          v-model="alertData.label"
-          label="Label"
-          class="w-full"
-        />
+        <va-input v-model="alertData.label" label="Label" class="w-full" />
       </div>
 
       <!-- Type -->
@@ -48,10 +44,7 @@
       />
 
       <!-- Is Hidden? -->
-      <va-switch
-        v-model="alertData.is_hidden"
-        label="Hidden"
-      />
+      <va-switch v-model="alertData.is_hidden" label="Hidden" />
     </va-form>
 
     <!-- Ok/Cancel buttons -->
@@ -101,8 +94,9 @@ const isNewAlert = ref(false);
 
 const showModal = (alert = null) => {
   visible.value = true;
-   
-  if (alert) { // editing an alert
+
+  if (alert) {
+    // editing an alert
     alertData.value = {
       ...(alert.id && { id: alert.id }),
       label: alert.label,
@@ -113,7 +107,8 @@ const showModal = (alert = null) => {
       status: alert.status,
       is_hidden: alert.is_hidden,
     };
-  } else { // creating a new alert
+  } else {
+    // creating a new alert
     alertData.value = getDefaultAlert();
     isNewAlert.value = true;
   }
@@ -154,9 +149,7 @@ const saveAlert = async () => {
 };
 
 onMounted(async () => {
-  Promise.all([
-    alertService.getTypes(),
-  ]).then(([res1]) => {
+  Promise.all([alertService.getTypes()]).then(([res1]) => {
     const types = res1.data;
     alertTypes.value = types;
   });

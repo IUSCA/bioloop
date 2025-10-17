@@ -8,10 +8,7 @@
     @cancel="hideModal"
   >
     <div v-if="alertData" class="flex flex-col gap-6">
-      <Alert 
-        :alert="alertData" 
-        :dismissable="false"
-      />
+      <Alert :alert="alertData" :dismissable="false" />
     </div>
   </va-modal>
 </template>
@@ -33,4 +30,3 @@ const hideModal = () => {
 
 defineExpose({ show });
 </script>
-
