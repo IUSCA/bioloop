@@ -126,7 +126,7 @@ export default defineConfig(({ command, mode }) => {
           },
         },
         "/upload": {
-          target: env.VITE_UPLOAD_API_URL,
+          target: env.VITE_UPLOAD_API_BASE_PATH,
           changeOrigin: true,
           secure: false,
         },
