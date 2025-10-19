@@ -1,6 +1,3 @@
 {
-  "mode": "docker",
-  "download_server": {
-    "base_url": "http://localhost:3060"
-  }  
+  "mode": "docker"
 }
