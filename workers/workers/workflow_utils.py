@@ -37,9 +37,9 @@ def get_archive_dir(dataset_type: str) -> str:
     dataset_type_archive_dir = config["paths"][dataset_type]["archive"]
     
     # create the directory if it does not exist
-    if config.get('mode') == 'docker':
-      dataset_type_archive_dir = Path(dataset_type_archive_dir)
-      dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
+    if config.get('mode') != 'production':
+      _dataset_type_archive_dir = Path(dataset_type_archive_dir)
+      _dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
     else:
       sda.ensure_directory(dataset_type_archive_dir)
 
@@ -196,9 +196,8 @@ def stage(archive_path: str, local_file_path: Path, *, celery_task: WorkflowTask
     @param celery_task: Celery task for progress tracking
     """
 
-    if config.get('mode') == 'docker':
+    if config.get('mode') != 'production':
         archive_file_path = Path(archive_path)        
-        logger.info(f'copying archived Dataset from {archive_file_path} to {local_file_path}')
         local_file_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(archive_file_path, local_file_path)
     else:

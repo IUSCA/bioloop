@@ -67,8 +67,7 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
 
     wf_utils.archive(local_file_path=bundle,
                       archive_path=dataset_bundle_path,
-                      celery_task=celery_task,
-                      verify_checksum=True)
+                      celery_task=celery_task)
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
