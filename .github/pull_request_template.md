@@ -1,30 +1,31 @@
 **Description**
 
-Enable dataset ingestion and download flows in non-production by allowing workers to archive/stage datasets via the docker filesystem and letting secure-download stream bundles directly when not in production while keeping production behavior unchanged. Update service configs so API/UI talk to the secure-download service on localhost:3060.
+Please provide a brief description of the changes made in this PR.
 
 **Related Issue(s)**
 
-Closes #N/A
+Closes #[Issue Number]
+
+If applicable, please reference the issue(s) that this PR addresses. If the PR does not address any specific issue, you can remove this section.
 
 **Changes Made**
 
-- Added mode-aware config/env wiring for secure_download, API, and UI so docker/local/test expose the download service on port 3060.
-- Updated secure_download download route to stream files from the configured `download_path` outside production and fall back to nginx acceleration in production.
-- Reworked worker archive and stage helpers to use local filesystem copies in docker mode while still using SDA in production.
-- Exposed secure_download:3060 in docker-compose for browser downloads and created local/test/docker config stubs.
+List the main changes made in this PR. Be as specific as possible.
 
-- [x] Feature added
+- [ ] Feature added
 - [ ] Bug fixed
-- [x] Code refactored
+- [ ] Code refactored
 - [ ] Tests changed
 - [ ] Documentation updated
 - [ ] Other changes: [describe]
 
 **Screenshots (if applicable)**
 
-Not applicable for service/config changes.
+Provide screenshots or GIFs that visually represent the changes. If not applicable, you can remove this section.
 
 **Checklist**
+
+Before submitting this PR, please make sure that:
 
 - [ ] Your code passes linting and coding style checks.
 - [ ] Documentation has been updated to reflect the changes.
@@ -34,4 +35,4 @@ Not applicable for service/config changes.
 
 **Additional Information**
 
-Production deployments continue to rely on SDA storage; docker/local/test modes now copy from the local filesystem rooted at `DOWNLOAD_PATH`/`paths.*.archive`.
+Add any other information or context that may be relevant to this PR. This can include potential impacts, known issues, or future work related to this change.
