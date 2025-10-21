@@ -1,0 +1,10 @@
+add tests to this:
+
+1. search results by name:
+- by exact string match
+-- assert exact matches
+- by matching string match
+-- assert partial matches
+
+- before tests, create new datasets (see existing tests to see how new datasets are created from within a test) to use for the test.
+

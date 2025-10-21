@@ -17,6 +17,8 @@ const get = async ({
   url,
   params,
 }) => {
+  console.log('get', url, params, token);
+  console.log('absoluteUrl', absoluteUrl(url));
   const context = await getRequestContext(requestContext);
   return context.get(absoluteUrl(url), {
     params,

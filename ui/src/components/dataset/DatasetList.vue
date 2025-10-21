@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div data-testid="dataset-list-container">
     <!-- search bar and filter -->
-    <div class="flex mb-3 gap-3">
+    <div class="flex mb-3 gap-3" data-testid="dataset-list-filters">
       <!-- search bar -->
       <div class="flex-1" v-if="activeFilters.length === 0">
         <va-input
@@ -10,6 +10,7 @@
           :placeholder="`Search ${props.label.toLowerCase()}`"
           outline
           clearable
+          data-testid="dataset-list-input"
           @update:model-value="handleMainFilter"
         >
           <template #prependInner>
@@ -19,7 +20,7 @@
       </div>
 
       <!-- Filter button -->
-      <va-button @click="searchModal.show()" preset="primary" class="flex-none">
+      <va-button @click="searchModal.show()" preset="primary" class="flex-none" data-testid="dataset-list-filters-button">
         <i-mdi-filter />
         <span> Filters </span>
       </va-button>
@@ -28,6 +29,7 @@
       <DatasetSearchFilters
         v-if="activeFilters.length > 0"
         class="flex-none"
+        data-testid="dataset-list-active-filters"
         @search="handleSearch"
         @open="searchModal.show()"
       />
@@ -41,11 +43,16 @@
       v-model:sorting-order="query.sort_order"
       disable-client-side-sorting
       :loading="data_loading"
+      data-testid="dataset-list"
     >
-      <template #cell(name)="{ rowData }">
-        <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
-          rowData.name
-        }}</router-link>
+      <template #cell(name)="{ rowData, rowIndex }">
+        <router-link 
+          :to="`/datasets/${rowData.id}`" 
+          class="va-link" 
+          :data-testid="`dataset-list-row-${rowIndex}-name`"
+        >
+          {{ rowData.name }}
+        </router-link>
       </template>
 
       <template #cell(created_at)="{ value }">
@@ -144,6 +151,7 @@
       :total_results="total_results"
       :curr_items="datasets.length"
       :page_size_options="PAGE_SIZE_OPTIONS"
+      data-testid="dataset-list-pagination"
     />
 
     <!-- launch modal -->
