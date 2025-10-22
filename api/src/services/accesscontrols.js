@@ -81,6 +81,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    groups: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
   },
 
   // user role permissions
@@ -131,6 +137,9 @@ const grantsObject = {
     },
     alerts: {
       'read:any': ['*'],
+    },
+    groups: {
+      'read:own': ['*'], // can read groups they're a member of
     },
   },
 
@@ -199,6 +208,12 @@ const grantsObject = {
       'create:any': ['*'],
     },
     alerts: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
+    groups: {
       'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],

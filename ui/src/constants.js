@@ -80,11 +80,11 @@ const exports = {
         test_id: "sidebar-workflows",
       },
       {
-        feature_key: "alerts",
-        icon: "mdi:alert-outline",
-        title: "Alerts",
-        path: "/alerts",
-        test_id: "sidebar-alerts",
+        feature_key: "groups",
+        icon: "mdi:account-group-outline",
+        title: "Groups",
+        path: "/groups",
+        test_id: "sidebar-groups",
       },
       // {
       //   icon: "mdi-account-multiple",

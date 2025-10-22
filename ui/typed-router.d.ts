@@ -38,6 +38,8 @@ declare module 'vue-router/auto-routes' {
     '/datasets/import': RouteRecordInfo<'/datasets/import', '/datasets/import', Record<never, never>, Record<never, never>>,
     '/datasetUpload/': RouteRecordInfo<'/datasetUpload/', '/datasetUpload', Record<never, never>, Record<never, never>>,
     '/datasetUpload/new': RouteRecordInfo<'/datasetUpload/new', '/datasetUpload/new', Record<never, never>, Record<never, never>>,
+    '/groups/': RouteRecordInfo<'/groups/', '/groups', Record<never, never>, Record<never, never>>,
+    '/groups/[groupId]/': RouteRecordInfo<'/groups/[groupId]/', '/groups/:groupId', { groupId: ParamValue<true> }, { groupId: ParamValue<false> }>,
     '/profile': RouteRecordInfo<'/profile', '/profile', Record<never, never>, Record<never, never>>,
     '/projects/': RouteRecordInfo<'/projects/', '/projects', Record<never, never>, Record<never, never>>,
     '/projects/[projectId]/': RouteRecordInfo<'/projects/[projectId]/', '/projects/:projectId', { projectId: ParamValue<true> }, { projectId: ParamValue<false> }>,

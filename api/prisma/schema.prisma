@@ -189,6 +189,10 @@ model user {
   owned_projects             project[]
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
+  groups                     group_user[]        @relation("group_user_user")
+  group_users_assigned       group_user[]        @relation("group_user_assignor")
+  group_projects_assigned    group_project[]
+  owned_groups               group[]
 }
 
 model user_password {
@@ -312,6 +316,7 @@ model project {
   users           project_user[]
   datasets        project_dataset[]
   contacts        project_contact[]
+  groups          group_project[]
 }
 
 model project_user {
@@ -450,4 +455,44 @@ enum ALERT_TYPE {
   INFO
   WARNING
   ERROR
+}
+
+model group {
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  description String?
+  parent_id   Int?
+  created_at  DateTime        @default(now()) @db.Timestamp(6)
+  updated_at  DateTime        @default(now()) @updatedAt @db.Timestamp(6)
+  owner_id    Int?
+  metadata    Json?
+  owner       user?           @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  parent      group?          @relation("group_hierarchy", fields: [parent_id], references: [id], onDelete: Cascade)
+  children    group[]         @relation("group_hierarchy")
+  users       group_user[]
+  projects    group_project[]
+}
+
+model group_user {
+  group_id    Int
+  user_id     Int
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
+  group       group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade, name: "group_user_user")
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull, name: "group_user_assignor")
+
+  @@id([group_id, user_id])
+}
+
+model group_project {
+  group_id    Int
+  project_id  String
+  assigned_at DateTime @default(now()) @db.Timestamp(6)
+  assignor_id Int?
+  group       group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  project     project  @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  assignor    user?    @relation(fields: [assignor_id], references: [id], onDelete: SetNull)
+
+  @@id([group_id, project_id])
 }

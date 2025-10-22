@@ -15,6 +15,7 @@ const workflowService = require('./workflow');
 const projectService = require('./project');
 const featureService = require('./features');
 const logger = require('./logger');
+const groupService = require('./group');
 
 const { log_axios_error } = require('../utils');
 const {
@@ -384,6 +385,7 @@ function create_filetree(files) {
 
 /**
  * Checks if a user has an association with a dataset.
+ * This checks both direct user-project associations and group-based access.
  *
  * @async
  * @function has_dataset_assoc
@@ -395,12 +397,45 @@ function create_filetree(files) {
 async function has_dataset_assoc({
   dataset_id, user_id,
 }) {
-  const projects = await prisma.project.findMany({
+  // Check direct user-project association
+  const directProjects = await prisma.project.findMany({
     where: {
       users: {
         some: {
           user: {
             id: user_id,
+          },
+        },
+      },
+      datasets: {
+        some: {
+          dataset: {
+            id: dataset_id,
+          },
+        },
+      },
+    },
+  });
+
+  if (directProjects.length > 0) {
+    return true;
+  }
+
+  // Check group-based access
+  // Get all groups user has access to (including descendant groups)
+  const accessibleGroupIds = await groupService.get_user_accessible_groups(user_id);
+
+  if (accessibleGroupIds.length === 0) {
+    return false;
+  }
+
+  // Check if any of these groups are associated with a project that has the dataset
+  const projects = await prisma.project.findMany({
+    where: {
+      groups: {
+        some: {
+          group_id: {
+            in: accessibleGroupIds,
           },
         },
       },

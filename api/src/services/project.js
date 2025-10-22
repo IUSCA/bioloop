@@ -3,6 +3,7 @@ const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
+const groupService = require('./group');
 
 function normalize_name(name) {
   // convert to lowercase
@@ -79,8 +80,19 @@ async function generate_slug({ name, project_id }) {
   }
 }
 
+/**
+ * Check if a user has access to a specific project
+ * Checks direct project-user association and optionally group-based access
+ *
+ * @param {string} project_id - The ID of the project
+ * @param {number} user_id - The ID of the user
+ * @param {boolean} [include_group_access=true] - Whether to check group-based access
+ * @returns {Promise<boolean>} True if user has access to the project
+ */
 async function has_project_assoc({
-  project_id, user_id,
+  project_id,
+  user_id,
+  include_group_access = true,
 }) {
   const projectUserAssociations = await prisma.project_user.findMany({
     where: {
@@ -88,7 +100,32 @@ async function has_project_assoc({
       user_id,
     },
   });
-  return projectUserAssociations.length > 0;
+
+  if (projectUserAssociations.length > 0) {
+    return true;
+  }
+
+  // If not directly associated with the Project, check if the User has access via Groups
+  if (include_group_access) {
+    const accessibleGroups = await groupService.get_user_accessible_groups(user_id);
+
+    if (accessibleGroups.length === 0) {
+      return false;
+    }
+
+    const groupProjectAssociation = await prisma.group_project.findFirst({
+      where: {
+        project_id,
+        group_id: {
+          in: accessibleGroups,
+        },
+      },
+    });
+
+    return !!groupProjectAssociation;
+  }
+
+  return false;
 }
 
 /**
