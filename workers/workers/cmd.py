@@ -10,12 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from email.message import EmailMessage
 from pathlib import Path
 from queue import Queue
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 from sca_rhythm import WorkflowTask
 
-from workers import api
-from workers import utils
+from workers import api, utils
 from workers.config import config
 
 logger = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ def execute(cmd: list[str], **kwargs) -> tuple[str, str]:
     """
     kwargs.pop('capture_output', None)
     kwargs.pop('text', None)
-    p = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    p = subprocess.run(cmd, capture_output=True, text=True, errors='ignore', **kwargs)
     if p.returncode != 0:
         msg = {
             'return_code': p.returncode,
