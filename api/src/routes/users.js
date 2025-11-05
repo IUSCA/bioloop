@@ -69,9 +69,11 @@ router.post(
     // if the roles is unset, set the roles as ['user']
     // clears the roles attribute when requester has no admin role
     const user_data = req.permission.filter(req.body);
+
     user_data.roles = user_data.roles || ['user'];
 
     const user = await userService.createUser(user_data);
+
     res.json(user);
   }),
 );

@@ -4,6 +4,8 @@ const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 const config = require('config');
 
+const logger = require('../services/logger');
+
 function renameKey(oldKey, newKey) {
   return (obj) => {
     // eslint-disable-next-line no-param-reassign
@@ -348,7 +350,8 @@ function base64urlEncode(buf) {
 function deepSortKeys(obj) {
   if (Array.isArray(obj)) {
     return obj.map(deepSortKeys);
-  } if (obj && typeof obj === 'object' && obj.constructor === Object) {
+  }
+  if (obj && typeof obj === 'object' && obj.constructor === Object) {
     return Object.fromEntries(
       Object.keys(obj).sort().map((k) => [k, deepSortKeys(obj[k])]),
     );

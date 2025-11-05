@@ -83,13 +83,20 @@ const exports = {
       enabledForRoles: ["admin"],
     },
     downloads: true,
-    signup: true,
+    signup: false,
     uploads: {
       enabledForRoles: ["admin"],
     },
+    auto_create_project_on_dataset_creation: {
+      enabledForRoles: ["user"],
+    },
+    alerts: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
+  },
+  alerts: {
+    maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   filesystem_search_spaces: [
     {

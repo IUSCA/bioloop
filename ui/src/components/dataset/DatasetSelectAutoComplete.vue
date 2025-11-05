@@ -1,6 +1,4 @@
 <template>
-  <!--  v-model:populated-result="populatedResult"-->
-
   <AutoComplete
     v-model:search-text="searchTerm"
     :async="true"
@@ -17,6 +15,8 @@
     @close="onClose"
     :disabled="props.disabled"
     :label="props.label"
+    :messages="props.messages"
+    :data-test-id="props.dataTestId"
   />
 </template>
 
@@ -25,7 +25,7 @@ import datasetService from "@/services/dataset";
 import toast from "@/services/toast";
 import _ from "lodash";
 
-const NAME_TRIM_THRESHOLD = 35;
+// const NAME_TRIM_THRESHOLD = 35;
 const PAGE_SIZE = 10;
 
 const props = defineProps({
@@ -46,12 +46,13 @@ const props = defineProps({
   label: {
     type: String,
   },
-  error: {
-    type: String,
-  },
-  errorMessages: {
+  messages: {
     type: Array,
     default: () => [],
+  },
+  dataTestId: {
+    type: String,
+    default: "dataset-autocomplete",
   },
 });
 
@@ -70,19 +71,14 @@ const page = ref(1);
 const skip = computed(() => {
   return PAGE_SIZE * (page.value - 1);
 });
-// const selectedResult = ref(null)
 const searchTerm = computed({
   get: () => {
-    // return props.populatedResult ? props.populatedResult['name'] : ''
     return props.searchTerm;
   },
   set: (val) => {
     emit("update:searchTerm", val);
-    // emit('update:populatedResult', null)
   },
 });
-
-// const searchTerm = ref('')
 
 const debouncedSearch = ref(null);
 const searchIndex = ref(0);
@@ -91,22 +87,13 @@ const latestQuery = ref(null);
 
 const onSelect = (item) => {
   emit("update:searchTerm", item.name);
-  // selectedResult.value = item
-  // emit('select', item)
   emit("update:selected", item);
 };
 
 const loadNextPage = () => {
-  // console.log('loadNextPage')
-  // console.log('searchTerm:', searchTerm.value)
   page.value += 1; // increase page value for offset recalculation
   return searchDatasets({ appendToCurrentResults: true });
 };
-
-// const trimName = (val) =>
-//   val.length > NAME_TRIM_THRESHOLD
-//     ? val.substring(0, NAME_TRIM_THRESHOLD) + "..."
-//     : val;
 
 const filterQuery = computed(() => {
   let query;
@@ -167,7 +154,7 @@ const searchDatasets = ({
         datasets.value = appendToCurrentResults
           ? datasets.value.concat(res.data.datasets)
           : res.data.datasets;
-        totalResultsCount.value = res.data.metadata.count;
+        totalResultsCount.value = res.data?.metadata?.count;
         resolveSearch(res.queryIndex);
       })
       .catch((e) => {

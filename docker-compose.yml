@@ -13,7 +13,7 @@ services:
       - ./ui/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"] 
+    command: ["npm", "run", "dev"]
 
   api:
     image: node:21
@@ -30,8 +30,8 @@ services:
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"] 
-    command: ["npm", "run", "dev"] 
+    entrypoint: ["bin/entrypoint.sh"]
+    command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 30s
@@ -64,6 +64,7 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
+      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
@@ -182,7 +183,7 @@ services:
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
-      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.  
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]

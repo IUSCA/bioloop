@@ -12,6 +12,8 @@ const wfService = require('./workflow');
 const userService = require('./user');
 const FileGraph = require('./fileGraph');
 const workflowService = require('./workflow');
+const projectService = require('./project');
+const featureService = require('./features');
 const logger = require('./logger');
 
 const { log_axios_error } = require('../utils');
@@ -827,6 +829,93 @@ async function add_files({ dataset_id, data }) {
   });
 }
 
+async function _handle_project_association({
+  tx, dataset_id, project_id, requester_id,
+}) {
+  const requester = await tx.user.findUniqueOrThrow({ where: { id: requester_id } });
+  const requester_roles = await userService.getUserRoles({ user_id: requester_id });
+
+  if (project_id) {
+    let is_permitted_to_assign_dataset_to_project = false;
+    // Associate the Dataset with the Project.
+    // Check if the user is authorized to associate Datasets to the requested Project. User is authorized if:
+    //  - EITHER, they have the `admin` or `operator` role
+    //  - OR, they are associated with the Project, and are the owner of the Project
+    if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
+      is_permitted_to_assign_dataset_to_project = true;
+    } else {
+      const associating_project_owner = await projectService.get_project_owner({ project_id });
+      const requester_project_association_permission = getPermission({
+        resource: 'project_datasets',
+        action: 'create',
+        requester_roles,
+        checkOwnership: true,
+        requester: requester.username,
+        resourceOwner: associating_project_owner.username,
+      });
+      is_permitted_to_assign_dataset_to_project = requester_project_association_permission.granted;
+      is_permitted_to_assign_dataset_to_project = is_permitted_to_assign_dataset_to_project
+       && await projectService.has_project_assoc({
+         project_id,
+         user_id: requester_id,
+       });
+    }
+    if (!is_permitted_to_assign_dataset_to_project) {
+      throw new Error(`You are not permitted to assign Datasets to Project ${project_id}.`);
+    }
+    await tx.project_dataset.create({
+      data: {
+        project_id,
+        dataset_id,
+        assignor_id: requester_id,
+      },
+    });
+
+    return;
+  }
+
+  // Check if the requester has any Projects assigned to them. If not, a new Project will be created.
+  const requester_projects = await tx.project_user.findMany({
+    where: {
+      user_id: requester_id,
+    },
+  });
+
+  const will_create_project = requester_projects.length === 0;
+  if (will_create_project) {
+    if (!featureService.isFeatureEnabled({ key: 'auto_create_project_on_dataset_creation' })) {
+      return;
+    }
+
+    // (When creating a Dataset) new Projects are only created for `user` role
+    if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
+      return;
+    }
+
+    // Check if the requester has permission to create a new Project
+    const requester_project_creation_permission = getPermission({
+      resource: 'projects',
+      action: 'create',
+      requester_roles,
+    });
+    if (!requester_project_creation_permission.granted) {
+      throw new Error('You are not permitted to create a new Project.');
+    }
+
+    const associating_dataset = await tx.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
+    await projectService.create_project({
+      tx,
+      data: {
+        description: `Project created for Dataset ${associating_dataset.name}`,
+        dataset_ids: [associating_dataset.id],
+        user_ids: [requester_id],
+        owner_id: requester_id,
+        assignor_id: requester_id,
+      },
+    });
+  }
+}
+
 /**
  * Creates a new dataset if one with the same name and type does not already exist.
  *
@@ -846,7 +935,9 @@ async function add_files({ dataset_id, data }) {
  * @param {Object} data - The data object containing details of the dataset to be created.
  * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
  */
-async function create(tx, data) {
+async function create({
+  tx, data, requester_id = null, project_id = null,
+} = {}) {
   // find if a dataset with the same name and type already exists
   const existingDataset = await tx.dataset.findFirst({
     where: {
@@ -859,18 +950,30 @@ async function create(tx, data) {
     },
   });
   if (existingDataset) {
+    console.log('dataset already exists', existingDataset.name, 'existingDataset_id', existingDataset.id);
     return;
   }
-  // if it doesn't exist, create it
-  // console.log(`creating dataset`, JSON.stringify(data, null, 2));
+
+  // Dataset being created may be assigned to a new Project, or an existing Project.
+
+  // if Dataset doesn't exist, create it
+  let created_dataset;
   try {
-    return await tx.dataset.create({
+    created_dataset = await tx.dataset.create({
       data,
+    });
+
+    await _handle_project_association({
+      tx,
+      dataset_id: created_dataset.id,
+      project_id,
+      requester_id,
     });
   } catch (e) {
     console.error('Error creating dataset:', e);
     throw e;
   }
+  return created_dataset;
 }
 
 /**
@@ -1144,11 +1247,11 @@ const buildDatasetsFetchQuery = ({
  * @param {string} data.name - The name of the dataset.
  * @param {string} data.type - The type of the dataset.
  * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
+ * @param {string} [data.description] - The description of the dataset.
  * @param {BigInt} [data.size] - The size of the dataset.
  * @param {string} data.origin_path - The origin path of the dataset.
  * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
  * @param {string} [data.workflow_id] - The ID of the associated workflow.
- * @param {string} [data.project_id] - The ID of the associated project.
  * @param {string} data.user_id - The ID of the user creating the dataset.
  * @param {string} [data.src_instrument_id] - The ID of the source instrument.
  * @param {string} [data.src_dataset_id] - The ID of the source dataset.
@@ -1166,14 +1269,14 @@ const buildDatasetsFetchQuery = ({
 const buildDatasetCreateQuery = (data) => {
   /* eslint-disable no-unused-vars */
   const {
-    name, type, du_size, size, origin_path, bundle_size, metadata, workflow_id,
-    project_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
+    user_id, src_instrument_id, src_dataset_id, state, create_method,
   } = data;
   /* eslint-disable no-unused-vars */
 
   // gather non-null data to create a new dataset
   const create_query = _.flow([
-    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata']),
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'description']),
     _.omitBy(_.isNil),
   ])(data);
 
@@ -1187,15 +1290,6 @@ const buildDatasetCreateQuery = (data) => {
           id: workflow_id,
         },
       ],
-    };
-  }
-
-  if (project_id) {
-    create_query.projects = {
-      create: [{
-        project_id,
-        assignor_id: user_id ?? Prisma.skip,
-      }],
     };
   }
 

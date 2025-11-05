@@ -813,6 +813,57 @@ Events
 - `update:searchTerm` - emitted when the `searchTerm` v-model is to be updated
 - `scroll-end` - emitted when user scrolls to the end of the current batch of results
 
+## OutlinedAlert
+
+A customizable alert component.
+
+### Primary Features:
+- Can be outlined (bordered)
+  - Vuestic's `va-alert` component, when used with the `outline` prop, changes the background color inside the alert. If this is not desirable, this component can serve as an alternative.
+- Can include an icon preceding the alert text
+- Can be customized in terms of size, text-color, border, padding-direction, padding-amount, the icon displayed and the icon's size.
+
+### Basic Usage
+
+```html
+<template>
+  <OutlinedAlert
+    icon="info"
+    color="primary"
+    border="left"
+  >
+    This is an alert message.
+  </OutlinedAlert>
+  
+  <OutlinedAlert 
+    icon="warning" 
+    color="danger" 
+    border="all" 
+    padding-direction="left" 
+    padding-amount="lg" 
+    size="large"
+  >
+    Warning: This is a more customized alert message.
+  </OutlinedAlert>
+</template>
+```
+
+### Props
+- size: String - Overall size of the alert. Options: "small", "medium", "large". Default: "medium"
+- icon: String - The icon to be displayed. Default: "info"
+- iconSize: String - Size of the icon. Options: "small", "medium", "large". Default: "medium"
+- border: String - Border style. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- color: String - Color of the alert. Default: "primary"
+- paddingDirection: String - Direction of padding. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- paddingAmount: String | Number - Amount of padding. Options: "none", "xs", "sm", "md", "lg", "xl", "2xl", "default", or a number (px) or string (custom value). Default: "default"
+
+### Slots
+- default: The content of the alert
+
+### Styling
+- Uses Tailwind classes
+
+
 ## Maybe
 
 Show data if it is neither null or undefined, else show default (provided it is also not null or undefined)
@@ -917,3 +968,94 @@ useQueryPersistence({
 
 It will update the URL query parameters by watching the refObject and it will update the refObject when URL query
 parameters change.
+
+## StartEndDateTimeInputs
+
+A component for selecting start and end date/time pairs with built-in validation.
+
+### Primary Features:
+- Separate date and time inputs for better UX
+- Automatic validation to ensure start date/time is before end date/time
+- Prevents selection of past dates
+- Handles timezone conversion and date/time combination internally
+- Supports disabled state for read-only scenarios
+- Optional validation that can be turned off
+
+### Basic Usage
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="alertData.start_time"
+    v-model:endTime="alertData.end_time"
+  />
+</template>
+
+<script setup>
+const alertData = ref({
+  start_time: null,
+  end_time: null
+});
+</script>
+```
+
+### With Validation Disabled
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="eventStart"
+    v-model:endTime="eventEnd"
+    :validate-dates="false"
+  />
+</template>
+
+<script setup>
+const eventStart = ref(new Date());
+const eventEnd = ref(new Date(Date.now() + 24 * 60 * 60 * 1000)); // Tomorrow
+</script>
+```
+
+### Read-Only Mode
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="existingEvent.start_time"
+    v-model:endTime="existingEvent.end_time"
+    :disabled="true"
+  />
+</template>
+
+<script setup>
+const existingEvent = ref({
+  start_time: new Date('2024-01-15T10:00:00'),
+  end_time: new Date('2024-01-15T12:00:00')
+});
+</script>
+```
+
+### Props
+- validateDates: Boolean - Whether to enable date/time validation. Default: true
+- disabled: Boolean - Whether the inputs should be disabled (read-only). Default: false
+
+### Models
+- startTime: Date - The combined start date and time as a Date object
+- endTime: Date - The combined end date and time as a Date object
+
+### Validation Rules
+When `validateDates` is true:
+- Start date cannot be in the past (compared to today's date)
+- Start date/time must be before end date/time
+- Validation messages are displayed inline with the respective fields
+
+### Internal Behavior
+- Automatically splits incoming Date objects into separate date and time components
+- Combines user-selected date and time back into Date objects
+- Handles timezone conversions appropriately
+- Prevents circular update loops between parent and internal state
+
+### Styling
+- Uses Vuestic UI components (`va-date-input`, `va-time-input`)
+- Responsive layout with flex gap spacing
+- Integrates with Vuestic's validation system

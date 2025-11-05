@@ -39,17 +39,27 @@
       <va-navbar-item class="flex items-center">
         <env-alert icon="warning" />
       </va-navbar-item>
-      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
-        <HeaderUserDropdown />
+
+      <va-navbar-item
+        class="flex items-center"
+        v-if="auth.isFeatureEnabled('alerts')"
+      >
+        <AlertDropdown />
       </va-navbar-item>
+
       <va-navbar-item
         class="flex items-center"
         v-if="auth.isFeatureEnabled('notifications')"
       >
         <NotificationDropdown />
       </va-navbar-item>
+
       <va-navbar-item class="flex items-center">
         <ThemeToggle />
+      </va-navbar-item>
+
+      <va-navbar-item class="flex items-center" v-if="auth.user?.username">
+        <HeaderUserDropdown />
       </va-navbar-item>
     </template>
   </va-navbar>

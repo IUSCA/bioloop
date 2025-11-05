@@ -10,9 +10,9 @@
     "dev": "nodemon --ignore 'tests/**/*.js' src/index.js",
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
+    "lint:file": "eslint --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",
-    "check": "jest",
-    "lint:file": "eslint --fix --ignore-path .gitignore"
+    "check": "jest"
   },
   "keywords": [],
   "author": "",
@@ -58,7 +58,7 @@
     "lodash": "^4.17.21",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
-    "multer": "2.0.1",
+    "multer": "2.0.2",
     "picomatch": "^4.0.2",
     "regex-username": "^2.0.0",
     "spark-md5": "^3.0.2",
