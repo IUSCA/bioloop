@@ -13,6 +13,9 @@ logger = get_task_logger(__name__)
 
 
 def delete_source(celery_task, dataset_id, launch_wf: bool = True, **kwargs):
+    logger.info(f"Deleting source for dataset {dataset_id}")
+    logger.info(f"launch_wf: {launch_wf}")
+
     if not launch_wf:
         logger.info(f"launch_wf is False. Skipping workflow launch for dataset {dataset_id}")
         return dataset_id,
