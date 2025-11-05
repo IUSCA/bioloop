@@ -37,7 +37,8 @@ def execute(cmd: list[str], **kwargs) -> tuple[str, str]:
     """
     kwargs.pop('capture_output', None)
     kwargs.pop('text', None)
-    p = subprocess.run(cmd, capture_output=True, text=True, errors='ignore', **kwargs)
+    encoding_errors = kwargs.pop('encoding_errors', 'strict')
+    p = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors=encoding_errors, **kwargs)
     if p.returncode != 0:
         msg = {
             'return_code': p.returncode,
