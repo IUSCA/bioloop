@@ -52,27 +52,27 @@ const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) =
   'processed',
 );
 
-/**
- * Deep merges an override object into a target object.
- *
- * @function deepMerge
- * @param {Object} target - The target object to merge into.
- * @param {Object} override - The override object to merge from.
- * @returns {Object} The merged object.
- */
-function deepMerge(target, override) {
-  const result = { ...target };
+// /**
+//  * Deep merges an override object into a target object.
+//  *
+//  * @function deepMerge
+//  * @param {Object} target - The target object to merge into.
+//  * @param {Object} override - The override object to merge from.
+//  * @returns {Object} The merged object.
+//  */
+// function deepMerge(target, override) {
+//   const result = { ...target };
 
-  Object.keys(override).forEach((key) => {
-    if (override[key] && typeof override[key] === 'object' && !Array.isArray(override[key])) {
-      result[key] = deepMerge(target[key] || {}, override[key]);
-    } else {
-      result[key] = override[key];
-    }
-  });
+//   Object.keys(override).forEach((key) => {
+//     if (override[key] && typeof override[key] === 'object' && !Array.isArray(override[key])) {
+//       result[key] = deepMerge(target[key] || {}, override[key]);
+//     } else {
+//       result[key] = override[key];
+//     }
+//   });
 
-  return result;
-}
+//   return result;
+// }
 
 /**
  * Applies overrides to workflow steps based on step name matching.
@@ -83,10 +83,25 @@ function deepMerge(target, override) {
  * @returns {Array} The modified workflow steps.
  */
 function applyStepOverrides(steps, stepOverrides) {
+  console.log('applyStepOverrides, steps');
+  console.dir(steps, { depth: null });
+  console.log('applyStepOverrides, stepOverrides');
+  console.dir(stepOverrides, { depth: null });
+  console.log('applyStepOverrides, steps.map');
   return steps.map((step) => {
-    if (stepOverrides[step.name]) {
-      return deepMerge(step, stepOverrides[step.name]);
+    const override = stepOverrides.find((o) => o.task === step.task);
+    
+    console.log('applyStepOverrides, step');
+    console.dir(step, { depth: null });
+    console.log('applyStepOverrides, override');
+    console.dir(override, { depth: null });
+    if (override) {
+      console.log('applyStepOverrides, override found');
+      console.dir(override, { depth: null });
+      return _.merge(step, override);
     }
+    console.log('applyStepOverrides, override not found');
+    console.dir(override, { depth: null });
     return step;
   });
 }
@@ -113,16 +128,17 @@ function get_wf_body(wf_name, overrides = null) {
     queue: step.queue || `${config.app_id}.q`,
   }));
 
-  console.log('wf_body before overrides');
+  console.log('get_wf_body, wf_body before overrides');
   console.dir(wf_body, { depth: null });
+
+  console.log('get_wf_body, overrides', overrides);
 
   // Apply runtime overrides if provided
   if (overrides) {
+    console.log('get_wf_body, overrides apply');
     // Apply step-specific overrides
     if (overrides.steps) {
       wf_body.steps = applyStepOverrides(wf_body.steps, overrides.steps);
-      console.log('wf_body after step overrides');
-      console.dir(wf_body, { depth: null });
     }
 
     // // Apply any other top-level overrides (excluding steps to avoid conflicts)
@@ -131,6 +147,9 @@ function get_wf_body(wf_name, overrides = null) {
     // console.log('wf_body after overrides');
     // console.dir(wf_body, { depth: null });
   }
+
+  console.log('get_wf_body, wf_body after overrides');
+  console.dir(wf_body, { depth: null });
 
   return wf_body;
 }
@@ -157,6 +176,8 @@ function get_wf_body(wf_name, overrides = null) {
  * 6. Returns the created workflow object.
  */
 async function create_workflow(dataset, wf_name, initiator_id, overrides = null) {
+  console.log('create_workflow, overrides', overrides);
+
   const wf_body = get_wf_body(wf_name, overrides);
 
   // check if a workflow with the same name is not already running / pending on
@@ -166,6 +187,9 @@ async function create_workflow(dataset, wf_name, initiator_id, overrides = null)
     .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
 
   assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
+
+  console.log('create_workflow, wf_body');
+  console.dir(wf_body, { depth: null });
 
   // create the workflow
   const wf = (await wfService.create({

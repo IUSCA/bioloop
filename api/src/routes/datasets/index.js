@@ -733,6 +733,9 @@ router.post(
     // #swagger.summary = Create and start a workflow and associate it.
     // Allowed workflows are `Stage` and `Integrated`.
 
+
+    console.log('req.body', req.body);
+
     const wf_name = req.params.wf;
 
     const dataset = await datasetService.get_dataset({
