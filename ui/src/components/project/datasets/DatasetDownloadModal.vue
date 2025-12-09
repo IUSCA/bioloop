@@ -184,7 +184,6 @@ const initiate_dataset_download = () => {
       url.searchParams.set("token", res.data.bearer_token);
       downloadFile({
         url: url.toString(),
-        filename: props.dataset.name,
       });
     })
     .catch((err) => {

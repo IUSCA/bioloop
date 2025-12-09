@@ -2,6 +2,7 @@ const express = require('express');
 const createError = require('http-errors');
 const config = require('config');
 const { param } = require('express-validator');
+const path = require('path');
 
 const { validate } = require('../middleware/validators');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -38,6 +39,13 @@ router.get(
 
       // make browser download response instead of attempting to render it
       res.set('content-type', 'application/octet-stream; charset=utf-8');
+
+      // Extract filename from the path for Content-Disposition header
+      const filename = path.basename(token_file_path);
+      // - Properly encode the filename for Content-Disposition header
+      // - Use both filename (for older browsers) and filename* (for
+      //  newer browsers with UTF-8 support)
+      res.set('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
       // makes nginx not cache the response file
       // otherwise the response cuts off at 1GB as the max buffer size is reached
