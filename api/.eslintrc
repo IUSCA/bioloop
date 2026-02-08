@@ -15,7 +15,7 @@
   },
   "rules": {
     "no-underscore-dangle": 0,
-    "no-unused-vars": ["error", { "argsIgnorePattern": "next" }],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "next|ctx" }],
     "no-use-before-define": ["error", { "variables": false }],
     "no-multi-str": 0,
     "consistent-return": 0,

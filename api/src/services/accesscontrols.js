@@ -208,4 +208,7 @@ const grantsObject = {
 };
 const ac = new AccessControl(grantsObject);
 
-module.exports = ac;
+module.exports = {
+  ac,
+  grantsObject,
+};

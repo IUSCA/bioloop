@@ -17,7 +17,7 @@ services:
 
   api:
     image: node:21
-    restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
+    restart: unless-stopped # This can help with loading container after it has all the keys set up.
     expose:
       - 3030
     env_file:
@@ -146,7 +146,7 @@ services:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
       - ./db/mongo/data:/data/db
-      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
+      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being mounted into the initialization folder, if you're not using docker you will need to run this manually.
 
   # You must clone the rhythm_api repo and place it in the rhythm folder
   rhythm:

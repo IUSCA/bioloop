@@ -3,7 +3,7 @@ const _ = require('lodash/fp');
 
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
-const ac = require('../services/accesscontrols');
+const { ac } = require('../services/accesscontrols');
 const nonceService = require('../services/nonce');
 const logger = require('../services/logger');
 const constants = require('../constants');
