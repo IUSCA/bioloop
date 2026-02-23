@@ -113,7 +113,42 @@ class Policy {
       );
     }
 
-    return this._evaluate(safeUser, safeResource, safeContext);
+    const result = this._evaluate(safeUser, safeResource, safeContext);
+
+    // console.log(`Evaluating ${this.name} policy:`, JSON.stringify({
+    //   user: safeUser, resource: safeResource, context: safeContext, result,
+    // }, null, 2));
+
+    return result;
+  }
+
+  setName(name) {
+    if (!name || typeof name !== 'string') {
+      throw new Error('Policy name must be a non-empty string');
+    }
+    this.name = name;
+    return this;
+  }
+
+  clone() {
+    return new Policy({
+      name: this.name,
+      resourceType: this.resourceType,
+      requires: this.requires,
+      evaluate: this._evaluate,
+    });
+  }
+
+  cloneWithName(name) {
+    if (!name || typeof name !== 'string') {
+      throw new Error('Policy name must be a non-empty string');
+    }
+    return new Policy({
+      name,
+      resourceType: this.resourceType,
+      requires: this.requires,
+      evaluate: this._evaluate,
+    });
   }
 }
 
@@ -121,7 +156,7 @@ function merge(...arrays) {
   return [...new Set(arrays.flat())];
 }
 
-function or(...policies) {
+function validateMergeAndResourceType(...policies) {
   if (!policies || policies.length === 0) {
     throw new Error('or() requires at least one policy');
   }
@@ -135,55 +170,48 @@ function or(...policies) {
   if (resourceTypes.size > 1) {
     throw new Error('Can only combine policies of the same resource type');
   }
+  const resourceType = resourceTypes.size === 1 ? [...resourceTypes][0] : null;
+  return resourceType;
+}
 
-  // merge requires from all policies
+function mergeRequires(...policies) {
+  return {
+    user: merge(...policies.map((p) => p.requires.user)),
+    resource: merge(...policies.map((p) => p.requires.resource)),
+    context: merge(...policies.map((p) => p.requires.context)),
+  };
+}
+
+function or(policies, name = null) {
+  const resourceType = validateMergeAndResourceType(...policies);
+
   return new Policy({
-    name: `or(${policies.map((p) => p.name).join(',')})`,
-    resourceType: policies[0].resourceType,
-    requires: {
-      user: merge(...policies.map((p) => p.requires.user)),
-      resource: merge(...policies.map((p) => p.requires.resource)),
-      context: merge(...policies.map((p) => p.requires.context)),
-    },
+    name: name || `or(${policies.map((p) => p.name).join(',')})`,
+    resourceType,
+    requires: mergeRequires(...policies),
     evaluate: (user, resource, ctx) => policies.some((p) => p.evaluate(user, resource, ctx)),
   });
 }
 
-function and(...policies) {
-  if (!policies || policies.length === 0) {
-    throw new Error('and() requires at least one policy');
-  }
-  if (policies.some((p) => !(p instanceof Policy))) {
-    throw new Error('All arguments to and() must be Policy instances');
-  }
-
-  // can only combine policies of the same resourceType
-  // resourceType can be null, but if not null must be the same across all policies
-  const resourceTypes = new Set(policies.map((p) => p.resourceType).filter((rt) => rt !== null));
-  if (resourceTypes.size > 1) {
-    throw new Error('Can only combine policies of the same resource type');
-  }
+function and(policies, name = null) {
+  const resourceType = validateMergeAndResourceType(...policies);
 
   // merge requires from all policies
   return new Policy({
-    name: `and(${policies.map((p) => p.name).join(',')})`,
-    resourceType: policies[0].resourceType,
-    requires: {
-      user: merge(...policies.map((p) => p.requires.user)),
-      resource: merge(...policies.map((p) => p.requires.resource)),
-      context: merge(...policies.map((p) => p.requires.context)),
-    },
+    name: name || `and(${policies.map((p) => p.name).join(',')})`,
+    resourceType,
+    requires: mergeRequires(...policies),
     evaluate: (user, resource, ctx) => policies.every((p) => p.evaluate(user, resource, ctx)),
   });
 }
 
-function not(policy) {
+function not(policy, name = null) {
   if (!policy || !(policy instanceof Policy)) {
     throw new Error('not() requires a Policy instance');
   }
 
   return new Policy({
-    name: `not(${policy.name})`,
+    name: name || `not(${policy.name})`,
     resourceType: policy.resourceType,
     requires: policy.requires,
     evaluate: (user, resource, ctx) => !policy.evaluate(user, resource, ctx),

@@ -7,7 +7,7 @@ const groupPolicies = require('./policies/group');
 
 /**
  * Registry mapping models to their policy definitions
- * @type {Object.<string, {meta: Object, actions: Object}>}
+ * @type {Object.<string, PolicyContainer>}
  */
 const POLICY_REGISTRY = {
   group: groupPolicies,

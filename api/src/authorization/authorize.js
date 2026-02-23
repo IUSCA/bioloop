@@ -1,5 +1,13 @@
+// const logger = require('@/services/logger');
 const { HydratorRegistry } = require('./hydrators');
 const Policy = require('./policies/base/policy');
+
+class AuthorizationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'AuthorizationError';
+  }
+}
 
 /**
  * Authorizes access based on a policy by evaluating user, resource, and context data.
@@ -20,16 +28,16 @@ const Policy = require('./policies/base/policy');
  */
 async function authorize(policy, identifiers, registry, policyExecutionContext = null) {
   if (!policy || !(policy instanceof Policy)) {
-    throw new Error('Invalid policy: must be an instance of Policy');
+    throw new AuthorizationError('Invalid policy: must be an instance of Policy');
   }
   if (!identifiers || typeof identifiers !== 'object') {
-    throw new Error('Invalid identifiers: must be an object');
+    throw new AuthorizationError(`[policy:${policy.name}] Invalid identifiers: must be an object`);
   }
   if (!registry || !(registry instanceof HydratorRegistry)) {
-    throw new Error('Invalid registry: must be an instance of HydratorRegistry');
+    throw new AuthorizationError(`[policy:${policy.name}] Invalid registry: must be an instance of HydratorRegistry`);
   }
   if (identifiers.user === null || identifiers.user === undefined) {
-    throw new Error('User identifier is required');
+    throw new AuthorizationError(`[policy:${policy.name}] User identifier is required to evaluate policy`);
   }
 
   const userHydrator = registry.get('user');
@@ -37,7 +45,9 @@ async function authorize(policy, identifiers, registry, policyExecutionContext =
   let resourceHydrator = null;
   if (policy.resourceType !== null) {
     if (identifiers.resource === null || identifiers.resource === undefined) {
-      throw new Error(`Resource identifier is required for policy with resourceType: ${policy.resourceType}`);
+      throw new AuthorizationError(
+        `[policy:${policy.name}] Resource identifier is required to evaluate policy which requires resource attributes`,
+      );
     }
     resourceHydrator = registry.get(policy.resourceType);
   }
@@ -67,6 +77,10 @@ async function authorize(policy, identifiers, registry, policyExecutionContext =
       cache: policyExecutionContext?.cache?.context || new Map(),
     }) : {},
   ]);
+
+  // console.debug('user:', JSON.stringify(user, null, 2), { isHydrated: true });
+  // console.debug('resource:', JSON.stringify(resource, null, 2), { isHydrated: resourceHydrator !== null });
+  // console.debug('context:', JSON.stringify(context, null, 2), { isHydrated: contextHydrator !== null });
 
   return policy.evaluate(user, resource, context);
 }

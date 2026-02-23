@@ -15,7 +15,7 @@ class PrismaHydrate extends Hydrate {
     this.model = modelName;
     this.idAttribute = idAttribute;
     this.schemaMap = modelFieldMap.get(modelName);
-    if (!this.schemaMap) throw new HydrationError(`Model ${modelName} not found in Prisma schema`);
+    if (!this.schemaMap) throw new Error(`Model ${modelName} not found in Prisma schema`);
     this.virtualLoaders = new Map();
   }
 
@@ -29,24 +29,30 @@ class PrismaHydrate extends Hydrate {
   */
   registerVirtualAttribute(attrName, loaderFn) {
     if (!attrName || typeof attrName !== 'string') {
-      throw new HydrationError('Virtual attribute name must be a non-empty string');
+      throw new Error('Virtual attribute name must be a non-empty string');
     }
     if (typeof loaderFn !== 'function') {
-      throw new HydrationError('Virtual attribute loader must be a function');
+      throw new Error('Virtual attribute loader must be a function');
     }
     if (this.virtualLoaders.has(attrName)) {
-      throw new HydrationError(`Virtual attribute loader already registered: ${attrName}`);
+      throw new Error(`Virtual attribute loader already registered: ${attrName}`);
     }
+
+    // check that attrName is not already a column or relation in the Prisma model, to avoid confusion and conflicts
+    if (this.schemaMap.has(attrName)) {
+      throw new Error(
+        `Cannot register virtual attribute loader: ${attrName} is a column or relation in the Prisma model. `
+      + 'Virtual attributes must have unique names that do not conflict with actual model fields. '
+      + 'Consider choosing a different name for the virtual attribute or not registering it as a virtual attribute.',
+      );
+    }
+
     this.virtualLoaders.set(attrName, loaderFn);
   }
 
   // given a model name and an array of attribute names, returns an object classifying the attributes into columns,
   // relations or unknown (not a column or relation on the model)
-  classifyAttributes(attributes) {
-    if (!Array.isArray(attributes)) {
-      throw new HydrationError('Attributes must be an array');
-    }
-
+  _classifyAttributes(attributes) {
     const result = {
       columns: [],
       relations: [],
@@ -55,9 +61,6 @@ class PrismaHydrate extends Hydrate {
     };
 
     attributes.forEach((attr) => {
-      if (typeof attr !== 'string') {
-        throw new HydrationError(`Attribute name must be a string, got ${typeof attr}`);
-      }
       if (this.virtualLoaders.has(attr)) {
         result.virtual.push(attr);
       } else if (!this.schemaMap.has(attr)) {
@@ -72,31 +75,27 @@ class PrismaHydrate extends Hydrate {
     return result;
   }
 
-  preparePrismaQueryPayload(id, columns = [], relations = []) {
-    if (id === null || id === undefined) {
-      throw new HydrationError('Record ID cannot be null or undefined');
-    }
-
+  _preparePrismaQueryPayload(id, columns = [], relations = []) {
     const payload = { where: { [this.idAttribute]: id } };
-    // always include the ID attribute in the select clause if columns are specified,
-    // to ensure we have it for caching and virtual loaders
-    const selectColumns = columns.length > 0 && !columns.includes(this.idAttribute)
-      ? [...columns, this.idAttribute]
-      : columns;
 
     // only set select if there is something to select; an empty select:{} would return an empty object
-    if (selectColumns.length > 0 || relations.length > 0) {
+    if (columns.length > 0 || relations.length > 0) {
       payload.select = {
-        ...selectColumns.reduce((acc, col) => ({ ...acc, [col]: true }), {}),
+        ...columns.reduce((acc, col) => ({ ...acc, [col]: true }), {}),
         ...relations.reduce((acc, rel) => ({ ...acc, [rel]: true }), {}),
       };
     }
+
+    // always include the ID attribute in the select clause to ensure we have it for caching and virtual loaders
+    const select = payload.select || {};
+    select[this.idAttribute] = true;
+    payload.select = select;
 
     return payload;
   }
 
   // separating the Prisma query into its own method allows for easier testing and overrides in subclasses if needed
-  async fetchPrismaRecord(payload) {
+  async _fetchPrismaRecord(payload) {
     return this.prisma[this.model].findUniqueOrThrow(payload);
   }
 
@@ -104,16 +103,22 @@ class PrismaHydrate extends Hydrate {
     id, attributes, cache = new Map(), preFetched = {},
   }) {
     if (id === null || id === undefined) {
-      throw new HydrationError('Cannot hydrate: id is required');
+      throw new HydrationError(`[${this.model}] Cannot hydrate: id is required`);
     }
     if (!Array.isArray(attributes)) {
-      throw new HydrationError('Cannot hydrate: attributes must be an array');
+      throw new HydrationError(`[${this.model}] Cannot hydrate: attributes must be an array`);
     }
+    // each attribute must be a string
+    attributes.forEach((attr) => {
+      if (typeof attr !== 'string') {
+        throw new HydrationError(`[${this.model}] Cannot hydrate: attribute names must be strings, got ${typeof attr}`);
+      }
+    });
     if (!(cache instanceof Map)) {
-      throw new HydrationError('Cannot hydrate: cache must be a Map instance');
+      throw new HydrationError(`[${this.model}] Cannot hydrate: cache must be a Map instance`);
     }
     if (preFetched && typeof preFetched !== 'object') {
-      throw new HydrationError('Cannot hydrate: preFetched must be an object');
+      throw new HydrationError(`[${this.model}] Cannot hydrate: preFetched must be an object`);
     }
 
     const cacheKey = `${id}`;
@@ -131,18 +136,21 @@ class PrismaHydrate extends Hydrate {
     const attributesToFetch = attributes.filter((attr) => !(attr in recordCache));
 
     // classify attributes to fetch
-    const classification = this.classifyAttributes(attributesToFetch);
+    const classification = this._classifyAttributes(attributesToFetch);
 
     if (classification.unknown.length) {
-      throw new HydrationError(`Unknown attributes for ${this.model}: ${classification.unknown.join(', ')}. `
+      throw new HydrationError(`[${this.model}] Unknown attributes: ${classification.unknown.join(', ')}. `
     + 'Consider registering virtual loaders for these attributes');
     }
 
-    // fetch DB attributes only if needed
-    if (classification.columns.length || classification.relations.length) {
-      const payload = this.preparePrismaQueryPayload(id, classification.columns, classification.relations);
-      const dbRecord = await this.fetchPrismaRecord(payload);
+    if (classification.columns.length > 0 || classification.relations.length > 0) {
+      const payload = this._preparePrismaQueryPayload(id, classification.columns, classification.relations);
+      const dbRecord = await this._fetchPrismaRecord(payload);
       Object.assign(recordCache, structuredClone(dbRecord));
+    } else {
+      // if there are no columns or relations to fetch, we still want to set the ID in the cache for virtual loaders
+      // that may depend on it
+      recordCache[this.idAttribute] = id;
     }
 
     const virtualAttributesToResolve = classification.virtual.filter((v) => !(v in recordCache));
