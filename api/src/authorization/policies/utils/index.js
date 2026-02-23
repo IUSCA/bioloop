@@ -1,12 +1,12 @@
-const Policy = require('../base/policy');
+const Policy = require('@/authorization/policies/base/policy');
 
-const isPlatformAdmin = Policy({
+const isPlatformAdmin = new Policy({
   name: 'isPlatformAdmin',
   resourceType: null, // this policy is not tied to a specific resource type
   requires: {
     user: ['roles'],
   },
-  evaluate: (user) => user.roles?.includes('admin'),
+  evaluate: (user) => user?.roles?.includes('admin') === true,
 });
 
 module.exports = {

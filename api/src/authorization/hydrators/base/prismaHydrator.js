@@ -1,6 +1,6 @@
-// hydrator/prismaHydrate.js
-const { Hydrate } = require('./base');
-const { modelToAttributeToIsAColumn } = require('./prismaSchemaMap');
+// hydrator/PrismaHydrator.js
+const { Hydrate } = require('./baseHydrator');
+const { modelFieldMap } = require('./schemaMap');
 const { HydrationError } = require('./errors');
 
 class PrismaHydrate extends Hydrate {
@@ -14,7 +14,7 @@ class PrismaHydrate extends Hydrate {
     this.prisma = prismaClient;
     this.model = modelName;
     this.idAttribute = idAttribute;
-    this.schemaMap = modelToAttributeToIsAColumn.get(modelName);
+    this.schemaMap = modelFieldMap.get(modelName);
     if (!this.schemaMap) throw new HydrationError(`Model ${modelName} not found in Prisma schema`);
     this.virtualLoaders = new Map();
   }
@@ -28,6 +28,12 @@ class PrismaHydrate extends Hydrate {
   * their loaders will be executed in parallel.
   */
   registerVirtualAttribute(attrName, loaderFn) {
+    if (!attrName || typeof attrName !== 'string') {
+      throw new HydrationError('Virtual attribute name must be a non-empty string');
+    }
+    if (typeof loaderFn !== 'function') {
+      throw new HydrationError('Virtual attribute loader must be a function');
+    }
     if (this.virtualLoaders.has(attrName)) {
       throw new HydrationError(`Virtual attribute loader already registered: ${attrName}`);
     }
@@ -37,6 +43,10 @@ class PrismaHydrate extends Hydrate {
   // given a model name and an array of attribute names, returns an object classifying the attributes into columns,
   // relations or unknown (not a column or relation on the model)
   classifyAttributes(attributes) {
+    if (!Array.isArray(attributes)) {
+      throw new HydrationError('Attributes must be an array');
+    }
+
     const result = {
       columns: [],
       relations: [],
@@ -45,6 +55,9 @@ class PrismaHydrate extends Hydrate {
     };
 
     attributes.forEach((attr) => {
+      if (typeof attr !== 'string') {
+        throw new HydrationError(`Attribute name must be a string, got ${typeof attr}`);
+      }
       if (this.virtualLoaders.has(attr)) {
         result.virtual.push(attr);
       } else if (!this.schemaMap.has(attr)) {
@@ -59,7 +72,11 @@ class PrismaHydrate extends Hydrate {
     return result;
   }
 
-  async fetchPrismaRecord(id, columns = [], relations = []) {
+  preparePrismaQueryPayload(id, columns = [], relations = []) {
+    if (id === null || id === undefined) {
+      throw new HydrationError('Record ID cannot be null or undefined');
+    }
+
     const payload = { where: { [this.idAttribute]: id } };
     // always include the ID attribute in the select clause if columns are specified,
     // to ensure we have it for caching and virtual loaders
@@ -75,17 +92,37 @@ class PrismaHydrate extends Hydrate {
       };
     }
 
+    return payload;
+  }
+
+  // separating the Prisma query into its own method allows for easier testing and overrides in subclasses if needed
+  async fetchPrismaRecord(payload) {
     return this.prisma[this.model].findUniqueOrThrow(payload);
   }
 
   async hydrate({
     id, attributes, cache = new Map(), preFetched = {},
   }) {
+    if (id === null || id === undefined) {
+      throw new HydrationError('Cannot hydrate: id is required');
+    }
+    if (!Array.isArray(attributes)) {
+      throw new HydrationError('Cannot hydrate: attributes must be an array');
+    }
+    if (!(cache instanceof Map)) {
+      throw new HydrationError('Cannot hydrate: cache must be a Map instance');
+    }
+    if (preFetched && typeof preFetched !== 'object') {
+      throw new HydrationError('Cannot hydrate: preFetched must be an object');
+    }
+
     const cacheKey = `${id}`;
     if (!cache.has(cacheKey)) cache.set(cacheKey, {});
     const recordCache = cache.get(cacheKey);
+
     // merge pre-fetched attributes, but do not overwrite keys already present in the cache
-    const preFetchedClone = structuredClone(preFetched);
+    // Use structuredClone for deep cloning
+    const preFetchedClone = preFetched ? structuredClone(preFetched) : {};
     Object.keys(preFetchedClone).forEach((key) => {
       if (!(key in recordCache)) recordCache[key] = preFetchedClone[key];
     });
@@ -103,7 +140,8 @@ class PrismaHydrate extends Hydrate {
 
     // fetch DB attributes only if needed
     if (classification.columns.length || classification.relations.length) {
-      const dbRecord = await this.fetchPrismaRecord(id, classification.columns, classification.relations);
+      const payload = this.preparePrismaQueryPayload(id, classification.columns, classification.relations);
+      const dbRecord = await this.fetchPrismaRecord(payload);
       Object.assign(recordCache, structuredClone(dbRecord));
     }
 

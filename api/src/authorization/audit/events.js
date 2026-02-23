@@ -1,4 +1,4 @@
-export default Object.freeze({ // enum AUTH_EVENT_TYPE {
+const AUTH_EVENT_TYPE = Object.freeze({
   ACCESS_CHECK: 'ACCESS_CHECK', // Authorization decision was made
   GRANT_CREATED: 'GRANT_CREATED',
   GRANT_REVOKED: 'GRANT_REVOKED',
@@ -23,3 +23,5 @@ export default Object.freeze({ // enum AUTH_EVENT_TYPE {
   DATASET_OWNERSHIP_TRANSFERRED: 'DATASET_OWNERSHIP_TRANSFERRED',
   VISIBILITY_CHANGED: 'VISIBILITY_CHANGED',
 });
+
+module.exports = { AUTH_EVENT_TYPE };

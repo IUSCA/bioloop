@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-// hydrator/base.js
 class Hydrate {
   constructor() {
     if (new.target === Hydrate) {

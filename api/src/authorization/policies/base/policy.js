@@ -19,6 +19,7 @@
  *
  * @example
  * const policy = new Policy({
+ *   name: 'isOwnerAndAdmin',
  *   resourceType: 'post',
  *   requires: {
  *     user: ['id', 'role'],
@@ -85,22 +86,34 @@ class Policy {
   }
 
   evaluate(user, resource, context) {
+    // Ensure we have valid objects to check attributes on
+    const safeUser = user || {};
+    const safeResource = resource || {};
+    const safeContext = context || {};
+
     // check if required attributes are present on user, resource, context
-    const missingUserAttrs = this.requires.user.filter((attr) => !(attr in user));
-    const missingResourceAttrs = this.requires.resource.filter((attr) => !(attr in resource));
-    const missingContextAttrs = this.requires.context.filter((attr) => !(attr in context));
+    const missingUserAttrs = this.requires.user.filter((attr) => !(attr in safeUser));
+    const missingResourceAttrs = this.requires.resource.filter((attr) => !(attr in safeResource));
+    const missingContextAttrs = this.requires.context.filter((attr) => !(attr in safeContext));
 
     if (missingUserAttrs.length > 0) {
-      throw new Error(`Missing required user attributes for policy evaluation: ${missingUserAttrs.join(', ')}`);
+      throw new Error(
+        `Policy: ${this.name} - Missing required user attributes for evaluation: ${missingUserAttrs.join(', ')}`,
+      );
     }
     if (missingResourceAttrs.length > 0) {
-      throw new Error(`Missing required resource attributes for policy evaluation: ${missingResourceAttrs.join(', ')}`);
+      throw new Error(
+        `Policy: ${this.name} - Missing required resource`
+        + ` attributes for evaluation: ${missingResourceAttrs.join(', ')}`,
+      );
     }
     if (missingContextAttrs.length > 0) {
-      throw new Error(`Missing required context attributes for policy evaluation: ${missingContextAttrs.join(', ')}`);
+      throw new Error(
+        `Policy: ${this.name} - Missing required context attributes for evaluation: ${missingContextAttrs.join(', ')}`,
+      );
     }
 
-    return this._evaluate(user, resource, context);
+    return this._evaluate(safeUser, safeResource, safeContext);
   }
 }
 
@@ -109,6 +122,13 @@ function merge(...arrays) {
 }
 
 function or(...policies) {
+  if (!policies || policies.length === 0) {
+    throw new Error('or() requires at least one policy');
+  }
+  if (policies.some((p) => !(p instanceof Policy))) {
+    throw new Error('All arguments to or() must be Policy instances');
+  }
+
   // can only combine policies of the same resourceType
   // resourceType can be null, but if not null must be the same across all policies
   const resourceTypes = new Set(policies.map((p) => p.resourceType).filter((rt) => rt !== null));
@@ -130,6 +150,13 @@ function or(...policies) {
 }
 
 function and(...policies) {
+  if (!policies || policies.length === 0) {
+    throw new Error('and() requires at least one policy');
+  }
+  if (policies.some((p) => !(p instanceof Policy))) {
+    throw new Error('All arguments to and() must be Policy instances');
+  }
+
   // can only combine policies of the same resourceType
   // resourceType can be null, but if not null must be the same across all policies
   const resourceTypes = new Set(policies.map((p) => p.resourceType).filter((rt) => rt !== null));
@@ -151,6 +178,10 @@ function and(...policies) {
 }
 
 function not(policy) {
+  if (!policy || !(policy instanceof Policy)) {
+    throw new Error('not() requires a Policy instance');
+  }
+
   return new Policy({
     name: `not(${policy.name})`,
     resourceType: policy.resourceType,

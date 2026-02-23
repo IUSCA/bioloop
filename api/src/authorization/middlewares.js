@@ -1,3 +1,8 @@
+/**
+ * Initializes the policy execution context with request-scoped caches.
+ * This middleware should be added early in the request processing pipeline
+ * to ensure all authorization checks can benefit from caching.
+ */
 function initializePolicyContext(req, res, next) {
   // check if req has policyContext and if not initialize it to an empty object
   if (!req.policyContext) {

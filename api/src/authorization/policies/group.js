@@ -1,4 +1,4 @@
-const { Policy } = require('./base/policy');
+const Policy = require('./base/policy');
 const { isPlatformAdmin } = require('./utils');
 
 const meta = {
