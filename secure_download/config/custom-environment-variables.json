@@ -1,5 +1,11 @@
 {
+  "mode": "NODE_ENV",
   "auth": {
     "jwks_uri": "JWKS_URI"
-  }
+  },
+  "express": {
+    "port": "EXPRESS_PORT",
+    "host": "EXPRESS_HOST"
+  },
+  "download_path": "DOWNLOAD_PATH"
 }
