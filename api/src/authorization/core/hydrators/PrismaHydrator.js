@@ -96,6 +96,7 @@ class PrismaHydrate extends Hydrate {
 
   // separating the Prisma query into its own method allows for easier testing and overrides in subclasses if needed
   async _fetchPrismaRecord(payload) {
+    // console.debug(`prisma [${this.model}] :`, JSON.stringify(payload, null, 2));
     return this.prisma[this.model].findUniqueOrThrow(payload);
   }
 
