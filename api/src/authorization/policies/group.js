@@ -67,19 +67,22 @@ groupPolicies
     edit_member_role: Policy.or([isPlatformAdmin, isGroupAdmin]),
 
   })
-  // .attributes({
-  //   // * - any action
-  //   '*': [{
-  //     policy: isGroupMember,
-  //     attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'members'],
-  //   }, {
-  //     policy: Policy.or([isPlatformAdmin, isGroupAdmin]),
-  //     attribute_filters: ['*'], // * - all attributes
-  //   }, {
-  //     policy: hasGroupOversight,
-  //     attribute_filters: ['*'],
-  //   }],
-  // })
+  .attributes({
+    // * - any action
+    '*': [
+      {
+        policy: Policy.or([isPlatformAdmin, isGroupAdmin]),
+        attribute_filters: ['*'], // * - all attributes
+      },
+      {
+        policy: isGroupMember,
+        attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'members'],
+      },
+      {
+        policy: hasGroupOversight,
+        attribute_filters: ['*'],
+      }],
+  })
   .freeze();
 
 module.exports = groupPolicies;

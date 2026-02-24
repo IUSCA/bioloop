@@ -1,6 +1,7 @@
 // const logger = require('@/services/logger');
 const { HydratorRegistry } = require('./hydrators');
 const Policy = require('./policies/base/policy');
+const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 class AuthorizationError extends Error {
   constructor(message) {
@@ -85,4 +86,152 @@ async function authorize(policy, identifiers, registry, policyExecutionContext =
   return policy.evaluate(user, resource, context);
 }
 
-module.exports = { authorize };
+/**
+ * Authorizes access with attribute filtering support
+ * Phase 1: Evaluates action policy (reuses standard authorize logic)
+ * Phase 2: If granted, evaluates attribute filter rules with incremental hydration
+ *
+ * @async
+ * @param {Policy} actionPolicy - The authorization policy for the action
+ * @param {Array} attributeRules - Array of attribute filter rules from PolicyContainer
+ * @param {Object} identifiers - The identifiers for hydration
+ * @param {string|number} identifiers.user - User identifier
+ * @param {string|number} identifiers.resource - Resource identifier
+ * @param {string|number} identifiers.context - Context identifier
+ * @param {HydratorRegistry} registry - The service registry for obtaining hydrators
+ * @param {Object} [policyExecutionContext=null] - Optional execution context with cached data
+ * @param {Object} [policyExecutionContext.cache] - Cached hydration data
+ * @param {Map} [policyExecutionContext.cache.user] - User cache Map
+ * @param {Map} [policyExecutionContext.cache.resource] - Resource cache Map
+ * @param {Map} [policyExecutionContext.cache.context] - Context cache Map
+ * @returns {Promise<Object>} Authorization result
+ * @returns {boolean} result.granted - Whether access is granted
+ * @returns {Function|null} result.filter - Filter function to apply to resource objects
+ *                                          Returns null if access denied
+ *
+ * @example
+ * const result = await authorizeWithFilters(
+ *   groupPolicies.getAction('view_metadata'),
+ *   groupPolicies.getAttributeRules('view_metadata'),
+ *   { user: req.user.id, resource: req.params.groupId },
+ *   hydratorRegistry,
+ *   req.policyContext
+ * );
+ * if (result.granted) {
+ *   const group = await prisma.group.findUnique({ where: { id: req.params.groupId } });
+ *   res.json(result.filter(group));
+ * }
+ */
+async function authorizeWithFilters(
+  actionPolicy,
+  attributeRules,
+  identifiers,
+  registry,
+  policyExecutionContext = null,
+) {
+  // Validate inputs
+  if (!actionPolicy || !(actionPolicy instanceof Policy)) {
+    throw new AuthorizationError('Invalid actionPolicy: must be an instance of Policy');
+  }
+  if (!Array.isArray(attributeRules)) {
+    throw new AuthorizationError('Invalid attributeRules: must be an array');
+  }
+  if (!identifiers || typeof identifiers !== 'object') {
+    throw new AuthorizationError(
+      `[policy:${actionPolicy.name}] Invalid identifiers: must be an object`,
+    );
+  }
+  if (!registry || !(registry instanceof HydratorRegistry)) {
+    throw new AuthorizationError(
+      `[policy:${actionPolicy.name}] Invalid registry: must be an instance of HydratorRegistry`,
+    );
+  }
+  if (identifiers.user === null || identifiers.user === undefined) {
+    throw new AuthorizationError(
+      `[policy:${actionPolicy.name}] User identifier is required to evaluate policy`,
+    );
+  }
+
+  // Initialize caches if not provided
+  const caches = {
+    user: policyExecutionContext?.cache?.user || new Map(),
+    resource: policyExecutionContext?.cache?.resource || new Map(),
+    context: policyExecutionContext?.cache?.context || new Map(),
+  };
+
+  // Get hydrators
+  const userHydrator = registry.get('user');
+
+  let resourceHydrator = null;
+  if (actionPolicy.resourceType !== null) {
+    if (identifiers.resource === null || identifiers.resource === undefined) {
+      throw new AuthorizationError(
+        `[policy:${actionPolicy.name}] Resource identifier is required to evaluate policy`,
+      );
+    }
+    resourceHydrator = registry.get(actionPolicy.resourceType);
+  }
+
+  let contextHydrator = null;
+  if (registry.has('context')) {
+    contextHydrator = registry.get('context');
+  }
+
+  // PHASE 1: Evaluate action authorization
+  // Hydrate data needed for action policy
+  const [user, resource, context] = await Promise.all([
+    userHydrator.hydrate({
+      id: identifiers.user,
+      attributes: actionPolicy.requires.user,
+      cache: caches.user,
+    }),
+
+    resourceHydrator ? resourceHydrator.hydrate({
+      id: identifiers.resource,
+      attributes: actionPolicy.requires.resource,
+      cache: caches.resource,
+    }) : {},
+
+    contextHydrator && identifiers.context ? contextHydrator.hydrate({
+      id: identifiers.context,
+      attributes: actionPolicy.requires.context,
+      cache: caches.context,
+    }) : {},
+  ]);
+
+  // Evaluate action policy
+  const actionGranted = actionPolicy.evaluate(user, resource, context);
+
+  // If action denied, return immediately (no need to evaluate attribute filters)
+  if (!actionGranted) {
+    return {
+      granted: false,
+      filter: null,
+    };
+  }
+
+  // PHASE 2: Action granted - evaluate attribute filtering rules
+  // This reuses the caches populated in Phase 1 and does incremental hydration
+  const hydrators = {
+    user: userHydrator,
+    resource: resourceHydrator,
+    context: contextHydrator,
+  };
+
+  const attributeFilters = await evaluateAttributeFilters(
+    attributeRules,
+    identifiers,
+    hydrators,
+    caches,
+  );
+
+  // Create the filter function
+  const filterFunction = createFilterFunction(attributeFilters);
+
+  return {
+    granted: true,
+    filter: filterFunction,
+  };
+}
+
+module.exports = { authorize, authorizeWithFilters };
