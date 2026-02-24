@@ -167,7 +167,7 @@ class PolicyContainer {
   /**
    * Get a specific action policy
    */
-  getAction(actionName) {
+  getPolicy(actionName) {
     const policy = this._actions[actionName];
     if (!policy) {
       throw new Error(`Action '${actionName}' not found in '${this.meta.resourceType}' policies`);

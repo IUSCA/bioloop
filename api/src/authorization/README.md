@@ -67,7 +67,7 @@ const { authorize, POLICY_REGISTRY, hydratorRegistry } = require('@/authorizatio
 
 router.get('/groups/:id', async (req, res) => {
   const allowed = await authorize(
-    POLICY_REGISTRY.group.getAction('view_metadata'),
+    POLICY_REGISTRY.group.getPolicy('view_metadata'),
     {
       user: req.user.id,
       resource: req.params.id,
@@ -180,7 +180,7 @@ userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
 
 ```javascript
 const result = await authorizeWithFilters(
-  groupPolicies.getAction('view_metadata'),
+  groupPolicies.getPolicy('view_metadata'),
   groupPolicies.getAttributeRules('view_metadata'),
   { user: req.user.id, resource: req.params.id },
   hydratorRegistry,

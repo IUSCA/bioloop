@@ -75,14 +75,15 @@ groupPolicies
         attribute_filters: ['*'], // * - all attributes
       },
       {
+        policy: hasGroupOversight,
+        attribute_filters: ['*'],
+      },
+      {
         policy: isGroupMember,
         attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'members'],
       },
-      {
-        policy: hasGroupOversight,
-        attribute_filters: ['*'],
-      }],
+    ],
   })
   .freeze();
 
-module.exports = groupPolicies;
+module.exports = { groupPolicies };

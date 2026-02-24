@@ -136,7 +136,7 @@ Two-phase authorization: action check + attribute filtering.
 **Example:**
 ```javascript
 const result = await authorizeWithFilters(
-  container.getAction('view'),
+  container.getPolicy('view'),
   container.getAttributeRules('view'),
   { user: userId, resource: resourceId },
   hydratorRegistry,

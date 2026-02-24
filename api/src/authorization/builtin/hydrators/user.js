@@ -61,31 +61,4 @@ userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrat
   return rows.map((row) => row.id);
 });
 
-// class UserHydrator extends PrismaHydrate {
-//   constructor(options) {
-//     super({ ...options, modelName: 'user', idAttribute: 'id' });
-//   }
-
-//   // overriding fetchPrismaRecord
-//   async fetchPrismaRecord(payload) {
-//     const include = payload.include || {};
-//     include.user_role = {
-//       include: {
-//         role: true,
-//       },
-//     };
-
-//     const modifiedPayload = { ...payload, include };
-
-//     const userRecord = await this.prisma.user.findUniqueOrThrow(modifiedPayload);
-
-//     // extract role names from user_role relation
-//     const roles = userRecord.user_role.map((ur) => ur.role.name);
-//     userRecord.roles = roles; // add virtual attribute to record
-//     return userRecord;
-//   }
-// }
-
-// const userHydrator = new UserHydrator({ prismaClient: prisma });
-
-module.exports = userHydrator;
+module.exports = { userHydrator };

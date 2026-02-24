@@ -19,7 +19,7 @@ class Hydrate {
    */
   // eslint-disable-next-line class-methods-use-this
   async hydrate({
-    id, attributes, cache, preFetched = {},
+    id, attributes, cache, preFetched,
   }) {
     throw new Error("Abstract method 'hydrate' must be implemented in subclass");
   }

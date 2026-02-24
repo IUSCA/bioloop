@@ -1,29 +1,39 @@
-const { Hydrate } = require('../../core/hydrators/BaseHydrator');
+const { Hydrate } = require('../../core');
 
-/**
- * Context hydrator for request-level context attributes.
- * This hydrator provides access to request-specific data that doesn't
- * come from the database but from the request itself.
- */
 class ContextHydrator extends Hydrate {
+  constructor({ appConfig }) {
+    super();
+    this.appConfig = appConfig;
+  }
+
   // eslint-disable-next-line class-methods-use-this
-  async hydrate({ id, attributes, cache = new Map() }) {
-    const cacheKey = `${id}`;
+  async hydrate({ attributes, cache = new Map(), preFetched = null }) {
+    const cacheKey = 'context';
     if (!cache.has(cacheKey)) cache.set(cacheKey, {});
-    const recordCache = cache.get(cacheKey);
+    const contextCache = cache.get(cacheKey);
 
-    // Context attributes are typically set by middleware or passed in
-    // For now, return empty object or cached values
-    attributes.forEach((attr) => {
-      if (!(attr in recordCache)) {
-        recordCache[attr] = undefined;
-      }
-    });
+    // update contextCache with preFetched values for requested attributes
+    if (preFetched) {
+      attributes.forEach((attr) => {
+        if (attr in preFetched) {
+          contextCache[attr] = preFetched[attr];
+        }
+      });
+    }
 
-    return recordCache;
+    // Determine which attributes still need to be resolved
+    const attributesToResolve = attributes.filter((attr) => !(attr in contextCache));
+    if (attributesToResolve.length === 0) {
+      // All attributes are already in cache, return them
+      return contextCache;
+    }
+
+    // add code to resolve context attributes based on appConfig and preFetched (which can be req object)
+
+    throw new Error(`ContextHydrator cannot resolve attributes: ${attributesToResolve.join(', ')}.`);
   }
 }
 
-const contextHydrator = new ContextHydrator();
+const contextHydrator = new ContextHydrator({ appConfig: null });
 
-module.exports = contextHydrator;
+module.exports = { ContextHydrator, contextHydrator };

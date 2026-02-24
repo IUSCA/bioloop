@@ -9,6 +9,7 @@
 // Policy framework
 const Policy = require('./policies/Policy');
 const PolicyContainer = require('./policies/PolicyContainer');
+const PolicyRegistry = require('./policies/PolicyRegistry');
 
 // Hydrator framework
 const { Hydrate } = require('./hydrators/BaseHydrator');
@@ -22,12 +23,13 @@ const { authorize, authorizeWithFilters } = require('./authorize');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 // Middleware
-const { initializePolicyContext } = require('./middlewares');
+const { initializePolicyContext, createAuthorizationMiddlewareFunction } = require('./middlewares');
 
 module.exports = {
   // Policy classes
   Policy,
   PolicyContainer,
+  PolicyRegistry,
 
   // Hydrator classes
   Hydrate,
@@ -44,4 +46,5 @@ module.exports = {
 
   // Middleware
   initializePolicyContext,
+  createAuthorizationMiddlewareFunction,
 };

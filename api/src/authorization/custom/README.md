@@ -204,7 +204,7 @@ const { authorize, POLICY_REGISTRY, hydratorRegistry } = require('@/authorizatio
 
 router.get('/projects/:id', async (req, res) => {
   const allowed = await authorize(
-    POLICY_REGISTRY.project.getAction('view'),
+    POLICY_REGISTRY.project.getPolicy('view'),
     { 
       user: req.user.id, 
       resource: req.params.id,

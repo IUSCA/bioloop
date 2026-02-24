@@ -38,4 +38,4 @@ collectionPolicies.actions({
   delete: Policy.or([isPlatformAdmin, isCollectionAdmin]),
 }).freeze();
 
-module.exports = collectionPolicies;
+module.exports = { collectionPolicies };

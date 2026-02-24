@@ -27,6 +27,15 @@ class HydratorRegistry {
     this.hydrators.set(type, hydrator);
   }
 
+  /**
+   * Retrieves the hydrator for the given type. If no hydrator is registered for the type and a createDefaultHydrator
+   * function is provided, it will attempt to create a default hydrator using that function. If a hydrator is found or
+   * created, it is returned. Otherwise, an error is thrown.
+   *
+   * @param {string} type - The type of hydrator to retrieve
+   * @returns {Hydrate} The hydrator instance for the given type
+   * @throws {HydrationError} If no hydrator is registered for the type and no default hydrator can be created
+   */
   get(type) {
     if (!type || typeof type !== 'string') {
       throw new HydrationError('hydrator type must be a non-empty string');

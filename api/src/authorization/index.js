@@ -19,6 +19,7 @@ const {
   // Policy framework
   Policy,
   PolicyContainer,
+  PolicyRegistry,
 
   // Hydrator framework
   Hydrate,
@@ -27,63 +28,45 @@ const {
   HydrationError,
 
   // Authorization engine
-  authorize,
-  authorizeWithFilters,
+  authorize: coreAuthorize,
+  // authorizeWithFilters,
 
   // Middleware
   initializePolicyContext,
+  createAuthorizationMiddlewareFunction,
 } = require('./core');
 
 // ============================================================================
 // SECTION 2: IMPORT BUILTIN POLICIES & HYDRATORS (base app code)
-// Merge conflicts here are typically simple - accept upstream changes
 // ============================================================================
 
 // Builtin policies
-const groupPolicies = require('./builtin/policies/group');
-const collectionPolicies = require('./builtin/policies/collection');
+const { groupPolicies } = require('./builtin/policies/group');
+const { collectionPolicies } = require('./builtin/policies/collection');
 
 // Builtin hydrators
-const userHydrator = require('./builtin/hydrators/user');
-const contextHydrator = require('./builtin/hydrators/context');
+const { userHydrator } = require('./builtin/hydrators/user');
+const { contextHydrator } = require('./builtin/hydrators/context');
 
-// Builtin utilities
+// Builtin events
 const { AUTH_EVENT_TYPE } = require('./builtin/audit/events');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
 // Add your custom policy and hydrator imports here
-// Example:
-// const projectPolicies = require('./custom/policies/project');
-// const projectHydrator = require('./custom/hydrators/project');
 // ============================================================================
 
-// (No custom policies in base repo - this section only used in derived apps)
-
 // ============================================================================
-// SECTION 4: BUILD POLICY REGISTRY
-// Register all policies (builtin + custom) here
-// In derived apps: add your custom policies to this registry
+// SECTION 4: BUILD REGISTRIES
+// Register all policies and hydrators (builtin + custom) here
 // ============================================================================
 
-/**
- * Registry mapping resource types to their policy containers
- * @type {Object.<string, PolicyContainer>}
- */
-const POLICY_REGISTRY = {
-  // Builtin policies (shipped with base repo)
-  group: groupPolicies,
-  collection: collectionPolicies,
+const policyRegistry = new PolicyRegistry();
+// Register builtin policy containers
+policyRegistry.register('group', groupPolicies);
+policyRegistry.register('collection', collectionPolicies);
 
-  // Custom policies (add yours here in derived apps)
-  // Example:
-  // project: projectPolicies,
-};
-
-// ============================================================================
-// SECTION 5: INITIALIZE HYDRATOR REGISTRY
-// Register all hydrators (builtin + custom) here
-// ============================================================================
+// Register derived app policy containers here
 
 // Create default factory for auto-hydrator generation
 function createDefaultHydrator(type) {
@@ -97,26 +80,40 @@ hydratorRegistry.register('user', userHydrator);
 hydratorRegistry.register('context', contextHydrator);
 
 // Register custom hydrators (add yours here in derived apps)
-// Example:
-// hydratorRegistry.register('project', projectHydrator);
 
+// create middleware function factory with the policy and hydrator registries
+const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry);
+
+// inject hydrate registry into core authorize function
+async function authorize({
+  policy, identifiers, policyExecutionContext, preFetched,
+}) {
+  return coreAuthorize({
+    policy,
+    identifiers,
+    registry: hydratorRegistry,
+    policyExecutionContext,
+    preFetched,
+  });
+}
 // ============================================================================
-// SECTION 6: EXPORTS
+// SECTION 5: EXPORTS
 // Single export point for all authorization functionality
 // ============================================================================
 
 module.exports = {
   // Core authorization functions
   authorize,
-  authorizeWithFilters,
+  // authorizeWithFilters,
 
   // Middleware
   initializePolicyContext,
-
+  createAuthorizationMiddleware,
   // Policy framework
   Policy,
   PolicyContainer,
-  POLICY_REGISTRY,
+  PolicyRegistry,
+  policyRegistry,
 
   // Hydrator framework
   Hydrate,
