@@ -1,3 +1,4 @@
+const collectionService = require('@/services/collections');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { isPlatformAdmin } = require('./utils/index');
@@ -21,6 +22,30 @@ const isCollectionAdmin = new CollectionPolicy({
     .some((membership) => membership.group_id === collection.owner_group_id && membership.role === 'ADMIN'),
 });
 
+const userHasGrant = (access_type) => new CollectionPolicy({
+  name: 'userHasGrant',
+  requires: {
+    user: ['id'],
+    resource: ['id'],
+  },
+  evaluate: (user, collection) => collectionService.userHasGrant({
+    user_id: user.id,
+    collection_id: collection.id,
+    access_type,
+  }),
+});
+
+const isMemberOfOwningGroup = new CollectionPolicy({
+  name: 'isMemberOfOwningGroup',
+  requires: {
+    user: ['all_group_ids'],
+    resource: ['owner_group_id'],
+  },
+  evaluate: (user, collection) => user
+    .all_group_ids
+    .includes(collection.owner_group_id),
+});
+
 const collectionPolicies = new PolicyContainer({
   resourceType: 'collection',
   version: '1.0.0',
@@ -29,8 +54,8 @@ const collectionPolicies = new PolicyContainer({
 
 collectionPolicies.actions({
   create: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-  view_metadata: Policy.never, // TODO
-  list_datasets: Policy.never, // TODO
+  view_metadata: Policy.or([isPlatformAdmin, isMemberOfOwningGroup, userHasGrant('view_metadata')]),
+  list_datasets: Policy.or([isPlatformAdmin, isCollectionAdmin, userHasGrant('view_datasets')]),
   edit_metadata: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   add_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   remove_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),

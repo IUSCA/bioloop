@@ -1,0 +1,308 @@
+/**
+ * Grant Service
+ * Manages durable authorization facts
+ */
+
+const { Prisma } = require('@prisma/client');
+
+const prisma = require('@/db');
+const { AUTH_EVENTS } = require('@/authorization');
+
+// ============================================================================
+// Grant Creation
+// ============================================================================
+
+async function _createGrant(tx, data, granted_by, granted_via_group) {
+  const grant = await tx.grant.create({
+    data: {
+      subject_type: data.subject_type,
+      subject_id: data.subject_id,
+      resource_type: data.resource_type,
+      resource_id: data.resource_id,
+      access_type_id: data.access_type_id,
+      valid_from: data.valid_from ?? Prisma.skip,
+      valid_until: data.valid_until ?? Prisma.skip,
+      granted_by,
+      granted_via_group: granted_via_group ?? Prisma.skip,
+      justification: data.justification ?? Prisma.skip,
+    },
+  });
+
+  // create audit record for grant creation
+  await tx.authorization_audit.create({
+    data: {
+      event_type: AUTH_EVENTS.GRANT_CREATED,
+      actor_id: granted_by,
+      target_type: 'grant',
+      target_id: grant.id,
+      action: 'CREATE',
+    },
+  });
+
+  return grant;
+}
+
+/**
+ * Create a grant (direct authorization)
+ * @param {Object} data
+ * @param {string} data.subject_type - 'USER' or 'GROUP'
+ * @param {string} data.subject_id - User ID or Group ID
+ * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
+ * @param {string} data.resource_id
+ * @param {string} data.access_type_id - GRANT_ACCESS_TYPE enum
+ * @param {Date} [data.valid_from] - Defaults to now
+ * @param {Date} [data.valid_until] - Expiration date
+ * @param {number} granted_by - Actor user ID
+ * @param {string} [granted_via_group] - Authority group ID
+ * @param {string} [data.justification] - Optional justification for the grant creation
+ * @returns {Promise<Object>} Created grant
+ */
+async function createGrant(data, granted_by, granted_via_group, txn = null) {
+  if (txn) {
+    return _createGrant(txn, data, granted_by, granted_via_group);
+  }
+  return prisma.$transaction((tx) => _createGrant(tx, data, granted_by, granted_via_group));
+}
+
+/**
+ * Create grants in a batch for multiple access types (one for each access type) - useful for access request approvals.
+ * Each grant will be created in a single transaction, so either all succeed or all fail.
+ * @param {Object} data
+ * @param {string} data.subject_type - 'USER' or 'GROUP'
+ * @param {string} data.subject_id - User ID or Group ID
+ * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
+ * @param {string} data.resource_id
+ * @param {string[]} data.access_types - GRANT_ACCESS_TYPE enum
+ * @param {Date} [data.valid_from] - Defaults to now
+ * @param {Date} [data.valid_until] - Expiration date
+ * @param {number} granted_by - Actor user ID
+ * @param {string} granted_via_group - Authority group ID
+ * @param {string} [data.justification] - Optional justification for the grant creation
+ * @returns {Promise<Object>} Created grants
+ */
+async function createGrantsBatch(data) {
+  return prisma.$transaction(async (tx) => {
+    const createdGrants = await tx.grant.createManyAndReturn({
+      data: data.access_types.map((access_type) => ({
+        subject_type: data.subject_type,
+        subject_id: data.subject_id,
+        resource_type: data.resource_type,
+        resource_id: data.resource_id,
+        access_type,
+        valid_from: data.valid_from ?? Prisma.skip,
+        valid_until: data.valid_until ?? Prisma.skip,
+        granted_by: data.granted_by,
+        granted_via_group: data.granted_via_group ?? Prisma.skip,
+        justification: data.justification ?? Prisma.skip,
+      })),
+      select: {
+        id: true,
+      },
+    });
+
+    // create audit records for each created grant
+    await tx.authorization_audit.createMany({
+      data: createdGrants.map((grant) => ({
+        event_type: AUTH_EVENTS.GRANT_CREATED,
+        actor_id: data.granted_by,
+        target_type: 'grant',
+        target_id: grant.id,
+        action: 'CREATE',
+      })),
+    });
+
+    return createdGrants;
+  });
+}
+
+/**
+ * Revoke a grant
+ * @param {string} grant_id
+ * @param {number} actor_id
+ * @param {string} [reason] - Optional revocation reason
+ * @returns {Promise<Object>} Revoked grant
+ */
+async function revokeGrant(grant_id, { actor_id, reason }) {
+  return prisma.$transaction(async (tx) => {
+    const revokedGrant = await tx.grant.update({
+      where: { id: grant_id },
+      data: {
+        revoked: true,
+        revoked_by: actor_id,
+        justification: reason ?? Prisma.skip,
+      },
+    });
+
+    // create audit record for grant revocation
+    await tx.authorization_audit.create({
+      data: {
+        event_type: AUTH_EVENTS.GRANT_REVOKED,
+        actor_id,
+        target_type: 'grant',
+        target_id: revokedGrant.id,
+        action: 'REVOKE',
+      },
+    });
+
+    return revokedGrant;
+  });
+}
+
+/**
+ * Helper to build SQL query for fetching grants or access types for a user and dataset, including via group membership and collection-level grants
+ * @param {number} user_id
+ * @param {string} dataset_id
+ * @param {Object} [options]
+ * @param {string} [options.return_type] - 'grants' (default) or 'access_types' - whether to return full grant records or just distinct access types
+ * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
+ * @returns {Prisma.sql} SQL query to fetch the desired data
+ */
+function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access_types } = {}) {
+  // find grants for a user and dataset, including grants via group membership and collection-level grants
+  // grant - user, dataset
+  // grant - user, collection containing dataset
+  // grant - group (user is member), dataset
+  // grant - group (user is member), collection containing dataset
+
+  const select_fields = return_type === 'access_types'
+    ? Prisma.sql`distinct gat.name AS access_type`
+    : Prisma.sql`G.*, gat.name AS access_type`;
+
+  const access_type_filter = access_types && access_types.length > 0
+    ? Prisma.sql`AND gat.name IN (${Prisma.join(access_types)})`
+    : Prisma.empty;
+
+  return Prisma.sql`
+    WITH user_groups AS (
+      SELECT group_id
+      FROM group_membership
+      WHERE user_id = ${user_id}
+    ),
+    dataset_collections AS (
+      SELECT collection_id
+      FROM collection_datasets
+      WHERE dataset_id = ${dataset_id}
+    )
+    SELECT ${select_fields}
+    FROM "grant" G
+    JOIN grant_access_type gat ON G.access_type_id = gat.id
+    WHERE G.valid_from <= NOW()
+      AND (G.valid_until IS NULL OR G.valid_until > NOW())
+      AND G.revoked_at IS NULL
+      AND (
+        (
+          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
+        )
+        OR (
+          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM dataset_collections)
+        )
+        OR (
+          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
+        )
+        OR (
+          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM dataset_collections)
+        )
+      )
+      ${access_type_filter}
+  `;
+}
+
+function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', access_types } = {}) {
+  // find grants for a user and collection, including grants via group membership
+  // grant - user, collection
+  // grant - group (user is member), collection
+
+  const select_fields = return_type === 'access_types'
+    ? Prisma.sql`distinct gat.name AS access_type`
+    : Prisma.sql`G.*, gat.name AS access_type`;
+
+  const access_type_filter = access_types && access_types.length > 0
+    ? Prisma.sql`AND gat.name IN (${Prisma.join(access_types)})`
+    : Prisma.empty;
+
+  return Prisma.sql`
+    WITH user_groups AS (
+      SELECT group_id
+      FROM group_membership
+      WHERE user_id = ${user_id}
+    )
+    SELECT ${select_fields}
+    FROM "grant" G
+    JOIN grant_access_type gat ON G.access_type_id = gat.id
+    WHERE G.valid_from <= NOW()
+      AND (G.valid_until IS NULL OR G.valid_until > NOW())
+      AND G.revoked_at IS NULL
+      AND (
+        (
+          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
+        )
+        OR (
+          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
+        )
+      )
+      ${access_type_filter}
+  `;
+}
+
+/**
+ * Get grants for a user and dataset, including grants via group membership and collection-level grants
+ * @param {number} user_id
+ * @param {string} dataset_id
+ * @param {Object} [options]
+ * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
+ * @returns {Promise<Object[]>} List of grants the user has for the dataset (including via groups and collections)
+ */
+async function getUserDatasetGrants(user_id, dataset_id, { access_types } = {}) {
+  // grant - user, dataset
+  // grant - user, collection containing dataset
+  // grant - group (user is member), dataset
+  // grant - group (user is member), collection containing dataset
+
+  const sql = userDatasetsQuery(user_id, dataset_id, { return_type: 'grants', access_types });
+  return prisma.$queryRaw(sql);
+}
+
+/**
+ * * Get access types for a user and dataset via grants (including group and collection grants)
+ * @param {number} user_id
+ * @param {string} dataset_id
+ * @returns {Promise<string[]>} List of access types the user has for the dataset
+ */
+async function getUserDatasetAccessTypes(user_id, dataset_id) {
+  const sql = userDatasetsQuery(user_id, dataset_id, { return_type: 'access_types' });
+  const results = await prisma.$queryRaw(sql);
+  return results.map((r) => r.access_type);
+}
+
+async function userHasGrant({
+  user_id, resource_type, resource_id, access_type,
+}) {
+  if (resource_type === 'COLLECTION') {
+    // check if user has grant for the collection directly or via group membership
+    const sql = userCollectionsQuery(
+      user_id,
+      resource_id,
+      { return_type: 'access_types', access_types: [access_type] },
+    );
+    const results = await prisma.$queryRaw(sql);
+    return results.length > 0;
+  }
+  const sql = userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types: [access_type] });
+  const results = await prisma.$queryRaw(sql);
+  return results.length > 0;
+}
+
+module.exports = {
+  createGrant,
+  createGrantsBatch,
+  revokeGrant,
+  getUserDatasetGrants,
+  getUserDatasetAccessTypes,
+  userHasGrant,
+};

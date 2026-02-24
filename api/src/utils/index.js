@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
-const config = require('config');
+// const config = require('config');
 
-const logger = require('../services/logger');
+// const logger = require('../services/logger');
 
 function renameKey(oldKey, newKey) {
   return (obj) => {
@@ -48,6 +48,15 @@ function setIntersection(setA, setB) {
   }
 
   return _intersection;
+}
+
+function setsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  // eslint-disable-next-line no-restricted-syntax
+  for (const value of a) {
+    if (!b.has(value)) return false;
+  }
+  return true;
 }
 
 function log_axios_error(error) {
@@ -359,11 +368,17 @@ function deepSortKeys(obj) {
   return obj;
 }
 
+// Given an array of attribute names, returns a function that takes in an object and returns a new object containing
+// only the key-value pairs of the input object whose keys are in the input array and whose values are not null or
+// undefined.
+const pickNonNil = (attrs) => _.flow([_.pick(attrs), _.omitBy(_.isNil)]);
+
 module.exports = {
   renameKey,
   setDifference,
   setUnion,
   setIntersection,
+  setsEqual,
   log_axios_error,
   sanitize_timestamp,
   groupByAndAggregate,
@@ -374,4 +389,5 @@ module.exports = {
   TransactionRetryError,
   base64urlEncode,
   deepSortKeys,
+  pickNonNil,
 };
