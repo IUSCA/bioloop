@@ -32,5 +32,9 @@
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "prisma.pinToPrisma6": true,
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
   }
 }

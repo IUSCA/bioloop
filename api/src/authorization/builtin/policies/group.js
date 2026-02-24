@@ -60,6 +60,8 @@ groupPolicies
     edit_metadata: Policy.or([isPlatformAdmin, isGroupAdmin]),
 
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
+    view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
+    view_descendants: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
 
     add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),

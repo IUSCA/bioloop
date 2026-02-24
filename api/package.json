@@ -68,6 +68,7 @@
     "swagger-ui-express": "^5.0.0",
     "the-big-username-blacklist": "^1.5.2",
     "uuid": "^9.0.1",
+    "validator": "^13.15.26",
     "winston": "^3.10.0"
   },
   "prisma": {
