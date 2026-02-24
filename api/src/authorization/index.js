@@ -4,6 +4,7 @@ const { hydratorRegistry, HydrationError } = require('./hydrators');
 const { Policy } = require('./policies');
 const { AUTH_EVENT_TYPE } = require('./audit/events');
 const groupPolicies = require('./policies/group');
+const collectionPolicies = require('./policies/collection');
 
 /**
  * Registry mapping models to their policy definitions
@@ -11,6 +12,7 @@ const groupPolicies = require('./policies/group');
  */
 const POLICY_REGISTRY = {
   group: groupPolicies,
+  collection: collectionPolicies,
 };
 
 module.exports = {

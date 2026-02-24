@@ -200,7 +200,7 @@ async function authorizeWithFilters(
   ]);
 
   // Evaluate action policy
-  const actionGranted = actionPolicy.evaluate(user, resource, context);
+  const actionGranted = await actionPolicy.evaluate(user, resource, context);
 
   // If action denied, return immediately (no need to evaluate attribute filters)
   if (!actionGranted) {

@@ -9,7 +9,7 @@
  * @param {string[]} config.requires.user - Array of required user attributes
  * @param {string[]} config.requires.resource - Array of required resource attributes
  * @param {string[]} config.requires.context - Array of required context attributes
- * @param {Function} config.evaluate - Function that evaluates the authorization policy.
+ * @param {Function} config.evaluate - Async function that evaluates the authorization policy.
  *                                      Called with user, resource, and context parameters
  *
  * @throws {Error} If requires is not an object
@@ -26,7 +26,7 @@
  *     resource: ['ownerId'],
  *     context: []
  *   },
- *   evaluate: (user, resource, context) => user.id === resource.ownerId && user.role === 'admin'
+ *   evaluate: async (user, resource, context) => user.id === resource.ownerId && user.role === 'admin'
  * });
  */
 class Policy {
@@ -85,7 +85,7 @@ class Policy {
     this._evaluate = evaluate;
   }
 
-  evaluate(user, resource, context) {
+  async evaluate(user, resource, context) {
     // Ensure we have valid objects to check attributes on
     const safeUser = user || {};
     const safeResource = resource || {};
@@ -113,7 +113,7 @@ class Policy {
       );
     }
 
-    const result = this._evaluate(safeUser, safeResource, safeContext);
+    const result = await this._evaluate(safeUser, safeResource, safeContext);
 
     // console.log(`Evaluating ${this.name} policy:`, JSON.stringify({
     //   user: safeUser, resource: safeResource, context: safeContext, result,
@@ -189,7 +189,16 @@ function or(policies, name = null) {
     name: name || `or(${policies.map((p) => p.name).join(',')})`,
     resourceType,
     requires: mergeRequires(...policies),
-    evaluate: (user, resource, ctx) => policies.some((p) => p.evaluate(user, resource, ctx)),
+    evaluate: async (user, resource, ctx) => {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const p of policies) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await p.evaluate(user, resource, ctx)) {
+          return true;
+        }
+      }
+      return false;
+    },
   });
 }
 
@@ -201,7 +210,16 @@ function and(policies, name = null) {
     name: name || `and(${policies.map((p) => p.name).join(',')})`,
     resourceType,
     requires: mergeRequires(...policies),
-    evaluate: (user, resource, ctx) => policies.every((p) => p.evaluate(user, resource, ctx)),
+    evaluate: async (user, resource, ctx) => {
+      // eslint-disable-next-line no-restricted-syntax
+      for (const p of policies) {
+        // eslint-disable-next-line no-await-in-loop
+        if (!(await p.evaluate(user, resource, ctx))) {
+          return false;
+        }
+      }
+      return true;
+    },
   });
 }
 
@@ -214,7 +232,7 @@ function not(policy, name = null) {
     name: name || `not(${policy.name})`,
     resourceType: policy.resourceType,
     requires: policy.requires,
-    evaluate: (user, resource, ctx) => !policy.evaluate(user, resource, ctx),
+    evaluate: async (user, resource, ctx) => !(await policy.evaluate(user, resource, ctx)),
   });
 }
 
@@ -222,5 +240,17 @@ function not(policy, name = null) {
 Policy.or = or;
 Policy.and = and;
 Policy.not = not;
+Policy.always = new Policy({
+  name: 'always',
+  resourceType: null,
+  requires: { user: [], resource: [], context: [] },
+  evaluate: async () => true,
+});
+Policy.never = new Policy({
+  name: 'never',
+  resourceType: null,
+  requires: { user: [], resource: [], context: [] },
+  evaluate: async () => false,
+});
 
 module.exports = Policy;
