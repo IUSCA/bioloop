@@ -5,13 +5,11 @@ class PolicyRegistry {
     this.registry = new Map();
   }
 
-  register(resourceType, policyContainer) {
-    if (!resourceType || typeof resourceType !== 'string') {
-      throw new Error('Resource type must be a non-empty string');
-    }
+  register(policyContainer) {
     if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
       throw new Error('Policy container must be an instance of PolicyContainer');
     }
+    const { resourceType } = policyContainer.meta;
     if (this.registry.has(resourceType)) {
       throw new Error(`Policy already registered for resource type: ${resourceType}`);
     }

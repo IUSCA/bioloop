@@ -63,8 +63,8 @@ const { AUTH_EVENT_TYPE } = require('./builtin/audit/events');
 
 const policyRegistry = new PolicyRegistry();
 // Register builtin policy containers
-policyRegistry.register('group', groupPolicies);
-policyRegistry.register('collection', collectionPolicies);
+policyRegistry.register(groupPolicies);
+policyRegistry.register(collectionPolicies);
 
 // Register derived app policy containers here
 
@@ -96,6 +96,7 @@ async function authorize({
     preFetched,
   });
 }
+
 // ============================================================================
 // SECTION 5: EXPORTS
 // Single export point for all authorization functionality
