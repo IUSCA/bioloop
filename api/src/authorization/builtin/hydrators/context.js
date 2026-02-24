@@ -1,5 +1,4 @@
-const hydratorRegistry = require('./base/hydratorRegistry');
-const { Hydrate } = require('./base/baseHydrator');
+const { Hydrate } = require('../../core/hydrators/BaseHydrator');
 
 /**
  * Context hydrator for request-level context attributes.
@@ -27,4 +26,4 @@ class ContextHydrator extends Hydrate {
 
 const contextHydrator = new ContextHydrator();
 
-hydratorRegistry.register('context', contextHydrator);
+module.exports = contextHydrator;

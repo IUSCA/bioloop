@@ -1,0 +1,12 @@
+# Custom policies for derived applications
+# 
+# This directory is for policies specific to your derived application.
+# Files here should never exist in the base bioloop repository.
+#
+# To add a custom policy:
+# 1. Create a new file (e.g., project.js)
+# 2. Import core/builtin utilities as needed
+# 3. Define and export a PolicyContainer
+# 4. Register it in ../index.js POLICY_REGISTRY
+#
+# See ../custom/README.md for examples and guidelines

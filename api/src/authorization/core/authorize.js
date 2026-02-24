@@ -1,6 +1,6 @@
 // const logger = require('@/services/logger');
-const { HydratorRegistry } = require('./hydrators');
-const Policy = require('./policies/base/policy');
+const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
+const Policy = require('./policies/Policy');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 class AuthorizationError extends Error {

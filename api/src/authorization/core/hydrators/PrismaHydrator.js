@@ -1,5 +1,5 @@
 // hydrator/PrismaHydrator.js
-const { Hydrate } = require('./baseHydrator');
+const { Hydrate } = require('./BaseHydrator');
 const { modelFieldMap } = require('./schemaMap');
 const { HydrationError } = require('./errors');
 

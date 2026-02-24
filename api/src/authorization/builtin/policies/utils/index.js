@@ -1,4 +1,4 @@
-const Policy = require('@/authorization/policies/base/policy');
+const Policy = require('../../../core/policies/Policy');
 
 const isPlatformAdmin = new Policy({
   name: 'isPlatformAdmin',

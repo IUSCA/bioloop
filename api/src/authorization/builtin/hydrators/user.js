@@ -2,7 +2,7 @@ const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
 
-const { PrismaHydrate } = require('./base/prismaHydrator');
+const { PrismaHydrate } = require('../../core/hydrators/PrismaHydrator');
 
 const userHydrator = new PrismaHydrate({ prismaClient: prisma, modelName: 'user', idAttribute: 'id' });
 

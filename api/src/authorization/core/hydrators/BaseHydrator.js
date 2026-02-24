@@ -13,8 +13,8 @@ class Hydrate {
    *   - attributes: array of attribute names to resolve
    *   - cache: Map for request-scoped caching per entity type,
    *   where keys are entity identifiers and values are objects with resolved attributes.
-   *   This allows sharing resolved attributes across multiple hydrations within the same request. - preFetched:
-   *   optional object that already has some attributes
+   *   This allows sharing resolved attributes across multiple hydrations within the same request.
+   *   - preFetched: optional object that already has some attributes
    * @returns {Object} hydrated attributes
    */
   // eslint-disable-next-line class-methods-use-this

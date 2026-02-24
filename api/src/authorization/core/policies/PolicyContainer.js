@@ -1,4 +1,4 @@
-const Policy = require('./policy');
+const Policy = require('./Policy');
 
 /**
  * PolicyContainer - A singleton container for managing resource policies

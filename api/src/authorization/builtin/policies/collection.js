@@ -1,6 +1,6 @@
-const Policy = require('./base/policy');
-const PolicyContainer = require('./base/policyContainer');
-const { isPlatformAdmin } = require('./utils');
+const Policy = require('../../core/policies/Policy');
+const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { isPlatformAdmin } = require('./utils/index');
 
 class CollectionPolicy extends Policy {
   constructor({ name, requires, evaluate }) {

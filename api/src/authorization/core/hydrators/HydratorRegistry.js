@@ -1,4 +1,4 @@
-const { Hydrate } = require('./baseHydrator');
+const { Hydrate } = require('./BaseHydrator');
 const { HydrationError } = require('./errors');
 
 class HydratorRegistry {

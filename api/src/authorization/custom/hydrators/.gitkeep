@@ -1,0 +1,13 @@
+# Custom hydrators for derived applications
+#
+# This directory is for hydrators specific to your derived application.
+# Files here should never exist in the base bioloop repository.
+#
+# To add a custom hydrator:
+# 1. Create a new file (e.g., project.js)
+# 2. Extend PrismaHydrate or Hydrate base class
+# 3. Register virtual attributes if needed
+# 4. Export the hydrator instance
+# 5. Register it in ../index.js hydratorRegistry
+#
+# See ../custom/README.md for examples and guidelines
