@@ -57,7 +57,6 @@
             </va-chip>
           </td>
         </tr>
-
         <tr data-testid="source-raw-data-row">
           <td>Source Raw Data</td>
           <td class="metadata">
@@ -67,6 +66,18 @@
               data-testid="upload-details-source-raw-data-link"
             >
               {{ props.sourceRawData?.name }}
+            </router-link>
+          </td>
+        </tr>
+
+        <tr v-if="props.sourceDataProduct">
+          <td>Source Data Product</td>
+          <td class="metadata">
+            <router-link
+              :to="`/datasets/${props.sourceDataProduct?.id}`"
+              target="_blank"
+            >
+              {{ props.sourceDataProduct?.name }}
             </router-link>
           </td>
         </tr>
@@ -126,6 +137,7 @@
 import { useAuthStore } from "@/stores/auth";
 import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 import { snakeCaseToTitleCase } from "@/services/utils";
+import { formatGenome } from "@/services/sessionUtils";
 
 const props = defineProps({
   // `dataset`: Dataset to be uploaded
@@ -169,7 +181,9 @@ const props = defineProps({
   sourceRawData: {
     type: Object,
   },
-  isSubmissionAlertVisible: {
+  sourceDataProduct: {
+    type: Object,
+  },  isSubmissionAlertVisible: {
     type: Boolean,
     default: false,
   },
@@ -181,6 +195,12 @@ const props = defineProps({
     default: "warning",
   },
 });
+
+const formatFileType = (fileType) => {
+  if (!fileType) return '';
+  // fileType is an object with name and extension
+  return fileType.extension ? `${fileType.name} (${fileType.extension})` : fileType.name;
+};
 
 const emit = defineEmits(["update:populatedDatasetName"]);
 

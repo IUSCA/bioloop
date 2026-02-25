@@ -38,6 +38,8 @@ model dataset {
   bundle            bundle?
   src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
+  create_method     DATASET_CREATE_METHOD?
+  upload_logs       dataset_upload_log[]
 
   @@unique([name, type, is_deleted])
 }
@@ -82,29 +84,21 @@ model dataset_file_hierarchy {
 }
 
 model dataset_upload_log {
-  id           Int               @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   status       upload_status
-  files        file_upload_log[]
-  updated_at   DateTime          @default(now()) @updatedAt @db.Timestamp(6)
-  audit_log    dataset_audit     @relation(fields: [audit_log_id], references: [id], onDelete: Cascade)
-  audit_log_id Int               @unique
-}
+  process_id   String?       // Generic upload identifier (TUS ID, S3 key, etc.)
+  retry_count  Int           @default(0) // Track workflow retry attempts
+  metadata     Json?         // { checksum?: {...}, failure_reason?: "...", worker_process_id?: ... }
+  updated_at   DateTime      @default(now()) @updatedAt @db.Timestamp(6)
+  dataset      dataset       @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  dataset_id   Int
 
-model file_upload_log {
-  id                    Int                 @id @default(autoincrement())
-  name                  String
-  md5                   String
-  num_chunks            Int
-  status                upload_status
-  path                  String?
-  dataset_upload_log    dataset_upload_log? @relation(fields: [dataset_upload_log_id], references: [id], onDelete: Cascade)
-  dataset_upload_log_id Int?
+  @@index([dataset_id])
 }
 
 model dataset_audit {
   id            Int                    @id @default(autoincrement())
   action        String
-  create_method DATASET_CREATE_METHOD?
   updated_at    DateTime               @default(now()) @updatedAt @db.Timestamp(6)
   timestamp     DateTime               @default(now())
   old_data      Json?
@@ -113,9 +107,6 @@ model dataset_audit {
   user          user?                  @relation(fields: [user_id], references: [id], onDelete: SetNull)
   dataset_id    Int?
   dataset       dataset?               @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  upload        dataset_upload_log?
-
-  @@unique([dataset_id, create_method])
 }
 
 model dataset_state {
@@ -278,11 +269,13 @@ model user_role {
 }
 
 model workflow {
-  id           String   @id
-  dataset_id   Int?
-  dataset      dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  initiator_id Int?
-  initiator    user?    @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
+  id               String            @id
+  dataset_id       Int?
+  dataset          dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  initiator_id     Int?
+  initiator        user?             @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
+  metadata         Json?
+  worker_processes worker_process[]
 }
 
 model metric {
@@ -362,13 +355,14 @@ model log {
 }
 
 model worker_process {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   pid         Int
   task_id     String
   step        String
-  workflow_id String
+  workflow_id String?
+  workflow    workflow? @relation(fields: [workflow_id], references: [id])
   tags        Json?
-  start_time  DateTime @default(now()) @db.Timestamp(6)
+  start_time  DateTime  @default(now()) @db.Timestamp(6)
   hostname    String
   logs        log[]
 }
@@ -427,10 +421,14 @@ enum upload_status {
   UPLOADING
   UPLOAD_FAILED
   UPLOADED
+  VERIFYING        // Integrity verification in progress (async Celery task)
+  VERIFIED         // Integrity verified, ready to trigger workflow
+  VERIFICATION_FAILED // Integrity check failed before registering the uploaded dataset into the system
   PROCESSING
   PROCESSING_FAILED
   COMPLETE
   FAILED
+  PERMANENTLY_FAILED // After 3 retry attempts
 }
 
 enum upload_type {

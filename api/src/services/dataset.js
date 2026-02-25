@@ -1324,6 +1324,139 @@ const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null
   return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
 };
 
+/**
+ * Gets the user who created the given dataset.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ *
+ * @returns {Promise<Object>} A promise that resolves to the user object of the user who created the dataset.
+ *
+ * @throws {Error} If an audit log for the dataset's creation is not found.
+ * @throws {Error} If the user who created the dataset cannot be determined.
+ */
+async function get_dataset_creator({ dataset_id }) {
+  const dataset_creation_log = await prisma.dataset_audit.findFirst({
+    where: {
+      dataset_id,
+      action: 'create',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+    orderBy: {
+      timestamp: 'asc',
+    },
+  });
+  if (!dataset_creation_log) {
+    throw new Error(`Expected to find an audit log for the creation of dataset ${dataset_id}, but found none.`);
+  }
+  if (!dataset_creation_log.user) {
+    throw new Error(`Expected to find a user who created dataset ${dataset_id}, but found none.`);
+  }
+  return dataset_creation_log.user;
+}
+
+/**
+ * Generates a Prisma query object for creating a new dataset.
+ *
+ * @function buildDatasetCreateQuery
+ * @param {Object} data - The data for creating the dataset.
+ * @param {string} data.name - The name of the dataset.
+ * @param {string} data.type - The type of the dataset.
+ * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
+ * @param {string} [data.description] - The description of the dataset.
+ * @param {BigInt} [data.size] - The size of the dataset.
+ * @param {string} data.origin_path - The origin path of the dataset.
+ * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
+ * @param {string} [data.workflow_id] - The ID of the associated workflow.
+ * @param {string} data.user_id - The ID of the user creating the dataset.
+ * @param {string} [data.src_instrument_id] - The ID of the source instrument.
+ * @param {string} [data.src_dataset_id] - The ID of the source dataset.
+ * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
+ * @param {string} [data.create_method=CONSTANTS.DATASET_CREATE_METHODS.SCAN] - The method used to create the dataset.
+ * @param {Object} [data.metadata] - Additional metadata for the dataset.
+ * @returns {Object} An object containing the query for creating a new dataset in the database.
+ *
+ * @description
+ * This function prepares a query object for creating a new dataset in the database.
+ * It normalizes the dataset name, sets up associations with workflows and projects,
+ * connects to source instruments and datasets, sets the initial state,
+ * and creates an audit log entry for the dataset creation.
+ */
+const buildDatasetCreateQuery = async (data) => {
+  const {
+    name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
+    user_id, src_instrument_id, src_dataset_id, state, create_method,
+  } = data;
+
+  // gather non-null data to create a new dataset
+  const create_query = _.flow([
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'description', 'create_method']),
+    _.omitBy(_.isNil),
+  ])(data);
+
+  create_query.name = normalize_name(create_query.name);
+
+  // Set create_method on the dataset
+  if (create_method) {
+    create_query.create_method = create_method;
+  }
+
+  // create workflow association
+  if (workflow_id) {
+    create_query.workflows = {
+      create: [
+        {
+          id: workflow_id,
+        },
+      ],
+    };
+  }
+
+  if (src_instrument_id) {
+    create_query.src_instrument = {
+      connect: {
+        id: src_instrument_id,
+      },
+    };
+  }
+
+  // Create source dataset relationships
+  if (src_dataset_id) {
+    create_query.source_datasets = {
+      create: [{
+        source_id: src_dataset_id,
+      }],
+    };
+  }
+
+  // add a state
+  create_query.states = {
+    create: [
+      {
+        state: state || 'REGISTERED',
+      },
+    ],
+  };
+
+  const audit_log = {
+    action: 'create',
+    user_id: user_id ?? Prisma.skip,
+  };
+
+  create_query.audit_logs = {
+    create: [audit_log],
+  };
+
+  return create_query;
+};
+
 module.exports = {
   soft_delete,
   get_dataset,
