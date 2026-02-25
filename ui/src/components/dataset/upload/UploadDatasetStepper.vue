@@ -40,7 +40,6 @@
       <!-- Step 0 (File selector) -->
       <template #step-content-0>
         <div class="flex flex-col" data-testid="step-content-0">
-
           <!-- Buttons to select the files/directory to upload -->
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
@@ -254,47 +253,8 @@
           </div>
         </div>
 
-        <!-- Source Data Product select -->
-        <div v-if="shouldShowSourceDataProductField" class="flex w-full pb-6">
-          <div class="w-60 flex flex-shrink-0 mr-4">
-            <div class="flex items-center">
-              <va-checkbox
-                v-model="willAssignSourceDataProduct"
-                @update:modelValue="resetSourceDataProductSearch"
-                :disabled="submitAttempted"
-                color="primary"
-                label="Assign source Data Product"
-                class="flex-grow"
-              />
-            </div>
-          </div>
-
-          <div class="flex-grow flex items-center">
-            <DatasetSelectAutoComplete
-              v-model:selected="selectedSourceDataProduct"
-              v-model:search-term="sourceDataProductSearchText"
-              :disabled="submitAttempted || !willAssignSourceDataProduct"
-              :dataset-type="config.dataset.types.DATA_PRODUCT.key"
-              placeholder="Search Data Product"
-              @clear="resetSourceDataProductSearch"
-              @open="onSourceDataProductSearchOpen"
-              @close="onSourceDataProductSearchClose"
-              class="flex-grow"
-              :label="'Source Data Product'"
-            >
-            </DatasetSelectAutoComplete>
-            <va-popover>
-              <template #body>
-                <div class="w-96">
-                  Associating a Data Product with a source Data Product establishes a clear lineage
-                  between derived datasets. This helps track data provenance and processing history.
-                </div>
-              </template>
-              <Icon icon="mdi:information" class="ml-2 text-xl text-gray-500" />
-            </va-popover>
-          </div>
-        </div>
       </template>
+
       <!-- Step 2: Start Upload / Upload Details -->
       <template #step-content-2>
         <!-- Always show two cards: Left (metadata with dataset name) and Right (file list with upload progress) -->
@@ -312,7 +272,8 @@
                   v-if="selectingFiles || selectingDirectory"
                   v-model:populated-dataset-name="uploadedDatasetName"
                   :dataset="datasetUploadLog?.dataset"
-                  :selected-dataset-type="selectedDatasetType.value"                  :input-disabled="submitAttempted"
+                  :selected-dataset-type="selectedDatasetType.value"
+                  :input-disabled="submitAttempted"
                   :uploaded-dataset-error="formErrors[STEP_KEYS.UPLOAD]"
                   :show-uploaded-dataset-error="
                     !!formErrors[STEP_KEYS.UPLOAD] && !stepIsPristine
@@ -320,7 +281,6 @@
                   :project="projectSelected"
                   :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
-                  :source-data-product="selectedSourceDataProduct"
                   :submission-status="submissionStatus"
                   :submission-alert="submissionAlert"
                   :status-chip-color="statusChipColor"
@@ -417,7 +377,8 @@
         </div>
       </template>
     </va-stepper>
-  </va-inner-loading></template>
+  </va-inner-loading>
+</template>
 
 <script setup>
 import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoComplete.vue";
@@ -465,7 +426,8 @@ const steps = [
     key: STEP_KEYS.GENERAL_INFO,
     label: "General Info",
     icon: "material-symbols:info",
-  },{
+  },
+  {
     key: STEP_KEYS.UPLOAD,
     label: "Upload",
     icon: "material-symbols:play-circle",
@@ -611,13 +573,6 @@ const willCreateNewProject = computed(() => {
   );
 });
 
-// determines whether a Data Product will be assigned as a parent to the Dataset being uploaded
-const willAssignSourceDataProduct = ref(false);
-// the (existing) Data Product which will be assigned as a parent to the Dataset being uploaded
-const selectedSourceDataProduct = ref(null);
-// search text, used to search for Data Products
-const sourceDataProductSearchText = ref('');
-
 // Upload progress state
 const uploadProgress = ref(0);
 const filesUploaded = ref(0);
@@ -627,13 +582,6 @@ const uploadRegistrationFailed = ref(false); // Track if final API call failed
 const isComputingChecksum = ref(false); // Track checksum computation state
 const checksumProgress = ref(0); // Track checksum computation progress (0-100)
 const computedChecksum = ref(null); // Store computed checksum before upload
-
-// Form is invalid if fields are empty OR duplicate exists
-const isFileTypeFormInvalid = computed(() => {
-  return !newFileTypeName.value ||
-    !newFileTypeExtension.value ||
-    checkDuplicateFileType(newFileTypeName.value, newFileTypeExtension.value);
-});
 
 /**
  * Computed: Determine if upload completed successfully
@@ -715,30 +663,12 @@ const uploadFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(selectedSourceDataProduct.value && {
-      source_data_product_id: selectedSourceDataProduct.value.id,
-    }),
     ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
-    })
+    }),
   };
 });
-
-const fileTypeOptions = computed(() => {
-  return analysisTypes.value.map((at) => ({
-    text: `${at.name} (${at.extension})`,
-    value: at, // Pass the whole object
-  }));
-});
-
-const genomeTypeOptions = computed(() => {
-  return Object.entries(Constants.GENOME_TYPES).map(([key, value]) => ({
-    text: value.label,
-    value: key,
-  }));
-});
-
 
 /**
  * Handler invoked when the user selects one or files that are to be uploaded.
@@ -798,39 +728,6 @@ const onProjectSearchClose = () => {
   }
 };
 
-const clearSelectedSourceDataProduct = () => {
-  selectedSourceDataProduct.value = null;
-  sourceDataProductSearchText.value = '';
-};
-
-const resetSourceDataProductSearch = () => {
-  clearSelectedSourceDataProduct();
-};
-
-const onSourceDataProductSearchOpen = () => {
-  selectedSourceDataProduct.value = null;
-};
-
-const onSourceDataProductSearchClose = () => {
-  if (!selectedSourceDataProduct.value) {
-    sourceDataProductSearchText.value = '';
-  }
-};
-
-// Load analysis types from API
-const loadAnalysisTypes = () => {
-  analysisTypeService
-    .getAll()
-    .then((res) => {
-      analysisTypes.value = res.data;
-    })
-    .catch((err) => {
-      toast.error('Failed to load file types');
-      console.error(err);
-    });
-};
-
-// Check if name/extension combo already exists (case-insensitive)
 /**
  * Format duration in milliseconds to human-readable string
  * @param {number} ms - Duration in milliseconds
@@ -967,7 +864,8 @@ const setUploadedFileType = (fileType) => {
 const resetFormErrors = () => {
   formErrors.value = {
     [STEP_KEYS.SELECT_FILES]: null,
-    [STEP_KEYS.GENERAL_INFO]: null,    [STEP_KEYS.UPLOAD]: null,
+    [STEP_KEYS.GENERAL_INFO]: null,
+    [STEP_KEYS.UPLOAD]: null,
   };
 };
 
@@ -986,17 +884,14 @@ const setFormErrors = async () => {
     if (
       (willAssignSourceRawData.value && !selectedRawData.value) ||
       (willAssignProject.value && !projectSelected.value) ||
-      (willAssignSourceInstrument.value && !selectedSourceInstrument.value) ||
-      (willAssignSourceDataProduct.value && !selectedSourceDataProduct.value)
+      (willAssignSourceInstrument.value && !selectedSourceInstrument.value)
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
       return;
     }
   }
 
-  if (step.value === 2) {  }
-
-  if (step.value === 3) {
+  if (step.value === 2) {
     const { isNameValid: datasetNameIsValid, error} =
       await validateDatasetName();
     if (datasetNameIsValid) {
@@ -1526,41 +1421,6 @@ const retryApiCall = async () => {
   await handleUploadComplete();
 };
 
-// Open modal and clear fields
-// Handle creating new file type
-const handleCreateFileType = () => {
-  // Prevent action if form is invalid (empty fields or duplicate exists)
-  if (isFileTypeFormInvalid.value) {
-    return; // Do nothing if invalid
-  }
-
-  // Remove the previously created file type if it exists
-  if (newlyCreatedFileType.value) {
-    const index = analysisTypes.value.findIndex(at => at === newlyCreatedFileType.value);
-    if (index !== -1) {
-      analysisTypes.value.splice(index, 1);
-    }
-  }
-
-  // Create the new file type object (don't save to API yet)
-  const newAnalysisType = {
-    name: newFileTypeName.value.trim().toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, ''),
-    extension: newFileTypeExtension.value.trim(),
-  };
-
-  // Add to local list
-  analysisTypes.value.push(newAnalysisType);
-
-  // Track this as the newly created type
-  newlyCreatedFileType.value = newAnalysisType;
-
-  // Clear fields and close modal
-  newFileTypeName.value = '';
-  newFileTypeExtension.value = '';
-  showCreateFileTypeModal.value = false;
-};
-
-// Handle canceling file type creation
 /**
  * Persists the details of the files selected for uploading in this component's state.
  *
@@ -1873,13 +1733,6 @@ watch(selectedDatasetType, () => {
   }
 });
 
-// Auto-prepend dot to extension
-watch(newFileTypeExtension, (newVal) => {
-  if (newVal && !newVal.startsWith('.')) {
-    newFileTypeExtension.value = `.${newVal}`;
-  }
-});
-
 // Form errors are set when this component mounts, or when a form field's value
 // changes, or when the current step changes.
 watch(
@@ -1890,13 +1743,11 @@ watch(
     willAssignProject,
     selectedRawData,
     willAssignSourceRawData,
-    selectedSourceDataProduct,
-    willAssignSourceDataProduct,
     selectedSourceInstrument,
     willAssignSourceInstrument,
     selectingFiles,
     selectingDirectory,
-    filesToUpload
+    filesToUpload,
   ],
   async (newVals, oldVals) => {
     // Mark step's form fields as not pristine, for fields' errors to be shown
@@ -1948,9 +1799,6 @@ onMounted(async () => {
     });
     noProjectsToAssign.value =
       onLoadProjectOptionsResponse.data.projects.length === 0;
-
-    // get a list of Analysis-Types created in the system
-    await loadAnalysisTypes();
   } catch (error) {
     console.error("Error loading resources:", error);
     toast.error("An error occurred. Please refresh the page to try again.");

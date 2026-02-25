@@ -174,18 +174,6 @@
         </va-chip>
       </template>
 
-      <template #cell(file_type)="{ value }">
-        <va-chip size="small" outline v-if="value">
-          {{ value.toUpperCase() }}
-        </va-chip>
-      </template>
-
-      <template #cell(genome)="{ rowData }">
-        <va-chip size="small" outline v-if="rowData.genome_type || rowData.genome_value">
-          {{ rowData.genome_type || '' }}{{ rowData.genome_value ? ` (${rowData.genome_value})` : '' }}
-        </va-chip>
-      </template>
-
       <template #cell(source_dataset)="{ rowData }">
         <div v-if="rowData.source_dataset">
           <div v-if="!auth.canOperate">
@@ -306,20 +294,6 @@ const columns = computed(() => {
       tdAlign: "center",
     },
     {
-      key: "file_type",
-      label: "File Type",
-      width: auth.canAdmin ? "8%" : "10%",
-      thAlign: "center",
-      tdAlign: "center",
-    },
-    {
-      key: "genome",
-      label: "Genome",
-      width: auth.canAdmin ? "12%" : "15%",
-      thAlign: "center",
-      tdAlign: "center",
-    },
-    {
       key: "source_dataset",
       label: "Source Raw Data",
       width: auth.canAdmin ? "12%" : "15%",
@@ -377,7 +351,6 @@ const getUploadLogs = async () => {
       pastUploads.value = res.data.uploads.map((e) => {
         let uploaded_dataset = e.dataset;
         const status = wfService.get_integrated_workflow_status(uploaded_dataset.workflows);
-        const genomicDetails = uploaded_dataset.genomic_details?.[0];
         // Get user from create audit log (filtered by action='create', only one exists)
         const createAuditLog = uploaded_dataset.audit_logs?.[0];
         return {
@@ -390,9 +363,6 @@ const getUploadLogs = async () => {
               ? uploaded_dataset.source_datasets[0].source_dataset
               : null,
           uploaded_dataset_type: uploaded_dataset.type,
-          file_type: uploaded_dataset.analysis_type?.name,
-          genome_type: genomicDetails?.genome_type,
-          genome_value: genomicDetails?.genome_value,
           integrated_status: status,
         };
       });

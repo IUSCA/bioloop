@@ -69,19 +69,6 @@
             </router-link>
           </td>
         </tr>
-
-        <tr v-if="props.sourceDataProduct">
-          <td>Source Data Product</td>
-          <td class="metadata">
-            <router-link
-              :to="`/datasets/${props.sourceDataProduct?.id}`"
-              target="_blank"
-            >
-              {{ props.sourceDataProduct?.name }}
-            </router-link>
-          </td>
-        </tr>
-
         <tr data-testid="project-row">
           <td>Project</td>
           <td class="metadata">
@@ -137,7 +124,6 @@
 import { useAuthStore } from "@/stores/auth";
 import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 import { snakeCaseToTitleCase } from "@/services/utils";
-import { formatGenome } from "@/services/sessionUtils";
 
 const props = defineProps({
   // `dataset`: Dataset to be uploaded
@@ -181,9 +167,7 @@ const props = defineProps({
   sourceRawData: {
     type: Object,
   },
-  sourceDataProduct: {
-    type: Object,
-  },  isSubmissionAlertVisible: {
+  isSubmissionAlertVisible: {
     type: Boolean,
     default: false,
   },
@@ -195,12 +179,6 @@ const props = defineProps({
     default: "warning",
   },
 });
-
-const formatFileType = (fileType) => {
-  if (!fileType) return '';
-  // fileType is an object with name and extension
-  return fileType.extension ? `${fileType.name} (${fileType.extension})` : fileType.name;
-};
 
 const emit = defineEmits(["update:populatedDatasetName"]);
 
