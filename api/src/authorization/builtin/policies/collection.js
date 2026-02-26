@@ -35,15 +35,13 @@ const userHasGrant = (access_type) => new CollectionPolicy({
   }),
 });
 
-const isMemberOfOwningGroup = new CollectionPolicy({
-  name: 'isMemberOfOwningGroup',
+const hasCollectionOversight = new CollectionPolicy({
+  name: 'hasCollectionOversight',
   requires: {
-    user: ['all_group_ids'],
+    user: ['oversight_group_ids'],
     resource: ['owner_group_id'],
   },
-  evaluate: (user, collection) => user
-    .all_group_ids
-    .includes(collection.owner_group_id),
+  evaluate: (user, collection) => user.oversight_group_ids.includes(collection.owner_group_id),
 });
 
 const collectionPolicies = new PolicyContainer({
@@ -53,14 +51,34 @@ const collectionPolicies = new PolicyContainer({
 });
 
 collectionPolicies.actions({
+  // here isCollectionAdmin means the user is admin of the group that will be the owner of the collection
   create: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-  view_metadata: Policy.or([isPlatformAdmin, isMemberOfOwningGroup, userHasGrant('view_metadata')]),
-  list_datasets: Policy.or([isPlatformAdmin, isCollectionAdmin, userHasGrant('view_datasets')]),
+
+  view_metadata: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight, userHasGrant('view_metadata')]),
+  list_datasets: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight, userHasGrant('list_datasets')]),
+
   edit_metadata: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   add_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   remove_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   transfer_ownership: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   delete: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-}).freeze();
+})
+  .attributes({
+  // all attributes are viewable/editable by admins, but for non-admins we restrict some attributes that might leak
+  // sensitive information about the collection or its datasets
+    '*': [
+      {
+        policy: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
+        attribute_filters: ['*'], // * - all attributes
+      },
+      {
+        policy: userHasGrant('view_metadata'),
+        attribute_filters: [
+          'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'owner_group_id', 'is_archived',
+        ],
+      },
+    ],
+  })
+  .freeze();
 
 module.exports = { collectionPolicies };

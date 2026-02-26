@@ -1,5 +1,7 @@
 const createError = require('http-errors');
-const { authorize } = require('./authorize');
+const _ = require('lodash/fp');
+
+const { authorizeWithFilters } = require('./authorize');
 
 /**
  * Initializes the policy execution context with request-scoped caches.
@@ -20,8 +22,8 @@ function initializePolicyContext(req, res, next) {
   next();
 }
 
-function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry) {
-  return (resourceType, action, {
+function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry, events) {
+  return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
   } = {}) => {
@@ -29,6 +31,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
     // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
     const policyContainer = policyRegistry.get(resourceType);
     const policy = policyContainer.getPolicy(action);
+    const attributeRules = policyContainer.getAttributeRules(action);
 
     return async (req, res, next) => {
     // extract identifiers from the request
@@ -39,9 +42,10 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
 
       const policyExecutionContext = req.policyContext || null;
 
-      // call authorize
-      const allowed = await authorize({
+      // call authorizeWithFilters
+      const result = await authorizeWithFilters({
         policy,
+        attributeRules,
         identifiers,
         registry: hydrationRegistry,
         policyExecutionContext,
@@ -51,13 +55,15 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
             req,
           },
         },
+        events,
       });
-      if (!allowed) {
+      if (!result.granted) {
         return next(createError(403, 'Forbidden'));
       }
+      req.permission = result;
       next();
     };
-  };
+  });
 }
 
 module.exports = {

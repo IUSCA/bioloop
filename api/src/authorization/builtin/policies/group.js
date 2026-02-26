@@ -24,12 +24,12 @@ const isGroupAdmin = new GroupPolicy({
 const isGroupMember = new GroupPolicy({
   name: 'isGroupMember',
   requires: {
-    user: ['group_memberships'],
+    user: ['effective_group_ids'],
     resource: ['id'],
   },
   evaluate: (user, group) => user
-    .group_memberships
-    .some((membership) => membership.group_id === group.id),
+    .effective_group_ids
+    .includes(group.id),
 });
 
 const hasGroupOversight = new GroupPolicy({
@@ -39,6 +39,15 @@ const hasGroupOversight = new GroupPolicy({
     resource: ['id'],
   },
   evaluate: (user, group) => user.oversight_group_ids.includes(group.id),
+});
+
+const canAccessOwnedResources = new GroupPolicy({
+  name: 'canAccessOwnedResources',
+  requires: {
+    user: ['accessible_owner_group_ids'], // ids of groups that own resources U has grants on
+    resource: ['id'],
+  },
+  evaluate: (user, group) => user.accessible_owner_group_ids.includes(group.id),
 });
 
 // Create the policy container for Group resource
@@ -56,33 +65,45 @@ groupPolicies
     archive: isPlatformAdmin,
     unarchive: isPlatformAdmin,
 
-    view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
+    view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessOwnedResources]),
     edit_metadata: Policy.or([isPlatformAdmin, isGroupAdmin]),
 
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
     view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
-    view_descendants: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
+
+    // immediate children of the group (not all descendants, which would be covered by view_metadata)
+    view_children: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
 
     add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
-
     edit_member_role: Policy.or([isPlatformAdmin, isGroupAdmin]),
-
   })
   .attributes({
     // * - any action
     '*': [
       {
-        policy: Policy.or([isPlatformAdmin, isGroupAdmin]),
+        policy: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
         attribute_filters: ['*'], // * - all attributes
       },
       {
-        policy: hasGroupOversight,
+        policy: isGroupMember,
+        attribute_filters: [
+          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
+        ],
+      },
+      {
+        policy: canAccessOwnedResources,
+        attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived'],
+      },
+    ],
+    view_members: [
+      {
+        policy: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
         attribute_filters: ['*'],
       },
       {
         policy: isGroupMember,
-        attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'members'],
+        attribute_filters: ['!assigned_by'],
       },
     ],
   })

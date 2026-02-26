@@ -2,6 +2,7 @@ const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
 
+const grantServices = require('@/services/grants');
 const { PrismaHydrate } = require('../../core/hydrators/PrismaHydrator');
 
 const userHydrator = new PrismaHydrate({ prismaClient: prisma, modelName: 'user', idAttribute: 'id' });
@@ -19,7 +20,7 @@ userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
   return rows.map((row) => row.roles.name);
 });
 
-userHydrator.registerVirtualAttribute('all_group_ids', async ({ id, hydrator }) => {
+userHydrator.registerVirtualAttribute('effective_group_ids', async ({ id, hydrator }) => {
   // ids of all groups the use is a member of, and all ancestor groups of those groups
 
   const dbClient = hydrator.prisma;
@@ -29,7 +30,7 @@ userHydrator.registerVirtualAttribute('all_group_ids', async ({ id, hydrator }) 
   const sql = Prisma.sql`
     WITH user_groups AS (
       SELECT group_id
-      FROM group_membership
+      FROM group_user
       WHERE user_id = ${id}
     )
     SELECT DISTINCT gc.ancestor_id AS id
@@ -57,6 +58,15 @@ userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrat
     LEFT JOIN group_closure gc ON gc.ancestor_id = g.id -- finding descendants
     JOIN user_groups ug ON ug.group_id = g.id
   `;
+  const rows = await dbClient.$queryRaw(sql);
+  return rows.map((row) => row.id);
+});
+
+userHydrator.registerVirtualAttribute('accessible_owner_group_ids', async ({ id, hydrator }) => {
+  // ids of groups that own resources the user has grants on (e.g. if U has a grant on a collection owned by G,
+  // then G's id will be in this list)
+  const dbClient = hydrator.prisma;
+  const sql = grantServices.ownerGroupIdsOfResourcesAccessibleByUserQuery(id);
   const rows = await dbClient.$queryRaw(sql);
   return rows.map((row) => row.id);
 });

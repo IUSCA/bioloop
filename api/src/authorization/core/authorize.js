@@ -1,7 +1,7 @@
 // const logger = require('@/services/logger');
 const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
-// const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
+const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 class AuthorizationError extends Error {
   constructor(message) {
@@ -105,6 +105,14 @@ async function authorize({
  * @param {Object} [policyExecutionContext.cache] - Cached hydration data
  * @param {Map} [policyExecutionContext.cache.user] - User cache Map
  * @param {Map} [policyExecutionContext.cache.resource] - Resource cache Map
+ * @param {Map} [policyExecutionContext.cache.context] - Context cache Map
+ * @param {Object} [preFetched=null] - Optional pre-fetched data to use instead of hydrating
+ * @param {Object} [preFetched.user] - Pre-fetched user data
+ * @param {Object} [preFetched.resource] - Pre-fetched resource data
+ * @param {Object} [preFetched.context] - Pre-fetched context data
+ * @param {Object} [events={}] - Optional events configuration
+ * @param {Function} [events.emit] - Event emitter function
+ * @param {string} [events.eventToEmit] - Event name to emit after authorization decision
  * @returns {Promise<Object>} Authorization result
  * @returns {boolean} result.granted - Whether access is granted
  * @returns {Function|null} result.filter - Filter function to apply to resource objects
@@ -123,109 +131,148 @@ async function authorize({
  *   res.json(result.filter(group));
  * }
  */
-// async function authorizeWithFilters(
-//   actionPolicy,
-//   attributeRules,
-//   identifiers,
-//   registry,
-//   policyExecutionContext = null,
-//   preFetched = null,
-// ) {
-//   // Validate inputs
-//   if (!actionPolicy || !(actionPolicy instanceof Policy)) {
-//     throw new AuthorizationError('Invalid actionPolicy: must be an instance of Policy');
-//   }
-//   if (!Array.isArray(attributeRules)) {
-//     throw new AuthorizationError('Invalid attributeRules: must be an array');
-//   }
-//   if (!identifiers || typeof identifiers !== 'object') {
-//     throw new AuthorizationError(
-//       `[policy:${actionPolicy.name}] Invalid identifiers: must be an object`,
-//     );
-//   }
-//   if (!registry || !(registry instanceof HydratorRegistry)) {
-//     throw new AuthorizationError(
-//       `[policy:${actionPolicy.name}] Invalid registry: must be an instance of HydratorRegistry`,
-//     );
-//   }
-//   if (identifiers.user === null || identifiers.user === undefined) {
-//     throw new AuthorizationError(
-//       `[policy:${actionPolicy.name}] User identifier is required to evaluate policy`,
-//     );
-//   }
+async function authorizeWithFilters({
+  policy,
+  attributeRules,
+  identifiers,
+  registry,
+  policyExecutionContext = null,
+  preFetched = null,
+  events = {
+    emit: null,
+    eventToEmit: null,
+  },
+}) {
+  // Validate inputs
+  if (!policy || !(policy instanceof Policy)) {
+    throw new AuthorizationError('Invalid policy: must be an instance of Policy');
+  }
+  if (!Array.isArray(attributeRules)) {
+    throw new AuthorizationError('Invalid attributeRules: must be an array');
+  }
+  if (!identifiers || typeof identifiers !== 'object') {
+    throw new AuthorizationError(
+      `[policy:${policy.name}] Invalid identifiers: must be an object`,
+    );
+  }
+  if (!registry || !(registry instanceof HydratorRegistry)) {
+    throw new AuthorizationError(
+      `[policy:${policy.name}] Invalid registry: must be an instance of HydratorRegistry`,
+    );
+  }
+  if (identifiers.user === null || identifiers.user === undefined) {
+    throw new AuthorizationError(
+      `[policy:${policy.name}] User identifier is required to evaluate policy`,
+    );
+  }
+  // validate events configuration
+  let emitEvent = false;
+  if (events.emit && typeof events.emit !== 'function') {
+    throw new AuthorizationError('Invalid events.emit: must be a function');
+  }
+  if (events.eventToEmit && typeof events.eventToEmit !== 'string') {
+    throw new AuthorizationError('Invalid events.eventToEmit: must be a string');
+  }
+  if (events.emit && events.eventToEmit) {
+    emitEvent = true;
+  }
 
-//   // Initialize caches if not provided
-//   const caches = {
-//     user: policyExecutionContext?.cache?.user || new Map(),
-//     resource: policyExecutionContext?.cache?.resource || new Map(),
-//     context: policyExecutionContext?.cache?.context || new Map(),
-//   };
+  // Initialize caches if not provided
+  const caches = {
+    user: policyExecutionContext?.cache?.user || new Map(),
+    resource: policyExecutionContext?.cache?.resource || new Map(),
+    context: policyExecutionContext?.cache?.context || new Map(),
+  };
 
-//   // Get hydrators
-//   const userHydrator = registry.get('user');
+  const userHydrator = registry.get('user');
+  const contextHydrator = registry.get('context');
 
-//   let resourceHydrator = null;
-//   if (actionPolicy.resourceType !== null) {
-//     if (identifiers.resource === null || identifiers.resource === undefined) {
-//       throw new AuthorizationError(
-//         `[policy:${actionPolicy.name}] Resource identifier is required to evaluate policy`,
-//       );
-//     }
-//     resourceHydrator = registry.get(actionPolicy.resourceType);
-//   }
+  let resourceHydrator = null;
+  if (policy.resourceType != null) {
+    if (identifiers.resource == null) {
+      throw new AuthorizationError(
+        `[policy:${policy.name}] Resource identifier is required to evaluate policy which requires resource attributes`,
+      );
+    }
+    resourceHydrator = registry.get(policy.resourceType);
+  }
 
-//   // PHASE 1: Evaluate action authorization
-//   // Hydrate data needed for action policy
-//   const [user, resource] = await Promise.all([
-//     userHydrator.hydrate({
-//       id: identifiers.user,
-//       attributes: actionPolicy.requires.user,
-//       cache: caches.user,
-//     }),
+  const [user, resource, context] = await Promise.all([
+    userHydrator.hydrate({
+      id: identifiers.user,
+      attributes: policy.requires.user,
+      cache: caches.user,
+      preFetched: preFetched?.user,
+    }),
 
-//     resourceHydrator ? resourceHydrator.hydrate({
-//       id: identifiers.resource,
-//       attributes: actionPolicy.requires.resource,
-//       cache: caches.resource,
-//     }) : {},
+    resourceHydrator ? resourceHydrator.hydrate({
+      id: identifiers.resource,
+      attributes: policy.requires.resource,
+      cache: caches.resource,
+      preFetched: preFetched?.resource,
+    }) : {},
 
-//   ]);
+    contextHydrator.hydrate({
+      id: null,
+      attributes: policy.requires.context,
+      cache: caches.context,
+      preFetched: preFetched?.context,
+    }),
+  ]);
 
-//   // Evaluate action policy
-//   const actionGranted = await actionPolicy.evaluate(user, resource, context);
+  // Evaluate action policy
+  const actionGranted = await policy.evaluate(user, resource, context);
 
-//   // If action denied, return immediately (no need to evaluate attribute filters)
-//   if (!actionGranted) {
-//     return {
-//       granted: false,
-//       filter: null,
-//     };
-//   }
+  // If action denied, return immediately (no need to evaluate attribute filters)
+  if (!actionGranted) {
+    if (emitEvent) {
+      events.emit(events.eventToEmit, {
+        policy: policy.name,
+        identifiers,
+        granted: false,
+        context,
+      });
+    }
+    return {
+      granted: false,
+      filter: null,
+    };
+  }
 
-//   // PHASE 2: Action granted - evaluate attribute filtering rules
-//   // This reuses the caches populated in Phase 1 and does incremental hydration
-//   const hydrators = {
-//     user: userHydrator,
-//     resource: resourceHydrator,
-//   };
+  // PHASE 2: Action granted - evaluate attribute filtering rules
+  // This reuses the caches populated in Phase 1 and does incremental hydration
+  const hydrators = {
+    user: userHydrator,
+    resource: resourceHydrator,
+    context: contextHydrator,
+  };
 
-//   const attributeFilters = await evaluateAttributeFilters(
-//     attributeRules,
-//     identifiers,
-//     hydrators,
-//     caches,
-//   );
+  const attributeFilters = await evaluateAttributeFilters(
+    attributeRules,
+    identifiers,
+    hydrators,
+    caches,
+  );
 
-//   // Create the filter function
-//   const filterFunction = createFilterFunction(attributeFilters);
+  // Create the filter function
+  const filterFunction = createFilterFunction(attributeFilters);
 
-//   return {
-//     granted: true,
-//     filter: filterFunction,
-//   };
-// }
+  if (emitEvent) {
+    events.emit(events.eventToEmit, {
+      policy: policy.name,
+      identifiers,
+      granted: true,
+      context,
+    });
+  }
+
+  return {
+    granted: true,
+    filter: filterFunction,
+  };
+}
 
 module.exports = {
   authorize,
-  // authorizeWithFilters,
+  authorizeWithFilters,
 };

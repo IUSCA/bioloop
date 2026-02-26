@@ -29,7 +29,7 @@ const {
 
   // Authorization engine
   authorize: coreAuthorize,
-  // authorizeWithFilters,
+  authorizeWithFilters: coreAuthorizeWithFilters,
 
   // Middleware
   initializePolicyContext,
@@ -97,6 +97,41 @@ async function authorize({
   });
 }
 
+// inject hydrate registry into core authorizeWithFilters function
+async function authorizeWithFilters({
+  policy, attributeRules, identifiers, policyExecutionContext, preFetched,
+}) {
+  return coreAuthorizeWithFilters({
+    policy,
+    attributeRules,
+    identifiers,
+    registry: hydratorRegistry,
+    policyExecutionContext,
+    preFetched,
+  });
+}
+
+// helper function to resolve policy and attribute rules for a given resourceType and action,
+// then call authorizeWithFilters
+async function authorizeAction({
+  resourceType, action, identifiers, policyExecutionContext, preFetched,
+}) {
+  // get the policy
+  // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
+  const policyContainer = policyRegistry.get(resourceType);
+  const policy = policyContainer.getPolicy(action);
+  const attributeRules = policyContainer.getAttributeRules(action);
+
+  return authorizeWithFilters({
+    policy,
+    attributeRules,
+    identifiers,
+    registry: hydratorRegistry,
+    policyExecutionContext,
+    preFetched,
+  });
+}
+
 // ============================================================================
 // SECTION 5: EXPORTS
 // Single export point for all authorization functionality
@@ -105,7 +140,8 @@ async function authorize({
 module.exports = {
   // Core authorization functions
   authorize,
-  // authorizeWithFilters,
+  authorizeWithFilters,
+  authorizeAction,
 
   // Middleware
   initializePolicyContext,
