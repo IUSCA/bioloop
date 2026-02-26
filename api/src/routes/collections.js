@@ -15,10 +15,8 @@ const { pickNonNil } = require('@/utils');
 const router = express.Router();
 
 // TODO:
-// find collections by owning group
-// router.get('/', asyncHandler(async (req, res) => {}));
-
-// find collections that a dataset belongs to
+// find collections by owning group ?owning_group_id=xxx
+// find collections that a dataset belongs to ?dataset_id=xxx
 // router.get('/', asyncHandler(async (req, res) => {}));
 
 // find all collections that I have access to
@@ -70,6 +68,9 @@ router.post(
     body('metadata').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Create a new collection'
+
     const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata'])(req.body);
     const newCollection = await collectionService.createCollection(data, { actor_id: req.user.id });
     res.status(201).json(newCollection);
@@ -88,6 +89,9 @@ router.patch(
   ]),
   authorize('collection', 'edit_metadata'),
   asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Update collection metadata (name, description, custom metadata)'
+
     const data = pickNonNil(['name', 'description', 'metadata'])(req.body);
     if (_.isEmpty(data)) {
       return next(createError(400, 'At least one metadata field must be provided for update'));
@@ -112,6 +116,9 @@ router.delete(
   ]),
   authorize('collection', 'delete'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Delete a collection'
+
     await collectionService.deleteCollection(req.params.id, req.user.id);
     res.status(204).send();
   }),
@@ -125,6 +132,9 @@ router.get(
   ]),
   authorize('collection', 'list_datasets'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'List datasets in a collection'
+
     const datasets = await collectionService.listDatasetsInCollection(req.params.id);
     res.json(datasets);
   }),
@@ -140,6 +150,9 @@ router.post(
   ]),
   authorize('collection', 'add_dataset'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Add one or more datasets to a collection'
+
     const { dataset_ids } = req.body;
     await collectionService.addDatasets(
       req.params.id,
@@ -161,6 +174,9 @@ router.delete(
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Remove a dataset from a collection'
+
     const { id, datasetId } = req.params;
     await collectionService.removeDatasets(id, { dataset_ids: [datasetId], actor_id: req.user.id });
     res.status(204).send();
@@ -177,6 +193,9 @@ router.delete(
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Bulk remove datasets from a collection'
+
     const { dataset_ids } = req.body;
     await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.id });
     res.status(204).send();

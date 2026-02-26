@@ -173,6 +173,7 @@ const loginHandler = asyncHandler(async (req, res, next) => {
 module.exports = {
   authenticate,
   accessControl,
+  rbacAccessControl: accessControl, // alias for backward compatibility
   getPermission,
   loginHandler,
 };

@@ -393,10 +393,9 @@ async function searchCollectionsForUser({
   offset,
   is_archived = null,
 }) {
-  // user is member of collection owner group
-  // OR user has grant for the collection with view_metadata access type
-
-  const access_types = ['view_metadata'];
+  // user is admin of the group that owns the collection
+  // OR user has oversight of the group that owns the collection
+  // OR user has grant for the collection
 
   let searchClause = Prisma.empty;
   if (search_term) {
@@ -417,49 +416,30 @@ async function searchCollectionsForUser({
   }
 
   return Prisma.sql`
-    WITH user_groups AS (
-      SELECT group_id
-      FROM group_user
-      WHERE user_id = ${user_id}
+    WITH accessible_collections_via_grants AS (
+      ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
     ),
-    all_groups AS (
-      SELECT DISTINCT gc.ancestor_id AS id
-      FROM "group" g
-      JOIN user_groups ug ON g.id = ug.group_id
-      JOIN group_closure gc ON gc.descendant_id = g.id
+    owned_collections AS (
+      SELECT id FROM "collection" c
+      JOIN group_user gu ON c.owner_group_id = gu.group_id
+      WHERE gu.user_id = ${user_id} AND gu.role = 'ADMIN'
     ),
-    accessible_collections_via_group AS (
-      SELECT c.id
-      from "collection" c
-      JOIN all_groups ag ON c.owner_group_id = ag.id
-    ),
-    accessible_collections_via_grant AS (
-      SELECT DISTINCT c.id
-      FROM "grant" G
-      JOIN grant_access_type gat ON G.access_type_id = gat.id
-      JOIN "collection" c ON G.resource_id = c.id AND G.resource_type = 'COLLECTION'
-      WHERE G.valid_from <= NOW()
-      AND (G.valid_until IS NULL OR G.valid_until > NOW())
-      AND G.revoked_at IS NULL
-      AND (
-        (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
-        )
-        OR (
-          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT id FROM all_groups) 
-        )
-      )
-      AND gat.name IN (${Prisma.join(access_types)})
+    oversight_collections AS (
+      SELECT id FROM "collection" c
+      JOIN effective_user_oversight_groups eug 
+        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
     ),
     accessible_collections AS (
-      SELECT id FROM accessible_collections_via_group
+      SELECT id FROM owned_collections
       UNION
-      SELECT id FROM accessible_collections_via_grant
+      SELECT id FROM oversight_collections
+      UNION
+      SELECT id FROM accessible_collections_via_grants
     )
     SELECT *
     FROM "collection" c
+    JOIN accessible_collections ac ON c.id = ac.id
     WHERE 
-      c.id IN (SELECT id FROM accessible_collections)
       ${searchClause}
       ${archivedClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}

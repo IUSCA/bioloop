@@ -7,6 +7,7 @@ const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
 const { AUTH_EVENTS } = require('@/authorization');
+const { EVERYONE_GROUP_ID } = require('@/constants');
 
 // ============================================================================
 // Grant Creation
@@ -164,6 +165,11 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
   // grant - group (user is member), dataset
   // grant - group (user is member), collection containing dataset
 
+  // group transitive membership: (not implemented here)
+  // it implies that if a user is not a direct member of a group that has a grant,
+  // but is direct member of descendant group that has no grant,
+  // still should get the grant via the ancestor group.
+
   const select_fields = return_type === 'access_types'
     ? Prisma.sql`distinct gat.name AS access_type`
     : Prisma.sql`G.*, gat.name AS access_type`;
@@ -174,29 +180,27 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
 
   return Prisma.sql`
     WITH user_groups AS (
-      SELECT group_id
-      FROM group_membership
-      WHERE user_id = ${user_id}
+      SELECT DISTINCT group_id 
+      FROM effective_user_groups 
+      WHERE user_id = ${user_id} 
+      UNION SELECT ${EVERYONE_GROUP_ID} -- include everyone group
     ),
-    dataset_collections AS (
+    collections_having_dataset AS (
       SELECT collection_id
       FROM collection_datasets
       WHERE dataset_id = ${dataset_id}
     )
     SELECT ${select_fields}
-    FROM "grant" G
+    FROM valid_grants G
     JOIN grant_access_type gat ON G.access_type_id = gat.id
-    WHERE G.valid_from <= NOW()
-      AND (G.valid_until IS NULL OR G.valid_until > NOW())
-      AND G.revoked_at IS NULL
-      AND (
+    WHERE (
         (
           G.subject_type = 'USER' AND G.subject_id = ${user_id} 
           AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
         )
         OR (
           G.subject_type = 'USER' AND G.subject_id = ${user_id} 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM dataset_collections)
+          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
         OR (
           G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
@@ -204,13 +208,14 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
         )
         OR (
           G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM dataset_collections)
+          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
       )
       ${access_type_filter}
   `;
 }
 
+// Similar helper for collections
 function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', access_types } = {}) {
   // find grants for a user and collection, including grants via group membership
   // grant - user, collection
@@ -226,17 +231,15 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
 
   return Prisma.sql`
     WITH user_groups AS (
-      SELECT group_id
-      FROM group_membership
-      WHERE user_id = ${user_id}
+      SELECT DISTINCT group_id 
+      FROM effective_user_groups 
+      WHERE user_id = ${user_id} 
+      UNION SELECT ${EVERYONE_GROUP_ID} -- include everyone group
     )
     SELECT ${select_fields}
-    FROM "grant" G
+    FROM valid_grants G
     JOIN grant_access_type gat ON G.access_type_id = gat.id
-    WHERE G.valid_from <= NOW()
-      AND (G.valid_until IS NULL OR G.valid_until > NOW())
-      AND G.revoked_at IS NULL
-      AND (
+    WHERE (
         (
           G.subject_type = 'USER' AND G.subject_id = ${user_id} 
           AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
@@ -247,6 +250,59 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
         )
       )
       ${access_type_filter}
+  `;
+}
+
+function userValidGrantsQuery(user_id) {
+  // helper to find all valid grants for a user, including via group membership
+  return Prisma.sql`
+    SELECT *
+    FROM valid_grants g
+    WHERE g.subject_type = 'USER'
+      AND g.subject_id = ${user_id}::text
+
+    UNION
+
+    SELECT g.*
+    FROM valid_grants g
+    WHERE g.subject_type = 'GROUP'
+      AND (
+            g.subject_id = ${EVERYONE_GROUP_ID}
+            OR g.subject_id IN (
+                  SELECT group_id
+                  FROM effective_user_groups
+                  WHERE user_id = ${user_id}
+              )
+          )
+  `;
+}
+
+function ownerGroupIdsOfResourcesAccessibleByUserQuery(user_id) {
+  // helper to find owner group ids of resources that a user has grants on
+  return Prisma.sql`
+    WITH user_valid_grants AS (
+      ${userValidGrantsQuery(user_id)}
+    )
+    SELECT DISTINCT d.owner_group_id as id
+    FROM user_valid_grants g
+    JOIN dataset d ON g.resource_type = 'DATASET' AND g.resource_id = d.id
+    WHERE d.owner_group_id IS NOT NULL
+    
+    UNION
+    
+    SELECT DISTINCT c.owner_group_id as id
+    FROM user_valid_grants g
+    JOIN collection c ON g.resource_type = 'COLLECTION' AND g.resource_id = c.id
+    WHERE c.owner_group_id IS NOT NULL
+  `;
+}
+
+function accessibleCollectionsByGrantsQuery(user_id) {
+  // helper to find collections that are accessible by a user via grants (directly or via group membership)
+  return Prisma.sql`
+    SELECT DISTINCT c.*
+    FROM (${userValidGrantsQuery(user_id)}) g
+    JOIN collection c ON g.resource_type = 'COLLECTION' AND g.resource_id = c.id
   `;
 }
 
@@ -281,19 +337,20 @@ async function getUserDatasetAccessTypes(user_id, dataset_id) {
 }
 
 async function userHasGrant({
-  user_id, resource_type, resource_id, access_type,
+  user_id, resource_type, resource_id, access_types,
 }) {
   if (resource_type === 'COLLECTION') {
     // check if user has grant for the collection directly or via group membership
     const sql = userCollectionsQuery(
       user_id,
       resource_id,
-      { return_type: 'access_types', access_types: [access_type] },
+      { return_type: 'access_types', access_types },
     );
     const results = await prisma.$queryRaw(sql);
     return results.length > 0;
   }
-  const sql = userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types: [access_type] });
+  const sql = userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
+
   const results = await prisma.$queryRaw(sql);
   return results.length > 0;
 }
@@ -305,4 +362,6 @@ module.exports = {
   getUserDatasetGrants,
   getUserDatasetAccessTypes,
   userHasGrant,
+  ownerGroupIdsOfResourcesAccessibleByUserQuery,
+  accessibleCollectionsByGrantsQuery,
 };

@@ -28,35 +28,25 @@ userHydrator.registerVirtualAttribute('effective_group_ids', async ({ id, hydrat
   // find all groups the user is a direct member of, then find all ancestor groups of those groups using the
   // group_closure table
   const sql = Prisma.sql`
-    WITH user_groups AS (
-      SELECT group_id
-      FROM group_user
-      WHERE user_id = ${id}
-    )
-    SELECT DISTINCT gc.ancestor_id AS id
-    FROM "group" g
-    LEFT JOIN group_closure gc ON gc.descendant_id = g.id -- finding ancestors
-    JOIN user_groups ug ON ug.group_id = g.id
+    SELECT DISTINCT group_id
+    FROM effective_user_groups
+    WHERE user_id = ${id}
   `;
   const rows = await dbClient.$queryRaw(sql);
   return rows.map((row) => row.id);
 });
 
 userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrator }) => {
-  // ids of groups the user is an admin of, and all descendant groups of those groups.
+  // ids of strict descendants of groups U admins
+  // does not include groups U is directly an admin of, unless U is also admin of descendant group
+  // ex: A -> B -> C, if U is admin of A, then B and C will be in this list, but not A;
+  // if U is admin of both A and B, then A will not be in this list, but B and C will be
 
   const dbClient = hydrator.prisma;
   const sql = Prisma.sql`
-    WITH user_groups AS (
-      SELECT group_id
-      FROM group_user
-      WHERE user_id = ${id}
-      AND role = 'ADMIN' -- only consider groups where user is an admin for oversight purposes
-    )
-    SELECT DISTINCT gc.descendant_id AS id
-    FROM "group" g
-    LEFT JOIN group_closure gc ON gc.ancestor_id = g.id -- finding descendants
-    JOIN user_groups ug ON ug.group_id = g.id
+    SELECT DISTINCT group_id
+    FROM effective_user_oversight_groups
+    WHERE user_id = ${id}
   `;
   const rows = await dbClient.$queryRaw(sql);
   return rows.map((row) => row.id);

@@ -692,7 +692,7 @@ async function searchGroupsForUser({
   if (direct_membership_only) {
     // direct_membership_only takes precedence, ignore oversight_only
     membershipClause = Prisma.sql`
-      ug.role IS NOT NULL
+      gu.role IS NOT NULL
     `;
   } else if (oversight_only) {
     // only show groups user administers
@@ -706,28 +706,23 @@ async function searchGroupsForUser({
     `;
   }
 
+  // Groups they are members of
+  // Parent groups of those groups
+  // if admin of any group, also show all descendant groups for oversight purposes
   const sql = Prisma.sql`
-    WITH user_groups AS (
-      SELECT group_id
-      FROM group_user
+    WITH all_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_groups
       WHERE user_id = ${user_id}
     ),
-    all_groups AS (
-      SELECT DISTINCT gc.ancestor_id AS id
-      FROM "group" g
-      JOIN user_groups ug ON ug.group_id = g.id
-      JOIN group_closure gc ON gc.descendant_id = g.id -- finding ancestors
-    ),
     oversight_groups AS (
-      SELECT DISTINCT gc.descendant_id AS id
-      FROM "group" g
-      JOIN user_groups ug ON ug.group_id = g.id
-      JOIN group_closure gc ON gc.ancestor_id = g.id
-      WHERE ug.role = 'ADMIN' -- only consider groups where user is an admin for oversight purposes 
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_oversight_groups
+      WHERE user_id = ${user_id}
     )
-    SELECT g.*, ug.role as user_role
+    SELECT g.*, gu.role as user_role
     FROM "group" g
-    LEFT JOIN user_groups ug ON ug.group_id = g.id
+    LEFT JOIN group_user gu ON gu.group_id = g.id
     WHERE 
     ${membershipClause}
     ${searchClause}

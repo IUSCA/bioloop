@@ -56,6 +56,23 @@ function getFSM(status) {
 // Request Lifecycle
 // ============================================================================
 
+async function getRequestById(request_id) {
+  return prisma.access_request.findUniqueOrThrow({
+    where: { id: request_id },
+    include: {
+      access_request_items: {
+        include: {
+          access_type: true,
+        },
+      },
+      requester: true,
+      reviewer: true,
+      dataset_resource: true,
+      collection_resource: true,
+    },
+  });
+}
+
 /**
  * Create a new access request
  * @param {Object} data
@@ -312,7 +329,13 @@ function updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
   });
 }
 
-function _createGrant(tx, currentRequest, reviewItem, granted_by, granted_via_group) {
+function _createGrant(tx, currentRequest, reviewItem, granted_by) {
+  // while submitting a review of access request, only admin of owning group can approve the request.
+  // So we can be sure that the grant is being given via owning group of the resource
+  const resourceOwningGroupId = currentRequest.dataset_resource?.owner_group_id
+    || currentRequest.collection_resource?.owner_group_id;
+  const granted_via_group = resourceOwningGroupId ?? null;
+
   const data = {
     subject_type: currentRequest.resource_type,
     subject_id: currentRequest.resource_id,
@@ -334,11 +357,10 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by, granted_via_gr
  * @param {Object} options
  * @param {Array<{id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.item_decisions - Decision for each item
  * @param {string} [options.decision_reason] - Overall review comment
- * @param {string} [options.granted_via_group] - Authority group ID if granting via group authority
  * @returns {Promise<Object>} Updated access request with review decisions
  */
-async function submitReview(request_id, reviewer_id, options = {}) {
-  const { item_decisions, decision_reason, granted_via_group } = options;
+async function submitReview({ request_id, reviewer_id, options = {} }) {
+  const { item_decisions, decision_reason } = options;
 
   if (!item_decisions || item_decisions.length === 0) {
     throw createError.BadRequest('Must provide decisions for at least one item');
@@ -349,8 +371,12 @@ async function submitReview(request_id, reviewer_id, options = {}) {
     where: { id: request_id },
     include: {
       access_request_items: true,
+      dataset_resource: true,
+      collection_resource: true,
     },
   });
+
+  // validate if reviewer can perform this action
 
   validateReview(currentRequest, item_decisions);
 
@@ -370,7 +396,7 @@ async function submitReview(request_id, reviewer_id, options = {}) {
       // create grant if approved
       if (reviewItem.decision === 'APPROVED') {
         // eslint-disable-next-line no-await-in-loop
-        const grant = await _createGrant(tx, currentRequest, reviewItem, reviewer_id, granted_via_group);
+        const grant = await _createGrant(tx, currentRequest, reviewItem, reviewer_id);
         // eslint-disable-next-line no-await-in-loop
         await updateRequestItem(tx, reviewItem, { grant_id: grant.id });
         approvedCount += 1;
@@ -430,7 +456,7 @@ async function submitReview(request_id, reviewer_id, options = {}) {
  * @param {number} requester_id
  * @returns {Promise<Object>} Updated access request
  */
-async function withdrawRequest(request_id, requester_id) {
+async function withdrawRequest({ request_id, requester_id }) {
   return prisma.$transaction(async (tx) => {
     // Fetch current request
     const currentRequest = await tx.access_request.findUniqueOrThrow({
@@ -491,7 +517,7 @@ async function withdrawRequest(request_id, requester_id) {
  * @param {number} max_age_days - Maximum age in days before expiration
  * @returns {Promise<number>} Count of expired requests
  */
-async function expireStaleRequests(max_age_days) {
+async function expireStaleRequests({ max_age_days }) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - max_age_days);
 
@@ -535,6 +561,105 @@ async function expireStaleRequests(max_age_days) {
   });
 }
 
+async function getRequestsByUser({
+  requester_id, status, sort_by, sort_order, offset, limit,
+}) {
+  const where = { requester_id };
+  if (status) {
+    where.status = status;
+  }
+  return prisma.access_request.findMany({
+    where,
+    include: {
+      access_request_items: {
+        include: {
+          access_type: true,
+        },
+      },
+      dataset_resource: true,
+      collection_resource: true,
+    },
+    orderBy: {
+      [sort_by || 'created_at']: sort_order || 'desc',
+    },
+    skip: offset,
+    take: limit,
+
+  });
+}
+
+// assume sort_by, sort_order, offset, limit are validated and passed as parameters
+async function getRequestsPendingReview({
+  reviewer_id, sort_by, sort_order, offset, limit,
+}) {
+  const sql = Prisma.sql`
+    WITH reviewer_as_admin_of_groups AS (
+      SELECT gu.group_id
+      FROM group_user gu
+      WHERE gu.user_id = ${reviewer_id}
+        AND gu.role = 'ADMIN'
+    )
+    SELECT ar.id
+    FROM access_request ar
+    WHERE ar.status = 'UNDER_REVIEW'
+      AND ( ar.resource_type = 'DATASET' AND ar.resource_id IN (
+            SELECT d.id
+            FROM dataset d
+            JOIN reviewer_as_admin_of_groups rag ON d.owner_group_id = rag.group_id
+          )
+        OR ar.resource_type = 'COLLECTION' AND ar.resource_id IN (
+            SELECT c.id
+            FROM collection c
+            JOIN reviewer_as_admin_of_groups rag ON c.owner_group_id = rag.group_id
+          )
+      )
+    ORDER BY ar.${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+    OFFSET ${offset}
+    LIMIT ${limit}
+  `;
+  const result = await prisma.$queryRaw(sql);
+  const requestIds = result.map((row) => row.id);
+
+  return prisma.access_request.findMany({
+    where: { id: { in: requestIds } },
+    include: {
+      access_request_items: {
+        include: {
+          access_type: true,
+        },
+      },
+      requester: true,
+      dataset_resource: true,
+      collection_resource: true,
+    },
+  });
+}
+
+async function getReviewedRequestsByUser(user_id, {
+  sort_by, sort_order, offset, limit,
+}) {
+  return prisma.access_request.findMany({
+    where: {
+      reviewed_by: user_id,
+    },
+    include: {
+      access_request_items: {
+        include: {
+          access_type: true,
+        },
+      },
+      requester: true,
+      dataset_resource: true,
+      collection_resource: true,
+    },
+    orderBy: {
+      [sort_by || 'reviewed_at']: sort_order || 'desc',
+    },
+    skip: offset,
+    take: limit,
+  });
+}
+
 module.exports = {
   createAccessRequest,
   updateAccessRequest,
@@ -542,4 +667,8 @@ module.exports = {
   submitReview,
   withdrawRequest,
   expireStaleRequests,
+  getRequestById,
+  getRequestsByUser,
+  getRequestsPendingReview,
+  getReviewedRequestsByUser,
 };
