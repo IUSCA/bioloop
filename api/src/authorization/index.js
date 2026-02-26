@@ -43,6 +43,7 @@ const {
 // Builtin policies
 const { groupPolicies } = require('./builtin/policies/group');
 const { collectionPolicies } = require('./builtin/policies/collection');
+const { datasetPolicies } = require('./builtin/policies/dataset');
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
@@ -65,6 +66,7 @@ const policyRegistry = new PolicyRegistry();
 // Register builtin policy containers
 policyRegistry.register(groupPolicies);
 policyRegistry.register(collectionPolicies);
+policyRegistry.register(datasetPolicies);
 
 // Register derived app policy containers here
 

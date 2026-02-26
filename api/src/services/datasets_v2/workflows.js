@@ -1,44 +1,47 @@
 const assert = require('assert');
+const config = require('config');
 
 const prisma = require('@/db');
+const wfService = require('@/services/workflow');
+const { DONE_STATUSES } = require('@/constants');
+
+function get_wf_body(wf_name) {
+  assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
+  const wf_body = { ...config.workflow_registry[wf_name] };
+  wf_body.name = wf_name;
+  wf_body.app_id = config.app_id;
+  wf_body.steps = wf_body.steps.map((step) => ({
+    ...step,
+    queue: step.queue || `${config.app_id}.q`,
+  }));
+  return wf_body;
+}
 
 /**
- * Creates a new workflow for a dataset.
+ * Creates a new workflow for a dataset and associates it.
  *
- * @async
- * @function createWorkflow
- * @param {Object} dataset - The dataset object for which the workflow is being created.
- * @param {string} wf_name - The name of the workflow to be created.
- * @param {number} initiator_id - The ID of the user initiating the workflow.
- * @throws {AssertionError} Throws an error if a workflow with the same name is already running or pending for the dataset.
- * @returns {Promise<Object>} The created workflow object.
+ * Requires `dataset.workflows` to be populated so that active-workflow
+ * conflict detection can be performed before dispatching to the workflow
+ * service.
  *
- * @description
- * This function performs the following steps:
- * 1. Retrieves the workflow body for the provided workflow name.
- * 2. Checks if there's already an active workflow with the same name for the given dataset.
- * 3. If no active workflow exists, it creates a new workflow using the workflow service.
- * 4. Associates the newly created workflow with the dataset in the database.
- * 5. Returns the created workflow object.
+ * @param {Object} params
+ * @param {Object} params.dataset       - Dataset object with `.workflows` loaded.
+ * @param {string} params.wf_name       - Registered workflow name.
+ * @param {number} [params.initiator_id] - ID of the user initiating the workflow.
+ * @returns {Promise<Object>} The created workflow object returned by the workflow service.
+ * @throws {AssertionError} If a workflow with the same name is already pending or running.
  */
 async function createWorkflow({ dataset, wf_name, initiator_id }) {
   const wf_body = get_wf_body(wf_name);
 
-  // check if a workflow with the same name is not already running / pending on
-  // this dataset
-  const active_wfs_with_same_name = dataset.workflows
-    .filter((_wf) => _wf.name === wf_body.name)
-    .filter((_wf) => !DONE_STATUSES.includes(_wf.status));
+  const active_same_name = dataset.workflows
+    .filter((wf) => wf.name === wf_body.name)
+    .filter((wf) => !DONE_STATUSES.includes(wf.status));
 
-  assert(active_wfs_with_same_name.length === 0, 'A workflow with the same name is either pending / running');
+  assert(active_same_name.length === 0, 'A workflow with the same name is either pending / running');
 
-  // create the workflow
-  const wf = (await wfService.create({
-    ...wf_body,
-    args: [dataset.id],
-  })).data;
+  const wf = (await wfService.create({ ...wf_body, args: [dataset.id] })).data;
 
-  // add association to the dataset
   await prisma.workflow.create({
     data: {
       id: wf.workflow_id,
