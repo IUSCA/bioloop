@@ -2,156 +2,225 @@
 
 ## 1. Introduction
 
-Bioloop allows uploading datasets through the browser, while ensuring strict access control to prevent unauthorized access.
+Bioloop allows uploading datasets through the browser using a resumable upload architecture based on the [TUS protocol](https://tus.io/). The system ensures strict access control, data integrity via BLAKE3 checksums, and reliable processing through an asynchronous worker pipeline.
 
 ## 2. Requirements and Limitations
 
 - Authorized users should be able to upload datasets directly from their web browsers. The uploaded datasets should be protected from unauthorized users.
-- Network timeouts, data corruption and other problems that arise from uploading large datasets must be avoided. To achieve this, our file upload architecture uploads files in chunks of 2 MB.
-  - Uploading files in chunks also gives us a more granular view into the upload state.
+- Network timeouts, data corruption, and other problems that arise from uploading large datasets must be avoided. To achieve this, the upload architecture uses the TUS resumable upload protocol (supports files up to 100 GB per file).
+  - TUS tracks byte offsets, so interrupted uploads can resume from where they left off without re-uploading already-transferred data.
+- End-to-end data integrity is verified using BLAKE3 cryptographic checksums computed in the browser and re-verified server-side.
 
 ## 3. Architecture Overview
 
-To meet the requirements outlined above, a distributed architecture is employed.
+The upload system is composed of five layers that work together:
 
-- UI Client: User logs into the Bioloop application through their web browser and navigates to the appropriate page to initiate a dataset upload.
-- API: This node serves the UI as well as workers via HTTP endpoints that are specific to dataset uploads.
-- Database: Any metadata related to an upload is stored in a PostgreSQL database.
-  - The contents of the uploaded files themselves are not persisted to this database.
-- Rhythm API: This node is used to initiate workflows from the UI. These workflows process the uploaded dataset.
-- Workers: Workflow tasks that process the uploaded dataset and register the uploaded dataset in the system.
-- Signet: An OAuth server that supports Client-Credentials flow. This is used to issue secure tokens which are needed for authorizing into the File-Upload API.
-- File-Upload API: A lightweight app hosted on the File-Upload Server, which writes files sent as part of an HTTP request to a filesystem.
-- File-Upload Server (Nginx): A server which receives requests from users to upload files. Files are uploaded to this server.
+| Component | Role |
+|-----------|------|
+| **UI** | Multi-step form: file selection, metadata entry, BLAKE3 checksum computation, TUS upload, completion signaling |
+| **API** | Node.js/Express server that hosts the TUS endpoint, registers datasets, moves files to final destination, and exposes polling endpoints for workers |
+| **PostgreSQL DB** | Stores dataset metadata and upload lifecycle state (`dataset`, `dataset_upload_log`) |
+| **Workers** | Python/Celery polling job that detects completed uploads, runs integrity verification, and triggers the integrated workflow |
+| **Disk** | Shared filesystem: TUS writes files to a temp directory; API moves them to the dataset's `origin_path`; workers and the integrated workflow read from `origin_path` |
+| **SDA** | Scientific Data Archive — final destination for processed datasets, reached via the integrated workflow |
 
-## 4. The Upload Process
+## 4. Data Flow Sequence
 
-### 4.1 Database
+The diagram below shows the complete data flow for a successful upload, from the moment a user selects files through to dataset archival in the SDA.
 
-For each upload, information is logged to the following relational tables (PostgreSQL):
-1. `dataset_audit` - used to create an audit log of a dataset being created in the system. Each record in this table is linked to a single `dataset` record.
-2. `dataset_upload_log` - contains metadata specific to a dataset's upload. Each record in this table is linked to multiple `file_upload_log` records.
-3. `file_upload_log` - contains metadata about each file that is uploaded as part of upload.
+```mermaid
+sequenceDiagram
+    actor User
+    participant UI
+    participant API
+    participant DB as PostgreSQL DB
+    participant Disk
+    participant Workers
+    participant SDA
 
-![Upload ER Diagram](/api/upload/ER-diagram.png)
+    Note over User,UI: Step 1 — File Selection & Metadata
+    User->>UI: Navigate to /datasets/uploads/new
+    User->>UI: Select files or directory
+    User->>UI: Fill in metadata (dataset type, name, project, instrument)
+    User->>UI: Click Submit
 
-### 4.2 Steps
+    Note over UI: Step 2 — BLAKE3 Checksum (optional, browser-side)
+    UI->>UI: Computes BLAKE3 manifest hash<br/>for all selected files (streaming, 64 MB chunks)
+    UI->>UI: Stores checksum in memory<br/>(sent to API after upload completes)
 
-1. Before an upload begins, the following events occur sequentially:
-   - Checksum evaluation - MD5 checksums are evaluated for each file being uploaded, as well as for each chunk that a file being uploaded is split into. 
-   - Any metadata associated with the upload is stored in the database. This includes:
-     - Names, MD5 checksums, and relative paths of the files being uploaded.
-     - User who is uploading the dataset
-     - (Optional) Source Raw Data that the dataset being uploaded is being derived from.
-     - (Optional) Project that the dataset being uploaded is assigned to
-     - (Optional) Source instrument where the dataset being uploaded was collected from.
-   - The UI requests a bearer token which it will use to call the File-Upload API (see [Access Control](#44-access-control))
-2. Upload of files is initiated by the UI once the above steps are successful.
-3. Chunks are uploaded sequentially to the File-Upload API.
-   - For this, the client sends an HTTP request to the File-Upload API in order to upload a file chunk, which then writes the received chunk to the File-Upload Server, after validating its checksum.
-   - If a chunk upload fails, the UI retries the upload up to 5 times before failing.
-   - The bearer token that is being used to call the File-Upload API is refreshed every 20 seconds
-4. If the user chooses to navigate to a different route before all files have been uploaded, they see a browser alert asking to verify their choice.
-   - Upon verification, the upload is cancelled by initiating the `cancel_dataset_upload` workflow.
-5. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to initiate the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
-   - This worker expects to have access to be the location where the File-Upload API uploads files to.
+    Note over UI,DB: Step 3 — Register Upload
+    UI->>API: POST /api/datasets/uploads<br/>{ type, name, project_id, src_dataset_id, src_instrument_id }
+    API->>DB: BEGIN TRANSACTION
+    API->>DB: INSERT INTO dataset { name, type, create_method='UPLOAD', ... }
+    API->>DB: UPDATE dataset SET origin_path = /uploads/{type}/{id}/{name}
+    API->>DB: INSERT INTO dataset_upload_log { dataset_id, status='UPLOADING' }
+    API->>DB: COMMIT
+    API-->>UI: 200 OK — { dataset_upload_log: { id, dataset: { id, name, origin_path } } }
 
-![Upload Steps Flowchart](/api/upload/steps-flowchart.jpeg)
+    Note over UI,Disk: Step 4 — TUS Resumable Upload (one request per file)
+    loop For each file
+        UI->>API: POST /api/uploads/files<br/>TUS-Resumable: 1.0.0, Upload-Length: N,<br/>metadata: { filename, dataset_id, selection_mode, relative_path }
+        API-->>UI: 201 Created — Location: /api/uploads/files/{process_id}
+        loop Upload chunks (PATCH until complete)
+            UI->>API: PATCH /api/uploads/files/{process_id}<br/>Content-Type: application/offset+octet-stream,<br/>Upload-Offset: N, Authorization: Bearer {token}
+            API->>Disk: Write chunk to /uploads/{process_id} (append at offset)
+            API-->>UI: 204 No Content — Upload-Offset: N+chunk_size
+        end
+        UI->>UI: Stores process_id for this file
+    end
 
-### 4.3 Directory structure
-The directories on the File-Upload Server that are used for uploads are described below.
+    Note over UI,Disk: Step 5 — Signal Completion
+    UI->>API: POST /api/datasets/uploads/{dataset_id}/complete<br/>{ process_id, selection_mode, directory_name, relative_path, metadata: { checksum } }
+    API->>Disk: Read TUS metadata from /uploads/{process_id}.json
+    API->>Disk: Move /uploads/{process_id} → origin_path/{filename}<br/>(idempotent: skip if already exists)
+    API->>DB: UPDATE dataset_upload_log SET status='UPLOADED', process_id=..., metadata={ checksum }
+    API-->>UI: 200 OK — { success: true, upload_log: { status: 'UPLOADED' } }
+    UI->>User: Show "All files uploaded successfully"
 
-1. The location where a dataset will be uploaded to is evaluated through the following method:
+    Note over Workers,DB: Step 6 — Workers Polling Job (runs every 1 minute)
+    loop manage_upload_workflows.py — every minute
+        Workers->>API: GET /api/datasets/uploads/stalled
+        API->>DB: SELECT * FROM dataset_upload_log<br/>WHERE status IN ('UPLOADED','VERIFYING','VERIFIED')<br/>AND updated_at < NOW() - 30s
+        API-->>Workers: { uploads: [{ dataset_id, dataset_name, uploaded_at }] }
+
+        alt Status == UPLOADED
+            Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFYING' }
+            API->>DB: UPDATE dataset_upload_log SET status='VERIFYING'
+            Workers->>Workers: Spawn Celery task: verify_upload_integrity(dataset_id)
+            Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ metadata: { verification_task_id, verification_started_at } }
+        else Status == VERIFYING
+            Workers->>Workers: Check Celery task state (task_id from metadata)
+            alt Task SUCCESS (status not yet updated)
+                Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFIED' }
+            else Task FAILURE
+                Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFICATION_FAILED', metadata: { failure_reason } }
+            else Task PENDING/STARTED
+                Note over Workers: Wait for next polling cycle
+            else Timeout > 24h
+                Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFICATION_FAILED' }
+            end
+        else Status == VERIFIED
+            Workers->>Workers: Start INTEGRATED Celery workflow
+            Workers->>API: POST /api/datasets/{dataset_id}/workflows<br/>{ workflow_id }
+            Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'COMPLETE' }
+        end
+    end
+
+    Note over Workers,Disk: Step 7 — Integrity Verification (Celery task)
+    Workers->>Disk: List files at origin_path (directory traversal)
+    alt Files found
+        Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFIED' }
+    else No files / path missing
+        Workers->>API: PATCH /api/datasets/uploads/{dataset_id}<br/>{ status: 'VERIFICATION_FAILED' }
+        Workers->>API: POST /api/notifications { title, message } — Admin notified
+    end
+
+    Note over Workers,SDA: Step 8 — Integrated Workflow
+    Workers->>Disk: Read dataset files from origin_path
+    Workers->>DB: Register dataset metadata (files, checksums, size)
+    Workers->>SDA: Stage/archive dataset to SDA
+    Workers->>DB: UPDATE dataset SET is_staged=true, is_archived=true
+    Workers->>User: Dataset visible in Bioloop UI
 ```
-const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => {
-  # `dataset_id`: the unique id that is generated for the dataset being uploaded.
-  # `config.upload.path`: the location where all uploaded datasets are stored.
 
-  return path.join(
-    config.upload.path,
-    datasetType.toLowerCase(),
-    `${datasetId}`,
-    'processed',
-  )
-};
+## 5. Upload Status Lifecycle
+
+The `dataset_upload_log.status` field tracks each upload through its lifecycle:
+
+| Status | Persisted | Set By | Description |
+|--------|-----------|--------|-------------|
+| `UPLOADING` | ✅ | API (`POST /datasets/uploads`) | Upload registered; TUS transfers in progress |
+| `UPLOAD_FAILED` | ✅ | UI / API | TUS transfer failed after all retries exhausted |
+| `UPLOADED` | ✅ | API (`POST /datasets/uploads/:id/complete`) | All files moved to `origin_path`; ready for verification |
+| `VERIFYING` | ✅ | Workers (`manage_upload_workflows.py`) | Celery verification task spawned |
+| `VERIFIED` | ✅ | Workers (Celery task) | BLAKE3 / file-existence check passed |
+| `VERIFICATION_FAILED` | ✅ | Workers | Verification failed; admin notified |
+| `PROCESSING` | ✅ | Workers (retry path) | Integrated workflow triggered (retry case) |
+| `PROCESSING_FAILED` | ✅ | Workers | Integrated workflow failed |
+| `COMPLETE` | ✅ | Workers (`manage_upload_workflows.py`) | Integrated workflow triggered successfully |
+| `PERMANENTLY_FAILED` | ✅ | Workers | Max retries (`MAX_RETRY_COUNT=3`) exceeded |
+
+> **UI-only statuses** (not persisted): `COMPUTING_CHECKSUMS`, `CHECKSUM_COMPUTATION_FAILED`, `UNINITIATED`.
+
 ```
-2. The location where any given file that is being uploaded as part of this upload will be uploaded to is evaluated through the methods shown below. Each file is uploaded in chunks.
-    - Individual chunks are named as `[file_md5]-[i]` where `i` serves as the position of this chunk among all sequentially-uploaded chunks of this file.
-      - When merging a file's chunks into the corresponding file, chunks will be processed sequentially based on the index `i`.
+UPLOADING
+    │
+    ├──(TUS failure)──► UPLOAD_FAILED
+    │
+    └──(POST /complete)──► UPLOADED
+                               │
+                         (Workers poll)
+                               │
+                           VERIFYING
+                               │
+                  ┌────────────┴────────────┐
+           (pass) │                         │ (fail)
+              VERIFIED             VERIFICATION_FAILED
+                  │
+           (Workers poll)
+                  │
+              COMPLETE ──(workflow fails)──► PROCESSING_FAILED
+                                                    │
+                                              (retry ≤ 3x)
+                                                    │
+                                            PERMANENTLY_FAILED
 ```
-# `uploadPath`: the path where this dataset will be uploaded to.
-# `fileUploadLogId`: the unique id which is generated to record this file's upload
 
-const chunkStorage = getFileChunksStorageDir(
-  {
-    uploadPath: req.body.upload_path,
-    fileUploadLogId: req.body.file_upload_log_id,
-  },
-);
-  
-const getFileChunksStorageDir = ({ uploadPath, fileUploadLogId } = {}) => {
-  return path.join(
-    uploadPath,
-    'uploaded_chunks',
-    fileUploadLogId,
-  )
- };
+## 6. Directory Structure
 
-# Name of uploaded chunk file:
-const getFileChunkName = (fileChecksum, index) => {
-  # `index`: The position of this uploaded chunk among all the chunks that a file is split into before being uploaded
-  return `${fileChecksum}-${index}`
-};
+Files move through two locations on disk:
+
+### TUS Temporary Directory (`config.upload.path`)
+
+TUS writes each uploaded file as a flat binary blob and a sidecar metadata file:
+
 ```
-3. Once the uploaded dataset's files have been processed (i.e. its chunks have been merged into corresponding files), the recreated dataset is stored at the path shown below.
-    - This location is considered the path where the dataset originated from (i.e. the dataset's `origin_path`).
+/uploads/
+  {process_id}           ← uploaded file bytes (appended by TUS PATCH requests)
+  {process_id}.json      ← TUS metadata (filename, filetype, dataset_id, selection_mode)
 ```
-path.join(
-  getUploadedDatasetPath({ datasetId = uploadedDatasetId, datasetType = uploadedDatasetType }),
-  'processed'
-)
+
+### Dataset Origin Path (final destination)
+
+After `POST /datasets/uploads/:id/complete`, the API moves files to:
+
 ```
-  
-### 4.4 Access Control
+/uploads/{dataset_type}/{dataset_id}/{dataset_name}/
+  file.raw               ← single-file upload
+  my_dir/                ← directory upload (relative paths preserved)
+    subdir/
+      file.raw
+```
 
-1. To verify that a user is authorized to initiate an upload, we perform role-based checking in the core Bioloop API.
-    - This validation cannot be performed in the File-Upload API, since evaluating permissions that are granted to a user for any given entity is done via information stored in the database, which the File-Upload API is not given access to, to keep it decoupled from the database.
-2. After verifying that the user is authorized to upload datasets, the UI issues a request to the core Bioloop API which requests the Signet service for a Bearer token, which is returned to the UI.
-   - The UI then attaches this token to the `Authorization` header of the HTTP request which is sent from the UI to the File-Upload API in order to upload a file.
-   - The scope included in the generated token contains the name of the file prefixed with the string `upload_file`.
-   - If the name of the file being uploaded has spaces in it, these spaces are replaced by hyphens in the granted token's scope.
-   - For example, to upload file `my file.json`, the Bearer token that is used to call the File-Upload API file will be expected to have scope `upload_file:my-file.json`.
-3. Before the File-Upload API accepts a file that needs to be uploaded, it verifies that the scope contained in the Bearer token is the same as the expected scope. If these scopes do not match, the File-Upload API rejects the HTTP request.
+This path is stored in `dataset.origin_path` and is the root from which the integrated workflow reads files for processing and SDA archival.
 
-### 4.5 Status
+## 7. Data Integrity
 
-The status of an upload action goes through the following values:
+BLAKE3 checksum verification is performed in two stages:
 
-| Status                      | Description                                                                                                                                                           |
-|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| COMPUTING_CHECKSUMS         | Checksums are being computed for the file(s) to be uploaded                                                                                                           |
-| CHECKSUM_COMPUTATION_FAILED | Checksums computation failed for the file(s) to be uploaded                                                                                                           |
-| UPLOADING                   | Upload initiated through the browser                                                                                                                                  |
-| UPLOAD_FAILED               | Upload could not be completed (network errors)                                                                                                                        |
-| UPLOADED                    | All files successfully uploaded                                                                                                                                       |
-| PROCESSING                  | Upload currently being processed                                                                                                                                      |
-| PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
-| COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
+1. **Browser (pre-upload)** — `checksum.js` computes a BLAKE3 manifest hash for all selected files using streaming 64 MB chunks. The manifest format is:
+   ```
+   blake3-manifest-v1
+   path/to/file.raw\t<size_bytes>\t<blake3_hex>
+   ...
+   ```
+   The manifest itself is then hashed to produce a single `manifest_hash`. This is sent to the API in the `/complete` request and stored in `dataset_upload_log.metadata.checksum`.
 
-- Statuses `COMPUTING_CHECKSUMS` and `COMPUTING_CHECKSUMS` are only shown on the User Interface, and are not persisted to the database.
-- All other statuses are persisted to the database.
+2. **Worker (post-upload)** — `verify_upload_integrity.py` currently performs file-existence verification (confirms files exist at `origin_path`). Full BLAKE3 re-hashing against the stored manifest hash is available via `_compute_manifest_hash()` and can be enabled for deployments requiring cryptographic end-to-end verification.
 
-## 5. Processing
-- Uploaded file chunks are merged into the corresponding file by the `process_dataset_upload` workflow.
-- After an uploaded file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of this file, which was persisted to the database before the upload.
-- After all uploaded files have been processed successfully, the resources (uploaded file chunks) associated with them are deleted.
-- At this point, the system initiates the `Integrated` workflow for the uploaded dataset, which registers this dataset in the system.
+## 8. Access Control
 
-## 6. Data Integrity
-The uploaded data goes through two stages of checksum validation:
-1. Validating MD5 checksum of an uploaded file before writing it to the filesystem.
-2. Validating MD5 checksum of the file being uploaded, once it has been recreated from its chunks by the worker.
+All upload-related API endpoints (`/api/datasets/uploads/*` and `/api/uploads/files/*`) require a valid JWT Bearer token issued by the Bioloop authentication service. The TUS middleware (`tus.js`) calls `authenticate()` before forwarding any request to the TUS server. Role-based access control (`accessControl('datasets')`) is enforced on all REST upload endpoints.
 
-## 7. Retry
-1. Upon encountering retryable exceptions, the `process_dataset_upload` worker retries itself 3 times before failing.
-2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that have been in states `PROCESSING_FAILED` or `UPLOADED`, and retries to process the ones which have been failing for less than 72 hours.
+## 9. Retry and Failure Handling
+
+The polling job `manage_upload_workflows.py` (runs every 1 minute via PM2 cron) handles all failure recovery:
+
+| Failure Scenario | Recovery |
+|------------------|----------|
+| Verification task ID missing but `VERIFYING` < 5 min | Wait for next cycle |
+| Verification task ID missing but `VERIFYING` > 5 min | Respawn verification task |
+| Verification hung > 24 hours | Mark `VERIFICATION_FAILED`, notify admin |
+| Celery task `FAILURE` | Mark `VERIFICATION_FAILED`, notify admin |
+| Integrated workflow fails | Increment `retry_count`; retry up to `MAX_RETRY_COUNT=3` |
+| Retries exhausted | Mark `PERMANENTLY_FAILED`, send admin notification |
