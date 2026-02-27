@@ -80,7 +80,8 @@ async function evaluateAttributeFilters(rules, identifiers, hydrators, caches) {
     ]);
 
     // Evaluate the policy - if it passes, return this rule's filters (short-circuit)
-    const matches = rule.policy.evaluate(user, resource, context);
+    // eslint-disable-next-line no-await-in-loop
+    const matches = await rule.policy.evaluate(user, resource, context);
     if (matches) {
       return rule.attribute_filters;
     }

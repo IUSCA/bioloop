@@ -78,7 +78,10 @@
     "collectCoverageFrom": [
       "tests/**/*.js",
       "!src/_test.js"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   },
   "_moduleAliases": {
     "@": "src"
