@@ -105,10 +105,10 @@ router.get(
     param('subjectType').isIn(['USER', 'GROUP']),
     param('subjectId').custom((value, { req }) => validateSubjectId(req.params.subjectType, value)),
     query('active').optional().isBoolean().toBoolean(),
-    query('offset').optional().isInt().toInt(),
-    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('sort_by').optional().isIn(['created_at', 'valid_from', 'valid_to']),
-    query('sort_order').optional().isIn(['asc', 'desc']),
+    query('offset').default(0).isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_subject', {
     resourceIdFn: () => null, // no specific resource to check for listing grants of a subject

@@ -7,7 +7,7 @@ const { generate_slug } = require('@/utils/slug');
 const { Prisma } = require('@prisma/client');
 const ConflictError = require('@/services/errors/ConflictError');
 
-const AUTH_EVENTS = require('@/authorization');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 
 const PRISMA_GROUP_INCLUDES = {};
 // eslint-disable-next-line max-len
@@ -106,7 +106,7 @@ async function createGroup(data, actor_id) {
     // create audit record for group creation
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.GROUP_CREATED,
+        event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
         actor_id,
         target_type: 'group',
         target_id: _group.id,
@@ -187,7 +187,7 @@ async function createChildGroup(parent_id, data, actor_id) {
     // create audit record for group creation
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.GROUP_CREATED,
+        event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
         actor_id,
         target_type: 'group',
         target_id: _group.id,
@@ -288,7 +288,7 @@ async function archiveGroup(group_id, actor_id) {
     // create audit record for group archival
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.GROUP_ARCHIVED,
+        event_type: AUTH_EVENT_TYPE.GROUP_ARCHIVED,
         actor_id,
         target_type: 'group',
         target_id: group_id,
@@ -318,7 +318,7 @@ async function unarchiveGroup(group_id, actor_id) {
     // create audit record for group unarchival
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.GROUP_UNARCHIVED,
+        event_type: AUTH_EVENT_TYPE.GROUP_UNARCHIVED,
         actor_id,
         target_type: 'group',
         target_id: group_id,
@@ -406,7 +406,7 @@ async function removeGroupMembers(group_id, {
     // create audit records for removing group members
     await tx.authorization_audit.createMany({
       data: deletedUserIds.map((user_id) => ({
-        event_type: AUTH_EVENTS.MEMBERSHIP_REMOVED,
+        event_type: AUTH_EVENT_TYPE.MEMBERSHIP_REMOVED,
         actor_id,
         target_type: 'group',
         target_id: group_id,
@@ -457,7 +457,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
     // create audit record for adding group members
     await tx.authorization_audit.createMany({
       data: createdUserIds.map((user_id) => ({
-        event_type: AUTH_EVENTS.MEMBERSHIP_ADDED,
+        event_type: AUTH_EVENT_TYPE.MEMBERSHIP_ADDED,
         actor_id,
         target_type: 'group',
         target_id: group_id,
@@ -515,7 +515,7 @@ async function promoteGroupMemberToAdmin(group_id, {
     // create audit record for promoting group member to admin
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.ADMIN_ADDED,
+        event_type: AUTH_EVENT_TYPE.ADMIN_ADDED,
         actor_id,
         target_type: 'group',
         target_id: group_id,
@@ -573,7 +573,7 @@ async function removeGroupAdmin(group_id, {
     // create audit record for demoting group admin to member
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.ADMIN_REMOVED,
+        event_type: AUTH_EVENT_TYPE.ADMIN_REMOVED,
         actor_id,
         target_type: 'group',
         target_id: group_id,

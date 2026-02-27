@@ -20,7 +20,9 @@ class PolicyRegistry {
   get(resourceType) {
     const policyContainer = this.registry.get(resourceType);
     if (!policyContainer) {
-      throw new Error(`No policies registered for resource type: ${resourceType}`);
+      throw new Error(
+        `No policies registered for resource type: ${resourceType}. Register at src/authorization/index.js`,
+      );
     }
     return policyContainer;
   }

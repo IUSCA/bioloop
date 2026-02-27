@@ -7,7 +7,7 @@ const { Prisma } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENTS } = require('@/authorization');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const ConflictError = require('@/services/errors/ConflictError');
 const StateMachine = require('@/services/stateMachine');
 const { createGrant } = require('@/services/grants');
@@ -117,7 +117,7 @@ async function createAccessRequest(data, requester_id) {
     // Create audit record for request creation
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.REQUEST_CREATED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: accessRequest.id,
@@ -202,7 +202,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
     // Create audit record
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.REQUEST_CREATED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
@@ -268,7 +268,7 @@ async function submitRequest(request_id, requester_id) {
     // Create audit record
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.REQUEST_CREATED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
@@ -304,17 +304,17 @@ function determineFinalStatus(approvedCount, rejectedCount) {
   let eventType;
   if (approvedCount > 0 && rejectedCount === 0) {
     finalStatus = 'APPROVED';
-    eventType = AUTH_EVENTS.REQUEST_APPROVED;
+    eventType = AUTH_EVENT_TYPE.REQUEST_APPROVED;
   } else if (approvedCount === 0 && rejectedCount > 0) {
     finalStatus = 'REJECTED';
-    eventType = AUTH_EVENTS.REQUEST_REJECTED;
+    eventType = AUTH_EVENT_TYPE.REQUEST_REJECTED;
   } else if (approvedCount > 0 && rejectedCount > 0) {
     finalStatus = 'PARTIALLY_APPROVED';
-    eventType = AUTH_EVENTS.REQUEST_APPROVED;
+    eventType = AUTH_EVENT_TYPE.REQUEST_APPROVED;
   } else {
     // No decisions made (shouldn't happen with validation above)
     finalStatus = 'REJECTED';
-    eventType = AUTH_EVENTS.REQUEST_REJECTED;
+    eventType = AUTH_EVENT_TYPE.REQUEST_REJECTED;
   }
   return { finalStatus, eventType };
 }
@@ -488,7 +488,7 @@ async function withdrawRequest({ request_id, requester_id }) {
     // Create audit record
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.REQUEST_WITHDRAWN,
+        event_type: AUTH_EVENT_TYPE.REQUEST_WITHDRAWN,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
@@ -538,7 +538,7 @@ async function expireStaleRequests({ max_age_days }) {
     // Create audit records for each expired request
     await tx.authorization_audit.createMany({
       data: requestIds.map((request_id) => ({
-        event_type: AUTH_EVENTS.REQUEST_EXPIRED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_EXPIRED,
         actor_id: null, // System action
         target_type: 'access_request',
         target_id: request_id,

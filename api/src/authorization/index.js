@@ -44,13 +44,12 @@ const {
 const { groupPolicies } = require('./builtin/policies/group');
 const { collectionPolicies } = require('./builtin/policies/collection');
 const { datasetPolicies } = require('./builtin/policies/dataset');
+const { accessRequestPolicies } = require('./builtin/policies/access_request');
+const { grantPolicies } = require('./builtin/policies/grant');
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
 const { contextHydrator } = require('./builtin/hydrators/context');
-
-// Builtin events
-const { AUTH_EVENT_TYPE } = require('./builtin/audit/events');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
@@ -67,6 +66,8 @@ const policyRegistry = new PolicyRegistry();
 policyRegistry.register(groupPolicies);
 policyRegistry.register(collectionPolicies);
 policyRegistry.register(datasetPolicies);
+policyRegistry.register(accessRequestPolicies);
+policyRegistry.register(grantPolicies);
 
 // Register derived app policy containers here
 
@@ -160,7 +161,4 @@ module.exports = {
   HydratorRegistry,
   hydratorRegistry,
   HydrationError,
-
-  // Events
-  AUTH_EVENT_TYPE,
 };

@@ -62,6 +62,8 @@ collectionPolicies.actions({
   remove_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   transfer_ownership: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   delete: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+  archive: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+  unarchive: Policy.or([isPlatformAdmin, isCollectionAdmin]),
 })
   .attributes({
   // all attributes are viewable/editable by admins, but for non-admins we restrict some attributes that might leak

@@ -19,10 +19,10 @@ router.get(
   '/requested-by-me',
   validate([
     query('status').optional().isIn(['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'EXPIRED']),
-    query('sort_by').optional().isIn(['created_at', 'updated_at']),
-    query('sort_order').optional().isIn(['asc', 'desc']),
-    query('offset').optional().isInt({ min: 0 }),
-    query('limit').optional().isInt({ min: 1 }),
+    query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('offset').default(0).isInt({ min: 0 }),
+    query('limit').default(100).isInt({ min: 1 }),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
@@ -69,7 +69,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_requests', 'read'),
+  authorize('access_request', 'read'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Get access request by ID'
@@ -125,7 +125,7 @@ router.post(
     body('item_decisions.*.comment').optional().isString(),
     body('decision_reason').isString().notEmpty(),
   ]),
-  authorize('access_requests', 'review'),
+  authorize('access_request', 'review'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Submit review for an access request'

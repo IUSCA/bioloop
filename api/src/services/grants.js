@@ -6,7 +6,7 @@
 const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { AUTH_EVENTS } = require('@/authorization');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { EVERYONE_GROUP_ID } = require('@/constants');
 
 // ============================================================================
@@ -31,7 +31,7 @@ async function _createGrant(tx, data, granted_by) {
   // create audit record for grant creation
   await tx.authorization_audit.create({
     data: {
-      event_type: AUTH_EVENTS.GRANT_CREATED,
+      event_type: AUTH_EVENT_TYPE.GRANT_CREATED,
       actor_id: granted_by,
       target_type: 'grant',
       target_id: grant.id,
@@ -100,7 +100,7 @@ async function createGrantsBatch(data) {
     // create audit records for each created grant
     await tx.authorization_audit.createMany({
       data: createdGrants.map((grant) => ({
-        event_type: AUTH_EVENTS.GRANT_CREATED,
+        event_type: AUTH_EVENT_TYPE.GRANT_CREATED,
         actor_id: data.granted_by,
         target_type: 'grant',
         target_id: grant.id,
@@ -133,7 +133,7 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
     // create audit record for grant revocation
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.GRANT_REVOKED,
+        event_type: AUTH_EVENT_TYPE.GRANT_REVOKED,
         actor_id,
         target_type: 'grant',
         target_id: revokedGrant.id,

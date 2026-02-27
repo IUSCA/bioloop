@@ -67,10 +67,12 @@ accessRequestPolicies
     review: isAdminOfResourceGroup,
   })
   .attributes({
-    '*': {
-      policy: Policy.always,
-      attribute_filters: ['*'],
-    },
+    '*': [
+      {
+        policy: Policy.always,
+        attribute_filters: ['*'],
+      },
+    ],
   })
   .freeze();
 

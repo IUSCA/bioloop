@@ -5,7 +5,7 @@ const createError = require('http-errors');
 const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
 const ConflictError = require('@/services/errors/ConflictError');
-const AUTH_EVENTS = require('@/authorization');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const grantService = require('@/services/grants');
 
 const PRISMA_COLLECTION_INCLUDES = {};
@@ -54,7 +54,7 @@ async function createCollection(data, { actor_id }) {
     // create audit record for group creation
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.COLLECTION_CREATED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
         actor_id,
         target_type: 'collection',
         target_id: _collection.id,
@@ -150,7 +150,7 @@ async function archiveCollection(collection_id, actor_id) {
     // create audit record for collection archival
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.COLLECTION_ARCHIVED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_ARCHIVED,
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
@@ -182,7 +182,7 @@ async function unarchiveCollection(collection_id, actor_id) {
     // create audit record for collection unarchival
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.COLLECTION_UNARCHIVED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_UNARCHIVED,
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
@@ -210,7 +210,7 @@ async function deleteCollection(collection_id, actor_id) {
     // create audit record for collection deletion
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENTS.COLLECTION_DELETED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_DELETED,
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
@@ -284,7 +284,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     // create audit records for each added dataset
     await tx.authorization_audit.createMany({
       data: createdRecords.map(({ dataset_id }) => ({
-        event_type: AUTH_EVENTS.COLLECTION_DATASET_ADDED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_ADDED,
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
@@ -335,7 +335,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     // create audit records for each removed dataset
     await tx.authorization_audit.createMany({
       data: removedRecords.map(({ dataset_id }) => ({
-        event_type: AUTH_EVENTS.COLLECTION_DATASET_REMOVED,
+        event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_REMOVED,
         actor_id,
         target_type: 'collection',
         target_id: collection_id,

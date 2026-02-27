@@ -115,10 +115,12 @@ grantPolicies
     list_for_subject: Policy.or([isPlatformAdmin, isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup]),
   })
   .attributes({
-    '*': {
-      policy: Policy.always,
-      attribute_filters: ['*'],
-    },
+    '*': [
+      {
+        policy: Policy.always,
+        attribute_filters: ['*'],
+      },
+    ],
   })
   .freeze();
 

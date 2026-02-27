@@ -107,7 +107,7 @@ router.post(
 // Create a new group
 router.post(
   '/',
-  authorize('groups', 'create'),
+  authorize('group', 'create'),
   validate([
     body('name').isString().notEmpty(),
     body('description').optional().isString().notEmpty(),
@@ -133,7 +133,7 @@ router.post(
     body('description').optional().isString().notEmpty(),
     body('allow_user_contributions').optional().isBoolean().toBoolean(),
   ]),
-  authorize('groups', 'create_child'),
+  authorize('group', 'create_child'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Create a new child group under a parent group'
@@ -153,7 +153,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('groups', 'view_metadata'),
+  authorize('group', 'view_metadata'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get group details by ID'
@@ -173,7 +173,7 @@ router.patch(
     body('description').optional().isString().notEmpty(),
     body('allow_user_contributions').optional().isBoolean().toBoolean(),
   ]),
-  authorize('groups', 'edit_metadata'),
+  authorize('group', 'edit_metadata'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Update group metadata'
@@ -203,7 +203,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('groups', 'archive'),
+  authorize('group', 'archive'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Archive a group (soft delete)'
@@ -221,7 +221,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('groups', 'archive'), // same policy as archiving, since both actions are about changing the archived status
+  authorize('group', 'archive'), // same policy as archiving, since both actions are about changing the archived status
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Unarchive a group'
@@ -241,7 +241,7 @@ router.get(
     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('groups', 'view_members'),
+  authorize('group', 'view_members'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'List members of a group'
@@ -261,7 +261,7 @@ router.put(
     param('id').isUUID(),
     param('userId').isInt().toInt(),
   ]),
-  authorize('groups', 'add_member'),
+  authorize('group', 'add_member'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Add a member to the group'
@@ -280,7 +280,7 @@ router.delete(
     param('id').isUUID(),
     param('userId').isInt().toInt(),
   ]),
-  authorize('groups', 'remove_member'),
+  authorize('group', 'remove_member'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Remove a member from the group'
@@ -308,7 +308,7 @@ router.post(
     body('members').isArray({ min: 1 }),
     body('members.*.user_id').isInt().toInt(),
   ]),
-  authorize('groups', 'add_member'),
+  authorize('group', 'add_member'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Bulk add members to the group'
@@ -331,7 +331,7 @@ router.put(
     param('id').isUUID(),
     param('userId').isInt().toInt(),
   ]),
-  authorize('groups', 'edit_member_role'),
+  authorize('group', 'edit_member_role'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Promote a member to admin of the group'
@@ -350,7 +350,7 @@ router.delete(
     param('id').isUUID(),
     param('userId').isInt().toInt(),
   ]),
-  authorize('groups', 'edit_member_role'),
+  authorize('group', 'edit_member_role'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Remove an admin from the group'
@@ -372,7 +372,7 @@ router.delete(
     body('user_ids').isArray({ min: 1 }),
     body('user_ids.*').isInt().toInt(),
   ]),
-  authorize('groups', 'remove_member'),
+  authorize('group', 'remove_member'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Bulk remove members from the group'
@@ -394,7 +394,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('groups', 'view_ancestors'),
+  authorize('group', 'view_ancestors'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get ancestor groups (hierarchy upward)'
@@ -405,13 +405,14 @@ router.get(
   }),
 );
 
+// TODO
 // Get descendant groups (hierarchy downward)
 router.get(
   '/:id/descendants',
   validate([
     param('id').isUUID(),
   ]),
-  authorize('groups', 'view_descendants'),
+  authorize('group', 'view_children'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get descendant groups (hierarchy downward)'
@@ -454,7 +455,7 @@ router.get(
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
-  authorize('groups', 'view_resources'),
+  authorize('group', 'view_resources'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'List collections owned by the group'
@@ -480,7 +481,7 @@ router.get(
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
-  authorize('groups', 'view_resources'),
+  authorize('group', 'view_resources'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'List datasets owned by the group'
