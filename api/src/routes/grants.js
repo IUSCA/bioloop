@@ -64,7 +64,7 @@ router.post(
       'justification'])(req.body);
     const granted_by = req.user.id;
     const grant = await grantService.createGrant(data, granted_by);
-    res.status(201).json(grant);
+    res.status(201).json(req.permission.filter(grant));
   }),
 );
 
@@ -77,7 +77,7 @@ router.get(
   authorize('grant', 'read'),
   asyncHandler(async (req, res) => {
     const grant = await grantService.getGrantById(req.params.id);
-    res.status(200).json(grant);
+    res.status(200).json(req.permission.filter(grant));
   }),
 );
 
@@ -121,7 +121,8 @@ router.get(
     const { subjectType, subjectId } = req.params;
 
     const grants = await grantService.listGrantsForSubject(subjectType, subjectId);
-    res.json(grants);
+    const filteredGrants = grants.map((g) => req.permission.filter(g));
+    res.json(filteredGrants);
   }),
 );
 
@@ -142,7 +143,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const { resourceType, resourceId } = req.params;
     const grants = await grantService.listGrantsForResource(resourceType, resourceId);
-    res.json(grants);
+    const filteredGrants = grants.map((g) => req.permission.filter(g));
+    res.json(filteredGrants);
   }),
 );
 

@@ -36,6 +36,7 @@ router.get(
       offset: req.query.offset,
       limit: req.query.limit,
     });
+    // TODO: attribute filter
     res.json(requests);
   }),
 );
@@ -59,6 +60,7 @@ router.post(
 
     const data = _.pick(['type', 'resource_type', 'resource_id', 'purpose', 'items'], req.body);
     const record = await accessRequestsService.createAccessRequest(data, req.user.id);
+    // TODO: attribute filter
     res.status(201).json(record);
   }),
 );
@@ -75,7 +77,7 @@ router.get(
     // #swagger.summary = 'Get access request by ID'
 
     const request = await accessRequestsService.getRequestById(req.params.id);
-    res.json(request);
+    res.json(req.permission.filter(request));
   }),
 );
 
@@ -95,6 +97,7 @@ router.put(
 
     const data = pickNonNil(_.pick(['purpose', 'items'], req.body));
     const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.id);
+    // TODO: attribute filter
     res.json(request);
   }),
 );
@@ -110,6 +113,7 @@ router.post(
     // #swagger.summary = 'Submit an access request'
 
     const request = await accessRequestsService.submitRequest(req.params.id, req.user.id);
+    // TODO: attribute filter
     res.json(request);
   }),
 );
@@ -136,7 +140,7 @@ router.post(
       reviewer_id: req.user.id,
       options,
     });
-    res.json(reviewResult);
+    res.json(req.permission.filter(reviewResult));
   }),
 );
 
@@ -172,6 +176,7 @@ router.get(
       offset,
       limit,
     });
+    // TODO: attribute filter
     res.json(requests);
   }),
 );
@@ -193,6 +198,7 @@ router.get(
       offset,
       limit,
     });
+    // TODO: attribute filter
     res.json(requests);
   }),
 );

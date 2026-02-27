@@ -338,7 +338,7 @@ async function unarchiveGroup(group_id, actor_id) {
  */
 async function listGroupMembers(group_id, { limit, offset }) {
   prisma.$transaction(async (tx) => {
-    const members = await tx.group_member.findMany({
+    const members = await tx.group_user.findMany({
       where: { group_id },
       include: {
         user: true,
@@ -348,7 +348,7 @@ async function listGroupMembers(group_id, { limit, offset }) {
     });
 
     // total count for pagination
-    const total_count = await tx.group_member.count({
+    const total_count = await tx.group_user.count({
       where: { group_id },
     });
 
@@ -396,7 +396,7 @@ async function removeGroupMembers(group_id, {
     }
 
     const deletedRecords = await tx.$queryRaw`
-      DELETE FROM group_member
+      DELETE FROM group_user
       WHERE group_id = ${group_id}
       AND user_id = ANY(${user_ids})
       RETURNING user_id;
@@ -445,7 +445,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
     }
 
     const createdRecords = await prisma.$queryRaw`
-      INSERT INTO group_member (group_id, user_id, role)
+      INSERT INTO group_user (group_id, user_id, role)
       SELECT ${group_id}, u.id, 'MEMBER'
       FROM "user" u
       WHERE u.id = ANY(${user_ids})
@@ -484,7 +484,7 @@ async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_member.findUnique({
+    const membership = await tx.group_user.findUnique({
       where: {
         group_id_user_id: {
           group_id,
@@ -500,7 +500,7 @@ async function promoteGroupMemberToAdmin(group_id, {
       return membership;
     }
 
-    const updatedMembership = await tx.group_member.update({
+    const updatedMembership = await tx.group_user.update({
       where: {
         group_id_user_id: {
           group_id,
@@ -542,7 +542,7 @@ async function removeGroupAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_member.findUnique({
+    const membership = await tx.group_user.findUnique({
       where: {
         group_id_user_id: {
           group_id,
@@ -558,7 +558,7 @@ async function removeGroupAdmin(group_id, {
       return membership;
     }
 
-    const updatedMembership = await tx.group_member.update({
+    const updatedMembership = await tx.group_user.update({
       where: {
         group_id_user_id: {
           group_id,

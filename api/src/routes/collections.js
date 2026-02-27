@@ -38,6 +38,7 @@ router.post(
     ])(req.body);
 
     const collections = await collectionService.searchCollectionsForUser({ ...params, user_id: req.user.id });
+    // TODO: attribute filter
     res.json(collections);
   }),
 );
@@ -51,7 +52,7 @@ router.get(
   authorize('collection', 'view_metadata'),
   asyncHandler(async (req, res) => {
     const collection = await collectionService.getCollectionById(req.params.id, req.user.id);
-    res.json(collection);
+    res.json(req.permission.filter(collection));
   }),
 );
 
@@ -74,7 +75,7 @@ router.post(
 
     const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata'])(req.body);
     const newCollection = await collectionService.createCollection(data, { actor_id: req.user.id });
-    res.status(201).json(newCollection);
+    res.status(201).json(req.permission.filter(newCollection));
   }),
 );
 
@@ -105,7 +106,7 @@ router.patch(
         expected_version: req.body.version,
       },
     );
-    res.json(updatedCollection);
+    res.json(req.permission.filter(updatedCollection));
   }),
 );
 
@@ -137,7 +138,8 @@ router.get(
     // #swagger.summary = 'List datasets in a collection'
 
     const datasets = await collectionService.listDatasetsInCollection(req.params.id);
-    res.json(datasets);
+    const filteredDatasets = datasets.map((d) => req.permission.filter(d));
+    res.json(filteredDatasets);
   }),
 );
 

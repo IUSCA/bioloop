@@ -59,6 +59,7 @@ router.get(
         ancestor_edges: true,
       },
     });
+    // TODO: attribute filter
     res.json(groups);
   }),
 );
@@ -100,6 +101,7 @@ router.post(
     } else {
       groups = await groupService.searchGroupsForUser({ ...params, user_id: req.user.id });
     }
+    // TODO: attribute filter
     res.json(groups);
   }),
 );
@@ -120,7 +122,7 @@ router.post(
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
     const group = await groupService.createGroup(data, req.user.id);
 
-    res.status(201).json(group);
+    res.status(201).json(req.permission.filter(group));
   }),
 );
 
@@ -143,7 +145,7 @@ router.post(
 
     const childGroup = await groupService.createChildGroup(id, data, req.user.id);
 
-    res.status(201).json(childGroup);
+    res.status(201).json(req.permission.filter(childGroup));
   }),
 );
 
@@ -158,8 +160,9 @@ router.get(
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get group details by ID'
 
-    const group = req.resource; // await groupService.getGroupById(id); - resource is already fetched in authorize middleware
-    res.json(group);
+    const { id } = req.params;
+    const group = await groupService.getGroupById(id);
+    res.json(req.permission.filter(group));
   }),
 );
 
@@ -193,7 +196,7 @@ router.patch(
         expected_version: req.query.version,
       },
     );
-    res.json(updatedGroup);
+    res.json(req.permission.filter(updatedGroup));
   }),
 );
 
@@ -211,7 +214,7 @@ router.post(
     const { id } = req.params;
 
     const archivedGroup = await groupService.archiveGroup(id);
-    res.json(archivedGroup);
+    res.json(req.permission.filter(archivedGroup));
   }),
 );
 
@@ -229,7 +232,7 @@ router.post(
     const { id } = req.params;
 
     const unarchivedGroup = await groupService.unarchiveGroup(id);
-    res.json(unarchivedGroup);
+    res.json(req.permission.filter(unarchivedGroup));
   }),
 );
 
@@ -250,7 +253,8 @@ router.get(
     const { limit, offset } = req.query;
 
     const members = await groupService.listGroupMembers(id, { limit, offset });
-    res.json(members);
+    const filteredMembers = members.map((m) => req.permission.filter(m));
+    res.json(filteredMembers);
   }),
 );
 
@@ -401,7 +405,8 @@ router.get(
 
     const { id } = req.params;
     const ancestors = await groupService.getGroupAncestors(id);
-    res.json(ancestors);
+    const filteredAncestors = ancestors.map((a) => req.permission.filter(a));
+    res.json(filteredAncestors);
   }),
 );
 
@@ -419,7 +424,8 @@ router.get(
 
     const { id } = req.params;
     const descendants = await groupService.getGroupDescendants(id);
-    res.json(descendants);
+    const filteredDescendants = descendants.map((d) => req.permission.filter(d));
+    res.json(filteredDescendants);
   }),
 );
 
@@ -467,7 +473,8 @@ router.get(
     const collections = await collectionService.findCollectionsByOwnerGroup({
       group_id: id, limit, offset, sort_by, sort_order,
     });
-    res.json(collections);
+    const filteredCollections = collections.map((c) => req.permission.filter(c));
+    res.json(filteredCollections);
   }),
 );
 
@@ -490,10 +497,11 @@ router.get(
     const {
       limit, offset, sort_by, sort_order,
     } = req.query;
-    const datasets = await datasetService.findDatasetsByOwnerGroup({
+    const datasets = await datasetService.getDatasetsByOwnerGroup({
       group_id: id, limit, offset, sort_by, sort_order,
     });
-    res.json(datasets);
+    const filteredDatasets = datasets.map((d) => req.permission.filter(d));
+    res.json(filteredDatasets);
   }),
 );
 

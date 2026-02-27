@@ -185,18 +185,34 @@ group_closure.push({
   depth: 1,
 });
 
+// Simple hash function for deterministic randomness
+const simpleHash = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash &= hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
+// function createUuidLikeGenerator(start = 0) {
+//   let counter = start;
+
+//   return function generate() {
+//     const hex = (counter++).toString(16).padStart(32, '0');
+
+//     return (
+//       `${hex.slice(0, 8)}-${
+//         hex.slice(8, 12)}-${
+//         hex.slice(12, 16)}-${
+//         hex.slice(16, 20)}-${
+//         hex.slice(20)}`
+//     );
+//   };
+// }
+
 function generateGroupUserMemberships(userIds) {
   const memberships = [];
-
-  // Simple hash function for deterministic randomness
-  const simpleHash = (str) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash &= hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
-  };
 
   groups.forEach((group) => {
     // Deterministically select which users belong to this group
@@ -248,10 +264,62 @@ function generateGroupUserMemberships(userIds) {
   return memberships;
 }
 
+function generateDatasetOwnerships(datasetIds) {
+  // return array of objects with dataset_id and owner_group_id
+  const ownerships = [];
+  datasetIds.forEach((datasetId) => {
+    // Deterministically assign an owner group to this dataset
+    const groupIndex = simpleHash(`dataset-${datasetId}`) % groups.length;
+    ownerships.push({
+      dataset_id: datasetId,
+      owner_group_id: groups[groupIndex].id,
+    });
+  });
+  return ownerships;
+}
+
+function generateCollections(n, datasets) {
+  // aggregate dataset ids by owner group
+  const datasetsByGroup = datasets.reduce((acc, dataset) => {
+    if (!acc[dataset.owner_group_id]) {
+      acc[dataset.owner_group_id] = [];
+    }
+    acc[dataset.owner_group_id].push(dataset.id);
+    return acc;
+  }, {});
+
+  // const generate = createUuidLikeGenerator(1);
+  const collections = [];
+  for (let i = 1; i <= n; i++) {
+    const idx = String(i).padStart(String(n).length, '0'); // capture loop variable and pad with zeros for better hashing
+    const owner_group_id = groups[simpleHash(`collection-${idx}`) % groups.length].id;
+
+    // Deterministically select some datasets for this collection based on the owner group
+    const datasetIdsForGroup = datasetsByGroup[owner_group_id] || [];
+    const datasetsIdsForCollection = datasetIdsForGroup.filter((datasetId) => {
+      const hashValue = simpleHash(`collection-${idx}-dataset-${datasetId}`);
+      // Each dataset has a 50% chance to be included in this collection
+      return (hashValue % 100) < 50;
+    });
+
+    collections.push({
+      id: i,
+      slug: `collection-${idx}`,
+      name: `Collection ${idx}`,
+      description: `Description for Collection ${idx}`,
+      owner_group_id,
+      dataset_ids: datasetsIdsForCollection,
+    });
+  }
+  return collections;
+}
+
 module.exports = {
   groups,
   group_closure,
   generateGroupUserMemberships,
+  generateDatasetOwnerships,
+  generateCollections,
 };
 
 if (require.main === module) {

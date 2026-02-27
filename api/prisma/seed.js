@@ -368,6 +368,48 @@ async function main() {
       create: gu,
     })),
   );
+
+  // updates datasets with owner_group_id
+  const dataset_ids = data.datasets.map((d) => d.id);
+  const dataset_group_updates = groupData.generateDatasetOwnerships(dataset_ids);
+  await Promise.all(
+    dataset_group_updates.map((dgu) => prisma.dataset.update({
+      where: { id: dgu.dataset_id },
+      data: { owner_group_id: dgu.owner_group_id },
+    })),
+  );
+
+  // create collections
+  const datasets = await prisma.dataset.findMany({});
+  const collections = groupData.generateCollections(20, datasets);
+  await Promise.all(
+    collections.map(({ dataset_ids: _dsIds, ...c }) => prisma.$transaction(async (tx) => {
+      await tx.collection.upsert({
+        where: { id: c.id },
+        update: {},
+        create: {
+          ...c,
+        },
+      });
+
+      // upsert collection-dataset associations
+      await Promise.all(
+        _dsIds.map((dataset_id) => tx.collection_dataset.upsert({
+          where: {
+            collection_id_dataset_id: {
+              collection_id: c.id,
+              dataset_id,
+            },
+          },
+          update: {},
+          create: {
+            collection_id: c.id,
+            dataset_id,
+          },
+        })),
+      );
+    })),
+  );
 }
 
 main()
