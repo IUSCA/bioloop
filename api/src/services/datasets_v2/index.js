@@ -13,6 +13,8 @@ const {
   DONE_STATUSES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_PROJECTS,
 } = require('@/constants');
 const CONSTANTS = require('@/constants');
+const grantService = require('@/services/grants');
+const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -443,10 +445,98 @@ async function checkNameExists(type, name, deleted = false) {
   return !!match;
 }
 
-// TODO: stub — implement when dataset_grant table is ready
-// async function userHasGrant({ user_id, dataset_id, access_type }) {
-//   return false;
-// }
+async function userHasGrant({ user_id, dataset_id, access_type }) {
+  return grantService.userHasGrant({
+    user_id,
+    resource_type: 'DATASET',
+    resource_id: dataset_id,
+    access_type,
+  });
+}
+
+async function getDatasetsByOwnerGroup({
+  group_id, limit, offset, sort_by, sort_order,
+}) {
+  return prisma.dataset.findMany({
+    where: {
+      owner_group_id: group_id,
+    },
+    include: {
+      ...INCLUDE_WORKFLOWS,
+      source_datasets: true,
+      derived_datasets: true,
+      bundle: false,
+      states: false,
+      ...INCLUDE_AUDIT_LOGS,
+      ...INCLUDE_PROJECTS,
+    },
+    take: limit,
+    skip: offset,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+}
+
+/**
+ * Explain why user can/cannot access a dataset
+ * Returns all applicable grants and ownership paths
+ * @param {number} user_id
+ * @param {number} dataset_id
+ * @param {string} action
+ * @returns {Promise<Object>} Detailed explanation
+ */
+async function explainDatasetAccess({ user_id, dataset_id, access_types }) {
+  // platformAdmin
+  // admin of owning group
+  // has oversight of owning group
+  // grants
+
+  const user = await userHydrator.hydrate({
+    id: user_id,
+    attributes: ['id', 'roles', 'group_memberships', 'oversight_group_ids', 'effective_group_ids'],
+  });
+
+  if (user.roles.includes('admin')) {
+    return {
+      granted: true,
+      reason: 'User is a platform admin',
+    };
+  }
+
+  const dataset = await prisma.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
+
+  const adminGroupIds = user.group_memberships
+    .filter((gm) => gm.role === 'ADMIN')
+    .map((gm) => gm.group_id);
+  if (adminGroupIds.includes(dataset.owner_group_id)) {
+    return {
+      granted: true,
+      reason: 'User is an admin of the owning group',
+    };
+  }
+
+  if (user.oversight_group_ids.includes(dataset.owner_group_id)) {
+    return {
+      granted: true,
+      reason: 'User has oversight of the owning group',
+    };
+  }
+
+  const grants = await grantService.getUserDatasetGrants({ user_id, dataset_id, access_types });
+  if (grants.length > 0) {
+    return {
+      granted: true,
+      reason: 'User has grants on the dataset',
+      grants,
+    };
+  }
+
+  return {
+    granted: false,
+    reason: 'User does not have any applicable grants',
+  };
+}
 
 // ── Exports ──────────────────────────────────────────────────────────────────
 
@@ -465,5 +555,7 @@ module.exports = {
   softDelete,
   createAssociations,
   checkNameExists,
-  // userHasGrant,
+  userHasGrant,
+  getDatasetsByOwnerGroup,
+  explainDatasetAccess,
 };

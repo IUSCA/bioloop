@@ -355,7 +355,9 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
  * @param {number} dataset_id
  * @returns {Promise<Object[]>}
  */
-async function findCollectionsByDataset(dataset_id) {
+async function findCollectionsByDataset({
+  dataset_id, limit, offset, sort_by, sort_order,
+}) {
   return prisma.collection.findMany({
     where: {
       datasets: {
@@ -365,6 +367,27 @@ async function findCollectionsByDataset(dataset_id) {
       },
     },
     include: PRISMA_COLLECTION_INCLUDES,
+    take: limit,
+    skip: offset,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+}
+
+async function findCollectionsByOwnerGroup({
+  group_id, limit, offset, sort_by, sort_order,
+}) {
+  return prisma.collection.findMany({
+    where: {
+      owner_group_id: group_id,
+    },
+    include: PRISMA_COLLECTION_INCLUDES,
+    take: limit,
+    skip: offset,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
   });
 }
 
@@ -456,6 +479,7 @@ module.exports = {
   addDatasets,
   removeDatasets,
   findCollectionsByDataset,
+  findCollectionsByOwnerGroup,
   getCollectionById,
   userHasGrant,
   searchCollectionsForUser,

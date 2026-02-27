@@ -103,9 +103,6 @@ class PrismaHydrate extends Hydrate {
   async hydrate({
     id, attributes, cache = new Map(), preFetched = {},
   }) {
-    if (id === null || id === undefined) {
-      throw new HydrationError(`[${this.model}] Cannot hydrate: id is required`);
-    }
     if (!Array.isArray(attributes)) {
       throw new HydrationError(`[${this.model}] Cannot hydrate: attributes must be an array`);
     }
@@ -145,6 +142,12 @@ class PrismaHydrate extends Hydrate {
     }
 
     if (classification.columns.length > 0 || classification.relations.length > 0) {
+      if (id == null) {
+        throw new HydrationError(
+          `[${this.model}] Cannot hydrate: id is required to fetch attributes `
+          + `[${[...classification.columns, ...classification.relations].join(', ')}] from the database`,
+        );
+      }
       const payload = this._preparePrismaQueryPayload(id, classification.columns, classification.relations);
       const dbRecord = await this._fetchPrismaRecord(payload);
       Object.assign(recordCache, structuredClone(dbRecord));

@@ -157,7 +157,7 @@ router.post(
 
 // get requests requiring user's review
 router.get(
-  '/pending-review',
+  '/my-pending-reviews',
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Get access requests pending user\'s review'
@@ -165,7 +165,7 @@ router.get(
     const {
       sort_by, sort_order, offset, limit,
     } = req.query;
-    const requests = await accessRequestsService.getRequestsPendingReview({
+    const requests = await accessRequestsService.getRequestsPendingReviewForUser({
       reviewer_id: req.user.id,
       sort_by,
       sort_order,

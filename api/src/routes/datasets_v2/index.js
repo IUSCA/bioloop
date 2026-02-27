@@ -9,6 +9,7 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
+const collectionService = require('@/services/collections');
 
 const router = express.Router();
 
@@ -275,6 +276,37 @@ router.delete(
     // #swagger.summary = 'Soft-delete a dataset'
     await datasetService.softDelete(req.params.id, req.user.id);
     res.sendStatus(204);
+  }),
+);
+
+// -- Collections that a dataset belongs to ────────────────────────────────────
+
+router.get(
+  '/:id/collections',
+  validate([
+    param('id').isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+  ]),
+  authorize('dataset', 'view_collections'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'List collections that a dataset belongs to'
+    const { id } = req.params;
+    const {
+      limit, offset, sort_by, sort_order,
+    } = req.query;
+
+    const collections = await collectionService.findCollectionsByDataset({
+      dataset_id: id,
+      limit,
+      offset,
+      sort_by,
+      sort_order,
+    });
+    res.json(collections);
   }),
 );
 

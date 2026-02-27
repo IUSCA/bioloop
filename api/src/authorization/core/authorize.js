@@ -51,11 +51,6 @@ async function authorize({
 
   let resourceHydrator = null;
   if (policy.resourceType != null) {
-    if (identifiers.resource == null) {
-      throw new AuthorizationError(
-        `[policy:${policy.name}] Resource identifier is required to evaluate policy which requires resource attributes`,
-      );
-    }
     resourceHydrator = registry.get(policy.resourceType);
   }
 
@@ -189,11 +184,6 @@ async function authorizeWithFilters({
 
   let resourceHydrator = null;
   if (policy.resourceType != null) {
-    if (identifiers.resource == null) {
-      throw new AuthorizationError(
-        `[policy:${policy.name}] Resource identifier is required to evaluate policy which requires resource attributes`,
-      );
-    }
     resourceHydrator = registry.get(policy.resourceType);
   }
 

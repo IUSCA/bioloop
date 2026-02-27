@@ -12,6 +12,8 @@ const groupService = require('@/services/groups');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
+const collectionService = require('@/services/collections');
+const datasetService = require('@/services/datasets_v2');
 
 const router = express.Router();
 
@@ -196,8 +198,8 @@ router.patch(
 );
 
 // Archive a group
-router.patch(
-  '/:id',
+router.post(
+  '/:id/archive',
   validate([
     param('id').isUUID(),
   ]),
@@ -214,7 +216,7 @@ router.patch(
 );
 
 // Unarchive a group
-router.patch(
+router.post(
   '/:id/unarchive',
   validate([
     param('id').isUUID(),
@@ -443,20 +445,55 @@ router.get(
 // );
 
 // List collections owned by group
-// router.get(
-//   '/:id/collections',
-//   validate([
-//     param('id').isUUID(),
-//     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
-//     query('offset').default(0).isInt({ min: 0 }).toInt(),
-//   ]),
-//   asyncHandler(async (req, res) => {
-//     // #swagger.tags = ['Groups']
-//     // #swagger.summary = 'List collections owned by the group'
+router.get(
+  '/:id/collections',
+  validate([
+    param('id').isUUID(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+  ]),
+  authorize('groups', 'view_resources'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'List collections owned by the group'
 
-//     const { id } = req.params;
-//     const { limit, offset } = req.query;
-//   }),
-// );
+    const { id } = req.params;
+    const {
+      limit, offset, sort_by, sort_order,
+    } = req.query;
+    const collections = await collectionService.findCollectionsByOwnerGroup({
+      group_id: id, limit, offset, sort_by, sort_order,
+    });
+    res.json(collections);
+  }),
+);
+
+// List datasets owned by group
+router.get(
+  '/:id/datasets',
+  validate([
+    param('id').isUUID(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+  ]),
+  authorize('groups', 'view_resources'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'List datasets owned by the group'
+
+    const { id } = req.params;
+    const {
+      limit, offset, sort_by, sort_order,
+    } = req.query;
+    const datasets = await datasetService.findDatasetsByOwnerGroup({
+      group_id: id, limit, offset, sort_by, sort_order,
+    });
+    res.json(datasets);
+  }),
+);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const createError = require('http-errors');
 const _ = require('lodash/fp');
 
+const asyncHandler = require('@/middleware/asyncHandler');
 const { authorizeWithFilters } = require('./authorize');
 
 /**
@@ -26,6 +27,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
+    preFetchedResourceFn = null, // optional fn(req) => object with pre-fetched resource attributes (e.g. for create actions where the resource does not yet exist)
   } = {}) => {
     // get the policy
     // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
@@ -33,7 +35,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
     const policy = policyContainer.getPolicy(action);
     const attributeRules = policyContainer.getAttributeRules(action);
 
-    return async (req, res, next) => {
+    return asyncHandler(async (req, res, next) => {
     // extract identifiers from the request
       const user = requesterFn(req);
       const userId = user?.id;
@@ -51,6 +53,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
         policyExecutionContext,
         preFetched: {
           user: req.user,
+          resource: preFetchedResourceFn ? preFetchedResourceFn(req) : undefined,
           context: {
             req,
           },
@@ -62,7 +65,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
       }
       req.permission = result;
       next();
-    };
+    });
   });
 }
 

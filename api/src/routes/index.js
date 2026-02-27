@@ -39,6 +39,7 @@ router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/groups', require('./groups') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/collections', require('./collections') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/access-requests', require('./access_requests') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/datasets/v2', require('./datasets_v2') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {

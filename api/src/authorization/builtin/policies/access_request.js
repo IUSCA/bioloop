@@ -61,10 +61,18 @@ const accessRequestPolicies = new PolicyContainer({
   description: 'Policies for Access Requests resource',
 });
 
-accessRequestPolicies.actions({
-  read: Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
-  review: isAdminOfResourceGroup,
-}).freeze();
+accessRequestPolicies
+  .actions({
+    read: Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
+    review: isAdminOfResourceGroup,
+  })
+  .attributes({
+    '*': {
+      policy: Policy.always,
+      attribute_filters: ['*'],
+    },
+  })
+  .freeze();
 
 module.exports = {
   accessRequestPolicies,

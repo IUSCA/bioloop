@@ -330,12 +330,6 @@ function updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
 }
 
 function _createGrant(tx, currentRequest, reviewItem, granted_by) {
-  // while submitting a review of access request, only admin of owning group can approve the request.
-  // So we can be sure that the grant is being given via owning group of the resource
-  const resourceOwningGroupId = currentRequest.dataset_resource?.owner_group_id
-    || currentRequest.collection_resource?.owner_group_id;
-  const granted_via_group = resourceOwningGroupId ?? null;
-
   const data = {
     subject_type: currentRequest.resource_type,
     subject_id: currentRequest.resource_id,
@@ -344,7 +338,7 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
     access_type_id: reviewItem.access_type.id,
     valid_until: reviewItem.approved_until,
   };
-  return createGrant(data, granted_by, granted_via_group, tx);
+  return createGrant(data, granted_by, tx);
 }
 
 /**
@@ -589,7 +583,7 @@ async function getRequestsByUser({
 }
 
 // assume sort_by, sort_order, offset, limit are validated and passed as parameters
-async function getRequestsPendingReview({
+async function getRequestsPendingReviewForUser({
   reviewer_id, sort_by, sort_order, offset, limit,
 }) {
   const sql = Prisma.sql`
@@ -669,6 +663,6 @@ module.exports = {
   expireStaleRequests,
   getRequestById,
   getRequestsByUser,
-  getRequestsPendingReview,
+  getRequestsPendingReviewForUser,
   getReviewedRequestsByUser,
 };

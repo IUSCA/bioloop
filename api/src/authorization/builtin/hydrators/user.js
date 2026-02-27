@@ -53,7 +53,7 @@ userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrat
 });
 
 userHydrator.registerVirtualAttribute('accessible_owner_group_ids', async ({ id, hydrator }) => {
-  // ids of groups that own resources the user has grants on (e.g. if U has a grant on a collection owned by G,
+  // ids of groups that own resources the user has grants for (e.g. if U has a grant on a collection owned by G,
   // then G's id will be in this list)
   const dbClient = hydrator.prisma;
   const sql = grantServices.ownerGroupIdsOfResourcesAccessibleByUserQuery(id);

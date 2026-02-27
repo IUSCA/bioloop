@@ -14,10 +14,8 @@ const { pickNonNil } = require('@/utils');
 
 const router = express.Router();
 
-// TODO:
 // find collections by owning group ?owning_group_id=xxx
 // find collections that a dataset belongs to ?dataset_id=xxx
-// router.get('/', asyncHandler(async (req, res) => {}));
 
 // find all collections that I have access to
 // search collections by name/description
@@ -44,7 +42,6 @@ router.post(
   }),
 );
 
-// TODO
 // get collection by id
 router.get(
   '/:id',
@@ -53,14 +50,18 @@ router.get(
   ]),
   authorize('collection', 'view_metadata'),
   asyncHandler(async (req, res) => {
-    res.json({});
+    const collection = await collectionService.getCollectionById(req.params.id, req.user.id);
+    res.json(collection);
   }),
 );
 
 // create collection
 router.post(
   '/',
-  authorize('collection', 'create'),
+  authorize('collection', 'create', {
+    resourceIdFn: () => null,
+    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
+  }),
   validate([
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
@@ -198,6 +199,38 @@ router.delete(
 
     const { dataset_ids } = req.body;
     await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.id });
+    res.status(204).send();
+  }),
+);
+
+// archive collection
+router.post(
+  '/:id/archive',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  authorize('collection', 'archive'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Archive a collection'
+
+    await collectionService.archiveCollection(req.params.id, req.user.id);
+    res.status(204).send();
+  }),
+);
+
+// unarchive collection
+router.post(
+  '/:id/unarchive',
+  validate([
+    param('id').isInt().toInt(),
+  ]),
+  authorize('collection', 'unarchive'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Unarchive a collection'
+
+    await collectionService.unarchiveCollection(req.params.id, req.user.id);
     res.status(204).send();
   }),
 );

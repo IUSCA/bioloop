@@ -13,7 +13,7 @@ const { EVERYONE_GROUP_ID } = require('@/constants');
 // Grant Creation
 // ============================================================================
 
-async function _createGrant(tx, data, granted_by, granted_via_group) {
+async function _createGrant(tx, data, granted_by) {
   const grant = await tx.grant.create({
     data: {
       subject_type: data.subject_type,
@@ -24,7 +24,6 @@ async function _createGrant(tx, data, granted_by, granted_via_group) {
       valid_from: data.valid_from ?? Prisma.skip,
       valid_until: data.valid_until ?? Prisma.skip,
       granted_by,
-      granted_via_group: granted_via_group ?? Prisma.skip,
       justification: data.justification ?? Prisma.skip,
     },
   });
@@ -54,15 +53,14 @@ async function _createGrant(tx, data, granted_by, granted_via_group) {
  * @param {Date} [data.valid_from] - Defaults to now
  * @param {Date} [data.valid_until] - Expiration date
  * @param {number} granted_by - Actor user ID
- * @param {string} [granted_via_group] - Authority group ID
  * @param {string} [data.justification] - Optional justification for the grant creation
  * @returns {Promise<Object>} Created grant
  */
-async function createGrant(data, granted_by, granted_via_group, txn = null) {
+async function createGrant(data, granted_by, txn = null) {
   if (txn) {
-    return _createGrant(txn, data, granted_by, granted_via_group);
+    return _createGrant(txn, data, granted_by);
   }
-  return prisma.$transaction((tx) => _createGrant(tx, data, granted_by, granted_via_group));
+  return prisma.$transaction((tx) => _createGrant(tx, data, granted_by));
 }
 
 /**
@@ -77,7 +75,6 @@ async function createGrant(data, granted_by, granted_via_group, txn = null) {
  * @param {Date} [data.valid_from] - Defaults to now
  * @param {Date} [data.valid_until] - Expiration date
  * @param {number} granted_by - Actor user ID
- * @param {string} granted_via_group - Authority group ID
  * @param {string} [data.justification] - Optional justification for the grant creation
  * @returns {Promise<Object>} Created grants
  */
@@ -93,7 +90,6 @@ async function createGrantsBatch(data) {
         valid_from: data.valid_from ?? Prisma.skip,
         valid_until: data.valid_until ?? Prisma.skip,
         granted_by: data.granted_by,
-        granted_via_group: data.granted_via_group ?? Prisma.skip,
         justification: data.justification ?? Prisma.skip,
       })),
       select: {
@@ -355,13 +351,48 @@ async function userHasGrant({
   return results.length > 0;
 }
 
+async function getGrantById(grant_id) {
+  return prisma.grant.findUnique({
+    where: { id: grant_id },
+  });
+}
+
+async function listGrantsForSubject(subject_type, subject_id) {
+  return prisma.grant.findMany({
+    where: {
+      subject_type,
+      subject_id: subject_id.toString(),
+    },
+  });
+}
+
+async function listGrantsForResource(resource_type, resource_id) {
+  return prisma.grant.findMany({
+    where: {
+      resource_type,
+      resource_id: resource_id.toString(),
+    },
+  });
+}
+
 module.exports = {
   createGrant,
   createGrantsBatch,
   revokeGrant,
+
+  // grants to a user for a dataset
   getUserDatasetGrants,
   getUserDatasetAccessTypes,
+
+  // existence check for a grant to a user for a resource and access type(s)
   userHasGrant,
+
+  // sql queries
   ownerGroupIdsOfResourcesAccessibleByUserQuery,
   accessibleCollectionsByGrantsQuery,
+
+  // get grant
+  getGrantById,
+  listGrantsForSubject,
+  listGrantsForResource,
 };
