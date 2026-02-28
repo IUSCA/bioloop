@@ -54,14 +54,21 @@ router.post(
     body('items.*.requested_until').optional().isISO8601().toDate(),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
+  authorize('access_request', 'create'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Create a new access request'
 
     const data = _.pick(['type', 'resource_type', 'resource_id', 'purpose', 'items'], req.body);
+
+    // validate items are unique by access_type_id within the request
+    const accessTypeIds = data.items.map((item) => item.access_type_id);
+    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+    }
+
     const record = await accessRequestsService.createAccessRequest(data, req.user.id);
-    // TODO: attribute filter
-    res.status(201).json(record);
+    res.status(201).json(req.permission.filter(record));
   }),
 );
 
@@ -153,6 +160,15 @@ router.put(
     // #swagger.summary = 'Update an access request (only if it is in DRAFT status)'
 
     const data = pickNonNil(_.pick(['purpose', 'items'], req.body));
+
+    // validate items are unique by access_type_id within the request if items are provided
+    if (data.items) {
+      const accessTypeIds = data.items.map((item) => item.access_type_id);
+      if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+        return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+      }
+    }
+
     const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.id);
     res.json(req.permission.filter(request));
   }),

@@ -8,7 +8,6 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const StateMachine = require('@/services/stateMachine');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
 
@@ -34,29 +33,31 @@ const config = {
       from: 'UNDER_REVIEW', to: 'WITHDRAWN', action: 'WITHDRAW', roles: ['REQUESTER'],
     },
     {
-      from: 'UNDER_REVIEW', to: 'EXPIRED', action: 'EXPIRE', roles: ['REQUESTER'],
+      from: 'UNDER_REVIEW', to: 'EXPIRED', action: 'EXPIRE', roles: ['SYSTEM'],
     },
   ],
 };
-
-function getFSM(status) {
-  const fsm = new StateMachine(config);
-  if (status) fsm.setState(status);
-  return fsm;
-}
-
-// const fsm = getFSM(request.status);
-// const { allowed, transition } = fsm.canPerformAction({ action: 'SUBMIT', role: 'REQUESTER' }); // Validate transition
-// if (!allowed) {
-//   throw new ConflictError('Cannot submit request from current status');
-// }
 
 // ============================================================================
 // Request Lifecycle
 // ============================================================================
 
-async function getRequestById(request_id) {
-  return prisma.access_request.findUniqueOrThrow({
+// ===============================
+// System-level invariants assumed
+// ===============================
+//
+// Code correctness depends on these invariants being globally true:
+//
+// - Request items are only mutable when status = DRAFT.
+// - All state transitions use conditional WHERE status = ...
+// - No direct update({ where: { id } }) exists anywhere.
+// - Grants are protected by DB uniqueness. No multiple valid grants for same subject/resource/access_type can exist.
+// - No code modifies access_request_item.decision outside review transaction.
+//
+// If any of these are violated elsewhere in the codebase, races reappear.
+
+async function _getRequestById(tx, request_id) {
+  return tx.access_request.findUnique({
     where: { id: request_id },
     include: {
       access_request_items: {
@@ -72,6 +73,10 @@ async function getRequestById(request_id) {
   });
 }
 
+async function getRequestById(request_id) {
+  return _getRequestById(prisma, request_id);
+}
+
 /**
  * Create a new access request
  * @param {Object} data
@@ -79,7 +84,7 @@ async function getRequestById(request_id) {
  * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
  * @param {number} data.resource_id - ID of the resource
  * @param {string} [data.purpose] - Justification for the request
- * @param {Array<{access_type_id: number, requested_until?: Date}>} data.items - Access types being requested
+ * @param {Array<{access_type_id: number, requested_until?: Date}>} data.items - Access types being requested, must be unique within the request
  * @param {string[]} [data.previous_grant_ids] - For renewals, reference to expired grants
  * @param {number} requester_id - User creating the request
  * @param {Object} [options]
@@ -148,36 +153,24 @@ async function createAccessRequest(data, requester_id) {
  * @param {number} requester_id
  * @param {Object} data
  * @param {string} [data.purpose] - Updated justification
- * @param {Array<{access_type_id: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing)
+ * @param {Array<{access_type_id: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing) must be unique within the request
  * @returns {Promise<Object>} Updated access request
  */
 async function updateAccessRequest(request_id, requester_id, data) {
   return prisma.$transaction(async (tx) => {
-    // Fetch current request
-    const currentRequest = await tx.access_request.findUniqueOrThrow({
-      where: { id: request_id },
-      include: {
-        access_request_items: true,
-      },
-    });
-
-    // Verify requester owns this request
-    if (currentRequest.requester_id !== requester_id) {
-      throw createError.Forbidden('You can only update your own requests');
-    }
-
-    // Only DRAFT requests can be updated
-    if (currentRequest.status !== 'DRAFT') {
-      throw createError.Conflict('Only DRAFT requests can be updated');
-    }
-
     // Update request metadata
-    await tx.access_request.update({
-      where: { id: request_id },
+    const updated = await tx.access_request.updateMany({
+      where: {
+        id: request_id,
+        status: 'DRAFT', // Ensure request is still in DRAFT to prevent race conditions
+      },
       data: {
         purpose: data.purpose ?? Prisma.skip,
       },
     });
+    if (updated.count !== 1) {
+      throw createError.Conflict('Request is no longer in DRAFT status');
+    }
 
     // If items are provided, replace existing items
     if (data.items && data.items.length > 0) {
@@ -208,16 +201,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
     });
 
     // Return updated request with items
-    return tx.access_request.findUnique({
-      where: { id: request_id },
-      include: {
-        access_request_items: {
-          include: {
-            access_type: true,
-          },
-        },
-      },
-    });
+    return _getRequestById(tx, request_id);
   });
 }
 
@@ -229,63 +213,20 @@ async function updateAccessRequest(request_id, requester_id, data) {
  */
 async function submitRequest(request_id, requester_id) {
   return prisma.$transaction(async (tx) => {
-    // Fetch current request with its items for duplicate checking
-    const currentRequest = await tx.access_request.findUniqueOrThrow({
-      where: { id: request_id },
-      include: { access_request_items: true },
-    });
-
-    // Verify requester owns this request
-    if (currentRequest.requester_id !== requester_id) {
-      throw createError.Forbidden('You can only submit your own requests');
-    }
-
-    // Validate state transition
-    const fsm = getFSM(currentRequest.status);
-    const { allowed } = fsm.canPerformAction({ action: 'SUBMIT', role: 'REQUESTER' });
-    if (!allowed) {
-      throw createError.Conflict(`Cannot submit request from ${currentRequest.status} status`);
-    }
-
-    // Prevent submitting a duplicate: check for another UNDER_REVIEW request from the
-    // same requester for the same resource that shares at least one access_type_id.
-    const currentAccessTypeIds = new Set(currentRequest.access_request_items.map((i) => i.access_type_id));
-    const duplicateRequest = await tx.access_request.findFirst({
-      where: {
-        id: { not: request_id },
-        requester_id,
-        resource_type: currentRequest.resource_type,
-        resource_id: currentRequest.resource_id,
-        status: 'UNDER_REVIEW',
-        access_request_items: {
-          some: {
-            access_type_id: { in: [...currentAccessTypeIds] },
-          },
-        },
-      },
-      select: { id: true },
-    });
-    if (duplicateRequest) {
-      throw createError.Conflict(
-        'An access request for the same resource and access type is already under review',
-      );
-    }
-
     // Update status to UNDER_REVIEW
-    const updatedRequest = await tx.access_request.update({
-      where: { id: request_id },
+    const updated = await tx.access_request.updateMany({
+      where: {
+        id: request_id,
+        status: 'DRAFT', // Ensure request is still in DRAFT to prevent race conditions
+      },
       data: {
         status: 'UNDER_REVIEW',
         submitted_at: new Date(),
       },
-      include: {
-        access_request_items: {
-          include: {
-            access_type: true,
-          },
-        },
-      },
     });
+    if (updated.count !== 1) {
+      throw createError.Conflict('Request is no longer in DRAFT status');
+    }
 
     // Create audit record
     await tx.authorization_audit.create({
@@ -295,31 +236,28 @@ async function submitRequest(request_id, requester_id) {
         target_type: 'access_request',
         target_id: request_id,
         metadata: {
-          from_status: currentRequest.status,
+          from_status: 'DRAFT',
           to_status: 'UNDER_REVIEW',
         },
       },
     });
 
-    return updatedRequest;
+    return _getRequestById(tx, request_id);
   });
 }
 
-function validateReview(currentRequest, item_decisions) {
-  // Validate state - must be UNDER_REVIEW
-  if (currentRequest.status !== 'UNDER_REVIEW') {
-    throw createError.Conflict('Only requests UNDER_REVIEW can be reviewed');
-  }
-
+function _validateReviewItems(requestItems, reviewItems) {
   // Validate all item IDs belong to this request
-  const requestItemIds = new Set(currentRequest.access_request_items.map((item) => item.id));
-  const decisionItemIds = new Set(item_decisions.map((d) => d.id));
+  const requestItemIds = new Set(requestItems.map((item) => item.id));
+  const decisionItemIds = new Set(reviewItems.map((d) => d.id));
   if (!setsEqual(requestItemIds, decisionItemIds)) {
-    throw createError.Conflict('Decisions must be provided for all items in the request');
+    throw createError.Conflict(
+      'Review decisions must be provided for all request items and cannot include items not in the request',
+    );
   }
 }
 
-function determineFinalStatus(approvedCount, rejectedCount) {
+function _determineFinalStatus(approvedCount, rejectedCount) {
   // Determine overall request status based on decisions
   let finalStatus;
   let eventType;
@@ -340,7 +278,7 @@ function determineFinalStatus(approvedCount, rejectedCount) {
   return { finalStatus, eventType };
 }
 
-function updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
+function _updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
   return tx.access_request_item.update({
     where: { id: reviewItem.id },
     data: {
@@ -367,65 +305,47 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
  * Reviewer approves or rejects each request item and submits the review.
  * Approved items will have grants created automatically.
  *
+ * Protection against concurrent reviews or withdrawals is implemented - optimistic concurrency control
+ *
  * @param {string} request_id
  * @param {number} reviewer_id
  * @param {Object} options
- * @param {Array<{id: number, access_type_id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.item_decisions - Decision for each item
+ * @param {Array<{id: number, access_type_id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.review_items - Decision for each item
  * @param {string} [options.decision_reason] - Overall review comment
  * @returns {Promise<Object>} Updated access request with review decisions
  */
 async function submitReview({ request_id, reviewer_id, options = {} }) {
-  const { item_decisions, decision_reason } = options;
-
-  if (!item_decisions || item_decisions.length === 0) {
-    throw createError.BadRequest('Must provide decisions for at least one item');
-  }
+  const { review_items: reviewItems, decision_reason } = options;
 
   // Fetch current request with items
   const currentRequest = await prisma.access_request.findUniqueOrThrow({
     where: { id: request_id },
     include: {
       access_request_items: true,
-      dataset_resource: true,
-      collection_resource: true,
     },
   });
 
-  // validate if reviewer can perform this action
-  validateReview(currentRequest, item_decisions);
+  // validate decisions match request items
+  _validateReviewItems(currentRequest.access_request_items, reviewItems);
 
-  const itemDecisionsMap = item_decisions.reduce((acc, curr) => {
-    acc[curr.id] = curr;
+  // Count approvals and rejections
+  const { approvedCount, rejectedCount } = reviewItems.reduce((acc, curr) => {
+    if (curr.decision === 'APPROVED') acc.approvedCount += 1;
+    else if (curr.decision === 'REJECTED') acc.rejectedCount += 1;
     return acc;
-  }, {});
+  }, { approvedCount: 0, rejectedCount: 0 });
+
+  // Determine final request status based on item decisions
+  const { finalStatus, eventType } = _determineFinalStatus(approvedCount, rejectedCount);
 
   return prisma.$transaction(async (tx) => {
-    // for each item, update decision and create grant if approved
-    // eslint-disable-next-line no-restricted-syntax
-    let approvedCount = 0;
-    let rejectedCount = 0;
-    // eslint-disable-next-line no-restricted-syntax
-    for (const requestItem of currentRequest.access_request_items) {
-      const reviewItem = itemDecisionsMap[requestItem.id];
-      // create grant if approved
-      if (reviewItem.decision === 'APPROVED') {
-        // eslint-disable-next-line no-await-in-loop
-        const grant = await _createGrant(tx, currentRequest, reviewItem, reviewer_id);
-        // eslint-disable-next-line no-await-in-loop
-        await updateRequestItem(tx, reviewItem, { grant_id: grant.id });
-        approvedCount += 1;
-      } else {
-        // eslint-disable-next-line no-await-in-loop
-        await updateRequestItem(tx, reviewItem);
-        rejectedCount += 1;
-      }
-    }
-
-    const { finalStatus, eventType } = determineFinalStatus(approvedCount, rejectedCount);
-
-    // Update request with review outcome
-    const updatedRequest = await tx.access_request.update({
-      where: { id: request_id },
+    // Update request with review outcome first to ensure request is locked for concurrent modifications (e.g.
+    // another reviewer trying to review or requester trying to withdraw)
+    const updated = await tx.access_request.updateMany({
+      where: {
+        id: request_id,
+        status: 'UNDER_REVIEW', // Ensure request is still under review to prevent race conditions
+      },
       data: {
         status: finalStatus,
         reviewed_by: reviewer_id,
@@ -433,15 +353,29 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
         closed_at: new Date(),
         decision_reason: decision_reason ?? Prisma.skip,
       },
-      include: {
-        access_request_items: {
-          include: {
-            access_type: true,
-            created_grant: true,
-          },
-        },
-      },
     });
+    if (updated.count !== 1) {
+      throw createError.Conflict('Request is no longer under review');
+    }
+
+    // fetch updated request items to ensure we have the latest data after locking the request
+    const latestRequest = await tx.access_request.findUniqueOrThrow({
+      where: { id: request_id },
+    });
+
+    // create grants for approved items and update request items with decisions and grant references
+    // eslint-disable-next-line no-restricted-syntax
+    for (const reviewItem of reviewItems) {
+      if (reviewItem.decision === 'APPROVED') {
+        // eslint-disable-next-line no-await-in-loop
+        const grant = await _createGrant(tx, latestRequest, reviewItem, reviewer_id);
+        // eslint-disable-next-line no-await-in-loop
+        await _updateRequestItem(tx, reviewItem, { grant_id: grant.id });
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        await _updateRequestItem(tx, reviewItem);
+      }
+    }
 
     // Create audit record for review
     await tx.authorization_audit.create({
@@ -459,7 +393,7 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
       },
     });
 
-    return updatedRequest;
+    return _getRequestById(tx, request_id);
   });
 }
 
@@ -476,33 +410,22 @@ async function withdrawRequest({ request_id, requester_id }) {
       where: { id: request_id },
     });
 
-    // Verify requester owns this request
-    if (currentRequest.requester_id !== requester_id) {
-      throw createError.Forbidden('You can only withdraw your own requests');
-    }
-
-    // Validate state transition
-    const fsm = getFSM(currentRequest.status);
-    const { allowed } = fsm.canPerformAction({ action: 'WITHDRAW', role: 'REQUESTER' });
-    if (!allowed) {
-      throw createError.Conflict(`Cannot withdraw request from ${currentRequest.status} status`);
-    }
-
     // Update status to WITHDRAWN
-    const updatedRequest = await tx.access_request.update({
-      where: { id: request_id },
+    const updated = await tx.access_request.updateMany({
+      where: {
+        id: request_id,
+        status: {
+          in: ['DRAFT', 'UNDER_REVIEW'], // Only allow withdrawal if request is still in DRAFT or UNDER_REVIEW to prevent race conditions with reviews
+        },
+      },
       data: {
         status: 'WITHDRAWN',
         closed_at: new Date(),
       },
-      include: {
-        access_request_items: {
-          include: {
-            access_type: true,
-          },
-        },
-      },
     });
+    if (updated.count !== 1) {
+      throw createError.Conflict('Request cannot be withdrawn at this stage');
+    }
 
     // Create audit record
     await tx.authorization_audit.create({
@@ -518,7 +441,7 @@ async function withdrawRequest({ request_id, requester_id }) {
       },
     });
 
-    return updatedRequest;
+    return _getRequestById(tx, request_id);
   });
 }
 

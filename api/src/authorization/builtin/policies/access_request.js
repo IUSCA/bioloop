@@ -66,6 +66,7 @@ accessRequestPolicies
     read: Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
     review: isAdminOfResourceGroup,
     update: isRequester,
+    create: Policy.always,
   })
   .attributes({
     '*': [
