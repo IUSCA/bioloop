@@ -7,6 +7,7 @@ const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
 const ConflictError = require('@/services/errors/ConflictError');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const sqlUtils = require('@/utils/sql');
 
 const PRISMA_GROUP_INCLUDES = {};
 // eslint-disable-next-line max-len
@@ -109,7 +110,6 @@ async function createGroup(data, actor_id) {
         actor_id,
         target_type: 'group',
         target_id: _group.id,
-        action: 'create',
       },
     });
 
@@ -118,7 +118,7 @@ async function createGroup(data, actor_id) {
 }
 
 /**
- * Create a new group
+ * Create a new child group under a parent group
  * @param {string} parent_id - ID of the parent group
  * @param {Object} data - Group creation data
  * @param {string} data.name - Group name (unique)
@@ -190,7 +190,6 @@ async function createChildGroup(parent_id, data, actor_id) {
         actor_id,
         target_type: 'group',
         target_id: _group.id,
-        action: 'create',
       },
     });
 
@@ -271,11 +270,11 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
  * Archive a group
  * @param {string} group_id - ID of the group to archive
  * @param {number} actor_id - User performing the archival (for audit)
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} The archived group object
  */
 async function archiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    await tx.group.update({
+    const updatedGroup = await tx.group.update({
       where: { id: group_id },
       data: {
         is_archived: true,
@@ -291,9 +290,9 @@ async function archiveGroup(group_id, actor_id) {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
       },
     });
+    return updatedGroup;
   });
 }
 
@@ -301,11 +300,11 @@ async function archiveGroup(group_id, actor_id) {
  * Unarchive a group
  * @param {string} group_id - ID of the group to unarchive
  * @param {number} actor_id - User performing the unarchival (for audit)
- * @returns {Promise<void>}
+ * @returns {Promise<Object>} The unarchived group object
  */
 async function unarchiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    await tx.group.update({
+    const updatedGroup = await tx.group.update({
       where: { id: group_id },
       data: {
         is_archived: false,
@@ -321,9 +320,9 @@ async function unarchiveGroup(group_id, actor_id) {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
       },
     });
+    return updatedGroup;
   });
 }
 
@@ -405,7 +404,6 @@ async function removeGroupMembers(group_id, {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
         metadata: {
           user_id,
         },
@@ -439,7 +437,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
     }
 
-    const createdRecords = await prisma.$queryRaw`
+    const createdRecords = await tx.$queryRaw`
       INSERT INTO group_user (group_id, user_id, role)
       SELECT ${group_id}, u.id, 'MEMBER'
       FROM "user" u
@@ -456,7 +454,6 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
         metadata: {
           user_id,
           role: 'MEMBER',
@@ -514,7 +511,6 @@ async function promoteGroupMemberToAdmin(group_id, {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
         metadata: {
           user_id,
         },
@@ -572,7 +568,6 @@ async function removeGroupAdmin(group_id, {
         actor_id,
         target_type: 'group',
         target_id: group_id,
-        action: 'update',
         metadata: {
           user_id,
         },
@@ -594,22 +589,11 @@ async function searchAllGroups({
   offset,
   is_archived = null,
 }) {
-  const DEFAULT_SORT_BY = 'name';
-  const DEFAULT_SORT_ORDER = 'asc';
-
-  // build sorting
-  const orderBy = {};
-  if (sort_by) {
-    orderBy[sort_by] = sort_order || DEFAULT_SORT_ORDER;
-  } else {
-    orderBy[DEFAULT_SORT_BY] = DEFAULT_SORT_ORDER;
-  }
-
   // build where clause
   const where = {};
   if (group_id) {
     where.id = group_id;
-  } else if (!search_term) {
+  } else if (search_term) {
     // if search_term is UUID, search by id
     where.OR = [
       {
@@ -640,7 +624,9 @@ async function searchAllGroups({
   // if platform admin, scope to all groups
   const data = await prisma.group.findMany({
     where,
-    orderBy,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
     skip: offset,
     take: limit,
   });
@@ -671,33 +657,27 @@ async function searchGroupsForUser({
 }) {
   let searchClause = Prisma.empty;
   if (search_term) {
-    searchClause = Prisma.sql`
-    AND (
+    searchClause = Prisma.sql`(
       g.name ILIKE ${`%${search_term}%`} OR
       g.description ILIKE ${`%${search_term}%`} OR
       g.slug ILIKE ${`%${search_term}%`}
-    )
-    `;
+    )`;
   }
   let idFilterClause = Prisma.empty;
   if (group_id) {
-    idFilterClause = Prisma.sql`
-      AND g.id = ${group_id}
-    `;
+    idFilterClause = Prisma.sql`g.id = ${group_id}`;
   }
 
   let archivedClause = Prisma.empty;
   if (is_archived !== null) {
-    archivedClause = Prisma.sql`
-      AND g.is_archived = ${is_archived}
-    `;
+    archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
   let membershipClause = Prisma.empty;
   if (direct_membership_only) {
     // direct_membership_only takes precedence, ignore oversight_only
     membershipClause = Prisma.sql`
-      gu.role IS NOT NULL
+      gu.role IS NOT NULL AND gu.user_id = ${user_id}
     `;
   } else if (oversight_only) {
     // only show groups user administers
@@ -710,6 +690,11 @@ async function searchGroupsForUser({
       (g.id IN (SELECT id FROM all_groups) OR g.id IN (SELECT id FROM oversight_groups))
     `;
   }
+
+  const finalWhereClause = sqlUtils.safeSqlJoin(
+    [searchClause, idFilterClause, archivedClause, membershipClause],
+    ' AND ',
+  );
 
   // Groups they are members of
   // Parent groups of those groups
@@ -729,11 +714,7 @@ async function searchGroupsForUser({
       SELECT g.*, gu.role as user_role
       FROM "group" g
       LEFT JOIN group_user gu ON gu.group_id = g.id
-      WHERE 
-      ${membershipClause}
-      ${searchClause}
-      ${idFilterClause}
-      ${archivedClause}
+      ${finalWhereClause}
     )
     SELECT *, COUNT(*) OVER () AS total_count
     FROM results

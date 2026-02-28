@@ -56,7 +56,7 @@ router.get(
 router.post(
   '/search',
   validate([
-    body('search_term').isString(),
+    body('search_term').isString().optional(),
     body('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     body('offset').default(0).isInt({ min: 0 }).toInt(),
     body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
@@ -160,7 +160,7 @@ router.patch(
   '/:id',
   validate([
     param('id').isUUID(),
-    query('version').isInt().toInt(), // for optimistic concurrency control
+    body('version').isInt({ min: 1 }).toInt(), // for optimistic concurrency control
     body('name').optional().isString().notEmpty(),
     body('description').optional().isString().notEmpty(),
     body('allow_user_contributions').optional().isBoolean().toBoolean(),
@@ -182,7 +182,7 @@ router.patch(
       {
         data,
         actor_id: req.user.id,
-        expected_version: req.query.version,
+        expected_version: req.body.version,
       },
     );
     res.json(req.permission.filter(updatedGroup));
@@ -202,7 +202,7 @@ router.post(
 
     const { id } = req.params;
 
-    const archivedGroup = await groupService.archiveGroup(id);
+    const archivedGroup = await groupService.archiveGroup(id, req.user.id);
     res.json(req.permission.filter(archivedGroup));
   }),
 );
@@ -220,7 +220,7 @@ router.post(
 
     const { id } = req.params;
 
-    const unarchivedGroup = await groupService.unarchiveGroup(id);
+    const unarchivedGroup = await groupService.unarchiveGroup(id, req.user.id);
     res.json(req.permission.filter(unarchivedGroup));
   }),
 );

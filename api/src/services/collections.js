@@ -47,18 +47,17 @@ async function createCollection(data, { actor_id }) {
         slug,
         description: data.description,
         metadata: data.metadata,
+        owner_group_id: data.owner_group_id,
       },
       include: PRISMA_COLLECTION_INCLUDES,
     });
 
-    // create audit record for group creation
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
         actor_id,
         target_type: 'collection',
         target_id: _collection.id,
-        action: 'create',
       },
     });
 
@@ -154,7 +153,6 @@ async function archiveCollection(collection_id, actor_id) {
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
-        action: 'update',
       },
     });
 
@@ -186,7 +184,6 @@ async function unarchiveCollection(collection_id, actor_id) {
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
-        action: 'update',
       },
     });
 
@@ -214,7 +211,6 @@ async function deleteCollection(collection_id, actor_id) {
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
-        action: 'delete',
       },
     });
 
@@ -288,7 +284,6 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
-        action: 'update',
         metadata: {
           dataset_id,
         },
@@ -339,7 +334,6 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
         actor_id,
         target_type: 'collection',
         target_id: collection_id,
-        action: 'update',
         metadata: {
           dataset_id,
         },
@@ -414,7 +408,7 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
     user_id,
     resource_type: 'COLLECTION',
     resource_id: collection_id,
-    access_type,
+    access_types: [access_type],
   });
 }
 

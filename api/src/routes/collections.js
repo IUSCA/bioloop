@@ -22,7 +22,7 @@ const router = express.Router();
 router.post(
   '/search',
   validate([
-    body('search_term').isString(),
+    body('search_term').isString().optional(),
     body('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     body('offset').default(0).isInt({ min: 0 }).toInt(),
     body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
@@ -141,7 +141,7 @@ router.get(
   '/:id/datasets',
   validate([
     param('id').isInt().toInt(),
-    query('limit').default(100).isInt({ min: 1 }).toInt(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),

@@ -35,7 +35,6 @@ async function _createGrant(tx, data, granted_by) {
       actor_id: granted_by,
       target_type: 'grant',
       target_id: grant.id,
-      action: 'CREATE',
     },
   });
 
@@ -104,7 +103,6 @@ async function createGrantsBatch(data) {
         actor_id: data.granted_by,
         target_type: 'grant',
         target_id: grant.id,
-        action: 'CREATE',
       })),
     });
 
@@ -137,7 +135,6 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
         actor_id,
         target_type: 'grant',
         target_id: revokedGrant.id,
-        action: 'REVOKE',
       },
     });
 

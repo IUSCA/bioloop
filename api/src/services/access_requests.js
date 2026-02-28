@@ -121,7 +121,6 @@ async function createAccessRequest(data, requester_id) {
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: accessRequest.id,
-        action: 'CREATE',
         metadata: {
           status: 'DRAFT',
           resource_type: data.resource_type,
@@ -202,11 +201,10 @@ async function updateAccessRequest(request_id, requester_id, data) {
     // Create audit record
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_UPDATED,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
-        action: 'UPDATE',
       },
     });
 
@@ -268,11 +266,10 @@ async function submitRequest(request_id, requester_id) {
     // Create audit record
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
+        event_type: AUTH_EVENT_TYPE.REQUEST_SUBMITTED,
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
-        action: 'SUBMIT',
         metadata: {
           from_status: currentRequest.status,
           to_status: 'UNDER_REVIEW',
@@ -331,11 +328,11 @@ function updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
 
 function _createGrant(tx, currentRequest, reviewItem, granted_by) {
   const data = {
-    subject_type: currentRequest.resource_type,
-    subject_id: currentRequest.resource_id,
+    subject_type: currentRequest.subject_type,
+    subject_id: currentRequest.subject_id,
     resource_type: currentRequest.resource_type,
     resource_id: currentRequest.resource_id,
-    access_type_id: reviewItem.access_type.id,
+    access_type_id: reviewItem.access_type_id,
     valid_until: reviewItem.approved_until,
   };
   return createGrant(data, granted_by, tx);
@@ -349,7 +346,7 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
  * @param {string} request_id
  * @param {number} reviewer_id
  * @param {Object} options
- * @param {Array<{id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.item_decisions - Decision for each item
+ * @param {Array<{id: number, access_type_id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.item_decisions - Decision for each item
  * @param {string} [options.decision_reason] - Overall review comment
  * @returns {Promise<Object>} Updated access request with review decisions
  */
@@ -371,7 +368,6 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
   });
 
   // validate if reviewer can perform this action
-
   validateReview(currentRequest, item_decisions);
 
   const itemDecisionsMap = item_decisions.reduce((acc, curr) => {
@@ -430,7 +426,6 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
         actor_id: reviewer_id,
         target_type: 'access_request',
         target_id: request_id,
-        action: 'REVIEW',
         metadata: {
           from_status: 'UNDER_REVIEW',
           to_status: finalStatus,
@@ -492,7 +487,6 @@ async function withdrawRequest({ request_id, requester_id }) {
         actor_id: requester_id,
         target_type: 'access_request',
         target_id: request_id,
-        action: 'WITHDRAW',
         metadata: {
           from_status: currentRequest.status,
           to_status: 'WITHDRAWN',
@@ -542,7 +536,6 @@ async function expireStaleRequests({ max_age_days }) {
         actor_id: null, // System action
         target_type: 'access_request',
         target_id: request_id,
-        action: 'EXPIRE',
         metadata: {
           from_status: 'UNDER_REVIEW',
           to_status: 'EXPIRED',
@@ -627,7 +620,7 @@ async function getRequestsPendingReviewForUser({
   const total = Number(result.length > 0 ? result[0].total_count : 0);
   const requestIds = result.map((row) => row.id);
 
-  const data = prisma.access_request.findMany({
+  const data = await prisma.access_request.findMany({
     where: { id: { in: requestIds } },
     include: {
       access_request_items: {
@@ -643,8 +636,17 @@ async function getRequestsPendingReviewForUser({
   return { metadata: { total, offset, limit }, data };
 }
 
-async function getReviewedRequestsByUser(user_id, {
-  sort_by, sort_order, offset, limit,
+/**
+ * Get requests reviewed by a user (as reviewer)
+ * @param {string} user_id
+ * @param {string} sort_by - Field to sort by (e.g. 'reviewed_at')
+ * @param {string} sort_order - 'asc' or 'desc'
+ * @param {number} offset - Pagination offset
+ * @param {number} limit - Pagination limit
+ * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
+ */
+async function getRequestsReviewedByUser({
+  user_id, sort_by, sort_order, offset, limit,
 }) {
   const data = await prisma.access_request.findMany({
     where: {
@@ -691,5 +693,6 @@ module.exports = {
   getRequestById,
   getRequestsByUser,
   getRequestsPendingReviewForUser,
-  getReviewedRequestsByUser,
+  getRequestsReviewedByUser,
+  accessRequestStates: config.states,
 };
