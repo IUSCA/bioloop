@@ -457,7 +457,7 @@ async function userHasGrant({ user_id, dataset_id, access_type }) {
 async function getDatasetsByOwnerGroup({
   group_id, limit, offset, sort_by, sort_order,
 }) {
-  return prisma.dataset.findMany({
+  const datasets = await prisma.dataset.findMany({
     where: {
       owner_group_id: group_id,
     },
@@ -476,6 +476,12 @@ async function getDatasetsByOwnerGroup({
       [sort_by]: sort_order,
     },
   });
+  const total = await prisma.dataset.count({
+    where: {
+      owner_group_id: group_id,
+    },
+  });
+  return { metadata: { total, offset, limit }, data: datasets };
 }
 
 /**

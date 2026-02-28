@@ -65,6 +65,62 @@ router.post(
   }),
 );
 
+// get requests requiring user's review
+router.get(
+  '/my-pending-reviews',
+  validate([
+    query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('offset').default(0).isInt({ min: 0 }),
+    query('limit').default(100).isInt({ min: 1 }),
+  ]),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Access Requests']
+    // #swagger.summary = 'Get access requests pending user\'s review'
+
+    const {
+      sort_by, sort_order, offset, limit,
+    } = req.query;
+    const { metadata, data } = await accessRequestsService.getRequestsPendingReviewForUser({
+      reviewer_id: req.user.id,
+      sort_by,
+      sort_order,
+      offset,
+      limit,
+    });
+    // TODO: attribute filter
+    res.json({ metadata, data });
+  }),
+);
+
+// get requests reviewed by the user
+router.get(
+  '/reviewed-by-me',
+  validate([
+    query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+    query('offset').default(0).isInt({ min: 0 }),
+    query('limit').default(100).isInt({ min: 1 }),
+  ]),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Access Requests']
+    // #swagger.summary = 'Get access requests reviewed by the user'
+
+    const {
+      sort_by, sort_order, offset, limit,
+    } = req.query;
+    const { metadata, data } = await accessRequestsService.getReviewedRequestsByUser({
+      user_id: req.user.id,
+      sort_by,
+      sort_order,
+      offset,
+      limit,
+    });
+    // TODO: attribute filter
+    res.json({ metadata, data });
+  }),
+);
+
 // get request by id
 router.get(
   '/:id',
@@ -156,50 +212,6 @@ router.post(
 
     await accessRequestsService.withdrawRequest({ request_id: req.params.id, requester_id: req.user.id });
     res.status(204).send();
-  }),
-);
-
-// get requests requiring user's review
-router.get(
-  '/my-pending-reviews',
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Access Requests']
-    // #swagger.summary = 'Get access requests pending user\'s review'
-
-    const {
-      sort_by, sort_order, offset, limit,
-    } = req.query;
-    const requests = await accessRequestsService.getRequestsPendingReviewForUser({
-      reviewer_id: req.user.id,
-      sort_by,
-      sort_order,
-      offset,
-      limit,
-    });
-    // TODO: attribute filter
-    res.json(requests);
-  }),
-);
-
-// get requests reviewed by the user
-router.get(
-  '/reviewed-by-me',
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Access Requests']
-    // #swagger.summary = 'Get access requests reviewed by the user'
-
-    const {
-      sort_by, sort_order, offset, limit,
-    } = req.query;
-    const requests = await accessRequestsService.getReviewedRequestsByUser({
-      user_id: req.user.id,
-      sort_by,
-      sort_order,
-      offset,
-      limit,
-    });
-    // TODO: attribute filter
-    res.json(requests);
   }),
 );
 

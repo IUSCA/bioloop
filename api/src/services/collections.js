@@ -358,14 +358,15 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
 async function findCollectionsByDataset({
   dataset_id, limit, offset, sort_by, sort_order,
 }) {
-  return prisma.collection.findMany({
-    where: {
-      datasets: {
-        some: {
-          dataset_id,
-        },
+  const where = {
+    datasets: {
+      some: {
+        dataset_id,
       },
     },
+  };
+  const data = await prisma.collection.findMany({
+    where,
     include: PRISMA_COLLECTION_INCLUDES,
     take: limit,
     skip: offset,
@@ -373,12 +374,16 @@ async function findCollectionsByDataset({
       [sort_by]: sort_order,
     },
   });
+  const total = await prisma.collection.count({
+    where,
+  });
+  return { metadata: { total, limit, offset }, data };
 }
 
 async function findCollectionsByOwnerGroup({
   group_id, limit, offset, sort_by, sort_order,
 }) {
-  return prisma.collection.findMany({
+  const data = await prisma.collection.findMany({
     where: {
       owner_group_id: group_id,
     },
@@ -389,6 +394,12 @@ async function findCollectionsByOwnerGroup({
       [sort_by]: sort_order,
     },
   });
+  const total = await prisma.collection.count({
+    where: {
+      owner_group_id: group_id,
+    },
+  });
+  return { metadata: { total, limit, offset }, data };
 }
 
 async function getCollectionById(collection_id) {
@@ -438,36 +449,102 @@ async function searchCollectionsForUser({
       `;
   }
 
-  return Prisma.sql`
-    WITH accessible_collections_via_grants AS (
-      ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
-    ),
-    owned_collections AS (
-      SELECT id FROM "collection" c
-      JOIN group_user gu ON c.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = 'ADMIN'
-    ),
-    oversight_collections AS (
-      SELECT id FROM "collection" c
-      JOIN effective_user_oversight_groups eug 
-        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
-    ),
-    accessible_collections AS (
-      SELECT id FROM owned_collections
-      UNION
-      SELECT id FROM oversight_collections
-      UNION
-      SELECT id FROM accessible_collections_via_grants
+  const query = Prisma.sql`
+    WITH results AS (
+      WITH accessible_collections_via_grants AS (
+        ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
+      ),
+      owned_collections AS (
+        SELECT id FROM "collection" c
+        JOIN group_user gu ON c.owner_group_id = gu.group_id
+        WHERE gu.user_id = ${user_id} AND gu.role = 'ADMIN'
+      ),
+      oversight_collections AS (
+        SELECT id FROM "collection" c
+        JOIN effective_user_oversight_groups eug 
+          ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
+      ),
+      accessible_collections AS (
+        SELECT id FROM owned_collections
+        UNION
+        SELECT id FROM oversight_collections
+        UNION
+        SELECT id FROM accessible_collections_via_grants
+      )
+      SELECT *
+      FROM "collection" c
+      JOIN accessible_collections ac ON c.id = ac.id
+      WHERE 
+        1=1
+        ${searchClause}
+        ${archivedClause}
     )
-    SELECT *
-    FROM "collection" c
-    JOIN accessible_collections ac ON c.id = ac.id
-    WHERE 
-      ${searchClause}
-      ${archivedClause}
+    SELECT *, COUNT(*) OVER () AS total_count
+    FROM results
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
-    LIMIT ${limit} OFFSET ${offset}
+    LIMIT ${limit} 
+    OFFSET ${offset}
   `;
+  const collections = await prisma.$queryRaw(query);
+  const total_count = Number(collections.length > 0 ? collections[0].total_count : 0);
+  return { metadata: { total: total_count, limit, offset }, data: collections };
+}
+
+async function searchAllCollections({
+  search_term = null,
+  is_archived = null,
+  sort_by,
+  sort_order,
+  limit,
+  offset,
+}) {
+  const where = {};
+  if (search_term) {
+    where.OR = [
+      { name: { contains: search_term, mode: 'insensitive' } },
+      { description: { contains: search_term, mode: 'insensitive' } },
+      { slug: { contains: search_term, mode: 'insensitive' } },
+    ];
+  }
+  if (is_archived !== null) {
+    where.is_archived = is_archived;
+  }
+  const collections = await prisma.collection.findMany({
+    where,
+    include: PRISMA_COLLECTION_INCLUDES,
+    take: limit,
+    skip: offset,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+  const total = await prisma.collection.count({ where });
+  return { metadata: { total, limit, offset }, data: collections };
+}
+
+async function listDatasetsInCollection({
+  collection_id, limit, offset, sort_by, sort_order,
+}) {
+  const datasets = await prisma.dataset.findMany({
+    where: {
+      collections: {
+        some: {
+          collection_id,
+        },
+      },
+    },
+    take: limit,
+    skip: offset,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+  const total = await prisma.collection_dataset.count({
+    where: {
+      collection_id,
+    },
+  });
+  return { metadata: { total, limit, offset }, data: datasets };
 }
 
 module.exports = {
@@ -483,4 +560,6 @@ module.exports = {
   getCollectionById,
   userHasGrant,
   searchCollectionsForUser,
+  searchAllCollections,
+  listDatasetsInCollection,
 };

@@ -1,12 +1,11 @@
+const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
 
 const { generate_slug } = require('@/utils/slug');
-const { Prisma } = require('@prisma/client');
 const ConflictError = require('@/services/errors/ConflictError');
-
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 
 const PRISMA_GROUP_INCLUDES = {};
@@ -275,8 +274,8 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
  * @returns {Promise<void>}
  */
 async function archiveGroup(group_id, actor_id) {
-  prisma.$transaction(async (tx) => {
-    tx.group.update({
+  return prisma.$transaction(async (tx) => {
+    await tx.group.update({
       where: { id: group_id },
       data: {
         is_archived: true,
@@ -305,8 +304,8 @@ async function archiveGroup(group_id, actor_id) {
  * @returns {Promise<void>}
  */
 async function unarchiveGroup(group_id, actor_id) {
-  prisma.$transaction(async (tx) => {
-    tx.group.update({
+  return prisma.$transaction(async (tx) => {
+    await tx.group.update({
       where: { id: group_id },
       data: {
         is_archived: false,
@@ -337,33 +336,29 @@ async function unarchiveGroup(group_id, actor_id) {
  * @returns {Promise<Object>} Paginated list of group members with metadata
  */
 async function listGroupMembers(group_id, { limit, offset }) {
-  prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx) => {
     const members = await tx.group_user.findMany({
       where: { group_id },
       include: {
         user: true,
+        assignor: true,
       },
       skip: offset,
       take: limit,
     });
 
     // total count for pagination
-    const total_count = await tx.group_user.count({
+    const total = await tx.group_user.count({
       where: { group_id },
     });
 
     return {
       metadata: {
-        total_count,
+        total,
         limit,
         offset,
       },
-      data: members.map((member) => ({
-        id: member.user.id,
-        name: member.user.name,
-        email: member.user.email,
-        role: member.role,
-      })),
+      data: members,
     };
   });
 }
@@ -643,12 +638,22 @@ async function searchAllGroups({
   }
 
   // if platform admin, scope to all groups
-  return prisma.group.findMany({
+  const data = await prisma.group.findMany({
     where,
     orderBy,
     skip: offset,
     take: limit,
   });
+  const total = await prisma.group.count({ where });
+
+  return {
+    metadata: {
+      total,
+      limit,
+      offset,
+    },
+    data,
+  };
 }
 
 // assume user_id, sort_by, sort_order, limit, offset are not null or undefined
@@ -710,29 +715,42 @@ async function searchGroupsForUser({
   // Parent groups of those groups
   // if admin of any group, also show all descendant groups for oversight purposes
   const sql = Prisma.sql`
-    WITH all_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-    ),
-    oversight_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_oversight_groups
-      WHERE user_id = ${user_id}
+    WITH results AS (
+      WITH all_groups AS (
+        SELECT DISTINCT group_id AS id
+        FROM effective_user_groups
+        WHERE user_id = ${user_id}
+      ),
+      oversight_groups AS (
+        SELECT DISTINCT group_id AS id
+        FROM effective_user_oversight_groups
+        WHERE user_id = ${user_id}
+      )
+      SELECT g.*, gu.role as user_role
+      FROM "group" g
+      LEFT JOIN group_user gu ON gu.group_id = g.id
+      WHERE 
+      ${membershipClause}
+      ${searchClause}
+      ${idFilterClause}
+      ${archivedClause}
     )
-    SELECT g.*, gu.role as user_role
-    FROM "group" g
-    LEFT JOIN group_user gu ON gu.group_id = g.id
-    WHERE 
-    ${membershipClause}
-    ${searchClause}
-    ${idFilterClause}
-    ${archivedClause}
+    SELECT *, COUNT(*) OVER () AS total_count
+    FROM results
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} OFFSET ${offset}
   `;
 
-  return prisma.$queryRaw(sql);
+  const results = await prisma.$queryRaw(sql);
+  const total = Number(results.length > 0 ? results[0].total_count : 0);
+  return {
+    metadata: {
+      total,
+      limit,
+      offset,
+    },
+    data: results,
+  };
 }
 
 async function getGroupAncestors(group_id) {
@@ -761,6 +779,35 @@ async function getGroupDescendants(group_id) {
   return descendants.map(({ depth, descendant }) => ({ depth, ...descendant }));
 }
 
+async function getMyGroups({ user_id, archived = null }) {
+  // archived=true will return only archived groups
+  // archived=false will return only active groups
+  // archived not provided will return all groups regardless of archived status
+  const where = {
+    is_archived: archived ?? Prisma.skip,
+    members: {
+      some: {
+        user_id,
+      },
+    },
+  };
+  const groups = await prisma.group.findMany({
+    where,
+    include: {
+      ancestor_edges: true,
+    },
+  });
+  const total = await prisma.group.count({
+    where,
+  });
+  return {
+    metadata: {
+      total,
+    },
+    data: groups,
+  };
+}
+
 module.exports = {
   createGroup,
   createChildGroup,
@@ -779,4 +826,5 @@ module.exports = {
   searchGroupsForUser,
   getGroupAncestors,
   getGroupDescendants,
+  getMyGroups,
 };

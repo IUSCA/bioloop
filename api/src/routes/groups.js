@@ -2,7 +2,6 @@ const express = require('express');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
-const { Prisma } = require('@prisma/client');
 const assert = require('assert');
 const { isUUID } = require('validator');
 
@@ -40,27 +39,16 @@ router.get(
     // query('include_ancestors').optional().isBoolean().toBoolean(),
   ]),
   asyncHandler(async (req, res) => {
-  // #swagger.tags = ['Groups']
-  // #swagger.summary = 'List all groups the user has access to'
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'List all groups the user has access to'
 
-    // archived=true will return only archived groups
-    // archived=false will return only active groups
-    // archived not provided will return all groups regardless of archived status
-    const groups = await prisma.group.findMany({
-      where: {
-        is_archived: req.query.archived ?? Prisma.skip,
-        members: {
-          some: {
-            user_id: req.user.id,
-          },
-        },
-      },
-      include: {
-        ancestor_edges: true,
-      },
+    const { metadata, data } = await groupService.getMyGroups({
+      user_id: req.user.id,
+      archived: req.query.archived,
+      // include_ancestors: req.query.include_ancestors,
     });
     // TODO: attribute filter
-    res.json(groups);
+    res.json({ metadata, data });
   }),
 );
 
@@ -95,14 +83,15 @@ router.post(
       delete params.search_term;
     }
 
-    let groups;
+    let promise;
     if (isPlatformAdmin) {
-      groups = await groupService.searchAllGroups(params);
+      promise = groupService.searchAllGroups(params);
     } else {
-      groups = await groupService.searchGroupsForUser({ ...params, user_id: req.user.id });
+      promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.id });
     }
+    const { metadata, data } = await promise;
     // TODO: attribute filter
-    res.json(groups);
+    res.json({ metadata, data });
   }),
 );
 
@@ -252,9 +241,12 @@ router.get(
     const { id } = req.params;
     const { limit, offset } = req.query;
 
-    const members = await groupService.listGroupMembers(id, { limit, offset });
-    const filteredMembers = members.map((m) => req.permission.filter(m));
-    res.json(filteredMembers);
+    const { metadata, data } = await groupService.listGroupMembers(id, { limit, offset });
+    const filteredMembers = data.map((m) => req.permission.filter(m));
+    res.json({
+      metadata,
+      data: filteredMembers,
+    });
   }),
 );
 
@@ -470,11 +462,11 @@ router.get(
     const {
       limit, offset, sort_by, sort_order,
     } = req.query;
-    const collections = await collectionService.findCollectionsByOwnerGroup({
+    const { metadata, data } = await collectionService.findCollectionsByOwnerGroup({
       group_id: id, limit, offset, sort_by, sort_order,
     });
-    const filteredCollections = collections.map((c) => req.permission.filter(c));
-    res.json(filteredCollections);
+    const filteredCollections = data.map((c) => req.permission.filter(c));
+    res.json({ metadata, data: filteredCollections });
   }),
 );
 
@@ -497,11 +489,11 @@ router.get(
     const {
       limit, offset, sort_by, sort_order,
     } = req.query;
-    const datasets = await datasetService.getDatasetsByOwnerGroup({
+    const { metadata, data } = await datasetService.getDatasetsByOwnerGroup({
       group_id: id, limit, offset, sort_by, sort_order,
     });
-    const filteredDatasets = datasets.map((d) => req.permission.filter(d));
-    res.json(filteredDatasets);
+    const filteredDatasets = data.map((d) => req.permission.filter(d));
+    res.json({ metadata, data: filteredDatasets });
   }),
 );
 

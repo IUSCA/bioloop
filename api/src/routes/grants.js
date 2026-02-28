@@ -29,6 +29,14 @@ function validateSubjectId(subject_type, subject_id) {
 // List grants (filtered by user authority)
 // router.get('/');
 
+router.get(
+  '/access-types',
+  asyncHandler(async (req, res) => {
+    const accessTypes = await grantService.listAccessTypes();
+    res.json(accessTypes);
+  }),
+);
+
 // Create a grant
 router.post(
   '/',
@@ -119,10 +127,24 @@ router.get(
   }),
   asyncHandler(async (req, res) => {
     const { subjectType, subjectId } = req.params;
+    const {
+      active, offset, limit, sort_by, sort_order,
+    } = req.query;
 
-    const grants = await grantService.listGrantsForSubject(subjectType, subjectId);
-    const filteredGrants = grants.map((g) => req.permission.filter(g));
-    res.json(filteredGrants);
+    const grants = await grantService.listGrantsForSubject({
+      subjectType,
+      subjectId,
+      active,
+      offset,
+      limit,
+      sort_by,
+      sort_order,
+    });
+    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
+    res.json({
+      metadata: grants.metadata,
+      data: filteredGrants,
+    });
   }),
 );
 
@@ -132,6 +154,11 @@ router.get(
   validate([
     param('resourceType').isIn(['DATASET', 'COLLECTION']),
     param('resourceId').isInt(),
+    query('active').optional().isBoolean().toBoolean(),
+    query('offset').default(0).isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_resource', {
     resourceIdFn: (req) => req.params.resourceId,
@@ -142,9 +169,18 @@ router.get(
   }),
   asyncHandler(async (req, res) => {
     const { resourceType, resourceId } = req.params;
-    const grants = await grantService.listGrantsForResource(resourceType, resourceId);
-    const filteredGrants = grants.map((g) => req.permission.filter(g));
-    res.json(filteredGrants);
+    const {
+      active, offset, limit, sort_by, sort_order,
+    } = req.query;
+
+    const grants = await grantService.listGrantsForResource({
+      resourceType, resourceId, active, offset, limit, sort_by, sort_order,
+    });
+    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
+    res.json({
+      metadata: grants.metadata,
+      data: filteredGrants,
+    });
   }),
 );
 

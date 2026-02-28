@@ -24,26 +24,27 @@ router.use(authenticate);
  * as a call to the `/datasets/:datasetId` API.
  */
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
-  router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
+  router.use('/datasets/uploads', uploadRouter);
 }
 
-router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/statistics', require('./statistics') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/notifications', require('./notifications') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/instruments', require('./instruments') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/groups', require('./groups') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/collections', require('./collections') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/access-requests', require('./access_requests') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/datasets/v2', require('./datasets_v2') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/datasets', require('./datasets'));
+router.use('/metrics', require('./metrics'));
+router.use('/users', require('./users'));
+router.use('/workflows', require('./workflows'));
+router.use('/projects', require('./projects'));
+router.use('/statistics', require('./statistics'));
+router.use('/notifications', require('./notifications'));
+router.use('/instruments', require('./instruments'));
+router.use('/uploads', require('./uploads'));
+router.use('/alerts', require('./alerts'));
+router.use('/groups', require('./groups'));
+router.use('/collections', require('./collections'));
+router.use('/access-requests', require('./access_requests'));
+router.use('/datasets/v2', require('./datasets_v2'));
+router.use('/grants', require('./grants'));
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {
-  router.use('/fs', fsRouter /* #swagger.security = [{"BearerAuth": []}] */);
+  router.use('/fs', fsRouter);
 }
 
 module.exports = router;

@@ -562,7 +562,7 @@ async function getRequestsByUser({
   if (status) {
     where.status = status;
   }
-  return prisma.access_request.findMany({
+  const data = await prisma.access_request.findMany({
     where,
     include: {
       access_request_items: {
@@ -578,8 +578,16 @@ async function getRequestsByUser({
     },
     skip: offset,
     take: limit,
-
   });
+  const total = await prisma.access_request.count({ where });
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
 }
 
 // assume sort_by, sort_order, offset, limit are validated and passed as parameters
@@ -587,34 +595,39 @@ async function getRequestsPendingReviewForUser({
   reviewer_id, sort_by, sort_order, offset, limit,
 }) {
   const sql = Prisma.sql`
-    WITH reviewer_as_admin_of_groups AS (
-      SELECT gu.group_id
-      FROM group_user gu
-      WHERE gu.user_id = ${reviewer_id}
-        AND gu.role = 'ADMIN'
-    )
-    SELECT ar.id
-    FROM access_request ar
-    WHERE ar.status = 'UNDER_REVIEW'
-      AND ( ar.resource_type = 'DATASET' AND ar.resource_id IN (
-            SELECT d.id
-            FROM dataset d
-            JOIN reviewer_as_admin_of_groups rag ON d.owner_group_id = rag.group_id
-          )
-        OR ar.resource_type = 'COLLECTION' AND ar.resource_id IN (
-            SELECT c.id
-            FROM collection c
-            JOIN reviewer_as_admin_of_groups rag ON c.owner_group_id = rag.group_id
-          )
+    WITH results AS (
+      WITH reviewer_as_admin_of_groups AS (
+        SELECT gu.group_id
+        FROM group_user gu
+        WHERE gu.user_id = ${reviewer_id}
+          AND gu.role = 'ADMIN'
       )
-    ORDER BY ar.${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+      SELECT *
+      FROM access_request ar
+      WHERE ar.status = 'UNDER_REVIEW'
+        AND ( ar.resource_type = 'DATASET' AND ar.resource_id IN (
+              SELECT d.id
+              FROM dataset d
+              JOIN reviewer_as_admin_of_groups rag ON d.owner_group_id = rag.group_id
+            )
+          OR ar.resource_type = 'COLLECTION' AND ar.resource_id IN (
+              SELECT c.id
+              FROM collection c
+              JOIN reviewer_as_admin_of_groups rag ON c.owner_group_id = rag.group_id
+            )
+        )
+    )
+    SELECT id, count(*) OVER () as total_count
+    FROM results
+    ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     OFFSET ${offset}
     LIMIT ${limit}
   `;
   const result = await prisma.$queryRaw(sql);
+  const total = Number(result.length > 0 ? result[0].total_count : 0);
   const requestIds = result.map((row) => row.id);
 
-  return prisma.access_request.findMany({
+  const data = prisma.access_request.findMany({
     where: { id: { in: requestIds } },
     include: {
       access_request_items: {
@@ -627,12 +640,13 @@ async function getRequestsPendingReviewForUser({
       collection_resource: true,
     },
   });
+  return { metadata: { total, offset, limit }, data };
 }
 
 async function getReviewedRequestsByUser(user_id, {
   sort_by, sort_order, offset, limit,
 }) {
-  return prisma.access_request.findMany({
+  const data = await prisma.access_request.findMany({
     where: {
       reviewed_by: user_id,
     },
@@ -652,6 +666,19 @@ async function getReviewedRequestsByUser(user_id, {
     skip: offset,
     take: limit,
   });
+  const total = await prisma.access_request.count({
+    where: {
+      reviewed_by: user_id,
+    },
+  });
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
 }
 
 module.exports = {

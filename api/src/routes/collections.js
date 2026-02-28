@@ -1,5 +1,5 @@
 const express = require('express');
-const { param, body } = require('express-validator');
+const { param, body, query } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
 // const { Prisma } = require('@prisma/client');
@@ -37,9 +37,19 @@ router.post(
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order', 'is_archived',
     ])(req.body);
 
-    const collections = await collectionService.searchCollectionsForUser({ ...params, user_id: req.user.id });
+    // if user is platform admin, search all groups, otherwise search only groups the user has access to
+    const isPlatformAdmin = req.user?.roles?.includes('admin') === true;
+
+    let promise;
+    if (isPlatformAdmin) {
+      promise = collectionService.searchAllCollections(params);
+    } else {
+      promise = collectionService.searchCollectionsForUser({ ...params, user_id: req.user.id });
+    }
+
+    const { metadata, data } = await promise;
     // TODO: attribute filter
-    res.json(collections);
+    res.json({ metadata, data });
   }),
 );
 
@@ -131,15 +141,25 @@ router.get(
   '/:id/datasets',
   validate([
     param('id').isInt().toInt(),
+    query('limit').default(100).isInt({ min: 1 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('collection', 'list_datasets'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'List datasets in a collection'
 
-    const datasets = await collectionService.listDatasetsInCollection(req.params.id);
-    const filteredDatasets = datasets.map((d) => req.permission.filter(d));
-    res.json(filteredDatasets);
+    const { metadata, data } = await collectionService.listDatasetsInCollection({
+      collection_id: req.params.id,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      sort_by: req.query.sort_by,
+      sort_order: req.query.sort_order,
+    });
+    const filteredDatasets = data.map((d) => req.permission.filter(d));
+    res.json({ metadata, data: filteredDatasets });
   }),
 );
 

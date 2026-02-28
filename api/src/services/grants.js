@@ -357,20 +357,100 @@ async function getGrantById(grant_id) {
   });
 }
 
-async function listGrantsForSubject(subject_type, subject_id) {
-  return prisma.grant.findMany({
-    where: {
-      subject_type,
-      subject_id: subject_id.toString(),
-    },
-  });
+function getPrismaGrantValidityFilter(active) {
+  const where = {};
+  if (active !== undefined && active !== null) {
+    if (active === true) {
+      where.revoked_at = null;
+      where.valid_from = { lte: new Date() };
+      where.OR = [
+        { valid_until: null },
+        { valid_until: { gt: new Date() } },
+      ];
+    } else if (active === false) {
+      where.OR = [
+        { revoked_at: { not: null } },
+        { valid_from: { gt: new Date() } },
+        { valid_until: { lte: new Date() } },
+      ];
+    }
+  }
+  return where;
 }
 
-async function listGrantsForResource(resource_type, resource_id) {
-  return prisma.grant.findMany({
-    where: {
-      resource_type,
-      resource_id: resource_id.toString(),
+async function listGrantsForSubject({
+  subject_type, subject_id,
+  active,
+  offset,
+  limit,
+  sort_by,
+  sort_order,
+}) {
+  const where = {
+    subject_type,
+    subject_id: subject_id.toString(),
+  };
+  Object.assign(where, getPrismaGrantValidityFilter(active));
+
+  const data = await prisma.grant.findMany({
+    where,
+    skip: offset,
+    take: limit,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+  const total = await prisma.grant.count({
+    where,
+  });
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
+}
+
+async function listGrantsForResource({
+  resource_type, resource_id,
+  active,
+  offset,
+  limit,
+  sort_by,
+  sort_order,
+}) {
+  const where = {
+    resource_type,
+    resource_id: resource_id.toString(),
+  };
+  Object.assign(where, getPrismaGrantValidityFilter(active));
+  const data = await prisma.grant.findMany({
+    where,
+    skip: offset,
+    take: limit,
+    orderBy: {
+      [sort_by]: sort_order,
+    },
+  });
+  const total = await prisma.grant.count({
+    where,
+  });
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
+}
+
+async function listAccessTypes() {
+  return prisma.grant_access_type.findMany({
+    orderBy: {
+      name: 'asc',
     },
   });
 }
@@ -395,4 +475,5 @@ module.exports = {
   getGrantById,
   listGrantsForSubject,
   listGrantsForResource,
+  listAccessTypes,
 };

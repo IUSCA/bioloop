@@ -1,8 +1,11 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /* eslint-disable no-console */
 require('module-alias/register');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
+const { GRANT_ACCESS_TYPES } = require('../constants');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
@@ -39,13 +42,14 @@ async function update_seq(table) {
 }
 
 async function main() {
-  await Promise.allSettled(roles.map((role) => prisma.role.upsert({
-    where: { id: role.id },
-    create: role,
-    update: role,
-  })));
+  for (const role of roles) {
+    await prisma.role.upsert({
+      where: { id: role.id },
+      create: role,
+      update: role,
+    });
+  }
 
-  // eslint-disable-next-line no-console
   console.log(`created ${roles.length} roles`);
 
   // Create default admins
@@ -86,23 +90,33 @@ async function main() {
     },
   }));
 
-  const promises = admins
-    .concat(operators)
-    .concat(users)
-    .map((user) => prisma.user.upsert({
+  for (const user of admins.concat(operators).concat(users)) {
+    await prisma.user.upsert({
       where: { email: user.email },
       update: {},
       create: user,
-    }));
-
-  await Promise.all(promises);
+    });
+  }
 
   console.log(`created ${admins.length} administrators`);
   console.log(`created ${operators.length} operators`);
   console.log(`created ${users.length} users`);
 
-  const tables = ['user', 'role'];
-  await Promise.all(tables.map(update_seq));
+  // Upsert grant access types
+  for (const gat of GRANT_ACCESS_TYPES) {
+    await prisma.grant_access_type.upsert({
+      where: { id: gat.id },
+      update: {},
+      create: gat,
+    });
+  }
+
+  console.log(`created ${GRANT_ACCESS_TYPES.length} grant access types`);
+
+  const tables = ['user', 'role', 'grant_access_type'];
+  for (const table of tables) {
+    await update_seq(table);
+  }
 }
 
 main()

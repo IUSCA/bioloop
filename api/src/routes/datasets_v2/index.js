@@ -299,14 +299,15 @@ router.get(
       limit, offset, sort_by, sort_order,
     } = req.query;
 
-    const collections = await collectionService.findCollectionsByDataset({
+    const { metadata, data } = await collectionService.findCollectionsByDataset({
       dataset_id: id,
       limit,
       offset,
       sort_by,
       sort_order,
     });
-    res.json(collections);
+    const filteredCollections = data.map((c) => req.permission.filter(c));
+    res.json({ metadata, data: filteredCollections });
   }),
 );
 
