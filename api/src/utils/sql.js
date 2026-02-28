@@ -5,8 +5,7 @@ function safeSqlJoin(clauses, separator = ' AND ') {
   if (nonEmptyClauses.length === 0) {
     return Prisma.empty;
   }
-  const joinedClauses = Prisma.join(nonEmptyClauses, separator);
-  return Prisma.sql`${joinedClauses}`;
+  return Prisma.join(nonEmptyClauses, separator);
 }
 
 module.exports = {

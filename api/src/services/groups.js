@@ -690,10 +690,13 @@ async function searchGroupsForUser({
     `;
   }
 
-  const finalWhereClause = sqlUtils.safeSqlJoin(
+  const joinedClauses = sqlUtils.safeSqlJoin(
     [searchClause, idFilterClause, archivedClause, membershipClause],
     ' AND ',
   );
+  const finalWhereClause = joinedClauses === Prisma.empty
+    ? Prisma.empty
+    : Prisma.sql`WHERE ${joinedClauses}`;
 
   // Groups they are members of
   // Parent groups of those groups

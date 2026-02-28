@@ -206,14 +206,101 @@ async function updateAccessRequest(request_id, requester_id, data) {
 }
 
 /**
+ * Throws if the requester already holds an active (non-revoked, currently valid) direct USER grant
+ * for any of the access types in this request.
+ * Group-mediated access is intentionally excluded — the user may still want a personal grant.
+ * @param {Object} request - access_request with access_request_items included
+ */
+async function _assertNoActiveGrants(request) {
+  const now = new Date();
+  const itemAccessTypeIds = request.access_request_items.map((item) => item.access_type_id);
+
+  const conflicting = await prisma.grant.findMany({
+    where: {
+      subject_type: 'USER',
+      subject_id: String(request.requester_id),
+      resource_type: request.resource_type,
+      resource_id: request.resource_id,
+      access_type_id: { in: itemAccessTypeIds },
+      revoked_at: null,
+      valid_from: { lte: now },
+      OR: [
+        { valid_until: null },
+        { valid_until: { gt: now } },
+      ],
+    },
+    select: { access_type_id: true },
+  });
+
+  if (conflicting.length > 0) {
+    const ids = [...new Set(conflicting.map((g) => g.access_type_id))];
+    throw createError.Conflict(
+      `Access is already granted for access_type_id(s): ${ids.join(', ')}`,
+    );
+  }
+}
+
+/**
+ * Throws if the requester already has another DRAFT or UNDER_REVIEW request for the same
+ * resource that overlaps with any of the access types in this request.
+ * @param {Object} request - access_request with access_request_items included
+ */
+async function _assertNoInFlightRequests(request) {
+  const itemAccessTypeIds = request.access_request_items.map((item) => item.access_type_id);
+
+  const conflicting = await prisma.access_request.findMany({
+    where: {
+      id: { not: request.id },
+      requester_id: request.requester_id,
+      resource_type: request.resource_type,
+      resource_id: request.resource_id,
+      status: { in: ['DRAFT', 'UNDER_REVIEW'] },
+      access_request_items: {
+        some: { access_type_id: { in: itemAccessTypeIds } },
+      },
+    },
+    include: {
+      // Only include the overlapping items so we can report them
+      access_request_items: {
+        where: { access_type_id: { in: itemAccessTypeIds } },
+        select: { access_type_id: true },
+      },
+    },
+  });
+
+  if (conflicting.length > 0) {
+    const conflictingTypeIds = [...new Set(
+      conflicting.flatMap((r) => r.access_request_items.map((i) => i.access_type_id)),
+    )];
+    const requestIds = conflicting.map((r) => r.id);
+    throw createError.Conflict(
+      `A pending request already exists for access_type_id(s): ${conflictingTypeIds.join(', ')}`
+      + ` (request id(s): ${requestIds.join(', ')})`,
+    );
+  }
+}
+
+/**
  * Submit a DRAFT request for review
  * @param {string} request_id
  * @param {number} requester_id
  * @returns {Promise<Object>} Updated access request
  */
 async function submitRequest(request_id, requester_id) {
+  // Fetch the request with items for pre-flight validation
+  const request = await _getRequestById(prisma, request_id);
+  if (!request || request.status !== 'DRAFT') {
+    throw createError.Conflict('Request is no longer in DRAFT status');
+  }
+
+  // 1. Reject if the requester already holds active grants for any requested access type
+  await _assertNoActiveGrants(request);
+
+  // 2. Reject if another in-flight request covers any of the same access types
+  await _assertNoInFlightRequests(request);
+
   return prisma.$transaction(async (tx) => {
-    // Update status to UNDER_REVIEW
+    // Update status to UNDER_REVIEW — WHERE status='DRAFT' guards against concurrent submit races
     const updated = await tx.access_request.updateMany({
       where: {
         id: request_id,
@@ -290,8 +377,8 @@ function _updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
 
 function _createGrant(tx, currentRequest, reviewItem, granted_by) {
   const data = {
-    subject_type: currentRequest.subject_type,
-    subject_id: currentRequest.subject_id,
+    subject_type: 'USER',
+    subject_id: String(currentRequest.requester_id),
     resource_type: currentRequest.resource_type,
     resource_id: currentRequest.resource_id,
     access_type_id: reviewItem.access_type_id,

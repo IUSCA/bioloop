@@ -19,6 +19,7 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
+const { GRANT_ACCESS_TYPES } = require('../src/constants');
 
 const prisma = new PrismaClient();
 
@@ -271,10 +272,6 @@ async function main() {
   await put_dataset_files({ dataset_id: 7, num_files: 100, max_depth: 1 });
   await put_dataset_files({ dataset_id: 8, num_files: 100 });
 
-  // update the auto increment id's sequence numbers
-  const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact'];
-  await Promise.all(tables.map(update_seq));
-
   // add metrics
   // delete first to not overwrite data.
   await prisma.metric.deleteMany();
@@ -305,6 +302,15 @@ async function main() {
   await prisma.stage_request_log.createMany({
     data: stage_request_logs,
   });
+
+  // upsert grant access types
+  await Promise.all(
+    GRANT_ACCESS_TYPES.map((gat) => prisma.grant_access_type.upsert({
+      where: { id: gat.id },
+      update: {},
+      create: gat,
+    })),
+  );
 
   // create instruments
   // delete pre-existing records
@@ -410,6 +416,17 @@ async function main() {
       );
     })),
   );
+
+  /**
+   * @note ⚠️ IMPORTANT: Always keep the sequence number update code at the end of this function.
+   * The `update_seq` calls must execute after all data operations are complete to ensure
+   * auto-increment ID sequences are properly synchronized with the database state.
+   * Failure to do so may result in ID conflicts and errors in subsequent database operations.
+   */
+
+  // update the auto increment id's sequence numbers
+  const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type'];
+  await Promise.all(tables.map(update_seq));
 }
 
 main()

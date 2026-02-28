@@ -116,62 +116,6 @@ async function createGrant(data, granted_by, txn = null) {
 }
 
 /**
- * Create grants in a batch for multiple access types (one for each access type) - useful for access request approvals.
- * Each grant will be created in a single transaction, so either all succeed or all fail.
- * @param {Object} data
- * @param {string} data.subject_type - 'USER' or 'GROUP'
- * @param {string} data.subject_id - User ID or Group ID
- * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
- * @param {string} data.resource_id
- * @param {string[]} data.access_types - GRANT_ACCESS_TYPE enum
- * @param {Date} [data.valid_from] - Defaults to now
- * @param {Date} [data.valid_until] - Expiration date
- * @param {number} granted_by - Actor user ID
- * @param {string} [data.justification] - Optional justification for the grant creation
- * @returns {Promise<Object>} Created grants
- */
-async function createGrantsBatch(data) {
-  return prisma.$transaction(async (tx) => {
-    let createdGrants;
-    try {
-      createdGrants = await tx.grant.createManyAndReturn({
-        data: data.access_types.map((access_type) => ({
-          subject_type: data.subject_type,
-          subject_id: data.subject_id,
-          resource_type: data.resource_type,
-          resource_id: data.resource_id,
-          access_type,
-          valid_from: data.valid_from ?? Prisma.skip,
-          valid_until: data.valid_until ?? Prisma.skip,
-          granted_by: data.granted_by,
-          justification: data.justification ?? Prisma.skip,
-        })),
-        select: {
-          id: true,
-        },
-      });
-    } catch (e) {
-      if (e instanceof Prisma.PrismaClientUnknownRequestError && e.message.includes('grant_no_overlap')) {
-        throw createError(409, GRANT_OVERLAP_ERROR_MSG);
-      }
-      throw e;
-    }
-
-    // create audit records for each created grant
-    await tx.authorization_audit.createMany({
-      data: createdGrants.map((grant) => ({
-        event_type: AUTH_EVENT_TYPE.GRANT_CREATED,
-        actor_id: data.granted_by,
-        target_type: 'grant',
-        target_id: grant.id,
-      })),
-    });
-
-    return createdGrants;
-  });
-}
-
-/**
  * Revoke a grant
  * @param {string} grant_id
  * @param {number} actor_id
@@ -183,7 +127,7 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
     const revokedGrant = await tx.grant.update({
       where: { id: grant_id },
       data: {
-        revoked: true,
+        revoked_at: new Date(),
         revoked_by: actor_id,
         justification: reason ?? Prisma.skip,
       },
@@ -515,7 +459,6 @@ async function listAccessTypes() {
 
 module.exports = {
   createGrant,
-  createGrantsBatch,
   revokeGrant,
 
   // grants to a user for a dataset
