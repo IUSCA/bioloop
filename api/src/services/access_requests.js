@@ -8,7 +8,6 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const ConflictError = require('@/services/errors/ConflictError');
 const StateMachine = require('@/services/stateMachine');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
@@ -169,7 +168,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
 
     // Only DRAFT requests can be updated
     if (currentRequest.status !== 'DRAFT') {
-      throw new ConflictError('Only DRAFT requests can be updated');
+      throw createError.Conflict('Only DRAFT requests can be updated');
     }
 
     // Update request metadata
@@ -230,9 +229,10 @@ async function updateAccessRequest(request_id, requester_id, data) {
  */
 async function submitRequest(request_id, requester_id) {
   return prisma.$transaction(async (tx) => {
-    // Fetch current request
+    // Fetch current request with its items for duplicate checking
     const currentRequest = await tx.access_request.findUniqueOrThrow({
       where: { id: request_id },
+      include: { access_request_items: true },
     });
 
     // Verify requester owns this request
@@ -244,7 +244,31 @@ async function submitRequest(request_id, requester_id) {
     const fsm = getFSM(currentRequest.status);
     const { allowed } = fsm.canPerformAction({ action: 'SUBMIT', role: 'REQUESTER' });
     if (!allowed) {
-      throw new ConflictError(`Cannot submit request from ${currentRequest.status} status`);
+      throw createError.Conflict(`Cannot submit request from ${currentRequest.status} status`);
+    }
+
+    // Prevent submitting a duplicate: check for another UNDER_REVIEW request from the
+    // same requester for the same resource that shares at least one access_type_id.
+    const currentAccessTypeIds = new Set(currentRequest.access_request_items.map((i) => i.access_type_id));
+    const duplicateRequest = await tx.access_request.findFirst({
+      where: {
+        id: { not: request_id },
+        requester_id,
+        resource_type: currentRequest.resource_type,
+        resource_id: currentRequest.resource_id,
+        status: 'UNDER_REVIEW',
+        access_request_items: {
+          some: {
+            access_type_id: { in: [...currentAccessTypeIds] },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    if (duplicateRequest) {
+      throw createError.Conflict(
+        'An access request for the same resource and access type is already under review',
+      );
     }
 
     // Update status to UNDER_REVIEW
@@ -284,14 +308,14 @@ async function submitRequest(request_id, requester_id) {
 function validateReview(currentRequest, item_decisions) {
   // Validate state - must be UNDER_REVIEW
   if (currentRequest.status !== 'UNDER_REVIEW') {
-    throw new ConflictError('Only requests UNDER_REVIEW can be reviewed');
+    throw createError.Conflict('Only requests UNDER_REVIEW can be reviewed');
   }
 
   // Validate all item IDs belong to this request
   const requestItemIds = new Set(currentRequest.access_request_items.map((item) => item.id));
   const decisionItemIds = new Set(item_decisions.map((d) => d.id));
   if (!setsEqual(requestItemIds, decisionItemIds)) {
-    throw new ConflictError('Decisions must be provided for all items in the request');
+    throw createError.Conflict('Decisions must be provided for all items in the request');
   }
 }
 
@@ -461,7 +485,7 @@ async function withdrawRequest({ request_id, requester_id }) {
     const fsm = getFSM(currentRequest.status);
     const { allowed } = fsm.canPerformAction({ action: 'WITHDRAW', role: 'REQUESTER' });
     if (!allowed) {
-      throw new ConflictError(`Cannot withdraw request from ${currentRequest.status} status`);
+      throw createError.Conflict(`Cannot withdraw request from ${currentRequest.status} status`);
     }
 
     // Update status to WITHDRAWN

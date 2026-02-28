@@ -4,7 +4,6 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
-const ConflictError = require('@/services/errors/ConflictError');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const grantService = require('@/services/grants');
 
@@ -75,7 +74,7 @@ async function createCollection(data, { actor_id }) {
  * @param {Object} [data.metadata] - Metadata updates to merge with existing metadata (optional)
  * @param {number} expected_version - The version of the collection that the client expects to update. Must match the current version in the database for the update to succeed.
  * @returns {Promise<Object>} Updated collection object
- * @throws {ConflictError} If the expected_version does not match the current version in the database, indicating a concurrent modification
+ * @throws {createError.Conflict} If the expected_version does not match the current version in the database, indicating a concurrent modification
  */
 async function updateCollectionMetadata(collection_id, { data, expected_version }) {
   return prisma.$transaction(async (tx) => {
@@ -86,7 +85,7 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
 
     // if current collection is archived, prevent any updates
     if (currentCollection.is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     // if name is being updated, generate a new slug, otherwise keep existing slug
@@ -120,7 +119,7 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError
         && (e.code === 'P2025' || e.code === 'P2015')) {
-        throw new ConflictError(CONFLICT_ERROR_MESSAGE);
+        throw createError.Conflict(CONFLICT_ERROR_MESSAGE);
       }
       throw e;
     }
@@ -266,7 +265,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     }
     const { is_archived } = collectionRows[0];
     if (is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     const createdRecords = await tx.$queryRaw`
@@ -317,7 +316,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     }
     const { is_archived } = collectionRows[0];
     if (is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     const removedRecords = await tx.$queryRaw`

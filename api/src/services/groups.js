@@ -5,7 +5,6 @@ const createError = require('http-errors');
 const prisma = require('@/db');
 
 const { generate_slug } = require('@/utils/slug');
-const ConflictError = require('@/services/errors/ConflictError');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const sqlUtils = require('@/utils/sql');
 
@@ -209,7 +208,7 @@ async function createChildGroup(parent_id, data, actor_id) {
  * @param {number} params.actor_id - User performing the update (for audit)
  * @param {number} params.expected_version - Expected current version for optimistic concurrency control
  * @returns {Promise<Object>} Updated group object
- * @throws {ConflictError} If the update fails due to concurrent modification
+ * @throws {createError.Conflict} If the update fails due to concurrent modification
  */
 async function updateGroupMetadata(group_id, { data, expected_version }) {
   return prisma.$transaction(async (tx) => {
@@ -221,7 +220,7 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
 
     // ensure group is not archived before allowing metadata updates
     if (currentGroup.is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     if (data.name && data.name !== currentGroup.name) {
@@ -257,7 +256,7 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError
         && (e.code === 'P2025' || e.code === 'P2015')) {
-        throw new ConflictError(CONFLICT_ERROR_MESSAGE);
+        throw createError.Conflict(CONFLICT_ERROR_MESSAGE);
       }
       throw e;
     }
@@ -386,7 +385,7 @@ async function removeGroupMembers(group_id, {
       throw createError.NotFound('Group not found');
     }
     if (groupRecords[0].is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     const deletedRecords = await tx.$queryRaw`
@@ -434,7 +433,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       throw createError.NotFound('Group not found');
     }
     if (groupRows[0].is_archived) {
-      throw new ConflictError(ARCHIVED_ERROR_MESSAGE);
+      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
     const createdRecords = await tx.$queryRaw`
@@ -470,7 +469,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
  * @param {number} data.user_id - ID of the user to promote
  * @param {number} data.actor_id - Admin performing the action
  * @returns {Promise<Object>} Updated membership object
- * @throws {ConflictError} If the user is not a member of the group
+ * @throws {createError.Conflict} If the user is not a member of the group
  */
 async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
@@ -486,7 +485,7 @@ async function promoteGroupMemberToAdmin(group_id, {
     });
 
     if (!membership) {
-      throw new ConflictError('User is not a member of the group.');
+      throw createError.Conflict('User is not a member of the group.');
     }
     if (membership.role === 'ADMIN') {
       return membership;
@@ -527,7 +526,7 @@ async function promoteGroupMemberToAdmin(group_id, {
  * @param {number} data.user_id - ID of the user to demote
  * @param {number} data.actor_id - Admin performing the action
  * @returns {Promise<Object>} Updated membership object
- * @throws {ConflictError} If the user is not a member of the group
+ * @throws {createError.Conflict} If the user is not a member of the group
  */
 async function removeGroupAdmin(group_id, {
   user_id, actor_id,
@@ -543,7 +542,7 @@ async function removeGroupAdmin(group_id, {
     });
 
     if (!membership) {
-      throw new ConflictError('User is not a member of the group.');
+      throw createError.Conflict('User is not a member of the group.');
     }
     if (membership.role === 'MEMBER') {
       return membership;

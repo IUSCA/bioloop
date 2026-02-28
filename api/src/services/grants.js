@@ -4,6 +4,7 @@
  */
 
 const { Prisma } = require('@prisma/client');
+const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
@@ -13,20 +14,72 @@ const { EVERYONE_GROUP_ID } = require('@/constants');
 // Grant Creation
 // ============================================================================
 
-async function _createGrant(tx, data, granted_by) {
-  const grant = await tx.grant.create({
-    data: {
+const GRANT_OVERLAP_ERROR_MSG = 'An active grant with overlapping validity already exists'
+  + ' for this subject, resource, and access type';
+
+/**
+ * Check whether a non-revoked grant already exists that would overlap with the requested validity window.
+ * Uses half-open interval semantics [valid_from, valid_until) matching the DB exclusion constraint.
+ * Kept as an explicit pre-flight helper for callers that want early ORM-level feedback before hitting the DB.
+ */
+// eslint-disable-next-line no-unused-vars
+async function _assertNoOverlappingGrant(tx, data) {
+  const newFrom = data.valid_from ? new Date(data.valid_from) : new Date();
+  const newUntil = data.valid_until ? new Date(data.valid_until) : null;
+
+  // Overlap condition for [newFrom, newUntil) vs [existingFrom, existingUntil):
+  //   existingFrom < newUntil  (infinity if newUntil is null → always true)
+  //   newFrom < existingUntil  (infinity if existingUntil is null → always true)
+  const conflicting = await tx.grant.findFirst({
+    where: {
       subject_type: data.subject_type,
-      subject_id: data.subject_id,
+      subject_id: data.subject_id.toString(),
       resource_type: data.resource_type,
-      resource_id: data.resource_id,
-      access_type_id: data.access_type_id,
-      valid_from: data.valid_from ?? Prisma.skip,
-      valid_until: data.valid_until ?? Prisma.skip,
-      granted_by,
-      justification: data.justification ?? Prisma.skip,
+      resource_id: Number(data.resource_id),
+      access_type_id: Number(data.access_type_id),
+      revoked_at: null,
+      AND: [
+        // existingFrom < newUntil (skip if newUntil is null → ∞, so always overlaps)
+        ...(newUntil ? [{ valid_from: { lt: newUntil } }] : []),
+        // newFrom < existingUntil (existingUntil null → ∞, so always overlaps)
+        {
+          OR: [
+            { valid_until: null },
+            { valid_until: { gt: newFrom } },
+          ],
+        },
+      ],
     },
+    select: { id: true },
   });
+
+  if (conflicting) {
+    throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
+  }
+}
+
+async function _createGrant(tx, data, granted_by) {
+  let grant;
+  try {
+    grant = await tx.grant.create({
+      data: {
+        subject_type: data.subject_type,
+        subject_id: data.subject_id,
+        resource_type: data.resource_type,
+        resource_id: data.resource_id,
+        access_type_id: data.access_type_id,
+        valid_from: data.valid_from ?? Prisma.skip,
+        valid_until: data.valid_until ?? Prisma.skip,
+        granted_by,
+        justification: data.justification ?? Prisma.skip,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientUnknownRequestError && e.message.includes('grant_no_overlap')) {
+      throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
+    }
+    throw e;
+  }
 
   // create audit record for grant creation
   await tx.authorization_audit.create({
@@ -79,22 +132,30 @@ async function createGrant(data, granted_by, txn = null) {
  */
 async function createGrantsBatch(data) {
   return prisma.$transaction(async (tx) => {
-    const createdGrants = await tx.grant.createManyAndReturn({
-      data: data.access_types.map((access_type) => ({
-        subject_type: data.subject_type,
-        subject_id: data.subject_id,
-        resource_type: data.resource_type,
-        resource_id: data.resource_id,
-        access_type,
-        valid_from: data.valid_from ?? Prisma.skip,
-        valid_until: data.valid_until ?? Prisma.skip,
-        granted_by: data.granted_by,
-        justification: data.justification ?? Prisma.skip,
-      })),
-      select: {
-        id: true,
-      },
-    });
+    let createdGrants;
+    try {
+      createdGrants = await tx.grant.createManyAndReturn({
+        data: data.access_types.map((access_type) => ({
+          subject_type: data.subject_type,
+          subject_id: data.subject_id,
+          resource_type: data.resource_type,
+          resource_id: data.resource_id,
+          access_type,
+          valid_from: data.valid_from ?? Prisma.skip,
+          valid_until: data.valid_until ?? Prisma.skip,
+          granted_by: data.granted_by,
+          justification: data.justification ?? Prisma.skip,
+        })),
+        select: {
+          id: true,
+        },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientUnknownRequestError && e.message.includes('grant_no_overlap')) {
+        throw createError(409, GRANT_OVERLAP_ERROR_MSG);
+      }
+      throw e;
+    }
 
     // create audit records for each created grant
     await tx.authorization_audit.createMany({
