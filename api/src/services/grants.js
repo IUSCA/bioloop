@@ -156,7 +156,7 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
  * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
  * @returns {Prisma.sql} SQL query to fetch the desired data
  */
-function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access_types } = {}) {
+function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access_types = [] } = {}) {
   // find grants for a user and dataset, including grants via group membership and collection-level grants
   // grant - user, dataset
   // grant - user, collection containing dataset
@@ -214,7 +214,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
 }
 
 // Similar helper for collections
-function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', access_types } = {}) {
+function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', access_types = [] } = {}) {
   // find grants for a user and collection, including grants via group membership
   // grant - user, collection
   // grant - group (user is member), collection
@@ -332,6 +332,25 @@ async function getUserDatasetAccessTypes(user_id, dataset_id) {
   const sql = userDatasetsQuery(user_id, dataset_id, { return_type: 'access_types' });
   const results = await prisma.$queryRaw(sql);
   return results.map((r) => r.access_type);
+}
+
+/**
+ * Get all active grant access types for a user on any resource type in a single query.
+ * Returns a Set<string> for O(1) membership tests inside policy evaluate() functions.
+ * Covers direct-user grants, group-membership grants, and (for datasets) collection-level grants.
+ *
+ * @param {number}          user_id       - User id
+ * @param {string|number}   resource_id   - Dataset or Collection id
+ * @param {'DATASET'|'COLLECTION'} resource_type
+ * @returns {Promise<Set<string>>} Set of active access-type names (e.g. {'view_metadata','download'})
+ */
+async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_type) {
+  const sql = resource_type === 'COLLECTION'
+    ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types' })
+    : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types' });
+
+  const results = await prisma.$queryRaw(sql);
+  return new Set(results.map((r) => r.access_type));
 }
 
 async function userHasGrant({
@@ -464,6 +483,7 @@ module.exports = {
   // grants to a user for a dataset
   getUserDatasetGrants,
   getUserDatasetAccessTypes,
+  getUserGrantAccessTypesForUser,
 
   // existence check for a grant to a user for a resource and access type(s)
   userHasGrant,

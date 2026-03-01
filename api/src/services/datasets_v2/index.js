@@ -450,7 +450,7 @@ async function userHasGrant({ user_id, dataset_id, access_type }) {
     user_id,
     resource_type: 'DATASET',
     resource_id: dataset_id,
-    access_type,
+    access_types: [access_type],
   });
 }
 
