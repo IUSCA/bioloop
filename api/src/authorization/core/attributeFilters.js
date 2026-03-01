@@ -34,7 +34,7 @@ const { Notation } = require('notation');
  * // If user is admin: returns ['*']
  * // If user is neither: returns []
  */
-async function evaluateAttributeFilters(rules, identifiers, hydrators, caches) {
+async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, contextId = null) {
   if (!rules || !Array.isArray(rules)) {
     throw new Error('Rules must be an array');
   }
@@ -72,8 +72,8 @@ async function evaluateAttributeFilters(rules, identifiers, hydrators, caches) {
         cache: caches.resource,
       }) : {},
 
-      hydrators.context && identifiers.context ? hydrators.context.hydrate({
-        id: identifiers.context,
+      hydrators.context ? hydrators.context.hydrate({
+        id: contextId,
         attributes: rule.policy.requires.context,
         cache: caches.context,
       }) : {},

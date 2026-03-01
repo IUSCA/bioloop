@@ -63,8 +63,6 @@ Collections are authorization containers.
 
 * `collection.view_metadata`
 
-(Collections do not expose data; they propagate dataset grants.)
-
 ---
 
 #### B. Governance (Ownership/Admin-Based)

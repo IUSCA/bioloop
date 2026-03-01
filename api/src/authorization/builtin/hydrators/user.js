@@ -3,9 +3,9 @@ const { Prisma } = require('@prisma/client');
 const prisma = require('@/db');
 
 const grantServices = require('@/services/grants');
-const { PrismaHydrate } = require('../../core/hydrators/PrismaHydrator');
+const { PrismaHydrator } = require('../../core/hydrators/PrismaHydrator');
 
-const userHydrator = new PrismaHydrate({ prismaClient: prisma, modelName: 'user', idAttribute: 'id' });
+const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user', idAttribute: 'id' });
 
 userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
@@ -28,7 +28,7 @@ userHydrator.registerVirtualAttribute('effective_group_ids', async ({ id, hydrat
   // find all groups the user is a direct member of, then find all ancestor groups of those groups using the
   // group_closure table
   const sql = Prisma.sql`
-    SELECT DISTINCT group_id
+    SELECT DISTINCT group_id as id
     FROM effective_user_groups
     WHERE user_id = ${id}
   `;
@@ -44,7 +44,7 @@ userHydrator.registerVirtualAttribute('oversight_group_ids', async ({ id, hydrat
 
   const dbClient = hydrator.prisma;
   const sql = Prisma.sql`
-    SELECT DISTINCT group_id
+    SELECT DISTINCT group_id as id
     FROM effective_user_oversight_groups
     WHERE user_id = ${id}
   `;

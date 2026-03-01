@@ -37,8 +37,6 @@ model group {
   name        String   @unique
   slug        String   @unique
   description String?
-  group_type  group_type @relation(fields: [group_type_id], references: [id])
-  group_type_id String
   
   // Lifecycle
   created_at  DateTime @default(now()) @db.Timestamp(6)
@@ -92,12 +90,6 @@ model group_user {
 enum GROUP_ROLE {
   MEMBER
   ADMIN
-}
-
-model group_type {
-  id          String @id // e.g. 'CENTER', 'CORE', 'LAB', etc.
-  display_name        String @unique // e.g. 'Center', 'Core Facility', 'Research Lab'
-  description String?
 }
 
 // ============================================================================
@@ -352,7 +344,7 @@ model authorization_audit {
   timestamp   DateTime @default(now()) @db.Timestamp(6)
   
   // Event type
-  event_type  AUTH_EVENT_TYPE
+  event_type  String
   
   // Actor
   actor_id    Int?
@@ -377,28 +369,28 @@ model authorization_audit {
   @@index([target_type, target_id])
 }
 
-enum AUTH_EVENT_TYPE {
-  ACCESS_CHECK      // Authorization decision was made
-  GRANT_CREATED
-  GRANT_REVOKED
-  GRANT_EXPIRED
-  REQUEST_CREATED
-  REQUEST_APPROVED
-  REQUEST_REJECTED
-  REQUEST_WITHDRAWN
-  GROUP_CREATED
-  GROUP_ARCHIVED
-  GROUP_REPARENTED
-  MEMBERSHIP_ADDED
-  MEMBERSHIP_REMOVED
-  ADMIN_ADDED
-  ADMIN_REMOVED
-  COLLECTION_CREATED
-  COLLECTION_DATASET_ADDED
-  COLLECTION_DATASET_REMOVED
-  DATASET_OWNERSHIP_TRANSFERRED
-  VISIBILITY_CHANGED
-}
+// enum AUTH_EVENT_TYPE {
+//   ACCESS_CHECK      // Authorization decision was made
+//   GRANT_CREATED
+//   GRANT_REVOKED
+//   GRANT_EXPIRED
+//   REQUEST_CREATED
+//   REQUEST_APPROVED
+//   REQUEST_REJECTED
+//   REQUEST_WITHDRAWN
+//   GROUP_CREATED
+//   GROUP_ARCHIVED
+//   GROUP_REPARENTED
+//   MEMBERSHIP_ADDED
+//   MEMBERSHIP_REMOVED
+//   ADMIN_ADDED
+//   ADMIN_REMOVED
+//   COLLECTION_CREATED
+//   COLLECTION_DATASET_ADDED
+//   COLLECTION_DATASET_REMOVED
+//   DATASET_OWNERSHIP_TRANSFERRED
+//   VISIBILITY_CHANGED
+// }
 ```
 
 ---
@@ -422,7 +414,6 @@ enum AUTH_EVENT_TYPE {
  * @param {Object} data - Group creation data
  * @param {string} data.name - Group name (unique)
  * @param {string} data.slug - URL-friendly identifier
- * @param {string} data.group_type - GROUP_TYPE enum value
  * @param {string} [data.description] - Optional description
  * @param {boolean} [data.allow_user_contributions] - Whether users can upload
  * @param {Object} [data.metadata] - Additional metadata
@@ -1659,3 +1650,138 @@ api/
 ---
 
 This implementation spec provides the complete data model, service layer structure, route definitions, and policy framework needed to implement the hierarchical groups and access control system. All function signatures follow existing codebase patterns while introducing the new authorization primitives defined in the design documents.
+
+
+Feature out of scope for initial phase:
+- transfer ownership of datasets and collections
+- group reparenting
+- access request renewal
+
+
+SQL
+
+```sql
+-- create "Everyone" system group
+INSERT INTO "group" (id, name, slug, description, allow_user_contributions) 
+VALUES ('00000000-0000-0000-0000-000000000000', 'Everyone', 'everyone', 'System principal representing all authenticated users. Cannot be deleted or modified.', false);
+
+-- Prevent deletion of "Everyone" group
+CREATE OR REPLACE RULE prevent_everyone_delete AS
+  ON DELETE TO "group"
+  WHERE OLD.id = '00000000-0000-0000-0000-000000000000'
+  DO INSTEAD NOTHING;
+
+-- Prevent members from being added to "Everyone" group
+ALTER TABLE group_user 
+  ADD CONSTRAINT no_everyone_members 
+  CHECK (group_id != '00000000-0000-0000-0000-000000000000');
+
+-- Prevent hierarchy relationships involving "Everyone" group
+ALTER TABLE group_closure 
+  ADD CONSTRAINT no_everyone_hierarchy 
+  CHECK (
+    ancestor_id != '00000000-0000-0000-0000-000000000000' 
+    AND descendant_id != '00000000-0000-0000-0000-000000000000'
+  );
+```
+
+Edit table authorization_audit
+```
+PARTITION BY RANGE (timestamp);
+```
+
+```sql
+-- create monthly partitions for the next 10 years
+DO $$
+DECLARE
+    start_year INT := EXTRACT(YEAR FROM CURRENT_DATE);
+    end_year INT := start_year + 9;
+    year INT;
+    month INT;
+    next_month INT;
+    next_year INT;
+BEGIN
+    FOR year IN start_year..end_year LOOP
+        FOR month IN 1..12 LOOP
+            next_month := month + 1;
+            next_year := year;
+            IF next_month > 12 THEN
+                next_month := 1;
+                next_year := year + 1;
+            END IF;
+            
+            EXECUTE format('
+                CREATE TABLE IF NOT EXISTS authorization_audit_%s_%s PARTITION OF authorization_audit
+                FOR VALUES FROM (''%s-%s-01 00:00:00'') TO (''%s-%s-01 00:00:00'');
+            ', year, LPAD(month::TEXT, 2, '0'), year, LPAD(month::TEXT, 2, '0'), next_year, LPAD(next_month::TEXT, 2, '0'));
+        END LOOP;
+    END LOOP;
+END $$;
+
+-- create default partition for old records
+CREATE TABLE IF NOT EXISTS authorization_audit_default PARTITION OF authorization_audit DEFAULT;
+```
+
+```sql
+CREATE OR REPLACE VIEW effective_user_groups AS
+SELECT
+  gu.user_id,
+  gc.ancestor_id AS group_id
+FROM group_user gu
+-- walk up the closure table from each directly-joined group
+JOIN group_closure gc
+  ON gc.descendant_id = gu.group_id
+-- self-rows in closure table (depth=0) cover direct membership too
+
+--- Usage:
+-- SELECT DISTINCT group_id
+-- FROM effective_user_groups
+-- WHERE user_id = $1;
+
+
+CREATE OR REPLACE VIEW effective_user_oversight_groups AS
+SELECT
+  gu.user_id,
+  gc.descendant_id AS group_id
+FROM group_user gu
+JOIN group_closure gc 
+  ON gc.ancestor_id = gu.group_id -- walk DOWN the closure table from each admin group
+WHERE gu.role = 'ADMIN' -- only admins have oversight
+  AND gc.depth > 0; -- exclude self (you don't "oversee" your own group, you administer it)
+
+-- Usage:
+-- groups U has oversight over (strict descendants of groups U admins)
+-- SELECT DISTINCT group_id
+-- FROM effective_user_oversight_groups
+-- WHERE user_id = $1;
+
+-- valid_from is inclusive, valid_until is exclusive
+-- don't use valid_until >= now() elsewhere
+CREATE OR REPLACE VIEW valid_grants AS
+SELECT *
+FROM "grant" g
+WHERE g.valid_from <= now()
+  AND (g.valid_until IS NULL OR g.valid_until > now())
+  AND g.revoked_at IS NULL;
+
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+-- For the same (subject_type, subject_id, resource_type, resource_id, access_type_id) tuple, there must never exist two non-revoked grants whose validity intervals overlap.
+-- validity period checks: left inclusive, right exclusive
+-- [10:00, 11:00) and [11:00, 12:00) do NOT overlap
+ALTER TABLE "grant"
+ADD CONSTRAINT grant_no_overlap
+EXCLUDE USING gist (
+  subject_type WITH =,
+  subject_id WITH =,
+  resource_type WITH =,
+  resource_id WITH =,
+  access_type_id WITH =,
+  tstzrange(
+    valid_from,
+    COALESCE(valid_until, 'infinity'::timestamptz),
+    '[)'
+  ) WITH &&
+)
+WHERE revoked_at IS NULL;
+```

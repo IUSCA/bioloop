@@ -103,9 +103,9 @@ If your resource requires virtual attributes or custom hydration logic:
 
 ```javascript
 const prisma = require('@/db');
-const { PrismaHydrate } = require('../../../core/hydrators/PrismaHydrator');
+const { PrismaHydrator } = require('../../../core/hydrators/PrismaHydrator');
 
-const projectHydrator = new PrismaHydrate({ 
+const projectHydrator = new PrismaHydrator({ 
   prismaClient: prisma, 
   modelName: 'project', 
   idAttribute: 'id' 

@@ -323,18 +323,6 @@ async function getUserDatasetGrants(user_id, dataset_id, { access_types } = {}) 
 }
 
 /**
- * * Get access types for a user and dataset via grants (including group and collection grants)
- * @param {number} user_id
- * @param {string} dataset_id
- * @returns {Promise<string[]>} List of access types the user has for the dataset
- */
-async function getUserDatasetAccessTypes(user_id, dataset_id) {
-  const sql = userDatasetsQuery(user_id, dataset_id, { return_type: 'access_types' });
-  const results = await prisma.$queryRaw(sql);
-  return results.map((r) => r.access_type);
-}
-
-/**
  * Get all active grant access types for a user on any resource type in a single query.
  * Returns a Set<string> for O(1) membership tests inside policy evaluate() functions.
  * Covers direct-user grants, group-membership grants, and (for datasets) collection-level grants.
@@ -356,17 +344,9 @@ async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_typ
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,
 }) {
-  if (resource_type === 'COLLECTION') {
-    // check if user has grant for the collection directly or via group membership
-    const sql = userCollectionsQuery(
-      user_id,
-      resource_id,
-      { return_type: 'access_types', access_types },
-    );
-    const results = await prisma.$queryRaw(sql);
-    return results.length > 0;
-  }
-  const sql = userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
+  const sql = resource_type === 'COLLECTION'
+    ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types', access_types })
+    : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
 
   const results = await prisma.$queryRaw(sql);
   return results.length > 0;
@@ -482,7 +462,6 @@ module.exports = {
 
   // grants to a user for a dataset
   getUserDatasetGrants,
-  getUserDatasetAccessTypes,
   getUserGrantAccessTypesForUser,
 
   // existence check for a grant to a user for a resource and access type(s)

@@ -302,3 +302,41 @@ router.get('/posts', async (req, res) => {
   res.json(posts.map(post => permission.filter(post)));
 });
 ```
+
+
+```javascript
+/**
+ * Retrieves a policy function for a given model and action
+ *
+ * Resolves policies from the code-based POLICY_REGISTRY and config-based RBAC_POLICIES.
+ * When both exist, behavior depends on enforceBoth:
+ * - true: Returns a combined function requiring both policies to pass
+ * - false: Returns the code-based policy (higher priority)
+ *
+ * @param {string} model - The model name (e.g., 'post')
+ * @param {string} action - The action name (e.g., 'create', 'read', 'update', 'delete')
+ * @param {boolean} [enforceBoth=false] - Whether to enforce both code and config policies when both are present
+ * @returns {Function|null} Policy function with signature (user, resource, ctx) => boolean, or null if not found
+ *
+ */
+function getPolicy(model, action, enforceBoth = false) {
+  const codePolicy = POLICY_REGISTRY[model]?.actions?.[action] || null;
+
+  const configPolicy = RBAC_POLICIES[model]?.actions?.[action] || null;
+
+  // if both exist, and enforceBoth is true, combine them, else return codePolicy
+  if (codePolicy && configPolicy) {
+    if (enforceBoth) {
+      return (user, resource, ctx = {}) => {
+        const configResult = configPolicy(user, resource, ctx);
+        if (!configResult) return false;
+        return codePolicy(user, resource, ctx);
+      };
+    }
+    return codePolicy;
+  }
+
+  return codePolicy || configPolicy || null;
+}
+
+```

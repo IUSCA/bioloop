@@ -41,8 +41,8 @@ const hasGroupOversight = new GroupPolicy({
   evaluate: (user, group) => user.oversight_group_ids.includes(group.id),
 });
 
-const canAccessOwnedResources = new GroupPolicy({
-  name: 'canAccessOwnedResources',
+const canAccessResourcesOwnedByGroup = new GroupPolicy({
+  name: 'canAccessResourcesOwnedByGroup',
   requires: {
     user: ['accessible_owner_group_ids'], // ids of groups that own resources U has grants on
     resource: ['id'],
@@ -65,7 +65,7 @@ groupPolicies
     archive: isPlatformAdmin,
     unarchive: isPlatformAdmin,
 
-    view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessOwnedResources]),
+    view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
     edit_metadata: Policy.or([isPlatformAdmin, isGroupAdmin]),
 
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
@@ -95,7 +95,7 @@ groupPolicies
         ],
       },
       {
-        policy: canAccessOwnedResources,
+        policy: canAccessResourcesOwnedByGroup,
         attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived'],
       },
     ],

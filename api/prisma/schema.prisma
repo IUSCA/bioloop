@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["strictUndefinedChecks"]
+  previewFeatures = ["strictUndefinedChecks", "views"]
 }
 
 datasource db {
@@ -9,7 +9,7 @@ datasource db {
 }
 
 model dataset {
-  id                Int                 @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   name              String
   type              String
   num_directories   Int?
@@ -18,26 +18,34 @@ model dataset {
   size              BigInt?
   bundle_size       BigInt?
   description       String?
-  created_at        DateTime            @default(now()) @db.Timestamp(6)
-  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamp(6)
   origin_path       String?
   archive_path      String?
   staged_path       String?
-  is_deleted        Boolean             @default(false)
-  is_staged         Boolean             @default(false)
+  is_deleted        Boolean  @default(false)
+  is_staged         Boolean  @default(false)
   metadata          Json?
-  workflows         workflow[]
-  files             dataset_file[]
-  audit_logs        dataset_audit[]
-  states            dataset_state[]
-  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
-  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
-  projects          project_dataset[]
-  accesses          data_access_log[]
-  stage_requests    stage_request_log[]
-  bundle            bundle?
-  src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
+  owner_group_id    String?
+
+  workflows        workflow[]
+  files            dataset_file[]
+  audit_logs       dataset_audit[]
+  states           dataset_state[]
+  derived_datasets dataset_hierarchy[] @relation("source_datasets")
+  source_datasets  dataset_hierarchy[] @relation("derived_datasets")
+  projects         project_dataset[]
+  accesses         data_access_log[]
+  stage_requests   stage_request_log[]
+  bundle           bundle?
+  src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
+
+  owner_group     group?                      @relation(fields: [owner_group_id], references: [id])
+  collections     collection_dataset[]
+  grants          grant[]                     @relation("dataset_grants")
+  access_requests access_request[]            @relation("dataset_requests")
+  contributions   user_dataset_contribution[]
 
   @@unique([name, type, is_deleted])
 }
@@ -189,6 +197,16 @@ model user {
   owned_projects             project[]
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
+
+  group_memberships         group_user[]                @relation("user_memberships")
+  memberships_assigned      group_user[]                @relation("membership_assignor")
+  collection_datasets_added collection_dataset[]        @relation("collection_dataset_adder")
+  grants_created            grant[]                     @relation("grants_created")
+  grants_revoked            grant[]                     @relation("grants_revoked")
+  access_requests           access_request[]            @relation("access_requests_created")
+  access_requests_reviewed  access_request[]            @relation("access_requests_reviewed")
+  authorization_audits      authorization_audit[]
+  contributions             user_dataset_contribution[]
 }
 
 model user_password {
@@ -411,6 +429,422 @@ model alert {
   end_time      DateTime?  @db.Timestamp(6)
   is_hidden     Boolean?   @default(false)
 }
+
+// ============================================================================
+// Hierarchical Groups, Collections, and Data Access Control Models
+// ============================================================================
+
+// created everyone group and added rules to protect modification in migration script
+model group {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+
+  // Lifecycle
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  archived_at DateTime? @db.Timestamp(6)
+  is_archived Boolean   @default(false)
+  version     Int       @default(1) // For optimistic concurrency control
+
+  // Settings
+  allow_user_contributions Boolean @default(false)
+  metadata                 Json?
+
+  // Relations
+  members           group_user[]
+  ancestor_edges    group_closure[]             @relation("group_ancestors")
+  descendant_edges  group_closure[]             @relation("group_descendants")
+  owned_datasets    dataset[]
+  owned_collections collection[]
+  contributions     user_dataset_contribution[]
+}
+
+// Closure table for efficient hierarchy traversal
+model group_closure {
+  ancestor_id   String
+  descendant_id String
+  depth         Int
+
+  ancestor   group @relation("group_ancestors", fields: [ancestor_id], references: [id], onDelete: Cascade)
+  descendant group @relation("group_descendants", fields: [descendant_id], references: [id], onDelete: Cascade)
+
+  @@id([ancestor_id, descendant_id])
+  @@index([descendant_id, depth])
+  @@index([ancestor_id, depth])
+}
+
+// Group membership with roles
+model group_user {
+  group_id    String
+  user_id     Int
+  role        GROUP_MEMBER_ROLE @default(MEMBER)
+  assigned_at DateTime          @default(now()) @db.Timestamp(6)
+  assigned_by Int?
+
+  group    group @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  user     user  @relation("user_memberships", fields: [user_id], references: [id], onDelete: Cascade)
+  assignor user? @relation("membership_assignor", fields: [assigned_by], references: [id], onDelete: SetNull)
+
+  @@id([group_id, user_id])
+  @@index([user_id])
+}
+
+enum GROUP_MEMBER_ROLE {
+  MEMBER
+  ADMIN
+}
+
+model user_dataset_contribution {
+  id         Int      @id @default(autoincrement())
+  group_id   String
+  user_id    Int
+  dataset_id Int
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  group   group   @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  user    user    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  dataset dataset @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+
+  @@unique([group_id, user_id, dataset_id])
+  @@index([group_id])
+  @@index([user_id])
+  @@index([dataset_id])
+}
+
+// ============================================================================
+// COLLECTIONS - Authorization containers for datasets
+// ============================================================================
+
+model collection {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String?
+  version     Int     @default(1) // For optimistic concurrency control
+
+  // Ownership (single owning group)
+  owner_group_id String
+  owner_group    group  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+
+  // Lifecycle
+  created_at  DateTime  @default(now()) @db.Timestamp(6)
+  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  archived_at DateTime? @db.Timestamp(6)
+  is_archived Boolean   @default(false)
+
+  // Settings
+  metadata Json?
+
+  // Relations
+  datasets        collection_dataset[]
+  grants          grant[]              @relation("collection_grants")
+  access_requests access_request[]     @relation("collection_requests")
+
+  @@index([owner_group_id])
+  @@index([is_archived])
+}
+
+model collection_dataset {
+  collection_id Int
+  dataset_id    Int
+  added_at      DateTime @default(now()) @db.Timestamp(6)
+  added_by      Int?
+
+  collection collection @relation(fields: [collection_id], references: [id], onDelete: Cascade)
+  dataset    dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  adder      user?      @relation("collection_dataset_adder", fields: [added_by], references: [id], onDelete: SetNull)
+
+  @@id([collection_id, dataset_id])
+  @@index([dataset_id])
+}
+
+// ============================================================================
+// GRANTS - Durable authorization facts
+//
+// Has an exclusion constraint to prevent overlapping grants. Defined in the migration script.
+// For the same (subject_type, subject_id, resource_type, resource_id, access_type_id) tuple, 
+// there must never exist two non-revoked grants whose validity intervals overlap.
+// ============================================================================
+
+model grant {
+  id String @id @default(uuid())
+
+  // Subject (who receives access)
+  subject_type GRANT_SUBJECT_TYPE
+  subject_id   String // user.id or group.id (as string)
+
+  // Resource (what is being accessed)
+  resource_type GRANT_RESOURCE_TYPE
+  resource_id   Int // dataset.id or collection.id
+
+  // Access type (what action is allowed) - atomic granularity by design
+  access_type_id Int
+  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Cascade)
+
+  // Temporal bounds
+  valid_from  DateTime  @default(now()) @db.Timestamp(6)
+  valid_until DateTime? @db.Timestamp(6)
+
+  // Provenance
+  granted_by    Int
+  justification String? // Optional justification for the grant creation or revocation
+  created_at    DateTime            @default(now()) @db.Timestamp(6)
+  revoked_at    DateTime?           @db.Timestamp(6)
+  revoked_by    Int?
+  creation_type GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
+
+  // Relations
+  grantor user  @relation("grants_created", fields: [granted_by], references: [id], onDelete: Restrict)
+  revoker user? @relation("grants_revoked", fields: [revoked_by], references: [id], onDelete: SetNull)
+
+  // Resource relations (nullable because of polymorphic reference)
+  dataset_resource    dataset?    @relation("dataset_grants", fields: [resource_id], references: [id], onDelete: Cascade, map: "dataset_resource_id")
+  collection_resource collection? @relation("collection_grants", fields: [resource_id], references: [id], onDelete: Cascade, map: "collection_resource_id")
+
+  // If created via access request approval, link back to the request item that led to this grant
+  accessRequestItems access_request_item[]
+
+  @@index([subject_type, subject_id])
+  @@index([resource_type, resource_id])
+  @@index([valid_from, valid_until])
+}
+
+// view active_grants {
+//   id             String
+//   subject_type   GRANT_SUBJECT_TYPE
+//   subject_id     String
+//   resource_type  GRANT_RESOURCE_TYPE
+//   resource_id    Int
+//   access_type_id Int
+//   valid_from     DateTime
+//   valid_until    DateTime?
+// }
+
+enum GRANT_SUBJECT_TYPE {
+  USER
+  GROUP
+}
+
+enum GRANT_RESOURCE_TYPE {
+  DATASET
+  COLLECTION
+}
+
+// enum GRANT_ACCESS_TYPE {
+//   // Dataset consumption actions (grantable)
+//   VIEW_METADATA
+//   VIEW_SENSITIVE_METADATA
+//   READ_DATA
+//   DOWNLOAD
+//   COMPUTE
+// }
+
+enum GRANT_CREATION_TYPE {
+  ACCESS_REQUEST
+  MANUAL
+  SYSTEM_BOOTSTRAP
+}
+
+model grant_access_type {
+  id            Int                 @id @default(autoincrement())
+  name          String
+  description   String?
+  resource_type GRANT_RESOURCE_TYPE
+
+  grants             grant[]
+  accessRequestItems access_request_item[]
+
+  @@unique([name, resource_type])
+}
+
+// ============================================================================
+// ACCESS REQUESTS - Workflow objects (not authorization primitives)
+// ============================================================================
+
+model access_request {
+  id String @id @default(uuid())
+
+  // Request type
+  type ACCESS_REQUEST_TYPE
+
+  // Target resource
+  resource_type GRANT_RESOURCE_TYPE
+  resource_id   Int
+
+  // Requester
+  requester_id Int
+  requester    user @relation("access_requests_created", fields: [requester_id], references: [id], onDelete: Cascade)
+
+  // Justification
+  purpose String?
+
+  // Prior context (for renewals)
+  previous_grant_ids String[] // References expired grants
+
+  // Status
+  status ACCESS_REQUEST_STATUS @default(DRAFT)
+
+  // Review
+  reviewed_by     Int?
+  reviewed_at     DateTime? @db.Timestamp(6)
+  decision_reason String?
+
+  // Lifecycle
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  updated_at   DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  submitted_at DateTime? @db.Timestamp(6)
+  closed_at    DateTime? @db.Timestamp(6)
+
+  // Relations
+  reviewer user? @relation("access_requests_reviewed", fields: [reviewed_by], references: [id], onDelete: SetNull)
+
+  // Resource relations
+  dataset_resource     dataset?              @relation("dataset_requests", fields: [resource_id], references: [id], onDelete: Cascade, map: "dataset_resource_id")
+  collection_resource  collection?           @relation("collection_requests", fields: [resource_id], references: [id], onDelete: Cascade, map: "collection_resource_id")
+  access_request_items access_request_item[]
+
+  @@index([requester_id, status])
+  @@index([resource_type, resource_id, status])
+  @@index([status, submitted_at])
+}
+
+model access_request_item {
+  id                String                       @id @default(uuid())
+  access_request_id String
+  access_type_id    Int // What was requested
+  requested_until   DateTime?
+  decision          ACCESS_REQUEST_ITEM_DECISION @default(PENDING) // Review outcome
+  created_grant_id  String?
+
+  access_request access_request    @relation(fields: [access_request_id], references: [id], onDelete: Cascade)
+  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Cascade)
+  created_grant  grant?            @relation(fields: [created_grant_id], references: [id], onDelete: SetNull)
+
+  // Prevent Duplicate Items Inside Same Request
+  @@unique([access_request_id, access_type_id])
+}
+
+enum ACCESS_REQUEST_TYPE {
+  NEW
+  RENEWAL
+}
+
+enum ACCESS_REQUEST_STATUS {
+  DRAFT
+  UNDER_REVIEW
+  PARTIALLY_APPROVED
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ACCESS_REQUEST_ITEM_DECISION {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================================================
+// AUDIT LOG - Authorization events
+// ============================================================================
+
+// partitioned by timestamp in the migration
+// monthly partitions named like authorization_audit_2026_01, authorization_audit_2026_02, etc.
+model authorization_audit {
+  id        Int      @default(autoincrement())
+  timestamp DateTime @default(now()) @db.Timestamp(6)
+
+  // Event type
+  event_type String
+
+  // Actor
+  actor_id Int?
+  actor    user? @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+
+  // Target
+  target_type String // 'user', 'group', 'dataset', 'collection', 'grant'
+  target_id   String
+
+  // Details
+  action   String? // 'create', 'revoke', 'approve', 'reparent', etc.
+  metadata Json?
+
+  // Authorization decision context (for access checks)
+  resource_type String?
+  resource_id   String?
+  decision      Boolean?
+  reason        String?
+
+  @@id([id, timestamp]) // include timestamp in primary key to allow partitioning by time
+  @@index([event_type, timestamp])
+  @@index([actor_id])
+  @@index([target_type, target_id])
+}
+
+// ============================================================================
+// AUTHORITY TRANSFERS - Ownership mutation workflow
+// ============================================================================
+
+model authority_transfer {
+  id String @id @default(uuid())
+
+  // Generic resource reference
+  resource_type AUTH_RESOURCE_TYPE
+  resource_id   String
+
+  // Ownership mutation
+  source_principal_type PRINCIPAL_TYPE
+  source_principal_id   String
+
+  target_principal_type PRINCIPAL_TYPE
+  target_principal_id   String
+
+  proposed_by Int
+  reason      String?
+
+  status AUTH_TRANSFER_STATUS @default(PENDING)
+
+  // Approval tracking
+  source_approved_at DateTime?
+  source_approved_by Int?
+
+  target_approved_at DateTime?
+  target_approved_by Int?
+
+  executed_at DateTime?
+  executed_by Int?
+
+  cancelled_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+enum PRINCIPAL_TYPE {
+  USER
+  GROUP
+}
+
+enum AUTH_RESOURCE_TYPE {
+  DATASET
+  COLLECTION
+}
+
+enum AUTH_TRANSFER_STATUS {
+  PENDING
+  SOURCE_APPROVED
+  TARGET_APPROVED
+  APPROVED // both sides approved
+  EXECUTED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+// ================ END OF GROUPS AND AUTHORIZATION MODELS ================
 
 enum access_type {
   BROWSER

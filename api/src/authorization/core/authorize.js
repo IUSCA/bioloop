@@ -11,80 +11,6 @@ class AuthorizationError extends Error {
 }
 
 /**
- * Authorizes access based on a policy by evaluating user, resource, and context data.
- *
- * @async
- * @param {Object} options - Authorization options object.
- * @param {Policy} options.policy - The authorization policy to evaluate.
- * @param {Object} options.identifiers - The identifiers for hydration.
- * @param {string|number} options.identifiers.user - The user identifier.
- * @param {string|number} options.identifiers.resource - The resource identifier.
- * @param {HydratorRegistry} options.registry - The service registry for obtaining hydrators.
- * @param {Object} [options.policyExecutionContext=null] - Optional execution context containing cached data.
- * @param {Object} [options.policyExecutionContext.cache] - Cached hydration data.
- * @param {Object} [options.policyExecutionContext.cache.user] - Cached user data.
- * @param {Object} [options.policyExecutionContext.cache.resource] - Cached resource data.
- * @param {Object} [options.preFetched=null] - Optional pre-fetched data to use instead of hydrating.
- * @param {Object} [options.preFetched.user] - Pre-fetched user data.
- * @param {Object} [options.preFetched.resource] - Pre-fetched resource data.
- * @param {Object} [options.preFetched.context] - Pre-fetched context data.
- * @returns {Promise<boolean>} The authorization decision result.
- */
-async function authorize({
-  policy, identifiers, registry, policyExecutionContext = null, preFetched = null,
-}) {
-  if (!policy || !(policy instanceof Policy)) {
-    throw new AuthorizationError('Invalid policy: must be an instance of Policy');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new AuthorizationError(`[policy:${policy.name}] Invalid identifiers: must be an object`);
-  }
-  if (!registry || !(registry instanceof HydratorRegistry)) {
-    throw new AuthorizationError(`[policy:${policy.name}] Invalid registry: must be an instance of HydratorRegistry`);
-  }
-  if (identifiers.user == null) {
-    throw new AuthorizationError(`[policy:${policy.name}] User identifier is required to evaluate policy`);
-  }
-
-  const userHydrator = registry.get('user');
-  const contextHydrator = registry.get('context');
-
-  let resourceHydrator = null;
-  if (policy.resourceType != null) {
-    resourceHydrator = registry.get(policy.resourceType);
-  }
-
-  const [user, resource, context] = await Promise.all([
-    userHydrator.hydrate({
-      id: identifiers.user,
-      attributes: policy.requires.user,
-      cache: policyExecutionContext?.cache?.user || new Map(),
-      preFetched: preFetched?.user,
-    }),
-
-    resourceHydrator ? resourceHydrator.hydrate({
-      id: identifiers.resource,
-      attributes: policy.requires.resource,
-      cache: policyExecutionContext?.cache?.resource || new Map(),
-      preFetched: preFetched?.resource,
-    }) : {},
-
-    contextHydrator.hydrate({
-      id: null,
-      attributes: policy.requires.context,
-      cache: policyExecutionContext?.cache?.context || new Map(),
-      preFetched: preFetched?.context,
-    }),
-  ]);
-
-  // console.debug('user:', JSON.stringify(user, null, 2));
-  // console.debug('resource:', JSON.stringify(resource, null, 2), { isHydrated: resourceHydrator !== null });
-  // console.debug('context:', JSON.stringify(context, null, 2));
-
-  return policy.evaluate(user, resource, context);
-}
-
-/**
  * Authorizes access with attribute filtering support
  * Phase 1: Evaluates action policy (reuses standard authorize logic)
  * Phase 2: If granted, evaluates attribute filter rules with incremental hydration
@@ -203,7 +129,7 @@ async function authorizeWithFilters({
     }) : {},
 
     contextHydrator.hydrate({
-      id: null,
+      id: { ...identifiers, resourceType: policy.resourceType },
       attributes: policy.requires.context,
       cache: caches.context,
       preFetched: preFetched?.context,
@@ -230,7 +156,10 @@ async function authorizeWithFilters({
   }
 
   // PHASE 2: Action granted - evaluate attribute filtering rules
-  // This reuses the caches populated in Phase 1 and does incremental hydration
+  // This reuses the caches populated in Phase 1 and does incremental hydration.
+  // contextId is forwarded so the context hydrator uses the same cache key as Phase 1
+  // and finds active_grant_access_types already resolved (zero additional DB calls).
+  const contextId = { ...identifiers, resourceType: policy.resourceType };
   const hydrators = {
     user: userHydrator,
     resource: resourceHydrator,
@@ -242,6 +171,7 @@ async function authorizeWithFilters({
     identifiers,
     hydrators,
     caches,
+    contextId,
   );
 
   // Create the filter function
@@ -263,6 +193,5 @@ async function authorizeWithFilters({
 }
 
 module.exports = {
-  authorize,
   authorizeWithFilters,
 };

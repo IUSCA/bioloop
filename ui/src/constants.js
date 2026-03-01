@@ -26,6 +26,31 @@ const exports = {
           },
         ],
       },
+      // ── Governance (v2) ──────────────────────────────────────────────────
+      {
+        icon: "mdi-home-outline",
+        title: "Home",
+        path: "/v2/home",
+        test_id: "sidebar-v2-home",
+      },
+      {
+        icon: "mdi-account-group-outline",
+        title: "Groups",
+        path: "/v2/groups",
+        test_id: "sidebar-v2-groups",
+      },
+      {
+        icon: "mdi-folder-multiple-outline",
+        title: "Collections",
+        path: "/v2/collections",
+        test_id: "sidebar-v2-collections",
+      },
+      {
+        icon: "mdi-key-outline",
+        title: "Access",
+        path: "/v2/access",
+        test_id: "sidebar-v2-access",
+      },
     ],
     operator_items: [
       {
@@ -117,7 +142,14 @@ const exports = {
         test_id: "sidebar-logout",
       },
     ],
-    admin_items: [],
+    admin_items: [
+      {
+        icon: "mdi-shield-crown-outline",
+        title: "Admin",
+        path: "/v2/admin",
+        test_id: "sidebar-v2-admin",
+      },
+    ],
   },
   UPLOAD_STATUSES: {
     // Statuses that only appear in the UI

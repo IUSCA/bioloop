@@ -153,7 +153,7 @@ groupPolicies
 Hydrators fetch entity attributes needed by policies:
 
 ```javascript
-const userHydrator = new PrismaHydrate({ 
+const userHydrator = new PrismaHydrator({ 
   prismaClient: prisma, 
   modelName: 'user' 
 });
@@ -199,7 +199,7 @@ if (result.granted) {
 
 - **[core/policies/Policy.js](core/policies/Policy.js)**: Base Policy class with combinators
 - **[core/policies/PolicyContainer.js](core/policies/PolicyContainer.js)**: Container for organizing resource policies
-- **[core/hydrators/BaseHydrator.js](core/hydrators/BaseHydrator.js)**: Abstract Hydrate base class
+- **[core/hydrators/BaseHydrator.js](core/hydrators/BaseHydrator.js)**: Abstract Hydrator base class
 - **[core/hydrators/PrismaHydrator.js](core/hydrators/PrismaHydrator.js)**: Prisma-based hydrator with virtual attributes
 - **[core/hydrators/HydratorRegistry.js](core/hydrators/HydratorRegistry.js)**: Registry with auto-hydrator factory
 - **[core/authorize.js](core/authorize.js)**: Core `authorize()` and `authorizeWithFilters()` functions

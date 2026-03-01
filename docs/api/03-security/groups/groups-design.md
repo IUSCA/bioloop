@@ -303,7 +303,8 @@ Even “public” access is now durable, auditable, and revocable.
 
 Groups may be nested arbitrarily:
 
-* Center → Core → Lab → Sub‑Lab
+* Center → Core
+* Center → Lab → Sub‑Lab
 
 Hierarchy semantics:
 
@@ -397,6 +398,137 @@ When a group is reparented:
 * **No dataset grant authority changes**
 
 This ensures organizational restructuring does not accidentally shift data control.
+
+### 6.4 Archiving Groups
+
+#### Archiving Philosophy
+
+Archiving is **not deletion**. It represents a governance boundary that is organizationally closed but structurally and historically persistent.
+
+Deletion would:
+* Break auditability
+* Orphan datasets
+* Invalidate historical grant provenance
+* Destroy explainability of past decisions
+
+Archiving corresponds to institutional reality:
+* A lab shutting down
+* A grant expiring
+* A project being formally closed
+* A core being reorganized
+
+But closure does not mean erasure.
+
+#### What Archiving Preserves
+
+When a group is archived:
+
+* **Ownership remains intact**
+  * Datasets owned by the archived group remain owned by it
+  * No implicit ownership transfer occurs
+  * If ownership transfer is desired, it must be performed explicitly via the dual-consent model
+  * This preserves the invariant: authority changes require explicit action
+
+* **Grants remain valid**
+  * Grants granted **to** the group (giving access to group members) remain active
+  * Grants granted **by** the group (created under its governance authority) remain valid
+  * Dataset consumption grants remain active unless separately revoked or expired
+  * Archiving is structural; it does not retroactively mutate access
+
+* **Membership remains frozen**
+  * Existing membership is preserved
+  * No new members may be added
+  * No members may be removed
+  * This prevents silent access mutations that would violate auditability
+  * If institutional policy requires explicit membership revocation, that must be performed separately
+
+* **Hierarchy relationships remain intact**
+  * Parent-child relationships persist
+  * Ancestor admins retain oversight visibility over archived group
+  * Reparenting of archived groups is disallowed (see prohibitions below)
+
+#### What Archiving Prohibits
+
+When `group.is_archived = true`, the following actions are disallowed:
+
+**Membership and Admin Mutations:**
+* Add new members
+* Remove members
+* Add new admins
+* Modify admin list
+
+**Governance Authority:**
+* Create new grants for resources owned by the group
+* Revoke existing grants (except via platform admin for incident response)
+* Transfer ownership of datasets from the group (except via platform admin override)
+* Create new datasets owned by the group
+* Edit group metadata (except for archival notes or administrative timestamps)
+
+**Structural Mutations:**
+* Reparent the group
+* Modify parent-child relationships
+* Dataset creation with an archived group as owner must be rejected. Reason: Archive signals governance boundary closure. Allowing new assets under it defeats the lifecycle signal.
+* Create new collections owned by the group / delete existing collections owned by the group
+* Modify collection membership (add/remove datasets from collections owned by the group)
+
+
+#### Permitted Actions on Archived Groups
+
+For clarity, these actions **are** allowed:
+* View metadata
+* View members
+* Oversight visibility (ancestor admins over archived descendants)
+* Evaluate existing grants
+* Run audit reports and explain historical access decisions
+* Platform admin incident response (all actions, with audit trail)
+
+#### Reversibility: Unarchiving
+
+Archiving is reversible via explicit unarchive action:
+
+```
+Allow group.unarchive IF:
+  user is platform_admin
+  
+Deny group.unarchive IF:
+  user is not platform_admin
+```
+
+Unarchiving requires platform admin authority because:
+* It reactivates governance authority
+* It re-enables dataset creation and grant authority
+* It is a high-impact structural change
+
+Each unarchive event must emit an audit record with full provenance.
+
+#### ABAC Rules for Archived Groups
+
+```
+allow(user, action, group:archived) = 
+  (action ∈ {view, view_members, audit}) 
+  OR (user = platform_admin)
+  
+deny(user, action, group:archived) = 
+  (action ∈ {add_member, remove_member, grant_access, revoke_access, 
+              transfer_ownership, create_dataset, edit_metadata, reparent})
+  UNLESS user = platform_admin AND reason = incident_response
+```
+
+Summarized:
+
+| Action | Archived? | Allowed? | Authority |
+|--------|-----------|----------|--------|
+| View metadata | Yes | Yes | Anyone |
+| View members | Yes | Yes | Ancestors, admins, platform admin |
+| Audit | Yes | Yes | Admins, oversight, platform admin |
+| Add member | Yes | No | — |
+| Remove member | Yes | No | — |
+| Grant access | Yes | No | — |
+| Revoke access | Yes | No | Platform admin only |
+| Transfer ownership | Yes | No | Platform admin only |
+| Create dataset | Yes | No | — |
+| Edit metadata | Yes | No | — |
+| Reparent | Yes | No | — |
 
 ---
 
@@ -751,20 +883,25 @@ Platform admins may override any decision for incident response.
 
 ### 12.1 Groups
 
-* Creation
-* Reparenting (transactional closure update)
-* Archival (no new grants, history preserved)
+#### Creation
 
-#### Reparenting Safety
+Groups are created with `status = active`.
 
-Because admin authority is local only:
+#### Reparenting (Transactional Closure Update)
 
-* Reparenting changes oversight visibility
-* Reparenting does **not** change governance authority
-* No dataset access grants are affected
-* No ownership changes occur
+Reparenting updates the closure table and changes oversight visibility but does not modify governance authority.
 
-This is a critical safety property.
+#### Archival
+
+For complete archival semantics, see **Section 6.4: Archiving Groups**.
+
+Key points:
+* Ownership remains intact
+* Existing grants remain valid
+* Membership is frozen
+* No new governance authority may be exercised
+* No new datasets may be created with the archived group as owner
+* State is reversible via platform-admin unarchive
 
 ---
 

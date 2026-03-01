@@ -1,9 +1,9 @@
 // hydrator/PrismaHydrator.js
-const { Hydrate } = require('./BaseHydrator');
+const { Hydrator } = require('./BaseHydrator');
 const { modelFieldMap } = require('./schemaMap');
 const { HydrationError } = require('./errors');
 
-class PrismaHydrate extends Hydrate {
+class PrismaHydrator extends Hydrator {
   /* options:
     - prismaClient: instance of PrismaClient to use for fetching records
     - modelName: name of the Prisma model this hydrator is for
@@ -119,7 +119,7 @@ class PrismaHydrate extends Hydrate {
       throw new HydrationError(`[${this.model}] Cannot hydrate: preFetched must be an object`);
     }
 
-    const cacheKey = `${id}`;
+    const cacheKey = id != null ? `${id}` : 'global';
     if (!cache.has(cacheKey)) cache.set(cacheKey, {});
     const recordCache = cache.get(cacheKey);
 
@@ -151,20 +151,22 @@ class PrismaHydrate extends Hydrate {
       const payload = this._preparePrismaQueryPayload(id, classification.columns, classification.relations);
       const dbRecord = await this._fetchPrismaRecord(payload);
       Object.assign(recordCache, structuredClone(dbRecord));
-    } else {
+    } else if (id != null) {
       // if there are no columns or relations to fetch, we still want to set the ID in the cache for virtual loaders
       // that may depend on it
       recordCache[this.idAttribute] = id;
     }
 
     const virtualAttributesToResolve = classification.virtual.filter((v) => !(v in recordCache));
-    await Promise.all(virtualAttributesToResolve.map(async (v) => {
-      recordCache[v] = await this.virtualLoaders.get(v)({ id, recordCache, hydrator: this });
-    }));
+    if (virtualAttributesToResolve.length > 0) {
+      await Promise.all(virtualAttributesToResolve.map(async (v) => {
+        recordCache[v] = await this.virtualLoaders.get(v)({ id, recordCache, hydrator: this });
+      }));
+    }
 
     cache.set(cacheKey, recordCache);
     return recordCache;
   }
 }
 
-module.exports = { PrismaHydrate };
+module.exports = { PrismaHydrator };

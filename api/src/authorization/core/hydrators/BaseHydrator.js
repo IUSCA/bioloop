@@ -1,13 +1,13 @@
 /* eslint-disable no-unused-vars */
-class Hydrate {
+class Hydrator {
   constructor() {
-    if (new.target === Hydrate) {
-      throw new Error('Cannot instantiate abstract class Hydrate directly');
+    if (new.target === Hydrator) {
+      throw new Error('Cannot instantiate abstract class Hydrator directly');
     }
   }
 
   /**
-   * Hydrate the object of a given type.
+   * Hydrator the object of a given type.
    * @param {Object} options
    *   - id: identifier of the entity
    *   - attributes: array of attribute names to resolve
@@ -25,4 +25,4 @@ class Hydrate {
   }
 }
 
-module.exports = { Hydrate };
+module.exports = { Hydrator };

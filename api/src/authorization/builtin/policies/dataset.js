@@ -1,4 +1,3 @@
-const datasetService = require('@/services/datasets_v2');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { isPlatformAdmin } = require('./utils/index');
@@ -58,25 +57,18 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
  * Factory: returns a policy that checks whether the user has an active grant
  * of the specified access_type on this dataset.
  *
- * Grant resolution includes:
- *   - Direct user grants (subject_type = USER, subject_id = user.id)
- *   - Group grants where the user is a transitive member of the subject group
- *     (subject_type = GROUP, subject_id ∈ user.effective_group_ids)
- *
- * Temporal validity (valid_from, valid_until, revoked_at) is enforced
- * inside datasetService.userHasGrant.
+ * The check is a pure Set membership test against `context.active_grant_access_types`,
+ * a Set<string> pre-fetched once per request by the ContextHydrator virtual attribute
+ * `active_grant_access_types`.  No DB call fires inside evaluate().
  */
 const userHasGrant = (access_type) => new DatasetPolicy({
   name: `userHasGrant(${access_type})`,
   requires: {
-    user: ['id'],
-    resource: ['id'],
+    user: [],
+    resource: [],
+    context: ['active_grant_access_types'],
   },
-  evaluate: (user, dataset) => datasetService.userHasGrant({
-    user_id: user.id,
-    dataset_id: dataset.id,
-    access_type,
-  }),
+  evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
 });
 
 // ============================================================================

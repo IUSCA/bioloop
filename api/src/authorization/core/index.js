@@ -12,14 +12,15 @@ const PolicyContainer = require('./policies/PolicyContainer');
 const PolicyRegistry = require('./policies/PolicyRegistry');
 
 // Hydrator framework
-const { Hydrate } = require('./hydrators/BaseHydrator');
-const { PrismaHydrate } = require('./hydrators/PrismaHydrator');
+const { Hydrator } = require('./hydrators/BaseHydrator');
+const { PrismaHydrator } = require('./hydrators/PrismaHydrator');
 const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const { HydrationError } = require('./hydrators/errors');
 const { modelFieldMap } = require('./hydrators/schemaMap');
 
 // Authorization engine
-const { authorize, authorizeWithFilters } = require('./authorize');
+const { authorizeWithFilters } = require('./authorize');
+const { evaluateCapabilitySet, CapabilityEvaluationError } = require('./evaluateCapabilitySet');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 // Middleware
@@ -32,15 +33,16 @@ module.exports = {
   PolicyRegistry,
 
   // Hydrator classes
-  Hydrate,
-  PrismaHydrate,
+  Hydrator,
+  PrismaHydrator,
   HydratorRegistry,
   HydrationError,
   modelFieldMap,
 
   // Authorization functions
-  authorize,
   authorizeWithFilters,
+  evaluateCapabilitySet,
+  CapabilityEvaluationError,
   evaluateAttributeFilters,
   createFilterFunction,
 

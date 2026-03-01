@@ -74,7 +74,7 @@ Prisma-based hydrator with virtual attribute support.
 
 **Example:**
 ```javascript
-const userHydrator = new PrismaHydrate({ 
+const userHydrator = new PrismaHydrator({ 
   prismaClient: prisma, 
   modelName: 'user' 
 });
@@ -183,7 +183,7 @@ app.use(initializePolicyContext);
 ## Architecture Patterns
 
 ### 1. Dependency Inversion
-Core framework depends on abstractions (`Policy`, `Hydrate`), not concrete implementations. Applications inject concrete policies and hydrators via registries.
+Core framework depends on abstractions (`Policy`, `Hydrator`), not concrete implementations. Applications inject concrete policies and hydrators via registries.
 
 ### 2. Strategy Pattern
 Policies are strategies for authorization decisions. Hydrators are strategies for data loading.
@@ -192,7 +192,7 @@ Policies are strategies for authorization decisions. Hydrators are strategies fo
 Centralized lookup for policies and hydrators, enabling plugin-like extensibility.
 
 ### 4. Template Method
-`PrismaHydrate` provides template (`_preparePrismaQueryPayload`, `_fetchPrismaRecord`) that subclasses can override.
+`PrismaHydrator` provides template (`_preparePrismaQueryPayload`, `_fetchPrismaRecord`) that subclasses can override.
 
 ### 5. Builder/Fluent API
 `PolicyContainer` uses method chaining for declarative policy configuration.
@@ -217,7 +217,7 @@ assert(result === true);
 
 ### Unit Testing Hydrators
 ```javascript
-const hydrator = new PrismaHydrate({ 
+const hydrator = new PrismaHydrator({ 
   prismaClient: mockPrisma, 
   modelName: 'user' 
 });

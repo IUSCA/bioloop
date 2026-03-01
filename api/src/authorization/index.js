@@ -22,13 +22,12 @@ const {
   PolicyRegistry,
 
   // Hydrator framework
-  Hydrate,
-  PrismaHydrate,
+  Hydrator,
+  PrismaHydrator,
   HydratorRegistry,
   HydrationError,
 
   // Authorization engine
-  authorize: coreAuthorize,
   authorizeWithFilters: coreAuthorizeWithFilters,
 
   // Middleware
@@ -73,7 +72,7 @@ policyRegistry.register(grantPolicies);
 
 // Create default factory for auto-hydrator generation
 function createDefaultHydrator(type) {
-  return new PrismaHydrate({ prismaClient: prisma, modelName: type });
+  return new PrismaHydrator({ prismaClient: prisma, modelName: type });
 }
 
 const hydratorRegistry = new HydratorRegistry(createDefaultHydrator);
@@ -86,19 +85,6 @@ hydratorRegistry.register('context', contextHydrator);
 
 // create middleware function factory with the policy and hydrator registries
 const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry);
-
-// inject hydrate registry into core authorize function
-async function authorize({
-  policy, identifiers, policyExecutionContext, preFetched,
-}) {
-  return coreAuthorize({
-    policy,
-    identifiers,
-    registry: hydratorRegistry,
-    policyExecutionContext,
-    preFetched,
-  });
-}
 
 // inject hydrate registry into core authorizeWithFilters function
 async function authorizeWithFilters({
@@ -142,7 +128,6 @@ async function authorizeAction({
 
 module.exports = {
   // Core authorization functions
-  authorize,
   authorizeWithFilters,
   authorizeAction,
 
@@ -156,8 +141,8 @@ module.exports = {
   policyRegistry,
 
   // Hydrator framework
-  Hydrate,
-  PrismaHydrate,
+  Hydrator,
+  PrismaHydrator,
   HydratorRegistry,
   hydratorRegistry,
   HydrationError,
