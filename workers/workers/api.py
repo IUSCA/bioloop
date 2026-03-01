@@ -283,6 +283,54 @@ def update_dataset_upload(uploaded_dataset_id: int, log_data: dict):
         r.raise_for_status()
 
 
+def get_stalled_uploads():
+    """Get uploads that are UPLOADED but workflow hasn't started (>30s)"""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/stalled')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_failed_uploads(max_retry_count=2, max_age_hours=72):
+    """Get PROCESSING_FAILED uploads eligible for retry"""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/failed', params={
+            'max_retry_count': max_retry_count,
+            'max_age_hours': max_age_hours,
+        })
+        r.raise_for_status()
+        return r.json()
+
+
+def update_upload_retry(upload_id: int, retry_count: int, status: str = None, failure_reason: str = None):
+    """Update upload retry count and status"""
+    with APIServerSession() as s:
+        data = {'retry_count': retry_count}
+        if status:
+            data['status'] = status
+        if failure_reason:
+            data['metadata'] = {'failure_reason': failure_reason}
+        r = s.patch(f'datasets/uploads/{upload_id}/upload-log', json=data)
+        r.raise_for_status()
+        return r.json()
+
+
+def get_dataset_upload_log(dataset_id: int) -> dict:
+    """Get upload log for a dataset"""
+    with APIServerSession() as s:
+        r = s.get(f'datasets/uploads/{dataset_id}/upload-log')
+        r.raise_for_status()
+        return r.json()
+
+
+def update_dataset_upload_log(dataset_id: int, log_data: dict) -> dict:
+    """Update upload log metadata"""
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=log_data)
+        r.raise_for_status()
+        return r.json()
+
+
 def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)
