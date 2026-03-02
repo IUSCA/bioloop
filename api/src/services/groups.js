@@ -37,7 +37,8 @@ async function getAncestorGroups(tx, group_id) {
       depth: 'asc',
     },
   });
-  return ancestors.map((entry) => entry.ancestor);
+  // TODO: verify claude's fix
+  return ancestors.map((entry) => ({ ...entry.ancestor, depth: entry.depth }));
 }
 
 async function getDescendantGroups(tx, group_id) {
@@ -86,9 +87,9 @@ async function createGroup(data, actor_id) {
       data: {
         name: data.name,
         slug,
-        description: data.description,
-        allow_user_contributions: data.allow_user_contributions,
-        metadata: data.metadata,
+        description: data.description ?? Prisma.skip,
+        allow_user_contributions: data.allow_user_contributions ?? Prisma.skip,
+        metadata: data.metadata ?? Prisma.skip,
       },
       include: PRISMA_GROUP_INCLUDES,
     });
@@ -140,13 +141,13 @@ async function createChildGroup(parent_id, data, actor_id) {
       data: {
         name: data.name,
         slug,
-        description: data.description,
-        allow_user_contributions: data.allow_user_contributions,
-        metadata: data.metadata,
+        description: data.description ?? Prisma.skip,
+        allow_user_contributions: data.allow_user_contributions ?? Prisma.skip,
+        metadata: data.metadata ?? Prisma.skip,
         members: {
           create: {
             user_id: actor_id,
-            role: 'admin',
+            role: 'ADMIN',
           },
         },
       },

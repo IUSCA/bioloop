@@ -44,8 +44,8 @@ async function createCollection(data, { actor_id }) {
       data: {
         name: data.name,
         slug,
-        description: data.description,
-        metadata: data.metadata,
+        description: data.description ?? Prisma.skip,
+        metadata: data.metadata ?? Prisma.skip,
         owner_group_id: data.owner_group_id,
       },
       include: PRISMA_COLLECTION_INCLUDES,
@@ -56,7 +56,7 @@ async function createCollection(data, { actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
         actor_id,
         target_type: 'collection',
-        target_id: _collection.id,
+        target_id: String(_collection.id),
       },
     });
 
@@ -114,6 +114,7 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
           slug: slug ?? Prisma.skip,
           description: data.description ?? Prisma.skip,
           metadata: mergedMetadata ?? Prisma.skip,
+          version: { increment: 1 }, // increment version on every update
         },
       });
     } catch (e) {
@@ -151,7 +152,7 @@ async function archiveCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_ARCHIVED,
         actor_id,
         target_type: 'collection',
-        target_id: collection_id,
+        target_id: String(collection_id),
       },
     });
 
@@ -182,7 +183,7 @@ async function unarchiveCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_UNARCHIVED,
         actor_id,
         target_type: 'collection',
-        target_id: collection_id,
+        target_id: String(collection_id),
       },
     });
 
@@ -209,7 +210,7 @@ async function deleteCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DELETED,
         actor_id,
         target_type: 'collection',
-        target_id: collection_id,
+        target_id: String(collection_id),
       },
     });
 
@@ -282,7 +283,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_ADDED,
         actor_id,
         target_type: 'collection',
-        target_id: collection_id,
+        target_id: String(collection_id),
         metadata: {
           dataset_id,
         },
@@ -332,7 +333,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_REMOVED,
         actor_id,
         target_type: 'collection',
-        target_id: collection_id,
+        target_id: String(collection_id),
         metadata: {
           dataset_id,
         },
