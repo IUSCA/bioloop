@@ -57,7 +57,22 @@ const groupPolicies = new PolicyContainer({
   description: 'Policies for Group resource',
 });
 
+const CallerRole = Object.freeze({
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  GROUP_ADMIN: 'GROUP_ADMIN',
+  GROUP_MEMBER: 'GROUP_MEMBER',
+  OVERSIGHT: 'OVERSIGHT',
+  RESOURCE_ACCESS: 'RESOURCE_ACCESS',
+});
+
 groupPolicies
+  .roles([
+    { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
+    { policy: isGroupAdmin, role: CallerRole.GROUP_ADMIN },
+    { policy: isGroupMember, role: CallerRole.GROUP_MEMBER },
+    { policy: hasGroupOversight, role: CallerRole.OVERSIGHT },
+    { policy: canAccessResourcesOwnedByGroup, role: CallerRole.RESOURCE_ACCESS },
+  ])
   .actions({
     create: isPlatformAdmin,
     create_child: Policy.or([isPlatformAdmin, isGroupAdmin]),
@@ -67,6 +82,7 @@ groupPolicies
 
     view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
     edit_metadata: Policy.or([isPlatformAdmin, isGroupAdmin]),
+    list: Policy.always, // database query will contains filters based on user's access, so no policy needed here
 
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
     view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
@@ -109,7 +125,19 @@ groupPolicies
         attribute_filters: ['!assigned_by'],
       },
     ],
+    list: [
+      {
+        policy: isPlatformAdmin,
+        attribute_filters: ['*'],
+      },
+      {
+        policy: Policy.always,
+        attribute_filters: [
+          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
+        ],
+      },
+    ],
   })
   .freeze();
 
-module.exports = { groupPolicies };
+module.exports = { groupPolicies, CallerRole };

@@ -16,6 +16,7 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+const { initializePolicyContext } = require('./authorization');
 
 // Register application
 const app = express();
@@ -52,6 +53,8 @@ if (!['production', 'test'].includes(config.get('mode'))) {
     console.error('Unable to load "./swagger_output.json"', e);
   }
 }
+
+app.use(initializePolicyContext);
 
 // mount router
 app.use('/', indexRouter);

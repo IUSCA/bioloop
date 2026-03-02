@@ -1,5 +1,5 @@
 const grantService = require('@/services/grants');
-const { Hydrator } = require('../../core');
+const { Hydrator, HydrationError } = require('../../core');
 
 class ContextHydrator extends Hydrator {
   constructor({ appConfig }) {
@@ -67,23 +67,22 @@ class ContextHydrator extends Hydrator {
     const attributesToResolve = attributes.filter((attr) => !(attr in contextCache));
     if (attributesToResolve.length === 0) return contextCache;
 
-    // Resolve registered virtual attributes in parallel
-    const unknownAttrs = [];
+    // find unknown attributes before executing any loaders,
+    // to fail fast if the policy requires an attribute that doesn't exist and avoid unnecessary DB calls from loaders
+    const unknownAttrs = attributesToResolve.filter((attr) => !this.virtualLoaders.has(attr));
+    if (unknownAttrs.length > 0) {
+      throw new HydrationError(`[ContextHydrator] Unknown attributes: ${unknownAttrs.join(', ')}. `
+    + 'Consider registering virtual loaders for these attributes');
+    }
+
     await Promise.all(
       attributesToResolve.map(async (attr) => {
-        if (this.virtualLoaders.has(attr)) {
-          contextCache[attr] = await this.virtualLoaders.get(attr)({ id });
-        } else {
-          unknownAttrs.push(attr);
-        }
+        // eslint-disable-next-line no-console
+        console.debug(`Hydrating context attribute [${attr}] for cache key [${cacheKey}]`);
+        const loaderFn = this.virtualLoaders.get(attr);
+        contextCache[attr] = await loaderFn({ id, recordCache: contextCache, hydrator: this });
       }),
     );
-
-    if (unknownAttrs.length > 0) {
-      throw new Error(
-        `ContextHydrator cannot resolve attributes: ${unknownAttrs.join(', ')}.`,
-      );
-    }
 
     return contextCache;
   }

@@ -1,4 +1,5 @@
 const { Notation } = require('notation');
+const { hydrateEntities } = require('./hydrationUtils');
 
 /**
  * Evaluates attribute filtering rules with incremental hydration and short-circuit
@@ -59,25 +60,13 @@ async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, c
     }
 
     // eslint-disable-next-line no-await-in-loop
-    const [user, resource, context] = await Promise.all([
-      hydrators.user.hydrate({
-        id: identifiers.user,
-        attributes: rule.policy.requires.user,
-        cache: caches.user,
-      }),
-
-      hydrators.resource ? hydrators.resource.hydrate({
-        id: identifiers.resource,
-        attributes: rule.policy.requires.resource,
-        cache: caches.resource,
-      }) : {},
-
-      hydrators.context ? hydrators.context.hydrate({
-        id: contextId,
-        attributes: rule.policy.requires.context,
-        cache: caches.context,
-      }) : {},
-    ]);
+    const [user, resource, context] = await hydrateEntities({
+      policy: rule.policy,
+      identifiers,
+      hydrators,
+      caches,
+      contextId,
+    });
 
     // Evaluate the policy - if it passes, return this rule's filters (short-circuit)
     // eslint-disable-next-line no-await-in-loop
@@ -102,23 +91,6 @@ async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, c
  *                                       Supports dot notation for nested paths
  * @returns {Function} Filter function that takes an object and returns filtered object
  *
- * @example
- * // Include specific fields
- * const filter = createFilterFunction(['id', 'name', 'email']);
- * filter({ id: 1, name: 'John', email: 'j@ex.com', password: 'secret' });
- * // Returns: { id: 1, name: 'John', email: 'j@ex.com' }
- *
- * @example
- * // All fields except exclusions
- * const filter = createFilterFunction(['*', '!password', '!ssn']);
- * filter({ id: 1, name: 'John', password: 'secret', ssn: '123' });
- * // Returns: { id: 1, name: 'John' }
- *
- * @example
- * // Empty filters (no access)
- * const filter = createFilterFunction([]);
- * filter({ id: 1, name: 'John' });
- * // Returns: {}
  */
 function createFilterFunction(attributeFilters) {
   if (!Array.isArray(attributeFilters)) {

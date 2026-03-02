@@ -10,6 +10,8 @@ const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { EVERYONE_GROUP_ID } = require('@/constants');
 
+const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
+
 // ============================================================================
 // Grant Creation
 // ============================================================================
@@ -181,7 +183,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
       SELECT DISTINCT group_id 
       FROM effective_user_groups 
       WHERE user_id = ${user_id} 
-      UNION SELECT ${EVERYONE_GROUP_ID} -- include everyone group
+      UNION SELECT ${EVERYONE_GROUP_ID_SQL} -- include everyone group
     ),
     collections_having_dataset AS (
       SELECT collection_id
@@ -193,11 +195,11 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
           AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
         )
         OR (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
           AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
         OR (
@@ -232,14 +234,14 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
       SELECT DISTINCT group_id 
       FROM effective_user_groups 
       WHERE user_id = ${user_id} 
-      UNION SELECT ${EVERYONE_GROUP_ID} -- include everyone group
+      UNION SELECT ${EVERYONE_GROUP_ID_SQL} -- include everyone group
     )
     SELECT ${select_fields}
     FROM valid_grants G
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id} 
+          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
           AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
         )
         OR (
@@ -265,7 +267,7 @@ function userValidGrantsQuery(user_id) {
     FROM valid_grants g
     WHERE g.subject_type = 'GROUP'
       AND (
-            g.subject_id = ${EVERYONE_GROUP_ID}
+            g.subject_id = ${EVERYONE_GROUP_ID_SQL}
             OR g.subject_id IN (
                   SELECT group_id
                   FROM effective_user_groups
@@ -337,6 +339,7 @@ async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_typ
     ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types' })
     : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types' });
 
+  // console.log(sql.sql, sql.values); // log the generated SQL and values for debugging
   const results = await prisma.$queryRaw(sql);
   return new Set(results.map((r) => r.access_type));
 }

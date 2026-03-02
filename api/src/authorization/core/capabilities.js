@@ -1,6 +1,7 @@
 const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
 const PolicyContainer = require('./policies/PolicyContainer');
+const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
 
 class CapabilityEvaluationError extends Error {
   constructor(message) {
@@ -33,7 +34,7 @@ class CapabilityEvaluationError extends Error {
  * @async
  * @param {Object} options
  * @param {PolicyContainer} options.policyContainer         - Container that owns the action policies.
- * @param {string[]}         options.actionNames            - Actions to evaluate (must be registered in container).
+ * @param {string[]}         options.actionNames            - Array of action names to evaluate.  If null/undefined, evaluates all actions in the container.
  * @param {Object}           options.identifiers            - Hydration identifiers.
  * @param {string|number}    options.identifiers.user       - User id.
  * @param {string|number}    [options.identifiers.resource] - Resource id (omit for user-only policies).
@@ -54,19 +55,93 @@ class CapabilityEvaluationError extends Error {
  */
 async function evaluateCapabilitySet({
   policyContainer,
-  actionNames,
   identifiers,
   hydratorRegistry,
   policyExecutionContext = null,
   preFetched = null,
+  actionNames = null,
 }) {
   // --- Input validation ---
 
   if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
     throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
   }
-  if (!Array.isArray(actionNames) || actionNames.length === 0) {
+  if (!identifiers || typeof identifiers !== 'object') {
+    throw new CapabilityEvaluationError('identifiers must be an object');
+  }
+  if (identifiers.user == null) {
+    throw new CapabilityEvaluationError('identifiers.user is required');
+  }
+  if (!hydratorRegistry || !(hydratorRegistry instanceof HydratorRegistry)) {
+    throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
+  }
+  // actionNames is optional (defaults to all actions in container),
+  // but if provided must be a non-empty array of strings
+  if (actionNames != null && (!Array.isArray(actionNames) || actionNames.length === 0)) {
     throw new CapabilityEvaluationError('actionNames must be a non-empty array of strings');
+  }
+
+  // --- Step 1: Resolve action policies ---
+
+  const _actionNames = actionNames || policyContainer.getActionNames();
+  const policies = _actionNames.map((name) => {
+    const policy = policyContainer.getPolicy(name);
+    return { name, policy };
+  });
+
+  // --- Step 2: Build union policy to get merged `requires` ---
+  //
+  // Policy.or() unions the `requires` arrays of all child policies (deduped).
+  // hydrate the full closure of attributes needed by any action in one pass.
+
+  const unionPolicy = Policy.or(policies.map((p) => p.policy));
+  // console.log('Union policy requires:', unionPolicy.requires);
+
+  // --- Step 3: Single hydration pass ---
+  //
+  // Populates policyExecutionContext.cache.{user,resource,context} with every attribute
+  // declared across all requested action policies.  The union result itself is discarded —
+  // we only care about the side-effect of cache population.
+
+  const caches = {
+    user: policyExecutionContext?.cache?.user || new Map(),
+    resource: policyExecutionContext?.cache?.resource || new Map(),
+    context: policyExecutionContext?.cache?.context || new Map(),
+  };
+
+  const hydrators = resolveHydrators(hydratorRegistry, unionPolicy);
+  const [user, resource, context] = await hydrateEntities({
+    policy: unionPolicy,
+    identifiers,
+    hydrators,
+    caches,
+    preFetched,
+  });
+
+  // --- Step 4: Per-action in-memory evaluation ---
+  //
+  // Every evaluation is pure in-memory.
+
+  const results = {};
+
+  await Promise.all(
+    policies.map(async ({ name, policy }) => {
+      results[name] = await policy.evaluate(user, resource, context);
+    }),
+  );
+
+  return results;
+}
+
+async function deriveCallerRole({
+  policyContainer,
+  identifiers,
+  hydratorRegistry,
+  policyExecutionContext = null,
+  preFetched = null,
+}) {
+  if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
+    throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
   }
   if (!identifiers || typeof identifiers !== 'object') {
     throw new CapabilityEvaluationError('identifiers must be an object');
@@ -78,70 +153,28 @@ async function evaluateCapabilitySet({
     throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
   }
 
-  // --- Step 1: Resolve action policies ---
+  const policy = policyContainer.getRoleDerivationPolicy();
 
-  const policies = actionNames.map((name) => {
-    const policy = policyContainer.getPolicy(name);
-    return { name, policy };
+  const caches = {
+    user: policyExecutionContext?.cache?.user || new Map(),
+    resource: policyExecutionContext?.cache?.resource || new Map(),
+    context: policyExecutionContext?.cache?.context || new Map(),
+  };
+
+  const hydrators = resolveHydrators(hydratorRegistry, policy);
+  const [user, resource, context] = await hydrateEntities({
+    policy,
+    identifiers,
+    hydrators,
+    caches,
+    preFetched,
   });
 
-  // --- Step 2: Build union policy to get merged `requires` ---
-  //
-  // Policy.or() unions the `requires` arrays of all child policies (deduped).
-  // hydrate the full closure of attributes needed by any action in one pass.
-
-  const unionPolicy = Policy.or(policies.map((p) => p.policy));
-
-  // --- Step 3: Single hydration pass ---
-  //
-  // Populates policyExecutionContext.cache.{user,resource,context} with every attribute
-  // declared across all requested action policies.  The union result itself is discarded —
-  // we only care about the side-effect of cache population.
-
-  const userHydrator = hydratorRegistry.get('user');
-  const contextHydrator = hydratorRegistry.get('context');
-
-  let resourceHydrator = null;
-  if (unionPolicy.resourceType != null) {
-    resourceHydrator = hydratorRegistry.get(unionPolicy.resourceType);
+  const role = await policy.evaluate(user, resource, context);
+  if (!role) {
+    return null;
   }
-
-  const [user, resource, context] = await Promise.all([
-    userHydrator.hydrate({
-      id: identifiers.user,
-      attributes: unionPolicy.requires.user,
-      cache: policyExecutionContext?.cache?.user || new Map(),
-      preFetched: preFetched?.user,
-    }),
-
-    resourceHydrator ? resourceHydrator.hydrate({
-      id: identifiers.resource,
-      attributes: unionPolicy.requires.resource,
-      cache: policyExecutionContext?.cache?.resource || new Map(),
-      preFetched: preFetched?.resource,
-    }) : {},
-
-    contextHydrator.hydrate({
-      id: { ...identifiers, resourceType: unionPolicy.resourceType },
-      attributes: unionPolicy.requires.context,
-      cache: policyExecutionContext?.cache?.context || new Map(),
-      preFetched: preFetched?.context,
-    }),
-  ]);
-
-  // --- Step 4: Per-action in-memory evaluation ---
-  //
-  // Every evaluation is pure in-memory.
-
-  const results = {};
-
-  await Promise.all(
-    policies.map(async ({ name, policy }) => {
-      results[name] = policy.evaluate(user, resource, context);
-    }),
-  );
-
-  return results;
+  return role;
 }
 
-module.exports = { evaluateCapabilitySet, CapabilityEvaluationError };
+module.exports = { evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole };

@@ -20,7 +20,7 @@ const { modelFieldMap } = require('./hydrators/schemaMap');
 
 // Authorization engine
 const { authorizeWithFilters } = require('./authorize');
-const { evaluateCapabilitySet, CapabilityEvaluationError } = require('./evaluateCapabilitySet');
+const { evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole } = require('./capabilities');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 // Middleware
@@ -45,6 +45,7 @@ module.exports = {
   CapabilityEvaluationError,
   evaluateAttributeFilters,
   createFilterFunction,
+  deriveCallerRole,
 
   // Middleware
   initializePolicyContext,

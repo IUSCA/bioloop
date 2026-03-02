@@ -3,6 +3,7 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { authorizeWithFilters } = require('./authorize');
+const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
 
 /**
  * Initializes the policy execution context with request-scoped caches.
@@ -23,11 +24,13 @@ function initializePolicyContext(req, res, next) {
   next();
 }
 
-function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry, events) {
+function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry, events) {
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
     preFetchedResourceFn = null, // optional fn(req) => object with pre-fetched resource attributes (e.g. for create actions where the resource does not yet exist)
+    shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
+    shouldDeriveCallerRole = false, // whether to derive caller role and include it in the policy execution context
   } = {}) => {
     // get the policy
     // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
@@ -42,14 +45,20 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
       const resourceId = resourceIdFn(req);
       const identifiers = { user: userId, resource: resourceId };
 
-      const policyExecutionContext = req.policyContext || null;
+      const policyExecutionContext = req.policyContext ?? {
+        cache: {
+          user: new Map(),
+          resource: new Map(),
+          context: new Map(),
+        },
+      };
 
       // call authorizeWithFilters
       const result = await authorizeWithFilters({
         policy,
         attributeRules,
         identifiers,
-        registry: hydrationRegistry,
+        registry: hydratorRegistry,
         policyExecutionContext,
         preFetched: {
           user: req.user,
@@ -64,6 +73,23 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydrationRegistry
         return next(createError(403, 'Forbidden'));
       }
       req.permission = result;
+
+      if (shouldDeriveCapabilities) {
+        const capabilities = await evaluateCapabilitySet({
+          policyContainer,
+          identifiers,
+          hydratorRegistry,
+          policyExecutionContext,
+        });
+        req.permission.capabilities = capabilities;
+      }
+      if (shouldDeriveCallerRole) {
+        const callerRole = await deriveCallerRole({
+          policyContainer, identifiers, hydratorRegistry, policyExecutionContext,
+        });
+        req.permission.callerRole = callerRole;
+      }
+
       next();
     });
   });

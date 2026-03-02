@@ -38,6 +38,7 @@ router.get(
     query('archived').optional().isBoolean().toBoolean(),
     // query('include_ancestors').optional().isBoolean().toBoolean(),
   ]),
+  authorize('group', 'list', { shouldDeriveCallerRole: true }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'List all groups the user has access to'
@@ -47,8 +48,8 @@ router.get(
       archived: req.query.archived,
       // include_ancestors: req.query.include_ancestors,
     });
-    // TODO: attribute filter
-    res.json({ metadata, data });
+    const filteredGroups = data.map((g) => req.permission.filter(g));
+    res.json({ metadata, data: filteredGroups, _meta: { caller_role: req.permission.callerRole } });
   }),
 );
 
@@ -65,6 +66,7 @@ router.post(
     body('direct_membership_only').optional().isBoolean(),
     body('oversight_only').optional().isBoolean(),
   ]),
+  authorize('group', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Search groups by name or description'
@@ -90,8 +92,8 @@ router.post(
       promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.id });
     }
     const { metadata, data } = await promise;
-    // TODO: attribute filter
-    res.json({ metadata, data });
+    const filteredGroups = data.map((g) => req.permission.filter(g));
+    res.json({ metadata, data: filteredGroups });
   }),
 );
 

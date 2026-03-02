@@ -21,7 +21,7 @@ class PrismaHydrator extends Hydrator {
 
   /* Registers a virtual attribute loader function for an attribute that is not a column or relation in the Prisma model.
     - attrName: name of the virtual attribute
-  * - loaderFn: async function that takes an object with shape { id, recordCache,
+  * - loaderFn: async function that takes an object with shape { id,
   * hydrator } and returns the value for the virtual attribute
   *
   * virtual loaders are independent of each other. If multiple virtual attributes are requested,
@@ -96,13 +96,15 @@ class PrismaHydrator extends Hydrator {
 
   // separating the Prisma query into its own method allows for easier testing and overrides in subclasses if needed
   async _fetchPrismaRecord(payload) {
-    // console.debug(`prisma [${this.model}] :`, JSON.stringify(payload, null, 2));
+    // eslint-disable-next-line no-console
+    console.debug(`prisma [${this.model}] :`, JSON.stringify(payload, null, 2));
     return this.prisma[this.model].findUniqueOrThrow(payload);
   }
 
   async hydrate({
     id, attributes, cache = new Map(), preFetched = {},
   }) {
+    // console.debug(`Hydrating [${this.model}] with id [${id}] for attributes [${attributes.join(', ')}]`);
     if (!Array.isArray(attributes)) {
       throw new HydrationError(`[${this.model}] Cannot hydrate: attributes must be an array`);
     }
@@ -160,6 +162,8 @@ class PrismaHydrator extends Hydrator {
     const virtualAttributesToResolve = classification.virtual.filter((v) => !(v in recordCache));
     if (virtualAttributesToResolve.length > 0) {
       await Promise.all(virtualAttributesToResolve.map(async (v) => {
+        // eslint-disable-next-line no-console
+        console.debug(`Resolving virtual attribute [${v}] for model [${this.model}] with id [${id}]`);
         recordCache[v] = await this.virtualLoaders.get(v)({ id, recordCache, hydrator: this });
       }));
     }

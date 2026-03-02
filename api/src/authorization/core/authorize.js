@@ -2,6 +2,7 @@
 const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
+const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
 
 class AuthorizationError extends Error {
   constructor(message) {
@@ -105,36 +106,14 @@ async function authorizeWithFilters({
     context: policyExecutionContext?.cache?.context || new Map(),
   };
 
-  const userHydrator = registry.get('user');
-  const contextHydrator = registry.get('context');
-
-  let resourceHydrator = null;
-  if (policy.resourceType != null) {
-    resourceHydrator = registry.get(policy.resourceType);
-  }
-
-  const [user, resource, context] = await Promise.all([
-    userHydrator.hydrate({
-      id: identifiers.user,
-      attributes: policy.requires.user,
-      cache: caches.user,
-      preFetched: preFetched?.user,
-    }),
-
-    resourceHydrator ? resourceHydrator.hydrate({
-      id: identifiers.resource,
-      attributes: policy.requires.resource,
-      cache: caches.resource,
-      preFetched: preFetched?.resource,
-    }) : {},
-
-    contextHydrator.hydrate({
-      id: { ...identifiers, resourceType: policy.resourceType },
-      attributes: policy.requires.context,
-      cache: caches.context,
-      preFetched: preFetched?.context,
-    }),
-  ]);
+  const hydrators = resolveHydrators(registry, policy);
+  const [user, resource, context] = await hydrateEntities({
+    policy,
+    identifiers,
+    hydrators,
+    caches,
+    preFetched,
+  });
 
   // Evaluate action policy
   const actionGranted = await policy.evaluate(user, resource, context);
@@ -160,11 +139,6 @@ async function authorizeWithFilters({
   // contextId is forwarded so the context hydrator uses the same cache key as Phase 1
   // and finds active_grant_access_types already resolved (zero additional DB calls).
   const contextId = { ...identifiers, resourceType: policy.resourceType };
-  const hydrators = {
-    user: userHydrator,
-    resource: resourceHydrator,
-    context: contextHydrator,
-  };
 
   const attributeFilters = await evaluateAttributeFilters(
     attributeRules,

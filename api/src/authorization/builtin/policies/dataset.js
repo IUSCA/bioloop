@@ -71,6 +71,13 @@ const userHasGrant = (access_type) => new DatasetPolicy({
   evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
 });
 
+const callerRoles = Object.freeze({
+  PLATFORM_ADMIN: 'ADMIN',
+  DATASET_OWNER_GROUP_ADMIN: 'ADMIN',
+  DATASET_OWNER_GROUP_OVERSIGHT: 'OVERSIGHT',
+  GRANT_HOLDER: 'GRANT_HOLDER',
+});
+
 // ============================================================================
 // POLICY CONTAINER
 // ============================================================================
@@ -296,6 +303,23 @@ datasetPolicies
       },
     ],
   })
+  .roles([
+    { policy: isPlatformAdmin, role: callerRoles.PLATFORM_ADMIN },
+    { policy: isDatasetOwningGroupAdmin, role: callerRoles.DATASET_OWNER_GROUP_ADMIN },
+    { policy: hasDatasetOwningGroupOversight, role: callerRoles.DATASET_OWNER_GROUP_OVERSIGHT },
+    {
+      policy: Policy.or([
+        userHasGrant('view_metadata'),
+        userHasGrant('list_files'),
+        userHasGrant('view_sensitive_metadata'),
+        userHasGrant('read_data'),
+        userHasGrant('download'),
+        userHasGrant('compute'),
+        userHasGrant('request_stage'),
+      ]),
+      role: callerRoles.GRANT_HOLDER,
+    },
+  ])
   .freeze();
 
 module.exports = { datasetPolicies };
