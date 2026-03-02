@@ -41,11 +41,11 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group     group?                      @relation(fields: [owner_group_id], references: [id])
-  collections     collection_dataset[]
-  grants          grant[]                     @relation("dataset_grants")
-  access_requests access_request[]            @relation("dataset_requests")
-  contributions   user_dataset_contribution[]
+  owner_group   group?                      @relation(fields: [owner_group_id], references: [id])
+  collections   collection_dataset[]
+  contributions user_dataset_contribution[]
+  resource_id   String?                      @unique
+  resource      resource?                    @relation(fields: [resource_id], references: [id])
 
   @@unique([name, type, is_deleted])
 }
@@ -207,6 +207,8 @@ model user {
   access_requests_reviewed  access_request[]            @relation("access_requests_reviewed")
   authorization_audits      authorization_audit[]
   contributions             user_dataset_contribution[]
+  subject_id                String?                      @unique
+  subject                   subject?                     @relation(fields: [subject_id], references: [id])
 }
 
 model user_password {
@@ -434,6 +436,39 @@ model alert {
 // Hierarchical Groups, Collections, and Data Access Control Models
 // ============================================================================
 
+// ============================================================================
+// RESOURCE / SUBJECT - Common parent tables for real FK integrity
+// ============================================================================
+
+enum RESOURCE_TYPE {
+  DATASET
+  COLLECTION
+}
+
+enum SUBJECT_TYPE {
+  USER
+  GROUP
+}
+
+model resource {
+  id   String        @id @default(uuid())
+  type RESOURCE_TYPE
+
+  dataset         dataset?
+  collection      collection?
+  grants          grant[]
+  access_requests access_request[]
+}
+
+model subject {
+  id   String       @id @default(uuid())
+  type SUBJECT_TYPE
+
+  user   user?
+  group  group?
+  grants grant[]
+}
+
 // created everyone group and added rules to protect modification in migration script
 model group {
   id          String  @id @default(uuid())
@@ -459,6 +494,7 @@ model group {
   owned_datasets    dataset[]
   owned_collections collection[]
   contributions     user_dataset_contribution[]
+  subject           subject                     @relation(fields: [id], references: [id])
 }
 
 // Closure table for efficient hierarchy traversal
@@ -518,7 +554,7 @@ model user_dataset_contribution {
 // ============================================================================
 
 model collection {
-  id          Int     @id @default(autoincrement())
+  id          String  @id @default(uuid())
   name        String
   slug        String  @unique
   description String?
@@ -538,16 +574,15 @@ model collection {
   metadata Json?
 
   // Relations
-  datasets        collection_dataset[]
-  grants          grant[]              @relation("collection_grants")
-  access_requests access_request[]     @relation("collection_requests")
+  datasets collection_dataset[]
+  resource resource             @relation(fields: [id], references: [id])
 
   @@index([owner_group_id])
   @@index([is_archived])
 }
 
 model collection_dataset {
-  collection_id Int
+  collection_id String
   dataset_id    Int
   added_at      DateTime @default(now()) @db.Timestamp(6)
   added_by      Int?
@@ -572,21 +607,22 @@ model grant {
   id String @id @default(uuid())
 
   // Subject (who receives access)
-  subject_type GRANT_SUBJECT_TYPE
-  subject_id   String // user.id or group.id (as string)
+  subject_id String
+  subject    subject @relation(fields: [subject_id], references: [id], onDelete: Cascade)
 
   // Resource (what is being accessed)
-  resource_type GRANT_RESOURCE_TYPE
-  resource_id   Int // dataset.id or collection.id
+  resource_id String
+  resource    resource @relation(fields: [resource_id], references: [id], onDelete: Cascade)
 
   // Access type (what action is allowed) - atomic granularity by design
   access_type_id Int
   access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Cascade)
 
   // Temporal bounds
-  valid_from  DateTime  @default(now()) @db.Timestamp(6)
-  valid_until DateTime? @db.Timestamp(6)
-
+  valid_from   DateTime                @default(now()) @db.Timestamp(6)
+  valid_until  DateTime?               @db.Timestamp(6)
+  valid_period Unsupported("tsrange")?
+  
   // Provenance
   granted_by    Int
   justification String? // Optional justification for the grant creation or revocation
@@ -599,32 +635,16 @@ model grant {
   grantor user  @relation("grants_created", fields: [granted_by], references: [id], onDelete: Restrict)
   revoker user? @relation("grants_revoked", fields: [revoked_by], references: [id], onDelete: SetNull)
 
-  // Resource relations (nullable because of polymorphic reference)
-  dataset_resource    dataset?    @relation("dataset_grants", fields: [resource_id], references: [id], onDelete: Cascade, map: "dataset_resource_id")
-  collection_resource collection? @relation("collection_grants", fields: [resource_id], references: [id], onDelete: Cascade, map: "collection_resource_id")
-
   // If created via access request approval, link back to the request item that led to this grant
   accessRequestItems access_request_item[]
 
-  @@index([subject_type, subject_id])
-  @@index([resource_type, resource_id])
+  // valid_period generated column and grant_no_overlap exclusion constraint are defined in the migration SQL
+  // For the same (subject_id, resource_id, access_type_id) tuple,
+  // there must never exist two non-revoked grants whose validity intervals overlap.
+
+  @@index([subject_id])
+  @@index([resource_id])
   @@index([valid_from, valid_until])
-}
-
-// view active_grants {
-//   id             String
-//   subject_type   GRANT_SUBJECT_TYPE
-//   subject_id     String
-//   resource_type  GRANT_RESOURCE_TYPE
-//   resource_id    Int
-//   access_type_id Int
-//   valid_from     DateTime
-//   valid_until    DateTime?
-// }
-
-enum GRANT_SUBJECT_TYPE {
-  USER
-  GROUP
 }
 
 enum GRANT_RESOURCE_TYPE {
@@ -670,8 +690,8 @@ model access_request {
   type ACCESS_REQUEST_TYPE
 
   // Target resource
-  resource_type GRANT_RESOURCE_TYPE
-  resource_id   Int
+  resource_id String
+  resource    resource @relation(fields: [resource_id], references: [id], onDelete: Cascade)
 
   // Requester
   requester_id Int
@@ -700,13 +720,10 @@ model access_request {
   // Relations
   reviewer user? @relation("access_requests_reviewed", fields: [reviewed_by], references: [id], onDelete: SetNull)
 
-  // Resource relations
-  dataset_resource     dataset?              @relation("dataset_requests", fields: [resource_id], references: [id], onDelete: Cascade, map: "dataset_resource_id")
-  collection_resource  collection?           @relation("collection_requests", fields: [resource_id], references: [id], onDelete: Cascade, map: "collection_resource_id")
   access_request_items access_request_item[]
 
   @@index([requester_id, status])
-  @@index([resource_type, resource_id, status])
+  @@index([resource_id, status])
   @@index([status, submitted_at])
 }
 

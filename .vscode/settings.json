@@ -39,5 +39,8 @@
   },
   "[sql]": {
     "editor.defaultFormatter": "adpyke.vscode-sql-formatter"
+  },
+  "chat.tools.terminal.autoApprove": {
+    "npx jest": true
   }
 }

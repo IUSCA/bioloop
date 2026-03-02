@@ -1769,6 +1769,14 @@ CREATE EXTENSION IF NOT EXISTS btree_gist;
 -- For the same (subject_type, subject_id, resource_type, resource_id, access_type_id) tuple, there must never exist two non-revoked grants whose validity intervals overlap.
 -- validity period checks: left inclusive, right exclusive
 -- [10:00, 11:00) and [11:00, 12:00) do NOT overlap
+
+ALTER TABLE "grant"
+ADD COLUMN valid_period tsrange
+GENERATED ALWAYS AS (
+  tsrange(valid_from, valid_until, '[)')
+) STORED;  
+
+
 ALTER TABLE "grant"
 ADD CONSTRAINT grant_no_overlap
 EXCLUDE USING gist (
@@ -1777,11 +1785,7 @@ EXCLUDE USING gist (
   resource_type WITH =,
   resource_id WITH =,
   access_type_id WITH =,
-  tstzrange(
-    valid_from,
-    COALESCE(valid_until, 'infinity'::timestamptz),
-    '[)'
-  ) WITH &&
+  valid_period WITH &&
 )
-WHERE revoked_at IS NULL;
+WHERE (revoked_at IS null);
 ```

@@ -107,6 +107,7 @@
     "timestamptz",
     "traceback",
     "transactionally",
+    "tsrange",
     "tstzrange",
     "UCSF",
     "unarchival",
