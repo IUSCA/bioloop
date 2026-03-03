@@ -28,7 +28,6 @@ const {
   deleteUser,
   deleteGroup,
   deleteDataset,
-  deleteAccessRequests,
   deleteGrantsForResource,
 } = require('../helpers');
 
@@ -52,15 +51,15 @@ beforeAll(async () => {
   userIds.push(requester.id, reviewer.id);
 
   // reviewer is ADMIN of ownerGroup so getRequestsPendingReviewForUser returns results
-  ownerGroup = await createTestGroup(reviewer.id, '_ar_og');
+  ownerGroup = await createTestGroup(reviewer.subject_id, '_ar_og');
   groupIds.push(ownerGroup.id);
 
   dataset = await createTestDataset(ownerGroup.id, '_ar_ds');
   datasetIds.push(dataset.id);
 
   [viewMetadataTypeId, downloadTypeId] = await Promise.all([
-    getAccessTypeId('VIEW_METADATA', 'DATASET').then((t) => t.id),
-    getAccessTypeId('DOWNLOAD', 'DATASET').then((t) => t.id),
+    getAccessTypeId('DATASET:VIEW_METADATA'),
+    getAccessTypeId('DATASET:DOWNLOAD'),
   ]);
 }, 30_000);
 
@@ -68,7 +67,7 @@ afterAll(async () => {
   for (const id of arIds) {
     await prisma.access_request.deleteMany({ where: { id } }).catch(() => {});
   }
-  await deleteGrantsForResource('DATASET', dataset.id).catch(() => {});
+  await deleteGrantsForResource(dataset.resource_id).catch(() => {});
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
   for (const id of userIds) await deleteUser(id).catch(() => {});
@@ -82,11 +81,10 @@ afterAll(async () => {
 async function newDraftRequest(items, overrides = {}) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
-    resource_type: 'DATASET',
-    resource_id: dataset.id,
+    resource_id: dataset.resource_id,
     items,
     ...overrides,
-  }, requester.id);
+  }, requester.subject_id);
   arIds.push(ar.id);
   return ar;
 }
@@ -111,10 +109,8 @@ async function cleanupGrantsForRequester() {
   // Revoke all active USER grants for requester on this dataset so tests don't interfere
   await prisma.grant.updateMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(requester.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: requester.subject_id,
+      resource_id: dataset.resource_id,
       revoked_at: null,
     },
     data: { revoked_at: new Date() },
@@ -125,7 +121,7 @@ async function cleanupGrantsForRequester() {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('access requests – lifecycle', () => {
+describe('access requests - lifecycle', () => {
   describe('createAccessRequest', () => {
     it('creates a DRAFT request with PENDING items and null submitted_at', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
@@ -168,7 +164,7 @@ describe('access requests – lifecycle', () => {
   describe('updateAccessRequest', () => {
     it('replaces items on a DRAFT request', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const updated = await arService.updateAccessRequest(ar.id, requester.id, {
+      const updated = await arService.updateAccessRequest(ar.id, requester.subject_id, {
         items: [
           { access_type_id: viewMetadataTypeId },
           { access_type_id: downloadTypeId },
@@ -179,7 +175,7 @@ describe('access requests – lifecycle', () => {
 
     it('updates purpose on a DRAFT request', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const updated = await arService.updateAccessRequest(ar.id, requester.id, {
+      const updated = await arService.updateAccessRequest(ar.id, requester.subject_id, {
         purpose: 'Updated purpose',
       });
       expect(updated.purpose).toBe('Updated purpose');
@@ -187,10 +183,12 @@ describe('access requests – lifecycle', () => {
 
     it('throws 409 when request is not in DRAFT status', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
       await expect(
-        arService.updateAccessRequest(ar.id, requester.id, { purpose: 'Should fail' }),
+        arService.updateAccessRequest(ar.id, requester.subject_id, { purpose: 'Should fail' }),
       ).rejects.toMatchObject({ status: 409 });
+      // withdraw to clean up
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
   });
 
@@ -201,14 +199,16 @@ describe('access requests – lifecycle', () => {
 
     it('transitions DRAFT → UNDER_REVIEW and sets submitted_at', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       expect(submitted.status).toBe('UNDER_REVIEW');
       expect(submitted.submitted_at).not.toBeNull();
+      // withdraw to clean up
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
 
     it('creates a REQUEST_SUBMITTED audit row', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const audit = await prisma.authorization_audit.findFirst({
         where: {
           event_type: 'REQUEST_SUBMITTED',
@@ -217,41 +217,44 @@ describe('access requests – lifecycle', () => {
         },
       });
       expect(audit).not.toBeNull();
+      // withdraw to clean up
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
 
     it('throws 409 if called again on an already UNDER_REVIEW request', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
       await expect(
-        arService.submitRequest(ar.id, requester.id),
+        arService.submitRequest(ar.id, requester.subject_id),
       ).rejects.toMatchObject({ status: 409 });
+      // withdraw to clean up
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
   });
 
-  describe('submitReview – APPROVED', () => {
+  describe('submitReview - APPROVED', () => {
     afterEach(async () => {
       await cleanupGrantsForRequester();
     });
 
     it('transitions UNDER_REVIEW → APPROVED and creates a grant', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: { review_items: allApproveItems(submitted) },
       });
 
       expect(reviewed.status).toBe('APPROVED');
       expect(reviewed.closed_at).not.toBeNull();
-      expect(reviewed.reviewed_by).toBe(reviewer.id);
+      expect(reviewed.reviewed_by).toBe(reviewer.subject_id);
 
       // Grant must exist for requester
       const hasGrant = await grantsService.userHasGrant({
-        user_id: requester.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
+        user_id: requester.subject_id,
+        resource_id: dataset.resource_id,
         access_type_id: viewMetadataTypeId,
       });
       expect(hasGrant).toBe(true);
@@ -259,19 +262,17 @@ describe('access requests – lifecycle', () => {
 
     it('grant carries creation_type = ACCESS_REQUEST', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: { review_items: allApproveItems(submitted) },
       });
 
       const grant = await prisma.grant.findFirst({
         where: {
-          subject_type: 'USER',
-          subject_id: String(requester.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetadataTypeId,
           revoked_at: null,
         },
@@ -282,10 +283,10 @@ describe('access requests – lifecycle', () => {
 
     it('stores decision_reason when provided', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: {
           review_items: allApproveItems(submitted),
           decision_reason: 'Looks good',
@@ -295,14 +296,14 @@ describe('access requests – lifecycle', () => {
     });
   });
 
-  describe('submitReview – REJECTED', () => {
+  describe('submitReview - REJECTED', () => {
     it('transitions UNDER_REVIEW → REJECTED, no grant created', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: { review_items: allRejectItems(submitted) },
       });
 
@@ -311,10 +312,8 @@ describe('access requests – lifecycle', () => {
 
       const grantCount = await prisma.grant.count({
         where: {
-          subject_type: 'USER',
-          subject_id: String(requester.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
           revoked_at: null,
         },
       });
@@ -322,7 +321,7 @@ describe('access requests – lifecycle', () => {
     });
   });
 
-  describe('submitReview – PARTIALLY_APPROVED', () => {
+  describe('submitReview - PARTIALLY_APPROVED', () => {
     afterEach(async () => {
       await cleanupGrantsForRequester();
     });
@@ -332,7 +331,7 @@ describe('access requests – lifecycle', () => {
         { access_type_id: viewMetadataTypeId },
         { access_type_id: downloadTypeId },
       ]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const mixedItems = submitted.access_request_items.map((item, idx) => ({
         id: item.id,
@@ -342,7 +341,7 @@ describe('access requests – lifecycle', () => {
 
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: { review_items: mixedItems },
       });
 
@@ -355,7 +354,7 @@ describe('access requests – lifecycle', () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
       const withdrawn = await arService.withdrawRequest({
         request_id: ar.id,
-        requester_id: requester.id,
+        requester_id: requester.subject_id,
       });
       expect(withdrawn.status).toBe('WITHDRAWN');
       expect(withdrawn.closed_at).not.toBeNull();
@@ -363,10 +362,10 @@ describe('access requests – lifecycle', () => {
 
     it('transitions UNDER_REVIEW → WITHDRAWN and sets closed_at', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const withdrawn = await arService.withdrawRequest({
         request_id: submitted.id,
-        requester_id: requester.id,
+        requester_id: requester.subject_id,
       });
       expect(withdrawn.status).toBe('WITHDRAWN');
       expect(withdrawn.closed_at).not.toBeNull();
@@ -374,9 +373,9 @@ describe('access requests – lifecycle', () => {
 
     it('throws 409 when request is already terminal (WITHDRAWN)', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
       await expect(
-        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id }),
+        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
     });
   });
@@ -384,7 +383,7 @@ describe('access requests – lifecycle', () => {
   describe('expireStaleRequests', () => {
     it('marks UNDER_REVIEW requests older than max_age_days as EXPIRED', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
 
       // Backdate submitted_at to make it appear stale
       await prisma.access_request.update({
@@ -402,7 +401,7 @@ describe('access requests – lifecycle', () => {
 
     it('does not expire requests newer than max_age_days', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
 
       // maxAge=30 days; request was just submitted — should not expire
       await arService.expireStaleRequests({ max_age_days: 30 });
@@ -411,7 +410,7 @@ describe('access requests – lifecycle', () => {
       expect(updated.status).toBe('UNDER_REVIEW');
 
       // Clean up: withdraw so we don't interfere with other tests
-      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
   });
 
@@ -425,7 +424,7 @@ describe('access requests – lifecycle', () => {
       await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
 
       const result = await arService.getRequestsByUser({
-        requester_id: requester.id,
+        requester_id: requester.subject_id,
         sort_by: 'created_at',
         sort_order: 'desc',
         offset: 0,
@@ -434,15 +433,17 @@ describe('access requests – lifecycle', () => {
 
       expect(result.metadata.total).toBeGreaterThanOrEqual(2);
       expect(result.data.length).toBeGreaterThanOrEqual(2);
-      expect(result.data.every((r) => r.requester_id === requester.id || r.requester_id === requester.id)).toBe(true);
+      expect(result.data.every(
+        (r) => r.requester_id === requester.subject_id || r.requester_id === requester.subject_id,
+      )).toBe(true);
     });
 
     it('filters by status', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
 
       const result = await arService.getRequestsByUser({
-        requester_id: requester.id,
+        requester_id: requester.subject_id,
         status: 'UNDER_REVIEW',
         sort_by: 'created_at',
         sort_order: 'desc',
@@ -452,7 +453,7 @@ describe('access requests – lifecycle', () => {
 
       expect(result.data.every((r) => r.status === 'UNDER_REVIEW')).toBe(true);
       // Withdraw to clean up
-      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
   });
 
@@ -463,10 +464,10 @@ describe('access requests – lifecycle', () => {
 
     it('returns UNDER_REVIEW requests for datasets the reviewer administers', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const result = await arService.getRequestsPendingReviewForUser({
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         sort_by: 'created_at',
         sort_order: 'desc',
         offset: 0,
@@ -476,7 +477,7 @@ describe('access requests – lifecycle', () => {
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(submitted.id);
 
-      await arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id });
     });
   });
 
@@ -487,15 +488,15 @@ describe('access requests – lifecycle', () => {
 
     it('returns requests reviewed by the reviewer', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: { review_items: allRejectItems(submitted) },
       });
 
       const result = await arService.getRequestsReviewedByUser({
-        user_id: reviewer.id,
+        user_id: reviewer.subject_id,
         sort_by: 'reviewed_at',
         sort_order: 'desc',
         offset: 0,

@@ -69,8 +69,12 @@ async function _getRequestById(tx, request_id) {
       },
       requester: true,
       reviewer: true,
-      dataset_resource: true,
-      collection_resource: true,
+      resource: {
+        include: {
+          dataset: true,
+          collection: true,
+        },
+      },
     },
   });
 }
@@ -127,7 +131,6 @@ async function createAccessRequest(data, requester_id) {
         target_id: accessRequest.id,
         metadata: {
           status: ACCESS_REQUEST_STATUS.DRAFT,
-          resource_type: data.resource_type,
           resource_id: data.resource_id,
         },
       },
@@ -158,18 +161,29 @@ async function createAccessRequest(data, requester_id) {
  */
 async function updateAccessRequest(request_id, requester_id, data) {
   return prisma.$transaction(async (tx) => {
-    // Update request metadata
-    const updated = await tx.access_request.updateMany({
-      where: {
-        id: request_id,
-        status: ACCESS_REQUEST_STATUS.DRAFT, // Ensure request is still in DRAFT to prevent race conditions
-      },
-      data: {
-        purpose: data.purpose ?? Prisma.skip,
-      },
-    });
-    if (updated.count !== 1) {
-      throw createError.Conflict('Request is no longer in DRAFT status');
+    // get a row-level lock on the request to prevent concurrent updates
+    // Ensure request is still in DRAFT to prevent updates on requests that are already submitted or closed
+    const rows = await tx.$queryRaw`
+      SELECT id, status
+      FROM access_request 
+      WHERE 
+        id = ${request_id}
+      FOR UPDATE
+    `;
+
+    if (rows.length === 0) {
+      throw createError.NotFound();
+    }
+    const { status } = rows[0];
+    if (status !== ACCESS_REQUEST_STATUS.DRAFT) {
+      throw createError.Conflict('Request is not in DRAFT status');
+    }
+
+    if (data.purpose) {
+      await tx.access_request.update({
+        where: { id: request_id },
+        data: { purpose: data.purpose },
+      });
     }
 
     // If items are provided, replace existing items
@@ -232,14 +246,16 @@ async function _assertNoActiveGrants(request) {
 
   if (conflicting.length > 0) {
     const ids = [...new Set(conflicting.map((g) => g.access_type_id))];
-    throw createError.Conflict(
-      `Access is already granted for access_type_id(s): ${ids.join(', ')}`,
-    );
+    throw createError.Conflict('Access is already granted for one or more of the requested access types', {
+      details: {
+        access_type_ids: ids,
+      },
+    });
   }
 }
 
 /**
- * Throws if the requester already has another DRAFT or UNDER_REVIEW request for the same
+ * Throws if the requester already has another UNDER_REVIEW request for the same
  * resource that overlaps with any of the access types in this request.
  * @param {Object} request - access_request with access_request_items included
  */
@@ -251,7 +267,7 @@ async function _assertNoInFlightRequests(request) {
       id: { not: request.id },
       requester_id: request.requester_id,
       resource_id: request.resource_id,
-      status: { in: [ACCESS_REQUEST_STATUS.DRAFT, ACCESS_REQUEST_STATUS.UNDER_REVIEW] },
+      status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
       access_request_items: {
         some: { access_type_id: { in: itemAccessTypeIds } },
       },
@@ -270,10 +286,12 @@ async function _assertNoInFlightRequests(request) {
       conflicting.flatMap((r) => r.access_request_items.map((i) => i.access_type_id)),
     )];
     const requestIds = conflicting.map((r) => r.id);
-    throw createError.Conflict(
-      `A pending request already exists for access_type_id(s): ${conflictingTypeIds.join(', ')}`
-      + ` (request id(s): ${requestIds.join(', ')})`,
-    );
+    throw createError.Conflict('One or more pending requests already exist for some of the same access types', {
+      details: {
+        access_type_ids: conflictingTypeIds,
+        request_ids: requestIds,
+      },
+    });
   }
 }
 
