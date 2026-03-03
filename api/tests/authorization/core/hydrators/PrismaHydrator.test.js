@@ -141,7 +141,7 @@ describe('PrismaHydrate._classifyAttributes()', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hydrate() – input validation
+// hydrate() - input validation
 // ---------------------------------------------------------------------------
 describe('PrismaHydrate.hydrate() - input validation', () => {
   let hydrator;
@@ -181,7 +181,7 @@ describe('PrismaHydrate.hydrate() - input validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hydrate() – fetching columns and relations
+// hydrate() - fetching columns and relations
 // ---------------------------------------------------------------------------
 describe('PrismaHydrate.hydrate() - DB fetch', () => {
   let prismaClient;
@@ -233,7 +233,7 @@ describe('PrismaHydrate.hydrate() - DB fetch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hydrate() – preFetched handling
+// hydrate() - preFetched handling
 // ---------------------------------------------------------------------------
 describe('PrismaHydrate.hydrate() - preFetched', () => {
   let prismaClient;
@@ -269,7 +269,7 @@ describe('PrismaHydrate.hydrate() - preFetched', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hydrate() – virtual attributes
+// hydrate() - virtual attributes
 // ---------------------------------------------------------------------------
 describe('PrismaHydrate.hydrate() - virtual attributes', () => {
   let prismaClient;
@@ -326,7 +326,7 @@ describe('PrismaHydrate.hydrate() - virtual attributes', () => {
 // ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate – edge cases', () => {
+describe('PrismaHydrate - edge cases', () => {
   describe('falsy but valid id = 0', () => {
     it('treats id=0 as a valid non-null identifier (not treated like null)', async () => {
       const pc = makePrismaClient({ id: 0, name: 'Zero' });

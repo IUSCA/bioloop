@@ -101,7 +101,7 @@ async function archived(tag = '') {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('collections – invariants', () => {
+describe('collections - invariants', () => {
   describe('cross-group dataset rejection', () => {
     it('addDatasets rejects dataset owned by a different group (status 400)', async () => {
       const c = await newCollection('_cross_fgn');

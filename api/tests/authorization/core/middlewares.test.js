@@ -93,9 +93,9 @@ describe('initializePolicyContext()', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createAuthorizationMiddlewareFunction – setup / fail-fast
+// createAuthorizationMiddlewareFunction - setup / fail-fast
 // ---------------------------------------------------------------------------
-describe('createAuthorizationMiddlewareFunction() – setup', () => {
+describe('createAuthorizationMiddlewareFunction() - setup', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('throws at setup time when policyRegistry.get() throws', () => {
@@ -128,9 +128,9 @@ describe('createAuthorizationMiddlewareFunction() – setup', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createAuthorizationMiddlewareFunction – middleware behavior
+// createAuthorizationMiddlewareFunction - middleware behavior
 // ---------------------------------------------------------------------------
-describe('createAuthorizationMiddlewareFunction() – middleware', () => {
+describe('createAuthorizationMiddlewareFunction() - middleware', () => {
   let policy;
   let policyContainer;
   let policyRegistry;
@@ -250,7 +250,7 @@ describe('createAuthorizationMiddlewareFunction() – middleware', () => {
 // ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
-describe('createAuthorizationMiddlewareFunction() – edge cases', () => {
+describe('createAuthorizationMiddlewareFunction() - edge cases', () => {
   let policyRegistry;
   let middleware;
 
@@ -312,7 +312,7 @@ describe('createAuthorizationMiddlewareFunction() – edge cases', () => {
   });
 });
 
-describe('initializePolicyContext() – idempotency edge cases', () => {
+describe('initializePolicyContext() - idempotency edge cases', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('preserves cache entries populated between two consecutive initializePolicyContext calls', () => {
@@ -321,7 +321,7 @@ describe('initializePolicyContext() – idempotency edge cases', () => {
     req.policyContext.cache.user.set('userId:42', { id: 42 });
 
     const next2 = jest.fn();
-    initializePolicyContext(req, res, next2); // second call – policyContext already set
+    initializePolicyContext(req, res, next2); // second call - policyContext already set
     expect(req.policyContext.cache.user.get('userId:42')).toEqual({ id: 42 });
     expect(next2).toHaveBeenCalled();
   });

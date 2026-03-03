@@ -75,7 +75,7 @@ async function freshCollection(tag = '') {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('collections – concurrency', () => {
+describe('collections - concurrency', () => {
   describe('concurrent updateCollectionMetadata', () => {
     /**
      * updateCollectionMetadata increments the version field via `version: { increment: 1 }`.
@@ -208,8 +208,8 @@ describe('collections – concurrency', () => {
      * addDatasets acquires FOR UPDATE on the collection row, then checks is_archived.
      * archiveCollection issues a plain UPDATE. The two operations serialize on the
      * collection row. One of the following will happen:
-     *   – archiveCollection wins → addDatasets sees is_archived=true → throws 409
-     *   – addDatasets wins → datasets inserted; archiveCollection completes after
+     *   - archiveCollection wins → addDatasets sees is_archived=true → throws 409
+     *   - addDatasets wins → datasets inserted; archiveCollection completes after
      *
      * Either way the collection ends up archived and its final state is consistent.
      */

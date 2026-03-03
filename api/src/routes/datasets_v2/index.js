@@ -72,7 +72,7 @@ router.post(
   authorize('dataset', 'edit_metadata', { resourceIdFn: (req) => req.body[0]?.source_id }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Add parent–child associations between datasets'
+    // #swagger.summary = 'Add parent-child associations between datasets'
     await datasetService.createAssociations(req.body);
     res.sendStatus(200);
   }),

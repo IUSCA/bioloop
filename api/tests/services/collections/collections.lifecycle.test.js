@@ -87,7 +87,7 @@ async function newCollection(tag = '', overrides = {}) {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('collections – lifecycle', () => {
+describe('collections - lifecycle', () => {
   describe('createCollection', () => {
     it('returns collection with correct owner_group_id', async () => {
       const c = await newCollection('_create');

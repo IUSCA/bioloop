@@ -67,8 +67,8 @@ async function newChildGroup(parentId, tag = '') {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('groups – concurrency', () => {
-  describe('concurrent updateGroupMetadata – same expected_version', () => {
+describe('groups - concurrency', () => {
+  describe('concurrent updateGroupMetadata - same expected_version', () => {
     it('exactly one update succeeds and one is rejected with 409', async () => {
       const g = await newGroup('_upd_race');
 
@@ -98,7 +98,7 @@ describe('groups – concurrency', () => {
     });
   });
 
-  describe('concurrent updateGroupMetadata – correct sequential versions', () => {
+  describe('concurrent updateGroupMetadata - correct sequential versions', () => {
     it('both updates succeed when each uses the correct current version', async () => {
       const g = await newGroup('_sequential_upd');
       const v2 = await groupsService.updateGroupMetadata(g.id, { data: { description: 'v2' }, expected_version: 1 });

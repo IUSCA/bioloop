@@ -62,7 +62,7 @@ async function newGroup(tag = '', overrides = {}) {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('groups – invariants', () => {
+describe('groups - invariants', () => {
   describe('EVERYONE group membership guard', () => {
     it('cannot insert a row into group_user for the EVERYONE group (DB CHECK constraint)', async () => {
       await expect(

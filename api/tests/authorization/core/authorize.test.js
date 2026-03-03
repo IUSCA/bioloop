@@ -35,7 +35,7 @@ class StubHydrator extends Hydrate {
 
     // add only requested attributes that are present
     attributes.forEach(() => {
-      // already in record or not available – that's fine for stub tests
+      // already in record or not available - that's fine for stub tests
     });
 
     return record;
@@ -283,7 +283,7 @@ describe('authorizeWithFilters()', () => {
     });
   });
 
-  describe('action granted – no attribute rules', () => {
+  describe('action granted - no attribute rules', () => {
     it('returns { granted: true, filter } when policy grants and no attribute rules', async () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => true });
@@ -300,7 +300,7 @@ describe('authorizeWithFilters()', () => {
     });
   });
 
-  describe('action granted – with attribute rules', () => {
+  describe('action granted - with attribute rules', () => {
     it('returned filter correctly includes only allowed attributes', async () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => true });
@@ -393,7 +393,7 @@ describe('authorizeWithFilters()', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: error propagation
 // ---------------------------------------------------------------------------
-describe('authorize() – error propagation', () => {
+describe('authorize() - error propagation', () => {
   it('propagates an error thrown inside policy.evaluate', async () => {
     const { registry } = makeRegistry({ 1: { id: 1 } });
     const policy = makePolicy({ evaluate: async () => { throw new Error('policy eval crash'); } });
@@ -403,7 +403,7 @@ describe('authorize() – error propagation', () => {
   });
 });
 
-describe('authorizeWithFilters() – error propagation', () => {
+describe('authorizeWithFilters() - error propagation', () => {
   it('propagates an error thrown inside policy.evaluate during phase 1', async () => {
     const { registry } = makeRegistry({ 1: { id: 1 } });
     const policy = makePolicy({ evaluate: async () => { throw new Error('auth crash'); } });
@@ -418,7 +418,7 @@ describe('authorizeWithFilters() – error propagation', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: cache sharing between phases
 // ---------------------------------------------------------------------------
-describe('authorizeWithFilters() – cache sharing between phases', () => {
+describe('authorizeWithFilters() - cache sharing between phases', () => {
   it('passes the same user cache Map instance to both phase 1 and phase 2', async () => {
     const { registry, userHydrator } = makeRegistry({ 1: { id: 1 } });
     const actionPolicy = makePolicy({ evaluate: async () => true });
@@ -461,7 +461,7 @@ describe('authorizeWithFilters() – cache sharing between phases', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: attribute rule evaluation
 // ---------------------------------------------------------------------------
-describe('authorizeWithFilters() – attribute rule edge cases', () => {
+describe('authorizeWithFilters() - attribute rule edge cases', () => {
   it('returns filter that produces {} when all attribute rule policies deny', async () => {
     const { registry } = makeRegistry({ 1: { id: 1 } });
     const actionPolicy = makePolicy({ evaluate: async () => true });

@@ -337,7 +337,7 @@ describe('Policy.never', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: composition
 // ---------------------------------------------------------------------------
-describe('Policy composition – edge cases', () => {
+describe('Policy composition - edge cases', () => {
   it('or() with a single policy works transparently', async () => {
     const p = makePolicy({ evaluate: async () => true });
     const combined = Policy.or([p]);
@@ -414,7 +414,7 @@ describe('Policy composition – edge cases', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: error propagation
 // ---------------------------------------------------------------------------
-describe('Policy.evaluate() – error propagation', () => {
+describe('Policy.evaluate() - error propagation', () => {
   it('propagates an error thrown by the inner evaluate function', async () => {
     const p = makePolicy({
       evaluate: async () => { throw new Error('unexpected DB failure'); },
