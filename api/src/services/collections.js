@@ -7,6 +7,7 @@ const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const grantService = require('@/services/grants');
+const { enumToSql, buildWhereClause } = require('@/utils/sql');
 
 const PRISMA_COLLECTION_INCLUDES = {};
 const CONFLICT_ERROR_MESSAGE = 'Collection was updated by another process. Please refresh and try again.';
@@ -461,7 +462,7 @@ async function searchCollectionsForUser({
   let searchClause = Prisma.empty;
   if (search_term) {
     searchClause = Prisma.sql`
-      AND (
+      (
         c.name ILIKE ${`%${search_term}%`} OR
         c.description ILIKE ${`%${search_term}%`} OR
         c.slug ILIKE ${`%${search_term}%`}
@@ -471,40 +472,40 @@ async function searchCollectionsForUser({
 
   let archivedClause = Prisma.empty;
   if (is_archived !== null) {
-    archivedClause = Prisma.sql`
-        AND c.is_archived = ${is_archived}
-      `;
+    archivedClause = Prisma.sql`c.is_archived = ${is_archived}`;
   }
+
+  const whereClause = buildWhereClause([searchClause, archivedClause], 'AND');
 
   const query = Prisma.sql`
     WITH results AS (
-      WITH accessible_collections_via_grants AS (
+      WITH via_grants AS (
         ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
       ),
-      owned_collections AS (
-        SELECT id FROM "collection" c
+      accessible_ids AS (
+        -- via grants
+        SELECT id from via_grants
+
+        UNION
+
+        -- via group ownership
+        SELECT c.id
+        FROM "collection" c
         JOIN group_user gu ON c.owner_group_id = gu.group_id
-        WHERE gu.user_id = ${user_id} AND gu.role = ${GROUP_MEMBER_ROLE.ADMIN}
-      ),
-      oversight_collections AS (
-        SELECT id FROM "collection" c
+        WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+
+        UNION
+
+        -- via group oversight
+        SELECT c.id
+        FROM "collection" c
         JOIN effective_user_oversight_groups eug 
           ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
-      ),
-      accessible_collections AS (
-        SELECT id FROM owned_collections
-        UNION
-        SELECT id FROM oversight_collections
-        UNION
-        SELECT id FROM accessible_collections_via_grants
       )
-      SELECT *
-      FROM "collection" c
-      JOIN accessible_collections ac ON c.id = ac.id
-      WHERE 
-        1=1
-        ${searchClause}
-        ${archivedClause}
+      SELECT c.*
+      FROM collection c
+      JOIN accessible_ids a ON a.id = c.id
+      ${whereClause}
     )
     SELECT *, COUNT(*) OVER () AS total_count
     FROM results
@@ -512,6 +513,7 @@ async function searchCollectionsForUser({
     LIMIT ${limit} 
     OFFSET ${offset}
   `;
+  // console.log(query.sql, query.values); // Log the raw SQL query for debugging purposes
   const collections = await prisma.$queryRaw(query);
   const total_count = Number(collections.length > 0 ? collections[0].total_count : 0);
   return { metadata: { total: total_count, limit, offset }, data: collections };

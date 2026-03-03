@@ -33,6 +33,11 @@ const {
   // Middleware
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
+
+  // capabilities
+  evaluateCapabilitySet,
+  CapabilityEvaluationError,
+  deriveCallerRole,
 } = require('./core');
 
 // ============================================================================
@@ -102,8 +107,12 @@ async function authorizeWithFilters({
 
 // helper function to resolve policy and attribute rules for a given resourceType and action,
 // then call authorizeWithFilters
-async function authorizeAction({
-  resourceType, action, identifiers, policyExecutionContext, preFetched,
+async function authorizeAction(resourceType, action, {
+  identifiers,
+  policyExecutionContext,
+  preFetched,
+  shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
+  shouldDeriveCallerRole = false, // whether to derive caller role and include it in the policy execution context
 }) {
   // get the policy
   // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
@@ -111,7 +120,7 @@ async function authorizeAction({
   const policy = policyContainer.getPolicy(action);
   const attributeRules = policyContainer.getAttributeRules(action);
 
-  return authorizeWithFilters({
+  const permission = await authorizeWithFilters({
     policy,
     attributeRules,
     identifiers,
@@ -119,6 +128,23 @@ async function authorizeAction({
     policyExecutionContext,
     preFetched,
   });
+
+  if (shouldDeriveCapabilities) {
+    const capabilities = await evaluateCapabilitySet({
+      policyContainer,
+      identifiers,
+      hydratorRegistry,
+      policyExecutionContext,
+    });
+    permission.capabilities = capabilities;
+  }
+  if (shouldDeriveCallerRole) {
+    const callerRole = await deriveCallerRole({
+      policyContainer, identifiers, hydratorRegistry, policyExecutionContext,
+    });
+    permission.callerRole = callerRole;
+  }
+  return permission;
 }
 
 // ============================================================================
@@ -146,4 +172,9 @@ module.exports = {
   HydratorRegistry,
   hydratorRegistry,
   HydrationError,
+
+  // capabilities
+  evaluateCapabilitySet,
+  CapabilityEvaluationError,
+  deriveCallerRole,
 };

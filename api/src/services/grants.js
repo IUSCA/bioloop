@@ -4,14 +4,13 @@
  */
 
 const {
-  Prisma, GRANT_CREATION_TYPE, SUBJECT_TYPE, RESOURCE_TYPE,
+  Prisma, GRANT_CREATION_TYPE, RESOURCE_TYPE,
 } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { EVERYONE_GROUP_ID } = require('@/constants');
-const { enumToSql } = require('@/utils/sql');
 
 const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
 
@@ -227,29 +226,22 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
     : Prisma.empty;
 
   return Prisma.sql`
-    WITH user_groups AS (
-      SELECT DISTINCT group_id 
-      FROM effective_user_groups 
-      WHERE user_id = ${user_id} 
-      UNION SELECT ${EVERYONE_GROUP_ID_SQL} -- include everyone group
+    WITH subjects AS (
+      SELECT ${user_id} AS subject_id
+      UNION
+      SELECT group_id
+      FROM effective_user_groups
+      WHERE user_id = ${user_id}
+      UNION
+      SELECT ${EVERYONE_GROUP_ID_SQL}
     )
     SELECT ${select_fields}
-    FROM valid_grants G
-    JOIN resource r ON G.resource_id = r.id
-    JOIN subject s ON G.subject_id = s.id
-    JOIN grant_access_type gat ON G.access_type_id = gat.id
-    WHERE (
-        (
-          s.type = ${enumToSql(SUBJECT_TYPE.USER)} AND G.subject_id = ${user_id}
-          AND r.type = ${enumToSql(RESOURCE_TYPE.COLLECTION)} AND G.resource_id = ${collection_id}
-        )
-        OR (
-          s.type = ${enumToSql(SUBJECT_TYPE.GROUP)} AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = ${enumToSql(RESOURCE_TYPE.COLLECTION)} AND G.resource_id = ${collection_id}
-        )
-      )
-      ${access_type_filter}
-  `;
+    FROM valid_grants g
+    JOIN subjects s ON g.subject_id = s.subject_id
+    JOIN grant_access_type gat ON g.access_type_id = gat.id
+    WHERE g.resource_id = ${collection_id}
+    ${access_type_filter}
+`;
 }
 
 /**
@@ -260,26 +252,18 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
 function userValidGrantsQuery(user_id) {
   // helper to find all valid grants for a user, including via group membership
   return Prisma.sql`
-    SELECT *
-    FROM valid_grants g
-    JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = ${enumToSql(SUBJECT_TYPE.USER)}
-      AND g.subject_id = ${user_id}
-
-    UNION
-
+    WITH subjects AS (
+      SELECT ${user_id} AS subject_id
+      UNION
+      SELECT group_id
+      FROM effective_user_groups
+      WHERE user_id = ${user_id}
+      UNION
+      SELECT ${EVERYONE_GROUP_ID_SQL}
+    )
     SELECT g.*
     FROM valid_grants g
-    JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = ${enumToSql(SUBJECT_TYPE.GROUP)}
-      AND (
-            g.subject_id = ${EVERYONE_GROUP_ID_SQL}
-            OR g.subject_id IN (
-                  SELECT group_id
-                  FROM effective_user_groups
-                  WHERE user_id = ${user_id}
-              )
-          )
+    JOIN subjects s ON g.subject_id = s.subject_id
   `;
 }
 

@@ -108,6 +108,8 @@ groupPolicies
         policy: isGroupMember,
         attribute_filters: [
           'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
+          'ancestors.*.id', 'ancestors.*.name', 'ancestors.*.slug', 'ancestors.*.description',
+          'ancestors.*.is_archived', 'ancestors.*.depth',
         ],
       },
       {
@@ -122,7 +124,7 @@ groupPolicies
       },
       {
         policy: isGroupMember,
-        attribute_filters: ['!assigned_by'],
+        attribute_filters: ['*', '!assignor'],
       },
     ],
     list: [

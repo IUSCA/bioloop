@@ -29,7 +29,7 @@ router.get(
     // #swagger.summary = 'Get access requests raised by the user'
 
     const requests = await accessRequestsService.getRequestsByUser({
-      requester_id: req.user.id,
+      requester_id: req.user.subject_id,
       status: req.query.status,
       sort_by: req.query.sort_by,
       sort_order: req.query.sort_order,
@@ -67,7 +67,7 @@ router.post(
       return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
     }
 
-    const record = await accessRequestsService.createAccessRequest(data, req.user.id);
+    const record = await accessRequestsService.createAccessRequest(data, req.user.subject_id);
     res.status(201).json(req.permission.filter(record));
   }),
 );
@@ -89,7 +89,7 @@ router.get(
       sort_by, sort_order, offset, limit,
     } = req.query;
     const { metadata, data } = await accessRequestsService.getRequestsPendingReviewForUser({
-      reviewer_id: req.user.id,
+      reviewer_id: req.user.subject_id,
       sort_by,
       sort_order,
       offset,
@@ -117,7 +117,7 @@ router.get(
       sort_by, sort_order, offset, limit,
     } = req.query;
     const { metadata, data } = await accessRequestsService.getRequestsReviewedByUser({
-      user_id: req.user.id,
+      user_id: req.user.subject_id,
       sort_by,
       sort_order,
       offset,
@@ -169,7 +169,7 @@ router.put(
       }
     }
 
-    const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.id);
+    const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.subject_id);
     res.json(req.permission.filter(request));
   }),
 );
@@ -185,7 +185,7 @@ router.post(
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Submit an access request'
 
-    const request = await accessRequestsService.submitRequest(req.params.id, req.user.id);
+    const request = await accessRequestsService.submitRequest(req.params.id, req.user.subject_id);
     res.json(req.permission.filter(request));
   }),
 );
@@ -210,7 +210,7 @@ router.post(
     const options = _.pick(['item_decisions', 'decision_reason'], req.body);
     const reviewResult = await accessRequestsService.submitReview({
       request_id: req.params.id,
-      reviewer_id: req.user.id,
+      reviewer_id: req.user.subject_id,
       options,
     });
     res.json(req.permission.filter(reviewResult));
@@ -228,7 +228,7 @@ router.post(
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Withdraw an access request'
 
-    await accessRequestsService.withdrawRequest({ request_id: req.params.id, requester_id: req.user.id });
+    await accessRequestsService.withdrawRequest({ request_id: req.params.id, requester_id: req.user.subject_id });
     res.status(204).send();
   }),
 );

@@ -8,6 +8,11 @@ function safeSqlJoin(clauses, separator = ' AND ') {
   return Prisma.join(nonEmptyClauses, separator);
 }
 
+function buildWhereClause(clauses, operator = 'AND') {
+  const x = safeSqlJoin(clauses, ` ${operator} `);
+  return x === Prisma.empty ? Prisma.empty : Prisma.sql`WHERE ${x}`;
+}
+
 function enumToSql(enumValue) {
   return Prisma.raw(`'${enumValue}'`);
 }
@@ -15,4 +20,5 @@ function enumToSql(enumValue) {
 module.exports = {
   safeSqlJoin,
   enumToSql,
+  buildWhereClause,
 };

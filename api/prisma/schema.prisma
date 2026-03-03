@@ -44,11 +44,11 @@ model dataset {
   owner_group   group?                      @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collections   collection_dataset[]
   contributions user_dataset_contribution[]
-  resource_id   String                     @unique
+  resource_id   String                      @unique
   // Restrict: prevents deleting a resource row directly while this dataset still references it.
   // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
-  resource      resource                   @relation(fields: [resource_id], references: [id], onDelete: Restrict)
+  resource      resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
 
   @@unique([name, type, is_deleted])
 }
@@ -210,11 +210,11 @@ model user {
   access_requests_reviewed  access_request[]            @relation("access_requests_reviewed")
   authorization_audits      authorization_audit[]
   contributions             user_dataset_contribution[]
-  subject_id                String                     @unique
+  subject_id                String                      @unique
   // Restrict: prevents deleting a subject row directly while this user still references it.
   // Reverse cascade (user deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
-  subject                   subject                    @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  subject                   subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 }
 
 model user_password {
@@ -495,8 +495,8 @@ model group {
 
   // Relations
   members           group_user[]
-  ancestor_edges    group_closure[]             @relation("group_ancestors")
-  descendant_edges  group_closure[]             @relation("group_descendants")
+  ancestor_edges    group_closure[]             @relation("group_descendants")
+  descendant_edges  group_closure[]             @relation("group_ancestors")
   owned_datasets    dataset[]
   owned_collections collection[]
   contributions     user_dataset_contribution[]
@@ -671,9 +671,9 @@ enum GRANT_CREATION_TYPE {
 }
 
 model grant_access_type {
-  id            Int                 @id @default(autoincrement())
-  name          String
-  description   String?
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
 
   grants             grant[]
   accessRequestItems access_request_item[]
@@ -697,7 +697,7 @@ model access_request {
 
   // Requester
   requester_id String
-  requester    user @relation("access_requests_created", fields: [requester_id], references: [subject_id], onDelete: Restrict)
+  requester    user   @relation("access_requests_created", fields: [requester_id], references: [subject_id], onDelete: Restrict)
 
   // Justification
   purpose String?
@@ -781,7 +781,7 @@ model authorization_audit {
 
   // Actor
   actor_id String?
-  actor    user? @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
+  actor    user?   @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
 
   // Target
   target_type String // 'user', 'group', 'dataset', 'collection', 'grant'

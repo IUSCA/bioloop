@@ -425,12 +425,21 @@ async function main() {
       },
     },
     select: {
-      id: true,
+      subject_id: true,
     },
   });
   const userIds = userRecords.map((u) => u.subject_id);
 
-  const group_user = groupData.generateGroupUserMemberships(userIds);
+  const systemAdmin = await prisma.user.findUnique({
+    where: {
+      username: 'svc_tasks',
+    },
+    select: {
+      subject_id: true,
+    },
+  });
+
+  const group_user = groupData.generateGroupUserMemberships(userIds, systemAdmin.subject_id);
   await Promise.all(
     group_user.map((gu) => prisma.group_user.upsert({
       where: {

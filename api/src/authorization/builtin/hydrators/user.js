@@ -5,13 +5,15 @@ const prisma = require('@/db');
 const grantServices = require('@/services/grants');
 const { PrismaHydrator } = require('../../core/hydrators/PrismaHydrator');
 
-const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user', idAttribute: 'id' });
+const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user', idAttribute: 'subject_id' });
 
 userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
   const rows = await dbClient.user_role.findMany({
     where: {
-      user_id: id,
+      user: {
+        subject_id: id,
+      },
     },
     include: {
       roles: true,

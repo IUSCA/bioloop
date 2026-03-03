@@ -9,7 +9,7 @@ const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
 const collectionService = require('@/services/collections');
@@ -153,14 +153,52 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('group', 'view_metadata'),
+  authorize('group', 'view_metadata', { shouldDeriveCallerRole: true, shouldDeriveCapabilities: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get group details by ID'
 
     const { id } = req.params;
     const group = await groupService.getGroupById(id);
-    res.json(req.permission.filter(group));
+    res.json({
+      ...req.permission.filter(group),
+      _meta: {
+        caller_role: req.permission.callerRole,
+        capabilities: req.permission.capabilities,
+      },
+    });
+  }),
+);
+
+// get group by slug
+router.get(
+  '/slug/:slug',
+  asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Groups']
+  // #swagger.summary = 'Get group details by slug'
+
+    const { slug } = req.params;
+    const group = await groupService.getGroupBySlug(slug);
+
+    const permission = await authorizeAction('group', 'view_metadata', {
+      identifiers: { group_id: group.id },
+      policyExecutionContext: req.policyExecutionContext,
+      preFetched: { resource: group },
+      shouldDeriveCallerRole: true,
+      shouldDeriveCapabilities: true,
+    });
+
+    if (!permission.granted) {
+      return next(createError(403, 'Forbidden'));
+    }
+
+    res.json({
+      ...permission.filter(group),
+      _meta: {
+        caller_role: permission.callerRole,
+        capabilities: permission.capabilities,
+      },
+    });
   }),
 );
 
@@ -434,23 +472,6 @@ router.get(
 // Move group to new parent
 // router.post('/:id/reparent', asyncHandler(async (req, res) => {})) - Don't implement until we have a use case for it,
 // as it's complex and not currently needed
-
-// List datasets owned by group
-// router.get(
-//   '/:id/datasets',
-//   validate([
-//     param('id').isUUID(),
-//     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
-//     query('offset').default(0).isInt({ min: 0 }).toInt(),
-//   ]),
-//   asyncHandler(async (req, res) => {
-//     // #swagger.tags = ['Groups']
-//     // #swagger.summary = 'List datasets owned by the group'
-
-//     const { id } = req.params;
-//     const { limit, offset } = req.query;
-//   }),
-// );
 
 // List collections owned by group
 router.get(

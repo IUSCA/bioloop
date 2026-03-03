@@ -8,11 +8,38 @@ const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const sqlUtils = require('@/utils/sql');
+const assert = require('assert');
 
 const PRISMA_GROUP_INCLUDES = {};
+
 // eslint-disable-next-line max-len
 const CONFLICT_ERROR_MESSAGE = 'Failed to update group metadata due to concurrent modification. Please refresh and try again.';
 const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived group.';
+
+async function _getGroup(by, value) {
+  assert(by === 'id' || by === 'slug', 'Invalid "by" parameter');
+  const group = await prisma.group.findUniqueOrThrow({
+    where: { [by]: value },
+    include: {
+      ancestor_edges: {
+        include: {
+          ancestor: true,
+        },
+      },
+    },
+  });
+  const { ancestor_edges, ...groupData } = group;
+  const ancestors = ancestor_edges
+    .filter((edge) => edge.depth > 0) // exclude self-edge with depth 0
+    .map((edge) => ({
+      depth: edge.depth,
+      ...edge.ancestor,
+    }));
+  return {
+    ancestors,
+    ...groupData,
+  };
+}
 
 /**
  * Get group by ID
@@ -20,12 +47,16 @@ const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived group.';
  * @returns {Promise<Object>} Group object with members
  */
 async function getGroupById(group_id) {
-  return prisma.group.findUniqueOrThrow({
-    where: { id: group_id },
-    include: {
-      ancestor_edges: true,
-    },
-  });
+  return _getGroup('id', group_id);
+}
+
+/**
+ * Get group by Slug
+ * @param {string} slug - Slug of the group
+ * @returns {Promise<Object>} Group object with members
+ */
+async function getGroupBySlug(slug) {
+  return _getGroup('slug', slug);
 }
 
 /** Helper function to get ancestor groups with depth information within a transaction
@@ -363,14 +394,32 @@ async function unarchiveGroup(group_id, actor_id) {
 async function listGroupMembers(group_id, { limit, offset }) {
   return prisma.$transaction(async (tx) => {
     const members = await tx.group_user.findMany({
-      where: { group_id },
+      where: { group_id, user: { is_deleted: false } },
       include: {
-        user: true,
-        assignor: true,
+        user: {
+          select: {
+            id: true,
+            subject_id: true,
+            name: true,
+            email: true,
+            username: true,
+          },
+        },
+        assignor: {
+          select: {
+            id: true,
+            subject_id: true,
+            name: true,
+            email: true,
+            username: true,
+          },
+        },
       },
       skip: offset,
       take: limit,
     });
+
+    const sanitizedMembers = members.map(_.omit(['group_id', 'user_id', 'assignor_id']));
 
     // total count for pagination
     const total = await tx.group_user.count({
@@ -383,7 +432,7 @@ async function listGroupMembers(group_id, { limit, offset }) {
         limit,
         offset,
       },
-      data: members,
+      data: sanitizedMembers,
     };
   });
 }
@@ -463,10 +512,9 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
-    const member = Prisma.raw(`'${GROUP_MEMBER_ROLE.MEMBER}'`);
     const createdRecords = await tx.$queryRaw`
       INSERT INTO group_user (group_id, user_id, role)
-      SELECT ${group_id}, u.subject_id, ${member}
+      SELECT ${group_id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.MEMBER)}
       FROM "user" u
       WHERE u.subject_id = ANY(${user_ids}::text[])
       ON CONFLICT (group_id, user_id) DO NOTHING
@@ -860,6 +908,7 @@ module.exports = {
   createGroup,
   createChildGroup,
   getGroupById,
+  getGroupBySlug,
   updateGroupMetadata,
   archiveGroup,
   unarchiveGroup,

@@ -20,6 +20,10 @@ function initializePolicyContext(req, res, next) {
         context: new Map(),
       },
     };
+    if (req.user) {
+      // pre-populate user cache with the requester if available
+      req.policyContext.cache.user.set(req.user.subject_id, req.user);
+    }
   }
   next();
 }
@@ -41,7 +45,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
     return asyncHandler(async (req, res, next) => {
     // extract identifiers from the request
       const user = requesterFn(req);
-      const userId = user?.id;
+      const userId = user?.subject_id;
       const resourceId = resourceIdFn(req);
       const identifiers = { user: userId, resource: resourceId };
 
