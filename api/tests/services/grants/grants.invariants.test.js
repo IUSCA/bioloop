@@ -16,9 +16,9 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
-const { Prisma } = require('@prisma/client');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
+const { addGroupMembers } = require('@/services/groups');
 const { EVERYONE_GROUP_ID } = require('@/constants');
 const {
   createTestUser,
@@ -42,18 +42,20 @@ const createdGroupIds = [];
 const createdUserIds = [];
 const createdDatasetIds = [];
 
+// cSpell: ignore vfrom, vuntil
+
 beforeAll(async () => {
   actor = await createTestUser('_gi_actor');
   member = await createTestUser('_gi_member');
   createdUserIds.push(actor.id, member.id);
 
-  const group = await createTestGroup(actor.id, '_gi');
+  const group = await createTestGroup(actor.subject_id, '_gi');
   createdGroupIds.push(group.id);
 
   dataset = await createTestDataset(group.id, '_gi');
   createdDatasetIds.push(dataset.id);
 
-  viewMetaId = await getAccessTypeId('VIEW_METADATA', 'DATASET');
+  viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
 }, 30_000);
 
 afterAll(async () => {
@@ -71,12 +73,11 @@ afterAll(async () => {
 async function insertRawGrant(overrides = {}) {
   const g = await prisma.grant.create({
     data: {
-      subject_type: 'USER',
-      subject_id: String(member.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: member.subject_id,
+      resource_id: dataset.resource_id,
       access_type_id: viewMetaId,
-      granted_by: actor.id,
+      granted_by: actor.subject_id,
+      creation_type: 'MANUAL',
       ...overrides,
     },
   });
@@ -88,7 +89,7 @@ async function insertRawGrant(overrides = {}) {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('grants – invariants', () => {
+describe('grants - invariants', () => {
   describe('valid_period computed column', () => {
     it('lower bound equals valid_from and is inclusive', async () => {
       const validFrom = new Date('2025-01-01T00:00:00Z');
@@ -139,6 +140,8 @@ describe('grants – invariants', () => {
       `;
       expect(row).toBeDefined();
       expect(row.id).toBe(grant.id);
+      // Revoke immediately so subsequent tests can use the same time window
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
     });
 
     it('excludes a revoked grant', async () => {
@@ -146,7 +149,7 @@ describe('grants – invariants', () => {
         valid_from: new Date(Date.now() - 1000),
         valid_until: new Date(Date.now() + 60 * 60 * 1000),
       });
-      await grantsService.revokeGrant(grant.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
 
       const rows = await prisma.$queryRaw`
         SELECT id FROM valid_grants WHERE id = ${grant.id}
@@ -169,14 +172,13 @@ describe('grants – invariants', () => {
     it('excludes a grant whose valid_until is in the past', async () => {
       const grant = await prisma.grant.create({
         data: {
-          subject_type: 'USER',
-          subject_id: String(member.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: member.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetaId,
-          granted_by: actor.id,
+          granted_by: actor.subject_id,
           valid_from: new Date(Date.now() - 2 * 60 * 60 * 1000),
           valid_until: new Date(Date.now() - 1000), // expired 1 second ago
+          creation_type: 'MANUAL',
         },
       });
       createdGrantIds.push(grant.id);
@@ -199,39 +201,36 @@ describe('grants – invariants', () => {
       transitiveUser = await createTestUser('_gi_trans');
       createdUserIds.push(transitiveUser.id);
 
-      parentGroup = await createTestGroup(actor.id, '_gi_parent');
+      parentGroup = await createTestGroup(actor.subject_id, '_gi_parent');
       createdGroupIds.push(parentGroup.id);
 
-      childGroup = await createTestChildGroup(parentGroup.id, actor.id, '_gi_child');
+      childGroup = await createTestChildGroup(parentGroup.id, actor.subject_id, '_gi_child');
       createdGroupIds.push(childGroup.id);
 
       transitiveDataset = await createTestDataset(parentGroup.id, '_gi_trans');
       createdDatasetIds.push(transitiveDataset.id);
 
       // Add user to the CHILD group only
-      const { addGroupMembers } = require('@/services/groups');
-      await addGroupMembers(childGroup.id, { user_ids: [transitiveUser.id], actor_id: actor.id });
+
+      await addGroupMembers(childGroup.id, { user_ids: [transitiveUser.subject_id], actor_id: actor.subject_id });
 
       // Grant access to the PARENT group
       transitiveGrant = await grantsService.createGrant(
         {
-          subject_type: 'GROUP',
           subject_id: parentGroup.id,
-          resource_type: 'DATASET',
-          resource_id: transitiveDataset.id,
+          resource_id: transitiveDataset.resource_id,
           access_type_id: viewMetaId,
         },
-        actor.id,
+        actor.subject_id,
       );
       createdGrantIds.push(transitiveGrant.id);
     });
 
     it('user in child group inherits access from parent group grant', async () => {
       const has = await grantsService.userHasGrant({
-        user_id: transitiveUser.id,
-        resource_type: 'DATASET',
-        resource_id: transitiveDataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: transitiveUser.subject_id,
+        resource_id: transitiveDataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(true);
     });
@@ -239,11 +238,11 @@ describe('grants – invariants', () => {
     it('getUserGrantAccessTypesForUser returns the access type name', async () => {
       const types = await grantsService
         .getUserGrantAccessTypesForUser(
-          transitiveUser.id,
-          transitiveDataset.id,
+          transitiveUser.subject_id,
+          transitiveDataset.resource_id,
           'DATASET',
         );
-      expect(types.has('VIEW_METADATA')).toBe(true);
+      expect(types.has('DATASET:VIEW_METADATA')).toBe(true);
     });
   });
 
@@ -264,26 +263,23 @@ describe('grants – invariants', () => {
       everyoneDataset = await createTestDataset(ownerGroup.id, '_gi_everyone');
       createdDatasetIds.push(everyoneDataset.id);
 
-      const everyoneAccessTypeId = await getAccessTypeId('VIEW_METADATA', 'DATASET');
+      const everyoneAccessTypeId = await getAccessTypeId('DATASET:VIEW_METADATA');
       everyoneGrant = await grantsService.createGrant(
         {
-          subject_type: 'GROUP',
           subject_id: EVERYONE_GROUP_ID,
-          resource_type: 'DATASET',
-          resource_id: everyoneDataset.id,
+          resource_id: everyoneDataset.resource_id,
           access_type_id: everyoneAccessTypeId,
         },
-        actor.id,
+        actor.subject_id,
       );
       createdGrantIds.push(everyoneGrant.id);
     });
 
     it('a user with no group memberships has access via the EVERYONE grant', async () => {
       const has = await grantsService.userHasGrant({
-        user_id: unaffiliatedUser.id,
-        resource_type: 'DATASET',
-        resource_id: everyoneDataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: unaffiliatedUser.subject_id,
+        resource_id: everyoneDataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(true);
     });
@@ -294,15 +290,13 @@ describe('grants – invariants', () => {
       // Use the service for both to get proper error conversion.
       const g1 = await grantsService.createGrant(
         {
-          subject_type: 'USER',
-          subject_id: String(member.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: member.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetaId,
           valid_from: new Date('2032-01-01T00:00:00Z'),
           valid_until: new Date('2033-01-01T00:00:00Z'),
         },
-        actor.id,
+        actor.subject_id,
       );
       createdGrantIds.push(g1.id);
 
@@ -310,15 +304,13 @@ describe('grants – invariants', () => {
       await expect(
         grantsService.createGrant(
           {
-            subject_type: 'USER',
-            subject_id: String(member.id),
-            resource_type: 'DATASET',
-            resource_id: dataset.id,
+            subject_id: member.subject_id,
+            resource_id: dataset.resource_id,
             access_type_id: viewMetaId,
             valid_from: new Date('2032-06-01T00:00:00Z'),
             valid_until: new Date('2033-06-01T00:00:00Z'),
           },
-          actor.id,
+          actor.subject_id,
         ),
       ).rejects.toMatchObject({ status: 409 });
     });

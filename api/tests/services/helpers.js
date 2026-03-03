@@ -142,14 +142,12 @@ async function createTestCollection(ownerGroupId, actorId, tag = '', overrides =
 /**
  * Look up the integer id of a grant_access_type by name and resource_type.
  * Throws if not found (seeded data must already exist).
- * @param {string} name - e.g. 'VIEW_METADATA'
+ * @param {string} name - e.g. 'DATASET:VIEW_METADATA'
  * @param {'DATASET'|'COLLECTION'} resourceType
  */
-async function getAccessTypeId(name, resourceType) {
-  // grant_access_type names now use "RESOURCE_TYPE:NAME" format (e.g. "DATASET:VIEW_METADATA")
-  const fullName = resourceType ? `${resourceType}:${name}` : name;
+async function getAccessTypeId(name) {
   const row = await prisma.grant_access_type.findFirstOrThrow({
-    where: { name: fullName },
+    where: { name },
     select: { id: true },
   });
   return row.id;

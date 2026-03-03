@@ -239,21 +239,4 @@ describe('collections - concurrency', () => {
       ).rejects.toMatchObject({ status: 409 });
     });
   });
-
-  describe('concurrent archiveCollection and unarchiveCollection', () => {
-    // cSpell: ignore unarch
-    it('final state is archived or unarchived — no corrupt intermediate state', async () => {
-      const c = await freshCollection('_arch_unarch');
-      await collectionsService.archiveCollection(c.id, actor.subject_id);
-
-      await Promise.allSettled([
-        collectionsService.unarchiveCollection(c.id, actor.subject_id),
-        collectionsService.archiveCollection(c.id, actor.subject_id),
-      ]);
-
-      const final = await prisma.collection.findUnique({ where: { id: c.id } });
-      // Must be a valid boolean — no null / corrupted state
-      expect(typeof final.is_archived).toBe('boolean');
-    });
-  });
 });

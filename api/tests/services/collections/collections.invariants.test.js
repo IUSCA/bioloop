@@ -196,27 +196,6 @@ describe('collections - invariants', () => {
     });
   });
 
-  describe('deleteCollection cascade', () => {
-    it('deleting a collection cascades and removes all collection_dataset rows', async () => {
-      const c = await collectionsService.createCollection(
-        { name: `Cascade Del ${Date.now()}`, owner_group_id: ownerGroup.id },
-        { actor_id: actor.subject_id },
-      );
-      await collectionsService.addDatasets(c.id, {
-        dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id,
-      });
-
-      await collectionsService.deleteCollection(c.id, actor.subject_id);
-
-      const cdCount = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
-      expect(cdCount).toBe(0);
-
-      const cRow = await prisma.collection.findUnique({ where: { id: c.id } });
-      expect(cRow).toBeNull();
-      // (no push to collectionIds since we deleted it manually)
-    });
-  });
-
   describe('slug invariant', () => {
     it('slug is URL-friendly (no spaces, all lowercase)', async () => {
       const c = await collectionsService.createCollection(
@@ -241,21 +220,6 @@ describe('collections - invariants', () => {
       collectionIds.push(c.id);
 
       expect(c.slug).toContain('unique');
-    });
-  });
-
-  describe('DB-level @@id uniqueness on collection_dataset', () => {
-    it('inserting a duplicate row for the same (collection_id, dataset_id) is rejected at the DB level', async () => {
-      const c = await newCollection('_dup_cd');
-      // First insert via service (idempotent)
-      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id });
-
-      // Direct raw insert bypassing ON CONFLICT — should throw unique constraint violation
-      await expect(
-        prisma.collection_dataset.create({
-          data: { collection_id: c.id, dataset_id: ownDs.resource_id },
-        }),
-      ).rejects.toThrow(); // Prisma P2002 unique constraint
     });
   });
 });

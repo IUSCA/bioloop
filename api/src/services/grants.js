@@ -11,6 +11,7 @@ const createError = require('http-errors');
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { EVERYONE_GROUP_ID } = require('@/constants');
+const { enumToSql } = require('@/utils/sql');
 
 const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
 
@@ -124,8 +125,11 @@ async function createGrant(data, granted_by, txn = null) {
  */
 async function revokeGrant(grant_id, { actor_id, reason }) {
   return prisma.$transaction(async (tx) => {
+    // if a grant with given id is not found or already revoked
+    // PrismaClientKnownRequestError with code 'P2025' will be thrown
+    // this error is caught and re-thrown as 404 Not Found by the route handler, which is the desired behavior
     const revokedGrant = await tx.grant.update({
-      where: { id: grant_id },
+      where: { id: grant_id, revoked_at: null }, // only allow revocation of non-revoked grants
       data: {
         revoked_at: new Date(),
         revoked_by: actor_id,
@@ -160,61 +164,44 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
   // find grants for a user and dataset, including grants via group membership and collection-level grants
   // grant - user, dataset
   // grant - user, collection containing dataset
-  // grant - group (user is member), dataset
-  // grant - group (user is member), collection containing dataset
-
-  // group transitive membership: (not implemented here)
-  // it implies that if a user is not a direct member of a group that has a grant,
-  // but is direct member of descendant group that has no grant,
-  // still should get the grant via the ancestor group.
+  // grant - group (user is an effective member), dataset
+  // grant - group (user is an effective member), collection containing dataset
 
   const select_fields = return_type === 'access_types'
     ? Prisma.sql`distinct gat.name AS access_type`
     : Prisma.sql`G.*, gat.name AS access_type`;
 
   const access_type_filter = access_types && access_types.length > 0
-    ? Prisma.sql`AND gat.name IN (${Prisma.join(access_types)})`
+    ? Prisma.sql`gat.name IN (${Prisma.join(access_types)})`
     : Prisma.empty;
 
+  const whereClause = access_type_filter !== Prisma.empty ? Prisma.sql`WHERE ${access_type_filter}` : Prisma.empty;
+
+  // cSpell: ignore rsrc gat
   return Prisma.sql`
-    WITH user_groups AS ( -- UUIDs of groups the user is a member of (including everyone group)
-      SELECT DISTINCT group_id 
-      FROM effective_user_groups 
-      WHERE user_id = ${user_id} 
-      UNION SELECT ${EVERYONE_GROUP_ID_SQL} -- include everyone group
+    WITH subjects AS (
+      SELECT ${user_id} AS subject_id
+      UNION
+      SELECT group_id
+      FROM effective_user_groups
+      WHERE user_id = ${user_id}
+      UNION
+      SELECT ${EVERYONE_GROUP_ID_SQL}
     ),
-    collections_having_dataset AS ( -- UUIDs of collections that contain the dataset
-      SELECT collection_id
-      FROM collection_dataset
-      WHERE dataset_id = ${dataset_id}
+    resources AS (
+        SELECT ${dataset_id} AS resource_id
+        UNION
+        SELECT collection_id
+        FROM collection_dataset
+        WHERE dataset_id = ${dataset_id}
     )
     SELECT ${select_fields}
-    FROM valid_grants G
-    JOIN resource r ON G.resource_id = r.id
-    JOIN subject s ON G.subject_id = s.id
-    JOIN grant_access_type gat ON G.access_type_id = gat.id
-    WHERE (
-        (
-          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
-          AND r.type = ${RESOURCE_TYPE.DATASET} AND G.resource_id = ${dataset_id}
-        )
-        OR (
-          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
-          AND r.type = ${RESOURCE_TYPE.COLLECTION} 
-          AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
-        )
-        OR (
-          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = ${RESOURCE_TYPE.DATASET} AND G.resource_id = ${dataset_id}
-        )
-        OR (
-          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = ${RESOURCE_TYPE.COLLECTION} 
-          AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
-        )
-      )
-      ${access_type_filter}
-  `;
+    FROM valid_grants g
+    JOIN subjects s ON g.subject_id = s.subject_id
+    JOIN resources rsrc ON g.resource_id = rsrc.resource_id
+    JOIN grant_access_type gat ON g.access_type_id = gat.id
+    ${whereClause}
+`;
 }
 
 /**
@@ -253,12 +240,12 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
-          AND r.type = ${RESOURCE_TYPE.COLLECTION} AND G.resource_id = ${collection_id}
+          s.type = ${enumToSql(SUBJECT_TYPE.USER)} AND G.subject_id = ${user_id}
+          AND r.type = ${enumToSql(RESOURCE_TYPE.COLLECTION)} AND G.resource_id = ${collection_id}
         )
         OR (
-          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = ${RESOURCE_TYPE.COLLECTION} AND G.resource_id = ${collection_id}
+          s.type = ${enumToSql(SUBJECT_TYPE.GROUP)} AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = ${enumToSql(RESOURCE_TYPE.COLLECTION)} AND G.resource_id = ${collection_id}
         )
       )
       ${access_type_filter}
@@ -276,7 +263,7 @@ function userValidGrantsQuery(user_id) {
     SELECT *
     FROM valid_grants g
     JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = ${SUBJECT_TYPE.USER}
+    WHERE s.type = ${enumToSql(SUBJECT_TYPE.USER)}
       AND g.subject_id = ${user_id}
 
     UNION
@@ -284,7 +271,7 @@ function userValidGrantsQuery(user_id) {
     SELECT g.*
     FROM valid_grants g
     JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = ${SUBJECT_TYPE.GROUP}
+    WHERE s.type = ${enumToSql(SUBJECT_TYPE.GROUP)}
       AND (
             g.subject_id = ${EVERYONE_GROUP_ID_SQL}
             OR g.subject_id IN (
@@ -389,6 +376,7 @@ async function userHasGrant({
     ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types', access_types })
     : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
 
+  // console.log(sql.sql, sql.values); // log the generated SQL and values for debugging
   const results = await prisma.$queryRaw(sql);
   return results.length > 0;
 }

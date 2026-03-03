@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /**
  * grants.lifecycle.test.js
  *
@@ -13,6 +14,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
+const { addGroupMembers } = require('@/services/groups');
 const {
   createTestUser,
   createTestGroup,
@@ -41,13 +43,12 @@ const createdGrantIds = [];
 beforeAll(async () => {
   actor = await createTestUser('_gl_actor');
   member = await createTestUser('_gl_member');
-  group = await createTestGroup(actor.id, '_gl');
+  group = await createTestGroup(actor.subject_id, '_gl');
   // make `member` a member of the group
-  const { addGroupMembers } = require('@/services/groups');
-  await addGroupMembers(group.id, { user_ids: [member.id], actor_id: actor.id });
+  await addGroupMembers(group.id, { user_ids: [member.subject_id], actor_id: actor.subject_id });
   dataset = await createTestDataset(group.id, '_gl');
-  viewMetaId = await getAccessTypeId('VIEW_METADATA', 'DATASET');
-  downloadId = await getAccessTypeId('DOWNLOAD', 'DATASET');
+  viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
+  downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
 }, 30_000);
 
 afterAll(async () => {
@@ -63,17 +64,22 @@ afterAll(async () => {
 // Helpers
 // ─────────────────────────────────────────────
 
+// async function countActiveGrants() {
+//   const rows = await prisma.$queryRaw`
+//     SELECT COUNT(*) FROM valid_grants
+//   `;
+//   return rows[0].count;
+// }
+
 async function makeUserGrant(overrides = {}) {
   const grant = await grantsService.createGrant(
     {
-      subject_type: 'USER',
-      subject_id: String(member.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: member.subject_id,
+      resource_id: dataset.resource_id,
       access_type_id: viewMetaId,
       ...overrides,
     },
-    actor.id,
+    actor.subject_id,
   );
   createdGrantIds.push(grant.id);
   return grant;
@@ -83,20 +89,16 @@ async function makeUserGrant(overrides = {}) {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('grants – lifecycle', () => {
-  describe('createGrant – USER', () => {
+describe('grants - lifecycle', () => {
+  describe('createGrant - USER', () => {
     let grant;
 
     beforeAll(async () => {
       grant = await makeUserGrant();
     });
 
-    it('returns subject_type USER', () => {
-      expect(grant.subject_type).toBe('USER');
-    });
-
-    it('returns subject_id equal to member.id as string', () => {
-      expect(grant.subject_id).toBe(String(member.id));
+    it('returns subject_id equal to member.subject_id', () => {
+      expect(grant.subject_id).toBe(member.subject_id);
     });
 
     it('is not revoked at creation time', () => {
@@ -117,48 +119,61 @@ describe('grants – lifecycle', () => {
         where: { event_type: 'GRANT_CREATED', target_type: 'grant', target_id: grant.id },
       });
       expect(auditRow).not.toBeNull();
-      expect(auditRow.actor_id).toBe(actor.id);
+      expect(auditRow.actor_id).toBe(actor.subject_id);
+    });
+
+    afterAll(async () => {
+      // Revoke the USER grant so subsequent describe blocks can create their own non-overlapping grants
+      if (grant) await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
     });
   });
 
-  describe('createGrant – GROUP', () => {
+  describe('createGrant - GROUP', () => {
     let grant;
 
     beforeAll(async () => {
       grant = await grantsService.createGrant(
         {
-          subject_type: 'GROUP',
           subject_id: group.id,
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          resource_id: dataset.resource_id,
           access_type_id: downloadId,
         },
-        actor.id,
+        actor.subject_id,
       );
       createdGrantIds.push(grant.id);
-    });
-
-    it('returns subject_type GROUP', () => {
-      expect(grant.subject_type).toBe('GROUP');
     });
 
     it('returns subject_id equal to group.id', () => {
       expect(grant.subject_id).toBe(group.id);
     });
+
+    afterAll(async () => {
+      // Revoke the GROUP grant so subsequent describe blocks can create their own non-overlapping grants
+      if (grant) await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
+    });
   });
 
   describe('getGrantById', () => {
+    let grant;
+    beforeAll(async () => {
+      grant = await makeUserGrant({ access_type_id: downloadId });
+    });
+
     it('returns the grant with correct fields', async () => {
-      const grant = await makeUserGrant({ access_type_id: downloadId });
       const fetched = await grantsService.getGrantById(grant.id);
       expect(fetched).not.toBeNull();
       expect(fetched.id).toBe(grant.id);
-      expect(fetched.resource_id).toBe(dataset.id);
+      expect(fetched.resource_id).toBe(dataset.resource_id);
     });
 
     it('returns null for an unknown id', async () => {
       const result = await grantsService.getGrantById('00000000-0000-0000-0000-000000000000');
       expect(result).toBeNull();
+    });
+
+    afterAll(async () => {
+      // Revoke immediately so the active downloadId grant does not conflict with later tests
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
     });
   });
 
@@ -167,7 +182,7 @@ describe('grants – lifecycle', () => {
 
     beforeAll(async () => {
       grant = await makeUserGrant({ access_type_id: viewMetaId });
-      grant = await grantsService.revokeGrant(grant.id, { actor_id: actor.id, reason: 'test revoke' });
+      grant = await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id, reason: 'test revoke' });
     });
 
     it('sets revoked_at', () => {
@@ -175,7 +190,7 @@ describe('grants – lifecycle', () => {
     });
 
     it('sets revoked_by to the actor', () => {
-      expect(grant.revoked_by).toBe(actor.id);
+      expect(grant.revoked_by).toBe(actor.subject_id);
     });
 
     it('creates a GRANT_REVOKED audit row', async () => {
@@ -186,63 +201,66 @@ describe('grants – lifecycle', () => {
     });
   });
 
-  describe('userHasGrant – direct USER grant', () => {
+  describe('userHasGrant - direct USER grant', () => {
     let grant;
 
     beforeAll(async () => {
       grant = await makeUserGrant({ access_type_id: viewMetaId });
     });
 
-    afterAll(async () => {
-      await grantsService.revokeGrant(grant.id, { actor_id: actor.id });
-    });
-
     it('returns true when a valid grant exists', async () => {
       const has = await grantsService.userHasGrant({
-        user_id: member.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: member.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(true);
     });
 
     it('returns false after the grant is revoked', async () => {
-      await grantsService.revokeGrant(grant.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
       const has = await grantsService.userHasGrant({
-        user_id: member.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: member.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(false);
     });
+
+    afterAll(async () => {
+      // Revoke the USER grant so subsequent describe blocks can create their own non-overlapping grants
+      if (grant) {
+        try {
+          await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
+        } catch (error) {
+          // Ignore P2025 errors (grant already revoked) - safe to ignore in cleanup
+          if (error.code !== 'P2025') throw error;
+        }
+      }
+    });
   });
 
-  describe('userHasGrant – via GROUP grant', () => {
+  describe('userHasGrant - via GROUP grant', () => {
     let grant;
 
     beforeAll(async () => {
       // `member` is in `group`; a GROUP grant on the dataset should give member access
       grant = await grantsService.createGrant(
         {
-          subject_type: 'GROUP',
           subject_id: group.id,
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetaId,
         },
-        actor.id,
+        actor.subject_id,
       );
       createdGrantIds.push(grant.id);
     });
 
     it('member inherits access via group membership', async () => {
       const has = await grantsService.userHasGrant({
-        user_id: member.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: member.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(true);
     });
@@ -250,13 +268,17 @@ describe('grants – lifecycle', () => {
     it('a user not in the group does NOT get access', async () => {
       const outsider = await createTestUser('_gl_outsider');
       const has = await grantsService.userHasGrant({
-        user_id: outsider.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: outsider.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       await deleteUser(outsider.id);
       expect(has).toBe(false);
+    });
+
+    afterAll(async () => {
+      // Revoke the GROUP grant so subsequent describe blocks can create their own non-overlapping grants
+      if (grant) await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
     });
   });
 
@@ -268,14 +290,22 @@ describe('grants – lifecycle', () => {
     });
 
     it('returns a Set containing the granted access-type name', async () => {
-      const types = await grantsService.getUserGrantAccessTypesForUser(member.id, dataset.id, 'DATASET');
+      const types = await grantsService.getUserGrantAccessTypesForUser(
+        member.subject_id,
+        dataset.resource_id,
+        'DATASET',
+      );
       expect(types).toBeInstanceOf(Set);
-      expect(types.has('VIEW_METADATA')).toBe(true);
+      expect(types.has('DATASET:VIEW_METADATA')).toBe(true);
     });
 
     it('returns an empty Set after revocation', async () => {
-      await grantsService.revokeGrant(grant.id, { actor_id: actor.id });
-      const types = await grantsService.getUserGrantAccessTypesForUser(member.id, dataset.id, 'DATASET');
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
+      const types = await grantsService.getUserGrantAccessTypesForUser(
+        member.subject_id,
+        dataset.resource_id,
+        'DATASET',
+      );
       expect(types.size).toBe(0);
     });
   });
@@ -288,13 +318,12 @@ describe('grants – lifecycle', () => {
         valid_until: futureDate,
       });
       const has = await grantsService.userHasGrant({
-        user_id: member.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: member.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       // clean up before asserting so the grant does not interfere with other tests
-      await grantsService.revokeGrant(grant.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
       expect(has).toBe(true);
     });
 
@@ -305,23 +334,21 @@ describe('grants – lifecycle', () => {
 
       const row = await prisma.grant.create({
         data: {
-          subject_type: 'USER',
-          subject_id: String(member.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: member.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetaId,
           valid_from: pastFrom,
           valid_until: pastDate,
-          granted_by: actor.id,
+          granted_by: actor.subject_id,
+          creation_type: 'MANUAL',
         },
       });
       createdGrantIds.push(row.id);
 
       const has = await grantsService.userHasGrant({
-        user_id: member.id,
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
-        access_types: ['VIEW_METADATA'],
+        user_id: member.subject_id,
+        resource_id: dataset.resource_id,
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(false);
     });
@@ -331,7 +358,7 @@ describe('grants – lifecycle', () => {
     const localGrantIds = [];
 
     beforeAll(async () => {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 3; i += 1) {
         // Vary the access_type so each grant has a distinct validity window
         const atId = [viewMetaId, downloadId, viewMetaId][i];
         const fromOffset = i * 365 * 24 * 60 * 60 * 1000; // non-overlapping years
@@ -339,14 +366,13 @@ describe('grants – lifecycle', () => {
         const until = new Date(from.getTime() + 364 * 24 * 60 * 60 * 1000);
         const g = await prisma.grant.create({
           data: {
-            subject_type: 'USER',
-            subject_id: String(member.id),
-            resource_type: 'DATASET',
-            resource_id: dataset.id,
+            subject_id: member.subject_id,
+            resource_id: dataset.resource_id,
             access_type_id: atId,
             valid_from: from,
             valid_until: until,
-            granted_by: actor.id,
+            granted_by: actor.subject_id,
+            creation_type: 'MANUAL',
           },
         });
         localGrantIds.push(g.id);
@@ -356,8 +382,7 @@ describe('grants – lifecycle', () => {
 
     it('returns correct total count', async () => {
       const result = await grantsService.listGrantsForSubject({
-        subject_type: 'USER',
-        subject_id: member.id,
+        subject_id: member.subject_id,
         offset: 0,
         limit: 100,
         sort_by: 'created_at',
@@ -368,8 +393,7 @@ describe('grants – lifecycle', () => {
 
     it('respects limit in pagination', async () => {
       const result = await grantsService.listGrantsForSubject({
-        subject_type: 'USER',
-        subject_id: member.id,
+        subject_id: member.subject_id,
         offset: 0,
         limit: 2,
         sort_by: 'created_at',
@@ -377,17 +401,21 @@ describe('grants – lifecycle', () => {
       });
       expect(result.data.length).toBe(2);
     });
+
+    afterAll(async () => {
+      // Remove the grants created in this describe so they don't block listGrantsForResource tests
+      await deleteGrants(localGrantIds);
+    });
   });
 
   describe('listGrantsForResource', () => {
     it('active=true excludes revoked grants', async () => {
       // create and immediately revoke a grant
       const g = await makeUserGrant({ access_type_id: viewMetaId });
-      await grantsService.revokeGrant(g.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(g.id, { actor_id: actor.subject_id });
 
       const result = await grantsService.listGrantsForResource({
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
+        resource_id: dataset.resource_id,
         active: true,
         offset: 0,
         limit: 100,
@@ -400,11 +428,10 @@ describe('grants – lifecycle', () => {
 
     it('active=false lists only non-active (revoked/expired) grants', async () => {
       const g = await makeUserGrant({ access_type_id: viewMetaId });
-      await grantsService.revokeGrant(g.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(g.id, { actor_id: actor.subject_id });
 
       const result = await grantsService.listGrantsForResource({
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
+        resource_id: dataset.resource_id,
         active: false,
         offset: 0,
         limit: 100,
@@ -422,11 +449,11 @@ describe('grants – lifecycle', () => {
       expect(types.length).toBeGreaterThan(0);
     });
 
-    it('each entry has name and resource_type', async () => {
+    it('each entry has name and id', async () => {
       const types = await grantsService.listAccessTypes();
       types.forEach((t) => {
         expect(t).toHaveProperty('name');
-        expect(t).toHaveProperty('resource_type');
+        expect(t).toHaveProperty('id');
       });
     });
   });

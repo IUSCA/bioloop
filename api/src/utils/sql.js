@@ -8,6 +8,11 @@ function safeSqlJoin(clauses, separator = ' AND ') {
   return Prisma.join(nonEmptyClauses, separator);
 }
 
+function enumToSql(enumValue) {
+  return Prisma.raw(`'${enumValue}'`);
+}
+
 module.exports = {
   safeSqlJoin,
+  enumToSql,
 };

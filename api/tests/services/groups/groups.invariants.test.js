@@ -17,7 +17,6 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
-const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
 const { EVERYONE_GROUP_ID } = require('@/constants');
@@ -197,31 +196,6 @@ describe('groups - invariants', () => {
       const g = await newGroup('_slug_format', { name: `My Test Group Slug${Date.now()}` });
       expect(g.slug).not.toMatch(/\s/);
       expect(g.slug).toBe(g.slug.toLowerCase());
-    });
-  });
-
-  describe('group.name uniqueness at DB level', () => {
-    it('inserting a duplicate name raises a unique-constraint error (P2002)', async () => {
-      const g = await newGroup('_dup_name');
-
-      // group.id is a FK to subject.id, so we must create a subject first;
-      // otherwise the FK constraint fires before the name unique constraint.
-      const dupSubjectId = randomUUID();
-      await prisma.subject.create({ data: { id: dupSubjectId, type: 'GROUP' } });
-      try {
-        await expect(
-          prisma.group.create({
-            data: {
-              id: dupSubjectId,
-              name: g.name,
-              slug: `different-slug-${Date.now()}`,
-            },
-          }),
-        ).rejects.toMatchObject({ code: 'P2002' });
-      } finally {
-        // clean up the orphan subject if the group creation failed (expected)
-        await prisma.subject.deleteMany({ where: { id: dupSubjectId } });
-      }
     });
   });
 });

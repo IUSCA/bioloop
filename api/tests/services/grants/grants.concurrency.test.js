@@ -39,13 +39,23 @@ function trackGrants(...grants) {
 beforeAll(async () => {
   actor = await createTestUser('_gc_actor');
   user1 = await createTestUser('_gc_u1');
-  group = await createTestGroup(actor.id, '_gc');
+  group = await createTestGroup(actor.subject_id, '_gc');
   dataset = await createTestDataset(group.id, '_gc');
-  viewMetaId = await getAccessTypeId('VIEW_METADATA', 'DATASET');
-  downloadId = await getAccessTypeId('DOWNLOAD', 'DATASET');
+  viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
+  downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
+}, 30_000);
+
+// Clean up any grants created by each individual test so subsequent tests start fresh
+// (prevents the exclusion constraint from conflicting across test cases in the same suite).
+afterEach(async () => {
+  if (createdGrantIds.length > 0) {
+    await deleteGrants([...createdGrantIds]);
+    createdGrantIds.length = 0;
+  }
 }, 30_000);
 
 afterAll(async () => {
+  // createdGrantIds is emptied by afterEach; this is a safety net for any missed cleanup.
   await deleteGrants(createdGrantIds);
   await deleteDataset(dataset.id);
   await deleteGroup(group.id);
@@ -60,10 +70,8 @@ afterAll(async () => {
 
 function userGrantPayload(accessTypeId = null, overrides = {}) {
   return {
-    subject_type: 'USER',
-    subject_id: String(user1.id),
-    resource_type: 'DATASET',
-    resource_id: dataset.id,
+    subject_id: user1.subject_id,
+    resource_id: dataset.resource_id,
     access_type_id: accessTypeId ?? viewMetaId,
     ...overrides,
   };
@@ -71,10 +79,8 @@ function userGrantPayload(accessTypeId = null, overrides = {}) {
 
 function groupGrantPayload(accessTypeId = null, overrides = {}) {
   return {
-    subject_type: 'GROUP',
     subject_id: group.id,
-    resource_type: 'DATASET',
-    resource_id: dataset.id,
+    resource_id: dataset.resource_id,
     access_type_id: accessTypeId ?? viewMetaId,
     ...overrides,
   };
@@ -84,12 +90,12 @@ function groupGrantPayload(accessTypeId = null, overrides = {}) {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('grants – concurrency', () => {
-  describe('concurrent USER grants – same subject/resource/access_type/window', () => {
+describe('grants - concurrency', () => {
+  describe('concurrent USER grants - same subject/resource/access_type/window', () => {
     it('exactly one creation succeeds; the other is rejected by the DB constraint', async () => {
       const results = await Promise.allSettled([
-        grantsService.createGrant(userGrantPayload(viewMetaId), actor.id),
-        grantsService.createGrant(userGrantPayload(viewMetaId), actor.id),
+        grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id),
+        grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id),
       ]);
 
       const fulfilled = results.filter((r) => r.status === 'fulfilled');
@@ -104,9 +110,9 @@ describe('grants – concurrency', () => {
     });
 
     it('exactly 1 grant row exists after the race', async () => {
-      const [created] = await Promise.allSettled([
-        grantsService.createGrant(userGrantPayload(downloadId), actor.id),
-        grantsService.createGrant(userGrantPayload(downloadId), actor.id),
+      await Promise.allSettled([
+        grantsService.createGrant(userGrantPayload(downloadId), actor.subject_id),
+        grantsService.createGrant(userGrantPayload(downloadId), actor.subject_id),
       ]).then((results) => {
         results.filter((r) => r.status === 'fulfilled').forEach((r) => trackGrants(r.value));
         return results.filter((r) => r.status === 'fulfilled').map((r) => r.value);
@@ -114,10 +120,8 @@ describe('grants – concurrency', () => {
 
       const count = await prisma.grant.count({
         where: {
-          subject_type: 'USER',
-          subject_id: String(user1.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: user1.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: downloadId,
           revoked_at: null,
         },
@@ -126,11 +130,11 @@ describe('grants – concurrency', () => {
     });
   });
 
-  describe('concurrent GROUP grants – same group/resource/access_type/window', () => {
+  describe('concurrent GROUP grants - same group/resource/access_type/window', () => {
     it('exactly one creation succeeds', async () => {
       const results = await Promise.allSettled([
-        grantsService.createGrant(groupGrantPayload(viewMetaId), actor.id),
-        grantsService.createGrant(groupGrantPayload(viewMetaId), actor.id),
+        grantsService.createGrant(groupGrantPayload(viewMetaId), actor.subject_id),
+        grantsService.createGrant(groupGrantPayload(viewMetaId), actor.subject_id),
       ]);
 
       const fulfilled = results.filter((r) => r.status === 'fulfilled');
@@ -151,11 +155,11 @@ describe('grants – concurrency', () => {
       const results = await Promise.allSettled([
         grantsService.createGrant(
           userGrantPayload(viewMetaId, { valid_from: now, valid_until: plus1yr }),
-          actor.id,
+          actor.subject_id,
         ),
         grantsService.createGrant(
           userGrantPayload(viewMetaId, { valid_from: plus1yr, valid_until: plus2yr }),
-          actor.id,
+          actor.subject_id,
         ),
       ]);
 
@@ -171,20 +175,20 @@ describe('grants – concurrency', () => {
 
   describe('create after revoke unblocks the constraint', () => {
     it('revoking a grant allows a new overlapping grant to be created', async () => {
-      const g1 = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.id);
+      const g1 = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id);
       trackGrants(g1);
 
       // Duplicate should fail while g1 is active
       await expect(
-        grantsService.createGrant(userGrantPayload(viewMetaId), actor.id),
+        grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id),
       ).rejects.toMatchObject({ status: 409 });
 
-      // Revoke g1 – this sets revoked_at, so the WHERE (revoked_at IS NULL) predicate
+      // Revoke g1 - this sets revoked_at, so the WHERE (revoked_at IS NULL) predicate
       // on the exclusion constraint no longer applies to g1.
-      await grantsService.revokeGrant(g1.id, { actor_id: actor.id });
+      await grantsService.revokeGrant(g1.id, { actor_id: actor.subject_id });
 
       // Now creating a new grant for the same subject/resource/access_type must succeed
-      const g2 = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.id);
+      const g2 = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id);
       trackGrants(g2);
       expect(g2).not.toBeNull();
       expect(g2.revoked_at).toBeNull();
@@ -193,15 +197,15 @@ describe('grants – concurrency', () => {
 
   describe('concurrent revoke of the same grant', () => {
     it('both calls resolve and the grant ends up revoked exactly once', async () => {
-      const g = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.id);
+      const g = await grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id);
       trackGrants(g);
 
       // Two concurrent revocations of the same grant.
-      // Prisma update({where:{id}}) serialises writes at the DB level;
+      // Prisma update({where:{id}}) serializes writes at the DB level;
       // both calls will ultimately set revoked_at (idempotent write race).
       const results = await Promise.allSettled([
-        grantsService.revokeGrant(g.id, { actor_id: actor.id }),
-        grantsService.revokeGrant(g.id, { actor_id: actor.id }),
+        grantsService.revokeGrant(g.id, { actor_id: actor.subject_id }),
+        grantsService.revokeGrant(g.id, { actor_id: actor.subject_id }),
       ]);
 
       // At least one must succeed
@@ -217,8 +221,8 @@ describe('grants – concurrency', () => {
   describe('concurrent grants for different access types on the same resource', () => {
     it('both succeed because they target different access_type_ids', async () => {
       const results = await Promise.allSettled([
-        grantsService.createGrant(userGrantPayload(viewMetaId), actor.id),
-        grantsService.createGrant(userGrantPayload(downloadId), actor.id),
+        grantsService.createGrant(userGrantPayload(viewMetaId), actor.subject_id),
+        grantsService.createGrant(userGrantPayload(downloadId), actor.subject_id),
       ]);
 
       results.filter((r) => r.status === 'fulfilled').forEach((r) => trackGrants(r.value));
@@ -233,8 +237,8 @@ describe('grants – concurrency', () => {
       const user3 = await createTestUser('_gc_u3');
 
       const results = await Promise.allSettled([
-        grantsService.createGrant({ ...userGrantPayload(viewMetaId), subject_id: String(user2.id) }, actor.id),
-        grantsService.createGrant({ ...userGrantPayload(viewMetaId), subject_id: String(user3.id) }, actor.id),
+        grantsService.createGrant({ ...userGrantPayload(viewMetaId), subject_id: user2.subject_id }, actor.subject_id),
+        grantsService.createGrant({ ...userGrantPayload(viewMetaId), subject_id: user3.subject_id }, actor.subject_id),
       ]);
 
       results.filter((r) => r.status === 'fulfilled').forEach((r) => trackGrants(r.value));
