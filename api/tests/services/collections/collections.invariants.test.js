@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /**
  * collections.invariants.test.js
  *
@@ -45,9 +47,9 @@ beforeAll(async () => {
   actor = await createTestUser('_ci_actor');
   userIds.push(actor.id);
 
-  ownerGroup = await createTestGroup(actor.id, '_ci_owner');
-  foreignGroup = await createTestGroup(actor.id, '_ci_foreign');
-  archivedGroup = await createTestGroup(actor.id, '_ci_arched_g');
+  ownerGroup = await createTestGroup(actor.subject_id, '_ci_owner');
+  foreignGroup = await createTestGroup(actor.subject_id, '_ci_foreign');
+  archivedGroup = await createTestGroup(actor.subject_id, '_ci_arched_g');
   groupIds.push(ownerGroup.id, foreignGroup.id, archivedGroup.id);
 
   [ownDs, foreignDs, deletedDs] = await Promise.all([
@@ -57,6 +59,7 @@ beforeAll(async () => {
   ]);
 
   // Dataset whose owner_group is archived
+  // cSpell: ignore agds
   archivedGroupDs = await createTestDataset(archivedGroup.id, '_ci_agds');
   await prisma.group.update({ where: { id: archivedGroup.id }, data: { is_archived: true } });
 
@@ -82,7 +85,7 @@ afterAll(async () => {
 async function newCollection(tag = '') {
   const c = await collectionsService.createCollection(
     { name: `Inv Collection ${Date.now()}${tag}`, owner_group_id: ownerGroup.id },
-    { actor_id: actor.id },
+    { actor_id: actor.subject_id },
   );
   collectionIds.push(c.id);
   return c;
@@ -90,7 +93,7 @@ async function newCollection(tag = '') {
 
 async function archived(tag = '') {
   const c = await newCollection(tag);
-  await collectionsService.archiveCollection(c.id, actor.id);
+  await collectionsService.archiveCollection(c.id, actor.subject_id);
   return c;
 }
 
@@ -103,11 +106,11 @@ describe('collections – invariants', () => {
     it('addDatasets rejects dataset owned by a different group (status 400)', async () => {
       const c = await newCollection('_cross_fgn');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
 
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: foreignDs.id },
+        where: { collection_id: c.id, dataset_id: foreignDs.resource_id },
       });
       expect(count).toBe(0);
     });
@@ -115,14 +118,18 @@ describe('collections – invariants', () => {
     it('addDatasets rejects soft-deleted dataset (status 400)', async () => {
       const c = await newCollection('_cross_del');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
     });
 
+    // cSpell: ignore agroup
     it('addDatasets rejects dataset whose owner group is archived (status 400)', async () => {
       const c = await newCollection('_cross_agroup');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [archivedGroupDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, {
+          dataset_ids: [archivedGroupDs.resource_id],
+          actor_id: actor.subject_id,
+        }),
       ).rejects.toMatchObject({ status: 400 });
     });
   });
@@ -131,11 +138,11 @@ describe('collections – invariants', () => {
     it('addDatasets on archived collection throws 409', async () => {
       const c = await archived('_inv_arch_add');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
 
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: ownDs.id },
+        where: { collection_id: c.id, dataset_id: ownDs.resource_id },
       });
       expect(count).toBe(0);
     });
@@ -143,16 +150,16 @@ describe('collections – invariants', () => {
     it('removeDatasets on archived collection throws 409', async () => {
       // Add dataset first while not archived
       const c = await newCollection('_inv_arch_rm');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.id], actor_id: actor.id });
-      await collectionsService.archiveCollection(c.id, actor.id);
+      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id });
+      await collectionsService.archiveCollection(c.id, actor.subject_id);
 
       await expect(
-        collectionsService.removeDatasets(c.id, { dataset_ids: [ownDs.id], actor_id: actor.id }),
+        collectionsService.removeDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
 
       // Dataset must still be in the collection
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: ownDs.id },
+        where: { collection_id: c.id, dataset_id: ownDs.resource_id },
       });
       expect(count).toBe(1);
     });
@@ -193,13 +200,13 @@ describe('collections – invariants', () => {
     it('deleting a collection cascades and removes all collection_dataset rows', async () => {
       const c = await collectionsService.createCollection(
         { name: `Cascade Del ${Date.now()}`, owner_group_id: ownerGroup.id },
-        { actor_id: actor.id },
+        { actor_id: actor.subject_id },
       );
       await collectionsService.addDatasets(c.id, {
-        dataset_ids: [ownDs.id], actor_id: actor.id,
+        dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id,
       });
 
-      await collectionsService.deleteCollection(c.id, actor.id);
+      await collectionsService.deleteCollection(c.id, actor.subject_id);
 
       const cdCount = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
       expect(cdCount).toBe(0);
@@ -217,7 +224,7 @@ describe('collections – invariants', () => {
           name: 'My Test Collection With Spaces',
           owner_group_id: ownerGroup.id,
         },
-        { actor_id: actor.id },
+        { actor_id: actor.subject_id },
       );
       collectionIds.push(c.id);
 
@@ -229,7 +236,7 @@ describe('collections – invariants', () => {
       const ts = Date.now();
       const c = await collectionsService.createCollection(
         { name: `Unique Slug Source ${ts}`, owner_group_id: ownerGroup.id },
-        { actor_id: actor.id },
+        { actor_id: actor.subject_id },
       );
       collectionIds.push(c.id);
 
@@ -241,12 +248,12 @@ describe('collections – invariants', () => {
     it('inserting a duplicate row for the same (collection_id, dataset_id) is rejected at the DB level', async () => {
       const c = await newCollection('_dup_cd');
       // First insert via service (idempotent)
-      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, { dataset_ids: [ownDs.resource_id], actor_id: actor.subject_id });
 
       // Direct raw insert bypassing ON CONFLICT — should throw unique constraint violation
       await expect(
         prisma.collection_dataset.create({
-          data: { collection_id: c.id, dataset_id: ownDs.id },
+          data: { collection_id: c.id, dataset_id: ownDs.resource_id },
         }),
       ).rejects.toThrow(); // Prisma P2002 unique constraint
     });

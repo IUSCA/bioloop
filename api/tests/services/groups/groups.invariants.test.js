@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /**
  * groups.invariants.test.js
  *
@@ -15,7 +17,7 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
-const { Prisma } = require('@prisma/client');
+const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
 const { EVERYONE_GROUP_ID } = require('@/constants');
@@ -51,7 +53,7 @@ afterAll(async () => {
 // ─────────────────────────────────────────────
 
 async function newGroup(tag = '', overrides = {}) {
-  const g = await createTestGroup(actor.id, tag, overrides);
+  const g = await createTestGroup(actor.subject_id, tag, overrides);
   groupsToDelete.push(g.id);
   return g;
 }
@@ -67,14 +69,14 @@ describe('groups – invariants', () => {
         prisma.group_user.create({
           data: {
             group_id: EVERYONE_GROUP_ID,
-            user_id: memberUser.id,
+            user_id: memberUser.subject_id,
           },
         }),
       ).rejects.toThrow();
 
       // Confirm no row was inserted
       const count = await prisma.group_user.count({
-        where: { group_id: EVERYONE_GROUP_ID, user_id: memberUser.id },
+        where: { group_id: EVERYONE_GROUP_ID, user_id: memberUser.subject_id },
       });
       expect(count).toBe(0);
     });
@@ -113,10 +115,10 @@ describe('groups – invariants', () => {
   describe('archived group blocks mutation operations', () => {
     it('addGroupMembers throws 409 on an archived group', async () => {
       const g = await newGroup('_arch_add');
-      await groupsService.archiveGroup(g.id, actor.id);
+      await groupsService.archiveGroup(g.id, actor.subject_id);
 
       await expect(
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
 
       // Confirm no membership row was created
@@ -126,16 +128,16 @@ describe('groups – invariants', () => {
 
     it('removeGroupMembers throws 409 on an archived group', async () => {
       const g = await newGroup('_arch_remove');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
-      await groupsService.archiveGroup(g.id, actor.id);
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.archiveGroup(g.id, actor.subject_id);
 
       await expect(
-        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
 
       // Confirm the membership was NOT removed
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.id } },
+        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
       });
       expect(membership).not.toBeNull();
     });
@@ -158,7 +160,7 @@ describe('groups – invariants', () => {
       const child = await groupsService.createChildGroup(
         parent.id,
         { name: `Child self closure ${Date.now()}`, description: 'test' },
-        actor.id,
+        actor.subject_id,
       );
       groupsToDelete.push(child.id);
 
@@ -182,12 +184,12 @@ describe('groups – invariants', () => {
   describe('slug uniqueness', () => {
     it('two groups with the same name get distinct slugs', async () => {
       const sameName = `Identical Name ${Date.now()}`;
-      const g1 = await groupsService.createGroup({ name: sameName, description: 'first' }, actor.id);
+      const g1 = await groupsService.createGroup({ name: sameName, description: 'first' }, actor.subject_id);
       groupsToDelete.push(g1.id);
 
       // Second group must fail because `name` has a @unique constraint in the schema
       await expect(
-        groupsService.createGroup({ name: sameName, description: 'second' }, actor.id),
+        groupsService.createGroup({ name: sameName, description: 'second' }, actor.subject_id),
       ).rejects.toThrow();
     });
 
@@ -202,14 +204,24 @@ describe('groups – invariants', () => {
     it('inserting a duplicate name raises a unique-constraint error (P2002)', async () => {
       const g = await newGroup('_dup_name');
 
-      await expect(
-        prisma.group.create({
-          data: {
-            name: g.name,
-            slug: `different-slug-${Date.now()}`,
-          },
-        }),
-      ).rejects.toMatchObject({ code: 'P2002' });
+      // group.id is a FK to subject.id, so we must create a subject first;
+      // otherwise the FK constraint fires before the name unique constraint.
+      const dupSubjectId = randomUUID();
+      await prisma.subject.create({ data: { id: dupSubjectId, type: 'GROUP' } });
+      try {
+        await expect(
+          prisma.group.create({
+            data: {
+              id: dupSubjectId,
+              name: g.name,
+              slug: `different-slug-${Date.now()}`,
+            },
+          }),
+        ).rejects.toMatchObject({ code: 'P2002' });
+      } finally {
+        // clean up the orphan subject if the group creation failed (expected)
+        await prisma.subject.deleteMany({ where: { id: dupSubjectId } });
+      }
     });
   });
 });

@@ -1,10 +1,12 @@
 const path = require('path');
+const { randomUUID } = require('crypto');
 
 // Bootstrap aliases and basedir exactly as the application does at startup.
 // Must happen before any @/ import.
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
+const { SUBJECT_TYPE, RESOURCE_TYPE } = require('@prisma/client');
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
 const collectionsService = require('@/services/collections');
@@ -20,12 +22,20 @@ const collectionsService = require('@/services/collections');
  */
 async function createTestUser(tag = '') {
   const suffix = `${Date.now()}${tag}`;
+  // const subject_id = randomUUID();
+  // subject row must be created first — user.subject_id is a FK to subject.id
+  // await prisma.subject.create({ data: { id: subject_id, type: 'USER' } });
   return prisma.user.create({
     data: {
       name: `Test User ${suffix}`,
       username: `testuser_${suffix}`,
       email: `testuser_${suffix}@test.invalid`,
       is_deleted: false,
+      subject: {
+        create: {
+          type: SUBJECT_TYPE.USER,
+        },
+      },
     },
   });
 }
@@ -86,11 +96,15 @@ async function createTestChildGroup(parentId, actorId, tag = '', overrides = {})
  */
 async function createTestDataset(ownerGroupId, tag = '', overrides = {}) {
   const suffix = `${Date.now()}${tag}`;
+  const resource_id = randomUUID();
+  // resource row must be created first — dataset.resource_id is a FK to resource.id
+  await prisma.resource.create({ data: { id: resource_id, type: RESOURCE_TYPE.DATASET } });
   return prisma.dataset.create({
     data: {
       name: `Test Dataset ${suffix}`,
       type: 'RAW_DATA',
       owner_group_id: ownerGroupId,
+      resource_id,
       is_deleted: false,
       ...overrides,
     },
@@ -132,8 +146,10 @@ async function createTestCollection(ownerGroupId, actorId, tag = '', overrides =
  * @param {'DATASET'|'COLLECTION'} resourceType
  */
 async function getAccessTypeId(name, resourceType) {
+  // grant_access_type names now use "RESOURCE_TYPE:NAME" format (e.g. "DATASET:VIEW_METADATA")
+  const fullName = resourceType ? `${resourceType}:${name}` : name;
   const row = await prisma.grant_access_type.findFirstOrThrow({
-    where: { name, resource_type: resourceType },
+    where: { name: fullName },
     select: { id: true },
   });
   return row.id;
@@ -176,11 +192,11 @@ async function deleteGrants(grantIds = []) {
 }
 
 /**
- * Delete all grants associated with a resource.
+ * Delete all grants associated with a resource (by resource UUID).
  */
-async function deleteGrantsForResource(resourceType, resourceId) {
+async function deleteGrantsForResource(resourceId) {
   const grants = await prisma.grant.findMany({
-    where: { resource_type: resourceType, resource_id: resourceId },
+    where: { resource_id: resourceId },
     select: { id: true },
   });
   await deleteGrants(grants.map((g) => g.id));
@@ -190,7 +206,9 @@ async function deleteGrantsForResource(resourceType, resourceId) {
  * Delete a dataset by id (deletes associated grants first).
  */
 async function deleteDataset(datasetId) {
-  await deleteGrantsForResource('DATASET', datasetId);
+  // Look up resource_id (UUID) to clean up grants before deleting the dataset row
+  const ds = await prisma.dataset.findUnique({ where: { id: datasetId }, select: { resource_id: true } });
+  if (ds?.resource_id) await deleteGrantsForResource(ds.resource_id);
   await prisma.dataset_file.deleteMany({ where: { dataset_id: datasetId } });
   await prisma.dataset.delete({ where: { id: datasetId } });
 }
@@ -199,7 +217,8 @@ async function deleteDataset(datasetId) {
  * Delete a collection by id (deletes dataset links and grants first).
  */
 async function deleteCollection(collectionId) {
-  await deleteGrantsForResource('COLLECTION', collectionId);
+  // collection.id IS resource.id (UUID) — use it directly
+  await deleteGrantsForResource(collectionId);
   await prisma.collection_dataset.deleteMany({ where: { collection_id: collectionId } });
   // use deleteMany to avoid throwing if already deleted
   await prisma.collection.deleteMany({ where: { id: collectionId } });
@@ -218,9 +237,29 @@ async function deleteGroup(groupId) {
 
 /**
  * Delete a user by id.
+ * Cleans up grants, access_requests (all Restrict FKs) before deleting.
+ * The subject row is deleted by a DB trigger after user deletion.
  */
 async function deleteUser(userId) {
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { subject_id: true } });
+  if (u?.subject_id) {
+    // Delete access_request_items first (cascade from access_request), then requests
+    const arIds = await prisma.access_request.findMany({
+      where: { requester_id: u.subject_id },
+      select: { id: true },
+    });
+    if (arIds.length) {
+      const ids = arIds.map((r) => r.id);
+      await prisma.access_request_item.deleteMany({ where: { access_request_id: { in: ids } } });
+      await prisma.access_request.deleteMany({ where: { id: { in: ids } } });
+    }
+    // Delete grants where this user is the subject (recipient)
+    await prisma.grant.deleteMany({ where: { subject_id: u.subject_id } });
+    // Delete grants created by this user (granted_by is NOT NULL, Restrict)
+    await prisma.grant.deleteMany({ where: { granted_by: u.subject_id } });
+  }
   await prisma.user.deleteMany({ where: { id: userId } });
+  // subject row is deleted by DB trigger after user deletion
 }
 
 module.exports = {

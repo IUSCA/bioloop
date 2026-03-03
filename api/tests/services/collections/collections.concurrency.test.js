@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /**
  * collections.concurrency.test.js
  *
@@ -38,7 +40,7 @@ beforeAll(async () => {
   actor = await createTestUser('_cc_actor');
   userIds.push(actor.id);
 
-  ownerGroup = await createTestGroup(actor.id, '_cc_owner');
+  ownerGroup = await createTestGroup(actor.subject_id, '_cc_owner');
   groupIds.push(ownerGroup.id);
 
   [dsA, dsB] = await Promise.all([
@@ -63,7 +65,7 @@ afterAll(async () => {
 async function freshCollection(tag = '') {
   const c = await collectionsService.createCollection(
     { name: `Conc Collection ${Date.now()}${tag}`, owner_group_id: ownerGroup.id },
-    { actor_id: actor.id },
+    { actor_id: actor.subject_id },
   );
   collectionIds.push(c.id);
   return c;
@@ -147,8 +149,8 @@ describe('collections – concurrency', () => {
       const c = await freshCollection('_add_conc');
 
       const [r1, r2] = await Promise.allSettled([
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ]);
 
       // Both serialized by FOR UPDATE — both should resolve
@@ -156,7 +158,7 @@ describe('collections – concurrency', () => {
       expect(r2.status).toBe('fulfilled');
 
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: dsA.id },
+        where: { collection_id: c.id, dataset_id: dsA.resource_id },
       });
       expect(count).toBe(1);
     });
@@ -165,8 +167,8 @@ describe('collections – concurrency', () => {
       const c = await freshCollection('_add_diff');
 
       await Promise.all([
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsB.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsB.resource_id], actor_id: actor.subject_id }),
       ]);
 
       const count = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
@@ -177,18 +179,18 @@ describe('collections – concurrency', () => {
   describe('concurrent removeDatasets', () => {
     it('two concurrent removes of the same dataset both resolve with 0 rows remaining', async () => {
       const c = await freshCollection('_rm_conc');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
 
       const [r1, r2] = await Promise.allSettled([
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
+        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ]);
 
       expect(r1.status).toBe('fulfilled');
       expect(r2.status).toBe('fulfilled');
 
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: dsA.id },
+        where: { collection_id: c.id, dataset_id: dsA.resource_id },
       });
       expect(count).toBe(0);
     });
@@ -196,7 +198,7 @@ describe('collections – concurrency', () => {
     it('remove on already-empty collection resolves without error', async () => {
       const c = await freshCollection('_rm_empty');
       await expect(
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
+        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ).resolves.not.toThrow();
     });
   });
@@ -215,8 +217,8 @@ describe('collections – concurrency', () => {
       const c = await freshCollection('_arch_race');
 
       const results = await Promise.allSettled([
-        collectionsService.archiveCollection(c.id, actor.id),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
+        collectionsService.archiveCollection(c.id, actor.subject_id),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ]);
 
       // At least one operation succeeded
@@ -230,22 +232,23 @@ describe('collections – concurrency', () => {
 
     it('addDatasets on already-archived collection throws 409', async () => {
       const c = await freshCollection('_arch_add');
-      await collectionsService.archiveCollection(c.id, actor.id);
+      await collectionsService.archiveCollection(c.id, actor.subject_id);
 
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
     });
   });
 
   describe('concurrent archiveCollection and unarchiveCollection', () => {
+    // cSpell: ignore unarch
     it('final state is archived or unarchived — no corrupt intermediate state', async () => {
       const c = await freshCollection('_arch_unarch');
-      await collectionsService.archiveCollection(c.id, actor.id);
+      await collectionsService.archiveCollection(c.id, actor.subject_id);
 
       await Promise.allSettled([
-        collectionsService.unarchiveCollection(c.id, actor.id),
-        collectionsService.archiveCollection(c.id, actor.id),
+        collectionsService.unarchiveCollection(c.id, actor.subject_id),
+        collectionsService.archiveCollection(c.id, actor.subject_id),
       ]);
 
       const final = await prisma.collection.findUnique({ where: { id: c.id } });

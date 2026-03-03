@@ -1,4 +1,4 @@
-const { Prisma } = require('@prisma/client');
+const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
 const { randomUUID } = require('crypto');
@@ -243,13 +243,13 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     WITH collection_owner AS (
       SELECT owner_group_id FROM collection WHERE id = ${collection_id}
     )
-    SELECT d.subject_id
+    SELECT d.resource_id
     FROM dataset d
     JOIN "group" g ON d.owner_group_id = g.id
     JOIN collection_owner co ON d.owner_group_id = co.owner_group_id
-    WHERE d.subject_id = ANY(${dataset_ids}::text[]) and d.is_deleted = false and g.is_archived = false
+    WHERE d.resource_id = ANY(${dataset_ids}::text[]) and d.is_deleted = false and g.is_archived = false
   `;
-  const validDatasetIds = datasetRows.map((row) => row.subject_id);
+  const validDatasetIds = datasetRows.map((row) => row.resource_id);
   const invalidDatasetIds = dataset_ids.filter((id) => !validDatasetIds.includes(id));
   if (invalidDatasetIds.length) {
     throw createError.BadRequest(
@@ -484,7 +484,7 @@ async function searchCollectionsForUser({
       owned_collections AS (
         SELECT id FROM "collection" c
         JOIN group_user gu ON c.owner_group_id = gu.group_id
-        WHERE gu.user_id = ${user_id} AND gu.role = 'ADMIN'
+        WHERE gu.user_id = ${user_id} AND gu.role = ${GROUP_MEMBER_ROLE.ADMIN}
       ),
       oversight_collections AS (
         SELECT id FROM "collection" c

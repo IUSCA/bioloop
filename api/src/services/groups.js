@@ -1,4 +1,4 @@
-const { Prisma } = require('@prisma/client');
+const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
 const { randomUUID } = require('crypto');
@@ -173,7 +173,7 @@ async function createChildGroup(parent_id, data, actor_id) {
         members: {
           create: {
             user_id: actor_id,
-            role: 'ADMIN',
+            role: GROUP_MEMBER_ROLE.ADMIN,
           },
         },
       },
@@ -463,11 +463,12 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
+    const member = Prisma.raw(`'${GROUP_MEMBER_ROLE.MEMBER}'`);
     const createdRecords = await tx.$queryRaw`
       INSERT INTO group_user (group_id, user_id, role)
-      SELECT ${group_id}, u.id, 'MEMBER'
+      SELECT ${group_id}, u.subject_id, ${member}
       FROM "user" u
-      WHERE u.id = ANY(${user_ids}::text[])
+      WHERE u.subject_id = ANY(${user_ids}::text[])
       ON CONFLICT (group_id, user_id) DO NOTHING
       RETURNING user_id;
     `;
@@ -482,7 +483,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
         target_id: group_id,
         metadata: {
           user_id,
-          role: 'MEMBER',
+          role: GROUP_MEMBER_ROLE.MEMBER,
         },
       })),
     });
@@ -514,7 +515,7 @@ async function promoteGroupMemberToAdmin(group_id, {
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
     }
-    if (membership.role === 'ADMIN') {
+    if (membership.role === GROUP_MEMBER_ROLE.ADMIN) {
       return membership;
     }
 
@@ -526,7 +527,7 @@ async function promoteGroupMemberToAdmin(group_id, {
         },
       },
       data: {
-        role: 'ADMIN',
+        role: GROUP_MEMBER_ROLE.ADMIN,
       },
     });
 
@@ -571,7 +572,7 @@ async function removeGroupAdmin(group_id, {
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
     }
-    if (membership.role === 'MEMBER') {
+    if (membership.role === GROUP_MEMBER_ROLE.MEMBER) {
       return membership;
     }
 
@@ -583,7 +584,7 @@ async function removeGroupAdmin(group_id, {
         },
       },
       data: {
-        role: 'MEMBER',
+        role: GROUP_MEMBER_ROLE.MEMBER,
       },
     });
 

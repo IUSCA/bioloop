@@ -3,7 +3,9 @@
  * Manages approval workflow (not authorization itself)
  */
 
-const { Prisma } = require('@prisma/client');
+const {
+  Prisma, GROUP_MEMBER_ROLE, ACCESS_REQUEST_STATUS, ACCESS_REQUEST_ITEM_DECISION, GRANT_CREATION_TYPE,
+} = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
@@ -100,7 +102,7 @@ async function createAccessRequest(data, requester_id) {
         requester_id,
         purpose: data.purpose ?? Prisma.skip,
         previous_grant_ids: data.previous_grant_ids ?? Prisma.skip,
-        status: 'DRAFT',
+        status: ACCESS_REQUEST_STATUS.DRAFT,
       },
     });
 
@@ -111,7 +113,7 @@ async function createAccessRequest(data, requester_id) {
           access_request_id: accessRequest.id,
           access_type_id: item.access_type_id,
           requested_until: item.requested_until ?? Prisma.skip,
-          decision: 'PENDING',
+          decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
       });
     }
@@ -124,7 +126,7 @@ async function createAccessRequest(data, requester_id) {
         target_type: 'access_request',
         target_id: accessRequest.id,
         metadata: {
-          status: 'DRAFT',
+          status: ACCESS_REQUEST_STATUS.DRAFT,
           resource_type: data.resource_type,
           resource_id: data.resource_id,
         },
@@ -160,7 +162,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
     const updated = await tx.access_request.updateMany({
       where: {
         id: request_id,
-        status: 'DRAFT', // Ensure request is still in DRAFT to prevent race conditions
+        status: ACCESS_REQUEST_STATUS.DRAFT, // Ensure request is still in DRAFT to prevent race conditions
       },
       data: {
         purpose: data.purpose ?? Prisma.skip,
@@ -183,7 +185,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
           access_request_id: request_id,
           access_type_id: item.access_type_id,
           requested_until: item.requested_until ?? Prisma.skip,
-          decision: 'PENDING',
+          decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
       });
     }
@@ -249,7 +251,7 @@ async function _assertNoInFlightRequests(request) {
       id: { not: request.id },
       requester_id: request.requester_id,
       resource_id: request.resource_id,
-      status: { in: ['DRAFT', 'UNDER_REVIEW'] },
+      status: { in: [ACCESS_REQUEST_STATUS.DRAFT, ACCESS_REQUEST_STATUS.UNDER_REVIEW] },
       access_request_items: {
         some: { access_type_id: { in: itemAccessTypeIds } },
       },
@@ -284,7 +286,7 @@ async function _assertNoInFlightRequests(request) {
 async function submitRequest(request_id, requester_id) {
   // Fetch the request with items for pre-flight validation
   const request = await _getRequestById(prisma, request_id);
-  if (!request || request.status !== 'DRAFT') {
+  if (!request || request.status !== ACCESS_REQUEST_STATUS.DRAFT) {
     throw createError.Conflict('Request is no longer in DRAFT status');
   }
 
@@ -299,10 +301,10 @@ async function submitRequest(request_id, requester_id) {
     const updated = await tx.access_request.updateMany({
       where: {
         id: request_id,
-        status: 'DRAFT', // Ensure request is still in DRAFT to prevent race conditions
+        status: ACCESS_REQUEST_STATUS.DRAFT, // Ensure request is still in DRAFT to prevent race conditions
       },
       data: {
-        status: 'UNDER_REVIEW',
+        status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
         submitted_at: new Date(),
       },
     });
@@ -318,8 +320,8 @@ async function submitRequest(request_id, requester_id) {
         target_type: 'access_request',
         target_id: request_id,
         metadata: {
-          from_status: 'DRAFT',
-          to_status: 'UNDER_REVIEW',
+          from_status: ACCESS_REQUEST_STATUS.DRAFT,
+          to_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
         },
       },
     });
@@ -344,17 +346,17 @@ function _determineFinalStatus(approvedCount, rejectedCount) {
   let finalStatus;
   let eventType;
   if (approvedCount > 0 && rejectedCount === 0) {
-    finalStatus = 'APPROVED';
+    finalStatus = ACCESS_REQUEST_STATUS.APPROVED;
     eventType = AUTH_EVENT_TYPE.REQUEST_APPROVED;
   } else if (approvedCount === 0 && rejectedCount > 0) {
-    finalStatus = 'REJECTED';
+    finalStatus = ACCESS_REQUEST_STATUS.REJECTED;
     eventType = AUTH_EVENT_TYPE.REQUEST_REJECTED;
   } else if (approvedCount > 0 && rejectedCount > 0) {
-    finalStatus = 'PARTIALLY_APPROVED';
+    finalStatus = ACCESS_REQUEST_STATUS.PARTIALLY_APPROVED;
     eventType = AUTH_EVENT_TYPE.REQUEST_APPROVED;
   } else {
     // No decisions made (shouldn't happen with validation above)
-    finalStatus = 'REJECTED';
+    finalStatus = ACCESS_REQUEST_STATUS.REJECTED;
     eventType = AUTH_EVENT_TYPE.REQUEST_REJECTED;
   }
   return { finalStatus, eventType };
@@ -376,6 +378,7 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
     resource_id: currentRequest.resource_id,
     access_type_id: reviewItem.access_type_id,
     valid_until: reviewItem.approved_until,
+    creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST,
   };
   return createGrant(data, granted_by, tx);
 }
@@ -410,8 +413,8 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
 
   // Count approvals and rejections
   const { approvedCount, rejectedCount } = reviewItems.reduce((acc, curr) => {
-    if (curr.decision === 'APPROVED') acc.approvedCount += 1;
-    else if (curr.decision === 'REJECTED') acc.rejectedCount += 1;
+    if (curr.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) acc.approvedCount += 1;
+    else if (curr.decision === ACCESS_REQUEST_ITEM_DECISION.REJECTED) acc.rejectedCount += 1;
     return acc;
   }, { approvedCount: 0, rejectedCount: 0 });
 
@@ -424,7 +427,7 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
     const updated = await tx.access_request.updateMany({
       where: {
         id: request_id,
-        status: 'UNDER_REVIEW', // Ensure request is still under review to prevent race conditions
+        status: ACCESS_REQUEST_STATUS.UNDER_REVIEW, // Ensure request is still under review to prevent race conditions
       },
       data: {
         status: finalStatus,
@@ -446,7 +449,7 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
     // create grants for approved items and update request items with decisions and grant references
     // eslint-disable-next-line no-restricted-syntax
     for (const reviewItem of reviewItems) {
-      if (reviewItem.decision === 'APPROVED') {
+      if (reviewItem.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) {
         // eslint-disable-next-line no-await-in-loop
         const grant = await _createGrant(tx, latestRequest, reviewItem, reviewer_id);
         // eslint-disable-next-line no-await-in-loop
@@ -465,7 +468,7 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
         target_type: 'access_request',
         target_id: request_id,
         metadata: {
-          from_status: 'UNDER_REVIEW',
+          from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
           to_status: finalStatus,
           approved_count: approvedCount,
           rejected_count: rejectedCount,
@@ -495,11 +498,11 @@ async function withdrawRequest({ request_id, requester_id }) {
       where: {
         id: request_id,
         status: {
-          in: ['DRAFT', 'UNDER_REVIEW'], // Only allow withdrawal if request is still in DRAFT or UNDER_REVIEW to prevent race conditions with reviews
+          in: [ACCESS_REQUEST_STATUS.DRAFT, ACCESS_REQUEST_STATUS.UNDER_REVIEW], // Only allow withdrawal if request is still in DRAFT or UNDER_REVIEW to prevent race conditions with reviews
         },
       },
       data: {
-        status: 'WITHDRAWN',
+        status: ACCESS_REQUEST_STATUS.WITHDRAWN,
         closed_at: new Date(),
       },
     });
@@ -516,7 +519,7 @@ async function withdrawRequest({ request_id, requester_id }) {
         target_id: request_id,
         metadata: {
           from_status: currentRequest.status,
-          to_status: 'WITHDRAWN',
+          to_status: ACCESS_REQUEST_STATUS.WITHDRAWN,
         },
       },
     });
@@ -541,13 +544,13 @@ async function expireStaleRequests({ max_age_days }) {
     // Update all stale requests to EXPIRED
     const updatedRequests = await tx.access_request.updateManyAndReturn({
       where: {
-        status: 'UNDER_REVIEW',
+        status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
         submitted_at: {
           lte: cutoffDate,
         },
       },
       data: {
-        status: 'EXPIRED',
+        status: ACCESS_REQUEST_STATUS.EXPIRED,
         closed_at: new Date(),
       },
       select: {
@@ -564,8 +567,8 @@ async function expireStaleRequests({ max_age_days }) {
         target_type: 'access_request',
         target_id: request_id,
         metadata: {
-          from_status: 'UNDER_REVIEW',
-          to_status: 'EXPIRED',
+          from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+          to_status: ACCESS_REQUEST_STATUS.EXPIRED,
           max_age_days,
         },
       })),
@@ -603,7 +606,7 @@ async function getRequestsByUser({
       collection_resource: true,
     },
     orderBy: {
-      [sort_by || 'created_at']: sort_order || 'desc',
+      [sort_by]: sort_order,
     },
     skip: offset,
     take: limit,
@@ -638,11 +641,11 @@ async function getRequestsPendingReviewForUser({
         SELECT gu.group_id
         FROM group_user gu
         WHERE gu.user_id = ${reviewer_id}
-          AND gu.role = 'ADMIN'
+          AND gu.role = ${GROUP_MEMBER_ROLE.ADMIN}
       )
       SELECT *
       FROM access_request ar
-      WHERE ar.status = 'UNDER_REVIEW'
+      WHERE ar.status = ${ACCESS_REQUEST_STATUS.UNDER_REVIEW}
         AND ( ar.resource_id IN (
               SELECT d.resource_id
               FROM dataset d

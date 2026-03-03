@@ -1,6 +1,6 @@
 const assert = require('assert');
 // const path = require('node:path');
-const { Prisma } = require('@prisma/client');
+const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const config = require('config');
 const _ = require('lodash/fp');
@@ -513,7 +513,7 @@ async function explainDatasetAccess({ user_id, dataset_id, access_types }) {
   const dataset = await prisma.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
 
   const adminGroupIds = user.group_memberships
-    .filter((gm) => gm.role === 'ADMIN')
+    .filter((gm) => gm.role === GROUP_MEMBER_ROLE.ADMIN)
     .map((gm) => gm.group_id);
   if (adminGroupIds.includes(dataset.owner_group_id)) {
     return {

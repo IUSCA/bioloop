@@ -7,6 +7,7 @@
  */
 
 const path = require('path');
+const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
@@ -46,7 +47,7 @@ afterAll(async () => {
 // ─────────────────────────────────────────────
 
 async function newGroup(tag = '', overrides = {}) {
-  const g = await createTestGroup(actor.id, tag, overrides);
+  const g = await createTestGroup(actor.subject_id, tag, overrides);
   groupsToDelete.push(g.id);
   return g;
 }
@@ -55,7 +56,7 @@ async function newChildGroup(parentId, tag = '') {
   const g = await groupsService.createChildGroup(
     parentId,
     { name: `Test Child ${Date.now()}${tag}`, description: 'child' },
-    actor.id,
+    actor.subject_id,
   );
   groupsToDelete.push(g.id);
   return g;
@@ -65,7 +66,7 @@ async function newChildGroup(parentId, tag = '') {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('groups – lifecycle', () => {
+describe('groups - lifecycle', () => {
   describe('createGroup', () => {
     it('creates a self-closure row with depth 0', async () => {
       const g = await newGroup('_create');
@@ -88,7 +89,7 @@ describe('groups – lifecycle', () => {
         where: { event_type: 'GROUP_CREATED', target_type: 'group', target_id: g.id },
       });
       expect(auditRow).not.toBeNull();
-      expect(auditRow.actor_id).toBe(actor.id);
+      expect(auditRow.actor_id).toBe(actor.subject_id);
     });
 
     it('returned group has version = 1', async () => {
@@ -151,10 +152,10 @@ describe('groups – lifecycle', () => {
       const child = await newChildGroup(parent.id, '_auto_admin_child');
 
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: child.id, user_id: actor.id } },
+        where: { group_id_user_id: { group_id: child.id, user_id: actor.subject_id } },
       });
       expect(membership).not.toBeNull();
-      expect(membership.role).toBe('ADMIN');
+      expect(membership.role).toBe(GROUP_MEMBER_ROLE.ADMIN);
     });
   });
 
@@ -218,7 +219,7 @@ describe('groups – lifecycle', () => {
 
     it('throws on archived group regardless of version', async () => {
       const g = await newGroup('_arch_upd');
-      await groupsService.archiveGroup(g.id, actor.id);
+      await groupsService.archiveGroup(g.id, actor.subject_id);
       await expect(
         groupsService.updateGroupMetadata(g.id, { data: { description: 'new' }, expected_version: 1 }),
       ).rejects.toMatchObject({ status: 409 });
@@ -228,22 +229,22 @@ describe('groups – lifecycle', () => {
   describe('archiveGroup / unarchiveGroup', () => {
     it('archiveGroup sets is_archived=true and archived_at', async () => {
       const g = await newGroup('_archive');
-      const archived = await groupsService.archiveGroup(g.id, actor.id);
+      const archived = await groupsService.archiveGroup(g.id, actor.subject_id);
       expect(archived.is_archived).toBe(true);
       expect(archived.archived_at).not.toBeNull();
     });
 
     it('unarchiveGroup sets is_archived=false and clears archived_at', async () => {
       const g = await newGroup('_unarchive');
-      await groupsService.archiveGroup(g.id, actor.id);
-      const restored = await groupsService.unarchiveGroup(g.id, actor.id);
+      await groupsService.archiveGroup(g.id, actor.subject_id);
+      const restored = await groupsService.unarchiveGroup(g.id, actor.subject_id);
       expect(restored.is_archived).toBe(false);
       expect(restored.archived_at).toBeNull();
     });
 
     it('archiveGroup creates a GROUP_ARCHIVED audit row', async () => {
       const g = await newGroup('_arch_audit');
-      await groupsService.archiveGroup(g.id, actor.id);
+      await groupsService.archiveGroup(g.id, actor.subject_id);
       const audit = await prisma.authorization_audit.findFirst({
         where: { event_type: 'GROUP_ARCHIVED', target_type: 'group', target_id: g.id },
       });
@@ -254,43 +255,43 @@ describe('groups – lifecycle', () => {
   describe('membership management', () => {
     it('addGroupMembers adds user with role MEMBER', async () => {
       const g = await newGroup('_add_member');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.id } },
+        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
       });
       expect(membership).not.toBeNull();
-      expect(membership.role).toBe('MEMBER');
+      expect(membership.role).toBe(GROUP_MEMBER_ROLE.MEMBER);
     });
 
-    it('addGroupMembers is idempotent (ON CONFLICT DO NOTHING)', async () => {
+    it('addGroupMembers is idempotent', async () => {
       const g = await newGroup('_add_idem');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
       // Second call must not throw and must not create a duplicate row
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const count = await prisma.group_user.count({
-        where: { group_id: g.id, user_id: memberUser.id },
+        where: { group_id: g.id, user_id: memberUser.subject_id },
       });
       expect(count).toBe(1);
     });
 
     it('listGroupMembers reflects added members', async () => {
       const g = await newGroup('_list_members');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const result = await groupsService.listGroupMembers(g.id, { limit: 10, offset: 0 });
       const userIds = result.data.map((m) => m.user_id);
-      expect(userIds).toContain(memberUser.id);
+      expect(userIds).toContain(memberUser.subject_id);
     });
 
     it('removeGroupMembers removes the user', async () => {
       const g = await newGroup('_rm_member');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
-      await groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.id } },
+        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
       });
       expect(membership).toBeNull();
     });
@@ -300,11 +301,17 @@ describe('groups – lifecycle', () => {
       const extraUser = await createTestUser('_member_extra');
       usersToDelete.push(extraUser.id);
 
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id, extraUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, {
+        user_ids: [memberUser.subject_id, extraUser.subject_id],
+        actor_id: actor.subject_id,
+      });
       let result = await groupsService.listGroupMembers(g.id, { limit: 10, offset: 0 });
       expect(result.metadata.total).toBe(2);
 
-      await groupsService.removeGroupMembers(g.id, { user_ids: [extraUser.id], actor_id: actor.id });
+      await groupsService.removeGroupMembers(g.id, {
+        user_ids: [extraUser.subject_id],
+        actor_id: actor.subject_id,
+      });
       result = await groupsService.listGroupMembers(g.id, { limit: 10, offset: 0 });
       expect(result.metadata.total).toBe(1);
     });
@@ -313,25 +320,31 @@ describe('groups – lifecycle', () => {
   describe('promoteGroupMemberToAdmin / removeGroupAdmin', () => {
     it('promotion changes role to ADMIN', async () => {
       const g = await newGroup('_promote');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
       const result = await groupsService.promoteGroupMemberToAdmin(g.id, {
-        user_id: memberUser.id, actor_id: actor.id,
+        user_id: memberUser.subject_id, actor_id: actor.subject_id,
       });
-      expect(result.role).toBe('ADMIN');
+      expect(result.role).toBe(GROUP_MEMBER_ROLE.ADMIN);
     });
 
     it('demotion changes role back to MEMBER', async () => {
       const g = await newGroup('_demote');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
-      await groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id });
-      const result = await groupsService.removeGroupAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id });
-      expect(result.role).toBe('MEMBER');
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: memberUser.subject_id,
+        actor_id: actor.subject_id,
+      });
+      const result = await groupsService.removeGroupAdmin(g.id, {
+        user_id: memberUser.subject_id,
+        actor_id: actor.subject_id,
+      });
+      expect(result.role).toBe(GROUP_MEMBER_ROLE.MEMBER);
     });
 
     it('promoting a non-member throws 409', async () => {
       const g = await newGroup('_promote_nonmember');
       await expect(
-        groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id }),
+        groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
     });
   });

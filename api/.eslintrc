@@ -45,7 +45,25 @@
     ],
     "max-len": ["error", { "ignoreComments": true, "code": 120 }],
     "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
-    "local-rules/no-original-prisma-inside-tx": "error"
+    "local-rules/no-original-prisma-inside-tx": "error",
+    "no-await-in-loop": "off",
+    // Override airbnb-base config to allow for...of loops (required for await in loops).
+    // Removes ForOfStatement restriction while keeping ForInStatement, LabeledStatement, and WithStatement.
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ForInStatement",
+        "message": "for...in loops iterate over the entire prototype chain, use Object.{keys,values,entries} and iterate over the resulting array instead"
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labels are a form of GOTO; using them makes code confusing and hard to maintain and refactor"
+      },
+      {
+        "selector": "WithStatement",
+        "message": "`with` is disallowed in strict mode because it makes code impossible to predict and optimize"
+      }
+    ]
   },
   "env": {
     "node": true,

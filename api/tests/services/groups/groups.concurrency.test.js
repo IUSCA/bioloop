@@ -1,3 +1,5 @@
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /**
  * groups.concurrency.test.js
  *
@@ -7,6 +9,7 @@
  */
 
 const path = require('path');
+const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
@@ -45,7 +48,7 @@ afterAll(async () => {
 // ─────────────────────────────────────────────
 
 async function newGroup(tag = '') {
-  const g = await createTestGroup(actor.id, tag);
+  const g = await createTestGroup(actor.subject_id, tag);
   groupsToDelete.push(g.id);
   return g;
 }
@@ -54,7 +57,7 @@ async function newChildGroup(parentId, tag = '') {
   const g = await groupsService.createChildGroup(
     parentId,
     { name: `Concurrent Child ${Date.now()}${tag}`, description: 'test' },
-    actor.id,
+    actor.subject_id,
   );
   groupsToDelete.push(g.id);
   return g;
@@ -110,8 +113,8 @@ describe('groups – concurrency', () => {
       const g = await newGroup('_add_race');
 
       const results = await Promise.allSettled([
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ]);
 
       const rejected = results.filter((r) => r.status === 'rejected');
@@ -122,12 +125,12 @@ describe('groups – concurrency', () => {
       const g = await newGroup('_add_race_count');
 
       await Promise.allSettled([
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ]);
 
       const count = await prisma.group_user.count({
-        where: { group_id: g.id, user_id: memberUser.id },
+        where: { group_id: g.id, user_id: memberUser.subject_id },
       });
       expect(count).toBe(1);
     });
@@ -136,11 +139,11 @@ describe('groups – concurrency', () => {
   describe('concurrent removeGroupMembers for same user', () => {
     it('both removes resolve without error', async () => {
       const g = await newGroup('_rm_race');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const results = await Promise.allSettled([
-        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
-        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
+        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ]);
 
       const rejected = results.filter((r) => r.status === 'rejected');
@@ -149,15 +152,15 @@ describe('groups – concurrency', () => {
 
     it('user is absent from the group after both removes complete', async () => {
       const g = await newGroup('_rm_race_absent');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       await Promise.allSettled([
-        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
-        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
+        groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ]);
 
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.id } },
+        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
       });
       expect(membership).toBeNull();
     });
@@ -184,8 +187,8 @@ describe('groups – concurrency', () => {
       const g = await newGroup('_arch_add_race');
 
       const results = await Promise.allSettled([
-        groupsService.archiveGroup(g.id, actor.id),
-        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id }),
+        groupsService.archiveGroup(g.id, actor.subject_id),
+        groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id }),
       ]);
 
       // At least archiveGroup must succeed since it has no precondition guard
@@ -207,19 +210,22 @@ describe('groups – concurrency', () => {
   describe('concurrent promoteGroupMemberToAdmin and removeGroupAdmin', () => {
     it('final role is a valid GROUP_MEMBER_ROLE value (no corruption)', async () => {
       const g = await newGroup('_promo_demote_race');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.id], actor_id: actor.id });
-      await groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: memberUser.subject_id,
+        actor_id: actor.subject_id,
+      });
 
       // Race between a second promote and a demote
       await Promise.allSettled([
-        groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id }),
-        groupsService.removeGroupAdmin(g.id, { user_id: memberUser.id, actor_id: actor.id }),
+        groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
+        groupsService.removeGroupAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
       ]);
 
       const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.id } },
+        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
       });
-      expect(['ADMIN', 'MEMBER']).toContain(membership.role);
+      expect([GROUP_MEMBER_ROLE.ADMIN, GROUP_MEMBER_ROLE.MEMBER]).toContain(membership.role);
     });
   });
 });

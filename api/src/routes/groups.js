@@ -4,6 +4,7 @@ const createError = require('http-errors');
 const _ = require('lodash/fp');
 const assert = require('assert');
 const { isUUID } = require('validator');
+const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -28,7 +29,7 @@ async function ensureNotRemovingLastAdmin(group_id, user_id) {
   // but prevents group admins from removing the only admin (themselves) and leaving the group without any admins,
   // which would make it impossible to manage the group going forward
   const groupAdmins = await prisma.group_user.findMany({
-    where: { group_id, role: 'ADMIN' },
+    where: { group_id, role: GROUP_MEMBER_ROLE.ADMIN },
   });
   const message = 'Cannot remove the only admin from the group.'
         + ' Please promote another member to admin before removing this member.';

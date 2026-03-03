@@ -50,8 +50,8 @@ beforeAll(async () => {
   actor = await createTestUser('_cl_actor');
   userIds.push(actor.id);
 
-  ownerGroup = await createTestGroup(actor.id, '_cl_owner');
-  foreignGroup = await createTestGroup(actor.id, '_cl_foreign');
+  ownerGroup = await createTestGroup(actor.subject_id, '_cl_owner');
+  foreignGroup = await createTestGroup(actor.subject_id, '_cl_foreign');
   groupIds.push(ownerGroup.id, foreignGroup.id);
 
   [dsA, dsB, dsC] = await Promise.all([
@@ -78,7 +78,7 @@ afterAll(async () => {
 // ─────────────────────────────────────────────
 
 async function newCollection(tag = '', overrides = {}) {
-  const c = await createTestCollection(ownerGroup.id, actor.id, tag, overrides);
+  const c = await createTestCollection(ownerGroup.id, actor.subject_id, tag, overrides);
   collectionIds.push(c.id);
   return c;
 }
@@ -146,7 +146,7 @@ describe('collections – lifecycle', () => {
 
     it('throws 409 on archived collection regardless of version', async () => {
       const c = await newCollection('_upd_archived');
-      await collectionsService.archiveCollection(c.id, actor.id);
+      await collectionsService.archiveCollection(c.id, actor.subject_id);
       await expect(
         collectionsService.updateCollectionMetadata(c.id, {
           data: { description: 'should fail' },
@@ -159,15 +159,15 @@ describe('collections – lifecycle', () => {
   describe('archiveCollection / unarchiveCollection', () => {
     it('archiveCollection sets is_archived=true and archived_at', async () => {
       const c = await newCollection('_archive');
-      const archived = await collectionsService.archiveCollection(c.id, actor.id);
+      const archived = await collectionsService.archiveCollection(c.id, actor.subject_id);
       expect(archived.is_archived).toBe(true);
       expect(archived.archived_at).not.toBeNull();
     });
 
     it('unarchiveCollection sets is_archived=false and clears archived_at', async () => {
       const c = await newCollection('_unarchive');
-      await collectionsService.archiveCollection(c.id, actor.id);
-      const restored = await collectionsService.unarchiveCollection(c.id, actor.id);
+      await collectionsService.archiveCollection(c.id, actor.subject_id);
+      const restored = await collectionsService.unarchiveCollection(c.id, actor.subject_id);
       expect(restored.is_archived).toBe(false);
       expect(restored.archived_at).toBeNull();
     });
@@ -180,9 +180,9 @@ describe('collections – lifecycle', () => {
           name: `Delete Me ${Date.now()}`,
           owner_group_id: ownerGroup.id,
         },
-        { actor_id: actor.id },
+        { actor_id: actor.subject_id },
       );
-      await collectionsService.deleteCollection(c.id, actor.id);
+      await collectionsService.deleteCollection(c.id, actor.subject_id);
       const row = await prisma.collection.findUnique({ where: { id: c.id } });
       expect(row).toBeNull();
     });
@@ -191,7 +191,10 @@ describe('collections – lifecycle', () => {
   describe('addDatasets', () => {
     it('adds datasets and they appear in listDatasetsInCollection', async () => {
       const c = await newCollection('_add_ds');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id, dsB.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, {
+        dataset_ids: [dsA.resource_id, dsB.resource_id],
+        actor_id: actor.subject_id,
+      });
 
       const result = await collectionsService.listDatasetsInCollection({
         collection_id: c.id, limit: 10, offset: 0, sort_by: 'id', sort_order: 'desc',
@@ -204,12 +207,12 @@ describe('collections – lifecycle', () => {
     it('rejects datasets from a different owner group (cross-group violation)', async () => {
       const c = await newCollection('_cross_group');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
 
       // No row must have been inserted
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: foreignDs.id },
+        where: { collection_id: c.id, dataset_id: foreignDs.resource_id },
       });
       expect(count).toBe(0);
     });
@@ -217,17 +220,17 @@ describe('collections – lifecycle', () => {
     it('rejects soft-deleted datasets (is_deleted=true)', async () => {
       const c = await newCollection('_deleted_ds');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.id], actor_id: actor.id }),
+        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
     });
 
     it('is idempotent — adding the same dataset twice leaves exactly 1 row', async () => {
       const c = await newCollection('_idem_add');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id });
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
 
       const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: dsA.id },
+        where: { collection_id: c.id, dataset_id: dsA.resource_id },
       });
       expect(count).toBe(1);
     });
@@ -236,8 +239,11 @@ describe('collections – lifecycle', () => {
   describe('removeDatasets', () => {
     it('removes a dataset from the collection', async () => {
       const c = await newCollection('_rm_ds');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id, dsB.id], actor_id: actor.id });
-      await collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, {
+        dataset_ids: [dsA.resource_id, dsB.resource_id],
+        actor_id: actor.subject_id,
+      });
+      await collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.listDatasetsInCollection({
         collection_id: c.id, limit: 10, offset: 0, sort_by: 'id', sort_order: 'desc',
@@ -252,11 +258,11 @@ describe('collections – lifecycle', () => {
     it('returns all collections containing the dataset', async () => {
       const c1 = await newCollection('_fbd_1');
       const c2 = await newCollection('_fbd_2');
-      await collectionsService.addDatasets(c1.id, { dataset_ids: [dsC.id], actor_id: actor.id });
-      await collectionsService.addDatasets(c2.id, { dataset_ids: [dsC.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c1.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c2.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.findCollectionsByDataset({
-        dataset_id: dsC.id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        dataset_id: dsC.resource_id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
       });
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(c1.id);
@@ -265,10 +271,10 @@ describe('collections – lifecycle', () => {
 
     it('returns pagination metadata with correct total', async () => {
       const c3 = await newCollection('_fbd_3');
-      await collectionsService.addDatasets(c3.id, { dataset_ids: [dsC.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c3.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.findCollectionsByDataset({
-        dataset_id: dsC.id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        dataset_id: dsC.resource_id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
       });
       expect(result.metadata.total).toBeGreaterThanOrEqual(3);
     });
@@ -296,7 +302,10 @@ describe('collections – lifecycle', () => {
   describe('listDatasetsInCollection pagination', () => {
     it('respects limit and returns correct total', async () => {
       const c = await newCollection('_list_ds_pag');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.id, dsB.id, dsC.id], actor_id: actor.id });
+      await collectionsService.addDatasets(c.id, {
+        dataset_ids: [dsA.resource_id, dsB.resource_id, dsC.resource_id],
+        actor_id: actor.subject_id,
+      });
 
       const result = await collectionsService.listDatasetsInCollection({
         collection_id: c.id, limit: 2, offset: 0, sort_by: 'id', sort_order: 'desc',

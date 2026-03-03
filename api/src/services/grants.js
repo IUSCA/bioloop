@@ -3,7 +3,9 @@
  * Manages durable authorization facts
  */
 
-const { Prisma } = require('@prisma/client');
+const {
+  Prisma, GRANT_CREATION_TYPE, SUBJECT_TYPE, RESOURCE_TYPE,
+} = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
@@ -66,6 +68,7 @@ async function _createGrant(tx, data, granted_by) {
         subject_id: data.subject_id,
         resource_id: data.resource_id,
         access_type_id: data.access_type_id,
+        creation_type: data.creation_type ?? GRANT_CREATION_TYPE.MANUAL,
         valid_from: data.valid_from ?? Prisma.skip,
         valid_until: data.valid_until ?? Prisma.skip,
         granted_by,
@@ -100,6 +103,7 @@ async function _createGrant(tx, data, granted_by) {
  * @param {string} data.access_type_id - GRANT_ACCESS_TYPE enum
  * @param {Date} [data.valid_from] - Defaults to now
  * @param {Date} [data.valid_until] - Expiration date
+ * @param {string} [data.creation_type] - GRANT_CREATION_TYPE enum, defaults to MANUAL
  * @param {string} granted_by - UUID of the user performing the grant
  * @param {string} [data.justification] - Optional justification for the grant creation
  * @returns {Promise<Object>} Created grant
@@ -181,7 +185,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
     ),
     collections_having_dataset AS ( -- UUIDs of collections that contain the dataset
       SELECT collection_id
-      FROM collection_datasets
+      FROM collection_dataset
       WHERE dataset_id = ${dataset_id}
     )
     SELECT ${select_fields}
@@ -191,20 +195,22 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          s.type = 'USER' AND G.subject_id = ${user_id}
-          AND r.type = 'DATASET' AND G.resource_id = ${dataset_id}
+          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
+          AND r.type = ${RESOURCE_TYPE.DATASET} AND G.resource_id = ${dataset_id}
         )
         OR (
-          s.type = 'USER' AND G.subject_id = ${user_id}
-          AND r.type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
+          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
+          AND r.type = ${RESOURCE_TYPE.COLLECTION} 
+          AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
         OR (
-          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = 'DATASET' AND G.resource_id = ${dataset_id}
+          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = ${RESOURCE_TYPE.DATASET} AND G.resource_id = ${dataset_id}
         )
         OR (
-          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
+          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = ${RESOURCE_TYPE.COLLECTION} 
+          AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
       )
       ${access_type_filter}
@@ -247,12 +253,12 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          s.type = 'USER' AND G.subject_id = ${user_id}
-          AND r.type = 'COLLECTION' AND G.resource_id = ${collection_id}
+          s.type = ${SUBJECT_TYPE.USER} AND G.subject_id = ${user_id}
+          AND r.type = ${RESOURCE_TYPE.COLLECTION} AND G.resource_id = ${collection_id}
         )
         OR (
-          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND r.type = 'COLLECTION' AND G.resource_id = ${collection_id}
+          s.type = ${SUBJECT_TYPE.GROUP} AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = ${RESOURCE_TYPE.COLLECTION} AND G.resource_id = ${collection_id}
         )
       )
       ${access_type_filter}
@@ -270,7 +276,7 @@ function userValidGrantsQuery(user_id) {
     SELECT *
     FROM valid_grants g
     JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = 'USER'
+    WHERE s.type = ${SUBJECT_TYPE.USER}
       AND g.subject_id = ${user_id}
 
     UNION
@@ -278,7 +284,7 @@ function userValidGrantsQuery(user_id) {
     SELECT g.*
     FROM valid_grants g
     JOIN subject s ON g.subject_id = s.id
-    WHERE s.type = 'GROUP'
+    WHERE s.type = ${SUBJECT_TYPE.GROUP}
       AND (
             g.subject_id = ${EVERYONE_GROUP_ID_SQL}
             OR g.subject_id IN (
@@ -359,7 +365,7 @@ async function getUserDatasetGrants(user_id, dataset_id, { access_types } = {}) 
  * @returns {Promise<Set<string>>} Set of active access-type names (e.g. {'view_metadata','download'})
  */
 async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_type) {
-  const sql = resource_type === 'COLLECTION'
+  const sql = resource_type === RESOURCE_TYPE.COLLECTION
     ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types' })
     : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types' });
 
@@ -379,7 +385,7 @@ async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_typ
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,
 }) {
-  const sql = resource_type === 'COLLECTION'
+  const sql = resource_type === RESOURCE_TYPE.COLLECTION
     ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types', access_types })
     : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
 
