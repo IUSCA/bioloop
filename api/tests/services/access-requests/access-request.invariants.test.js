@@ -48,15 +48,15 @@ beforeAll(async () => {
   reviewer = await createTestUser('_ari_rev');
   userIds.push(requester.id, reviewer.id);
 
-  ownerGroup = await createTestGroup(reviewer.id, '_ari_og');
+  ownerGroup = await createTestGroup(reviewer.subject_id, '_ari_og');
   groupIds.push(ownerGroup.id);
 
   dataset = await createTestDataset(ownerGroup.id, '_ari_ds');
   datasetIds.push(dataset.id);
 
   [viewMetadataTypeId, downloadTypeId] = await Promise.all([
-    getAccessTypeId('VIEW_METADATA', 'DATASET').then((t) => t.id),
-    getAccessTypeId('DOWNLOAD', 'DATASET').then((t) => t.id),
+    getAccessTypeId('DATASET:VIEW_METADATA'),
+    getAccessTypeId('DATASET:DOWNLOAD'),
   ]);
 }, 30_000);
 
@@ -66,10 +66,8 @@ afterAll(async () => {
   }
   await prisma.grant.updateMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(requester.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: requester.subject_id,
+      resource_id: dataset.resource_id,
     },
     data: { revoked_at: new Date() },
   }).catch(() => {});
@@ -86,38 +84,18 @@ afterAll(async () => {
 async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }]) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
-    resource_type: 'DATASET',
-    resource_id: dataset.id,
+    resource_id: dataset.resource_id,
     items,
-  }, requester.id);
+  }, requester.subject_id);
   arIds.push(ar.id);
-  return ar;
-}
-
-async function submitAndReject(items) {
-  const ar = await newDraftRequest(items);
-  const submitted = await arService.submitRequest(ar.id, requester.id);
-  await arService.submitReview({
-    request_id: submitted.id,
-    reviewer_id: reviewer.id,
-    options: {
-      review_items: submitted.access_request_items.map((i) => ({
-        id: i.id,
-        access_type_id: i.access_type_id,
-        decision: 'REJECTED',
-      })),
-    },
-  });
   return ar;
 }
 
 async function revokeAllRequesterGrants() {
   await prisma.grant.updateMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(requester.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: requester.subject_id,
+      resource_id: dataset.resource_id,
       revoked_at: null,
     },
     data: { revoked_at: new Date() },
@@ -127,9 +105,8 @@ async function revokeAllRequesterGrants() {
 async function withdrawOpen() {
   await prisma.access_request.updateMany({
     where: {
-      requester_id: requester.id,
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      requester_id: requester.subject_id,
+      resource_id: dataset.resource_id,
       status: { in: ['DRAFT', 'UNDER_REVIEW'] },
     },
     data: { status: 'WITHDRAWN', closed_at: new Date() },
@@ -140,7 +117,7 @@ async function withdrawOpen() {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('access requests – invariants', () => {
+describe('access requests - invariants', () => {
   afterEach(async () => {
     await revokeAllRequesterGrants();
     await withdrawOpen();
@@ -150,16 +127,14 @@ describe('access requests – invariants', () => {
     it('submitRequest throws 409 when requester already holds an active grant for that access type', async () => {
       // Create a direct USER grant for the requester first
       await grantsService.createGrant({
-        subject_type: 'USER',
-        subject_id: String(requester.id),
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
+        subject_id: requester.subject_id,
+        resource_id: dataset.resource_id,
         access_type_id: viewMetadataTypeId,
-      }, reviewer.id);
+      }, reviewer.subject_id);
 
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
       await expect(
-        arService.submitRequest(ar.id, requester.id),
+        arService.submitRequest(ar.id, requester.subject_id),
       ).rejects.toMatchObject({ status: 409 });
 
       // Request remains DRAFT
@@ -169,17 +144,15 @@ describe('access requests – invariants', () => {
 
     it('after grant is revoked, submitRequest succeeds', async () => {
       const grant = await grantsService.createGrant({
-        subject_type: 'USER',
-        subject_id: String(requester.id),
-        resource_type: 'DATASET',
-        resource_id: dataset.id,
+        subject_id: requester.subject_id,
+        resource_id: dataset.resource_id,
         access_type_id: viewMetadataTypeId,
-      }, reviewer.id);
+      }, reviewer.subject_id);
 
-      await grantsService.revokeGrant(grant.id, reviewer.id);
+      await grantsService.revokeGrant(grant.id, { actor_id: reviewer.subject_id });
 
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       expect(submitted.status).toBe('UNDER_REVIEW');
     });
   });
@@ -187,20 +160,20 @@ describe('access requests – invariants', () => {
   describe('_assertNoInFlightRequests invariant', () => {
     it('submitRequest throws 409 when another UNDER_REVIEW request covers the same access type', async () => {
       const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar1.id, requester.id);
+      await arService.submitRequest(ar1.id, requester.subject_id);
 
       const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
       await expect(
-        arService.submitRequest(ar2.id, requester.id),
+        arService.submitRequest(ar2.id, requester.subject_id),
       ).rejects.toMatchObject({ status: 409 });
     });
 
     it('requests for different access types on the same resource can both be submitted', async () => {
       const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar1.id, requester.id);
+      await arService.submitRequest(ar1.id, requester.subject_id);
 
       const ar2 = await newDraftRequest([{ access_type_id: downloadTypeId }]);
-      const submitted = await arService.submitRequest(ar2.id, requester.id);
+      const submitted = await arService.submitRequest(ar2.id, requester.subject_id);
       expect(submitted.status).toBe('UNDER_REVIEW');
     });
   });
@@ -211,7 +184,7 @@ describe('access requests – invariants', () => {
         { access_type_id: viewMetadataTypeId },
         { access_type_id: downloadTypeId },
       ]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       // Only include one of the two items
       const partialItems = [submitted.access_request_items[0]].map((i) => ({
@@ -223,7 +196,7 @@ describe('access requests – invariants', () => {
       await expect(
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: partialItems },
         }),
       ).rejects.toMatchObject({ status: 409 });
@@ -235,7 +208,7 @@ describe('access requests – invariants', () => {
 
     it('throws 409 when review_items includes items not in the request', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const foreignItem = {
         id: -1, // Non-existent item ID
@@ -246,7 +219,7 @@ describe('access requests – invariants', () => {
       await expect(
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: {
             review_items: [
               ...submitted.access_request_items.map((i) => ({
@@ -265,10 +238,10 @@ describe('access requests – invariants', () => {
   describe('item immutability once UNDER_REVIEW', () => {
     it('updateAccessRequest after submitRequest throws 409 (status no longer DRAFT)', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
 
       await expect(
-        arService.updateAccessRequest(ar.id, requester.id, {
+        arService.updateAccessRequest(ar.id, requester.subject_id, {
           items: [{ access_type_id: downloadTypeId }],
         }),
       ).rejects.toMatchObject({ status: 409 });
@@ -283,10 +256,10 @@ describe('access requests – invariants', () => {
   describe('closed_at set on every terminal transition', () => {
     it('is set when APPROVED', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: {
           review_items: submitted.access_request_items.map((i) => ({
             id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
@@ -299,10 +272,10 @@ describe('access requests – invariants', () => {
 
     it('is set when REJECTED', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: {
           review_items: submitted.access_request_items.map((i) => ({
             id: i.id, access_type_id: i.access_type_id, decision: 'REJECTED',
@@ -315,23 +288,23 @@ describe('access requests – invariants', () => {
     it('is set when WITHDRAWN from DRAFT', async () => {
       const ar = await newDraftRequest();
       const withdrawn = await arService.withdrawRequest({
-        request_id: ar.id, requester_id: requester.id,
+        request_id: ar.id, requester_id: requester.subject_id,
       });
       expect(withdrawn.closed_at).not.toBeNull();
     });
 
     it('is set when WITHDRAWN from UNDER_REVIEW', async () => {
       const ar = await newDraftRequest();
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
       const withdrawn = await arService.withdrawRequest({
-        request_id: ar.id, requester_id: requester.id,
+        request_id: ar.id, requester_id: requester.subject_id,
       });
       expect(withdrawn.closed_at).not.toBeNull();
     });
 
     it('is set when EXPIRED', async () => {
       const ar = await newDraftRequest();
-      await arService.submitRequest(ar.id, requester.id);
+      await arService.submitRequest(ar.id, requester.subject_id);
       await prisma.access_request.update({
         where: { id: ar.id },
         data: { submitted_at: new Date(0) },
@@ -352,7 +325,7 @@ describe('access requests – invariants', () => {
 
     it('is populated after submitRequest', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       expect(submitted.submitted_at).not.toBeNull();
     });
   });
@@ -376,10 +349,10 @@ describe('access requests – invariants', () => {
   describe('grant invariant after approval', () => {
     it('approved grant has creation_type = ACCESS_REQUEST', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: {
           review_items: submitted.access_request_items.map((i) => ({
             id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
@@ -389,10 +362,8 @@ describe('access requests – invariants', () => {
 
       const grant = await prisma.grant.findFirst({
         where: {
-          subject_type: 'USER',
-          subject_id: String(requester.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetadataTypeId,
           revoked_at: null,
         },
@@ -403,10 +374,10 @@ describe('access requests – invariants', () => {
 
     it('access_request_item.created_grant_id is populated for approved item', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const reviewed = await arService.submitReview({
         request_id: submitted.id,
-        reviewer_id: reviewer.id,
+        reviewer_id: reviewer.subject_id,
         options: {
           review_items: submitted.access_request_items.map((i) => ({
             id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',

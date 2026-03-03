@@ -38,6 +38,7 @@ let reviewer;
 let ownerGroup;
 let dataset;
 let viewMetadataTypeId;
+// eslint-disable-next-line no-unused-vars
 let downloadTypeId;
 
 const userIds = [];
@@ -50,15 +51,15 @@ beforeAll(async () => {
   reviewer = await createTestUser('_arc_rev');
   userIds.push(requester.id, reviewer.id);
 
-  ownerGroup = await createTestGroup(reviewer.id, '_arc_og');
+  ownerGroup = await createTestGroup(reviewer.subject_id, '_arc_og');
   groupIds.push(ownerGroup.id);
 
   dataset = await createTestDataset(ownerGroup.id, '_arc_ds');
   datasetIds.push(dataset.id);
 
   [viewMetadataTypeId, downloadTypeId] = await Promise.all([
-    getAccessTypeId('VIEW_METADATA', 'DATASET').then((t) => t.id),
-    getAccessTypeId('DOWNLOAD', 'DATASET').then((t) => t.id),
+    getAccessTypeId('DATASET:VIEW_METADATA'),
+    getAccessTypeId('DATASET:DOWNLOAD'),
   ]);
 }, 30_000);
 
@@ -69,10 +70,8 @@ afterAll(async () => {
   // Revoke all grants created during tests
   await prisma.grant.updateMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(requester.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: requester.subject_id,
+      resource_id: dataset.resource_id,
     },
     data: { revoked_at: new Date() },
   }).catch(() => {});
@@ -90,10 +89,9 @@ afterAll(async () => {
 async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }]) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
-    resource_type: 'DATASET',
-    resource_id: dataset.id,
+    resource_id: dataset.resource_id,
     items,
-  }, requester.id);
+  }, requester.subject_id);
   arIds.push(ar.id);
   return ar;
 }
@@ -101,10 +99,8 @@ async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }])
 async function revokeOutstandingGrants() {
   await prisma.grant.updateMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(requester.id),
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      subject_id: requester.subject_id,
+      resource_id: dataset.resource_id,
       revoked_at: null,
     },
     data: { revoked_at: new Date() },
@@ -112,9 +108,8 @@ async function revokeOutstandingGrants() {
   // Also close open UNDER_REVIEW requests
   await prisma.access_request.updateMany({
     where: {
-      requester_id: requester.id,
-      resource_type: 'DATASET',
-      resource_id: dataset.id,
+      requester_id: requester.subject_id,
+      resource_id: dataset.resource_id,
       status: { in: ['DRAFT', 'UNDER_REVIEW'] },
     },
     data: { status: 'WITHDRAWN', closed_at: new Date() },
@@ -125,7 +120,7 @@ async function revokeOutstandingGrants() {
 // Tests
 // ─────────────────────────────────────────────
 
-describe('access requests – concurrency', () => {
+describe('access requests - concurrency', () => {
   afterEach(async () => {
     await revokeOutstandingGrants();
   });
@@ -135,8 +130,8 @@ describe('access requests – concurrency', () => {
       const ar = await newDraftRequest();
 
       const [r1, r2] = await Promise.allSettled([
-        arService.submitRequest(ar.id, requester.id),
-        arService.submitRequest(ar.id, requester.id),
+        arService.submitRequest(ar.id, requester.subject_id),
+        arService.submitRequest(ar.id, requester.subject_id),
       ]);
 
       const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
@@ -151,14 +146,14 @@ describe('access requests – concurrency', () => {
       expect(final.status).toBe('UNDER_REVIEW');
 
       // Withdraw to return to clean state
-      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
   });
 
   describe('concurrent review of the same UNDER_REVIEW request', () => {
     it('exactly 1 review succeeds; the other receives 409', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
@@ -169,12 +164,12 @@ describe('access requests – concurrency', () => {
       const [r1, r2] = await Promise.allSettled([
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
       ]);
@@ -192,7 +187,7 @@ describe('access requests – concurrency', () => {
 
     it('exactly 1 approval succeeds — 1 grant created, not 2', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
@@ -203,22 +198,20 @@ describe('access requests – concurrency', () => {
       await Promise.allSettled([
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
       ]);
 
       const grantCount = await prisma.grant.count({
         where: {
-          subject_type: 'USER',
-          subject_id: String(requester.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
           access_type_id: viewMetadataTypeId,
           revoked_at: null,
         },
@@ -230,7 +223,7 @@ describe('access requests – concurrency', () => {
   describe('review vs withdraw race', () => {
     it('exactly one wins — no corrupt intermediate state, closed_at always set', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
@@ -241,10 +234,10 @@ describe('access requests – concurrency', () => {
       const [review, withdraw] = await Promise.allSettled([
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.id }),
+        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
       ]);
 
       const successes = [review, withdraw].filter((r) => r.status === 'fulfilled');
@@ -257,7 +250,7 @@ describe('access requests – concurrency', () => {
 
     it('if review wins, no grant is created for a rejected item', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
@@ -268,18 +261,16 @@ describe('access requests – concurrency', () => {
       await Promise.allSettled([
         arService.submitReview({
           request_id: submitted.id,
-          reviewer_id: reviewer.id,
+          reviewer_id: reviewer.subject_id,
           options: { review_items: reviewItems },
         }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.id }),
+        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
       ]);
 
       const grantCount = await prisma.grant.count({
         where: {
-          subject_type: 'USER',
-          subject_id: String(requester.id),
-          resource_type: 'DATASET',
-          resource_id: dataset.id,
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
           revoked_at: null,
         },
       });
@@ -292,8 +283,8 @@ describe('access requests – concurrency', () => {
       const ar = await newDraftRequest();
 
       const [r1, r2] = await Promise.allSettled([
-        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id }),
-        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.id }),
+        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id }),
+        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id }),
       ]);
 
       const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
@@ -309,11 +300,11 @@ describe('access requests – concurrency', () => {
 
     it('exactly 1 succeeds from UNDER_REVIEW; the other receives 409', async () => {
       const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
 
       const [r1, r2] = await Promise.allSettled([
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.id }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.id }),
+        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
+        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
       ]);
 
       const failed = [r1, r2].filter((r) => r.status === 'rejected');
@@ -328,28 +319,28 @@ describe('access requests – concurrency', () => {
   describe('sequential duplicate submit for same resource + access type', () => {
     it('second submitRequest throws 409 because first is still UNDER_REVIEW', async () => {
       const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar1.id, requester.id);
+      await arService.submitRequest(ar1.id, requester.subject_id);
 
       const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
 
       await expect(
-        arService.submitRequest(ar2.id, requester.id),
+        arService.submitRequest(ar2.id, requester.subject_id),
       ).rejects.toMatchObject({ status: 409 });
 
       // Withdraw ar1 to unblock
-      await arService.withdrawRequest({ request_id: ar1.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar1.id, requester_id: requester.subject_id });
     });
 
     it('after first request is withdrawn, second request can be submitted', async () => {
       const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await arService.submitRequest(ar1.id, requester.id);
-      await arService.withdrawRequest({ request_id: ar1.id, requester_id: requester.id });
+      await arService.submitRequest(ar1.id, requester.subject_id);
+      await arService.withdrawRequest({ request_id: ar1.id, requester_id: requester.subject_id });
 
       const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar2.id, requester.id);
+      const submitted = await arService.submitRequest(ar2.id, requester.subject_id);
       expect(submitted.status).toBe('UNDER_REVIEW');
 
-      await arService.withdrawRequest({ request_id: ar2.id, requester_id: requester.id });
+      await arService.withdrawRequest({ request_id: ar2.id, requester_id: requester.subject_id });
     });
   });
 });

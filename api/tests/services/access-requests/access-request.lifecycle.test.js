@@ -54,6 +54,16 @@ beforeAll(async () => {
   ownerGroup = await createTestGroup(reviewer.subject_id, '_ar_og');
   groupIds.push(ownerGroup.id);
 
+  // add reviewer as ADMIN of ownerGroup
+  await prisma.group_user.create({
+    data: {
+      group_id: ownerGroup.id,
+      user_id: reviewer.subject_id,
+      role: 'ADMIN',
+    },
+  });
+  // deleting group will cascade and delete this membership
+
   dataset = await createTestDataset(ownerGroup.id, '_ar_ds');
   datasetIds.push(dataset.id);
 

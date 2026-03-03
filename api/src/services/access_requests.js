@@ -12,6 +12,7 @@ const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
+const { enumToSql } = require('@/utils/sql');
 
 const config = {
   states: ['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'PARTIALLY_APPROVED', 'REJECTED', 'WITHDRAWN', 'EXPIRED'],
@@ -58,24 +59,26 @@ const config = {
 //
 // If any of these are violated elsewhere in the codebase, races reappear.
 
+const INCLUDES_CONFIG = {
+  access_request_items: {
+    include: {
+      access_type: true,
+    },
+  },
+  requester: true,
+  reviewer: true,
+  resource: {
+    include: {
+      dataset: true,
+      collection: true,
+    },
+  },
+};
+
 async function _getRequestById(tx, request_id) {
   return tx.access_request.findUnique({
     where: { id: request_id },
-    include: {
-      access_request_items: {
-        include: {
-          access_type: true,
-        },
-      },
-      requester: true,
-      reviewer: true,
-      resource: {
-        include: {
-          dataset: true,
-          collection: true,
-        },
-      },
-    },
+    include: INCLUDES_CONFIG,
   });
 }
 
@@ -614,15 +617,7 @@ async function getRequestsByUser({
   }
   const data = await prisma.access_request.findMany({
     where,
-    include: {
-      access_request_items: {
-        include: {
-          access_type: true,
-        },
-      },
-      dataset_resource: true,
-      collection_resource: true,
-    },
+    include: INCLUDES_CONFIG,
     orderBy: {
       [sort_by]: sort_order,
     },
@@ -655,26 +650,28 @@ async function getRequestsPendingReviewForUser({
 }) {
   const sql = Prisma.sql`
     WITH results AS (
-      WITH reviewer_as_admin_of_groups AS (
+      WITH reviewer_admin_groups AS (
         SELECT gu.group_id
         FROM group_user gu
         WHERE gu.user_id = ${reviewer_id}
-          AND gu.role = ${GROUP_MEMBER_ROLE.ADMIN}
+          AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+      ),
+      owned_resources AS (
+        SELECT d.resource_id
+        FROM dataset d
+        JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
+
+        UNION
+
+        SELECT c.id
+        FROM collection c
+        JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
       )
-      SELECT *
+      SELECT ar.*
       FROM access_request ar
-      WHERE ar.status = ${ACCESS_REQUEST_STATUS.UNDER_REVIEW}
-        AND ( ar.resource_id IN (
-              SELECT d.resource_id
-              FROM dataset d
-              JOIN reviewer_as_admin_of_groups rag ON d.owner_group_id = rag.group_id
-            )
-          OR ar.resource_id IN (
-              SELECT c.id
-              FROM collection c
-              JOIN reviewer_as_admin_of_groups rag ON c.owner_group_id = rag.group_id
-            )
-        )
+      JOIN owned_resources r
+        ON ar.resource_id = r.resource_id
+      WHERE ar.status = ${enumToSql(ACCESS_REQUEST_STATUS.UNDER_REVIEW)}
     )
     SELECT id, count(*) OVER () as total_count
     FROM results
@@ -688,16 +685,7 @@ async function getRequestsPendingReviewForUser({
 
   const data = await prisma.access_request.findMany({
     where: { id: { in: requestIds } },
-    include: {
-      access_request_items: {
-        include: {
-          access_type: true,
-        },
-      },
-      requester: true,
-      dataset_resource: true,
-      collection_resource: true,
-    },
+    include: INCLUDES_CONFIG,
   });
   return { metadata: { total, offset, limit }, data };
 }
@@ -718,16 +706,7 @@ async function getRequestsReviewedByUser({
     where: {
       reviewed_by: user_id,
     },
-    include: {
-      access_request_items: {
-        include: {
-          access_type: true,
-        },
-      },
-      requester: true,
-      dataset_resource: true,
-      collection_resource: true,
-    },
+    include: INCLUDES_CONFIG,
     orderBy: {
       [sort_by]: sort_order,
     },
