@@ -4,7 +4,7 @@ require('module-alias/register');
 const path = require('path');
 
 global.__basedir = path.join(__dirname, '..');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, SUBJECT_TYPE, RESOURCE_TYPE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 const config = require('config');
@@ -124,6 +124,11 @@ async function main() {
         user_role: {
           create: [{ role_id: 1 }],
         },
+        subject: {
+          create: {
+            type: SUBJECT_TYPE.USER,
+          },
+        },
       },
     });
   }
@@ -142,6 +147,11 @@ async function main() {
         created_at: user.date,
         user_role: {
           create: [{ role_id: 2 }],
+        },
+        subject: {
+          create: {
+            type: SUBJECT_TYPE.USER,
+          },
         },
       },
     });
@@ -164,26 +174,68 @@ async function main() {
         user_role: {
           create: [{ role_id: 3 }],
         },
+        subject: {
+          create: {
+            type: SUBJECT_TYPE.USER,
+          },
+        },
       },
     });
   }
 
-  const datasetPromises = data.datasets.map((dataset) => {
-    const { workflows, ...dataset_obj } = dataset;
+  // data.datasets.map((dataset) => {
+  //   const { id, workflows, ...dataset_obj } = dataset;
+  //   if (workflows) {
+  //     dataset_obj.workflows = {
+  //       create: workflows.map((workflow_id) => ({ id: workflow_id })),
+  //     };
+  //   }
+
+  //   // create resource row for each dataset to reference, with type set to DATASET
+  //   dataset_obj.resource = {
+  //     create: {
+  //       type: RESOURCE_TYPE.DATASET,
+  //     },
+  //   };
+
+  //   return prisma.dataset.upsert({
+  //     where: {
+  //       id: dataset_obj.id,
+  //     },
+  //     update: {},
+  //     create: dataset_obj,
+  //   });
+  // });
+
+  for (const dataset of data.datasets) {
+    // prisma threw error if id is included in upsert create object
+    // eslint-disable-next-line no-unused-vars
+    const { id, workflows, ...dataset_obj } = dataset;
     if (workflows) {
       dataset_obj.workflows = {
         create: workflows.map((workflow_id) => ({ id: workflow_id })),
       };
     }
-    return prisma.dataset.upsert({
+
+    // create resource row for each dataset to reference, with type set to DATASET
+    dataset_obj.resource = {
+      create: {
+        type: RESOURCE_TYPE.DATASET,
+      },
+    };
+
+    await prisma.dataset.upsert({
       where: {
-        id: dataset_obj.id,
+        name_type_is_deleted: {
+          name: dataset_obj.name,
+          type: dataset_obj.type,
+          is_deleted: dataset_obj.is_deleted || false,
+        },
       },
       update: {},
       create: dataset_obj,
     });
-  });
-  await Promise.all(datasetPromises);
+  }
 
   // upsert raw data - data product associations
   await Promise.all(
@@ -279,8 +331,10 @@ async function main() {
     data: create_metrics_per_hour(72), // 72 hours = 3 days
   });
 
+  const datasets = await prisma.dataset.findMany();
+  const dataset_ids = datasets.map((d) => d.id);
   // create data access logs for the last 1 year
-  const data_access_logs = await generate_data_access_logs(1);
+  const data_access_logs = await generate_data_access_logs(1, dataset_ids);
   // delete pre-existing records
   await prisma.data_access_log.deleteMany();
   await prisma.data_access_log.createMany({
@@ -288,7 +342,7 @@ async function main() {
   });
 
   // create staged datasets' logs for the last 1 year
-  const staged_logs = generate_staged_logs(1);
+  const staged_logs = generate_staged_logs(1, dataset_ids);
   // delete pre-existing records
   await prisma.dataset_state.deleteMany();
   await prisma.dataset_state.createMany({
@@ -296,7 +350,7 @@ async function main() {
   });
 
   // create stage request logs for the last 1 year
-  const stage_request_logs = await generate_stage_request_logs(1);
+  const stage_request_logs = await generate_stage_request_logs(1, dataset_ids);
   // delete pre-existing records
   await prisma.stage_request_log.deleteMany();
   await prisma.stage_request_log.createMany({
@@ -322,100 +376,124 @@ async function main() {
     })),
   });
 
-  // // create groups and group closure data
-  // const { groups } = groupData;
-  // await Promise.all(
-  //   groups.map((g) => prisma.group.upsert({
-  //     where: {
-  //       id: g.id,
-  //     },
-  //     update: {},
-  //     create: g,
-  //   })),
-  // );
+  // create groups and group closure data
+  const { groups } = groupData;
 
-  // const { group_closure } = groupData;
-  // await Promise.all(
-  //   group_closure.map((gc) => prisma.group_closure.upsert({
-  //     where: {
-  //       ancestor_id_descendant_id: {
-  //         ancestor_id: gc.ancestor_id,
-  //         descendant_id: gc.descendant_id,
-  //       },
-  //     },
-  //     update: {},
-  //     create: gc,
-  //   })),
-  // );
+  // create subject entries for each group to reference, with type set to GROUP
+  await Promise.all(
+    groups.map((g) => prisma.subject.upsert({
+      where: {
+        id: g.id,
+      },
+      update: {},
+      create: {
+        id: g.id,
+        type: SUBJECT_TYPE.GROUP,
+      },
+    })),
+  );
+
+  await Promise.all(
+    groups.map((g) => prisma.group.upsert({
+      where: {
+        id: g.id,
+      },
+      update: {},
+      create: g,
+    })),
+  );
+
+  const { group_closure } = groupData;
+  await Promise.all(
+    group_closure.map((gc) => prisma.group_closure.upsert({
+      where: {
+        ancestor_id_descendant_id: {
+          ancestor_id: gc.ancestor_id,
+          descendant_id: gc.descendant_id,
+        },
+      },
+      update: {},
+      create: gc,
+    })),
+  );
 
   // // get ids of randomly generated users to add to groups
-  // const randomUserRecords = await prisma.user.findMany({
-  //   where: {
-  //     username: {
-  //       startsWith: 'user-',
-  //     },
-  //   },
-  //   select: {
-  //     id: true,
-  //   },
-  // });
-  // const randomUserIds = randomUserRecords.map((u) => u.id);
+  const userRecords = await prisma.user.findMany({
+    where: {
+      username: {
+        startsWith: 'user-',
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+  const userIds = userRecords.map((u) => u.subject_id);
 
-  // const group_user = groupData.generateGroupUserMemberships(randomUserIds);
-  // await Promise.all(
-  //   group_user.map((gu) => prisma.group_user.upsert({
-  //     where: {
-  //       group_id_user_id: {
-  //         group_id: gu.group_id,
-  //         user_id: gu.user_id,
-  //       },
-  //     },
-  //     update: {},
-  //     create: gu,
-  //   })),
-  // );
+  const group_user = groupData.generateGroupUserMemberships(userIds);
+  await Promise.all(
+    group_user.map((gu) => prisma.group_user.upsert({
+      where: {
+        group_id_user_id: {
+          group_id: gu.group_id,
+          user_id: gu.user_id,
+        },
+      },
+      update: {},
+      create: gu,
+    })),
+  );
 
   // // updates datasets with owner_group_id
-  // const dataset_ids = data.datasets.map((d) => d.id);
-  // const dataset_group_updates = groupData.generateDatasetOwnerships(dataset_ids);
-  // await Promise.all(
-  //   dataset_group_updates.map((dgu) => prisma.dataset.update({
-  //     where: { id: dgu.dataset_id },
-  //     data: { owner_group_id: dgu.owner_group_id },
-  //   })),
-  // );
+  const datasetResourceIds = datasets.map((d) => d.resource_id);
+  const dataset_group_updates = groupData.generateDatasetOwnerships(datasetResourceIds);
+  await Promise.all(
+    dataset_group_updates.map((dgu) => prisma.dataset.update({
+      where: { resource_id: dgu.dataset_id },
+      data: { owner_group_id: dgu.owner_group_id },
+    })),
+  );
 
   // // create collections
-  // const datasets = await prisma.dataset.findMany({});
-  // const collections = groupData.generateCollections(20, datasets);
-  // await Promise.all(
-  //   collections.map(({ dataset_ids: _dsIds, ...c }) => prisma.$transaction(async (tx) => {
-  //     await tx.collection.upsert({
-  //       where: { id: c.id },
-  //       update: {},
-  //       create: {
-  //         ...c,
-  //       },
-  //     });
+  const collections = groupData.generateCollections(20, datasets);
+  await Promise.all(
+    collections.map(({ dataset_ids: _dsIds, ...c }) => prisma.$transaction(async (tx) => {
+      // create resource with type COLLECTION for this collection to reference
+      await tx.resource.upsert({
+        where: { id: c.id },
+        update: {},
+        create: {
+          id: c.id,
+          type: RESOURCE_TYPE.COLLECTION,
+        },
+      });
 
-  //     // upsert collection-dataset associations
-  //     await Promise.all(
-  //       _dsIds.map((dataset_id) => tx.collection_dataset.upsert({
-  //         where: {
-  //           collection_id_dataset_id: {
-  //             collection_id: c.id,
-  //             dataset_id,
-  //           },
-  //         },
-  //         update: {},
-  //         create: {
-  //           collection_id: c.id,
-  //           dataset_id,
-  //         },
-  //       })),
-  //     );
-  //   })),
-  // );
+      await tx.collection.upsert({
+        where: { id: c.id },
+        update: {},
+        create: {
+          ...c,
+        },
+      });
+
+      // upsert collection-dataset associations
+      await Promise.all(
+        _dsIds.map((dataset_id) => tx.collection_dataset.upsert({
+          where: {
+            collection_id_dataset_id: {
+              collection_id: c.id,
+              dataset_id,
+            },
+          },
+          update: {},
+          create: {
+            collection_id: c.id,
+            dataset_id,
+          },
+        })),
+      );
+    })),
+  );
 
   /**
    * @note ⚠️ IMPORTANT: Always keep the sequence number update code at the end of this function.

@@ -16,6 +16,12 @@ const datasetService = require('@/services/datasets_v2');
 
 const router = express.Router();
 
+/**
+ * Helper function to ensure that a user is not removing the last admin from a group
+ *
+ * @param {string} group_id - UUID of group
+ * @param {string} user_id - UUID of user
+ */
 async function ensureNotRemovingLastAdmin(group_id, user_id) {
   // reject if this removal leads to zero admins in the group
   // This allows platform admins to remove use that leads to zero admins
@@ -44,7 +50,7 @@ router.get(
     // #swagger.summary = 'List all groups the user has access to'
 
     const { metadata, data } = await groupService.getMyGroups({
-      user_id: req.user.id,
+      user_id: req.user.subject_id,
       archived: req.query.archived,
       // include_ancestors: req.query.include_ancestors,
     });
@@ -89,7 +95,7 @@ router.post(
     if (isPlatformAdmin) {
       promise = groupService.searchAllGroups(params);
     } else {
-      promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.id });
+      promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.subject_id });
     }
     const { metadata, data } = await promise;
     const filteredGroups = data.map((g) => req.permission.filter(g));
@@ -111,7 +117,7 @@ router.post(
   // #swagger.summary = 'Create a new group'
 
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
-    const group = await groupService.createGroup(data, req.user.id);
+    const group = await groupService.createGroup(data, req.user.subject_id);
 
     res.status(201).json(req.permission.filter(group));
   }),
@@ -134,7 +140,7 @@ router.post(
     const { id } = req.params;
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
 
-    const childGroup = await groupService.createChildGroup(id, data, req.user.id);
+    const childGroup = await groupService.createChildGroup(id, data, req.user.subject_id);
 
     res.status(201).json(req.permission.filter(childGroup));
   }),
@@ -183,7 +189,7 @@ router.patch(
       id,
       {
         data,
-        actor_id: req.user.id,
+        actor_id: req.user.subject_id,
         expected_version: req.body.version,
       },
     );
@@ -204,7 +210,7 @@ router.post(
 
     const { id } = req.params;
 
-    const archivedGroup = await groupService.archiveGroup(id, req.user.id);
+    const archivedGroup = await groupService.archiveGroup(id, req.user.subject_id);
     res.json(req.permission.filter(archivedGroup));
   }),
 );
@@ -222,7 +228,7 @@ router.post(
 
     const { id } = req.params;
 
-    const unarchivedGroup = await groupService.unarchiveGroup(id, req.user.id);
+    const unarchivedGroup = await groupService.unarchiveGroup(id, req.user.subject_id);
     res.json(req.permission.filter(unarchivedGroup));
   }),
 );
@@ -257,7 +263,7 @@ router.put(
   '/:id/members/:userId',
   validate([
     param('id').isUUID(),
-    param('userId').isInt().toInt(),
+    param('userId').isUUID(),
   ]),
   authorize('group', 'add_member'),
   asyncHandler(async (req, res) => {
@@ -266,7 +272,7 @@ router.put(
 
     const { id, userId } = req.params;
 
-    await groupService.addGroupMembers(id, { user_ids: [userId], actor_id: req.user.id });
+    await groupService.addGroupMembers(id, { user_ids: [userId], actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -276,7 +282,7 @@ router.delete(
   '/:id/members/:userId',
   validate([
     param('id').isUUID(),
-    param('userId').isInt().toInt(),
+    param('userId').isUUID(),
   ]),
   authorize('group', 'remove_member'),
   asyncHandler(async (req, res) => {
@@ -289,7 +295,7 @@ router.delete(
 
     const deletedUserIds = await groupService.removeGroupMembers(
       id,
-      { user_ids: [userId], actor_id: req.user.id },
+      { user_ids: [userId], actor_id: req.user.subject_id },
     );
     if (deletedUserIds.length === 0) {
       throw createError.NotFound('User is not a member of the group');
@@ -304,7 +310,7 @@ router.post(
   validate([
     param('id').isUUID(),
     body('members').isArray({ min: 1 }),
-    body('members.*.user_id').isInt().toInt(),
+    body('members.*.user_id').isUUID(),
   ]),
   authorize('group', 'add_member'),
   asyncHandler(async (req, res) => {
@@ -315,7 +321,7 @@ router.post(
     const { members } = req.body; // array of { user_id, role }
 
     await groupService.addGroupMembers(id, {
-      actor_id: req.user.id,
+      actor_id: req.user.subject_id,
       user_ids: members.map((m) => m.user_id),
     });
     res.status(204).send();
@@ -327,7 +333,7 @@ router.put(
   '/:id/admins/:userId',
   validate([
     param('id').isUUID(),
-    param('userId').isInt().toInt(),
+    param('userId').isUUID(),
   ]),
   authorize('group', 'edit_member_role'),
   asyncHandler(async (req, res) => {
@@ -336,7 +342,7 @@ router.put(
 
     const { id, userId } = req.params;
 
-    await groupService.promoteGroupMemberToAdmin(id, { user_id: userId, actor_id: req.user.id });
+    await groupService.promoteGroupMemberToAdmin(id, { user_id: userId, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -346,7 +352,7 @@ router.delete(
   '/:id/admins/:userId',
   validate([
     param('id').isUUID(),
-    param('userId').isInt().toInt(),
+    param('userId').isUUID(),
   ]),
   authorize('group', 'edit_member_role'),
   asyncHandler(async (req, res) => {
@@ -357,7 +363,7 @@ router.delete(
 
     await ensureNotRemovingLastAdmin(id, userId);
 
-    await groupService.removeGroupAdmin(id, { user_id: userId, actor_id: req.user.id });
+    await groupService.removeGroupAdmin(id, { user_id: userId, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -368,7 +374,7 @@ router.delete(
   validate([
     param('id').isUUID(),
     body('user_ids').isArray({ min: 1 }),
-    body('user_ids.*').isInt().toInt(),
+    body('user_ids.*').isUUID(),
   ]),
   authorize('group', 'remove_member'),
   asyncHandler(async (req, res) => {
@@ -381,7 +387,7 @@ router.delete(
     // check if any of the removals would lead to zero admins in the group
     await Promise.all(user_ids.map((user_id) => ensureNotRemovingLastAdmin(id, user_id)));
 
-    await groupService.removeGroupMembers(id, { user_ids, actor_id: req.user.id });
+    await groupService.removeGroupMembers(id, { user_ids, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );

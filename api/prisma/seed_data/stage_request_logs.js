@@ -3,16 +3,14 @@ const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 
 const { generate_date_range } = require('../../src/services/datetime');
-const data = require('./data');
 
 const prisma = new PrismaClient();
 
 // generates records to be seeded into the stage_request_log table, across the given number of years
-async function generate_stage_request_logs(num_years) {
+async function generate_stage_request_logs(num_years, dataset_ids) {
   const end_date = new Date();
   const start_date = dayjs(end_date).subtract(num_years, 'year').toDate();
 
-  const { datasets } = data;
   const users = await prisma.user.findMany();
 
   const stage_request_logs = [];
@@ -23,7 +21,7 @@ async function generate_stage_request_logs(num_years) {
     _.range(0, num_staged_files).forEach(() => {
       stage_request_logs.push({
         timestamp: date,
-        dataset_id: datasets[Math.floor(Math.random() * datasets.length)].id,
+        dataset_id: dataset_ids[Math.floor(Math.random() * dataset_ids.length)],
         user_id: users[Math.floor(Math.random() * users.length)].id,
       });
     });

@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
+const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
@@ -28,7 +29,7 @@ function make_slug_unique_fn(tx) {
  * @param {string} data.owner_group_id - Owning group
  * @param {string} [data.description]
  * @param {Object} [data.metadata]
- * @param {number} actor_id - User creating the collection (must have appropriate permissions)
+ * @param {string} actor_id - UUID of the user creating the collection (must have appropriate permissions)
  * @returns {Promise<Object>} Created collection
  */
 async function createCollection(data, { actor_id }) {
@@ -39,9 +40,15 @@ async function createCollection(data, { actor_id }) {
       is_slug_unique_fn: make_slug_unique_fn(tx),
     });
 
+    const id = randomUUID();
+
+    // resource row must be created first — collection.id is a direct FK to resource.id
+    await tx.resource.create({ data: { id, type: 'COLLECTION' } });
+
     // create collection without any datasets
     const _collection = await tx.collection.create({
       data: {
+        id,
         name: data.name,
         slug,
         description: data.description ?? Prisma.skip,
@@ -56,7 +63,7 @@ async function createCollection(data, { actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
         actor_id,
         target_type: 'collection',
-        target_id: String(_collection.id),
+        target_id: _collection.id,
       },
     });
 
@@ -132,8 +139,8 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
 /**
  * Archive a collection (soft delete)
  *
- * @param {string} collection_id - ID of the collection to archive
- * @param {number} actor_id - User performing the archival action (must have appropriate permissions)
+ * @param {string} collection_id - UUID of the collection to archive
+ * @param {string} actor_id - UUID of the user performing the archival action (must have appropriate permissions)
  * @returns {Promise<Object>} The archived collection object
  */
 async function archiveCollection(collection_id, actor_id) {
@@ -152,7 +159,7 @@ async function archiveCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_ARCHIVED,
         actor_id,
         target_type: 'collection',
-        target_id: String(collection_id),
+        target_id: collection_id,
       },
     });
 
@@ -163,8 +170,8 @@ async function archiveCollection(collection_id, actor_id) {
 /**
  *  Unarchive a collection
  *
- * @param {string} collection_id - ID of the collection to unarchive
- * @param {number} actor_id - User performing the unarchival action (must have appropriate permissions)
+ * @param {string} collection_id - UUID of the collection to unarchive
+ * @param {string} actor_id - UUID of the user performing the unarchival action (must have appropriate permissions)
  * @returns {Promise<Object>} The unarchived collection object
  */
 async function unarchiveCollection(collection_id, actor_id) {
@@ -183,7 +190,7 @@ async function unarchiveCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_UNARCHIVED,
         actor_id,
         target_type: 'collection',
-        target_id: String(collection_id),
+        target_id: collection_id,
       },
     });
 
@@ -194,8 +201,8 @@ async function unarchiveCollection(collection_id, actor_id) {
 /**
  * Permanently delete a collection
  *
- * @param {string} collection_id - ID of the collection to delete
- * @param {number} actor_id - User performing the deletion action (must have appropriate permissions)
+ * @param {string} collection_id - UUID of the collection to delete
+ * @param {string} actor_id - UUID of the user performing the deletion action (must have appropriate permissions)
  * @returns {Promise<Object>} The deleted collection object
  */
 async function deleteCollection(collection_id, actor_id) {
@@ -210,7 +217,7 @@ async function deleteCollection(collection_id, actor_id) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DELETED,
         actor_id,
         target_type: 'collection',
-        target_id: String(collection_id),
+        target_id: collection_id,
       },
     });
 
@@ -220,9 +227,9 @@ async function deleteCollection(collection_id, actor_id) {
 
 /**
  * Add datasets to collection
- * @param {string} collection_id
- * @param {number[]} dataset_ids
- * @param {number} actor_id
+ * @param {string} collection_id - UUID of the collection
+ * @param {string[]} dataset_ids - UUIDs of datasets to add to the collection
+ * @param {string} actor_id - UUID of the user performing the action
  * @returns {Promise<Object[]>} Created records
  */
 async function addDatasets(collection_id, { dataset_ids, actor_id }) {
@@ -236,13 +243,13 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     WITH collection_owner AS (
       SELECT owner_group_id FROM collection WHERE id = ${collection_id}
     )
-    SELECT d.id
+    SELECT d.subject_id
     FROM dataset d
     JOIN "group" g ON d.owner_group_id = g.id
     JOIN collection_owner co ON d.owner_group_id = co.owner_group_id
-    WHERE d.id = ANY(${dataset_ids}::int[]) and d.is_deleted = false and g.is_archived = false
+    WHERE d.subject_id = ANY(${dataset_ids}::text[]) and d.is_deleted = false and g.is_archived = false
   `;
-  const validDatasetIds = datasetRows.map((row) => row.id);
+  const validDatasetIds = datasetRows.map((row) => row.subject_id);
   const invalidDatasetIds = dataset_ids.filter((id) => !validDatasetIds.includes(id));
   if (invalidDatasetIds.length) {
     throw createError.BadRequest(
@@ -272,7 +279,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     const createdRecords = await tx.$queryRaw`
       INSERT INTO collection_dataset (collection_id, dataset_id, added_by)
       SELECT ${collection_id}, dataset_id, ${actor_id}
-      FROM UNNEST(${dataset_ids}::int[]) AS dataset_id
+      FROM UNNEST(${dataset_ids}::text[]) AS dataset_id
       ON CONFLICT DO NOTHING
       RETURNING collection_id, dataset_id;
      `;
@@ -283,7 +290,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_ADDED,
         actor_id,
         target_type: 'collection',
-        target_id: String(collection_id),
+        target_id: collection_id,
         metadata: {
           dataset_id,
         },
@@ -296,9 +303,9 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
 
 /**
  * Remove datasets from collection
- * @param {string} collection_id
- * @param {number[]} dataset_ids
- * @param {number} actor_id
+ * @param {string} collection_id - UUID of the collection
+ * @param {string[]} dataset_ids - UUIDs of datasets to remove from the collection
+ * @param {string} actor_id - UUID of the user performing the action
  * @returns {Promise<Object[]>} Removed records
  */
 async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
@@ -323,7 +330,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     const removedRecords = await tx.$queryRaw`
       DELETE FROM collection_dataset
       WHERE collection_id = ${collection_id}
-      AND dataset_id = ANY(${dataset_ids}::int[])
+      AND dataset_id = ANY(${dataset_ids}::text[])
       RETURNING collection_id, dataset_id;
      `;
 
@@ -333,7 +340,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_REMOVED,
         actor_id,
         target_type: 'collection',
-        target_id: String(collection_id),
+        target_id: collection_id,
         metadata: {
           dataset_id,
         },
@@ -346,7 +353,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
 
 /**
  * Get all collections containing a dataset
- * @param {number} dataset_id
+ * @param {string} dataset_id - UUID of the dataset
  * @returns {Promise<Object[]>}
  */
 async function findCollectionsByDataset({
@@ -374,6 +381,11 @@ async function findCollectionsByDataset({
   return { metadata: { total, limit, offset }, data };
 }
 
+/**
+ * Get all collections owned by a group
+ * @param {string} group_id - UUID of the owning group
+ * @returns {Promise<Object[]>}
+ */
 async function findCollectionsByOwnerGroup({
   group_id, limit, offset, sort_by, sort_order,
 }) {
@@ -396,6 +408,10 @@ async function findCollectionsByOwnerGroup({
   return { metadata: { total, limit, offset }, data };
 }
 
+/** * Get collection by ID
+ * @param {string} collection_id - UUID of the collection
+ * @returns {Promise<Object>}
+ */
 async function getCollectionById(collection_id) {
   return prisma.collection.findUniqueOrThrow({
     where: { id: collection_id },
@@ -403,6 +419,12 @@ async function getCollectionById(collection_id) {
   });
 }
 
+/** * Check if a user has a specific grant for a collection
+ * @param {string} user_id - UUID of the user
+ * @param {string} collection_id - UUID of the collection
+ * @param {string} access_type - Access type to check (e.g. 'READ', 'WRITE')
+ * @returns {Promise<boolean>} True if the user has the specified grant, false otherwise
+ */
 async function userHasGrant({ user_id, collection_id, access_type }) {
   return grantService.userHasGrant({
     user_id,
@@ -412,6 +434,17 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
   });
 }
 
+/**
+ * Search collections accessible to a user with optional filters and pagination
+ * @param {string} user_id - UUID of the user performing the search
+ * @param {string} [search_term] - Optional search term to filter collections by name, description, or slug
+ * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) collections
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching collections
+ */
 async function searchCollectionsForUser({
   user_id,
   search_term = null,
@@ -484,6 +517,16 @@ async function searchCollectionsForUser({
   return { metadata: { total: total_count, limit, offset }, data: collections };
 }
 
+/**
+ * Search all collections with optional filters and pagination (admin only)
+ * @param {string} [search_term] - Optional search term to filter collections by name, description, or slug
+ * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) collections
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching collections
+ */
 async function searchAllCollections({
   search_term = null,
   is_archived = null,
@@ -516,6 +559,15 @@ async function searchAllCollections({
   return { metadata: { total, limit, offset }, data: collections };
 }
 
+/**
+ * List datasets in a collection with pagination and sorting
+ * @param {string} collection_id - UUID of the collection
+ * @param {string} sort_by - Field to sort by (e.g. 'added_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of datasets in the collection
+ */
 async function listDatasetsInCollection({
   collection_id, limit, offset, sort_by, sort_order,
 }) {

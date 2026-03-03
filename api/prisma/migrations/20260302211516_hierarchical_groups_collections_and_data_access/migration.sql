@@ -15,9 +15,6 @@ CREATE TYPE "SUBJECT_TYPE" AS ENUM ('USER', 'GROUP');
 CREATE TYPE "GROUP_MEMBER_ROLE" AS ENUM ('MEMBER', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "GRANT_RESOURCE_TYPE" AS ENUM ('DATASET', 'COLLECTION');
-
--- CreateEnum
 CREATE TYPE "GRANT_CREATION_TYPE" AS ENUM ('ACCESS_REQUEST', 'MANUAL', 'SYSTEM_BOOTSTRAP');
 
 -- CreateEnum
@@ -90,10 +87,10 @@ CREATE TABLE "group_closure" (
 -- CreateTable
 CREATE TABLE "group_user" (
     "group_id" TEXT NOT NULL,
-    "user_id" INTEGER NOT NULL,
+    "user_id" TEXT NOT NULL,
     "role" "GROUP_MEMBER_ROLE" NOT NULL DEFAULT 'MEMBER',
     "assigned_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "assigned_by" INTEGER,
+    "assigned_by" TEXT,
 
     CONSTRAINT "group_user_pkey" PRIMARY KEY ("group_id","user_id")
 );
@@ -102,8 +99,8 @@ CREATE TABLE "group_user" (
 CREATE TABLE "user_dataset_contribution" (
     "id" SERIAL NOT NULL,
     "group_id" TEXT NOT NULL,
-    "user_id" INTEGER NOT NULL,
-    "dataset_id" INTEGER NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "dataset_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "user_dataset_contribution_pkey" PRIMARY KEY ("id")
@@ -129,9 +126,9 @@ CREATE TABLE "collection" (
 -- CreateTable
 CREATE TABLE "collection_dataset" (
     "collection_id" TEXT NOT NULL,
-    "dataset_id" INTEGER NOT NULL,
+    "dataset_id" TEXT NOT NULL,
     "added_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "added_by" INTEGER,
+    "added_by" TEXT,
 
     CONSTRAINT "collection_dataset_pkey" PRIMARY KEY ("collection_id","dataset_id")
 );
@@ -145,11 +142,11 @@ CREATE TABLE "grant" (
     "valid_from" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "valid_until" TIMESTAMP(6),
     "valid_period" tsrange,
-    "granted_by" INTEGER NOT NULL,
+    "granted_by" TEXT NOT NULL,
     "justification" TEXT,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "revoked_at" TIMESTAMP(6),
-    "revoked_by" INTEGER,
+    "revoked_by" TEXT,
     "creation_type" "GRANT_CREATION_TYPE" NOT NULL,
 
     CONSTRAINT "grant_pkey" PRIMARY KEY ("id")
@@ -160,7 +157,6 @@ CREATE TABLE "grant_access_type" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
-    "resource_type" "GRANT_RESOURCE_TYPE" NOT NULL,
 
     CONSTRAINT "grant_access_type_pkey" PRIMARY KEY ("id")
 );
@@ -170,11 +166,11 @@ CREATE TABLE "access_request" (
     "id" TEXT NOT NULL,
     "type" "ACCESS_REQUEST_TYPE" NOT NULL,
     "resource_id" TEXT NOT NULL,
-    "requester_id" INTEGER NOT NULL,
+    "requester_id" TEXT NOT NULL,
     "purpose" TEXT,
     "previous_grant_ids" TEXT[],
     "status" "ACCESS_REQUEST_STATUS" NOT NULL DEFAULT 'DRAFT',
-    "reviewed_by" INTEGER,
+    "reviewed_by" TEXT,
     "reviewed_at" TIMESTAMP(6),
     "decision_reason" TEXT,
     "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -202,7 +198,7 @@ CREATE TABLE "authorization_audit" (
     "id" SERIAL NOT NULL,
     "timestamp" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "event_type" TEXT NOT NULL,
-    "actor_id" INTEGER,
+    "actor_id" TEXT,
     "target_type" TEXT NOT NULL,
     "target_id" TEXT NOT NULL,
     "action" TEXT,
@@ -224,15 +220,15 @@ CREATE TABLE "authority_transfer" (
     "source_principal_id" TEXT NOT NULL,
     "target_principal_type" "PRINCIPAL_TYPE" NOT NULL,
     "target_principal_id" TEXT NOT NULL,
-    "proposed_by" INTEGER NOT NULL,
+    "proposed_by" TEXT NOT NULL,
     "reason" TEXT,
     "status" "AUTH_TRANSFER_STATUS" NOT NULL DEFAULT 'PENDING',
     "source_approved_at" TIMESTAMP(3),
-    "source_approved_by" INTEGER,
+    "source_approved_by" TEXT,
     "target_approved_at" TIMESTAMP(3),
-    "target_approved_by" INTEGER,
+    "target_approved_by" TEXT,
     "executed_at" TIMESTAMP(3),
-    "executed_by" INTEGER,
+    "executed_by" TEXT,
     "cancelled_at" TIMESTAMP(3),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -289,7 +285,7 @@ CREATE INDEX "grant_resource_id_idx" ON "grant"("resource_id");
 CREATE INDEX "grant_valid_from_valid_until_idx" ON "grant"("valid_from", "valid_until");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "grant_access_type_name_resource_type_key" ON "grant_access_type"("name", "resource_type");
+CREATE UNIQUE INDEX "grant_access_type_name_key" ON "grant_access_type"("name");
 
 -- CreateIndex
 CREATE INDEX "access_request_requester_id_status_idx" ON "access_request"("requester_id", "status");
@@ -319,13 +315,13 @@ CREATE UNIQUE INDEX "dataset_resource_id_key" ON "dataset"("resource_id");
 CREATE UNIQUE INDEX "user_subject_id_key" ON "user"("subject_id");
 
 -- AddForeignKey
-ALTER TABLE "dataset" ADD CONSTRAINT "dataset_owner_group_id_fkey" FOREIGN KEY ("owner_group_id") REFERENCES "group"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset" ADD CONSTRAINT "dataset_owner_group_id_fkey" FOREIGN KEY ("owner_group_id") REFERENCES "group"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "dataset" ADD CONSTRAINT "dataset_resource_id_fkey" FOREIGN KEY ("resource_id") REFERENCES "resource"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "dataset" ADD CONSTRAINT "dataset_resource_id_fkey" FOREIGN KEY ("resource_id") REFERENCES "resource"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user" ADD CONSTRAINT "user_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "user" ADD CONSTRAINT "user_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "group" ADD CONSTRAINT "group_id_fkey" FOREIGN KEY ("id") REFERENCES "subject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -340,19 +336,19 @@ ALTER TABLE "group_closure" ADD CONSTRAINT "group_closure_descendant_id_fkey" FO
 ALTER TABLE "group_user" ADD CONSTRAINT "group_user_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "group_user" ADD CONSTRAINT "group_user_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "group_user" ADD CONSTRAINT "group_user_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("subject_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "group_user" ADD CONSTRAINT "group_user_assigned_by_fkey" FOREIGN KEY ("assigned_by") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "group_user" ADD CONSTRAINT "group_user_assigned_by_fkey" FOREIGN KEY ("assigned_by") REFERENCES "user"("subject_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user_dataset_contribution" ADD CONSTRAINT "user_dataset_contribution_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "group"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_dataset_contribution" ADD CONSTRAINT "user_dataset_contribution_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_dataset_contribution" ADD CONSTRAINT "user_dataset_contribution_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("subject_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "user_dataset_contribution" ADD CONSTRAINT "user_dataset_contribution_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "user_dataset_contribution" ADD CONSTRAINT "user_dataset_contribution_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("resource_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "collection" ADD CONSTRAINT "collection_owner_group_id_fkey" FOREIGN KEY ("owner_group_id") REFERENCES "group"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -364,46 +360,46 @@ ALTER TABLE "collection" ADD CONSTRAINT "collection_id_fkey" FOREIGN KEY ("id") 
 ALTER TABLE "collection_dataset" ADD CONSTRAINT "collection_dataset_collection_id_fkey" FOREIGN KEY ("collection_id") REFERENCES "collection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "collection_dataset" ADD CONSTRAINT "collection_dataset_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "collection_dataset" ADD CONSTRAINT "collection_dataset_dataset_id_fkey" FOREIGN KEY ("dataset_id") REFERENCES "dataset"("resource_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "collection_dataset" ADD CONSTRAINT "collection_dataset_added_by_fkey" FOREIGN KEY ("added_by") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "collection_dataset" ADD CONSTRAINT "collection_dataset_added_by_fkey" FOREIGN KEY ("added_by") REFERENCES "user"("subject_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "grant" ADD CONSTRAINT "grant_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "grant" ADD CONSTRAINT "grant_subject_id_fkey" FOREIGN KEY ("subject_id") REFERENCES "subject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "grant" ADD CONSTRAINT "grant_resource_id_fkey" FOREIGN KEY ("resource_id") REFERENCES "resource"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "grant" ADD CONSTRAINT "grant_resource_id_fkey" FOREIGN KEY ("resource_id") REFERENCES "resource"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "grant" ADD CONSTRAINT "grant_access_type_id_fkey" FOREIGN KEY ("access_type_id") REFERENCES "grant_access_type"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "grant" ADD CONSTRAINT "grant_access_type_id_fkey" FOREIGN KEY ("access_type_id") REFERENCES "grant_access_type"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "grant" ADD CONSTRAINT "grant_granted_by_fkey" FOREIGN KEY ("granted_by") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "grant" ADD CONSTRAINT "grant_granted_by_fkey" FOREIGN KEY ("granted_by") REFERENCES "user"("subject_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "grant" ADD CONSTRAINT "grant_revoked_by_fkey" FOREIGN KEY ("revoked_by") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "grant" ADD CONSTRAINT "grant_revoked_by_fkey" FOREIGN KEY ("revoked_by") REFERENCES "user"("subject_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "access_request" ADD CONSTRAINT "access_request_resource_id_fkey" FOREIGN KEY ("resource_id") REFERENCES "resource"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "access_request" ADD CONSTRAINT "access_request_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "access_request" ADD CONSTRAINT "access_request_requester_id_fkey" FOREIGN KEY ("requester_id") REFERENCES "user"("subject_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "access_request" ADD CONSTRAINT "access_request_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "access_request" ADD CONSTRAINT "access_request_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "user"("subject_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "access_request_item" ADD CONSTRAINT "access_request_item_access_request_id_fkey" FOREIGN KEY ("access_request_id") REFERENCES "access_request"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "access_request_item" ADD CONSTRAINT "access_request_item_access_type_id_fkey" FOREIGN KEY ("access_type_id") REFERENCES "grant_access_type"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "access_request_item" ADD CONSTRAINT "access_request_item_access_type_id_fkey" FOREIGN KEY ("access_type_id") REFERENCES "grant_access_type"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "access_request_item" ADD CONSTRAINT "access_request_item_created_grant_id_fkey" FOREIGN KEY ("created_grant_id") REFERENCES "grant"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "authorization_audit" ADD CONSTRAINT "authorization_audit_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "authorization_audit" ADD CONSTRAINT "authorization_audit_actor_id_fkey" FOREIGN KEY ("actor_id") REFERENCES "user"("subject_id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 
 -- ===========================================================================
@@ -539,6 +535,112 @@ ALTER TABLE "grant"
 
 
 -- ---------------------------------------------------------------------------
+-- 6. Triggers for cascading deletes that cannot be expressed via FK constraints
+-- ---------------------------------------------------------------------------
+
+-- =============================================================================
+-- Triggers: cascade-delete the parent row when a child is deleted, for the
+-- four 1-to-1 owner-of-subject/resource relationships.
+--
+-- Pattern:
+--   - The FK on the child has onDelete: Restrict, blocking direct deletion of
+--     the parent while the child still points to it.
+--   - These AFTER DELETE triggers enforce the reverse: when the child is
+--     removed, the now-orphaned parent row is also removed.
+--   - If the parent still has other referencing rows (e.g. active grants via
+--     grant.subject_id → subject.id with Restrict), the DELETE inside the
+--     trigger will itself raise a FK violation, preventing silent data loss.
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 1. group deleted → delete subject
+--    group.id IS the subject.id (shared PK / 1-to-1 join), never null.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_group_delete_cascade_subject()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  DELETE FROM subject WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trg_group_delete_cascade_subject
+AFTER DELETE ON "group"
+FOR EACH ROW
+EXECUTE FUNCTION fn_group_delete_cascade_subject();
+
+
+-- -----------------------------------------------------------------------------
+-- 2. user deleted → delete subject
+--    user.subject_id is not null (will change in future migration), guard against NULL just in case.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_user_delete_cascade_subject()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.subject_id IS NOT NULL THEN
+    DELETE FROM subject WHERE id = OLD.subject_id;
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trg_user_delete_cascade_subject
+AFTER DELETE ON "user"
+FOR EACH ROW
+EXECUTE FUNCTION fn_user_delete_cascade_subject();
+
+
+-- -----------------------------------------------------------------------------
+-- 3. dataset deleted → delete resource
+--    dataset.resource_id is not null (will change in future migration), guard against NULL just in case.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_dataset_delete_cascade_resource()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF OLD.resource_id IS NOT NULL THEN
+    DELETE FROM resource WHERE id = OLD.resource_id;
+  END IF;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trg_dataset_delete_cascade_resource
+AFTER DELETE ON "dataset"
+FOR EACH ROW
+EXECUTE FUNCTION fn_dataset_delete_cascade_resource();
+
+
+-- -----------------------------------------------------------------------------
+-- 4. collection deleted → delete resource
+--    collection.id IS the resource.id (shared PK / 1-to-1 join), never null.
+-- -----------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION fn_collection_delete_cascade_resource()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  DELETE FROM resource WHERE id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trg_collection_delete_cascade_resource
+AFTER DELETE ON "collection"
+FOR EACH ROW
+EXECUTE FUNCTION fn_collection_delete_cascade_resource();
+
+
+-- ---------------------------------------------------------------------------
 -- 6. Views
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW effective_user_groups AS
@@ -549,6 +651,7 @@ FROM group_user gu
 JOIN group_closure gc ON gc.descendant_id = gu.group_id;
 -- self-rows in closure table (depth=0) cover direct membership too
 -- Usage: SELECT DISTINCT group_id FROM effective_user_groups WHERE user_id = $1;
+-- user_id is UUID string (user.subject_id)
 
 CREATE OR REPLACE VIEW effective_user_oversight_groups AS
 SELECT
@@ -559,6 +662,7 @@ JOIN group_closure gc ON gc.ancestor_id = gu.group_id
 WHERE gu.role = 'ADMIN'
   AND gc.depth > 0;
 -- Usage: SELECT DISTINCT group_id FROM effective_user_oversight_groups WHERE user_id = $1;
+-- user_id is UUID string (user.subject_id)
 
 -- valid_from is inclusive, valid_until is exclusive
 CREATE OR REPLACE VIEW valid_grants AS
@@ -567,5 +671,3 @@ FROM "grant" g
 WHERE g.valid_from <= CURRENT_TIMESTAMP
   AND (g.valid_until IS NULL OR g.valid_until > CURRENT_TIMESTAMP)
   AND g.revoked_at IS NULL;
-
-

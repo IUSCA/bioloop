@@ -1,6 +1,7 @@
 const { Prisma } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
+const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
 
@@ -27,6 +28,11 @@ async function getGroupById(group_id) {
   });
 }
 
+/** Helper function to get ancestor groups with depth information within a transaction
+ * @param {Prisma.TransactionClient} tx - Prisma transaction client
+ * @param {string} group_id - ID of the group to get ancestors for
+ * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of ancestor groups with depth
+ */
 async function getAncestorGroups(tx, group_id) {
   const ancestors = await tx.group_closure.findMany({
     where: { descendant_id: group_id, depth: { gt: 0 } },
@@ -37,10 +43,14 @@ async function getAncestorGroups(tx, group_id) {
       depth: 'asc',
     },
   });
-  // TODO: verify claude's fix
   return ancestors.map((entry) => ({ ...entry.ancestor, depth: entry.depth }));
 }
 
+/** Helper function to get descendant groups with depth information within a transaction
+ * @param {Prisma.TransactionClient} tx - Prisma transaction client
+ * @param {string} group_id - ID of the group to get descendants for
+ * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
+ */
 async function getDescendantGroups(tx, group_id) {
   const descendants = await tx.group_closure.findMany({
     where: { ancestor_id: group_id, depth: { gt: 0 } },
@@ -51,9 +61,13 @@ async function getDescendantGroups(tx, group_id) {
       depth: 'asc',
     },
   });
-  return descendants.map((entry) => entry.descendant);
+  return descendants.map((entry) => ({ ...entry.descendant, depth: entry.depth }));
 }
 
+/** Factory function to create a slug uniqueness check function that operates within a transaction
+ * @param {Prisma.TransactionClient} tx - Prisma transaction client
+ * @returns {function(string): Promise<boolean>} Function that checks if a slug is unique within the transaction
+ */
 function make_slug_unique_fn(tx) {
   return async (_slug) => {
     const existingGroup = await tx.group.findUnique({
@@ -71,7 +85,7 @@ function make_slug_unique_fn(tx) {
  * @param {string} [data.description] - Optional description
  * @param {boolean} [data.allow_user_contributions] - Whether users can upload
  * @param {Object} [data.metadata] - Additional metadata
- * @param {number} actor_id - User creating the group
+ * @param {string} actor_id - UUID of the user creating the group
  * @returns {Promise<Object>} Created group with closure entries
  */
 async function createGroup(data, actor_id) {
@@ -82,9 +96,15 @@ async function createGroup(data, actor_id) {
       is_slug_unique_fn: make_slug_unique_fn(tx),
     });
 
+    const id = randomUUID();
+
+    // subject row must be created first — group.id is a direct FK to subject.id
+    await tx.subject.create({ data: { id, type: 'GROUP' } });
+
     // create group without any members
     const _group = await tx.group.create({
       data: {
+        id,
         name: data.name,
         slug,
         description: data.description ?? Prisma.skip,
@@ -125,7 +145,7 @@ async function createGroup(data, actor_id) {
  * @param {string} [data.description] - Optional description
  * @param {boolean} [data.allow_user_contributions] - Whether users can upload
  * @param {Object} [data.metadata] - Additional metadata
- * @param {number} actor_id - User creating the group
+ * @param {string} actor_id - UUID of the user creating the group
  * @returns {Promise<Object>} Created group with closure entries
  */
 async function createChildGroup(parent_id, data, actor_id) {
@@ -136,9 +156,15 @@ async function createChildGroup(parent_id, data, actor_id) {
       is_slug_unique_fn: make_slug_unique_fn(tx),
     });
 
+    const id = randomUUID();
+
+    // subject row must be created first — group.id is a direct FK to subject.id
+    await tx.subject.create({ data: { id, type: 'GROUP' } });
+
     // create the new group
     const _group = await tx.group.create({
       data: {
+        id,
         name: data.name,
         slug,
         description: data.description ?? Prisma.skip,
@@ -206,7 +232,7 @@ async function createChildGroup(parent_id, data, actor_id) {
  * @param {string} [params.data.description] - New description
  * @param {boolean} [params.data.allow_user_contributions] - Whether users can upload
  * @param {Object} [params.data.metadata] - Additional metadata
- * @param {number} params.actor_id - User performing the update (for audit)
+ * @param {string} params.actor_id - UUID of the user performing the update (for audit)
  * @param {number} params.expected_version - Expected current version for optimistic concurrency control
  * @returns {Promise<Object>} Updated group object
  * @throws {createError.Conflict} If the update fails due to concurrent modification
@@ -269,7 +295,7 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
 /**
  * Archive a group
  * @param {string} group_id - ID of the group to archive
- * @param {number} actor_id - User performing the archival (for audit)
+ * @param {string} actor_id - UUID of the user performing the archival (for audit)
  * @returns {Promise<Object>} The archived group object
  */
 async function archiveGroup(group_id, actor_id) {
@@ -299,7 +325,7 @@ async function archiveGroup(group_id, actor_id) {
 /**
  * Unarchive a group
  * @param {string} group_id - ID of the group to unarchive
- * @param {number} actor_id - User performing the unarchival (for audit)
+ * @param {string} actor_id - UUID of the user performing the unarchival (for audit)
  * @returns {Promise<Object>} The unarchived group object
  */
 async function unarchiveGroup(group_id, actor_id) {
@@ -365,8 +391,8 @@ async function listGroupMembers(group_id, { limit, offset }) {
 /**
  * Remove users from a group
  * @param {string} group_id
- * @param {number} data.user_ids - ID of the user to remove
- * @param {number} data.actor_id - Admin performing the action
+ * @param {Array<string>} data.user_ids - UUIDs of the users to remove
+ * @param {string} data.actor_id - UUID of the admin performing the action
  * @returns {Promise<boolean>} Whether a membership was deleted
  */
 async function removeGroupMembers(group_id, {
@@ -392,7 +418,7 @@ async function removeGroupMembers(group_id, {
     const deletedRecords = await tx.$queryRaw`
       DELETE FROM group_user
       WHERE group_id = ${group_id}
-      AND user_id = ANY(${user_ids})
+      AND user_id = ANY(${user_ids}::text[])
       RETURNING user_id;
     `;
     const deletedUserIds = deletedRecords.map((record) => record.user_id);
@@ -418,8 +444,8 @@ async function removeGroupMembers(group_id, {
  * Bulk add members to a group
  * @param {string} group_id
  * @param {Object} data
- * @param {Array<{user_id: number}>} data.user_ids - IDs of users to add as members
- * @param {number} data.actor_id - Admin performing the action
+ * @param {Array<{user_id: string}>} data.user_ids - UUIDs of users to add as members
+ * @param {string} data.actor_id - UUID of the admin performing the action
  * @returns {Promise<void>}
  */
 async function addGroupMembers(group_id, { user_ids, actor_id }) {
@@ -441,7 +467,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       INSERT INTO group_user (group_id, user_id, role)
       SELECT ${group_id}, u.id, 'MEMBER'
       FROM "user" u
-      WHERE u.id = ANY(${user_ids})
+      WHERE u.id = ANY(${user_ids}::text[])
       ON CONFLICT (group_id, user_id) DO NOTHING
       RETURNING user_id;
     `;
@@ -467,8 +493,8 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
  * Promote a group member to admin role
  * @param {string} group_id
  * @param {Object} data
- * @param {number} data.user_id - ID of the user to promote
- * @param {number} data.actor_id - Admin performing the action
+ * @param {string} data.user_id - UUID of the user to promote
+ * @param {string} data.actor_id - UUID of the admin performing the action
  * @returns {Promise<Object>} Updated membership object
  * @throws {createError.Conflict} If the user is not a member of the group
  */
@@ -524,8 +550,8 @@ async function promoteGroupMemberToAdmin(group_id, {
  * Remove admin role from a group member
  * @param {string} group_id
  * @param {Object} data
- * @param {number} data.user_id - ID of the user to demote
- * @param {number} data.actor_id - Admin performing the action
+ * @param {string} data.user_id - UUID of the user to demote
+ * @param {string} data.actor_id - UUID of the admin performing the action
  * @returns {Promise<Object>} Updated membership object
  * @throws {createError.Conflict} If the user is not a member of the group
  */
@@ -577,9 +603,17 @@ async function removeGroupAdmin(group_id, {
   });
 }
 
-// search term
-// - partial case-insensitive match on name or description or slug
-// - or exact match on id
+/**
+ * Search all groups with optional filters and pagination (admin only)
+ * @param {string} [group_id] - Optional group ID to filter by
+ * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
+ */
 async function searchAllGroups({
   group_id = null,
   search_term = null,
@@ -642,7 +676,20 @@ async function searchAllGroups({
   };
 }
 
-// assume user_id, sort_by, sort_order, limit, offset are not null or undefined
+/**
+ * Search groups that a user is a member of with optional filters and pagination
+ * @param {string} user_id - ID of the user to search groups for
+ * @param {string} [group_id] - Optional group ID to filter by
+ * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
+ * @param {boolean} direct_membership_only - If true, only return groups where the user is a direct member (not through nested group membership)
+ * @param {boolean} oversight_only - If true, only return groups where the user has an admin role for oversight purposes
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
+ */
 async function searchGroupsForUser({
   user_id,
   group_id = null,
@@ -737,6 +784,11 @@ async function searchGroupsForUser({
   };
 }
 
+/**
+ * Get ancestor groups of a group with depth information
+ * @param {string} group_id - ID of the group to get ancestors for
+ * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of ancestor groups with depth
+ */
 async function getGroupAncestors(group_id) {
   const ancestors = await prisma.group_closure.findMany({
     where: { descendant_id: group_id, depth: { gt: 0 } },
@@ -750,6 +802,11 @@ async function getGroupAncestors(group_id) {
   return ancestors.map(({ depth, ancestor }) => ({ depth, ...ancestor }));
 }
 
+/**
+ * Get descendant groups of a group with depth information
+ * @param {string} group_id - ID of the group to get descendants for
+ * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
+ */
 async function getGroupDescendants(group_id) {
   const descendants = await prisma.group_closure.findMany({
     where: { ancestor_id: group_id, depth: { gt: 0 } },
@@ -763,6 +820,12 @@ async function getGroupDescendants(group_id) {
   return descendants.map(({ depth, descendant }) => ({ depth, ...descendant }));
 }
 
+/**
+ * Get groups that a user is a member of with optional filter for archived status
+ * @param {string} user_id - ID of the user to get groups for
+ * @param {boolean|null} archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
+ */
 async function getMyGroups({ user_id, archived = null }) {
   // archived=true will return only archived groups
   // archived=false will return only active groups

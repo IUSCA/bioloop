@@ -34,10 +34,8 @@ async function _assertNoOverlappingGrant(tx, data) {
   //   newFrom < existingUntil  (infinity if existingUntil is null → always true)
   const conflicting = await tx.grant.findFirst({
     where: {
-      subject_type: data.subject_type,
-      subject_id: data.subject_id.toString(),
-      resource_type: data.resource_type,
-      resource_id: Number(data.resource_id),
+      subject_id: data.subject_id,
+      resource_id: data.resource_id,
       access_type_id: Number(data.access_type_id),
       revoked_at: null,
       AND: [
@@ -65,9 +63,7 @@ async function _createGrant(tx, data, granted_by) {
   try {
     grant = await tx.grant.create({
       data: {
-        subject_type: data.subject_type,
         subject_id: data.subject_id,
-        resource_type: data.resource_type,
         resource_id: data.resource_id,
         access_type_id: data.access_type_id,
         valid_from: data.valid_from ?? Prisma.skip,
@@ -99,14 +95,12 @@ async function _createGrant(tx, data, granted_by) {
 /**
  * Create a grant (direct authorization)
  * @param {Object} data
- * @param {string} data.subject_type - 'USER' or 'GROUP'
- * @param {string} data.subject_id - User ID or Group ID
- * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
- * @param {string} data.resource_id
+ * @param {string} data.subject_id - UUID of either user of group
+ * @param {string} data.resource_id - UUID of either dataset or collection
  * @param {string} data.access_type_id - GRANT_ACCESS_TYPE enum
  * @param {Date} [data.valid_from] - Defaults to now
  * @param {Date} [data.valid_until] - Expiration date
- * @param {number} granted_by - Actor user ID
+ * @param {string} granted_by - UUID of the user performing the grant
  * @param {string} [data.justification] - Optional justification for the grant creation
  * @returns {Promise<Object>} Created grant
  */
@@ -119,8 +113,8 @@ async function createGrant(data, granted_by, txn = null) {
 
 /**
  * Revoke a grant
- * @param {string} grant_id
- * @param {number} actor_id
+ * @param {string} grant_id - UUID of the grant to revoke
+ * @param {string} actor_id - UUID of the user performing the revocation
  * @param {string} [reason] - Optional revocation reason
  * @returns {Promise<Object>} Revoked grant
  */
@@ -151,8 +145,8 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
 
 /**
  * Helper to build SQL query for fetching grants or access types for a user and dataset, including via group membership and collection-level grants
- * @param {number} user_id
- * @param {string} dataset_id
+ * @param {string} user_id - UUID of the user
+ * @param {string} dataset_id - UUID of the dataset
  * @param {Object} [options]
  * @param {string} [options.return_type] - 'grants' (default) or 'access_types' - whether to return full grant records or just distinct access types
  * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
@@ -179,43 +173,53 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
     : Prisma.empty;
 
   return Prisma.sql`
-    WITH user_groups AS (
+    WITH user_groups AS ( -- UUIDs of groups the user is a member of (including everyone group)
       SELECT DISTINCT group_id 
       FROM effective_user_groups 
       WHERE user_id = ${user_id} 
       UNION SELECT ${EVERYONE_GROUP_ID_SQL} -- include everyone group
     ),
-    collections_having_dataset AS (
+    collections_having_dataset AS ( -- UUIDs of collections that contain the dataset
       SELECT collection_id
       FROM collection_datasets
       WHERE dataset_id = ${dataset_id}
     )
     SELECT ${select_fields}
     FROM valid_grants G
+    JOIN resource r ON G.resource_id = r.id
+    JOIN subject s ON G.subject_id = s.id
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
-          AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
+          s.type = 'USER' AND G.subject_id = ${user_id}
+          AND r.type = 'DATASET' AND G.resource_id = ${dataset_id}
         )
         OR (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
+          s.type = 'USER' AND G.subject_id = ${user_id}
+          AND r.type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
         OR (
-          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND G.resource_type = 'DATASET' AND G.resource_id = ${dataset_id}
+          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = 'DATASET' AND G.resource_id = ${dataset_id}
         )
         OR (
-          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
+          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = 'COLLECTION' AND G.resource_id IN (SELECT collection_id FROM collections_having_dataset)
         )
       )
       ${access_type_filter}
   `;
 }
 
-// Similar helper for collections
+/**
+ * Helper to build SQL query for fetching grants or access types for a user and collection, including via group membership
+ * @param {string} user_id - UUID of the user
+ * @param {string} collection_id - UUID of the collection
+ * @param {Object} [options]
+ * @param {string} [options.return_type] - 'grants' (default) or 'access_types' - whether to return full grant records or just distinct access types
+ * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
+ * @returns {Prisma.sql} SQL query to fetch the desired data
+ */
 function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', access_types = [] } = {}) {
   // find grants for a user and collection, including grants via group membership
   // grant - user, collection
@@ -238,34 +242,43 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
     )
     SELECT ${select_fields}
     FROM valid_grants G
+    JOIN resource r ON G.resource_id = r.id
+    JOIN subject s ON G.subject_id = s.id
     JOIN grant_access_type gat ON G.access_type_id = gat.id
     WHERE (
         (
-          G.subject_type = 'USER' AND G.subject_id = ${user_id}::text 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
+          s.type = 'USER' AND G.subject_id = ${user_id}
+          AND r.type = 'COLLECTION' AND G.resource_id = ${collection_id}
         )
         OR (
-          G.subject_type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
-          AND G.resource_type = 'COLLECTION' AND G.resource_id = ${collection_id}
+          s.type = 'GROUP' AND G.subject_id IN (SELECT group_id FROM user_groups) 
+          AND r.type = 'COLLECTION' AND G.resource_id = ${collection_id}
         )
       )
       ${access_type_filter}
   `;
 }
 
+/**
+ * Helper to build SQL query for fetching all valid grants for a user, including via group membership
+ * @param {string} user_id - UUID of the user
+ * @returns {Prisma.sql} SQL query to fetch all valid grants for the user
+ */
 function userValidGrantsQuery(user_id) {
   // helper to find all valid grants for a user, including via group membership
   return Prisma.sql`
     SELECT *
     FROM valid_grants g
-    WHERE g.subject_type = 'USER'
-      AND g.subject_id = ${user_id}::text
+    JOIN subject s ON g.subject_id = s.id
+    WHERE s.type = 'USER'
+      AND g.subject_id = ${user_id}
 
     UNION
 
     SELECT g.*
     FROM valid_grants g
-    WHERE g.subject_type = 'GROUP'
+    JOIN subject s ON g.subject_id = s.id
+    WHERE s.type = 'GROUP'
       AND (
             g.subject_id = ${EVERYONE_GROUP_ID_SQL}
             OR g.subject_id IN (
@@ -277,39 +290,50 @@ function userValidGrantsQuery(user_id) {
   `;
 }
 
+/**
+ * Helper to build SQL query for fetching owner group ids of resources that a user has grants on
+ * @param {string} user_id - UUID of the user
+ * @returns {Prisma.sql} SQL query to fetch owner group ids of resources accessible by the user via grants
+ */
 function ownerGroupIdsOfResourcesAccessibleByUserQuery(user_id) {
-  // helper to find owner group ids of resources that a user has grants on
   return Prisma.sql`
     WITH user_valid_grants AS (
       ${userValidGrantsQuery(user_id)}
     )
+    -- directly join all grants to datasets; if a grant resource is not dataset, 
+    -- the join will remove the row, so we only get grants that are on datasets
     SELECT DISTINCT d.owner_group_id as id
     FROM user_valid_grants g
-    JOIN dataset d ON g.resource_type = 'DATASET' AND g.resource_id = d.id
+    JOIN dataset d ON g.resource_id = d.resource_id
     WHERE d.owner_group_id IS NOT NULL
     
     UNION
     
     SELECT DISTINCT c.owner_group_id as id
     FROM user_valid_grants g
-    JOIN collection c ON g.resource_type = 'COLLECTION' AND g.resource_id = c.id
+    JOIN collection c ON g.resource_id = c.id
     WHERE c.owner_group_id IS NOT NULL
   `;
 }
 
+/**
+ * Helper to build SQL query for fetching collections that are accessible by a user via grants (directly or via group membership)
+ * @param {string} user_id - UUID of the user
+ * @returns {Prisma.sql} SQL query to fetch collections accessible by the user via grants
+ */
 function accessibleCollectionsByGrantsQuery(user_id) {
   // helper to find collections that are accessible by a user via grants (directly or via group membership)
   return Prisma.sql`
     SELECT DISTINCT c.*
     FROM (${userValidGrantsQuery(user_id)}) g
-    JOIN collection c ON g.resource_type = 'COLLECTION' AND g.resource_id = c.id
+    JOIN collection c ON g.resource_id = c.id
   `;
 }
 
 /**
  * Get grants for a user and dataset, including grants via group membership and collection-level grants
- * @param {number} user_id
- * @param {string} dataset_id
+ * @param {string} user_id - UUID of the user
+ * @param {string} dataset_id - UUID of the dataset
  * @param {Object} [options]
  * @param {string[]} [options.access_types] - Optional filter to only return grants with these access types
  * @returns {Promise<Object[]>} List of grants the user has for the dataset (including via groups and collections)
@@ -329,8 +353,8 @@ async function getUserDatasetGrants(user_id, dataset_id, { access_types } = {}) 
  * Returns a Set<string> for O(1) membership tests inside policy evaluate() functions.
  * Covers direct-user grants, group-membership grants, and (for datasets) collection-level grants.
  *
- * @param {number}          user_id       - User id
- * @param {string|number}   resource_id   - Dataset or Collection id
+ * @param {string}   user_id       - UUID of the user
+ * @param {string}   resource_id   - UUID of the dataset or collection
  * @param {'DATASET'|'COLLECTION'} resource_type
  * @returns {Promise<Set<string>>} Set of active access-type names (e.g. {'view_metadata','download'})
  */
@@ -344,6 +368,14 @@ async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_typ
   return new Set(results.map((r) => r.access_type));
 }
 
+/**
+ * Check whether a user has at least one active grant for the specified resource and access type(s), including via group membership and collection-level grants
+ * @param {string} user_id - UUID of the user
+ * @param {string} resource_id - UUID of the dataset or collection
+ * @param {'DATASET'|'COLLECTION'} resource_type
+ * @param {string[]} access_types - List of access types to check (e.g. ['view_metadata','download'])
+ * @returns {Promise<boolean>} Whether the user has at least one matching grant
+ */
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,
 }) {
@@ -355,6 +387,11 @@ async function userHasGrant({
   return results.length > 0;
 }
 
+/**
+ * Get a grant by ID
+ * @param {string} grant_id - UUID of the grant
+ * @returns {Promise<Object>} Grant record or null if not found
+ */
 async function getGrantById(grant_id) {
   return prisma.grant.findUnique({
     where: { id: grant_id },
@@ -382,8 +419,19 @@ function getPrismaGrantValidityFilter(active) {
   return where;
 }
 
+/**
+ * List grants for a subject (user or group) with optional filtering by active status and pagination/sorting
+ * @param {Object} params
+ * @param {string} params.subject_id - UUID of the user or group
+ * @param {boolean} [params.active] - If true, only return active grants; if false, only return inactive grants; if omitted, return all grants
+ * @param {number} [params.offset] - Pagination offset
+ * @param {number} [params.limit] - Pagination limit
+ * @param {string} [params.sort_by] - Field to sort by (e.g. 'created_at')
+ * @param {'asc'|'desc'} [params.sort_order] - Sort order
+ * @returns {Promise<Object>} Paginated list of grants matching the criteria
+ */
 async function listGrantsForSubject({
-  subject_type, subject_id,
+  subject_id,
   active,
   offset,
   limit,
@@ -391,8 +439,7 @@ async function listGrantsForSubject({
   sort_order,
 }) {
   const where = {
-    subject_type,
-    subject_id: subject_id.toString(),
+    subject_id,
   };
   Object.assign(where, getPrismaGrantValidityFilter(active));
 
@@ -417,8 +464,19 @@ async function listGrantsForSubject({
   };
 }
 
+/**
+ * List grants for a resource (dataset or collection) with optional filtering by active status and pagination/sorting
+ * @param {Object} params
+ * @param {string} params.resource_id - UUID of the dataset or collection
+ * @param {boolean} [params.active] - If true, only return active grants; if false, only return inactive grants; if omitted, return all grants
+ * @param {number} [params.offset] - Pagination offset
+ * @param {number} [params.limit] - Pagination limit
+ * @param {string} [params.sort_by] - Field to sort by (e.g. 'created_at')
+ * @param {'asc'|'desc'} [params.sort_order] - Sort order
+ * @returns {Promise<Object>} Paginated list of grants matching the criteria
+ */
 async function listGrantsForResource({
-  resource_type, resource_id,
+  resource_id,
   active,
   offset,
   limit,
@@ -426,8 +484,7 @@ async function listGrantsForResource({
   sort_order,
 }) {
   const where = {
-    resource_type,
-    resource_id: resource_id.toString(),
+    resource_id,
   };
   Object.assign(where, getPrismaGrantValidityFilter(active));
   const data = await prisma.grant.findMany({

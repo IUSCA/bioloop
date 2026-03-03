@@ -41,11 +41,14 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group   group?                      @relation(fields: [owner_group_id], references: [id])
+  owner_group   group?                      @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collections   collection_dataset[]
   contributions user_dataset_contribution[]
   resource_id   String                     @unique
-  resource      resource                   @relation(fields: [resource_id], references: [id])
+  // Restrict: prevents deleting a resource row directly while this dataset still references it.
+  // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
+  //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
+  resource      resource                   @relation(fields: [resource_id], references: [id], onDelete: Restrict)
 
   @@unique([name, type, is_deleted])
 }
@@ -208,7 +211,10 @@ model user {
   authorization_audits      authorization_audit[]
   contributions             user_dataset_contribution[]
   subject_id                String                     @unique
-  subject                   subject                    @relation(fields: [subject_id], references: [id])
+  // Restrict: prevents deleting a subject row directly while this user still references it.
+  // Reverse cascade (user deleted → subject deleted) is enforced via a DB trigger:
+  //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
+  subject                   subject                    @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 }
 
 model user_password {
@@ -494,7 +500,10 @@ model group {
   owned_datasets    dataset[]
   owned_collections collection[]
   contributions     user_dataset_contribution[]
-  subject           subject                     @relation(fields: [id], references: [id])
+  // Restrict: prevents deleting a subject row directly while this group still references it.
+  // Reverse cascade (group deleted → subject deleted) is enforced via a DB trigger:
+  //   AFTER DELETE ON "group" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.id
+  subject           subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
 }
 
 // Closure table for efficient hierarchy traversal
@@ -514,14 +523,14 @@ model group_closure {
 // Group membership with roles
 model group_user {
   group_id    String
-  user_id     Int
+  user_id     String
   role        GROUP_MEMBER_ROLE @default(MEMBER)
   assigned_at DateTime          @default(now()) @db.Timestamp(6)
-  assigned_by Int?
+  assigned_by String?
 
   group    group @relation(fields: [group_id], references: [id], onDelete: Cascade)
-  user     user  @relation("user_memberships", fields: [user_id], references: [id], onDelete: Cascade)
-  assignor user? @relation("membership_assignor", fields: [assigned_by], references: [id], onDelete: SetNull)
+  user     user  @relation("user_memberships", fields: [user_id], references: [subject_id], onDelete: Cascade)
+  assignor user? @relation("membership_assignor", fields: [assigned_by], references: [subject_id], onDelete: SetNull)
 
   @@id([group_id, user_id])
   @@index([user_id])
@@ -535,13 +544,13 @@ enum GROUP_MEMBER_ROLE {
 model user_dataset_contribution {
   id         Int      @id @default(autoincrement())
   group_id   String
-  user_id    Int
-  dataset_id Int
+  user_id    String
+  dataset_id String
   created_at DateTime @default(now()) @db.Timestamp(6)
 
   group   group   @relation(fields: [group_id], references: [id], onDelete: Cascade)
-  user    user    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  dataset dataset @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  user    user    @relation(fields: [user_id], references: [subject_id], onDelete: Cascade)
+  dataset dataset @relation(fields: [dataset_id], references: [resource_id], onDelete: Cascade)
 
   @@unique([group_id, user_id, dataset_id])
   @@index([group_id])
@@ -575,7 +584,10 @@ model collection {
 
   // Relations
   datasets collection_dataset[]
-  resource resource             @relation(fields: [id], references: [id])
+  // Restrict: prevents deleting a resource row directly while this collection still references it.
+  // Reverse cascade (collection deleted → resource deleted) is enforced via a DB trigger:
+  //   AFTER DELETE ON "collection" FOR EACH ROW: DELETE FROM resource WHERE id = OLD.id
+  resource resource             @relation(fields: [id], references: [id], onDelete: Restrict)
 
   @@index([owner_group_id])
   @@index([is_archived])
@@ -583,13 +595,13 @@ model collection {
 
 model collection_dataset {
   collection_id String
-  dataset_id    Int
+  dataset_id    String
   added_at      DateTime @default(now()) @db.Timestamp(6)
-  added_by      Int?
+  added_by      String?
 
   collection collection @relation(fields: [collection_id], references: [id], onDelete: Cascade)
-  dataset    dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  adder      user?      @relation("collection_dataset_adder", fields: [added_by], references: [id], onDelete: SetNull)
+  dataset    dataset    @relation(fields: [dataset_id], references: [resource_id], onDelete: Cascade)
+  adder      user?      @relation("collection_dataset_adder", fields: [added_by], references: [subject_id], onDelete: SetNull)
 
   @@id([collection_id, dataset_id])
   @@index([dataset_id])
@@ -608,15 +620,15 @@ model grant {
 
   // Subject (who receives access)
   subject_id String
-  subject    subject @relation(fields: [subject_id], references: [id], onDelete: Cascade)
+  subject    subject @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 
   // Resource (what is being accessed)
   resource_id String
-  resource    resource @relation(fields: [resource_id], references: [id], onDelete: Cascade)
+  resource    resource @relation(fields: [resource_id], references: [id], onDelete: Restrict)
 
   // Access type (what action is allowed) - atomic granularity by design
   access_type_id Int
-  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Cascade)
+  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Restrict)
 
   // Temporal bounds
   valid_from   DateTime                @default(now()) @db.Timestamp(6)
@@ -629,16 +641,16 @@ model grant {
   // Otherwise, Prisma would try to drop and recreate the column on every migration since it doesn't recognize it as a generated column.
 
   // Provenance
-  granted_by    Int
+  granted_by    String
   justification String? // Optional justification for the grant creation or revocation
   created_at    DateTime            @default(now()) @db.Timestamp(6)
   revoked_at    DateTime?           @db.Timestamp(6)
-  revoked_by    Int?
+  revoked_by    String?
   creation_type GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
 
   // Relations
-  grantor user  @relation("grants_created", fields: [granted_by], references: [id], onDelete: Restrict)
-  revoker user? @relation("grants_revoked", fields: [revoked_by], references: [id], onDelete: SetNull)
+  grantor user  @relation("grants_created", fields: [granted_by], references: [subject_id], onDelete: Restrict)
+  revoker user? @relation("grants_revoked", fields: [revoked_by], references: [subject_id], onDelete: SetNull)
 
   // If created via access request approval, link back to the request item that led to this grant
   accessRequestItems access_request_item[]
@@ -652,20 +664,6 @@ model grant {
   @@index([valid_from, valid_until])
 }
 
-enum GRANT_RESOURCE_TYPE {
-  DATASET
-  COLLECTION
-}
-
-// enum GRANT_ACCESS_TYPE {
-//   // Dataset consumption actions (grantable)
-//   VIEW_METADATA
-//   VIEW_SENSITIVE_METADATA
-//   READ_DATA
-//   DOWNLOAD
-//   COMPUTE
-// }
-
 enum GRANT_CREATION_TYPE {
   ACCESS_REQUEST
   MANUAL
@@ -676,12 +674,11 @@ model grant_access_type {
   id            Int                 @id @default(autoincrement())
   name          String
   description   String?
-  resource_type GRANT_RESOURCE_TYPE
 
   grants             grant[]
   accessRequestItems access_request_item[]
 
-  @@unique([name, resource_type])
+  @@unique([name])
 }
 
 // ============================================================================
@@ -699,8 +696,8 @@ model access_request {
   resource    resource @relation(fields: [resource_id], references: [id], onDelete: Cascade)
 
   // Requester
-  requester_id Int
-  requester    user @relation("access_requests_created", fields: [requester_id], references: [id], onDelete: Cascade)
+  requester_id String
+  requester    user @relation("access_requests_created", fields: [requester_id], references: [subject_id], onDelete: Restrict)
 
   // Justification
   purpose String?
@@ -712,7 +709,7 @@ model access_request {
   status ACCESS_REQUEST_STATUS @default(DRAFT)
 
   // Review
-  reviewed_by     Int?
+  reviewed_by     String?
   reviewed_at     DateTime? @db.Timestamp(6)
   decision_reason String?
 
@@ -723,7 +720,7 @@ model access_request {
   closed_at    DateTime? @db.Timestamp(6)
 
   // Relations
-  reviewer user? @relation("access_requests_reviewed", fields: [reviewed_by], references: [id], onDelete: SetNull)
+  reviewer user? @relation("access_requests_reviewed", fields: [reviewed_by], references: [subject_id], onDelete: SetNull)
 
   access_request_items access_request_item[]
 
@@ -741,7 +738,7 @@ model access_request_item {
   created_grant_id  String?
 
   access_request access_request    @relation(fields: [access_request_id], references: [id], onDelete: Cascade)
-  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Cascade)
+  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Restrict)
   created_grant  grant?            @relation(fields: [created_grant_id], references: [id], onDelete: SetNull)
 
   // Prevent Duplicate Items Inside Same Request
@@ -783,8 +780,8 @@ model authorization_audit {
   event_type String
 
   // Actor
-  actor_id Int?
-  actor    user? @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+  actor_id String?
+  actor    user? @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
 
   // Target
   target_type String // 'user', 'group', 'dataset', 'collection', 'grant'
@@ -824,20 +821,20 @@ model authority_transfer {
   target_principal_type PRINCIPAL_TYPE
   target_principal_id   String
 
-  proposed_by Int
+  proposed_by String
   reason      String?
 
   status AUTH_TRANSFER_STATUS @default(PENDING)
 
   // Approval tracking
   source_approved_at DateTime?
-  source_approved_by Int?
+  source_approved_by String?
 
   target_approved_at DateTime?
-  target_approved_by Int?
+  target_approved_by String?
 
   executed_at DateTime?
-  executed_by Int?
+  executed_by String?
 
   cancelled_at DateTime?
 

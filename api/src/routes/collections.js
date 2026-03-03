@@ -44,7 +44,7 @@ router.post(
     if (isPlatformAdmin) {
       promise = collectionService.searchAllCollections(params);
     } else {
-      promise = collectionService.searchCollectionsForUser({ ...params, user_id: req.user.id });
+      promise = collectionService.searchCollectionsForUser({ ...params, user_id: req.user.subject_id });
     }
 
     const { metadata, data } = await promise;
@@ -57,11 +57,11 @@ router.post(
 router.get(
   '/:id',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
   ]),
   authorize('collection', 'view_metadata'),
   asyncHandler(async (req, res) => {
-    const collection = await collectionService.getCollectionById(req.params.id, req.user.id);
+    const collection = await collectionService.getCollectionById(req.params.id, req.user.subject_id);
     res.json(req.permission.filter(collection));
   }),
 );
@@ -84,7 +84,7 @@ router.post(
     // #swagger.summary = 'Create a new collection'
 
     const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata'])(req.body);
-    const newCollection = await collectionService.createCollection(data, { actor_id: req.user.id });
+    const newCollection = await collectionService.createCollection(data, { actor_id: req.user.subject_id });
     res.status(201).json(req.permission.filter(newCollection));
   }),
 );
@@ -93,7 +93,7 @@ router.post(
 router.patch(
   '/:id',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
     body('name').optional().isString().notEmpty(),
     body('description').optional().isString(),
     body('metadata').optional().isObject(),
@@ -112,7 +112,7 @@ router.patch(
       req.params.id,
       {
         data,
-        actor_id: req.user.id,
+        actor_id: req.user.subject_id,
         expected_version: req.body.version,
       },
     );
@@ -124,14 +124,14 @@ router.patch(
 router.delete(
   '/:id',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
   ]),
   authorize('collection', 'delete'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Delete a collection'
 
-    await collectionService.deleteCollection(req.params.id, req.user.id);
+    await collectionService.deleteCollection(req.params.id, req.user.subject_id);
     res.status(204).send();
   }),
 );
@@ -140,7 +140,7 @@ router.delete(
 router.get(
   '/:id/datasets',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
@@ -167,9 +167,9 @@ router.get(
 router.post(
   '/:id/datasets',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
     body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isInt(),
+    body('dataset_ids.*').isUUID(),
   ]),
   authorize('collection', 'add_dataset'),
   asyncHandler(async (req, res) => {
@@ -181,7 +181,7 @@ router.post(
       req.params.id,
       {
         dataset_ids,
-        actor_id: req.user.id,
+        actor_id: req.user.subject_id,
       },
     );
     res.status(204).send();
@@ -192,8 +192,8 @@ router.post(
 router.delete(
   '/:id/datasets/:datasetId',
   validate([
-    param('id').isInt().toInt(),
-    param('datasetId').isInt().toInt(),
+    param('id').isUUID(),
+    param('datasetId').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
@@ -201,7 +201,7 @@ router.delete(
     // #swagger.summary = 'Remove a dataset from a collection'
 
     const { id, datasetId } = req.params;
-    await collectionService.removeDatasets(id, { dataset_ids: [datasetId], actor_id: req.user.id });
+    await collectionService.removeDatasets(id, { dataset_ids: [datasetId], actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -210,9 +210,9 @@ router.delete(
 router.delete(
   '/:id/datasets',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
     body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isInt(),
+    body('dataset_ids.*').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
@@ -220,7 +220,7 @@ router.delete(
     // #swagger.summary = 'Bulk remove datasets from a collection'
 
     const { dataset_ids } = req.body;
-    await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.id });
+    await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -229,14 +229,14 @@ router.delete(
 router.post(
   '/:id/archive',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
   ]),
   authorize('collection', 'archive'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Archive a collection'
 
-    await collectionService.archiveCollection(req.params.id, req.user.id);
+    await collectionService.archiveCollection(req.params.id, req.user.subject_id);
     res.status(204).send();
   }),
 );
@@ -245,14 +245,14 @@ router.post(
 router.post(
   '/:id/unarchive',
   validate([
-    param('id').isInt().toInt(),
+    param('id').isUUID(),
   ]),
   authorize('collection', 'unarchive'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Unarchive a collection'
 
-    await collectionService.unarchiveCollection(req.params.id, req.user.id);
+    await collectionService.unarchiveCollection(req.params.id, req.user.subject_id);
     res.status(204).send();
   }),
 );

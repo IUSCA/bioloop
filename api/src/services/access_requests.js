@@ -81,12 +81,11 @@ async function getRequestById(request_id) {
  * Create a new access request
  * @param {Object} data
  * @param {string} data.type - 'NEW' or 'RENEWAL'
- * @param {string} data.resource_type - 'DATASET' or 'COLLECTION'
- * @param {number} data.resource_id - ID of the resource
+ * @param {number} data.resource_id - UUID of the resource
  * @param {string} [data.purpose] - Justification for the request
  * @param {Array<{access_type_id: number, requested_until?: Date}>} data.items - Access types being requested, must be unique within the request
  * @param {string[]} [data.previous_grant_ids] - For renewals, reference to expired grants
- * @param {number} requester_id - User creating the request
+ * @param {string} requester_id - UUID of the user creating the request
  * @param {Object} [options]
  * @param {boolean} [options.submit=false] - If true, immediately submit the request for review
  * @returns {Promise<Object>} Created access request
@@ -97,7 +96,6 @@ async function createAccessRequest(data, requester_id) {
     const accessRequest = await tx.access_request.create({
       data: {
         type: data.type,
-        resource_type: data.resource_type,
         resource_id: data.resource_id,
         requester_id,
         purpose: data.purpose ?? Prisma.skip,
@@ -150,7 +148,7 @@ async function createAccessRequest(data, requester_id) {
 /**
  * Update a DRAFT access request
  * @param {string} request_id
- * @param {number} requester_id
+ * @param {string} requester_id - UUID of the user creating the request
  * @param {Object} data
  * @param {string} [data.purpose] - Updated justification
  * @param {Array<{access_type_id: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing) must be unique within the request
@@ -217,9 +215,7 @@ async function _assertNoActiveGrants(request) {
 
   const conflicting = await prisma.grant.findMany({
     where: {
-      subject_type: 'USER',
-      subject_id: String(request.requester_id),
-      resource_type: request.resource_type,
+      subject_id: request.requester_id,
       resource_id: request.resource_id,
       access_type_id: { in: itemAccessTypeIds },
       revoked_at: null,
@@ -252,7 +248,6 @@ async function _assertNoInFlightRequests(request) {
     where: {
       id: { not: request.id },
       requester_id: request.requester_id,
-      resource_type: request.resource_type,
       resource_id: request.resource_id,
       status: { in: ['DRAFT', 'UNDER_REVIEW'] },
       access_request_items: {
@@ -283,7 +278,7 @@ async function _assertNoInFlightRequests(request) {
 /**
  * Submit a DRAFT request for review
  * @param {string} request_id
- * @param {number} requester_id
+ * @param {string} requester_id - UUID of the user creating the request
  * @returns {Promise<Object>} Updated access request
  */
 async function submitRequest(request_id, requester_id) {
@@ -377,9 +372,7 @@ function _updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
 
 function _createGrant(tx, currentRequest, reviewItem, granted_by) {
   const data = {
-    subject_type: 'USER',
-    subject_id: String(currentRequest.requester_id),
-    resource_type: currentRequest.resource_type,
+    subject_id: currentRequest.requester_id,
     resource_id: currentRequest.resource_id,
     access_type_id: reviewItem.access_type_id,
     valid_until: reviewItem.approved_until,
@@ -395,7 +388,7 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
  * Protection against concurrent reviews or withdrawals is implemented - optimistic concurrency control
  *
  * @param {string} request_id
- * @param {number} reviewer_id
+ * @param {string} reviewer_id - UUID of the user performing the review
  * @param {Object} options
  * @param {Array<{id: number, access_type_id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.review_items - Decision for each item
  * @param {string} [options.decision_reason] - Overall review comment
@@ -582,6 +575,15 @@ async function expireStaleRequests({ max_age_days }) {
   });
 }
 
+/** * Get access requests for a user (as requester)
+ * @param {string} requester_id - UUID of the user creating the request
+ * @param {string} [status] - Filter by request status
+ * @param {string} [sort_by] - Field to sort by (e.g. 'created_at')
+ * @param {string} [sort_order] - 'asc' or 'desc'
+ * @param {number} [offset] - Pagination offset
+ * @param {number} [limit] - Pagination limit
+ * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
+ */
 async function getRequestsByUser({
   requester_id, status, sort_by, sort_order, offset, limit,
 }) {
@@ -617,7 +619,16 @@ async function getRequestsByUser({
   };
 }
 
-// assume sort_by, sort_order, offset, limit are validated and passed as parameters
+/**
+ * Get requests pending review for a user (as reviewer)
+ * A user can review a request if they are a reviewer for the resource's owning group
+ * @param {string} reviewer_id - UUID of the user performing the review
+ * @param {string} sort_by - Field to sort by (e.g. 'submitted_at')
+ * @param {string} sort_order - 'asc' or 'desc'
+ * @param {number} offset - Pagination offset
+ * @param {number} limit - Pagination limit
+ * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
+ */
 async function getRequestsPendingReviewForUser({
   reviewer_id, sort_by, sort_order, offset, limit,
 }) {
@@ -632,12 +643,12 @@ async function getRequestsPendingReviewForUser({
       SELECT *
       FROM access_request ar
       WHERE ar.status = 'UNDER_REVIEW'
-        AND ( ar.resource_type = 'DATASET' AND ar.resource_id IN (
-              SELECT d.id
+        AND ( ar.resource_id IN (
+              SELECT d.resource_id
               FROM dataset d
               JOIN reviewer_as_admin_of_groups rag ON d.owner_group_id = rag.group_id
             )
-          OR ar.resource_type = 'COLLECTION' AND ar.resource_id IN (
+          OR ar.resource_id IN (
               SELECT c.id
               FROM collection c
               JOIN reviewer_as_admin_of_groups rag ON c.owner_group_id = rag.group_id
@@ -672,7 +683,7 @@ async function getRequestsPendingReviewForUser({
 
 /**
  * Get requests reviewed by a user (as reviewer)
- * @param {string} user_id
+ * @param {string} user_id - UUID of the user performing the review
  * @param {string} sort_by - Field to sort by (e.g. 'reviewed_at')
  * @param {string} sort_order - 'asc' or 'desc'
  * @param {number} offset - Pagination offset
@@ -697,7 +708,7 @@ async function getRequestsReviewedByUser({
       collection_resource: true,
     },
     orderBy: {
-      [sort_by || 'reviewed_at']: sort_order || 'desc',
+      [sort_by]: sort_order,
     },
     skip: offset,
     take: limit,

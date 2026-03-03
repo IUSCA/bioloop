@@ -182,57 +182,48 @@ const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 const GRANT_ACCESS_TYPES = [
   {
     id: 1,
-    name: 'VIEW_METADATA',
+    name: 'DATASET:VIEW_METADATA',
     description: 'View dataset or collection metadata',
-    resource_type: 'DATASET',
   },
   {
     id: 2,
-    name: 'VIEW_SENSITIVE_METADATA',
+    name: 'DATASET:VIEW_SENSITIVE_METADATA',
     description: 'View sensitive dataset metadata',
-    resource_type: 'DATASET',
   },
   {
     id: 3,
-    name: 'REQUEST_ACCESS',
+    name: 'DATASET:REQUEST_ACCESS',
     description: 'Request access to a dataset',
-    resource_type: 'DATASET',
   },
   {
     id: 4,
-    name: 'READ_DATA',
+    name: 'DATASET:READ_DATA',
     description: 'Read and access dataset data files',
-    resource_type: 'DATASET',
   },
   {
     id: 5,
-    name: 'DOWNLOAD',
+    name: 'DATASET:DOWNLOAD',
     description: 'Download dataset data',
-    resource_type: 'DATASET',
   },
   {
     id: 6,
-    name: 'COMPUTE',
+    name: 'DATASET:COMPUTE',
     description: 'Run compute jobs against dataset data',
-    resource_type: 'DATASET',
   },
   {
     id: 7,
-    name: 'VIEW_METADATA',
+    name: 'COLLECTION:VIEW_METADATA',
     description: 'View dataset or collection metadata',
-    resource_type: 'COLLECTION',
   },
   {
     id: 8,
-    name: 'REQUEST_ACCESS',
+    name: 'COLLECTION:REQUEST_ACCESS',
     description: 'Request access to a collection',
-    resource_type: 'COLLECTION',
   },
   {
     id: 9,
-    name: 'READ_DATA',
+    name: 'COLLECTION:READ_DATA',
     description: 'List datasets in collection and read dataset metadata',
-    resource_type: 'COLLECTION',
   },
 ];
 

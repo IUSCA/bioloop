@@ -1,7 +1,6 @@
 const express = require('express');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
-const { isUUID, isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -10,21 +9,6 @@ const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
 
 const router = express.Router();
-
-function validateSubjectId(subject_type, subject_id) {
-  if (subject_type === 'GROUP') {
-    if (!isUUID(subject_id)) {
-      throw createError(400, 'Invalid subject_id for GROUP (must be UUID)');
-    }
-  } else if (subject_type === 'USER') {
-    if (!isInt(subject_id)) {
-      throw createError(400, 'Invalid subject_id for USER (must be integer)');
-    }
-  } else {
-    throw createError(400, 'Invalid subject_type (must be USER or GROUP)');
-  }
-  return true;
-}
 
 // List grants (filtered by user authority)
 // router.get('/');
@@ -42,9 +26,9 @@ router.post(
   '/',
   validate([
     body('subject_type').isIn(['USER', 'GROUP']),
-    body('subject_id').custom((value, { req }) => validateSubjectId(req.body.subject_type, value)),
+    body('subject_id').isUUID(),
     body('resource_type').isIn(['DATASET', 'COLLECTION']),
-    body('resource_id').isInt(),
+    body('resource_id').isUUID(),
     body('access_type_id').isInt(),
     body('justification').optional().isString(),
     body('valid_from').optional().isISO8601(),
@@ -70,7 +54,7 @@ router.post(
       'access_type_id',
       'valid_from', 'valid_to',
       'justification'])(req.body);
-    const granted_by = req.user.id;
+    const granted_by = req.user.subject_id;
     const grant = await grantService.createGrant(data, granted_by);
     res.status(201).json(req.permission.filter(grant));
   }),
@@ -101,7 +85,7 @@ router.post(
     const grantId = req.params.id;
     const { reason } = req.body;
 
-    await grantService.revokeGrant(grantId, { actor_id: req.user.id, reason });
+    await grantService.revokeGrant(grantId, { actor_id: req.user.subject_id, reason });
     res.status(204).send();
   }),
 );
@@ -111,7 +95,7 @@ router.get(
   '/subject/:subjectType/:subjectId',
   validate([
     param('subjectType').isIn(['USER', 'GROUP']),
-    param('subjectId').custom((value, { req }) => validateSubjectId(req.params.subjectType, value)),
+    param('subjectId').isUUID(),
     query('active').optional().isBoolean().toBoolean(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
@@ -153,7 +137,7 @@ router.get(
   '/resource/:resourceType/:resourceId',
   validate([
     param('resourceType').isIn(['DATASET', 'COLLECTION']),
-    param('resourceId').isInt(),
+    param('resourceId').isUUID(),
     query('active').optional().isBoolean().toBoolean(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),

@@ -47,7 +47,7 @@ router.post(
   validate([
     body('type').isIn(['NEW']), // 'RENEWAL' is not implemented yet
     body('resource_type').isIn(['DATASET', 'COLLECTION']),
-    body('resource_id').isString().notEmpty(),
+    body('resource_id').isUUID(),
     body('purpose').isString().notEmpty(),
     body('items').isArray({ min: 1 }),
     body('items.*.access_type_id').isInt(),

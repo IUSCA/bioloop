@@ -195,21 +195,21 @@ const simpleHash = (str) => {
   return Math.abs(hash);
 };
 
-// function createUuidLikeGenerator(start = 0) {
-//   let counter = start;
+function createUuidLikeGenerator(start = 0) {
+  let counter = start;
 
-//   return function generate() {
-//     const hex = (counter++).toString(16).padStart(32, '0');
+  return function generate() {
+    const hex = (counter++).toString(16).padStart(32, '0');
 
-//     return (
-//       `${hex.slice(0, 8)}-${
-//         hex.slice(8, 12)}-${
-//         hex.slice(12, 16)}-${
-//         hex.slice(16, 20)}-${
-//         hex.slice(20)}`
-//     );
-//   };
-// }
+    return (
+      `${hex.slice(0, 8)}-${
+        hex.slice(8, 12)}-${
+        hex.slice(12, 16)}-${
+        hex.slice(16, 20)}-${
+        hex.slice(20)}`
+    );
+  };
+}
 
 function generateGroupUserMemberships(userIds) {
   const memberships = [];
@@ -279,18 +279,19 @@ function generateDatasetOwnerships(datasetIds) {
 }
 
 function generateCollections(n, datasets) {
-  // aggregate dataset ids by owner group
+  // aggregate dataset resource ids by owner group
   const datasetsByGroup = datasets.reduce((acc, dataset) => {
     if (!acc[dataset.owner_group_id]) {
       acc[dataset.owner_group_id] = [];
     }
-    acc[dataset.owner_group_id].push(dataset.id);
+    acc[dataset.owner_group_id].push(dataset.resource_id);
     return acc;
   }, {});
 
-  // const generate = createUuidLikeGenerator(1);
+  const generate = createUuidLikeGenerator(1);
   const collections = [];
   for (let i = 1; i <= n; i++) {
+    const collection_uuid = generate();
     const idx = String(i).padStart(String(n).length, '0'); // capture loop variable and pad with zeros for better hashing
     const owner_group_id = groups[simpleHash(`collection-${idx}`) % groups.length].id;
 
@@ -303,7 +304,7 @@ function generateCollections(n, datasets) {
     });
 
     collections.push({
-      id: i,
+      id: collection_uuid,
       slug: `collection-${idx}`,
       name: `Collection ${idx}`,
       description: `Description for Collection ${idx}`,
