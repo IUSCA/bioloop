@@ -64,7 +64,6 @@ const grantsObject = {
       'create:any': ['*'],
     },
     notifications: {
-      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
@@ -131,6 +130,10 @@ const grantsObject = {
     },
     alerts: {
       'read:any': ['*'],
+    },
+    notifications: {
+      'read:any': ['*'],
+      'update:any': ['*'],
     },
   },
 

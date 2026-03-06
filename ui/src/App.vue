@@ -16,12 +16,14 @@ import router from "@/router";
 import envService from "@/services/env";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
+import { useNotificationStore } from "@/stores/notification";
 import { useUIStore } from "@/stores/ui";
 import { useBreakpoint, useColors } from "vuestic-ui";
 
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
 const auth = useAuthStore();
+const notificationStore = useNotificationStore();
 const { applyPreset, colors } = useColors();
 const loading = ref(false);
 
@@ -55,6 +57,18 @@ const fetchEnv = () => {
       loading.value = false;
     });
 };
+
+watch(
+  () => auth.loggedIn,
+  (isLoggedIn) => {
+    if (isLoggedIn && auth.isFeatureEnabled("notifications")) {
+      notificationStore.connect();
+    } else {
+      notificationStore.disconnect();
+    }
+  },
+  { immediate: true },
+);
 
 watch(
   () => breakpoint.current,

@@ -227,6 +227,9 @@ const GRANT_ACCESS_TYPES = [
   },
 ];
 
+const JWT_COOKIE_NAME = 'jwt';
+const GRAFANA_COOKIE_NAME = 'grafana_token';
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -244,4 +247,6 @@ module.exports = {
   INCLUDE_PROJECTS,
   EVERYONE_GROUP_ID,
   GRANT_ACCESS_TYPES,
+  JWT_COOKIE_NAME,
+  GRAFANA_COOKIE_NAME,
 };

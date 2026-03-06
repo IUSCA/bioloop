@@ -124,6 +124,13 @@ const exports = {
     ],
     bottom_items: [
       {
+        feature_key: "notifications",
+        icon: "mdi-bell-outline",
+        title: "Notifications",
+        path: "/notifications",
+        test_id: "sidebar-notifications",
+      },
+      {
         icon: "mdi-information",
         title: "About",
         path: "/about",

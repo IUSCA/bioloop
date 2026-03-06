@@ -25,6 +25,7 @@
 const logger = require('@/services/logger');
 const { getQueue } = require('./queue/queues');
 const { TYPES, QUEUE_ROUTING } = require('./types');
+const InAppNotificationService = require('./inApp/InAppNotificationService');
 
 class NotificationService {
   // ── Core dispatcher ──────────────────────────────────────────────
@@ -33,7 +34,7 @@ class NotificationService {
   // You should never need to call _enqueue() directly.
 
   async _enqueue({
-    type, to, subject, template, data = {}, jobOpts = {},
+    type, to, subject, template, data = {}, jobOpts = {}, userId = null,
   }) {
     const routing = QUEUE_ROUTING[type];
     if (!routing) {
@@ -63,6 +64,16 @@ class NotificationService {
       priority: routing.priority,
       recipients: recipients.length,
     });
+
+    // Dual-write: optionally create an in-app notification when a userId is provided
+    if (userId != null) {
+      InAppNotificationService.create({
+        userId,
+        type,
+        title: subject,
+        payload: data,
+      }).catch((err) => logger.error('[Notify] In-app notification creation failed', { error: err.message }));
+    }
 
     return job;
   }
@@ -94,7 +105,7 @@ class NotificationService {
    * });
    */
   sendAlert({
-    to, subject, alertTitle, alertBody, severity = 'warning', actionUrl, actionLabel,
+    to, subject, alertTitle, alertBody, severity = 'warning', actionUrl, actionLabel, userId,
   }) {
     return this._enqueue({
       type: TYPES.ALERT,
@@ -104,6 +115,7 @@ class NotificationService {
       data: {
         alertTitle, alertBody, severity, actionUrl, actionLabel,
       },
+      userId,
     });
   }
 
@@ -133,7 +145,7 @@ class NotificationService {
    * });
    */
   sendWorkflowUpdate({
-    to, subject, workflowName, stepName, status, message, actionUrl, actionLabel,
+    to, subject, workflowName, stepName, status, message, actionUrl, actionLabel, userId,
   }) {
     return this._enqueue({
       type: TYPES.WORKFLOW,
@@ -143,6 +155,7 @@ class NotificationService {
       data: {
         workflowName, stepName, status, message, actionUrl, actionLabel,
       },
+      userId,
     });
   }
 
@@ -175,7 +188,7 @@ class NotificationService {
    * });
    */
   sendRequest({
-    to, subject, requestType, requestTitle, requesterName, message, dueDate, actionUrl, actionLabel,
+    to, subject, requestType, requestTitle, requesterName, message, dueDate, actionUrl, actionLabel, userId,
   }) {
     return this._enqueue({
       type: TYPES.REQUEST,
@@ -185,6 +198,7 @@ class NotificationService {
       data: {
         requestType, requestTitle, requesterName, message, dueDate, actionUrl, actionLabel,
       },
+      userId,
     });
   }
 
@@ -244,7 +258,7 @@ class NotificationService {
    * });
    */
   sendSystem({
-    to, subject, message, actionUrl, actionLabel,
+    to, subject, message, actionUrl, actionLabel, userId,
   }) {
     return this._enqueue({
       type: TYPES.SYSTEM,
@@ -252,6 +266,7 @@ class NotificationService {
       subject,
       template: 'system',
       data: { message, actionUrl, actionLabel },
+      userId,
     });
   }
 

@@ -11,35 +11,55 @@ const { isFeatureEnabled } = require('../services/features');
 
 const asyncHandler = require('./asyncHandler');
 
-function authenticate(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  if (!authHeader) return next(createError.Unauthorized('Authentication failed. Token not found.'));
+const TOKEN_NOT_FOUND_ERROR = 'Authentication failed. Token not found.';
+const TOKEN_INVALID_ERROR = 'Authentication failed. Token is not valid.';
 
-  const err = createError.Unauthorized('Authentication failed. Token is not valid.');
-  if (!authHeader.startsWith('Bearer ')) { return next(err); }
+function authenticateWithHeader(req) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader) throw createError.Unauthorized(TOKEN_NOT_FOUND_ERROR);
+
+  const err = createError.Unauthorized(TOKEN_INVALID_ERROR);
+  if (!authHeader.startsWith('Bearer ')) { throw err; }
   const token = authHeader.split(' ')[1];
 
   const auth = authService.checkJWT(token);
-  if (!auth) return next(err);
-
-  req.user = auth.profile;
-  next();
+  if (!auth) throw err;
+  return auth.profile;
 }
 
-// function checkRole(role) {
-//   // role can be a string indicating single role or an array of strings
-//   // to check for multiple roles
-//   // in case of multiple roles, user is allowed if they have at least one of the provided roles
-//   return (req, res, next) => {
-//     const userRoles = req?.user?.roles || [];
-//     const allowedRoles = Array(role).flat().concat('superuser');
-//     const authorized = allowedRoles.some((r) => userRoles.includes(r));
-//     if (!authorized) {
-//       return next(createError.Forbidden('Not permitted'));
-//     }
-//     next();
-//   };
-// }
+function authenticateWithCookie(req) {
+  const token = req.cookies[constants.JWT_COOKIE_NAME];
+  if (!token) throw createError.Unauthorized(TOKEN_NOT_FOUND_ERROR);
+
+  const err = createError.Unauthorized(TOKEN_INVALID_ERROR);
+  const auth = authService.checkJWT(token);
+  if (!auth) throw err;
+  return auth.profile;
+}
+
+function authenticate(req, res, next) {
+  // try to authenticate with header first, then fallback to cookie
+  try {
+    req.user = authenticateWithHeader(req);
+  } catch (err) {
+    if (err.status === 401) {
+      try {
+        req.user = authenticateWithCookie(req);
+      } catch (cookieErr) {
+        if (cookieErr.status === 401) {
+          // if both header and cookie authentication fail, return 401
+          return next(createError.Unauthorized('Authentication failed. No valid authentication method found.'));
+        }
+        // if cookie authentication fails for any other reason, return that error
+        return next(cookieErr);
+      }
+    } else {
+      // if header authentication fails for any other reason, return that error
+      return next(err);
+    }
+  }
+  next();
+}
 
 function buildActions(action) {
   const actions = {};
@@ -130,9 +150,16 @@ const loginHandler = asyncHandler(async (req, res, next) => {
   if (user) {
     const resObj = await authService.onLogin({ user, method: req.auth?.method });
 
+    // set JWT cookie
+    res.cookie(constants.JWT_COOKIE_NAME, resObj.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+    });
+
     if (user.roles.includes('admin')) {
       // set cookie
-      res.cookie('grafana_token', authService.issueGrafanaToken(user), {
+      res.cookie(constants.GRAFANA_COOKIE_NAME, authService.issueGrafanaToken(user), {
         httpOnly: true,
         secure: true,
         sameSite: 'Strict',

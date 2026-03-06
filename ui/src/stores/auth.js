@@ -38,10 +38,18 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function onLogout() {
-    loggedIn.value = false;
-    user.value = {};
-    token.value = "";
-    uploadToken.value = "";
+    // call logout API to clear cookie on backend
+    authService
+      .logout()
+      .catch((err) => {
+        console.error("Error calling logout API", err);
+      })
+      .finally(() => {
+        loggedIn.value = false;
+        user.value = {};
+        token.value = "";
+        uploadToken.value = "";
+      });
   }
 
   /**
