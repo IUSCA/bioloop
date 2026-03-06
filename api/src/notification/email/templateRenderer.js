@@ -12,6 +12,8 @@
 const Handlebars = require('handlebars');
 const fs = require('fs');
 const path = require('path');
+const mjml2html = require('mjml');
+const { convert: htmlToText } = require('html-to-text');
 const logger = require('@/services/logger');
 
 const TEMPLATES_DIR = path.join(__dirname, '../templates');
@@ -35,7 +37,7 @@ Handlebars.registerHelper('ifEq', (a, b, options) => (a === b ? options.fn(this)
 function loadTemplate(name) {
   if (_cache.has(name)) return _cache.get(name);
 
-  const filePath = path.join(TEMPLATES_DIR, `${name}.hbs`);
+  const filePath = path.join(TEMPLATES_DIR, `${name}.mjml.hbs`);
   if (!fs.existsSync(filePath)) {
     throw new Error(`[Templates] Template file not found: ${filePath}`);
   }
@@ -55,28 +57,34 @@ function loadTemplate(name) {
  * @param {object} data          - variables available inside the template
  * @returns {{ html: string, text: string }}
  */
-function renderTemplate(templateName, data) {
+async function renderTemplate(templateName, data) {
   const renderBase = loadTemplate('base');
   const renderBody = loadTemplate(templateName);
 
-  // Render the notification-specific body first
-  const bodyHtml = renderBody(data);
+  // Render the notification-specific body first (produces MJML fragment)
+  const bodyMjml = renderBody(data);
 
-  // Inject into shared base layout
-  const fullHtml = renderBase({
+  // Inject fragment into the base MJML document
+  const fullMjml = renderBase({
     ...data,
-    body: bodyHtml,
+    body: bodyMjml,
     year: new Date().getFullYear(),
   });
 
-  // Generate plain-text fallback by stripping HTML
-  const plainText = fullHtml
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  // Compile MJML → HTML
+  const { html, errors } = await mjml2html(fullMjml, { validationLevel: 'soft' });
+  if (errors && errors.length) {
+    logger.warn('[Templates] MJML compilation warnings', { template: templateName, errors });
+  }
 
-  return { html: fullHtml, text: plainText };
+  // console.log(html);
+
+  // Generate plain-text fallback
+  const text = htmlToText(html, { wordwrap: 120 });
+
+  // console.log(text);
+
+  return { html, text };
 }
 
 /**

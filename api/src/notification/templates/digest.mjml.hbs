@@ -1,0 +1,39 @@
+<!-- Digest Notification -->
+<mj-section background-color="#ffffff" padding="28px 24px 8px">
+  <mj-column>
+    <mj-text font-size="22px" font-weight="700" color="#1a202c" line-height="1.3">
+      Your {{period}} Digest
+    </mj-text>
+  </mj-column>
+</mj-section>
+
+{{#each items}}
+
+<!-- item divider (skip before first item) -->
+<mj-section background-color="#ffffff" padding="0 24px">
+  <mj-column>
+    <mj-divider border-color="#f1f5f9" border-width="1px" padding="0" />
+  </mj-column>
+</mj-section>
+
+<mj-section background-color="#ffffff" padding="20px 24px">
+  <mj-column>
+    <mj-text font-size="15px" font-weight="600" color="#1a202c" padding="0 0 6px 0">
+      {{this.title}}
+    </mj-text>
+    <mj-text font-size="13px" color="#4a5568" line-height="1.7"
+             padding="0{{#if this.url}} 0 10px{{/if}}">
+      {{this.body}}
+    </mj-text>
+    {{#if this.url}}
+    <mj-text font-size="12px" font-weight="600" padding="0">
+      <a href="{{this.url}}" style="color:#2563eb; text-decoration:none;">Read more &rarr;</a>
+    </mj-text>
+    {{/if}}
+  </mj-column>
+</mj-section>
+
+{{/each}}
+
+<!-- bottom spacer -->
+<mj-section background-color="#ffffff" padding="0 0 16px 0" />

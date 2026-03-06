@@ -76,7 +76,7 @@ async function processEmailJob(job) {
   });
 
   // 1. Render HTML + plain text from Handlebars template
-  const { html, text } = renderTemplate(template, {
+  const { html, text } = await renderTemplate(template, {
     ...data,
     _meta: {
       type,

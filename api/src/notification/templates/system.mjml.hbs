@@ -1,0 +1,14 @@
+<!-- System Notification -->
+<mj-section background-color="#ffffff" padding="28px 24px 36px">
+  <mj-column>
+    <mj-text font-size="14px" color="#4a5568" line-height="1.7"
+             padding="0{{#if actionUrl}} 0 28px{{/if}}">
+      {{message}}
+    </mj-text>
+    {{#if actionUrl}}
+    <mj-button href="{{actionUrl}}">
+      {{#if actionLabel}}{{actionLabel}}{{else}}View Details{{/if}}
+    </mj-button>
+    {{/if}}
+  </mj-column>
+</mj-section>
