@@ -1,0 +1,14 @@
+{
+  "subject": "Workflow Update: Genome Sequencing Pipeline",
+  "preview": "Your workflow has progressed to a new step.",
+  "workflowName": "Genome Sequencing Pipeline",
+  "stepName": "Quality Control",
+  "status": "completed",
+  "message": "The Quality Control step has completed successfully. 1,248 samples passed all QC thresholds. The pipeline will now proceed to the alignment phase.",
+  "actionUrl": "https://bioloop.example.edu/workflows/genome-seq-42",
+  "actionLabel": "View Workflow",
+  "_meta": {
+    "type": "Workflow",
+    "generatedAt": "2026-03-06T09:15:00Z"
+  }
+}

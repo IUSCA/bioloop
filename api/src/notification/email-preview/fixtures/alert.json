@@ -1,0 +1,13 @@
+{
+  "subject": "Critical: Storage quota exceeded on /data/primary",
+  "preview": "Your storage quota has been exceeded.",
+  "severity": "critical",
+  "alertTitle": "Storage Quota Exceeded",
+  "alertBody": "The primary data volume at /data/primary has reached 98% capacity. Automated ingestion jobs have been paused. Immediate action is required to prevent data loss.",
+  "actionUrl": "https://bioloop.example.edu/datasets",
+  "actionLabel": "Manage Storage",
+  "_meta": {
+    "type": "Alert",
+    "generatedAt": "2026-03-06T14:22:00Z"
+  }
+}

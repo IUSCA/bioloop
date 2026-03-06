@@ -1,0 +1,15 @@
+{
+  "subject": "New Access Request: Restricted Dataset TCGA-BRCA",
+  "preview": "A new dataset access request requires your approval.",
+  "requestTitle": "Access Request: TCGA-BRCA Restricted Dataset",
+  "requestType": "Dataset Access",
+  "requesterName": "Dr. Jane Smith",
+  "message": "Dr. Jane Smith from the Oncology Research Group has requested access to the restricted TCGA-BRCA dataset. Please review the request and approve or deny access.",
+  "dueDate": "2026-03-13T23:59:00Z",
+  "actionUrl": "https://bioloop.example.edu/requests/1042",
+  "actionLabel": "Review Request",
+  "_meta": {
+    "type": "Request",
+    "generatedAt": "2026-03-06T11:30:00Z"
+  }
+}

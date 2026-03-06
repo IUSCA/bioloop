@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Template Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-w: 220px;
+      --topbar-h: 52px;
+      --bg-sidebar: #1a2744;
+      --bg-topbar: #ffffff;
+      --bg-main: #e5e7eb;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-sidebar: #c7d6f0;
+      --text-active: #ffffff;
+      --btn-active-bg: #2563eb;
+      --border: #e2e8f0;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+
+    html, body { height: 100%; overflow: hidden; font-family: var(--font); }
+
+    /* ── Layout ─────────────────────────────────────── */
+    #app {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: var(--topbar-h) 1fr;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    #sidebar {
+      grid-row: 1 / 3;
+      background: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    #sidebar-header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #8fa3c8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    #sidebar-header p {
+      font-size: 11px;
+      color: #4d6a96;
+      margin-top: 3px;
+    }
+
+    #template-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .tpl-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 10px;
+      margin-bottom: 2px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--text-sidebar);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tpl-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-active); }
+    .tpl-btn.active { background: var(--btn-active-bg); color: var(--text-active); }
+
+    .tpl-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .tpl-btn.active .tpl-icon { background: rgba(255,255,255,0.2); }
+
+    #sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 11px;
+      color: #4d6a96;
+      flex-shrink: 0;
+    }
+
+    /* ── Top bar ─────────────────────────────────────── */
+    #topbar {
+      grid-column: 2;
+      background: var(--bg-topbar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 12px;
+      height: var(--topbar-h);
+      z-index: 10;
+    }
+
+    #topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #template-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    #compile-status {
+      font-size: 11px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      transition: opacity 0.25s;
+    }
+    #compile-status.loading { color: #2563eb; background: #eff6ff; }
+    #compile-status.error   { color: #dc2626; background: #fef2f2; }
+
+    #topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .view-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+    .view-btn.active {
+      background: #1e293b;
+      color: #ffffff;
+      border-color: #1e293b;
+    }
+
+    /* ── Main / iframe area ──────────────────────────── */
+    #main {
+      grid-column: 2;
+      background: var(--bg-main);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    #frame-wrap {
+      background: #ffffff;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 680px;
+      transition: max-width 0.25s ease;
+      flex-shrink: 0;
+    }
+    #frame-wrap.mobile { max-width: 390px; }
+
+    iframe#preview-frame {
+      display: block;
+      width: 100%;
+      border: none;
+      min-height: 500px;
+    }
+
+    /* ── Empty/loading states ────────────────────────── */
+    #placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      color: #94a3b8;
+      gap: 12px;
+      width: 100%;
+    }
+    #placeholder svg { opacity: 0.3; }
+    #placeholder p { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- ── Sidebar ── -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <h1>Email Preview</h1>
+        <p>Select a template</p>
+      </div>
+      <nav id="template-list">
+        <p style="font-size:12px;color:#4d6a96;padding:6px 10px">Loading…</p>
+      </nav>
+      <div id="sidebar-footer">
+        <span id="hmr-indicator">⚡ HMR active</span>
+      </div>
+    </aside>
+
+    <!-- ── Top bar ── -->
+    <header id="topbar">
+      <div id="topbar-left">
+        <span id="template-name" style="color:#94a3b8">No template selected</span>
+        <span id="compile-status" style="display:none"></span>
+      </div>
+      <div id="topbar-right">
+        <button class="view-btn active" id="btn-desktop" title="Desktop width">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Desktop
+        </button>
+        <button class="view-btn" id="btn-mobile" title="Mobile width (390 px)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+          Mobile
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Main preview area ── -->
+    <main id="main">
+      <div id="placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <p>Select a template from the sidebar to preview it</p>
+      </div>
+      <div id="frame-wrap" style="display:none">
+        <iframe id="preview-frame" title="Email template preview"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    // ── State ───────────────────────────────────────────────────────────────
+    let activeTemplate = null;
+
+    const listEl     = document.getElementById('template-list');
+    const nameEl     = document.getElementById('template-name');
+    const statusEl   = document.getElementById('compile-status');
+    const frame      = document.getElementById('preview-frame');
+    const frameWrap  = document.getElementById('frame-wrap');
+    const placeholder = document.getElementById('placeholder');
+    const btnDesktop = document.getElementById('btn-desktop');
+    const btnMobile  = document.getElementById('btn-mobile');
+
+    // ── Template icons ───────────────────────────────────────────────────────
+    const ICONS = {
+      alert:    '🔔',
+      workflow: '⚙️',
+      request:  '📋',
+      digest:   '📰',
+      system:   '🛠️',
+    };
+
+    // ── Sidebar template buttons ─────────────────────────────────────────────
+    async function loadTemplateList() {
+      try {
+        const res = await fetch('/api/templates');
+        const names = await res.json();
+        listEl.innerHTML = '';
+        for (const name of names) {
+          const btn = document.createElement('button');
+          btn.className = 'tpl-btn';
+          btn.dataset.name = name;
+          btn.innerHTML = `
+            <span class="tpl-icon">${ICONS[name] ?? '✉️'}</span>
+            <span>${name.charAt(0).toUpperCase() + name.slice(1)}</span>
+          `;
+          btn.addEventListener('click', () => selectTemplate(name));
+          listEl.appendChild(btn);
+        }
+      } catch {
+        listEl.innerHTML = '<p style="font-size:12px;color:#dc2626;padding:6px 10px">Failed to load templates</p>';
+      }
+    }
+
+    // ── Render template into iframe ──────────────────────────────────────────
+    async function selectTemplate(name) {
+      activeTemplate = name;
+
+      // Update sidebar active state
+      document.querySelectorAll('.tpl-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.name === name);
+      });
+
+      nameEl.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      nameEl.style.color = '#1e293b';
+      showStatus('loading', 'Compiling…');
+
+      placeholder.style.display = 'none';
+      frameWrap.style.display = 'block';
+
+      try {
+        // Fetch the rendered HTML from the Vite plugin middleware
+        const res = await fetch(`/preview/${name}`, { cache: 'no-store' });
+        const html = await res.text();
+
+        if (!res.ok) {
+          showStatus('error', 'Compile error');
+          writeToFrame(html);
+          return;
+        }
+
+        showStatus('ok', `Compiled ${new Date().toLocaleTimeString()}`);
+        writeToFrame(html);
+        resizeFrameToContent();
+      } catch (err) {
+        showStatus('error', 'Network error');
+      }
+    }
+
+    function writeToFrame(html) {
+      const doc = frame.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+    }
+
+    function resizeFrameToContent() {
+      // Resize iframe to its content height after a short settle delay
+      clearTimeout(frame._resizeTimer);
+      frame._resizeTimer = setTimeout(() => {
+        try {
+          const h = frame.contentWindow.document.documentElement.scrollHeight;
+          if (h > 0) frame.style.height = h + 'px';
+        } catch { /* cross-origin guard */ }
+      }, 80);
+    }
+
+    function showStatus(type, msg) {
+      statusEl.style.display = '';
+      statusEl.className = type === 'loading' ? 'loading' : type === 'error' ? 'error' : '';
+      statusEl.textContent = msg;
+    }
+
+    // ── Desktop / mobile width toggle ───────────────────────────────────────
+    btnDesktop.addEventListener('click', () => {
+      frameWrap.classList.remove('mobile');
+      btnDesktop.classList.add('active');
+      btnMobile.classList.remove('active');
+    });
+
+    btnMobile.addEventListener('click', () => {
+      frameWrap.classList.add('mobile');
+      btnMobile.classList.add('active');
+      btnDesktop.classList.remove('active');
+    });
+
+    // ── Vite HMR – refresh only the active iframe on template changes ────────
+    if (import.meta.hot) {
+      import.meta.hot.on('email-update', ({ name }) => {
+        if (name === activeTemplate) {
+          selectTemplate(name);
+        }
+      });
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    loadTemplateList();
+  </script>
+</body>
+</html>

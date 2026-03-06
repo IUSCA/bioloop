@@ -1,0 +1,26 @@
+{
+  "subject": "Your Weekly Activity Digest",
+  "preview": "Here's a summary of activity from the past week.",
+  "period": "Weekly",
+  "items": [
+    {
+      "title": "3 New Datasets Published",
+      "body": "RNA-Seq Pancreatic Cancer (v2), Mouse Proteome Atlas, and Human Microbiome Study Wave 4 were published and are now available for download.",
+      "url": "https://bioloop.example.edu/datasets"
+    },
+    {
+      "title": "Pipeline Run Completed: RNA-Seq QC",
+      "body": "The weekly RNA-Seq quality control pipeline completed successfully. 98.7% of samples passed all quality thresholds.",
+      "url": "https://bioloop.example.edu/workflows/rna-qc-weekly"
+    },
+    {
+      "title": "Maintenance Window Reminder",
+      "body": "Scheduled maintenance is planned for Sunday, March 8 from 02:00–04:00 UTC. The system will be unavailable during this window.",
+      "url": null
+    }
+  ],
+  "_meta": {
+    "type": "Digest",
+    "generatedAt": "2026-03-06T07:00:00Z"
+  }
+}

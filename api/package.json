@@ -15,7 +15,8 @@
     "check": "jest",
     "worker": "node src/notification/worker.js",
     "dev:worker": "nodemon --watch src/notification --ignore 'tests/**/*.js' src/notification/worker.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:worker\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:worker\"",
+    "email:dev": "vite --config src/notification/email-preview/vite.config.js"
   },
   "keywords": [],
   "author": "",
@@ -37,7 +38,8 @@
     "prisma": "^6.19.2",
     "random": "^4.1.0",
     "random-js": "^2.1.0",
-    "supertest": "^7.1.0"
+    "supertest": "^7.1.0",
+    "vite": "^7.3.1"
   },
   "dependencies": {
     "@badgateway/oauth2-client": "^2.2.3",

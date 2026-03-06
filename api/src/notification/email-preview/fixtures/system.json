@@ -1,0 +1,11 @@
+{
+  "subject": "Scheduled Maintenance – Sunday 02:00 UTC",
+  "preview": "BioLoop will be unavailable during a scheduled maintenance window.",
+  "message": "BioLoop will undergo scheduled maintenance on Sunday, March 8 from 02:00–04:00 UTC. During this window all services including the API, web UI, and data ingestion pipelines will be unavailable. Please save your work before this time. We apologise for any inconvenience.",
+  "actionUrl": "https://bioloop.example.edu/status",
+  "actionLabel": "Check Status Page",
+  "_meta": {
+    "type": "System",
+    "generatedAt": "2026-03-06T08:00:00Z"
+  }
+}
