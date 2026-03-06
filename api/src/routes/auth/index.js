@@ -45,7 +45,7 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
   return createError.BadRequest('Not a valid user');
 }));
 
-if (!['production', 'test'].includes(config.get('mode'))) {
+if (!['production', 'test'].includes(config.get('env'))) {
   router.post(
     '/test_login',
     asyncHandler(async (req, res, next) => {

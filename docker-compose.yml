@@ -44,6 +44,12 @@ services:
         condition: service_started
       rhythm:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      # Lets the container reach host Postfix via host.docker.internal
+      # Required on Linux Docker hosts (Mac/Windows Docker Desktop handles this automatically)
+      - "host.docker.internal:host-gateway"
 
   postgres:
     image: postgres:14.5
@@ -307,6 +313,37 @@ services:
     profiles:
       - metrics
 
+  # cSpell: ignore appendonly maxmemory allkeys
+  # For notification service
+  # appendonly: enables Redis persistence by appending write operations to a file, allowing data recovery after restarts.
+  # maxmemory: sets a memory limit for Redis. In this case, it's set to 256mb to prevent Redis from consuming too much memory.
+  # maxmemory-policy allkeys-lru: configures Redis to evict the least recently used keys when the maxmemory limit is reached, ensuring that Redis continues to operate without crashing due to memory issues.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # For testing email notifications.  You can use any SMTP server, but Mailhog provides a nice web UI for viewing the emails that are sent.
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: always
+    ports:
+      - "1025:1025" # SMTP server port
+      - "8025:8025" # Web UI port
+
 volumes:
   grafana_data:
     external: false
@@ -320,3 +357,4 @@ volumes:
     external: false
   docs_modules:
     external: false
+  redis-data:

@@ -7,18 +7,22 @@
     "node": ">=18.12.0"
   },
   "scripts": {
-    "dev": "nodemon --ignore 'tests/**/*.js' src/index.js",
+    "dev": "nodemon --ignore 'tests/**/*.js' --ignore 'src/notification/**' src/index.js",
     "swagger": "node src/scripts/swagger.js",
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
     "lint:file": "eslint --fix --ignore-path .gitignore",
     "test": "jest --watch --verbose false",
-    "check": "jest"
+    "check": "jest",
+    "worker": "node src/notification/worker.js",
+    "dev:worker": "nodemon --watch src/notification --ignore 'tests/**/*.js' src/notification/worker.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:worker\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-import-resolver-module-alias": "^0.1.0",
@@ -41,6 +45,7 @@
     "@prisma/client": "^6.19.2",
     "accesscontrol": "^2.2.1",
     "axios": "^1.5.0",
+    "bull": "^4.16.5",
     "compression": "^1.7.4",
     "config": "^3.3.9",
     "cookie-parser": "^1.4.6",
@@ -51,15 +56,20 @@
     "eslint-plugin-local-rules": "^3.0.2",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
+    "handlebars": "^4.7.8",
     "he": "^1.2.0",
     "http-errors": "^2.0.0",
+    "ioredis": "^5.10.0",
     "jsdom": "^24.0.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
+    "mjml": "^5.0.0-beta.1",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
     "multer": "2.0.2",
+    "node-cron": "^4.2.1",
     "node-persist": "^4.0.4",
+    "nodemailer": "^8.0.1",
     "notation": "^2.0.0",
     "picomatch": "^4.0.2",
     "regex-username": "^2.0.0",
@@ -69,7 +79,7 @@
     "the-big-username-blacklist": "^1.5.2",
     "uuid": "^9.0.1",
     "validator": "^13.15.26",
-    "winston": "^3.10.0"
+    "winston": "^3.19.0"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

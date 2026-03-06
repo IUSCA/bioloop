@@ -12,6 +12,11 @@ require('./db');
 const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
+const { registerHandlers } = require('./notification/notificationBus');
+const { closeAllQueues } = require('./notification/queue/queues');
+
+// Register notification handlers
+registerHandlers();
 
 // log a warning when auto sign up is enabled
 if (config.get('auth.auto_sign_up.enabled')) {
@@ -26,9 +31,10 @@ const server = app.listen(port, () => {
   logger.info(`Listening: http://${host}:${port}`);
 });
 
-const shutdown = () => {
+const shutdown = async () => {
   logger.warn('server: closing');
-  server.close((err) => {
+  await closeAllQueues();
+  server.close(async (err) => {
     if (err) {
       logger.error('server: closed with ERROR', err);
       process.exit(1);

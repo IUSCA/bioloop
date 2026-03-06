@@ -62,5 +62,19 @@
   },
   "restricted_import_dirs": {
     "slateScratch": "SCRATCH_IMPORT_RESTRICTED_DIRS"
+  },
+  "redis": {
+    "host": "REDIS_HOST",
+    "port": "REDIS_PORT",
+    "password": "REDIS_PASSWORD"
+  },
+  "smtp": {
+    "host": "SMTP_HOST",
+    "port": "SMTP_PORT",
+    "secure": "SMTP_SECURE",
+    "auth": {
+      "user": "SMTP_AUTH_USER",
+      "pass": "SMTP_AUTH_PASS"
+    }
   }
 }
