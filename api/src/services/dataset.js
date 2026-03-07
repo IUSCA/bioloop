@@ -883,6 +883,26 @@ async function create({
       project_id,
       requester_id,
     });
+
+    if (featureService.isFeatureEnabled({ key: 'notifications' })) {
+      const operatorRole = await tx.role.findFirst({
+        where: { name: 'operator' },
+        select: { id: true },
+      });
+
+      if (operatorRole) {
+        await tx.notification.create({
+          data: {
+            label: `${created_dataset.type} ${created_dataset.id} was created`,
+            role_notifications: {
+              create: {
+                role_id: operatorRole.id,
+              },
+            },
+          },
+        });
+      }
+    }
   } catch (e) {
     console.error('Error creating dataset:', e);
     throw e;

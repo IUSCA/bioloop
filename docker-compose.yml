@@ -1,12 +1,12 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-local
 services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
+      - 127.0.0.1:10443:443
     env_file:
       - ui/.env.default
     volumes:
@@ -50,7 +50,7 @@ services:
     expose:
       - 5432
     ports:
-      - 127.0.0.1:5432:5432
+      - 127.0.0.1:10432:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -128,7 +128,7 @@ services:
     expose:
       - 5672
     ports:
-      - 127.0.0.1:15672:15672
+      - 127.0.0.1:10672:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -141,7 +141,7 @@ services:
     expose:
       - 27017
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:10017:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
@@ -179,7 +179,7 @@ services:
     image: node:19
     restart: unless-stopped
     ports:
-      - "3060:3060"
+      - "127.0.0.1:10060:3060"
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -242,7 +242,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:10173:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh
