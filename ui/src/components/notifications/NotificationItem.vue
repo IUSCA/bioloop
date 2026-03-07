@@ -111,6 +111,7 @@ function fromNow(value) {
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--va-background-border);
+  background: var(--va-background-element);
   transition: background 0.15s, border-color 0.15s;
 }
 

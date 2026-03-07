@@ -4,6 +4,7 @@
     <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
       <div class="flex items-center gap-3">
         <h2 class="text-2xl font-semibold">Notifications</h2>
+        <span v-if="store.totalCount > 0" class="total-count-badge">{{ store.totalCount }} total</span>
         <va-badge
           v-if="store.unreadCount > 0"
           :text="store.unreadCount"
@@ -84,6 +85,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const FILTERS = [
   { label: "All", value: "all" },
+  { label: "Unread", value: "unread" },
   { label: "Alert", value: "alert" },
   { label: "Workflow", value: "workflow" },
   { label: "Request", value: "request" },
@@ -94,6 +96,7 @@ const activeFilter = ref("all");
 
 const filteredNotifications = computed(() => {
   if (activeFilter.value === "all") return store.notifications;
+  if (activeFilter.value === "unread") return store.notifications.filter((n) => !n.is_read);
   return store.notifications.filter((n) => n.type === activeFilter.value);
 });
 
@@ -115,6 +118,15 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.total-count-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--va-background-border);
+  color: var(--va-secondary);
+}
+
 .notifications-page {
   max-width: 820px;
   margin: 0 auto;

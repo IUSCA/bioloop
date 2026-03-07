@@ -1,14 +1,17 @@
 <template>
-  <div class="flex flex-col gap-1">
-    <div class="flex items-center gap-2 flex-wrap">
-      <span class="font-medium text-sm capitalize">{{ props.notification.payload?.requestType }} Request</span>
+  <div class="flex flex-col gap-1.5">
+    <div
+      v-if="props.notification.payload?.requestTitle || props.notification.payload?.requesterName || props.notification.payload?.dueDate"
+      class="notif-request-meta"
+    >
+      <span v-if="props.notification.payload?.requestTitle || props.notification.payload?.requesterName">
+        {{ props.notification.payload?.requestTitle || props.notification.payload?.requesterName }}
+      </span>
+      <template v-if="props.notification.payload?.dueDate">
+        <span class="notif-meta-dot">·</span>
+        <span>Due {{ formatDate(props.notification.payload.dueDate) }}</span>
+      </template>
     </div>
-    <p v-if="props.notification.payload?.requesterName" class="text-xs" style="color: var(--va-secondary)">
-      From: {{ props.notification.payload.requesterName }}
-    </p>
-    <p v-if="props.notification.payload?.dueDate" class="text-xs" style="color: var(--va-secondary)">
-      Due: {{ formatDate(props.notification.payload.dueDate) }}
-    </p>
     <a
       v-if="props.notification.payload?.actionUrl"
       :href="props.notification.payload.actionUrl"
@@ -38,16 +41,38 @@ function formatDate(value) {
 </script>
 
 <style scoped>
-.notif-action-link {
+.notif-request-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
   font-size: 0.75rem;
-  color: var(--va-primary);
-  text-decoration: none;
+  color: var(--va-secondary);
+}
+
+.notif-meta-dot {
+  color: var(--va-secondary);
+  opacity: 0.5;
+}
+
+.notif-action-link {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--va-background-border);
+  background: transparent;
+  color: var(--va-text-primary);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .notif-action-link:hover {
-  text-decoration: underline;
+  border-color: var(--va-secondary);
+  background: var(--va-background-secondary);
+  text-decoration: none;
 }
 </style>

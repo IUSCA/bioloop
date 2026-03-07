@@ -66,15 +66,23 @@ const props = defineProps({
 }
 
 .notif-action-link {
-  font-size: 0.75rem;
-  color: var(--va-primary);
-  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--va-background-border);
+  background: transparent;
+  color: var(--va-text-primary);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .notif-action-link:hover {
-  text-decoration: underline;
+  border-color: var(--va-secondary);
+  background: var(--va-background-secondary);
+  text-decoration: none;
 }
 </style>
