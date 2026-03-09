@@ -62,5 +62,11 @@
   },
   "restricted_import_dirs": {
     "slateScratch": "SCRATCH_IMPORT_RESTRICTED_DIRS"
+  },
+  "jupyterhub": {
+    "base_url": "HUB_BASE_URL",
+    "api_url": "HUB_API_URL",
+    "auth_token": "HUB_AUTH_TOKEN",
+    "ticket_secret": "HUB_TICKET_SECRET"
   }
 }

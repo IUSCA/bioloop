@@ -1,0 +1,142 @@
+# =============================================================================
+# docker-compose.yml  —  JupyterHub service
+#
+# This runs JupyterHub itself in a container.
+# The spawned notebook containers are siblings on the host Docker socket,
+# NOT children of this compose stack.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f hub
+# =============================================================================
+
+services:
+
+  hub:
+    build:
+      context: ./hub
+      dockerfile: Dockerfile
+    image: jupyterhub-custom:latest
+    container_name: jupyterhub
+    restart: unless-stopped
+
+    volumes:
+      # Config
+      - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro
+
+      # Hub needs access to Docker socket to spawn notebook containers.
+      # In production, use a Docker socket proxy (see note below) instead
+      # of mounting the raw socket.
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+
+      # Persistent state (DB lives in Postgres, but Hub needs this for secrets)
+      - hub-data:/srv/jupyterhub
+
+      # User data directories (Hub creates per-user sub dirs on spawn)
+      - ./data/users:/data/users
+
+      # Shared read-only datasets
+      - ./data/shared:/data/shared:ro
+
+      # Logs
+      - ./logs/jupyterhub:/var/log/jupyterhub
+
+    env_file:
+      - ./hub/.env          # never commit — see .env.template
+
+    ports:
+      # Bind only to localhost — nginx terminates TLS and proxies here
+      - "127.0.0.1:8000:8000"
+
+    networks:
+      - jhub-users    # Hub must be on the same network as containers
+      - hub-internal        # for Postgres
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Hub itself needs these capabilities to manage containers
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+      - CHOWN
+      - DAC_OVERRIDE
+
+  # ---------------------------------------------------------------------------
+  # Postgres — Hub database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: jupyterhub-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB:       jupyterhub
+      POSTGRES_USER:     jupyterhub
+
+    env_file:
+      - ./hub/.env
+
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+    networks:
+      - hub-internal
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jupyterhub"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+    # DB should never be reachable from outside or from notebook containers
+    # (hub-internal network only)
+
+
+# =============================================================================
+# NOTE: Docker socket security
+#
+# Mounting /var/run/docker.sock gives Hub root-equivalent access to the host.
+# Even running on host with systemd has the same risk, since Hub can create privileged containers that mount the host filesystem.
+# In production, replace with a socket proxy that only allows the calls Hub
+# needs (container create/start/stop/inspect, network inspect):
+#
+#   https://github.com/Tecnativa/docker-socket-proxy
+#
+# Example socket-proxy service:
+#   # cSpell: ignore tecnativa
+#   socket-proxy:
+#     image: tecnativa/docker-socket-proxy
+#     volumes:
+#       - /var/run/docker.sock:/var/run/docker.sock:ro
+#     environment:
+#       CONTAINERS: 1
+#       NETWORKS: 1
+#       POST: 1
+#     networks:
+#       - hub-internal
+#
+# Then set DockerSpawner to connect to socket-proxy instead:
+#   c.DockerSpawner.docker_host = 'tcp://socket-proxy:2375'
+# =============================================================================
+
+networks:
+  jhub-users:
+    name: jhub-users    # pin the actual network name — prevents Docker Compose
+                        # from prefixing it with the project name
+                        # (e.g. 'jupyter-infra_jhub-users'), so
+                        # c.DockerSpawner.network_name = 'jhub-users' resolves correctly.
+    # Shared bridge for Hub + spawned notebook containers.
+    # ICC is unrestricted — containers on this network can talk to each other
+    # and to the Hub directly via Docker DNS ('jupyterhub' resolves to Hub IP).
+    driver: bridge
+  hub-internal:
+    driver: bridge
+    internal: true    # no external routing for DB network
+
+volumes:
+  hub-data:
+  db-data:

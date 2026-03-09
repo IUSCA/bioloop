@@ -37,6 +37,19 @@
 
     <template #right>
       <va-navbar-item class="flex items-center">
+        <a
+          href="/launch-notebook"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Launch Jupyter Notebook"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium border border-solid border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-400 dark:hover:text-gray-900 transition-colors duration-150"
+        >
+          <i-mdi-notebook-outline class="text-base shrink-0" />
+          <span class="hidden sm:inline">Notebook</span>
+        </a>
+      </va-navbar-item>
+
+      <va-navbar-item class="flex items-center">
         <env-alert icon="warning" />
       </va-navbar-item>
 

@@ -196,5 +196,11 @@
     "Internal Academic",
     "Non-profit",
     "Other"
-  ]
+  ],
+  "jupyterhub": {
+    "base_url": "",
+    "api_url": "",
+    "auth_token": "",
+    "ticket_secret": ""
+  }
 }
