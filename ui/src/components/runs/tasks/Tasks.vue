@@ -2,8 +2,11 @@
   <VaCard>
     <VaCardTitle>
       <span class="text-xl"> Active Tasks </span>
-      <span class="font-normal ml-3">
+      <span class="font-normal ml-3" v-if="!connection_error && last_updated">
         Last Updated: {{ datetime.fromNow(last_updated) }}
+      </span>
+      <span v-if="connection_error" class="font-normal ml-3 text-red-500">
+        Unable to fetch active tasks
       </span>
     </VaCardTitle>
     <VaCardContent>
@@ -47,6 +50,7 @@ function default_tasks_by_step() {
 
 const tasks_by_step = ref(default_tasks_by_step());
 const last_updated = ref(null);
+const connection_error = ref(false);
 
 const accordion = computed({
   get: () => {
@@ -100,6 +104,7 @@ function getTasks() {
       limit: 1000,
     })
     .then((res) => {
+      connection_error.value = false;
       const wf_data = res.data?.results || [];
 
       const active_tasks = extract_tasks(wf_data);
@@ -111,6 +116,9 @@ function getTasks() {
       tasks_by_step.value = _obj;
 
       last_updated.value = new Date();
+    }).catch((err) => {
+      console.error("Unable to fetch active tasks", err);
+      connection_error.value = true;
     });
 }
 

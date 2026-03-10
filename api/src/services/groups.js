@@ -653,81 +653,7 @@ async function removeGroupAdmin(group_id, {
 }
 
 /**
- * Search all groups with optional filters and pagination (admin only)
- * @param {string} [group_id] - Optional group ID to filter by
- * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
- * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
- * @param {string} sort_order - Sort order ('asc' or 'desc')
- * @param {number} limit - Number of results to return
- * @param {number} offset - Pagination offset
- * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
- */
-async function searchAllGroups({
-  group_id = null,
-  search_term = null,
-  sort_by,
-  sort_order,
-  limit,
-  offset,
-  is_archived = null,
-}) {
-  // build where clause
-  const where = {};
-  if (group_id) {
-    where.id = group_id;
-  } else if (search_term) {
-    // if search_term is UUID, search by id
-    where.OR = [
-      {
-        name: {
-          contains: search_term,
-          mode: 'insensitive',
-        },
-      },
-      {
-        description: {
-          contains: search_term,
-          mode: 'insensitive',
-        },
-      },
-      {
-        slug: {
-          contains: search_term,
-          mode: 'insensitive',
-        },
-      },
-    ];
-  }
-
-  if (is_archived !== null) {
-    where.is_archived = is_archived;
-  }
-
-  // if platform admin, scope to all groups
-  const data = await prisma.group.findMany({
-    where,
-    orderBy: {
-      [sort_by]: sort_order,
-    },
-    skip: offset,
-    take: limit,
-  });
-  const total = await prisma.group.count({ where });
-
-  return {
-    metadata: {
-      total,
-      limit,
-      offset,
-    },
-    data,
-  };
-}
-
-/**
- * Search groups that a user is a member of with optional filters and pagination
- * @param {string} user_id - ID of the user to search groups for
+ * Search all groups with optional filters and pagination
  * @param {string} [group_id] - Optional group ID to filter by
  * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
@@ -750,6 +676,7 @@ async function searchGroupsForUser({
   is_archived = null,
   direct_membership_only = false,
   oversight_only = false,
+  admin_only = false,
 }) {
   let searchClause = Prisma.empty;
   if (search_term) {
@@ -770,34 +697,35 @@ async function searchGroupsForUser({
   }
 
   let membershipClause = Prisma.empty;
-  if (direct_membership_only) {
-    // direct_membership_only takes precedence, ignore oversight_only
-    membershipClause = Prisma.sql`
-      gu.role IS NOT NULL AND gu.user_id = ${user_id}
-    `;
+  if (direct_membership_only || admin_only) {
+    // direct_membership_only or admin_only takes precedence, ignore oversight_only
+    if (admin_only) {
+      const admin_sql = Prisma.raw(GROUP_MEMBER_ROLE.ADMIN);
+      membershipClause = Prisma.sql`
+        gu.role = '${admin_sql}' AND gu.user_id = ${user_id}
+      `;
+    } else {
+      membershipClause = Prisma.sql`
+        gu.role IS NOT NULL AND gu.user_id = ${user_id}
+      `;
+    }
   } else if (oversight_only) {
     // only show groups user administers
     membershipClause = Prisma.sql`
-      g.id IN (SELECT id FROM oversight_groups)
+      og.id IS NOT NULL
     `;
   } else {
     // default: show all groups and oversight groups
     membershipClause = Prisma.sql`
-      (g.id IN (SELECT id FROM all_groups) OR g.id IN (SELECT id FROM oversight_groups))
+      (ag.id IS NOT NULL OR og.id IS NOT NULL)
     `;
   }
 
-  const joinedClauses = sqlUtils.safeSqlJoin(
+  const finalWhereClause = sqlUtils.buildWhereClause(
     [searchClause, idFilterClause, archivedClause, membershipClause],
     ' AND ',
   );
-  const finalWhereClause = joinedClauses === Prisma.empty
-    ? Prisma.empty
-    : Prisma.sql`WHERE ${joinedClauses}`;
 
-  // Groups they are members of
-  // Parent groups of those groups
-  // if admin of any group, also show all descendant groups for oversight purposes
   const sql = Prisma.sql`
     WITH results AS (
       WITH all_groups AS (
@@ -810,9 +738,17 @@ async function searchGroupsForUser({
         FROM effective_user_oversight_groups
         WHERE user_id = ${user_id}
       )
-      SELECT g.*, gu.role as user_role
+      SELECT 
+        g.*, 
+        COALESCE(
+          gu.role::text,
+          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
+        ) AS user_role,
+        ( select count(*) from group_user where group_id = g.id ) as size
       FROM "group" g
-      LEFT JOIN group_user gu ON gu.group_id = g.id
+      LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+      LEFT JOIN oversight_groups og ON og.id = g.id
+      LEFT JOIN all_groups ag ON ag.id = g.id
       ${finalWhereClause}
     )
     SELECT *, COUNT(*) OVER () AS total_count
@@ -829,7 +765,118 @@ async function searchGroupsForUser({
       limit,
       offset,
     },
-    data: results,
+    data: results.map(_.omit(['total_count'])),
+  };
+}
+
+/**
+ * Search groups that a user is a member of with optional filters and pagination
+ * @param {string} user_id - ID of the user to search groups for
+ * @param {string} [group_id] - Optional group ID to filter by
+ * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
+ * @param {string} sort_order - Sort order ('asc' or 'desc')
+ * @param {number} limit - Number of results to return
+ * @param {number} offset - Pagination offset
+ * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
+ * @param {boolean} direct_membership_only - If true, only return groups where the user is a direct member (not through nested group membership)
+ * @param {boolean} oversight_only - If true, only return groups where the user has an admin role for oversight purposes
+ * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
+ */
+async function searchAllGroups({
+  user_id,
+  group_id = null,
+  search_term = null,
+  sort_by,
+  sort_order,
+  limit,
+  offset,
+  is_archived = null,
+  direct_membership_only = false,
+  oversight_only = false,
+  admin_only = false,
+}) {
+  let searchClause = Prisma.empty;
+  if (search_term) {
+    searchClause = Prisma.sql`(
+      g.name ILIKE ${`%${search_term}%`} OR
+      g.description ILIKE ${`%${search_term}%`} OR
+      g.slug ILIKE ${`%${search_term}%`}
+    )`;
+  }
+  let idFilterClause = Prisma.empty;
+  if (group_id) {
+    idFilterClause = Prisma.sql`g.id = ${group_id}`;
+  }
+
+  let archivedClause = Prisma.empty;
+  if (is_archived !== null) {
+    archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
+  }
+
+  let membershipClause = Prisma.empty;
+  if (direct_membership_only || admin_only) {
+    // direct_membership_only or admin_only takes precedence, ignore oversight_only
+    if (admin_only) {
+      const admin_sql = Prisma.raw(GROUP_MEMBER_ROLE.ADMIN);
+      membershipClause = Prisma.sql`
+        gu.role = '${admin_sql}'
+      `;
+    } else {
+      membershipClause = Prisma.sql`
+        gu.role IS NOT NULL
+      `;
+    }
+  } else if (oversight_only) {
+    // only show groups user administers
+    membershipClause = Prisma.sql`
+      og.id IS NOT NULL
+    `;
+  }
+
+  const excludeEveryoneGroupClause = Prisma.sql`g.slug != 'everyone'`;
+
+  const finalWhereClause = sqlUtils.buildWhereClause(
+    [searchClause, idFilterClause, archivedClause, membershipClause, excludeEveryoneGroupClause],
+    ' AND ',
+  );
+
+  // Groups they are members of
+  // Parent groups of those groups
+  // if admin of any group, also show all descendant groups for oversight purposes
+  const sql = Prisma.sql`
+    WITH results AS (
+      WITH oversight_groups AS (
+        SELECT DISTINCT group_id AS id
+        FROM effective_user_oversight_groups
+        WHERE user_id = ${user_id}
+      )
+      SELECT 
+        g.*,
+        COALESCE(
+          gu.role::text,
+          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
+        ) AS user_role,
+        ( select count(*) from group_user where group_id = g.id ) as size
+      FROM "group" g
+      LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+      LEFT JOIN oversight_groups og ON og.id = g.id
+      ${finalWhereClause}
+    )
+    SELECT *, COUNT(*) OVER () AS total_count
+    FROM results
+    ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+  const results = await prisma.$queryRaw(sql);
+  const total = Number(results.length > 0 ? results[0].total_count : 0);
+  return {
+    metadata: {
+      total,
+      limit,
+      offset,
+    },
+    data: results.map(_.omit(['total_count'])),
   };
 }
 

@@ -28,6 +28,7 @@ export default {
     is_archived,
     direct_membership_only,
     oversight_only,
+    admin_only,
   } = {}) {
     return api.post("/groups/search", {
       search_term,
@@ -38,6 +39,7 @@ export default {
       ...(is_archived !== undefined && { is_archived }),
       ...(direct_membership_only !== undefined && { direct_membership_only }),
       ...(oversight_only !== undefined && { oversight_only }),
+      ...(admin_only !== undefined && { admin_only }),
     });
   },
 

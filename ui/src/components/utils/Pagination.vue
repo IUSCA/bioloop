@@ -32,6 +32,7 @@
     <!-- fixed width on all screens -->
     <div class="w-36 order-3 flex-none" data-testid="results-per-page">
       <VaSelect
+        v-if="props.page_size_options.length > 0"
         label="Results per page"
         v-model="page_size"
         :options="props.page_size_options"
@@ -66,7 +67,7 @@ const props = defineProps({
   },
   page_size_options: {
     type: Array,
-    required: true,
+    default: () => [],
   },
 });
 

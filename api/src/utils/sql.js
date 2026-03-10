@@ -9,8 +9,8 @@ function safeSqlJoin(clauses, separator = ' AND ') {
 }
 
 function buildWhereClause(clauses, operator = 'AND') {
-  const x = safeSqlJoin(clauses, ` ${operator} `);
-  return x === Prisma.empty ? Prisma.empty : Prisma.sql`WHERE ${x}`;
+  const joinedClauses = safeSqlJoin(clauses, ` ${operator} `);
+  return joinedClauses === Prisma.empty ? Prisma.empty : Prisma.sql`WHERE ${joinedClauses}`;
 }
 
 function enumToSql(enumValue) {

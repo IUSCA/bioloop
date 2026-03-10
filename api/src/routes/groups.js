@@ -72,6 +72,7 @@ router.post(
     body('is_archived').optional().isBoolean(),
     body('direct_membership_only').optional().isBoolean(),
     body('oversight_only').optional().isBoolean(),
+    body('admin_only').optional().isBoolean(),
   ]),
   authorize('group', 'list'),
   asyncHandler(async (req, res) => {
@@ -80,7 +81,7 @@ router.post(
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order',
-      'is_archived', 'direct_membership_only', 'oversight_only',
+      'is_archived', 'direct_membership_only', 'oversight_only', 'admin_only',
     ])(req.body);
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
@@ -94,7 +95,7 @@ router.post(
 
     let promise;
     if (isPlatformAdmin) {
-      promise = groupService.searchAllGroups(params);
+      promise = groupService.searchAllGroups({ ...params, user_id: req.user.subject_id });
     } else {
       promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.subject_id });
     }

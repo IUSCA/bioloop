@@ -11,7 +11,10 @@
     "source.organizeImports": "explicit"
   },
   "eslint.validate": [
-    "javascript"
+    "javascript",
+    "javascriptreact", 
+    "vue",
+    "html"
   ],
   "files.associations": {
     "*.css": "postcss"

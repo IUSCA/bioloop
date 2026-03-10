@@ -135,7 +135,8 @@ groupPolicies
       {
         policy: Policy.always,
         attribute_filters: [
-          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
+          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at',
+          'allow_user_contributions', 'size', 'user_role',
         ],
       },
     ],
