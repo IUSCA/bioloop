@@ -63,6 +63,7 @@ class Register:
             'name': candidate.name,
             'type': self.dataset_type,
             'origin_path': str(candidate.resolve()),
+            'create_method': 'SCAN',
         }
         if self.metadata:
             dataset_payload['metadata'] = self.metadata
@@ -82,6 +83,7 @@ class Register:
                 'name': candidate.name,
                 'type': self.dataset_type,
                 'origin_path': str(candidate.resolve()),
+                'create_method': 'SCAN',
             }
             if self.metadata:
                 dataset_payload['metadata'] = self.metadata
