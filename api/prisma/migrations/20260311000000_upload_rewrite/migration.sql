@@ -110,8 +110,12 @@ ALTER TABLE "dataset_audit"
 --     and rolling the whole migration back cleanly.
 -- /////////////////////////////////////////////////////////////////////////////
 
--- Step 1: Temporarily widen the column to plain text so we can drop the type.
+-- Step 1: Temporarily widen all columns that use this type to plain text so we
+-- can drop the type.  Both dataset_upload_log and file_upload_log reference it.
 ALTER TABLE "dataset_upload_log"
+    ALTER COLUMN "status" TYPE TEXT;
+
+ALTER TABLE "file_upload_log"
     ALTER COLUMN "status" TYPE TEXT;
 
 -- Step 2: Drop the old enum.
@@ -131,11 +135,16 @@ CREATE TYPE "upload_status" AS ENUM (
     'PERMANENTLY_FAILED'    -- Failed after max retry attempts; no further retries
 );
 
--- Step 4: Restore the column type.
+-- Step 4: Restore the column types.
 -- The USING clause casts the stored text back to the enum.  If any row
 -- contains 'FAILED' this will raise "invalid input value for enum" and the
 -- migration will be rolled back, preventing silent data loss.
 ALTER TABLE "dataset_upload_log"
+    ALTER COLUMN "status" TYPE "upload_status"
+    USING "status"::"upload_status";
+
+-- file_upload_log.status uses the same enum; restore it too.
+ALTER TABLE "file_upload_log"
     ALTER COLUMN "status" TYPE "upload_status"
     USING "status"::"upload_status";
 
