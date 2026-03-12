@@ -45,13 +45,31 @@
       <!-- Error state -->
       <ErrorState v-if="error" :error="error" @retry="fetchSubgroups" />
 
-      <!-- Empty state -->
+      <!-- Empty state (filtered results) -->
       <EmptyState
-        v-else-if="subgroups.length === 0 && !loading"
-        title="No subgroups found"
-        message="Try expanding your search or adjusting the scope filter."
+        v-else-if="subgroups.length === 0 && !loading && areFiltersActive"
+        title="No results found"
+        message="Try adjusting your filters."
         @reset="resetFilters"
       />
+
+      <!-- No data state -->
+      <div
+        v-else-if="subgroups.length === 0 && !loading && !areFiltersActive"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <div class="text-center">
+          <h3 class="text-lg font-semibold mb-2">
+            No subgroups have been created yet.
+          </h3>
+        </div>
+        <VaButton @click="handleCreateSubgroup" disabled>
+          <div class="flex items-center justify-between gap-2 mx-1">
+            <i-mdi-plus class="text-sm" />
+            Create Sub Group
+          </div>
+        </VaButton>
+      </div>
 
       <!-- Table -->
       <VaDataTable
@@ -101,6 +119,10 @@ const error = ref(null);
 const loading = ref(false);
 const activeScope = ref("all"); // 'all' | 'direct'
 const searchTerm = ref("");
+
+const areFiltersActive = computed(() => {
+  return searchTerm.value !== "" || activeScope.value !== "all";
+});
 
 const scopeFilters = [
   { label: "All Descendants", value: "all" },

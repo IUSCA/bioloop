@@ -145,6 +145,10 @@
       <ArchiveConfirmModal
         v-model="showArchiveModal"
         :group-name="group.name"
+        :group-slug="group.slug"
+        :affected-members="counts.members"
+        :affected-datasets="counts.datasets"
+        :affected-subgroups="counts.subgroups"
         :loading="archiving"
         @confirm="handleArchive"
       />

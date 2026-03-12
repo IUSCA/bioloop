@@ -37,7 +37,7 @@
         <VaButton size="small" disabled>
           <div class="flex items-center justify-between gap-2 mx-1">
             <i-mdi-plus class="text-sm" />
-            New Collection
+            Create Collection
           </div>
         </VaButton>
       </div>
@@ -101,11 +101,28 @@
         </VaDataTable>
 
         <EmptyState
-          v-else-if="!loading"
-          title="No collections found"
-          message="Try expanding your search or adjusting the status filter."
+          v-else-if="!loading && areFiltersActive"
+          title="No results found"
+          message="Try adjusting your filters."
           @reset="resetFilters"
         />
+
+        <div
+          v-else-if="!loading && !areFiltersActive"
+          class="flex flex-col items-center justify-center gap-4 py-12"
+        >
+          <div class="text-center">
+            <h3 class="text-lg font-semibold mb-2">
+              No collections have been created yet.
+            </h3>
+          </div>
+          <VaButton disabled>
+            <div class="flex items-center justify-between gap-2 mx-1">
+              <i-mdi-plus class="text-sm" />
+              Create Collection
+            </div>
+          </VaButton>
+        </div>
 
         <Pagination
           v-if="collections.length > 0"
@@ -145,6 +162,10 @@ const sortOrder = ref("desc");
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 
 const number_formatter = Intl.NumberFormat("en");
+
+const areFiltersActive = computed(() => {
+  return searchTerm.value !== "" || activeStatus.value !== "all";
+});
 
 const statusFilters = [
   { label: "All", value: "all" },

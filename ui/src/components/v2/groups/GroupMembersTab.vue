@@ -139,12 +139,31 @@
             </div>
           </template>
         </VaDataTable>
+
         <EmptyState
-          v-else-if="!loading"
-          title="No members found"
-          message="Try expanding your search or adjusting the scope filter."
+          v-else-if="!loading && areFiltersActive"
+          title="No results found"
+          message="Try adjusting your filters."
           @reset="resetFilters"
         />
+
+        <div
+          v-else-if="!loading && !areFiltersActive"
+          class="flex flex-col items-center justify-center gap-4 py-12"
+        >
+          <div class="text-center">
+            <h3 class="text-lg font-semibold mb-2">
+              No members have been added to this group yet.
+            </h3>
+          </div>
+          <VaButton v-if="props.canAdd" @click="showAddModal = true" disabled>
+            <div class="flex items-center justify-between gap-2 mx-1">
+              <i-mdi-account-plus class="text-sm" />
+              Add Member
+            </div>
+          </VaButton>
+        </div>
+
         <!-- <GroupMemberTable
           :members="members"
           :loading="loading"
@@ -206,6 +225,10 @@ const transitiveMembershipCount = computed(
   () => totalMembershipCount.value - directMembershipCount.value,
 );
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
+
+const areFiltersActive = computed(() => {
+  return searchTerm.value !== "" || activeScope.value !== "all";
+});
 
 const scopeFilters = computed(() => {
   const showCounts = !countsLoading.value && !countsError.value;

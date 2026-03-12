@@ -2,7 +2,7 @@
   <!-- min height prevents the vertical layout shift-->
   <!-- min-h-[1.75rem] removed because  -->
   <!-- As breadcrumbs are not reset between page transitions, there is no vertical layout shift -->
-  <va-breadcrumbs class="text-lg breadcrumbs">
+  <va-breadcrumbs class="breadcrumbs">
     <va-breadcrumbs-item
       v-for="(item, index) in displayedBreadcrumbs"
       :key="`${item}-${index}`"
