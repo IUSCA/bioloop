@@ -58,7 +58,7 @@
             </span>
           </VaTab>
 
-          <VaTab v-if="showChildren" name="subgroups">
+          <VaTab v-if="showDescendants" name="subgroups">
             <span class="flex items-center gap-1.5">
               Subgroups
               <span v-if="counts.subgroups !== null" class="tab-count-badge">
@@ -103,7 +103,7 @@
         <GroupSubgroupsTab
           v-else-if="activeTab === 'subgroups'"
           :group-id="props.id"
-          @count-changed="(n) => (counts.subgroups = n)"
+          @count-changed="handleSubgroupsUpdate"
         />
 
         <GroupResourcesTab
@@ -173,7 +173,7 @@ function can(action) {
 }
 
 const showMembers = computed(() => can("view_members"));
-const showChildren = computed(() => can("view_children"));
+const showDescendants = computed(() => can("view_descendants"));
 const showResources = computed(() => can("view_resources"));
 const showAuditLogs = computed(() => can("view_audit_logs"));
 
@@ -219,7 +219,7 @@ async function fetchCounts() {
     );
   }
 
-  if (can("view_children")) {
+  if (can("view_descendants")) {
     fetchers.push(
       GroupService.getDescendants(props.id)
         .then((r) => {
@@ -251,6 +251,16 @@ function handleMembersUpdate() {
     GroupService.getDirectMembers(props.id, { limit: 0 })
       .then((r) => {
         counts.value.members = r.data.metadata.total;
+      })
+      .catch(() => {});
+  }
+}
+
+function handleSubgroupsUpdate() {
+  if (can("view_descendants")) {
+    GroupService.getDescendants(props.id)
+      .then((r) => {
+        counts.value.subgroups = Array.isArray(r.data) ? r.data.length : 0;
       })
       .catch(() => {});
   }

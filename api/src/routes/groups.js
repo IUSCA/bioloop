@@ -468,20 +468,26 @@ router.get(
   }),
 );
 
-// TODO
 // Get descendant groups (hierarchy downward)
 router.get(
   '/:id/descendants',
   validate([
     param('id').isUUID(),
+    query('archived').optional().isBoolean().toBoolean(),
+    query('max_depth').optional().isInt({ min: 1 }).toInt(),
   ]),
-  authorize('group', 'view_children'),
+  authorize('group', 'view_descendants'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get descendant groups (hierarchy downward)'
 
     const { id } = req.params;
-    const descendants = await groupService.getGroupDescendants(id);
+    const { archived, max_depth, search_term } = req.query;
+    const descendants = await groupService.getGroupDescendants(id, {
+      archived,
+      max_depth,
+      search_term: search_term?.trim(),
+    });
     const filteredDescendants = descendants.map((d) => req.permission.filter(d));
     res.json(filteredDescendants);
   }),

@@ -1016,11 +1016,41 @@ async function getGroupAncestors(group_id) {
 /**
  * Get descendant groups of a group with depth information
  * @param {string} group_id - ID of the group to get descendants for
+ * @param {Object} options - Optional filters
+ * @param {boolean|null} options.archived - Optional filter to include only archived (true), only non-archived (false), or all (null) descendant groups
+ * @param {number} options.max_depth - Maximum depth of descendant groups to include (e.g. max_depth=1 to include only direct children)
+ * @param {string} search_term - Optional search term to filter descendant groups by name, description, or slug
  * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
  */
-async function getGroupDescendants(group_id) {
+async function getGroupDescendants(group_id, opts) {
+  const where = {
+    ancestor_id: group_id,
+    depth: {
+      gt: 0,
+    },
+  };
+  if (opts.archived != null) {
+    where.descendant = {
+      is_archived: opts.archived,
+    };
+  }
+  if (opts.max_depth != null) {
+    where.depth = {
+      gt: 0,
+      lte: opts.max_depth,
+    };
+  }
+  if (opts.search_term) {
+    where.descendant = {
+      OR: [
+        { name: { contains: opts.search_term, mode: 'insensitive' } },
+        { description: { contains: opts.search_term, mode: 'insensitive' } },
+        { slug: { contains: opts.search_term, mode: 'insensitive' } },
+      ],
+    };
+  }
   const descendants = await prisma.group_closure.findMany({
-    where: { ancestor_id: group_id, depth: { gt: 0 } },
+    where,
     include: {
       descendant: true,
     },

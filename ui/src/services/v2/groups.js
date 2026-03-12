@@ -148,9 +148,20 @@ export default {
     return api.get(`/groups/${id}/ancestors`);
   },
 
-  /** Get descendant groups (hierarchy downward). */
-  getDescendants(id) {
-    return api.get(`/groups/${id}/descendants`);
+  /** Get descendant groups (hierarchy downward).
+   * archived: optional boolean filter to include only archived (true), only non-archived (false),
+   * or all (null/undefined) descendant groups
+   *
+   * max_depth: optional integer filter to include only descendant groups at most
+   * this many levels below the current group (e.g. max_depth=1 to include only direct children)
+   *
+   * search_term: optional string filter to include only descendant groups whose name, description, or slug
+   * contains the search term (case-insensitive partial match)
+   */
+  getDescendants(id, params) {
+    return api.get(`/groups/${id}/descendants`, {
+      params,
+    });
   },
 
   /**

@@ -87,8 +87,8 @@ groupPolicies
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
     view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
 
-    // immediate children of the group (not all descendants, which would be covered by view_metadata)
-    view_children: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
+    // all descendants
+    view_descendants: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
 
     add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
