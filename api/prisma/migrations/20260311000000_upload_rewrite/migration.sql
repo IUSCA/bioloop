@@ -2,9 +2,7 @@
 -- Upload Feature Rewrite — Database Migration
 -- =============================================================================
 --
--- This migration covers all schema and data changes introduced by the upload
--- rewrite branch.  It is split into two independent parts that can be read and
--- reasoned about separately; there is no ordering dependency between them.
+-- This migration covers all schema and data changes introduced by the rewritten Upload-feature.
 --
 --   Part 1 — Move create_method from dataset_audit to dataset
 --   Part 2 — Rebuild the upload_status enum
@@ -13,6 +11,13 @@
 -- Both parts run inside a single transaction so the migration is atomic: if
 -- either part fails the entire migration rolls back with no partial state left
 -- in the database.
+--
+-- NOTES: - The migration associated with the original implementation of the Upload-feature is 
+--          `20241114142916_99_dataset_upload`.
+--        - The migration that added the ability to track the creation-method of a dataset
+--          (via the create_method column) is `20250428213406_track_dataset_creation_metadata`.
+
+
 -- =============================================================================
 
 
@@ -89,9 +94,9 @@ ALTER TABLE "dataset_audit"
 -- The upload rewrite introduces four new upload statuses and retires one:
 --
 --   Added:
---     VERIFYING          — integrity verification Celery task is running
+--     VERIFYING          — integrity-verification Celery task is running
 --     VERIFIED           — integrity verified; ready to start Integrated workflow
---     VERIFICATION_FAILED — integrity check failed; dataset not registered
+--     VERIFICATION_FAILED — integrity-verification failed; dataset not registered
 --     PERMANENTLY_FAILED — failed after max retries; no further automatic action
 --
 --   Removed:

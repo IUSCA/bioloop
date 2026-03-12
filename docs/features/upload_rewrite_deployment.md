@@ -36,14 +36,13 @@ container:
 UPLOAD_HOST_DIR=/N/scratch/scadev/bioloop/dev/uploads
 ```
 
-The TUS `FileStore` and the `/complete` upload route both read this value.
-The directory is created automatically the first time a file is uploaded
-(the `/complete` route calls `fs.mkdirSync(..., { recursive: true })`), but
-you can also create it manually in advance:
+The compose file mounts this path into the container at the same location
+(`${UPLOAD_HOST_DIR}:${UPLOAD_HOST_DIR}`) and injects the variable into the
+container environment, so the path is identical inside and outside the
+container.
 
-```bash
-mkdir -p /N/scratch/scadev/bioloop/dev/uploads
-```
+The directory must exist on the host before `docker compose up` or the bind
+mount will fail.  `setup_dirs.py --create` (step 4) handles this.
 
 ---
 
