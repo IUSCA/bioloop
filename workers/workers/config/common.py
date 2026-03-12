@@ -41,6 +41,7 @@ config = {
     'paths': {
         'scratch': '/path/to/scratch',
         'RAW_DATA': {
+            'upload': '/path/to/uploads/raw_data',
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
             'bundle': {
@@ -50,6 +51,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
+            'upload': '/path/to/uploads/data_product',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
