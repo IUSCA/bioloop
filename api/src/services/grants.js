@@ -307,6 +307,27 @@ function accessibleCollectionsByGrantsQuery(user_id) {
   `;
 }
 
+/** Helper to build SQL query for fetching datasets that are accessible by a user via grants
+ * (directly or via group membership, including via collection-level grants)
+ * @param {string} user_id - UUID of the user
+ * @returns {Prisma.sql} SQL query to fetch dataset resource ids accessible by the user via grants
+ */
+function accessibleDatasetIdsByGrantsQuery(user_id) {
+  return Prisma.sql`
+    WITH valid_grants AS (
+      ${userValidGrantsQuery(user_id)}
+    )
+    SELECT DISTINCT d.resource_id
+    FROM valid_grants g
+    JOIN dataset d ON g.resource_id = d.resource_id
+    UNION
+    SELECT DISTINCT cd.dataset_id as resource_id
+    FROM valid_grants g
+    JOIN collection c ON g.resource_id = c.id
+    JOIN collection_dataset cd ON cd.collection_id = c.id
+  `;
+}
+
 /**
  * Get grants for a user and dataset, including grants via group membership and collection-level grants
  * @param {string} user_id - UUID of the user
@@ -335,7 +356,7 @@ async function getUserDatasetGrants(user_id, dataset_id, { access_types } = {}) 
  * @param {'DATASET'|'COLLECTION'} resource_type
  * @returns {Promise<Set<string>>} Set of active access-type names (e.g. {'view_metadata','download'})
  */
-async function getUserGrantAccessTypesForUser(user_id, resource_id, resource_type) {
+async function getGrantAccessTypesForUser(user_id, resource_id, resource_type) {
   const sql = resource_type === RESOURCE_TYPE.COLLECTION
     ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types' })
     : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types' });
@@ -500,7 +521,7 @@ module.exports = {
 
   // grants to a user for a dataset
   getUserDatasetGrants,
-  getUserGrantAccessTypesForUser,
+  getGrantAccessTypesForUser,
 
   // existence check for a grant to a user for a resource and access type(s)
   userHasGrant,
@@ -508,6 +529,7 @@ module.exports = {
   // sql queries
   ownerGroupIdsOfResourcesAccessibleByUserQuery,
   accessibleCollectionsByGrantsQuery,
+  accessibleDatasetIdsByGrantsQuery,
 
   // get grant
   getGrantById,

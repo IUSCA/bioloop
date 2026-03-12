@@ -5,24 +5,8 @@ export default {
    * Search collections accessible to the current user.
    * Returns {metadata: {total, offset, limit}, data: [collections]}.
    */
-  search({
-    search_term = "",
-    limit = 100,
-    offset = 0,
-    sort_by = "name",
-    sort_order = "asc",
-    owner_group_id,
-    is_archived,
-  } = {}) {
-    return api.post("/collections/search", {
-      search_term,
-      limit,
-      offset,
-      sort_by,
-      sort_order,
-      ...(owner_group_id !== undefined && { owner_group_id }),
-      ...(is_archived !== undefined && { is_archived }),
-    });
+  search(params) {
+    return api.post("/collections/search", params);
   },
 
   /** Get a collection by ID. */

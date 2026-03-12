@@ -117,7 +117,7 @@ contextHydrator.registerVirtualAttribute(
   async ({ id }) => {
     // id = { user, resource, resourceType } threaded from authorize()
     if (!id?.user || !id?.resource || !id?.resourceType) return new Set();
-    return grantService.getUserGrantAccessTypesForUser(
+    return grantService.getGrantAccessTypesForUser(
       id.user,
       id.resource,
       id.resourceType.toUpperCase(),

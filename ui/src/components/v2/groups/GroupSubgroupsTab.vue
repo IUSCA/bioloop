@@ -1,6 +1,6 @@
 <template>
-  <VaInnerLoading :loading="loading">
-    <div class="flex flex-col gap-4">
+  <VaInnerLoading :loading="loading" icon="flare">
+    <div class="flex flex-col gap-4 max-w-4xl mx-auto min-h-[200px]">
       <!-- Header row -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <!-- Search input -->
@@ -47,7 +47,7 @@
 
       <!-- Empty state -->
       <EmptyState
-        v-else-if="subgroups.length === 0"
+        v-else-if="subgroups.length === 0 && !loading"
         title="No subgroups found"
         message="Try expanding your search or adjusting the scope filter."
         @reset="resetFilters"
@@ -61,28 +61,24 @@
         hoverable
         striped
       >
-        <template #cell(name)="{ row }">
-          <RouterLink
-            :to="`/v2/groups/${row.rowData.id}`"
-            class="text-sm font-medium hover:underline"
-            style="color: var(--va-primary)"
-          >
-            {{ row.rowData.name }}
+        <template #cell(name)="{ rowData }">
+          <RouterLink :to="`/v2/groups/${rowData.id}`" class="text-sm">
+            {{ rowData.name }}
           </RouterLink>
         </template>
 
-        <template #cell(description)="{ row }">
-          <span class="text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
-            {{ row.rowData.description || "—" }}
+        <template #cell(description)="{ value }">
+          <span class="text-sm va-text-secondary line-clamp-2">
+            {{ value || "—" }}
           </span>
         </template>
 
-        <template #cell(status)="{ row }">
+        <template #cell(status)="{ rowData }">
           <VaChip
-            :color="row.rowData.is_archived ? 'secondary' : 'success'"
+            :color="rowData.is_archived ? 'secondary' : 'success'"
             size="small"
           >
-            {{ row.rowData.is_archived ? "Archived" : "Active" }}
+            {{ rowData.is_archived ? "Archived" : "Active" }}
           </VaChip>
         </template>
       </VaDataTable>

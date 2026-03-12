@@ -6,12 +6,7 @@
         <p class="">Browse and manage organizational groups.</p>
       </div>
       <!-- Create Group — platform admin only -->
-      <VaButton
-        v-if="auth.canAdmin"
-        preset="primary"
-        icon="add"
-        @click="showCreateModal = true"
-      >
+      <VaButton v-if="auth.canAdmin" preset="primary" icon="add" disabled>
         Create Group
       </VaButton>
     </div>
@@ -91,36 +86,9 @@
       />
     </div>
   </div>
-
-  <!-- ── Create Group Modal ─────────────────────────────────────────── -->
-  <VaModal
-    v-model="showCreateModal"
-    title="Create Group"
-    ok-text="Create"
-    cancel-text="Cancel"
-    :ok-disabled="!createForm.name.trim()"
-    :loading="createLoading"
-    @ok="handleCreate"
-  >
-    <div class="flex flex-col gap-4">
-      <VaInput
-        v-model="createForm.name"
-        label="Group Name"
-        placeholder="e.g. Research Lab Alpha"
-        required
-      />
-      <VaTextarea
-        v-model="createForm.description"
-        label="Description"
-        placeholder="Short description of this group's purpose (optional)"
-        rows="3"
-      />
-    </div>
-  </VaModal>
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
 import { useAuthStore } from "@/stores/auth";
 
@@ -213,39 +181,6 @@ function resetFilters() {
 watch(currentPage, () => {
   fetchGroups();
 });
-
-// ── Create Group ──────────────────────────────────────────────────────────
-const showCreateModal = ref(false);
-const createLoading = ref(false);
-const createForm = reactive({ name: "", description: "" });
-
-async function handleCreate() {
-  if (!createForm.name.trim()) return;
-  createLoading.value = true;
-  try {
-    await GroupService.create({
-      name: createForm.name.trim(),
-      description: createForm.description.trim() || undefined,
-    });
-    toast.success({
-      message: `Group "${createForm.name}" created.`,
-      color: "success",
-      position: "bottom-right",
-    });
-    showCreateModal.value = false;
-    createForm.name = "";
-    createForm.description = "";
-    fetchGroups();
-  } catch (err) {
-    toast.error({
-      message: err?.response?.data?.message ?? "Failed to create group.",
-      color: "danger",
-      position: "bottom-right",
-    });
-  } finally {
-    createLoading.value = false;
-  }
-}
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────
 onMounted(() => {

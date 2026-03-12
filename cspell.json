@@ -135,6 +135,7 @@
     "Vuetify",
     "vueuse",
     "watchlib",
+    "WCAG",
     "weakcb"
   ],
   "ignorePaths": [

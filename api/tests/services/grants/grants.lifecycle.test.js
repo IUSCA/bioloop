@@ -4,7 +4,7 @@
  *
  * Tests that a grant can be created, read, listed, and revoked correctly.
  * Covers USER grants, GROUP grants, time-bounded grants, and the
- * derived-query helpers (getUserGrantAccessTypesForUser, userHasGrant).
+ * derived-query helpers (getGrantAccessTypesForUser, userHasGrant).
  */
 
 const path = require('path');
@@ -282,7 +282,7 @@ describe('grants - lifecycle', () => {
     });
   });
 
-  describe('getUserGrantAccessTypesForUser', () => {
+  describe('getGrantAccessTypesForUser', () => {
     let grant;
 
     beforeAll(async () => {
@@ -290,7 +290,7 @@ describe('grants - lifecycle', () => {
     });
 
     it('returns a Set containing the granted access-type name', async () => {
-      const types = await grantsService.getUserGrantAccessTypesForUser(
+      const types = await grantsService.getGrantAccessTypesForUser(
         member.subject_id,
         dataset.resource_id,
         'DATASET',
@@ -301,7 +301,7 @@ describe('grants - lifecycle', () => {
 
     it('returns an empty Set after revocation', async () => {
       await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
-      const types = await grantsService.getUserGrantAccessTypesForUser(
+      const types = await grantsService.getGrantAccessTypesForUser(
         member.subject_id,
         dataset.resource_id,
         'DATASET',

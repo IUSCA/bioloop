@@ -67,11 +67,20 @@
             </span>
           </VaTab>
 
-          <VaTab v-if="showResources" name="resources">
+          <VaTab v-if="showResources" name="datasets">
             <span class="flex items-center gap-1.5">
-              Resources
-              <span v-if="counts.resources !== null" class="tab-count-badge">
-                {{ counts.resources }}
+              Datasets
+              <span v-if="counts.datasets !== null" class="tab-count-badge">
+                {{ counts.datasets }}
+              </span>
+            </span>
+          </VaTab>
+
+          <VaTab v-if="showResources" name="collections">
+            <span class="flex items-center gap-1.5">
+              Collections
+              <span v-if="counts.collections !== null" class="tab-count-badge">
+                {{ counts.collections }}
               </span>
             </span>
           </VaTab>
@@ -106,10 +115,16 @@
           @count-changed="handleSubgroupsUpdate"
         />
 
-        <GroupResourcesTab
-          v-else-if="activeTab === 'resources'"
+        <GroupDatasetsTab
+          v-else-if="activeTab === 'datasets'"
           :group-id="props.id"
-          @count-changed="(n) => (counts.resources = n)"
+          @count-changed="handleDatasetsUpdate"
+        />
+
+        <GroupCollectionsTab
+          v-else-if="activeTab === 'collections'"
+          :group-id="props.id"
+          @count-changed="handleCollectionsUpdate"
         />
 
         <VaCard v-else-if="activeTab === 'audit-log'">
@@ -138,6 +153,8 @@
 </template>
 
 <script setup>
+import CollectionService from "@/services/v2/collections";
+import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
 import { useNavStore } from "@/stores/nav";
 import { useToast } from "vuestic-ui";
@@ -158,7 +175,12 @@ const activeTab = ref("overview");
 
 // counts live here; each tab component emits count-changed when mutations fire
 // null = not yet fetched, number = loaded value
-const counts = ref({ members: null, subgroups: null, resources: null });
+const counts = ref({
+  members: null,
+  subgroups: null,
+  datasets: null,
+  collections: null,
+});
 
 // ── Derived ───────────────────────────────────────────────────────────────
 const ancestors = computed(() => group.value?.ancestors ?? []);
@@ -231,13 +253,17 @@ async function fetchCounts() {
 
   if (can("view_resources")) {
     fetchers.push(
-      Promise.all([
-        GroupService.getDatasets(props.id, { limit: 0 }),
-        GroupService.getCollections(props.id, { limit: 0 }),
-      ])
-        .then(([ds, cs]) => {
-          counts.value.resources =
-            (ds.data.metadata?.total ?? 0) + (cs.data.metadata?.total ?? 0);
+      DatasetService.search({ limit: 0, owner_group_id: props.id })
+        .then((r) => {
+          counts.value.datasets = r.data.metadata.total;
+        })
+        .catch(() => {}),
+    );
+
+    fetchers.push(
+      CollectionService.search({ owner_group_id: props.id, limit: 0 })
+        .then((r) => {
+          counts.value.collections = r.data.metadata.total;
         })
         .catch(() => {}),
     );
@@ -261,6 +287,26 @@ function handleSubgroupsUpdate() {
     GroupService.getDescendants(props.id)
       .then((r) => {
         counts.value.subgroups = Array.isArray(r.data) ? r.data.length : 0;
+      })
+      .catch(() => {});
+  }
+}
+
+function handleDatasetsUpdate() {
+  if (can("view_resources")) {
+    DatasetService.search({ owner_group_id: props.id, limit: 0 })
+      .then((r) => {
+        counts.value.datasets = r.data.metadata.total;
+      })
+      .catch(() => {});
+  }
+}
+
+function handleCollectionsUpdate() {
+  if (can("view_resources")) {
+    CollectionService.search({ owner_group_id: props.id, limit: 0 })
+      .then((r) => {
+        counts.value.collections = r.data.metadata.total;
       })
       .catch(() => {});
   }
@@ -304,7 +350,7 @@ onMounted(() => fetchGroupData());
   height: 1rem;
   padding: 0 0.375rem;
   border-radius: 9999px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   background-color: rgb(219 234 254);
   color: rgb(29 78 216);

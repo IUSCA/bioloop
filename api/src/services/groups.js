@@ -1029,9 +1029,9 @@ async function getGroupDescendants(group_id, opts) {
       gt: 0,
     },
   };
-  if (opts.archived != null) {
+  if (opts.is_archived != null) {
     where.descendant = {
-      is_archived: opts.archived,
+      is_archived: opts.is_archived,
     };
   }
   if (opts.max_depth != null) {
@@ -1067,12 +1067,12 @@ async function getGroupDescendants(group_id, opts) {
  * @param {boolean|null} archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
-async function getMyGroups({ user_id, archived = null }) {
+async function getMyGroups({ user_id, is_archived = null }) {
   // archived=true will return only archived groups
   // archived=false will return only active groups
   // archived not provided will return all groups regardless of archived status
   const where = {
-    is_archived: archived ?? Prisma.skip,
+    is_archived: is_archived ?? Prisma.skip,
     members: {
       some: {
         user_id,

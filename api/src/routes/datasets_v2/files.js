@@ -28,7 +28,7 @@ router.post(
     body('*.md5').isString().isLength({ min: 1 }),
     body('*.type').isIn(FILE_TYPES),
   ]),
-  authorize('dataset', 'edit_metadata', byDatasetId),
+  authorize('dataset', 'edit', byDatasetId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate files to a dataset

@@ -38,7 +38,7 @@
               >
                 Description
               </dt>
-              <dd class="text-sm">
+              <dd class="text-sm line-clamp-2">
                 {{ props.group.description || "—" }}
               </dd>
             </div>
@@ -223,18 +223,25 @@
           :loading="props.counts.subgroups === null"
         />
         <MetricCard
-          label="Resources"
-          icon="mdi-database"
+          label="Datasets"
+          icon="mdi-table"
           color="success"
-          :value="props.counts.resources"
-          :loading="props.counts.resources === null"
+          :value="props.counts.datasets"
+          :loading="props.counts.datasets === null"
         />
         <MetricCard
+          label="Collections"
+          icon="mdi-folder-multiple"
+          color="success"
+          :value="props.counts.collections"
+          :loading="props.counts.collections === null"
+        />
+        <!-- <MetricCard
           label="Active Grants"
           icon="mdi-key"
           color="warning"
           :value="null"
-        />
+        /> -->
       </div>
 
       <!-- Admins panel -->

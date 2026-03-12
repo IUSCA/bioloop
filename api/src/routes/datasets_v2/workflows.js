@@ -74,7 +74,7 @@ router.post(
 // Associate an existing workflow ID with a dataset
 router.put(
   '/:workflow_id',
-  authorize('dataset', 'edit_metadata', byDatasetId),
+  authorize('dataset', 'edit', byDatasetId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate a workflow to a dataset
@@ -111,26 +111,5 @@ module.exports = router;
 //     const { dataset_id, workflow_type } = req.params;
 //   }),
 // );
-
-// add workflow ids to dataset
-router.put(
-  '/:workflow_id',
-  asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['datasets']
-  // #swagger.summary = Associate a workflow to a dataset
-    const { dataset_id, workflow_id } = req.params;
-
-    await prisma.workflow.createMany({
-      data: {
-        id: workflow_id,
-        dataset_id,
-        initiator_id: req.user.id,
-      },
-      skipDuplicates: true,
-    });
-
-    res.status(204).send();
-  }),
-);
 
 module.exports = router;

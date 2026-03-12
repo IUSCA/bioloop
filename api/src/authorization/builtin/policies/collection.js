@@ -53,6 +53,11 @@ const collectionPolicies = new PolicyContainer({
   description: 'Policies for Collection resource',
 });
 
+const PUBLIC_ATTRIBUTES = ['id', 'name', 'slug', 'description',
+  'metadata', 'created_at', 'updated_at', 'owner_group_id', 'is_archived',
+  'size',
+];
+
 collectionPolicies
   .actions({
   // here isCollectionAdmin means the user is admin of the group that will be the owner of the collection
@@ -64,6 +69,7 @@ collectionPolicies
       hasCollectionOversight,
       userHasGrant('view_metadata')]),
 
+    list: Policy.always, // anyone can list collections, but the results will be filtered based on their permissions
     list_datasets: Policy.or([
       isPlatformAdmin,
       isCollectionAdmin,
@@ -99,9 +105,19 @@ collectionPolicies
       },
       {
         policy: userHasGrant('view_metadata'),
-        attribute_filters: [
-          'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'owner_group_id', 'is_archived',
-        ],
+        attribute_filters: PUBLIC_ATTRIBUTES,
+      },
+    ],
+    list: [
+      {
+        policy: isPlatformAdmin,
+        attribute_filters: ['*'],
+      },
+      {
+        // for listing, we can't uniformly apply the attribute filters because
+        // different collections in the list might have different permissions, so we will apply the PUBLIC_ATTRIBUTES filter
+        policy: Policy.always,
+        attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],
   })

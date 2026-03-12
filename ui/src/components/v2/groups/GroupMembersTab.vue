@@ -1,6 +1,6 @@
 <template>
-  <VaInnerLoading :loading="loading">
-    <div class="flex flex-col gap-4 max-w-4xl mx-auto">
+  <VaInnerLoading :loading="loading" icon="flare">
+    <div class="flex flex-col gap-4 max-w-4xl mx-auto min-h-[200px]">
       <!-- Header row -->
       <div class="flex flex-wrap items-center justify-between gap-3">
         <!-- Search input -->
@@ -140,7 +140,7 @@
           </template>
         </VaDataTable>
         <EmptyState
-          v-else
+          v-else-if="!loading"
           title="No members found"
           message="Try expanding your search or adjusting the scope filter."
           @reset="resetFilters"

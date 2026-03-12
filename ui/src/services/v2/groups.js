@@ -8,9 +8,7 @@ export default {
    *
    * Returns {metadata: {total, offset, limit}, data: [groups]}
    */
-  mine({ archived } = {}) {
-    const params = {};
-    if (archived !== undefined) params.archived = archived;
+  mine(params) {
     return api.get("/groups/mine", { params });
   },
 

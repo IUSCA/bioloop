@@ -7,9 +7,13 @@ const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const grantService = require('@/services/grants');
-const { enumToSql, buildWhereClause } = require('@/utils/sql');
+const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 
-const PRISMA_COLLECTION_INCLUDES = {};
+const PRISMA_COLLECTION_INCLUDES = {
+  _count: {
+    select: { datasets: true },
+  },
+};
 const CONFLICT_ERROR_MESSAGE = 'Collection was updated by another process. Please refresh and try again.';
 const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived collection.';
 
@@ -352,63 +356,6 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
   });
 }
 
-/**
- * Get all collections containing a dataset
- * @param {string} dataset_id - UUID of the dataset
- * @returns {Promise<Object[]>}
- */
-async function findCollectionsByDataset({
-  dataset_id, limit, offset, sort_by, sort_order,
-}) {
-  const where = {
-    datasets: {
-      some: {
-        dataset_id,
-      },
-    },
-  };
-  const data = await prisma.collection.findMany({
-    where,
-    include: PRISMA_COLLECTION_INCLUDES,
-    take: limit,
-    skip: offset,
-    orderBy: {
-      [sort_by]: sort_order,
-    },
-  });
-  const total = await prisma.collection.count({
-    where,
-  });
-  return { metadata: { total, limit, offset }, data };
-}
-
-/**
- * Get all collections owned by a group
- * @param {string} group_id - UUID of the owning group
- * @returns {Promise<Object[]>}
- */
-async function findCollectionsByOwnerGroup({
-  group_id, limit, offset, sort_by, sort_order,
-}) {
-  const data = await prisma.collection.findMany({
-    where: {
-      owner_group_id: group_id,
-    },
-    include: PRISMA_COLLECTION_INCLUDES,
-    take: limit,
-    skip: offset,
-    orderBy: {
-      [sort_by]: sort_order,
-    },
-  });
-  const total = await prisma.collection.count({
-    where: {
-      owner_group_id: group_id,
-    },
-  });
-  return { metadata: { total, limit, offset }, data };
-}
-
 /** * Get collection by ID
  * @param {string} collection_id - UUID of the collection
  * @returns {Promise<Object>}
@@ -448,12 +395,14 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
  */
 async function searchCollectionsForUser({
   user_id,
-  search_term = null,
   sort_by,
   sort_order,
   limit,
   offset,
+  search_term = null,
   is_archived = null,
+  owner_group_id = null,
+  dataset_id = null,
 }) {
   // user is admin of the group that owns the collection
   // OR user has oversight of the group that owns the collection
@@ -461,61 +410,92 @@ async function searchCollectionsForUser({
 
   let searchClause = Prisma.empty;
   if (search_term) {
+    const likePattern = createLikePattern(search_term);
     searchClause = Prisma.sql`
       (
-        c.name ILIKE ${`%${search_term}%`} OR
-        c.description ILIKE ${`%${search_term}%`} OR
-        c.slug ILIKE ${`%${search_term}%`}
+        c.name ILIKE ${likePattern} OR
+        c.description ILIKE ${likePattern} OR
+        c.slug ILIKE ${likePattern}
       )
       `;
   }
 
   let archivedClause = Prisma.empty;
-  if (is_archived !== null) {
+  if (is_archived != null) {
     archivedClause = Prisma.sql`c.is_archived = ${is_archived}`;
   }
 
-  const whereClause = buildWhereClause([searchClause, archivedClause], 'AND');
+  let ownerGroupClause = Prisma.empty;
+  if (owner_group_id != null) {
+    ownerGroupClause = Prisma.sql`c.owner_group_id = ${owner_group_id}`;
+  }
 
-  const query = Prisma.sql`
-    WITH results AS (
-      WITH via_grants AS (
-        ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
-      ),
-      accessible_ids AS (
-        -- via grants
-        SELECT id from via_grants
-
-        UNION
-
-        -- via group ownership
-        SELECT c.id
-        FROM "collection" c
-        JOIN group_user gu ON c.owner_group_id = gu.group_id
-        WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-
-        UNION
-
-        -- via group oversight
-        SELECT c.id
-        FROM "collection" c
-        JOIN effective_user_oversight_groups eug 
-          ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
+  let datasetClause = Prisma.empty;
+  if (dataset_id != null) {
+    datasetClause = Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM collection_dataset cd
+        WHERE cd.collection_id = c.id AND cd.dataset_id = ${dataset_id}
       )
-      SELECT c.*
-      FROM collection c
-      JOIN accessible_ids a ON a.id = c.id
-      ${whereClause}
+    `;
+  }
+
+  const whereClause = buildWhereClause([searchClause, archivedClause, ownerGroupClause, datasetClause], 'AND');
+
+  const cte_query = Prisma.sql`
+    WITH via_grants AS (
+      ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
+    ),
+    accessible_ids AS (
+      -- via grants
+      SELECT id from via_grants
+
+      UNION
+
+      -- via group ownership
+      SELECT c.id
+      FROM "collection" c
+      JOIN group_user gu ON c.owner_group_id = gu.group_id
+      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+
+      UNION
+
+      -- via group oversight
+      SELECT c.id
+      FROM "collection" c
+      JOIN effective_user_oversight_groups eug 
+        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
     )
-    SELECT *, COUNT(*) OVER () AS total_count
-    FROM results
+  `;
+
+  const data_query = Prisma.sql`
+    ${cte_query}
+    SELECT c.*, (SELECT COUNT(*) FROM collection_dataset cd WHERE cd.collection_id = c.id) AS "size"
+    FROM collection c
+    JOIN accessible_ids a ON a.id = c.id
+    ${whereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} 
     OFFSET ${offset}
   `;
-  // console.log(query.sql, query.values); // Log the raw SQL query for debugging purposes
-  const collections = await prisma.$queryRaw(query);
-  const total_count = Number(collections.length > 0 ? collections[0].total_count : 0);
+
+  const count_query = Prisma.sql`
+    ${cte_query}
+    SELECT COUNT(*) AS total_count
+    FROM collection c
+    JOIN accessible_ids a ON a.id = c.id
+    ${whereClause}
+  `;
+
+  // console.log(count_query.sql, count_query.values);
+
+  const [countResult, collections] = await Promise.all([
+    prisma.$queryRaw(count_query),
+    prisma.$queryRaw(data_query),
+  ]);
+
+  const total_count = Number(countResult[0]?.total_count || 0);
   return { metadata: { total: total_count, limit, offset }, data: collections };
 }
 
@@ -532,6 +512,8 @@ async function searchCollectionsForUser({
 async function searchAllCollections({
   search_term = null,
   is_archived = null,
+  dataset_id = null,
+  owner_group_id = null,
   sort_by,
   sort_order,
   limit,
@@ -545,20 +527,60 @@ async function searchAllCollections({
       { slug: { contains: search_term, mode: 'insensitive' } },
     ];
   }
-  if (is_archived !== null) {
+  if (is_archived != null) {
     where.is_archived = is_archived;
   }
+  if (dataset_id != null) {
+    where.datasets = {
+      some: {
+        dataset_id,
+      },
+    };
+  }
+  if (owner_group_id != null) {
+    where.owner_group_id = owner_group_id;
+  }
+
+  // Handle sorting by computed 'size' field (dataset count)
+  const orderBy = sort_by === 'size'
+    ? { _count: { datasets: sort_order } }
+    : { [sort_by]: sort_order };
+
   const collections = await prisma.collection.findMany({
     where,
     include: PRISMA_COLLECTION_INCLUDES,
     take: limit,
     skip: offset,
-    orderBy: {
-      [sort_by]: sort_order,
-    },
+    orderBy,
   });
   const total = await prisma.collection.count({ where });
   return { metadata: { total, limit, offset }, data: collections };
+}
+
+/**
+ * Get all collections containing a dataset
+ * @param {string} dataset_id - UUID of the dataset
+ * @param {object} options - Search and pagination options for searchAllCollections function
+ * @returns {Promise<Object[]>}
+ */
+async function findCollectionsByDataset(dataset_id, options) {
+  return searchAllCollections({
+    dataset_id,
+    ...options,
+  });
+}
+
+/**
+ * Get all collections owned by a group
+ * @param {string} group_id - UUID of the owning group
+ * @param {object} options - Search and pagination options for searchAllCollections function
+ * @returns {Promise<Object[]>}
+ */
+async function findCollectionsByOwnerGroup(group_id, options) {
+  return searchAllCollections({
+    owner_group_id: group_id,
+    ...options,
+  });
 }
 
 /**

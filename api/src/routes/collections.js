@@ -23,18 +23,21 @@ router.post(
   '/search',
   validate([
     body('search_term').isString().optional(),
-    body('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    body('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     body('offset').default(0).isInt({ min: 0 }).toInt(),
-    body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at', 'size']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
+    body('owner_group_id').optional().isUUID(),
+    body('dataset_id').optional().isUUID(),
   ]),
+  authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Search collections by name or description'
 
     const params = _.pick([
-      'search_term', 'limit', 'offset', 'sort_by', 'sort_order', 'is_archived',
+      'search_term', 'limit', 'offset', 'sort_by', 'sort_order', 'is_archived', 'owner_group_id', 'dataset_id',
     ])(req.body);
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
@@ -48,8 +51,8 @@ router.post(
     }
 
     const { metadata, data } = await promise;
-    // TODO: attribute filter
-    res.json({ metadata, data });
+    const filteredData = data.map((collection) => req.permission.filter(collection));
+    res.json({ metadata, data: filteredData });
   }),
 );
 

@@ -235,9 +235,9 @@ describe('grants - invariants', () => {
       expect(has).toBe(true);
     });
 
-    it('getUserGrantAccessTypesForUser returns the access type name', async () => {
+    it('getGrantAccessTypesForUser returns the access type name', async () => {
       const types = await grantsService
-        .getUserGrantAccessTypesForUser(
+        .getGrantAccessTypesForUser(
           transitiveUser.subject_id,
           transitiveDataset.resource_id,
           'DATASET',

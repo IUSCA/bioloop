@@ -12,8 +12,8 @@ const groupService = require('@/services/groups');
 const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
-const collectionService = require('@/services/collections');
-const datasetService = require('@/services/datasets_v2');
+// const collectionService = require('@/services/collections');
+// const datasetService = require('@/services/datasets_v2');
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ async function ensureNotRemovingLastAdmin(group_id, user_id) {
 router.get(
   '/mine',
   validate([
-    query('archived').optional().isBoolean().toBoolean(),
+    query('is_archived').optional().isBoolean().toBoolean(),
     // query('include_ancestors').optional().isBoolean().toBoolean(),
   ]),
   authorize('group', 'list', { shouldDeriveCallerRole: true }),
@@ -52,7 +52,7 @@ router.get(
 
     const { metadata, data } = await groupService.getMyGroups({
       user_id: req.user.subject_id,
-      archived: req.query.archived,
+      is_archived: req.query.is_archived,
       // include_ancestors: req.query.include_ancestors,
     });
     const filteredGroups = data.map((g) => req.permission.filter(g));
@@ -473,7 +473,7 @@ router.get(
   '/:id/descendants',
   validate([
     param('id').isUUID(),
-    query('archived').optional().isBoolean().toBoolean(),
+    query('is_archived').optional().isBoolean().toBoolean(),
     query('max_depth').optional().isInt({ min: 1 }).toInt(),
   ]),
   authorize('group', 'view_descendants'),
@@ -482,9 +482,9 @@ router.get(
     // #swagger.summary = 'Get descendant groups (hierarchy downward)'
 
     const { id } = req.params;
-    const { archived, max_depth, search_term } = req.query;
+    const { is_archived, max_depth, search_term } = req.query;
     const descendants = await groupService.getGroupDescendants(id, {
-      archived,
+      is_archived,
       max_depth,
       search_term: search_term?.trim(),
     });
@@ -499,57 +499,9 @@ router.get(
 // as it's complex and not currently needed
 
 // List collections owned by group
-router.get(
-  '/:id/collections',
-  validate([
-    param('id').isUUID(),
-    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
-    query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
-    query('sort_order').default('asc').isIn(['asc', 'desc']),
-  ]),
-  authorize('group', 'view_resources'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'List collections owned by the group'
-
-    const { id } = req.params;
-    const {
-      limit, offset, sort_by, sort_order,
-    } = req.query;
-    const { metadata, data } = await collectionService.findCollectionsByOwnerGroup({
-      group_id: id, limit, offset, sort_by, sort_order,
-    });
-    const filteredCollections = data.map((c) => req.permission.filter(c));
-    res.json({ metadata, data: filteredCollections });
-  }),
-);
+// use search collections endpoint with owner_group_id filter instead of implementing a separate endpoint for this, since the search endpoint already supports pagination, sorting, and filtering, and we can leverage that for listing collections owned by a group without needing to implement those features again in this endpoint
 
 // List datasets owned by group
-router.get(
-  '/:id/datasets',
-  validate([
-    param('id').isUUID(),
-    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
-    query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
-    query('sort_order').default('asc').isIn(['asc', 'desc']),
-  ]),
-  authorize('group', 'view_resources'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'List datasets owned by the group'
-
-    const { id } = req.params;
-    const {
-      limit, offset, sort_by, sort_order,
-    } = req.query;
-    const { metadata, data } = await datasetService.getDatasetsByOwnerGroup({
-      group_id: id, limit, offset, sort_by, sort_order,
-    });
-    const filteredDatasets = data.map((d) => req.permission.filter(d));
-    res.json({ metadata, data: filteredDatasets });
-  }),
-);
+// use search datasets endpoint with owner_group_id filter instead of implementing a separate endpoint for this, since the search endpoint already supports pagination, sorting, and filtering, and we can leverage that for listing datasets owned by a group without needing to implement those features again in this endpoint
 
 module.exports = router;
