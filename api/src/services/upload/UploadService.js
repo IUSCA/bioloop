@@ -62,6 +62,20 @@ const DataStore = isProduction ? FileStore : require('./TestableFileStore');
 // TUS expiry: incomplete uploads older than this are cleaned up automatically.
 const UPLOAD_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Creates an Error that @tus/server translates into an HTTP error response.
+ *
+ * @tus/server reads .status_code and .body off the thrown value.  Throwing a
+ * plain object satisfies TUS but triggers ESLint's no-throw-literal rule;
+ * attaching those fields to a real Error instance satisfies both.
+ *
+ * @param {number} statusCode - HTTP status code to return to the client.
+ * @param {string} body       - Response body text.
+ */
+function tusError(statusCode, body) {
+  return Object.assign(new Error(body), { status_code: statusCode, body });
+}
+
 class UploadService {
   constructor() {
     const uploadPath = config.get('upload.path');
@@ -107,9 +121,9 @@ class UploadService {
         if (!datasetId || Number.isNaN(datasetId)) {
           logger.warn('[TUS] onUploadCreate: missing or invalid dataset_id in metadata', {
             user: req.user?.username,
-            raw_dataset_id: upload.metadata?.dataset_id,
+            unparsed_dataset_id: upload.metadata?.dataset_id,
           });
-          throw { status_code: 400, body: 'dataset_id is required in upload metadata' };
+          throw tusError(400, 'dataset_id is required in upload metadata');
         }
 
         const uploadLog = await prisma.dataset_upload_log.findUnique({
@@ -121,7 +135,7 @@ class UploadService {
             dataset_id: datasetId,
             user: req.user?.username,
           });
-          throw { status_code: 404, body: 'No upload log found for this dataset' };
+          throw tusError(404, 'No upload log found for this dataset');
         }
 
         if (uploadLog.status !== CONSTANTS.UPLOAD_STATUSES.UPLOADING) {
@@ -130,10 +144,7 @@ class UploadService {
             status: uploadLog.status,
             user: req.user?.username,
           });
-          throw {
-            status_code: 409,
-            body: `Upload is not in UPLOADING state (current: ${uploadLog.status})`,
-          };
+          throw tusError(409, `Upload is not in UPLOADING state (current: ${uploadLog.status})`);
         }
 
         // Admins and operators may upload to any dataset.
@@ -151,7 +162,7 @@ class UploadService {
               user_id: req.user?.id,
               creator_id: creator?.id,
             });
-            throw { status_code: 403, body: 'Not authorized to upload to this dataset' };
+            throw tusError(403, 'Not authorized to upload to this dataset');
           }
         }
 
