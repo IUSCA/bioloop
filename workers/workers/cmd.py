@@ -137,6 +137,8 @@ def execute_with_log_tracking(cmd: list[str], celery_task: WorkflowTask, cwd: st
         }
         raise SubprocessError(msg)
 
+    return worker_process_id
+
 
 def execute_old(cmd, cwd=None):
     if not cwd:

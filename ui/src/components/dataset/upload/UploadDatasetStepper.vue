@@ -389,6 +389,7 @@ import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { _getUploadServiceURL } from "@/services/upload";
+import { formatDuration } from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { Icon } from "@iconify/vue";
@@ -396,8 +397,8 @@ import _ from "lodash";
 import * as tus from "tus-js-client";
 import { VaDivider, VaPopover } from "vuestic-ui";
 import {
-  _computeManifestHash,
-  _isChecksumVerificationEnabled,
+  computeManifestHash,
+  isChecksumVerificationEnabled,
 } from "@/services/upload/checksum";
 
 const auth = useAuthStore();
@@ -678,6 +679,14 @@ const uploadFormData = computed(() => {
  */
 const onFilesAdded = (files) => {
   clearSelectedDirectoryToUpload();
+  const oversized = Array.from({ length: files.length }, (_, i) => files.item(i))
+    .filter((f) => f.size > config.upload.max_file_size_bytes);
+  if (oversized.length > 0) {
+    submissionAlert.value = `${oversized.map((f) => f.name).join(', ')} exceed${oversized.length === 1 ? 's' : ''} the ${formatBytes(config.upload.max_file_size_bytes)} per-file size limit.`;
+    submissionAlertColor.value = 'danger';
+    isSubmissionAlertVisible.value = true;
+    return;
+  }
   setFiles(files);
   isSubmissionAlertVisible.value = false;
   setUploadedFileType(FILE_TYPE.FILE);
@@ -693,6 +702,14 @@ const onFilesAdded = (files) => {
  */
 const onDirectoryAdded = (directoryDetails) => {
   clearSelectedFilesToUpload();
+  const oversized = Array.from(directoryDetails.files)
+    .filter((f) => f.size > config.upload.max_file_size_bytes);
+  if (oversized.length > 0) {
+    submissionAlert.value = `${oversized.map((f) => f.name).join(', ')} exceed${oversized.length === 1 ? 's' : ''} the ${formatBytes(config.upload.max_file_size_bytes)} per-file size limit.`;
+    submissionAlertColor.value = 'danger';
+    isSubmissionAlertVisible.value = true;
+    return;
+  }
   setDirectory(directoryDetails);
   isSubmissionAlertVisible.value = false;
   setUploadedFileType(FILE_TYPE.DIRECTORY);
@@ -728,23 +745,6 @@ const onProjectSearchClose = () => {
   }
 };
 
-/**
- * Format duration in milliseconds to human-readable string
- * @param {number} ms - Duration in milliseconds
- * @returns {string} Formatted duration (e.g., "1.5s", "2.3m", "1.2h")
- */
-const formatDuration = (ms) => {
-  const seconds = ms / 1000;
-  if (seconds < 60) {
-    return `${seconds.toFixed(1)}s`;
-  } else if (seconds < 3600) {
-    const minutes = seconds / 60;
-    return `${minutes.toFixed(1)}m`;
-  } else {
-    const hours = seconds / 3600;
-    return `${hours.toFixed(1)}h`;
-  }
-};
 
 // Determines whether the stepper button should be disabled for any given step.
 const isStepperButtonDisabled = (stepIndex) => {
@@ -929,7 +929,7 @@ const onSubmit = async () => {
         let checksumStartTime = null;
         let checksumEndTime = null;
 
-        if (_isChecksumVerificationEnabled() && !computedChecksum.value) {
+        if (isChecksumVerificationEnabled() && !computedChecksum.value) {
           try {
             console.log('✓ STARTING checksum computation BEFORE upload...');
             console.log('  Setting isComputingChecksum = true');
@@ -942,7 +942,7 @@ const onSubmit = async () => {
             console.log('  Files mapped:', files.map(f => `${f.name} (${f.size} bytes)`));
 
             console.log('  Calling _computeManifestHash...');
-            computedChecksum.value = await _computeManifestHash(files, (progress) => {
+            computedChecksum.value = await computeManifestHash(files, (progress) => {
               console.log(`  Checksum progress: ${progress}%`);
               checksumProgress.value = progress;
             });
@@ -1112,8 +1112,8 @@ const preUpload = async () => {
 
     console.log('[PRE-UPLOAD] SUCCESS: Upload log created/updated', {
       upload_log_id: datasetUploadLog.value.id,
-      dataset_id: datasetUploadLog.value.audit_log?.dataset?.id,
-      dataset_name: datasetUploadLog.value.audit_log?.dataset?.name,
+      dataset_id: datasetUploadLog.value.dataset?.id,
+      dataset_name: datasetUploadLog.value.dataset?.name,
       status: datasetUploadLog.value.status,
     });
   } catch (err) {
@@ -1137,14 +1137,14 @@ const createOrUpdateUploadLog = (data) => {
     const isCreate = !datasetUploadLog.value;
     console.log(`[CREATE-OR-UPDATE-LOG] ${isCreate ? 'Creating' : 'Updating'} upload log`, {
       is_create: isCreate,
-      dataset_id: datasetUploadLog.value?.audit_log?.dataset?.id,
+      dataset_id: datasetUploadLog.value?.dataset?.id,
       data,
     });
 
     return isCreate
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
-        datasetUploadLog.value?.audit_log?.dataset.id,
+        datasetUploadLog.value?.dataset?.id,
         data,
       );
   } else {
@@ -1205,29 +1205,17 @@ const uploadFilesWithTus = async (files, endpoint) => {
       // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
       const simulateFailureCount = localStorage.getItem('SIMULATE_UPLOAD_FAILURE_COUNT');
 
-      // Overall timeout for this upload (30 seconds)
-      // If TUS retries don't complete within this time, give up and show "Upload Failed"
-      const UPLOAD_TIMEOUT_MS = 30000; // 30 seconds
-      let timeoutId = null;
       let upload = null;
 
-      // Start timeout timer - will abort upload if it exceeds 30 seconds
-      timeoutId = setTimeout(() => {
-        console.error(`[TUS-CLIENT] ⏱️  Upload TIMEOUT after ${UPLOAD_TIMEOUT_MS / 1000}s for ${file.name}`);
-        console.error(`[TUS-CLIENT] Aborting upload due to timeout...`);
-
-        if (upload) {
-          upload.abort(true); // true = shouldTerminate (delete partial upload on server)
-        }
-
-        reject(new Error(`Upload timeout after ${UPLOAD_TIMEOUT_MS / 1000} seconds - retries exhausted or server not responding`));
-      }, UPLOAD_TIMEOUT_MS);
-
+      // No hard wall-clock timeout: TUS is designed for large resumable uploads
+      // (up to 100 GB). Failure handling is fully delegated to the retry schedule
+      // below — onError fires only after all retryDelays are exhausted, at which
+      // point the upload is considered permanently failed.
       upload = new tus.Upload(file, {
         endpoint,
-        // Increased retries for testing: allows up to 15 attempts total (1 initial + 14 retries)
-        // Delays: 0s, 1s, 2s, 3s, 5s, 8s, 13s, 21s, 34s, 55s (Fibonacci-like progression)
-        // This ensures we can test scenarios where retries exceed 30s timeout
+        // Fibonacci-progression retry delays (~16 min of cumulative back-off).
+        // tus-js-client retries automatically on network errors; onError is called
+        // only once the final delay has elapsed without a successful reconnect.
         retryDelays: [0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000, 144000, 233000, 377000],
         metadata: {
           dataset_id: String(datasetUploadLog.value.dataset.id),
@@ -1245,11 +1233,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
           } : {}),
         },
         onError: (error) => {
-          // Clear timeout on error
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-
           console.error(`[TUS-CLIENT] Upload FAILED for ${file.name}:`, {
             error_message: error.message,
             error_type: error.constructor.name,
@@ -1283,11 +1266,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
           }
         },
         onSuccess: async () => {
-          // Clear timeout on success
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-
           uploadedCount++;
           uploadedBytes += file.size;
           filesUploaded.value = uploadedCount;
@@ -1400,7 +1378,7 @@ const handleUploadComplete = async () => {
       error_response: error.response?.data,
       error_status: error.response?.status,
       error_stack: error.stack,
-      dataset_id: datasetUploadLog.value?.audit_log?.dataset?.id,
+      dataset_id: datasetUploadLog.value?.dataset?.id,
     });
 
     // API call failed - show retry option

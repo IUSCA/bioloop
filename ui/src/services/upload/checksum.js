@@ -105,15 +105,16 @@ async function _hashFile(file, createBlake3, onProgress = null) {
  * @param {Function} [progressCallback] - Optional callback for progress updates (0-100)
  * @returns {Promise<Object|null>} Manifest hash object or null if feature disabled/no files
  */
-export async function _computeManifestHash(files, progressCallback = null) {
-  console.log('[checksum.js] _computeManifestHash called');
+export async function computeManifestHash(files, progressCallback = null) {
+  console.log('[checksum.js] computeManifestHash called');
   console.log('[checksum.js]   files:', files?.length || 0);
   console.log('[checksum.js]   progressCallback:', typeof progressCallback);
 
-  // Check feature flag
+  // Guard: callers should check _isChecksumVerificationEnabled() first,
+  // but this provides a safe fallback if called directly.
   if (!config.enabledFeatures.upload_verify_checksums) {
     console.log('[checksum.js] Feature disabled via config');
-    return null; // Feature disabled
+    return null;
   }
 
   if (!files || files.length === 0) {
@@ -186,9 +187,13 @@ export async function _computeManifestHash(files, progressCallback = null) {
     const manifestHash = manifestHasher.digest('hex');
     console.log('[checksum.js] ✓ Manifest hash:', manifestHash);
 
+    // Always manifest-v1: the format is identical whether there is one file or
+    // many (blake3-manifest-v1 header + one tab-separated entry per file).
+    // Using a consistent mode string means the server-side verifier never needs
+    // to branch on file count.
     const result = {
       algorithm: 'blake3',
-      mode: files.length === 1 ? 'single' : 'manifest-v1',
+      mode: 'manifest-v1',
       manifest_hash: manifestHash,
       file_count: files.length,
       total_size: manifest.reduce((sum, f) => sum + f.size, 0),
@@ -209,11 +214,11 @@ export async function _computeManifestHash(files, progressCallback = null) {
  * Check if checksum verification is enabled
  * @returns {boolean} True if feature is enabled
  */
-export function _isChecksumVerificationEnabled() {
+export function isChecksumVerificationEnabled() {
   return Boolean(config.enabledFeatures.upload_verify_checksums);
 }
 
 export default {
-  _computeManifestHash,
-  _isChecksumVerificationEnabled,
+  computeManifestHash,
+  isChecksumVerificationEnabled,
 };

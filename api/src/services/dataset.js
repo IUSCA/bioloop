@@ -418,15 +418,27 @@ async function has_dataset_assoc({
 }
 
 /**
- * Gets the user who created the given dataset.
+ * Gets the user who created the given dataset by looking for a dataset_audit
+ * row with action='create'.
+ *
+ * Returns null in two situations that callers must handle gracefully:
+ *
+ *   1. No action='create' audit log exists.  The audit-log write was
+ *      introduced in this branch inside buildDatasetCreateQuery().  Datasets
+ *      that were created before this branch was deployed will not have such a
+ *      row.  Throwing here would make every ownership / access check on those
+ *      legacy datasets crash with a 500, so we return null instead and let
+ *      each call site decide the appropriate fallback behaviour.
+ *
+ *   2. The audit log row exists but its user reference is null.  This can
+ *      happen when the user account that originally created the dataset was
+ *      subsequently deleted (the FK is SET NULL on delete).
  *
  * @param {Object} params - The parameters object.
  * @param {number} params.dataset_id - The ID of the dataset.
  *
- * @returns {Promise<Object>} A promise that resolves to the user object of the user who created the dataset.
- *
- * @throws {Error} If an audit log for the dataset's creation is not found.
- * @throws {Error} If the user who created the dataset cannot be determined.
+ * @returns {Promise<Object|null>} The user object ({ id, username }) of the
+ *   dataset creator, or null if the creator cannot be determined.
  */
 async function get_dataset_creator({ dataset_id }) {
   const dataset_creation_log = await prisma.dataset_audit.findFirst({
@@ -446,12 +458,11 @@ async function get_dataset_creator({ dataset_id }) {
       timestamp: 'asc',
     },
   });
-  if (!dataset_creation_log) {
-    throw new Error(`Expected to find an audit log for the creation of dataset ${dataset_id}, but found none.`);
+
+  if (!dataset_creation_log || !dataset_creation_log.user) {
+    return null;
   }
-  if (!dataset_creation_log.user) {
-    throw new Error(`Expected to find a user who created dataset ${dataset_id}, but found none.`);
-  }
+
   return dataset_creation_log.user;
 }
 
@@ -501,7 +512,11 @@ async function has_workflow_access({ workflow, dataset_id, user_id }) {
 
   if (workflow === CONSTANTS.WORKFLOWS.INTEGRATED) {
     const dataset_creator = await get_dataset_creator({ dataset_id });
-    user_has_workflow_access = dataset_creator.id === user_id;
+    // dataset_creator is null when no action='create' audit log exists (legacy
+    // datasets pre-dating this branch) or when the creator account was deleted.
+    // Treat an indeterminate creator as "not the requester" — the user is
+    // denied unless an admin or operator (already returned true above).
+    user_has_workflow_access = !!dataset_creator && dataset_creator.id === user_id;
   } else {
     user_has_workflow_access = await has_dataset_assoc({
       dataset_id,
@@ -1187,11 +1202,6 @@ const buildDatasetCreateQuery = (data) => {
   ])(data);
 
   create_query.name = normalize_name(create_query.name); // normalize name
-
-  // Set create_method on the dataset
-  if (create_method) {
-    create_query.create_method = create_method;
-  }
 
   // create workflow association
   if (workflow_id) {

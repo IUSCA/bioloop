@@ -22,16 +22,11 @@ if [ $WORKER_TYPE == "celery_worker" ]; then
   
   # Start the upload polling job in the background (runs every 30 seconds)
   echo "Starting upload polling job in background..."
-  (
-    while true; do
-      sleep 30
-      echo "[$(date)] Running manage_upload_workflows..."
-      python -u -m workers.scripts.manage_upload_workflows --dry-run=False --max-retries=3 2>&1 || true
-    done
-  ) &
+  bash "$(dirname "$0")/poll_upload_workflows.sh" &
   POLLING_PID=$!
   echo "Upload polling job started with PID: $POLLING_PID"
-  
+
+  # Start the Celery worker
   exec python -m celery \
     -A workers.celery_app worker \
     --loglevel INFO \

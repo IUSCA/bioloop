@@ -93,7 +93,7 @@ model dataset_upload_log {
   dataset      dataset       @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   dataset_id   Int
 
-  @@index([dataset_id])
+  @@unique([dataset_id])
 }
 
 model dataset_audit {
@@ -422,13 +422,12 @@ enum upload_status {
   UPLOAD_FAILED
   UPLOADED
   VERIFYING        // Integrity verification in progress (async Celery task)
-  VERIFIED         // Integrity verified, ready to trigger workflow
+  VERIFIED         // Integrity verified, ready to trigger 'Integrated' workflow
   VERIFICATION_FAILED // Integrity check failed before registering the uploaded dataset into the system
   PROCESSING
   PROCESSING_FAILED
   COMPLETE
-  FAILED
-  PERMANENTLY_FAILED // After 3 retry attempts
+  PERMANENTLY_FAILED // After 3 retry attempts; no further automatic retries
 }
 
 enum upload_type {

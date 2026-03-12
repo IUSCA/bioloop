@@ -87,6 +87,9 @@ const exports = {
     uploads: {
       enabledForRoles: ["admin"],
     },
+    // Compute and send a BLAKE3 manifest hash before each upload so the
+    // verification worker can confirm file integrity end-to-end.
+    upload_verify_checksums: true,
     auto_create_project_on_dataset_creation: {
       enabledForRoles: ["user"],
     },
@@ -121,6 +124,13 @@ const exports = {
   },
   upload: {
     scope_prefix: "upload_file:",
+    // Maximum size per individual file (bytes). Must match upload.max_file_size_bytes
+    // in the API config. Enforced server-side by TUS; this value is used for
+    // client-side validation so users get an immediate error instead of a
+    // mid-upload rejection.
+    max_file_size_bytes:
+      parseInt(import.meta.env.VITE_UPLOAD_MAX_FILE_SIZE_BYTES) ||
+      107374182400, // 100 GB default
   },
 };
 

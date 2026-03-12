@@ -131,6 +131,7 @@
 <script setup>
 import constants from '@/constants';
 import datasetService from '@/services/dataset.js';
+import wfService from '@/services/workflow.js';
 import { useNavStore } from '@/stores/nav';
 import { Icon } from '@iconify/vue';
 import { useToast } from 'vuestic-ui';
@@ -156,6 +157,11 @@ const fetchUpload = async () => {
   try {
     const response = await datasetService.getUploadLogByDatasetId(props.id);
     upload.value = response.data;
+    // Stop polling as soon as a terminal state is observed so we don't
+    // keep firing requests after the upload has permanently settled.
+    if (isTerminalStatus(upload.value?.status)) {
+      stopAutoRefresh();
+    }
   } catch (err) {
     console.error('Failed to fetch upload:', err);
   } finally {
@@ -163,7 +169,19 @@ const fetchUpload = async () => {
   }
 };
 
-// Fetch verification logs
+// Statuses from which no further automatic state transitions will occur.
+// Auto-refresh stops as soon as one of these is observed.
+const TERMINAL_STATUSES = new Set([
+  constants.UPLOAD_STATUSES.COMPLETE,
+  constants.UPLOAD_STATUSES.UPLOAD_FAILED,
+  constants.UPLOAD_STATUSES.VERIFICATION_FAILED,
+  constants.UPLOAD_STATUSES.PERMANENTLY_FAILED,
+]);
+
+const isTerminalStatus = (status) => TERMINAL_STATUSES.has(status);
+
+// Fetch verification logs via the shared workflow service layer.
+// No-ops when the worker has not yet written its process ID to upload metadata.
 const fetchLogs = async () => {
   if (!upload.value?.metadata?.worker_process_id) {
     return;
@@ -172,21 +190,10 @@ const fetchLogs = async () => {
   loadingLogs.value = true;
   try {
     const processId = upload.value.metadata.worker_process_id;
-    const response = await fetch(
-      `/api/workflows/processes/${processId}/logs`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      }
+    const response = await wfService.getLogs({ processId });
+    logs.value = (response.data || []).sort(
+      (a, b) => new Date(a.created_at) - new Date(b.created_at)
     );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch logs');
-    }
-
-    const data = await response.json();
-    logs.value = data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   } catch (err) {
     console.error('Failed to fetch logs:', err);
   } finally {
@@ -283,8 +290,15 @@ onMounted(async () => {
     ]);
   }
   
+  // Fetch logs immediately if verification has already started.
   if (upload.value?.metadata?.worker_process_id) {
     await fetchLogs();
+  }
+
+  // Poll as long as the upload has not yet reached a terminal state.
+  // Each poll invokes fetchUpload(), which stops the interval automatically
+  // once a terminal status is observed (or the user navigates away).
+  if (!isTerminalStatus(upload.value?.status)) {
     startAutoRefresh();
   }
 });

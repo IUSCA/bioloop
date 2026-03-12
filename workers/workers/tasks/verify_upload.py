@@ -74,17 +74,17 @@ def verify_upload_integrity(celery_task, dataset_id):
         # 2. Capture all stdout/stderr from the subprocess
         # 3. Post logs to database in real-time
         # 4. Raise exception if subprocess exits with non-zero code
-        cmd.execute_with_log_tracking(
+        # 5. Return the worker_process_id so we can store it in upload metadata
+        worker_process_id = cmd.execute_with_log_tracking(
             cmd=verification_script_cmd,
             celery_task=celery_task,
             cwd=None
         )
         
-        # Look up worker_process_id by task_id and store in upload_log metadata
+        # Store worker_process_id in upload log metadata so the UI's
+        # "Verification Task Logs" card can display the captured logs.
         try:
-            worker_processes = api.get_worker_processes({'task_id': task_id})
-            if worker_processes:
-                worker_process_id = worker_processes[0]['id']
+            if worker_process_id:
                 api.update_dataset_upload_log(
                     dataset_id=dataset_id,
                     log_data={

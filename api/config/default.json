@@ -69,7 +69,8 @@
     }
   },
   "upload": {
-    "path": ""
+    "path": "",
+    "max_file_size_bytes": 107374182400
   },
   "download_server": {
     "base_url": ""

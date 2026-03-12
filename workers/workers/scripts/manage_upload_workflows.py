@@ -564,8 +564,8 @@ def process_failed_uploads(dry_run=True, max_retries=MAX_RETRY_COUNT):
                             continue
                         
                         logger.info(f"  Updating status...")
-                        api.update_dataset_upload(
-                            uploaded_dataset_id=dataset_id,
+                        api.update_dataset_upload_log(
+                            dataset_id=dataset_id,
                             log_data={
                                 'status': UPLOAD_STATUS['PROCESSING'],
                             }
@@ -592,8 +592,8 @@ def process_failed_uploads(dry_run=True, max_retries=MAX_RETRY_COUNT):
                         logger.info(f"  [DRY RUN] Would mark dataset {dataset_id} as PERMANENTLY_FAILED")
                         logger.info(f"  [DRY RUN] Would send admin notification")
                     else:
-                        api.update_dataset_upload(
-                            uploaded_dataset_id=dataset_id,
+                        api.update_dataset_upload_log(
+                            dataset_id=dataset_id,
                             log_data={
                                 'status': UPLOAD_STATUS['PERMANENTLY_FAILED'],
                                 'metadata': {
