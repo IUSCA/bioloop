@@ -152,8 +152,8 @@ class PolicyContainer {
    *
    * @example
    * container.roles([
-   *   { policy: isPlatformAdmin, role: CallerRole.ADMIN },
-   *   { policy: isGroupAdmin,    role: CallerRole.GROUP_ADMIN },
+   *   { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
+   *   { policy: isGroupAdmin,    role: CallerRole.ADMIN },
    * ])
    */
   roles(rolesArray) {

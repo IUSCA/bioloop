@@ -59,8 +59,8 @@ const groupPolicies = new PolicyContainer({
 
 const CallerRole = Object.freeze({
   PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  GROUP_ADMIN: 'GROUP_ADMIN',
-  GROUP_MEMBER: 'GROUP_MEMBER',
+  ADMIN: 'ADMIN',
+  MEMBER: 'MEMBER',
   OVERSIGHT: 'OVERSIGHT',
   RESOURCE_ACCESS: 'RESOURCE_ACCESS',
 });
@@ -68,9 +68,9 @@ const CallerRole = Object.freeze({
 groupPolicies
   .roles([
     { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
-    { policy: isGroupAdmin, role: CallerRole.GROUP_ADMIN },
-    { policy: isGroupMember, role: CallerRole.GROUP_MEMBER },
+    { policy: isGroupAdmin, role: CallerRole.ADMIN },
     { policy: hasGroupOversight, role: CallerRole.OVERSIGHT },
+    { policy: isGroupMember, role: CallerRole.MEMBER },
     { policy: canAccessResourcesOwnedByGroup, role: CallerRole.RESOURCE_ACCESS },
   ])
   .actions({
@@ -108,8 +108,9 @@ groupPolicies
         policy: isGroupMember,
         attribute_filters: [
           'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
-          'ancestors.*.id', 'ancestors.*.name', 'ancestors.*.slug', 'ancestors.*.description',
-          'ancestors.*.is_archived', 'ancestors.*.depth',
+          'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].description',
+          'ancestors[*].is_archived', 'ancestors[*].depth', 'ancestors[*].metadata',
+          'admins[*].id', 'admins[*].name', 'admins[*].email', 'admins[*].username', 'admins[*].subject_id',
         ],
       },
       {
@@ -124,7 +125,7 @@ groupPolicies
       },
       {
         policy: isGroupMember,
-        attribute_filters: ['*', '!assignor'],
+        attribute_filters: ['*', '!assignor', '!assigned_by'],
       },
     ],
     list: [

@@ -1,4 +1,4 @@
-const { Notation } = require('notation');
+const { projectObject } = require('@/utils/expression');
 const { hydrateEntities } = require('./hydrationUtils');
 
 /**
@@ -81,7 +81,7 @@ async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, c
 }
 
 /**
- * Creates a filter function that uses Notation library to filter object attributes
+ * Creates a filter function that uses expression library to filter object attributes
  * Supports wildcard '*' for all attributes and exclusion syntax '!fieldName'
  *
  * @param {string[]} attributeFilters - Array of attribute patterns
@@ -102,24 +102,7 @@ function createFilterFunction(attributeFilters) {
     return () => ({});
   }
 
-  // Return a function that filters the given object using Notation
-  // return (obj) => {
-  //   if (!obj || typeof obj !== 'object') {
-  //     return obj;
-  //   }
-
-  //   try {
-  //     return Notation.create(obj).filter(attributeFilters).value;
-  //   } catch (error) {
-  //     console.error('Error filtering attributes with Notation:', {
-  //       attributeFilters,
-  //       error: error.message,
-  //     });
-  //     // On error, return empty object (fail closed)
-  //     return {};
-  //   }
-  // };
-  return (obj) => Notation.create(obj).filter(attributeFilters).value;
+  return (obj) => projectObject(obj, attributeFilters);
 }
 
 module.exports = {

@@ -25,10 +25,30 @@ async function _getGroup(by, value) {
         include: {
           ancestor: true,
         },
+        orderBy: {
+          depth: 'desc',
+        },
+      },
+      members: {
+        where: {
+          user: { is_deleted: false },
+          role: GROUP_MEMBER_ROLE.ADMIN,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              username: true,
+              subject_id: true,
+            },
+          },
+        },
       },
     },
   });
-  const { ancestor_edges, ...groupData } = group;
+  const { ancestor_edges, members, ...groupData } = group;
   const ancestors = ancestor_edges
     .filter((edge) => edge.depth > 0) // exclude self-edge with depth 0
     .map((edge) => ({
@@ -37,6 +57,7 @@ async function _getGroup(by, value) {
     }));
   return {
     ancestors,
+    admins: members.map((member) => member.user),
     ...groupData,
   };
 }
@@ -384,51 +405,144 @@ async function unarchiveGroup(group_id, actor_id) {
 }
 
 /**
- * List members of a group with pagination
+ * List effective members of a group with pagination
  * @param {string} group_id - ID of the group
- * @param {Object} pagination - Pagination parameters
- * @param {number} pagination.limit - Number of members to return
- * @param {number} pagination.offset - Number of members to skip
+ * @param {Object} options - Pagination parameters
+ * @param {string} options.search_term - Optional search term to filter members by name or email
+ * @param {string} options.membership_type - 'all' for all members, 'direct' for direct members only, 'transitive' for transitive members only
+ * @param {number} options.limit - Number of members to return
+ * @param {number} options.offset - Number of members to skip
+ * @param {boolean} options.only_enabled_users - Whether to include only enabled users in the list
  * @returns {Promise<Object>} Paginated list of group members with metadata
  */
-async function listGroupMembers(group_id, { limit, offset }) {
+async function listGroupMembers(group_id, {
+  search_term,
+  membership_type,
+  only_enabled_users = false,
+  limit,
+  offset,
+}) {
+  const search_term_trimmed = (search_term || '')?.trim();
+  let searchClause = Prisma.empty;
+  if (search_term_trimmed) {
+    const likeTerm = sqlUtils.createLikePattern(search_term_trimmed);
+    searchClause = Prisma.sql`(
+      u.name ILIKE ${likeTerm} 
+      OR u.email ILIKE ${likeTerm} 
+      OR u.username ILIKE ${likeTerm} 
+    )`;
+  }
+
+  const groupIdFilterClause = Prisma.sql`gc.ancestor_id = ${group_id}`;
+  const enabledUsersClause = only_enabled_users ? Prisma.sql`u.is_disabled = false` : Prisma.empty;
+  let membershipTypeClause = Prisma.empty;
+  if (membership_type === 'direct') {
+    membershipTypeClause = Prisma.sql`gc.depth = 0`;
+  } else if (membership_type === 'transitive') {
+    membershipTypeClause = Prisma.sql`gc.depth > 0`;
+  }
+  const whereClause = sqlUtils.buildWhereClause(
+    [groupIdFilterClause, enabledUsersClause, membershipTypeClause, searchClause],
+    ' AND ',
+  );
+
   return prisma.$transaction(async (tx) => {
-    const members = await tx.group_user.findMany({
-      where: { group_id, user: { is_deleted: false } },
-      include: {
-        user: {
-          select: {
-            id: true,
-            subject_id: true,
-            name: true,
-            email: true,
-            username: true,
-          },
-        },
-        assignor: {
-          select: {
-            id: true,
-            subject_id: true,
-            name: true,
-            email: true,
-            username: true,
-          },
-        },
+    // Step 1: Get membership IDs with effective roles using raw SQL
+
+    // deduplication logic:
+    // if a user has multiple membership paths to the group, prefer:
+    // 1) lowest depth (shortest path to group) - direct membership over transitive membership
+    // 2) Otherwise prefer higher role (admin > member), in enum order: member = 0, admin = 1, so order by role desc
+    // 3) Otherwise prefer older assignment
+
+    // presentation ordering logic:
+    // 1) order by depth asc to show direct members first, then transitive members
+    // 2) then order by group name, so that members are grouped by group name within each depth level
+    // 3) then order by role desc to show admins before members within each group
+    // 4) then order by user name to have a consistent order for members with same role within same group
+    const sql = Prisma.sql`
+      select * from (
+        select distinct on (gu.user_id)
+          g.name as membership_group_name, 
+          g.id as membership_group_id, 
+          gc.depth, gu."role", gu.user_id, gu.assigned_at, gu.assigned_by,
+          u.name as user_name
+        from group_closure gc 
+        join "group" g on g.id = gc.descendant_id
+        join group_user gu on gu.group_id = gc.descendant_id
+        join "user" u on u.subject_id = gu.user_id
+        ${whereClause}
+        order by gu.user_id, gc.depth asc, gu."role" desc, gu.assigned_at asc
+      ) t
+      order by depth, membership_group_name, "role" desc, user_name ASC
+      limit ${limit} offset ${offset}
+    `;
+
+    // console.log(sql.sql, sql.values); // log the generated SQL for debugging
+
+    const membershipData = await tx.$queryRaw(sql);
+
+    // Step 2: Extract user and assignor IDs
+    const userSubjectIds = membershipData.map((m) => m.user_id);
+    const assignorSubjectIds = membershipData
+      .filter((m) => m.depth === 0) // assignor data only for direct members
+      .map((m) => m.assigned_by)
+      .filter(Boolean);
+    // merge and deduplicate user and assignor IDs to minimize number of queries
+    const subjectIdsToFetch = Array.from(new Set([...userSubjectIds, ...assignorSubjectIds]));
+
+    // Step 3: Fetch user and assignor details in parallel
+    const users = await tx.user.findMany({
+      where: { subject_id: { in: subjectIdsToFetch } },
+      select: {
+        id: true,
+        subject_id: true,
+        name: true,
+        email: true,
+        username: true,
+        is_deleted: true,
       },
-      skip: offset,
-      take: limit,
     });
 
-    const sanitizedMembers = members.map(_.omit(['group_id', 'user_id', 'assignor_id']));
+    // Step 4: Create lookup maps
+    const userMap = new Map(users.map((u) => [u.subject_id, u]));
 
-    // total count for pagination
-    const total = await tx.group_user.count({
-      where: { group_id },
+    // Step 5: Merge results
+    const sanitizedMembers = membershipData.map((membership) => ({
+      user: userMap.get(membership.user_id),
+      assignor: userMap.get(membership.assigned_by),
+      assigned_at: membership.assigned_at,
+      role: membership.effective_role,
+      effective_role: membership.depth === 0 ? membership.role : 'TRANSITIVE_MEMBER',
+      depth: membership.depth,
+      membership_via: {
+        type: membership.depth === 0 ? 'DIRECT' : 'TRANSITIVE',
+        name: membership.membership_group_name,
+        id: membership.membership_group_id,
+      },
+    }));
+
+    // Step 6: Get total count for pagination
+    const totalRows = await tx.$queryRaw`
+      SELECT count(distinct gu.user_id) as count
+      FROM group_user gu
+      JOIN group_closure gc ON gc.descendant_id = gu.group_id
+      JOIN "user" u on u.subject_id = gu.user_id
+      ${whereClause}
+    `;
+    const total = Number(totalRows[0].count);
+
+    // Step 7: get direct members count for metadata
+    const directMembershipCount = await tx.group_user.count({
+      where: {
+        group_id,
+      },
     });
 
     return {
       metadata: {
         total,
+        direct_membership: directMembershipCount,
         limit,
         offset,
       },
@@ -742,7 +856,8 @@ async function searchGroupsForUser({
         g.*, 
         COALESCE(
           gu.role::text,
-          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
+          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
+          'TRANSITIVE_MEMBER'
         ) AS user_role,
         ( select count(*) from group_user where group_id = g.id ) as size
       FROM "group" g

@@ -148,6 +148,17 @@ router.post(
   }),
 );
 
+function toCapabilitiesArray(capabilitiesObj) {
+  if (!capabilitiesObj || typeof capabilitiesObj !== 'object') {
+    return [];
+  }
+  return Object.entries(capabilitiesObj)
+  // eslint-disable-next-line no-unused-vars
+    .filter(([_key, value]) => value === true)
+    // eslint-disable-next-line no-unused-vars
+    .map(([key, _value]) => key);
+}
+
 // Get group details
 router.get(
   '/:id',
@@ -163,9 +174,10 @@ router.get(
     const group = await groupService.getGroupById(id);
     res.json({
       ...req.permission.filter(group),
+      // ...group,
       _meta: {
         caller_role: req.permission.callerRole,
-        capabilities: req.permission.capabilities,
+        capabilities: toCapabilitiesArray(req.permission.capabilities),
       },
     });
   }),
@@ -197,7 +209,7 @@ router.get(
       ...permission.filter(group),
       _meta: {
         caller_role: permission.callerRole,
-        capabilities: permission.capabilities,
+        capabilities: toCapabilitiesArray(permission.capabilities),
       },
     });
   }),
@@ -278,18 +290,24 @@ router.get(
   '/:id/members',
   validate([
     param('id').isUUID(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('membership_type').default('all').isIn(['all', 'direct', 'transitive']),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('only_enabled_users').default(false).isBoolean().toBoolean(),
   ]),
   authorize('group', 'view_members'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
-    // #swagger.summary = 'List members of a group'
+    // #swagger.summary = 'List direct members of a group'
 
     const { id } = req.params;
-    const { limit, offset } = req.query;
+    const {
+      limit, offset, only_enabled_users, membership_type, search_term,
+    } = req.query;
 
-    const { metadata, data } = await groupService.listGroupMembers(id, { limit, offset });
+    const { metadata, data } = await groupService.listGroupMembers(id, {
+      limit, offset, only_enabled_users, membership_type, search_term,
+    });
     const filteredMembers = data.map((m) => req.permission.filter(m));
     res.json({
       metadata,
@@ -479,7 +497,7 @@ router.get(
   '/:id/collections',
   validate([
     param('id').isUUID(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
@@ -506,7 +524,7 @@ router.get(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),

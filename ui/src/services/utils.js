@@ -54,8 +54,16 @@ function setIntersection(setA, setB) {
 }
 
 // https://stackoverflow.com/questions/27194359/javascript-pluralize-an-english-string
-function maybePluralize(count, noun, suffix = "s", showCount = true) {
-  return (showCount ? `${count} ` : "") + `${noun}${count !== 1 ? suffix : ""}`;
+function maybePluralize(
+  count,
+  noun,
+  { suffix = "s", showCount = true, formatter = null } = {},
+) {
+  const formattedCount = formatter ? formatter(count) : count;
+  return (
+    (showCount ? `${formattedCount} ` : "") +
+    `${noun}${count !== 1 ? suffix : ""}`
+  );
 }
 
 function validateEmail(email) {
@@ -462,5 +470,6 @@ export {
   setIntersection,
   snakeCaseToTitleCase,
   union,
-  validateEmail,
+  validateEmail
 };
+

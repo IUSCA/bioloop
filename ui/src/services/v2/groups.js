@@ -23,7 +23,7 @@ export default {
     search_term = "",
     limit = 100,
     offset = 0,
-    sort_by = "name",
+    sort_by = "created_at",
     sort_order = "asc",
     is_archived,
     direct_membership_only,
@@ -92,11 +92,25 @@ export default {
   },
 
   /**
-   * List members of a group (paginated).
+   * List all members of a group (paginated).
    * Returns {metadata:{total, limit, offset}, data: Array<User>}
    */
-  getMembers(id, { limit = 100, offset = 0 } = {}) {
-    return api.get(`/groups/${id}/members`, { params: { limit, offset } });
+  getMembers(id, params = {}) {
+    return api.get(`/groups/${id}/members`, {
+      params,
+    });
+  },
+
+  getDirectMembers(id, params = {}) {
+    return api.get(`/groups/${id}/members`, {
+      params: { ...params, membership_type: "direct" },
+    });
+  },
+
+  getTransitiveMembers(id, params = {}) {
+    return api.get(`/groups/${id}/members`, {
+      params: { ...params, membership_type: "transitive" },
+    });
   },
 
   /** Add a single member to a group. */
@@ -143,15 +157,25 @@ export default {
    * List datasets owned by the group.
    * Returns {metadata:{total, limit, offset}, data: Array<Dataset>}
    */
-  getDatasets(id) {
-    return api.get(`/groups/${id}/datasets`);
+  getDatasets(
+    id,
+    { limit = 100, offset = 0, sort_by = "name", sort_order = "asc" } = {},
+  ) {
+    return api.get(`/groups/${id}/datasets`, {
+      params: { limit, offset, sort_by, sort_order },
+    });
   },
 
   /**
    * List collections owned by the group.
    * Returns {metadata:{total, limit, offset}, data: Array<Collection>}
    */
-  getCollections(id) {
-    return api.get(`/groups/${id}/collections`);
+  getCollections(
+    id,
+    { limit = 100, offset = 0, sort_by = "name", sort_order = "asc" } = {},
+  ) {
+    return api.get(`/groups/${id}/collections`, {
+      params: { limit, offset, sort_by, sort_order },
+    });
   },
 };

@@ -16,7 +16,7 @@
           <!-- Name + type -->
           <div class="flex-1 min-w-0">
             <h3
-              class="text-sm font-semibold leading-tight truncate text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
+              class="font-semibold leading-tight truncate text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors"
               :title="group.name"
             >
               {{ group.name }}
@@ -30,19 +30,13 @@
           </div>
 
           <!-- Role badge -->
-          <span
-            :class="roleColor"
-            class="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wide"
-          >
-            <Icon :icon="roleIcon" class="text-sm" />
-            {{ props.group.user_role }}
-          </span>
+          <GroupMemberRoleBadge :role-name="props.group.user_role" />
         </div>
 
         <!-- Description -->
         <div class="flex-1 min-h-0">
           <p
-            class="text-xs leading-relaxed line-clamp-2 text-slate-500 dark:text-slate-400"
+            class="text-sm leading-relaxed line-clamp-2 text-slate-500 dark:text-slate-400"
           >
             {{ group.description }}
           </p>
@@ -50,14 +44,18 @@
 
         <!-- Footer -->
         <div
-          class="flex-shrink-0 flex items-center gap-3 pt-1.5 border-t border-slate-100 dark:border-slate-800"
+          class="flex-shrink-0 flex items-center gap-3 pt-1.5 border-solid border-t border-slate-100 dark:border-slate-800"
         >
           <!-- Member count -->
           <span
-            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500"
+            class="inline-flex items-center gap-1 text-sm text-slate-400 dark:text-slate-500"
           >
-            <i-mdi-account-multiple class="text-xs" />
-            {{ maybePluralize(group.size, "member") }}
+            <i-mdi-account-multiple class="text-sm" />
+            {{
+              maybePluralize(group.size, "member", {
+                formatter: number_formatter.format,
+              })
+            }}
           </span>
 
           <!-- Contributions status -->
@@ -89,29 +87,7 @@ const props = defineProps({
   group: { type: Object, required: true },
 });
 
-const roleColor = computed(() => {
-  switch (props.group.user_role) {
-    case "ADMIN":
-      return "text-amber-500 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-400/10";
-    case "MEMBER":
-      return "text-sky-500 bg-sky-500/10 dark:text-sky-400 dark:bg-sky-400/10";
-    default:
-      return "text-slate-500 bg-slate-500/10 dark:text-slate-400 dark:bg-slate-400/10";
-  }
-});
-
-const roleIcon = computed(() => {
-  switch (props.group.user_role) {
-    case "ADMIN":
-      return "mdi-shield-crown-outline";
-    case "MEMBER":
-      return "mdi-account-check-outline";
-    case "OVERSIGHT":
-      return "mdi-eye-outline";
-    default:
-      return "mdi-account-outline";
-  }
-});
+const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 
 const typeColor = computed(() => {
   switch (props.group.metadata?.type) {

@@ -17,8 +17,14 @@ function enumToSql(enumValue) {
   return Prisma.raw(`'${enumValue}'`);
 }
 
+function createLikePattern(value) {
+  const escapedValue = value.replace(/%/g, '\\%').replace(/_/g, '\\_');
+  return Prisma.sql`${`%${escapedValue}%`}`;
+}
+
 module.exports = {
   safeSqlJoin,
   enumToSql,
   buildWhereClause,
+  createLikePattern,
 };
