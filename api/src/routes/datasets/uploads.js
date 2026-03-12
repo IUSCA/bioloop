@@ -14,7 +14,7 @@ const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const CONSTANTS = require('@/constants');
-const logger = require('@/logger');
+const logger = require('@/services/logger');
 const prisma = require('@/db');
 
 const isPermittedTo = accessControl('datasets');
