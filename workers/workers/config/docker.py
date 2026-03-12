@@ -18,7 +18,6 @@ config = {
             'qc': '/opt/sca/data/qc/raw_data'
         },
         'DATA_PRODUCT': {
-            'upload': '/opt/sca/data/uploads',
             'archive': f'/opt/sca/data/archive/{YEAR}/data_products',
             'stage': '/opt/sca/data/staged/data_products',
             'bundle': {

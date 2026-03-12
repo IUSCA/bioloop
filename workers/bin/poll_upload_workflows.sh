@@ -7,5 +7,5 @@ INTERVAL=${UPLOAD_POLL_INTERVAL_SECONDS:-30}
 while true; do
   sleep "$INTERVAL"
   echo "[$(date)] Running manage_upload_workflows..."
-  python -u -m workers.scripts.manage_upload_workflows --dry-run=False --max-retries=3 2>&1 || true
+  python -u -m workers.scripts.manage_upload_workflows --max-retries=3 2>&1 || true
 done

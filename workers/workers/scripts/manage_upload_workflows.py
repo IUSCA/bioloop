@@ -11,14 +11,14 @@ This script manages TUS upload workflows by:
 Designed to run every 1 minute via PM2 cron.
 
 Usage:
-    # Dry run (default)
+    # Actually retry workflows (default)
     python -m workers.scripts.manage_upload_workflows
     
-    # Actually retry workflows
-    python -m workers.scripts.manage_upload_workflows --dry-run=False
+    # Dry run mode
+    python -m workers.scripts.manage_upload_workflows --dry-run=True
     
     # Custom retry threshold
-    python -m workers.scripts.manage_upload_workflows --dry-run=False --max-retries=3
+    python -m workers.scripts.manage_upload_workflows --max-retries=3
 """
 
 import logging
@@ -44,7 +44,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def manage_upload_workflows(dry_run=True, max_retries=MAX_RETRY_COUNT):
+def manage_upload_workflows(dry_run=False, max_retries=MAX_RETRY_COUNT):
     """
     Manage upload workflows by retrying stalled and failed uploads.
     
@@ -101,7 +101,7 @@ def manage_upload_workflows(dry_run=True, max_retries=MAX_RETRY_COUNT):
     return summary
 
 
-def process_stalled_uploads(dry_run=True):
+def process_stalled_uploads(dry_run=False):
     """
     Process uploads that need verification or workflow triggering.
     
@@ -509,7 +509,7 @@ def handle_verified_status(dataset_id, dataset_name, dataset, dry_run):
         return 'errors'
 
 
-def process_failed_uploads(dry_run=True, max_retries=MAX_RETRY_COUNT):
+def process_failed_uploads(dry_run=False, max_retries=MAX_RETRY_COUNT):
     """
     Process uploads that are PROCESSING_FAILED and eligible for retry.
     

@@ -50,7 +50,6 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/opt/sca/data',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -126,22 +125,6 @@ config = {
                 {
                     'name': 'setup_download',
                     'task': 'setup_dataset_download'
-                }
-            ]
-        },
-        'process_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Process Dataset Upload',
-                    'task': 'process_dataset_upload'
-                }
-            ]
-        },
-        'cancel_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Cancel Dataset Upload',
-                    'task': 'cancel_dataset_upload'
                 }
             ]
         }
