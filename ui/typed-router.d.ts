@@ -47,14 +47,8 @@ declare module 'vue-router/auto-routes' {
     '/rawdata/': RouteRecordInfo<'/rawdata/', '/rawdata', Record<never, never>, Record<never, never>>,
     '/stats': RouteRecordInfo<'/stats', '/stats', Record<never, never>, Record<never, never>>,
     '/users': RouteRecordInfo<'/users', '/users', Record<never, never>, Record<never, never>>,
-    '/v2/access/': RouteRecordInfo<'/v2/access/', '/v2/access', Record<never, never>, Record<never, never>>,
-    '/v2/admin/': RouteRecordInfo<'/v2/admin/', '/v2/admin', Record<never, never>, Record<never, never>>,
-    '/v2/collections/': RouteRecordInfo<'/v2/collections/', '/v2/collections', Record<never, never>, Record<never, never>>,
-    '/v2/collections/[id]/': RouteRecordInfo<'/v2/collections/[id]/', '/v2/collections/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
-    '/v2/datasets/[id]/': RouteRecordInfo<'/v2/datasets/[id]/', '/v2/datasets/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/v2/groups/': RouteRecordInfo<'/v2/groups/', '/v2/groups', Record<never, never>, Record<never, never>>,
     '/v2/groups/[id]/': RouteRecordInfo<'/v2/groups/[id]/', '/v2/groups/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
-    '/v2/home': RouteRecordInfo<'/v2/home', '/v2/home', Record<never, never>, Record<never, never>>,
     '/workflows/': RouteRecordInfo<'/workflows/', '/workflows', Record<never, never>, Record<never, never>>,
   }
 }
