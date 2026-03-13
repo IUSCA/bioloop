@@ -78,10 +78,10 @@ function createTusMiddleware(tusServer) {
     const isTusPath = req.path.startsWith('/uploads/files') || req.path.startsWith('/api/uploads/files');
 
     if (!isTusPath) {
-      logger.warn(`[TUS] Not a TUS path: ${req.path}`, {
-        path: req.path,
-        isTusPath,
-      });
+      // logger.warn(`[TUS] Not a TUS path: ${req.path}`, {
+      //   path: req.path,
+      //   isTusPath,
+      // });
       return next();
     }
 

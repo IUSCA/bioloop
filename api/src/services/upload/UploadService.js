@@ -121,7 +121,7 @@ class UploadService {
        * Throwing { status_code, body } aborts the request; TUS surfaces this to
        * the client and nothing is written to disk.
        */
-      onUploadCreate: async (req, upload) => {
+      onUploadCreate: async (req, res, upload) => {
         const datasetId = parseInt(upload.metadata?.dataset_id, 10);
 
         if (!datasetId || Number.isNaN(datasetId)) {
@@ -177,6 +177,8 @@ class UploadService {
           user: req.user?.username,
           privileged: isPrivileged,
         });
+
+        return res;
       },
 
       /**
@@ -237,6 +239,8 @@ class UploadService {
           process_id,
           origin_path: uploadLog.dataset.origin_path,
         });
+
+        return res;
       },
 
       onResponseError: (req, res, err) => {

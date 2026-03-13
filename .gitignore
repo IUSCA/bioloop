@@ -79,3 +79,5 @@ signet/signet
 # # AI-agent dirs
 # .cursorrules
 # .ai/
+
+upload_rewrite_testing/

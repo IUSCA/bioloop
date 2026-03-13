@@ -120,3 +120,14 @@ def delete_source(celery_task, dataset_id, **kwargs):
 def delete_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.mark_archived_and_delete import mark_archived_and_delete as task_body
     return task_body(celery_task, dataset_id, **kwargs)
+
+
+# NOT a WorkflowTask — upload verification runs outside the workflow engine
+# so that it can be dispatched directly via .delay() without a workflow wrapper.
+@app.task(bind=True, name='verify_upload_integrity',
+          autoretry_for=(Exception,),
+          max_retries=3,
+          default_retry_delay=5)
+def verify_upload_integrity(celery_task, dataset_id, **kwargs):
+    from workers.tasks.verify_upload import verify_upload_integrity as task_body
+    return task_body(celery_task, dataset_id)

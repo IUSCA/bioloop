@@ -169,9 +169,7 @@
       </template>
 
       <template #cell(uploaded_dataset_type)="{ value }">
-        <va-chip size="small" outline v-if="value">
-          {{ value }}
-        </va-chip>
+        <DatasetType v-if="value" :type="value" :show-icon="true" />
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
@@ -211,19 +209,19 @@
 </template>
 
 <script setup>
+import DatasetType from "@/components/dataset/DatasetType.vue";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
+import config from "@/config";
+import constants from "@/constants";
+import datasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
-import datasetService from "@/services/dataset";
-import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
-import config from "@/config";
-import { HalfCircleSpinner } from "epic-spinners";
-import { useColors } from "vuestic-ui";
-import _ from "lodash";
-import constants from "@/constants";
 import { Icon } from '@iconify/vue';
+import { HalfCircleSpinner } from "epic-spinners";
+import _ from "lodash";
+import { useColors } from "vuestic-ui";
 
 const { colors } = useColors();
 const nav = useNavStore();
@@ -343,6 +341,44 @@ const columns = computed(() => {
   return baseColumns;
 });
 
+/**
+ * Computes a single display status from an array of workflows by inspecting
+ * the most-recent "integrated" workflow.
+ *
+ * Returns:
+ *   'ACTIVE'   — workflow is running (PENDING or STARTED)
+ *   'SUCCESS'  — workflow completed successfully
+ *   'FAILURE'  — workflow ended in any other terminal state
+ *   null       — no integrated workflow exists yet
+ */
+const get_integrated_workflow_status = (workflows) => {
+  const ACTIVE_STATES = ['PENDING', 'STARTED'];
+
+  const integratedWorkflows = (workflows || []).filter(
+    (wf) => wf.name === 'integrated',
+  );
+
+  if (integratedWorkflows.length === 0) {
+    return null;
+  }
+
+  const latestWorkflow = integratedWorkflows[integratedWorkflows.length - 1];
+
+  if (!latestWorkflow.status) {
+    return null;
+  }
+
+  if (ACTIVE_STATES.includes(latestWorkflow.status)) {
+    return 'ACTIVE';
+  }
+
+  if (latestWorkflow.status === 'SUCCESS') {
+    return 'SUCCESS';
+  }
+
+  return 'FAILURE';
+}
+
 const getUploadLogs = async () => {
   loading.value = true;
   return datasetService
@@ -350,7 +386,7 @@ const getUploadLogs = async () => {
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
         let uploaded_dataset = e.dataset;
-        const status = wfService.get_integrated_workflow_status(uploaded_dataset.workflows);
+        const status = get_integrated_workflow_status(uploaded_dataset.workflows);
         // Get user from create audit log (filtered by action='create', only one exists)
         const createAuditLog = uploaded_dataset.audit_logs?.[0];
         return {
@@ -414,7 +450,7 @@ function fetch_and_update_dataset(id) {
       );
       if (uploadIndex !== -1) {
         pastUploads.value[uploadIndex].uploaded_dataset = res.data;
-        pastUploads.value[uploadIndex].integrated_status = wfService.get_integrated_workflow_status(
+        pastUploads.value[uploadIndex].integrated_status = get_integrated_workflow_status(
           res.data.workflows
         );
       }
