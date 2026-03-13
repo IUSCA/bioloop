@@ -5,7 +5,6 @@ YEAR = datetime.datetime.now().year
 TEN_MEGABYTES = 10 * 1024 * 1024
 
 config = {
-    'mode': 'docker',
     'paths': {
         'scratch': '/opt/sca/data/scratch',
         'RAW_DATA': {
