@@ -22,7 +22,7 @@ const exports = {
             feature_key: "uploads",
             icon: "mdi:folder-upload",
             title: "Upload",
-            path: "/datasetUpload",
+            path: "/datasets/uploads",
           },
         ],
       },

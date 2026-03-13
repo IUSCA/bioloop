@@ -5,11 +5,12 @@
 -- This migration covers all schema and data changes introduced by the rewritten Upload-feature.
 --
 --   Part 1 — Move create_method from dataset_audit to dataset
---   Part 2 — Rebuild the upload_status enum
+--   Part 2 — Drop file_upload_log and rebuild the upload_status enum
 --   Part 3 — Restructure dataset_upload_log (audit_log_id → dataset_id, new columns)
+--   Part 4 — workflow.metadata column; worker_process.workflow_id nullable
 --
--- Both parts run inside a single transaction so the migration is atomic: if
--- either part fails the entire migration rolls back with no partial state left
+-- All parts run inside a single transaction so the migration is atomic: if
+-- any part fails the entire migration rolls back with no partial state left
 -- in the database.
 --
 -- NOTES: - The migration associated with the original implementation of the Upload-feature is 
@@ -86,23 +87,32 @@ ALTER TABLE "dataset_audit"
 
 
 -- /////////////////////////////////////////////////////////////////////////////
--- PART 2: Rebuild the upload_status enum
+-- PART 2: Drop file_upload_log and rebuild the upload_status enum
 -- /////////////////////////////////////////////////////////////////////////////
 --
 -- Background
 -- ----------
--- The upload rewrite introduces four new upload statuses and retires one:
+-- file_upload_log tracked individual chunk uploads in the old multi-part upload
+-- architecture.  The TUS-based rewrite removes chunked uploads entirely, so the
+-- table and its FK into dataset_upload_log are no longer needed.
+--
+-- file_upload_log must be dropped BEFORE the enum rebuild below, because it
+-- holds a column of type upload_status.  Dropping the table first removes that
+-- dependency, which means the enum rebuild only needs to handle dataset_upload_log
+-- (no need to widen/restore file_upload_log.status at all).
+--
+-- The upload_status enum itself gains four new values and loses one:
 --
 --   Added:
---     VERIFYING          — integrity-verification Celery task is running
---     VERIFIED           — integrity verified; ready to start Integrated workflow
+--     VERIFYING           — integrity-verification Celery task is running
+--     VERIFIED            — integrity verified; ready to start Integrated workflow
 --     VERIFICATION_FAILED — integrity-verification failed; dataset not registered
---     PERMANENTLY_FAILED — failed after max retries; no further automatic action
+--     PERMANENTLY_FAILED  — failed after max retries; no further automatic action
 --
 --   Removed:
---     FAILED             — defined in migration 20241114142916 but never used by
---                          any code path in this branch; every failure scenario
---                          uses one of the four more-specific values above.
+--     FAILED              — defined in migration 20241114142916 but never used by
+--                           any code path in this branch; every failure scenario
+--                           uses one of the four more-specific values above.
 --
 -- Technique
 -- ---------
@@ -110,23 +120,28 @@ ALTER TABLE "dataset_audit"
 -- to remove an enum value is to recreate the type from scratch.  The pattern
 -- used here (TEXT → DROP → CREATE → enum) is safe because:
 --   - No row in dataset_upload_log has status = 'FAILED' (nothing ever sets it).
---   - The USING clause in Step 4 raises "invalid input value for enum" at
+--   - The USING clause in Step 3 raises "invalid input value for enum" at
 --     runtime if any such row does exist, acting as an automatic safety check
 --     and rolling the whole migration back cleanly.
 -- /////////////////////////////////////////////////////////////////////////////
 
--- Step 1: Temporarily widen all columns that use this type to plain text so we
--- can drop the type.  Both dataset_upload_log and file_upload_log reference it.
+-- Step 1: Drop file_upload_log and its FK into dataset_upload_log.
+-- This removes the only remaining dependency on upload_status besides
+-- dataset_upload_log, allowing the enum rebuild below to proceed cleanly.
+ALTER TABLE "file_upload_log"
+    DROP CONSTRAINT "file_upload_log_dataset_upload_log_id_fkey";
+
+DROP TABLE "file_upload_log";
+
+-- Step 2: Temporarily widen dataset_upload_log.status to plain text so we
+-- can drop and recreate the enum type.
 ALTER TABLE "dataset_upload_log"
     ALTER COLUMN "status" TYPE TEXT;
 
-ALTER TABLE "file_upload_log"
-    ALTER COLUMN "status" TYPE TEXT;
-
--- Step 2: Drop the old enum.
+-- Step 3: Drop the old enum.
 DROP TYPE "upload_status";
 
--- Step 3: Recreate with the correct set of values.
+-- Step 4: Recreate with the correct set of values.
 CREATE TYPE "upload_status" AS ENUM (
     'UPLOADING',            -- TUS upload session is in progress
     'UPLOAD_FAILED',        -- TUS upload did not complete
@@ -140,16 +155,11 @@ CREATE TYPE "upload_status" AS ENUM (
     'PERMANENTLY_FAILED'    -- Failed after max retry attempts; no further retries
 );
 
--- Step 4: Restore the column types.
+-- Step 5: Restore dataset_upload_log.status to the new enum.
 -- The USING clause casts the stored text back to the enum.  If any row
 -- contains 'FAILED' this will raise "invalid input value for enum" and the
 -- migration will be rolled back, preventing silent data loss.
 ALTER TABLE "dataset_upload_log"
-    ALTER COLUMN "status" TYPE "upload_status"
-    USING "status"::"upload_status";
-
--- file_upload_log.status uses the same enum; restore it too.
-ALTER TABLE "file_upload_log"
     ALTER COLUMN "status" TYPE "upload_status"
     USING "status"::"upload_status";
 
@@ -228,3 +238,43 @@ ALTER TABLE "dataset_upload_log"
 -- throughout the API would return whichever row Postgres happens to scan first.
 CREATE UNIQUE INDEX "dataset_upload_log_dataset_id_key"
     ON "dataset_upload_log"("dataset_id");
+
+
+-- /////////////////////////////////////////////////////////////////////////////
+-- PART 4: workflow.metadata column; worker_process.workflow_id nullable
+-- /////////////////////////////////////////////////////////////////////////////
+--
+-- Background
+-- ----------
+-- Two schema changes required to support the new upload verification pipeline:
+--
+--   workflow.metadata (JSONB)
+--     A generic metadata bag on the workflow record.  Used by the upload feature
+--     to store workflow-level context (e.g. which dataset triggered the workflow,
+--     upload-specific state).
+--
+--   worker_process.workflow_id nullable
+--     The verify_upload_integrity task is a standalone Celery task — not a
+--     WorkflowTask — so when it creates a worker_process record for log capture
+--     there is no associated workflow_id.  Making the column nullable allows
+--     non-workflow worker processes to be recorded without a dummy workflow row.
+--     The FK is recreated with ON DELETE SET NULL so that deleting a workflow
+--     does not orphan its worker_process rows.
+-- /////////////////////////////////////////////////////////////////////////////
+
+-- Step 1: Add metadata column to workflow.
+ALTER TABLE "workflow"
+    ADD COLUMN "metadata" JSONB;
+
+-- Step 2: Drop the existing NOT NULL FK on worker_process.workflow_id.
+-- The old constraint did not have an explicit name, so we recreate it by
+-- first dropping the column's NOT NULL constraint, then replacing the FK.
+ALTER TABLE "worker_process"
+    ALTER COLUMN "workflow_id" DROP NOT NULL;
+
+-- Step 3: Recreate the FK with ON DELETE SET NULL so that deleting a workflow
+-- nullifies worker_process.workflow_id rather than raising a constraint error.
+ALTER TABLE "worker_process"
+    ADD CONSTRAINT "worker_process_workflow_id_fkey"
+    FOREIGN KEY ("workflow_id") REFERENCES "workflow"("id")
+    ON DELETE SET NULL ON UPDATE CASCADE;

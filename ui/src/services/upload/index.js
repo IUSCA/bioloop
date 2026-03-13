@@ -1,3 +1,5 @@
+import config from '@/config';
+
 /**
  * Returns the TUS upload server URL for the given origin.
  *
@@ -5,5 +7,5 @@
  * (`/api/uploads/files`).
  */
 export function _getUploadServiceURL(origin) {
-  return `${origin}/api/uploads/files`;
+  return `${origin}${config.apiBasePath}/uploads/files`;
 }

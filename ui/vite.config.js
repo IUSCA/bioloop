@@ -13,6 +13,17 @@ import IconsResolver from "unplugin-icons/resolver";
 import Icons from "unplugin-icons/vite";
 import { VueRouterAutoImports } from "unplugin-vue-router";
 
+const certFiles = (() => {
+  try {
+    return {
+      key: fs.readFileSync("./.cert/key.pem"),
+      cert: fs.readFileSync("./.cert/cert.pem"),
+    };
+  } catch {
+    return null;
+  }
+})();
+
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
 export default defineConfig(({ command, mode }) => {
@@ -84,13 +95,13 @@ export default defineConfig(({ command, mode }) => {
     },
     server: {
       host: true,
-      port: 443,
+      port: certFiles ? 443 : 5173,
 
       // https://vitejs.dev/config/#server-https
-      https: {
-        key: fs.readFileSync("./.cert/key.pem"),
-        cert: fs.readFileSync("./.cert/cert.pem"),
-      },
+      // certFiles is null when running without SSL (e.g. prod HMR mode behind nginx)
+      ...(certFiles
+        ? { https: certFiles }
+        : { hmr: { clientPort: 443 } }),
       // just `true` yields errors with Firefox as of 2022.12
       // https: true,
 
