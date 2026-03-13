@@ -3,8 +3,6 @@ const exports = {
   // vite server redirects traffic on URLs starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
-  uploadApiBasePath:
-    import.meta.env.VITE_UPLOAD_API_BASE_PATH || "https://localhost",
   casReturn: import.meta.env.VITE_CAS_RETURN || "https://localhost/auth/iucas",
   googleReturn:
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
@@ -14,7 +12,6 @@ const exports = {
     import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 20,
   },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",

@@ -9,13 +9,16 @@ writing the formal doc.
 ## Architecture / Key Design Decisions
 
 - TUS protocol for resumable uploads (server: `@tus/server`, store: `@tus/file-store`).
-- Post-upload processing is deliberately **not** triggered from TUS completion
-  hooks — the UI calls `POST /datasets/uploads/:id/complete` explicitly instead,
-  to avoid response-stream conflicts with async operations inside a hook.
+- File moving happens in the **`onUploadFinish` TUS hook** — each file is moved
+  from TUS staging to `origin_path` as soon as TUS finishes receiving it.  All
+  routing metadata (`selection_mode`, `relative_path`, `directory_name`) is
+  embedded in the TUS upload metadata by the UI, so no extra round-trip is
+  needed.
 - Two-step upload registration flow:
-  1. `POST /datasets/uploads/` — creates the dataset + upload log, returns `process_id`.
-  2. `POST /datasets/uploads/:id/complete` — moves files from TUS staging to
-     `origin_path`, marks log as `UPLOADED`.
+  1. `POST /datasets/uploads/` — creates the dataset + upload log.
+  2. `POST /datasets/uploads/:id/complete` — records final status (`UPLOADED`)
+     and any UI-supplied metadata (e.g. BLAKE3 checksum).  File moving already
+     happened in `onUploadFinish`; this call is metadata-only.
 - `origin_path` is set deterministically at dataset creation time
   (`/uploads/{type}/{id}/{name}`) so it does not depend on the upload completing.
 
@@ -86,10 +89,11 @@ writing the formal doc.
       original design phase still exist (e.g. draft docs, commented-out prototype
       code, `TODO`/`FIXME` notes that were only meant for the design stage).
 - [ ] Install dependencies across `ui`, `api`, and `workers` to verify nothing is missing.
-- [ ] Test multi-file upload in "files" selection mode (not directory): verify ALL files
-      end up at origin_path, not just the last one. Currently handleUploadComplete only
-      sends the last process_id to POST /:id/complete — the /complete endpoint (and
-      possibly the API design) may need to accept all process_ids for multi-file uploads.
+- [ ] Test multi-file upload in both "files" and "directory" selection modes — verify
+      ALL files end up at `origin_path` (now handled by `onUploadFinish` hook).
+- [ ] Investigate whether OAuth token-scope validation should be added at the TUS
+      upload boundary (the old `secure_download` check was removed; current protection
+      is standard Bearer token + dataset ownership in `onUploadCreate`).
 - [ ] Review any remaining unaddressed Copilot PR comments before merge.
 
 ---

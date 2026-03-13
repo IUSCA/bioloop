@@ -389,7 +389,6 @@ import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { _getUploadServiceURL } from "@/services/upload";
-import { formatDuration } from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { Icon } from "@iconify/vue";
@@ -578,7 +577,7 @@ const willCreateNewProject = computed(() => {
 const uploadProgress = ref(0);
 const filesUploaded = ref(0);
 const totalFiles = ref(0);
-const uploadProcessIds = ref([]); // Track process_ids for all uploaded files
+const lastUploadProcessId = ref(null); // A TUS process_id from this batch — sent to /complete as audit reference only
 const uploadRegistrationFailed = ref(false); // Track if final API call failed
 const isComputingChecksum = ref(false); // Track checksum computation state
 const checksumProgress = ref(0); // Track checksum computation progress (0-100)
@@ -921,69 +920,21 @@ const onSubmit = async () => {
 
         // COMPUTE CHECKSUMS FIRST (before upload starts)
         // Skip if already computed (e.g., on retry after upload failure)
-        console.log('=== CHECKSUM VERIFICATION CHECK (BEFORE UPLOAD) ===');
-        console.log('Feature enabled?', _isChecksumVerificationEnabled());
-        console.log('Files to hash:', filesToUpload.value.length);
-        console.log('Already computed?', computedChecksum.value ? 'YES' : 'NO');
-
-        let checksumStartTime = null;
-        let checksumEndTime = null;
-
         if (isChecksumVerificationEnabled() && !computedChecksum.value) {
           try {
-            console.log('✓ STARTING checksum computation BEFORE upload...');
-            console.log('  Setting isComputingChecksum = true');
             isComputingChecksum.value = true;
             checksumProgress.value = 0;
 
-            checksumStartTime = performance.now();
-
             const files = filesToUpload.value.map(f => f.file);
-            console.log('  Files mapped:', files.map(f => `${f.name} (${f.size} bytes)`));
-
-            console.log('  Calling _computeManifestHash...');
             computedChecksum.value = await computeManifestHash(files, (progress) => {
-              console.log(`  Checksum progress: ${progress}%`);
               checksumProgress.value = progress;
             });
-
-            checksumEndTime = performance.now();
-
-            if (computedChecksum.value) {
-              console.log('✓ CHECKSUM COMPUTED (BEFORE UPLOAD):', {
-                manifest_hash: computedChecksum.value.manifest_hash,
-                file_count: computedChecksum.value.file_count,
-                total_size: computedChecksum.value.total_size,
-                mode: computedChecksum.value.mode
-              });
-            } else {
-              console.warn('⚠ Manifest hash computation returned null (checksum disabled or error)');
-            }
           } catch (error) {
-            console.error('✗ FAILED to compute manifest hash:', error);
-            console.error('  Error stack:', error.stack);
             // Don't fail upload - allow it to proceed without checksum
           } finally {
-            console.log('  Setting isComputingChecksum = false');
             isComputingChecksum.value = false;
             checksumProgress.value = 0;
-
-            if (checksumStartTime && checksumEndTime) {
-              const duration = checksumEndTime - checksumStartTime;
-              console.log(`⏱️  CHECKSUM COMPUTATION TIME: ${formatDuration(duration)}`);
-            }
-
-            console.log('=== CHECKSUM COMPUTATION COMPLETE (BEFORE UPLOAD) ===');
           }
-        } else if (computedChecksum.value) {
-          console.log('✓ Using previously computed checksum (skipping re-computation on retry)');
-          console.log('  Cached checksum:', {
-            manifest_hash: computedChecksum.value.manifest_hash,
-            file_count: computedChecksum.value.file_count,
-            total_size: computedChecksum.value.total_size
-          });
-        } else {
-          console.log('✗ Checksum verification disabled - skipping computation');
         }
 
         // NOW START UPLOAD
@@ -997,19 +948,10 @@ const onSubmit = async () => {
         filesUploaded.value = 0;
         uploadProgress.value = 0;
 
-        console.log('=== STARTING FILE UPLOAD ===');
-        const uploadStartTime = performance.now();
-
         const uploadServiceURL = _getUploadServiceURL(window.location.origin);
         const uploaded = await uploadFilesWithTus(filesToUploadList, uploadServiceURL);
 
-        const uploadEndTime = performance.now();
-
         if (uploaded) {
-          const uploadDuration = uploadEndTime - uploadStartTime;
-          console.log(`⏱️  FILE UPLOAD TIME: ${formatDuration(uploadDuration)}`);
-          console.log('=== FILE UPLOAD COMPLETE ===');
-
           handleUploadComplete();
           resolve();
         } else {
@@ -1100,30 +1042,10 @@ const preUpload = async () => {
       ...uploadFormData.value,
     };
 
-  console.log('[PRE-UPLOAD] Starting pre-upload registration', {
-    is_update: isUpdate,
-    existing_log_id: datasetUploadLog.value?.id,
-    log_data: logData,
-  });
-
   try {
     const res = await createOrUpdateUploadLog(logData);
     datasetUploadLog.value = res.data;
-
-    console.log('[PRE-UPLOAD] SUCCESS: Upload log created/updated', {
-      upload_log_id: datasetUploadLog.value.id,
-      dataset_id: datasetUploadLog.value.dataset?.id,
-      dataset_name: datasetUploadLog.value.dataset?.name,
-      status: datasetUploadLog.value.status,
-    });
   } catch (err) {
-    console.error('[PRE-UPLOAD] FAILED: Error creating/updating upload log', {
-      error_message: err.message,
-      error_response: err.response?.data,
-      error_status: err.response?.status,
-      error_stack: err.stack,
-      log_data: logData,
-    });
     throw new Error("Error logging dataset upload");
   }
 };
@@ -1135,12 +1057,6 @@ const preUpload = async () => {
 const createOrUpdateUploadLog = (data) => {
   if (!uploadCancelled.value) {
     const isCreate = !datasetUploadLog.value;
-    console.log(`[CREATE-OR-UPDATE-LOG] ${isCreate ? 'Creating' : 'Updating'} upload log`, {
-      is_create: isCreate,
-      dataset_id: datasetUploadLog.value?.dataset?.id,
-      data,
-    });
-
     return isCreate
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
@@ -1148,7 +1064,6 @@ const createOrUpdateUploadLog = (data) => {
         data,
       );
   } else {
-    console.log('[CREATE-OR-UPDATE-LOG] Upload cancelled, rejecting');
     return Promise.reject();
   }
 };
@@ -1165,11 +1080,8 @@ const uploadFilesWithTus = async (files, endpoint) => {
   // Get token directly from localStorage (more reliable than Pinia store in this context)
   const userToken = localStorage.getItem('token');
   if (!userToken) {
-    console.error('No authentication token available');
     throw new Error('Authentication token not found');
   }
-
-  console.log('Starting upload with token:', userToken ? `Token exists (length: ${userToken.length})` : 'No token');
 
   let uploadedCount = 0;
   let totalBytes = 0;
@@ -1193,13 +1105,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
 
   const uploadPromises = files.map((file, index) => {
     return new Promise((resolve, reject) => {
-      console.log(`[TUS-CLIENT] Starting upload for file ${index + 1}/${files.length}:`, {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        dataset_id: datasetUploadLog.value.dataset.id,
-        simulate_failure: simulateFailure || 'none',
-      });
 
       // TEST ONLY: Check for failure count configuration
       // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
@@ -1256,14 +1161,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
           const totalUploadedSoFar = uploadedBytes + bytesUploaded;
           uploadProgress.value = Math.round((totalUploadedSoFar / totalBytes) * 100);
 
-          // Log progress every 10% for large files
-          const fileProgress = (bytesUploaded / bytesTotal) * 100;
-          if (fileProgress % 10 < 1) {
-            console.log(`[TUS-CLIENT] Upload progress for ${file.name}: ${fileProgress.toFixed(1)}%`, {
-              bytes_uploaded: bytesUploaded,
-              bytes_total: bytesTotal,
-            });
-          }
         },
         onSuccess: async () => {
           uploadedCount++;
@@ -1271,35 +1168,20 @@ const uploadFilesWithTus = async (files, endpoint) => {
           filesUploaded.value = uploadedCount;
           uploadProgress.value = Math.round((uploadedBytes / totalBytes) * 100);
 
-          // Store the process_id for this file - will be sent to API after all uploads complete
-          const processId = upload.url.split('/').pop();
-          if (!uploadProcessIds.value) {
-            uploadProcessIds.value = [];
-          }
-          uploadProcessIds.value.push({
-            process_id: processId,
-            relative_path: file.webkitRelativePath || file.name,
-          });
+          // Record any one process_id for the /complete call (audit reference only;
+          // file moving is handled server-side in the onUploadFinish TUS hook).
+          lastUploadProcessId.value = upload.url.split('/').pop();
 
-          console.log(`[TUS-CLIENT] Upload SUCCESS for ${file.name}`, {
-            process_id: processId,
-            file_size: file.size,
-            upload_url: upload.url,
-          });
           resolve();
         },
       });
 
-      // Start the upload
-      console.log(`[TUS-CLIENT] Initiating upload.start() for ${file.name}`);
       upload.start();
     });
   });
 
   try {
-    console.log(`[TUS-CLIENT] Waiting for all ${uploadPromises.length} upload(s) to complete...`);
     await Promise.all(uploadPromises);
-    console.log(`[TUS-CLIENT] All uploads completed successfully`);
     return true;
   } catch (error) {
     console.error('[TUS-CLIENT] One or more uploads failed:', {
@@ -1313,55 +1195,17 @@ const uploadFilesWithTus = async (files, endpoint) => {
 };
 
 const handleUploadComplete = async () => {
-  // Call API to register all process_ids - this is the critical call
-  // Only show success if this succeeds
+  // Files are already at origin_path — the TUS onUploadFinish hook moved each
+  // file as it completed.  This call just records the final status + metadata.
   try {
     const datasetId = datasetUploadLog.value.dataset.id;
 
-    console.log('[UPLOAD-COMPLETE] Starting upload completion API call', {
-      dataset_id: datasetId,
-      process_ids_count: uploadProcessIds.value?.length || 0,
-    });
-
-    // Build metadata with checksum (use pre-computed checksum from before upload)
-    let metadata = {};
-
-    console.log('=== USING PRE-COMPUTED CHECKSUM (from before upload) ===');
-    if (computedChecksum.value) {
-      console.log('✓ Checksum available:', {
-        manifest_hash: computedChecksum.value.manifest_hash,
-        file_count: computedChecksum.value.file_count,
-        total_size: computedChecksum.value.total_size,
-        mode: computedChecksum.value.mode
-      });
-      metadata.checksum = computedChecksum.value;
-    } else {
-      console.log('⚠ No pre-computed checksum available (checksum disabled or computation failed)');
-    }
-
-    // Call /complete with the last process_id (for single file) or first (for multi)
-    // The worker will handle moving all files based on upload metadata
-    const lastUpload = uploadProcessIds.value[uploadProcessIds.value.length - 1];
-
     const completePayload = {
-      process_id: lastUpload.process_id,
-      selection_mode: selectingDirectory.value ? 'directory' : 'files',
-      directory_name: selectingDirectory.value && selectedDirectory.value ? selectedDirectory.value.name : '',
-      relative_path: lastUpload.relative_path,
-      metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      process_id: lastUploadProcessId.value,
+      metadata: computedChecksum.value ? { checksum: computedChecksum.value } : undefined,
     };
 
-    console.log('[UPLOAD-COMPLETE] Calling /complete endpoint', {
-      dataset_id: datasetId,
-      payload: completePayload,
-    });
-
-    const response = await datasetService.completeDatasetUpload(datasetId, completePayload);
-
-    console.log('[UPLOAD-COMPLETE] API call SUCCESS', {
-      dataset_id: datasetId,
-      response,
-    });
+    await datasetService.completeDatasetUpload(datasetId, completePayload);
 
     // Success - show green status
     uploadRegistrationFailed.value = false;

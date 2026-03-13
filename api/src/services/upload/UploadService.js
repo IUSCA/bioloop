@@ -36,21 +36,27 @@
  * This mirrors the spirit of origin/main's scoped upload token — authorization
  * is enforced before any data lands on disk.
  *
- * Post-upload processing
- * ----------------------
- * TUS completion hooks are NOT used for post-upload processing.  Instead, the UI
- * calls POST /datasets/uploads/:id/complete explicitly after all chunks are
- * received.  This avoids response-stream conflicts that arise when async work is
- * triggered inside a TUS hook.
+ * Post-upload processing (onUploadFinish)
+ * ----------------------------------------
+ * Each file is moved from TUS staging to its final location under
+ * dataset.origin_path as soon as TUS finishes receiving it (onUploadFinish
+ * hook).  All routing metadata (selection_mode, relative_path, directory_name)
+ * is already present in the TUS upload metadata sent by the UI, so no extra
+ * round-trip is needed.
+ *
+ * After all files are moved the UI calls POST /datasets/uploads/:id/complete,
+ * which is now a lightweight status + metadata update only (no file I/O).
  */
 
 const { Server } = require('@tus/server');
 const { FileStore } = require('@tus/file-store');
+const path = require('path');
 const config = require('config');
 const logger = require('@/services/logger');
 const prisma = require('@/db');
 const CONSTANTS = require('@/constants');
 const datasetService = require('@/services/dataset');
+const { readTusFileInfo, moveTusFileToDestination } = require('./tusUtils');
 
 // TestableFileStore is only loaded in non-production environments.
 // In production a plain FileStore is used — no simulation code is loaded or
@@ -170,6 +176,66 @@ class UploadService {
           dataset_id: datasetId,
           user: req.user?.username,
           privileged: isPrivileged,
+        });
+      },
+
+      /**
+       * Fires once TUS has received all bytes for a single file upload.
+       *
+       * Moves the staged TUS file to its final location under the dataset's
+       * origin_path.  The UI sends all routing metadata (selection_mode,
+       * relative_path, directory_name) as TUS upload metadata on the initial
+       * POST /uploads/files request, so everything needed is available here.
+       *
+       * Throwing tusError() here aborts the TUS response with an HTTP error,
+       * which the tus-js-client surfaces as an upload failure and may retry.
+       */
+      onUploadFinish: async (req, res, upload) => {
+        const datasetId = parseInt(upload.metadata?.dataset_id, 10);
+        const selection_mode = upload.metadata?.selection_mode;
+        const relative_path = upload.metadata?.relative_path;
+        const directory_name = upload.metadata?.directory_name;
+        const process_id = upload.id;
+
+        logger.info('[TUS] onUploadFinish: moving file to origin_path', {
+          dataset_id: datasetId,
+          process_id,
+          selection_mode,
+          relative_path,
+          directory_name,
+        });
+
+        const uploadLog = await prisma.dataset_upload_log.findUnique({
+          where: { dataset_id: datasetId },
+          include: { dataset: true },
+        });
+
+        if (!uploadLog || !uploadLog.dataset) {
+          logger.error('[TUS] onUploadFinish: no upload log or dataset found', { dataset_id: datasetId });
+          throw tusError(404, 'No upload log found for this dataset');
+        }
+
+        const uploadPath = config.get('upload.path');
+        const tusFilePath = path.join(uploadPath, process_id);
+        const tusInfoPath = `${tusFilePath}.json`;
+
+        const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
+
+        moveTusFileToDestination({
+          tusFilePath,
+          dataset: uploadLog.dataset,
+          selection_mode,
+          directory_name,
+          relative_path,
+          originalFilename,
+          datasetId,
+          process_id,
+        });
+
+        logger.info('[TUS] onUploadFinish: file moved', {
+          dataset_id: datasetId,
+          process_id,
+          origin_path: uploadLog.dataset.origin_path,
         });
       },
 

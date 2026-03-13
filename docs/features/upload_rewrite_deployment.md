@@ -79,9 +79,8 @@ python -m workers.scripts.setup_dirs
 python -m workers.scripts.setup_dirs --create
 ```
 
-`paths.upload` (`/N/scratch/scadev/bioloop/dev/uploads`) is now included in
-the checked/created set.  This single directory serves as the base for all
-upload types (`raw_data` and `data_product` are subdirectories within it).
+`paths.RAW_DATA.upload` and `paths.DATA_PRODUCT.upload` are now included in
+the checked/created set.
 
 ---
 

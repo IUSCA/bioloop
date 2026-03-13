@@ -64,123 +64,6 @@ async function findUploadLogForDataset(datasetId) {
   });
 }
 
-// Reads the TUS sidecar (.json) file to extract the original filename and raw
-// TUS metadata.  Falls back to sensible defaults when the sidecar is absent.
-// Returns { originalFilename, tusMetadata }.
-function readTusFileInfo({
-  tusInfoPath, datasetId, process_id,
-}) {
-  let tusMetadata = {};
-  let originalFilename = 'uploaded_file';
-
-  if (fs.existsSync(tusInfoPath)) {
-    const infoContent = fs.readFileSync(tusInfoPath, 'utf8');
-    tusMetadata = JSON.parse(infoContent);
-    originalFilename = tusMetadata.metadata?.filename
-      || tusMetadata.metadata?.name
-      || originalFilename;
-    logger.info('[UPLOAD-COMPLETE] TUS metadata read', {
-      dataset_id: datasetId,
-      process_id,
-      filename: originalFilename,
-      metadata: tusMetadata.metadata,
-    });
-  } else {
-    logger.warn('[UPLOAD-COMPLETE] TUS info file not found (using defaults)', {
-      dataset_id: datasetId,
-      process_id,
-      expected_path: tusInfoPath,
-    });
-  }
-
-  return { originalFilename, tusMetadata };
-}
-
-// Moves the raw TUS upload file to its final location under the dataset's
-// origin_path.  Handles two upload modes:
-//
-//   - 'directory' mode: preserves relative directory structure under
-//     origin_path/<directory_name>/<relative_path>
-//   - single-file mode (default): places the file at
-//     origin_path/<originalFilename>
-//
-// Operation is idempotent — if the file already exists at the destination the
-// move is skipped.  Parent directories are created as needed.
-// Returns the resolved final destination path.
-function moveTusFileToDestination({
-  tusFilePath,
-  dataset,
-  selection_mode,
-  directory_name,
-  relative_path,
-  originalFilename,
-  datasetId,
-  process_id,
-}) {
-  const baseOriginPath = dataset.origin_path;
-  let finalPath;
-
-  if (selection_mode === 'directory' && relative_path) {
-    const datasetUploadDir = path.join(baseOriginPath, directory_name || 'upload');
-    finalPath = path.join(datasetUploadDir, relative_path);
-
-    logger.info('[UPLOAD-COMPLETE] Directory upload mode', {
-      dataset_id: datasetId,
-      process_id,
-      directory_name,
-      relative_path,
-      source: tusFilePath,
-      destination: finalPath,
-    });
-
-    const parentDir = path.dirname(finalPath);
-    if (!fs.existsSync(parentDir)) {
-      logger.info('[UPLOAD-COMPLETE] Creating parent directory', {
-        dataset_id: datasetId,
-        parent_dir: parentDir,
-      });
-      fs.mkdirSync(parentDir, { recursive: true });
-    }
-  } else {
-    finalPath = path.join(baseOriginPath, originalFilename);
-
-    logger.info('[UPLOAD-COMPLETE] Single file upload mode', {
-      dataset_id: datasetId,
-      process_id,
-      filename: originalFilename,
-      source: tusFilePath,
-      destination: finalPath,
-    });
-
-    if (!fs.existsSync(baseOriginPath)) {
-      logger.info('[UPLOAD-COMPLETE] Creating dataset directory', {
-        dataset_id: datasetId,
-        directory: baseOriginPath,
-      });
-      fs.mkdirSync(baseOriginPath, { recursive: true });
-    }
-  }
-
-  if (!fs.existsSync(finalPath)) {
-    logger.info('[UPLOAD-COMPLETE] Moving file', {
-      dataset_id: datasetId,
-      source: tusFilePath,
-      destination: finalPath,
-    });
-    fs.renameSync(tusFilePath, finalPath);
-    logger.info('[UPLOAD-COMPLETE] File moved successfully', {
-      dataset_id: datasetId,
-      destination: finalPath,
-    });
-  } else {
-    logger.info('[UPLOAD-COMPLETE] File already exists at destination (idempotent)', {
-      dataset_id: datasetId,
-      destination: finalPath,
-    });
-  }
-
-  return finalPath;
-}
 
 // Sets the dataset upload log status to UPLOAD_FAILED and records the failure
 // reason in the log's metadata.  PROCESSING_FAILED is intentionally not used
@@ -783,31 +666,44 @@ router.post(
 // Response:
 //   - success:     true
 //   - upload_log:  the updated upload log record (with dataset relation)
+// Marks all files for a dataset upload as fully received.
+//
+// File I/O is handled by the TUS onUploadFinish hook as each file completes —
+// by the time this endpoint is called every file is already at origin_path.
+// This endpoint's only job is to transition the upload log to UPLOADED and
+// record any metadata the UI supplies (e.g. the BLAKE3 manifest hash).
+//
+// Path params:
+//   - id           the dataset ID
+//
+// Required body fields:
+//   - process_id   the TUS upload ID of the last (or only) file, stored on the
+//                  log for audit/reference purposes
+//
+// Optional body fields:
+//   - metadata     arbitrary key/value pairs to merge into the upload log
+//                  (e.g. { checksum: { manifest_hash: '...' } })
+//
+// Response:
+//   - success:     true
+//   - upload_log:  the updated upload log record (with dataset relation)
 router.post(
   '/:id/complete',
   isPermittedTo('update', { checkOwnership: true }, getDatasetCreatorUsername),
   validate([
     body('process_id').isString().notEmpty(),
-    body('selection_mode').optional().isString(),
-    body('directory_name').optional().isString(),
-    body('relative_path').optional().isString(),
     body('metadata').optional().isObject(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Mark TUS upload as complete and prepare for processing'
+    // #swagger.summary = 'Mark TUS upload as complete and record metadata'
 
     const datasetId = parseInt(req.params.id, 10);
-    const {
-      process_id, selection_mode, directory_name, relative_path, metadata,
-    } = req.body;
+    const { process_id, metadata } = req.body;
 
     logger.info('[UPLOAD-COMPLETE] Starting upload completion', {
       dataset_id: datasetId,
       process_id,
-      selection_mode,
-      directory_name,
-      relative_path,
       has_metadata: !!metadata,
       user: req.user?.username,
     });
@@ -818,73 +714,18 @@ router.post(
       if (!uploadLog) {
         logger.error('[UPLOAD-COMPLETE] FAILED: No upload log found', {
           dataset_id: datasetId,
-          process_id,
           user: req.user?.username,
         });
         return res.status(404).json({ error: 'Upload log not found' });
       }
 
-      logger.info('[UPLOAD-COMPLETE] Upload log found', {
-        upload_log_id: uploadLog.id,
-        dataset_id: datasetId,
-        current_status: uploadLog.status,
-        dataset_name: uploadLog.dataset.name,
-      });
-
       if (uploadLog.status === CONSTANTS.UPLOAD_STATUSES.UPLOADED) {
         logger.info('[UPLOAD-COMPLETE] Idempotent request - already completed', {
           dataset_id: datasetId,
           upload_log_id: uploadLog.id,
-          process_id,
         });
         return res.json({ success: true, upload_log: uploadLog });
       }
-
-      const uploadPath = config.get('upload.path');
-      const tusFilePath = path.join(uploadPath, process_id);
-      const tusInfoPath = `${tusFilePath}.json`;
-
-      if (!fs.existsSync(tusFilePath)) {
-        logger.error('[UPLOAD-COMPLETE] FAILED: TUS file not found', {
-          dataset_id: datasetId,
-          process_id,
-          expected_path: tusFilePath,
-        });
-        return res.status(404).json({ error: 'Upload file not found' });
-      }
-
-      logger.info('[UPLOAD-COMPLETE] TUS file found', {
-        dataset_id: datasetId,
-        process_id,
-        tus_file_path: tusFilePath,
-      });
-
-      const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
-
-      const stats = fs.statSync(tusFilePath);
-      logger.info('[UPLOAD-COMPLETE] File size determined', {
-        dataset_id: datasetId,
-        process_id,
-        file_size_bytes: stats.size,
-        file_size_mb: (stats.size / (1024 * 1024)).toFixed(2),
-      });
-
-      const finalPath = moveTusFileToDestination({
-        tusFilePath,
-        dataset: uploadLog.dataset,
-        selection_mode,
-        directory_name,
-        relative_path,
-        originalFilename,
-        datasetId,
-        process_id,
-      });
-
-      logger.info('[UPLOAD-COMPLETE] File is ready', {
-        dataset_id: datasetId,
-        final_path: finalPath,
-        origin_path: uploadLog.dataset.origin_path,
-      });
 
       const updateData = {
         status: CONSTANTS.UPLOAD_STATUSES.UPLOADED,
@@ -895,23 +736,11 @@ router.post(
       // Merge caller-supplied metadata (e.g. manifest hash from the UI) into
       // any existing metadata fields already stored on the log.
       if (metadata) {
-        logger.info('[UPLOAD-COMPLETE] Merging metadata', {
-          dataset_id: datasetId,
-          existing_metadata: uploadLog.metadata,
-          new_metadata: metadata,
-        });
         updateData.metadata = {
           ...(uploadLog.metadata || {}),
           ...metadata,
         };
       }
-
-      logger.info('[UPLOAD-COMPLETE] Updating upload log', {
-        dataset_id: datasetId,
-        upload_log_id: uploadLog.id,
-        new_status: CONSTANTS.UPLOAD_STATUSES.UPLOADED,
-        process_id,
-      });
 
       const updatedLog = await prisma.dataset_upload_log.update({
         where: { id: uploadLog.id },
