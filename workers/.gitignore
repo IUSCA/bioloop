@@ -104,3 +104,6 @@ workers/config/production.py
 
 *.state
 *.pid
+
+# ignore any fixtures/ directory under tests/ at any depth
+tests/**/fixtures/

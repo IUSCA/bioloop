@@ -94,8 +94,15 @@ fi
 
 
 if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
-  echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)"
-  echo "APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)" >> workers/.env
+  echo "Generating APP_API_TOKEN"
+  APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)
+  if [ $? -ne 0 ] || [ -z "$APP_API_TOKEN" ]; then
+    echo "ERROR: Failed to generate APP_API_TOKEN. Error from issue_token.js:"
+    node src/scripts/issue_token.js svc_tasks
+    exit 1
+  fi
+  echo "Writing APP_API_TOKEN to workers/.env"
+  echo "APP_API_TOKEN=$APP_API_TOKEN" >> workers/.env
 fi
 
 # Dynamically load environment variables from .env file

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -166,6 +167,57 @@ def get_dataset(dataset_id: str,
 
         r.raise_for_status()
         return dataset_getter(r.json())
+
+
+def get_workflows_for_dataset(
+    dataset_id: int,
+    last_task_runs: bool = False,
+    prev_task_runs: bool = False,
+) -> dict[str, Any]:
+    """
+    Fetch all workflows linked to a dataset via GET /workflows?dataset_id=<id>.
+
+    Returns { metadata: { total: N, ... }, results: [...] }.
+
+    When total == 0 the API returns immediately from Postgres without calling
+    the Rhythm API.  When total > 0 the results are Rhythm-enriched; if Rhythm
+    is unreachable the API returns a 5xx and raise_for_status() will raise,
+    failing the caller loudly rather than silently returning an empty list.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            'workflows',
+            params={
+                'dataset_id': dataset_id,
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+def get_workflow(
+    workflow_id: str,
+    last_task_runs: bool = True,
+    prev_task_runs: bool = True,
+) -> dict[str, Any]:
+    """
+    Fetch a single workflow by ID via GET /workflows/<workflow_id>.
+
+    Returns the full Rhythm-enriched workflow document including per-step
+    status and task-run history.  Raises HTTPError if Rhythm is unreachable.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            f'workflows/{workflow_id}',
+            params={
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
 
 
 class DatasetAlreadyExistsError(Exception):
