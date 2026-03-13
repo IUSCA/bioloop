@@ -3,20 +3,15 @@ services:
   ui:
     restart: unless-stopped
     image: node:19
-    environment:
-      - CHOKIDAR_USEPOLLING=true
-      - CHOKIDAR_INTERVAL=1000
     volumes:
       - ./ui/:/opt/sca/app
       - ui_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
-    ports:
-      - 127.0.0.1:5173:5173
     entrypoint:
       - sh
       - -c
       - |
-        npm install && exec npm run dev
+        npm install && exec npm run builddev
   
 
   api:
