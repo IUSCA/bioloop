@@ -10,7 +10,9 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const { resolveEntityName, resolveGrant } = require('@/authorization/builtin/audit/helpers');
 const { EVERYONE_GROUP_ID } = require('@/constants');
+const { TARGET_TYPE } = require('@/authorization/builtin/audit');
 
 const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
 
@@ -83,11 +85,24 @@ async function _createGrant(tx, data, granted_by) {
   }
 
   // create audit record for grant creation
+  const actorName = await resolveEntityName(tx, 'user', granted_by);
+  const fullGrant = await resolveGrant(tx, grant.id);
+
   await tx.authorization_audit.create({
     data: {
       event_type: AUTH_EVENT_TYPE.GRANT_CREATED,
       actor_id: granted_by,
-      target_type: 'grant',
+      actor_name: actorName,
+      subject_id: fullGrant.subject_id,
+      subject_name: fullGrant.subject.name,
+      subject_type: fullGrant.subject.type,
+      metadata: {
+        resource_id: fullGrant.resource_id,
+        resource_type: fullGrant.resource.type,
+        resource_name: fullGrant.resource.name,
+        access_type_name: fullGrant.access_type.name,
+      },
+      target_type: TARGET_TYPE.GRANT,
       target_id: grant.id,
     },
   });
@@ -137,12 +152,25 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
     });
 
     // create audit record for grant revocation
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    const fullGrant = await resolveGrant(tx, revokedGrant.id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.GRANT_REVOKED,
         actor_id,
-        target_type: 'grant',
-        target_id: revokedGrant.id,
+        actor_name: actorName,
+        subject_id: fullGrant.subject_id,
+        subject_name: fullGrant.subject.name,
+        subject_type: fullGrant.subject.type,
+        metadata: {
+          resource_id: fullGrant.resource_id,
+          resource_type: fullGrant.resource.type,
+          resource_name: fullGrant.resource.name,
+          access_type_name: fullGrant.access_type.name,
+        },
+        target_type: TARGET_TYPE.GRANT,
+        target_id: fullGrant.id,
       },
     });
 

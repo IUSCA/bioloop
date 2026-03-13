@@ -38,28 +38,6 @@ async function ensureNotRemovingLastAdmin(group_id, user_id) {
   }
 }
 
-// List user's direct groups
-router.get(
-  '/mine',
-  validate([
-    query('is_archived').optional().isBoolean().toBoolean(),
-    // query('include_ancestors').optional().isBoolean().toBoolean(),
-  ]),
-  authorize('group', 'list', { shouldDeriveCallerRole: true }),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'List all groups the user has access to'
-
-    const { metadata, data } = await groupService.getMyGroups({
-      user_id: req.user.subject_id,
-      is_archived: req.query.is_archived,
-      // include_ancestors: req.query.include_ancestors,
-    });
-    const filteredGroups = data.map((g) => req.permission.filter(g));
-    res.json({ metadata, data: filteredGroups, _meta: { caller_role: req.permission.callerRole } });
-  }),
-);
-
 // Search groups by name or description
 router.post(
   '/search',

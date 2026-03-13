@@ -47,7 +47,12 @@
         </VaButton>
       </div>
 
-      <ErrorState v-if="error" :error="error" @retry="fetchMembers" />
+      <ErrorState
+        v-if="error"
+        title="Failed to load group members"
+        :message="error?.message"
+        @retry="fetchMembers"
+      />
       <div v-else>
         <VaDataTable
           v-if="members.length > 0"

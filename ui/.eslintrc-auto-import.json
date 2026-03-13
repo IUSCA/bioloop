@@ -304,6 +304,10 @@
     "onElementRemoval": true,
     "useCountdown": true,
     "usePreferredReducedTransparency": true,
-    "useSSRWidth": true
+    "useSSRWidth": true,
+    "useAudit": true,
+    "useAuditCategories": true,
+    "useAuditRecord": true,
+    "useAuditTimestamp": true
   }
 }

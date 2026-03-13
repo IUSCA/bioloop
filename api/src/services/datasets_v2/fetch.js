@@ -155,6 +155,7 @@ function createPrismaWhere({
       states: { some: { state: 'STAGED', timestamp: { gte: xDaysAgo } } },
     };
   }
+  return filters;
 }
 
 function createSqlWhere({

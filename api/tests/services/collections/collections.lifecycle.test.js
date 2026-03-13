@@ -16,6 +16,8 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const collectionsService = require('@/services/collections');
+const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit');
+
 const {
   createTestUser,
   createTestGroup,
@@ -114,8 +116,8 @@ describe('collections - lifecycle', () => {
       const c = await newCollection('_create_audit');
       const audit = await prisma.authorization_audit.findFirst({
         where: {
-          event_type: 'COLLECTION_CREATED',
-          target_type: 'collection',
+          event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
+          target_type: TARGET_TYPE.COLLECTION,
           target_id: String(c.id),
         },
       });
@@ -261,9 +263,12 @@ describe('collections - lifecycle', () => {
       await collectionsService.addDatasets(c1.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
       await collectionsService.addDatasets(c2.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
-      const result = await collectionsService.findCollectionsByDataset({
-        dataset_id: dsC.resource_id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
-      });
+      const result = await collectionsService.findCollectionsByDataset(
+        dsC.resource_id,
+        {
+          limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        },
+      );
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(c1.id);
       expect(ids).toContain(c2.id);
@@ -273,9 +278,12 @@ describe('collections - lifecycle', () => {
       const c3 = await newCollection('_fbd_3');
       await collectionsService.addDatasets(c3.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
-      const result = await collectionsService.findCollectionsByDataset({
-        dataset_id: dsC.resource_id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
-      });
+      const result = await collectionsService.findCollectionsByDataset(
+        dsC.resource_id,
+        {
+          limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        },
+      );
       expect(result.metadata.total).toBeGreaterThanOrEqual(3);
     });
   });
@@ -284,16 +292,22 @@ describe('collections - lifecycle', () => {
     it('returns only collections owned by the specified group', async () => {
       const c = await newCollection('_by_group');
 
-      const result = await collectionsService.findCollectionsByOwnerGroup({
-        group_id: ownerGroup.id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
-      });
+      const result = await collectionsService.findCollectionsByOwnerGroup(
+        ownerGroup.id,
+        {
+          limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        },
+      );
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(c.id);
 
       // Collections from foreignGroup must NOT appear
-      const foreignResult = await collectionsService.findCollectionsByOwnerGroup({
-        group_id: foreignGroup.id, limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
-      });
+      const foreignResult = await collectionsService.findCollectionsByOwnerGroup(
+        foreignGroup.id,
+        {
+          limit: 100, offset: 0, sort_by: 'created_at', sort_order: 'desc',
+        },
+      );
       const foreignIds = foreignResult.data.map((r) => r.id);
       expect(foreignIds).not.toContain(c.id);
     });

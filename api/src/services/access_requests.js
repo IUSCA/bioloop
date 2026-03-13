@@ -5,14 +5,17 @@
 
 const {
   Prisma, GROUP_MEMBER_ROLE, ACCESS_REQUEST_STATUS, ACCESS_REQUEST_ITEM_DECISION, GRANT_CREATION_TYPE,
+  SUBJECT_TYPE,
 } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
 const { enumToSql } = require('@/utils/sql');
+const { TARGET_TYPE } = require('@/authorization/builtin/audit');
 
 const config = {
   states: ['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'PARTIALLY_APPROVED', 'REJECTED', 'WITHDRAWN', 'EXPIRED'],
@@ -126,15 +129,24 @@ async function createAccessRequest(data, requester_id) {
     }
 
     // Create audit record for request creation
+    const requesterName = await resolveEntityName(tx, 'user', requester_id);
+    // const resourceName = await resolveEntityName(tx, data.resource_type?.toLowerCase() || 'dataset', data.resource_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
         actor_id: requester_id,
-        target_type: 'access_request',
+        actor_name: requesterName,
+        subject_id: requester_id,
+        subject_name: requesterName,
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: accessRequest.id,
         metadata: {
-          status: ACCESS_REQUEST_STATUS.DRAFT,
           resource_id: data.resource_id,
+          // resource_type: data.resource_type,
+          // resource_name: resourceName,
+          status: ACCESS_REQUEST_STATUS.DRAFT,
         },
       },
     });
@@ -208,11 +220,14 @@ async function updateAccessRequest(request_id, requester_id, data) {
     }
 
     // Create audit record
+    const requesterName = await resolveEntityName(tx, 'user', requester_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.REQUEST_UPDATED,
         actor_id: requester_id,
-        target_type: 'access_request',
+        actor_name: requesterName,
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: request_id,
       },
     });
@@ -334,11 +349,14 @@ async function submitRequest(request_id, requester_id) {
     }
 
     // Create audit record
+    const requesterName = await resolveEntityName(tx, 'user', requester_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.REQUEST_SUBMITTED,
         actor_id: requester_id,
-        target_type: 'access_request',
+        actor_name: requesterName,
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: request_id,
         metadata: {
           from_status: ACCESS_REQUEST_STATUS.DRAFT,
@@ -482,11 +500,18 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
     }
 
     // Create audit record for review
+    const reviewerName = await resolveEntityName(tx, 'user', reviewer_id);
+    const requesterName = await resolveEntityName(tx, 'user', latestRequest.requester_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: eventType,
         actor_id: reviewer_id,
-        target_type: 'access_request',
+        actor_name: reviewerName,
+        subject_id: latestRequest.requester_id,
+        subject_name: requesterName,
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: request_id,
         metadata: {
           from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
@@ -532,11 +557,17 @@ async function withdrawRequest({ request_id, requester_id }) {
     }
 
     // Create audit record
+    const requesterName = await resolveEntityName(tx, 'user', requester_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.REQUEST_WITHDRAWN,
         actor_id: requester_id,
-        target_type: 'access_request',
+        actor_name: requesterName,
+        subject_id: requester_id,
+        subject_name: requesterName,
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: request_id,
         metadata: {
           from_status: currentRequest.status,
@@ -585,7 +616,8 @@ async function expireStaleRequests({ max_age_days }) {
       data: requestIds.map((request_id) => ({
         event_type: AUTH_EVENT_TYPE.REQUEST_EXPIRED,
         actor_id: null, // System action
-        target_type: 'access_request',
+        actor_name: 'system',
+        target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: request_id,
         metadata: {
           from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,

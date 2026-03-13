@@ -49,6 +49,7 @@ model dataset {
   // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
   resource      resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
+  // @@index([resource_id])
 
   @@unique([name, type, is_deleted])
 }
@@ -215,6 +216,8 @@ model user {
   // Reverse cascade (user deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
   subject                   subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+
+  // @@index([subject_id])
 }
 
 model user_password {
@@ -470,9 +473,9 @@ model subject {
   id   String       @id @default(uuid())
   type SUBJECT_TYPE
 
-  user   user?
-  group  group?
-  grants grant[]
+  user       user?
+  group      group?
+  grants     grant[]
 }
 
 // created everyone group and added rules to protect modification in migration script
@@ -779,28 +782,40 @@ model authorization_audit {
   // Event type
   event_type String
 
-  // Actor
-  actor_id String?
-  actor    user?   @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
+  // Actor — who performed the action
+  actor_id   String?
+  actor_name String? // Snapshot of actor name at write-time
+  actor      user?   @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
 
-  // Target
-  target_type String // 'user', 'group', 'dataset', 'collection', 'grant'
-  target_id   String
+  // Subject — who/what was acted upon (distinct from actor)
+  subject_id   String? 
+  subject_name String? // Snapshot of subject name at write-time
+  subject_type String? // 'USER', 'GROUP', or used for access checks
+
+  // Resource - useful for grants and access requests
+  // resource_id   String?
+  // resource_type String? // 'DATASET', 'COLLECTION', etc.
+  // resource_name String? // Snapshot of resource name at write-time
+
+
+  // Target — what resource is being accessed/modified (collection, dataset, grant, etc.)
+  target_id   String?
+  target_name String? // Snapshot of resource name at write-time
+  target_type String? // 'DATASET', 'COLLECTION', 'GRANT', or used for access checks
 
   // Details
   action   String? // 'create', 'revoke', 'approve', 'reparent', etc.
-  metadata Json?
+  metadata Json? // Event-specific details only (no names)
 
   // Authorization decision context (for access checks)
-  resource_type String?
-  resource_id   String?
-  decision      Boolean?
-  reason        String?
+  decision Boolean?
+  reason   String?
 
   @@id([id, timestamp]) // include timestamp in primary key to allow partitioning by time
   @@index([event_type, timestamp])
   @@index([actor_id])
-  @@index([target_type, target_id])
+  @@index([subject_id])
+  @@index([target_id])
 }
 
 // ============================================================================

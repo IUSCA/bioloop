@@ -76,8 +76,9 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "tests/**/*.js",
-      "!src/_test.js"
+      "src/**/*.js",
+      "!src/_test.js",
+      "tests/**/*.js"
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"

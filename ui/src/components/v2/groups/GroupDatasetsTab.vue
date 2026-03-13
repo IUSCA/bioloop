@@ -42,7 +42,12 @@
         </VaButton>
       </div>
 
-      <ErrorState v-if="error" :error="error" @retry="fetchDatasets" />
+      <ErrorState
+        v-if="error"
+        title="Failed to load datasets"
+        :message="error?.message"
+        @retry="fetchDatasets"
+      />
       <div v-else>
         <VaDataTable
           v-if="datasets.length > 0"

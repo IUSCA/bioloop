@@ -20,6 +20,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
 const grantsService = require('@/services/grants');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const {
   createTestUser,
   createTestGroup,
@@ -145,8 +146,8 @@ describe('access requests - lifecycle', () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
       const audit = await prisma.authorization_audit.findFirst({
         where: {
-          event_type: 'REQUEST_CREATED',
-          target_type: 'access_request',
+          event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
+          target_type: TARGET_TYPE.ACCESS_REQUEST,
           target_id: ar.id,
         },
       });
@@ -221,8 +222,8 @@ describe('access requests - lifecycle', () => {
       const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const audit = await prisma.authorization_audit.findFirst({
         where: {
-          event_type: 'REQUEST_SUBMITTED',
-          target_type: 'access_request',
+          event_type: AUTH_EVENT_TYPE.REQUEST_SUBMITTED,
+          target_type: TARGET_TYPE.ACCESS_REQUEST,
           target_id: submitted.id,
         },
       });

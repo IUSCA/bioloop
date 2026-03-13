@@ -5,7 +5,8 @@ const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const { AUTH_EVENT_TYPE, TARGET_TYPE, SUBJECT_TYPE } = require('@/authorization/builtin/audit');
+const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const grantService = require('@/services/grants');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 
@@ -63,11 +64,15 @@ async function createCollection(data, { actor_id }) {
       include: PRISMA_COLLECTION_INCLUDES,
     });
 
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.COLLECTION_CREATED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        target_name: _collection.name,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: _collection.id,
       },
     });
@@ -159,11 +164,16 @@ async function archiveCollection(collection_id, actor_id) {
     });
 
     // create audit record for collection archival
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    const collectionName = await resolveEntityName(tx, 'collection', collection_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.COLLECTION_ARCHIVED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        target_name: collectionName,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: collection_id,
       },
     });
@@ -190,11 +200,16 @@ async function unarchiveCollection(collection_id, actor_id) {
     });
 
     // create audit record for collection unarchival
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    const collectionName = await resolveEntityName(tx, 'collection', collection_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.COLLECTION_UNARCHIVED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        target_name: collectionName,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: collection_id,
       },
     });
@@ -217,11 +232,15 @@ async function deleteCollection(collection_id, actor_id) {
     });
 
     // create audit record for collection deletion
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.COLLECTION_DELETED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        target_name: deletedCollection.name,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: collection_id,
       },
     });
@@ -290,11 +309,24 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
      `;
 
     // create audit records for each added dataset
+    const datasetNames = new Map();
+    for (const record of createdRecords) {
+      const datasetName = await resolveEntityName(tx, 'dataset', record.dataset_id);
+      datasetNames.set(record.dataset_id, datasetName);
+    }
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    const collectionName = await resolveEntityName(tx, 'collection', collection_id);
+
     await tx.authorization_audit.createMany({
       data: createdRecords.map(({ dataset_id }) => ({
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_ADDED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        subject_id: dataset_id,
+        subject_name: datasetNames.get(dataset_id),
+        subject_type: SUBJECT_TYPE.DATASET,
+        target_name: collectionName,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: collection_id,
         metadata: {
           dataset_id,
@@ -340,11 +372,24 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
      `;
 
     // create audit records for each removed dataset
+    const datasetNames = new Map();
+    for (const record of removedRecords) {
+      const datasetName = await resolveEntityName(tx, 'dataset', record.dataset_id);
+      datasetNames.set(record.dataset_id, datasetName);
+    }
+    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    const collectionName = await resolveEntityName(tx, 'collection', collection_id);
+
     await tx.authorization_audit.createMany({
       data: removedRecords.map(({ dataset_id }) => ({
         event_type: AUTH_EVENT_TYPE.COLLECTION_DATASET_REMOVED,
         actor_id,
-        target_type: 'collection',
+        actor_name: actorName,
+        subject_id: dataset_id,
+        subject_name: datasetNames.get(dataset_id),
+        subject_type: SUBJECT_TYPE.DATASET,
+        target_name: collectionName,
+        target_type: TARGET_TYPE.COLLECTION,
         target_id: collection_id,
         metadata: {
           dataset_id,

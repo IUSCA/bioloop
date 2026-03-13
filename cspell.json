@@ -153,6 +153,7 @@
     "/ui/typed-router.d.ts",
     "/ui/public",
     "/ui/auto-imports.d.ts",
+    "ui/.eslintrc-auto-import.json",
     "/ui/components.d.ts",
     "ui/src/assets/",
     "api/users.json",

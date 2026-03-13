@@ -8,6 +8,7 @@
 
 const path = require('path');
 const { GROUP_MEMBER_ROLE } = require('@prisma/client');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
@@ -86,7 +87,7 @@ describe('groups - lifecycle', () => {
     it('creates a GROUP_CREATED audit row', async () => {
       const g = await newGroup('_audit');
       const auditRow = await prisma.authorization_audit.findFirst({
-        where: { event_type: 'GROUP_CREATED', target_type: 'group', target_id: g.id },
+        where: { event_type: AUTH_EVENT_TYPE.GROUP_CREATED, target_type: TARGET_TYPE.GROUP, target_id: g.id },
       });
       expect(auditRow).not.toBeNull();
       expect(auditRow.actor_id).toBe(actor.subject_id);
@@ -246,7 +247,7 @@ describe('groups - lifecycle', () => {
       const g = await newGroup('_arch_audit');
       await groupsService.archiveGroup(g.id, actor.subject_id);
       const audit = await prisma.authorization_audit.findFirst({
-        where: { event_type: 'GROUP_ARCHIVED', target_type: 'group', target_id: g.id },
+        where: { event_type: AUTH_EVENT_TYPE.GROUP_ARCHIVED, target_type: TARGET_TYPE.GROUP, target_id: g.id },
       });
       expect(audit).not.toBeNull();
     });
@@ -281,6 +282,8 @@ describe('groups - lifecycle', () => {
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const result = await groupsService.listGroupMembers(g.id, { limit: 10, offset: 0 });
+      // listGroupMembers now returns objects that include `user_id` as a
+      // convenience field alongside the `user` object.
       const userIds = result.data.map((m) => m.user_id);
       expect(userIds).toContain(memberUser.subject_id);
     });
@@ -346,6 +349,130 @@ describe('groups - lifecycle', () => {
       await expect(
         groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 409 });
+    });
+  });
+
+  describe('searchGroupsForUser filters', () => {
+    /**
+     * Create a small hierarchy for testing filter behavior:
+     *   - directGroup: user is a plain member
+     *   - adminGroup: user is promoted to admin
+     *   - parent: user is admin, and has a child created by another user
+     *   - child: not a member; should only appear via oversight when parent is
+     *     administered by the actor.
+     */
+    let directGroup;
+    let adminGroup;
+    let parent;
+    let child;
+
+    beforeAll(async () => {
+      directGroup = await newGroup('_filter_direct');
+      adminGroup = await newGroup('_filter_admin');
+      parent = await newGroup('_filter_parent');
+
+      // actor becomes a member of directGroup
+      await groupsService.addGroupMembers(directGroup.id, {
+        user_ids: [actor.subject_id],
+        actor_id: actor.subject_id,
+      });
+
+      // actor is made admin of adminGroup
+      await groupsService.addGroupMembers(adminGroup.id, {
+        user_ids: [actor.subject_id],
+        actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(adminGroup.id, {
+        user_id: actor.subject_id,
+        actor_id: actor.subject_id,
+      });
+
+      // actor is admin of parent
+      await groupsService.addGroupMembers(parent.id, {
+        user_ids: [actor.subject_id],
+        actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(parent.id, {
+        user_id: actor.subject_id,
+        actor_id: actor.subject_id,
+      });
+
+      // create child under parent, actor will not be a member
+      child = await groupsService.createChildGroup(
+        parent.id,
+        { name: `Filter Child ${Date.now()}`, description: 'test' },
+        memberUser.subject_id, // membership/administration belongs to memberUser
+      );
+      groupsToDelete.push(child.id);
+    });
+
+    it('all flags false returns every reachable group', async () => {
+      const result = await groupsService.searchGroupsForUser({
+        user_id: actor.subject_id,
+        sort_by: 'name',
+        sort_order: 'asc',
+        limit: 100,
+        offset: 0,
+      });
+      const ids = result.data.map((g) => g.id);
+      expect(ids).toEqual(expect.arrayContaining([
+        directGroup.id,
+        adminGroup.id,
+        parent.id,
+        child.id,
+      ]));
+    });
+
+    it('direct_membership_only returns only groups where user has a direct role', async () => {
+      const result = await groupsService.searchGroupsForUser({
+        user_id: actor.subject_id,
+        sort_by: 'name',
+        sort_order: 'asc',
+        limit: 100,
+        offset: 0,
+        direct_membership_only: true,
+      });
+      const ids = result.data.map((g) => g.id);
+      expect(ids).toEqual(expect.arrayContaining([
+        directGroup.id,
+        adminGroup.id,
+        parent.id,
+      ]));
+      expect(ids).not.toContain(child.id);
+    });
+
+    it('oversight_only returns at least the transitive child but never the bare member-only group', async () => {
+      const result = await groupsService.searchGroupsForUser({
+        user_id: actor.subject_id,
+        sort_by: 'name',
+        sort_order: 'asc',
+        limit: 100,
+        offset: 0,
+        oversight_only: true,
+      });
+      const ids = result.data.map((g) => g.id);
+
+      // the child is always included (transitive oversight); direct-only group must never appear
+      expect(ids).toContain(child.id);
+      expect(ids).not.toContain(directGroup.id);
+    });
+
+    it('admin_only returns only groups where user role is ADMIN', async () => {
+      const result = await groupsService.searchGroupsForUser({
+        user_id: actor.subject_id,
+        sort_by: 'name',
+        sort_order: 'asc',
+        limit: 100,
+        offset: 0,
+        admin_only: true,
+      });
+      const ids = result.data.map((g) => g.id);
+      expect(ids).toEqual(expect.arrayContaining([
+        adminGroup.id,
+        parent.id,
+      ]));
+      expect(ids).not.toContain(directGroup.id);
+      expect(ids).not.toContain(child.id);
     });
   });
 

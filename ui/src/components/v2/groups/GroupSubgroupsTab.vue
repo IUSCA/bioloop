@@ -43,7 +43,12 @@
       </div>
 
       <!-- Error state -->
-      <ErrorState v-if="error" :error="error" @retry="fetchSubgroups" />
+      <ErrorState
+        v-if="error"
+        title="Failed to load subgroups"
+        :message="error?.message"
+        @retry="fetchSubgroups"
+      />
 
       <!-- Empty state (filtered results) -->
       <EmptyState
@@ -92,12 +97,12 @@
         </template>
 
         <template #cell(status)="{ rowData }">
-          <VaChip
+          <ModernChip
             :color="rowData.is_archived ? 'secondary' : 'success'"
             size="small"
           >
             {{ rowData.is_archived ? "Archived" : "Active" }}
-          </VaChip>
+          </ModernChip>
         </template>
       </VaDataTable>
     </div>

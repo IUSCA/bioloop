@@ -6,7 +6,8 @@ const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 
 const { generate_slug } = require('@/utils/slug');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const { AUTH_EVENT_TYPE, TARGET_TYPE, SUBJECT_TYPE } = require('@/authorization/builtin/audit');
+const { resolveUserNames, resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const assert = require('assert');
 
@@ -176,12 +177,15 @@ async function createGroup(data, actor_id) {
     });
 
     // create audit record for group creation
+    const actorNames = await resolveUserNames(tx, [actor_id]);
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
         actor_id,
-        target_type: 'group',
+        actor_name: actorNames.get(actor_id),
+        target_type: TARGET_TYPE.GROUP,
         target_id: _group.id,
+        target_name: _group.name,
       },
     });
 
@@ -262,12 +266,20 @@ async function createChildGroup(parent_id, data, actor_id) {
     // so we don't need to create closure entries for descendant groups
 
     // create audit record for group creation
+    const actorNames = await resolveUserNames(tx, [actor_id]);
+    const parentName = await resolveEntityName(tx, 'group', parent_id);
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
         actor_id,
-        target_type: 'group',
+        actor_name: actorNames.get(actor_id),
+        target_type: TARGET_TYPE.GROUP,
         target_id: _group.id,
+        target_name: _group.name,
+        metadata: {
+          parent_id,
+          parent_name: parentName,
+        },
       },
     });
 
@@ -284,12 +296,12 @@ async function createChildGroup(parent_id, data, actor_id) {
  * @param {string} [params.data.description] - New description
  * @param {boolean} [params.data.allow_user_contributions] - Whether users can upload
  * @param {Object} [params.data.metadata] - Additional metadata
- * @param {string} params.actor_id - UUID of the user performing the update (for audit)
+ * @param {string} [params.actor_id] - UUID of the user performing the update (for audit)
  * @param {number} params.expected_version - Expected current version for optimistic concurrency control
  * @returns {Promise<Object>} Updated group object
  * @throws {createError.Conflict} If the update fails due to concurrent modification
  */
-async function updateGroupMetadata(group_id, { data, expected_version }) {
+async function updateGroupMetadata(group_id, { data, expected_version, actor_id }) {
   return prisma.$transaction(async (tx) => {
     // check if name changed and if so, generate new slug
     let slug;
@@ -340,6 +352,39 @@ async function updateGroupMetadata(group_id, { data, expected_version }) {
       throw e;
     }
 
+    // determine which fields were changed and emit audit
+    if (actor_id) {
+      const changedFields = [];
+      if (data.name && data.name !== currentGroup.name) changedFields.push('name');
+      if (data.description !== undefined && data.description !== currentGroup.description) {
+        changedFields.push('description');
+      }
+      if (
+        data.allow_user_contributions !== undefined
+        && data.allow_user_contributions !== currentGroup.allow_user_contributions
+      ) {
+        changedFields.push('allow_user_contributions');
+      }
+      if (data.metadata && !_.isEqual(data.metadata, currentGroup.metadata)) changedFields.push('metadata');
+
+      if (changedFields.length > 0) {
+        const actorNames = await resolveUserNames(tx, [actor_id]);
+        await tx.authorization_audit.create({
+          data: {
+            event_type: AUTH_EVENT_TYPE.GROUP_METADATA_UPDATED,
+            actor_id,
+            actor_name: actorNames.get(actor_id),
+            target_type: TARGET_TYPE.GROUP,
+            target_id: group_id,
+            target_name: updatedGroup.name,
+            metadata: {
+              changed_fields: changedFields,
+            },
+          },
+        });
+      }
+    }
+
     return updatedGroup;
   });
 }
@@ -362,12 +407,15 @@ async function archiveGroup(group_id, actor_id) {
     });
 
     // create audit record for group archival
+    const actorNames = await resolveUserNames(tx, [actor_id]);
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.GROUP_ARCHIVED,
         actor_id,
-        target_type: 'group',
+        actor_name: actorNames.get(actor_id),
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: updatedGroup.name,
       },
     });
     return updatedGroup;
@@ -392,12 +440,15 @@ async function unarchiveGroup(group_id, actor_id) {
     });
 
     // create audit record for group unarchival
+    const actorNames = await resolveUserNames(tx, [actor_id]);
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.GROUP_UNARCHIVED,
         actor_id,
-        target_type: 'group',
+        actor_name: actorNames.get(actor_id),
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: updatedGroup.name,
       },
     });
     return updatedGroup;
@@ -509,6 +560,7 @@ async function listGroupMembers(group_id, {
 
     // Step 5: Merge results
     const sanitizedMembers = membershipData.map((membership) => ({
+      user_id: membership.user_id,
       user: userMap.get(membership.user_id),
       assignor: userMap.get(membership.assigned_by),
       assigned_at: membership.assigned_at,
@@ -587,14 +639,22 @@ async function removeGroupMembers(group_id, {
     const deletedUserIds = deletedRecords.map((record) => record.user_id);
 
     // create audit records for removing group members
+    const allIds = [actor_id, ...deletedUserIds];
+    const userNames = await resolveUserNames(tx, allIds);
+    const groupName = await resolveEntityName(tx, 'group', group_id);
     await tx.authorization_audit.createMany({
       data: deletedUserIds.map((user_id) => ({
-        event_type: AUTH_EVENT_TYPE.MEMBERSHIP_REMOVED,
+        event_type: AUTH_EVENT_TYPE.GROUP_MEMBER_REMOVED,
         actor_id,
-        target_type: 'group',
+        actor_name: userNames.get(actor_id),
+        subject_id: user_id,
+        subject_name: userNames.get(user_id),
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: groupName,
         metadata: {
-          user_id,
+          role: GROUP_MEMBER_ROLE.MEMBER,
         },
       })),
     });
@@ -637,14 +697,21 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
     const createdUserIds = createdRecords.map((record) => record.user_id);
 
     // create audit record for adding group members
+    const allIds = [actor_id, ...createdUserIds];
+    const userNames = await resolveUserNames(tx, allIds);
+    const groupName = await resolveEntityName(tx, 'group', group_id);
     await tx.authorization_audit.createMany({
       data: createdUserIds.map((user_id) => ({
-        event_type: AUTH_EVENT_TYPE.MEMBERSHIP_ADDED,
+        event_type: AUTH_EVENT_TYPE.GROUP_MEMBER_ADDED,
         actor_id,
-        target_type: 'group',
+        actor_name: userNames.get(actor_id),
+        subject_id: user_id,
+        subject_name: userNames.get(user_id),
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: groupName,
         metadata: {
-          user_id,
           role: GROUP_MEMBER_ROLE.MEMBER,
         },
       })),
@@ -694,14 +761,21 @@ async function promoteGroupMemberToAdmin(group_id, {
     });
 
     // create audit record for promoting group member to admin
+    const userNames = await resolveUserNames(tx, [actor_id, user_id]);
+    const groupName = await resolveEntityName(tx, 'group', group_id);
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.ADMIN_ADDED,
+        event_type: AUTH_EVENT_TYPE.GROUP_ADMIN_ADDED,
         actor_id,
-        target_type: 'group',
+        actor_name: userNames.get(actor_id),
+        subject_id: user_id,
+        subject_name: userNames.get(user_id),
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: groupName,
         metadata: {
-          user_id,
+          role: GROUP_MEMBER_ROLE.ADMIN,
         },
       },
     });
@@ -751,14 +825,21 @@ async function removeGroupAdmin(group_id, {
     });
 
     // create audit record for demoting group admin to member
+    const userNames = await resolveUserNames(tx, [actor_id, user_id]);
+    const groupName = await resolveEntityName(tx, 'group', group_id);
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.ADMIN_REMOVED,
+        event_type: AUTH_EVENT_TYPE.GROUP_ADMIN_REMOVED,
         actor_id,
-        target_type: 'group',
+        actor_name: userNames.get(actor_id),
+        subject_id: user_id,
+        subject_name: userNames.get(user_id),
+        subject_type: SUBJECT_TYPE.USER,
+        target_type: TARGET_TYPE.GROUP,
         target_id: group_id,
+        target_name: groupName,
         metadata: {
-          user_id,
+          role: GROUP_MEMBER_ROLE.MEMBER,
         },
       },
     });
@@ -1022,7 +1103,7 @@ async function getGroupAncestors(group_id) {
  * @param {string} search_term - Optional search term to filter descendant groups by name, description, or slug
  * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
  */
-async function getGroupDescendants(group_id, opts) {
+async function getGroupDescendants(group_id, opts = {}) {
   const where = {
     ancestor_id: group_id,
     depth: {
@@ -1061,41 +1142,6 @@ async function getGroupDescendants(group_id, opts) {
   return descendants.map(({ depth, descendant }) => ({ depth, ...descendant }));
 }
 
-/**
- * Get groups that a user is a member of with optional filter for archived status
- * @param {string} user_id - ID of the user to get groups for
- * @param {boolean|null} archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
- */
-async function getMyGroups({ user_id, is_archived = null }) {
-  // archived=true will return only archived groups
-  // archived=false will return only active groups
-  // archived not provided will return all groups regardless of archived status
-  const where = {
-    is_archived: is_archived ?? Prisma.skip,
-    members: {
-      some: {
-        user_id,
-      },
-    },
-  };
-  const groups = await prisma.group.findMany({
-    where,
-    include: {
-      ancestor_edges: true,
-    },
-  });
-  const total = await prisma.group.count({
-    where,
-  });
-  return {
-    metadata: {
-      total,
-    },
-    data: groups,
-  };
-}
-
 module.exports = {
   createGroup,
   createChildGroup,
@@ -1115,5 +1161,4 @@ module.exports = {
   searchGroupsForUser,
   getGroupAncestors,
   getGroupDescendants,
-  getMyGroups,
 };

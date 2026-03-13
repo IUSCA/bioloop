@@ -42,7 +42,12 @@
         </VaButton>
       </div>
 
-      <ErrorState v-if="error" :error="error" @retry="fetchCollections" />
+      <ErrorState
+        v-if="error"
+        title="Failed to load collections"
+        :message="error?.message"
+        @retry="fetchCollections"
+      />
       <div v-else>
         <VaDataTable
           v-if="collections.length > 0"

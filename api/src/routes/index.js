@@ -42,6 +42,7 @@ router.use('/groups', require('./groups'));
 router.use('/collections', require('./collections'));
 router.use('/access-requests', require('./access_requests'));
 router.use('/grants', require('./grants'));
+router.use('/audit', require('./audit'));
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {
   router.use('/fs', fsRouter);

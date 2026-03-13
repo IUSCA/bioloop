@@ -15,6 +15,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const {
   createTestUser,
   createTestGroup,
@@ -116,7 +117,7 @@ describe('grants - lifecycle', () => {
 
     it('creates a GRANT_CREATED audit row', async () => {
       const auditRow = await prisma.authorization_audit.findFirst({
-        where: { event_type: 'GRANT_CREATED', target_type: 'grant', target_id: grant.id },
+        where: { event_type: AUTH_EVENT_TYPE.GRANT_CREATED, target_type: TARGET_TYPE.GRANT, target_id: grant.id },
       });
       expect(auditRow).not.toBeNull();
       expect(auditRow.actor_id).toBe(actor.subject_id);
@@ -195,7 +196,7 @@ describe('grants - lifecycle', () => {
 
     it('creates a GRANT_REVOKED audit row', async () => {
       const auditRow = await prisma.authorization_audit.findFirst({
-        where: { event_type: 'GRANT_REVOKED', target_type: 'grant', target_id: grant.id },
+        where: { event_type: AUTH_EVENT_TYPE.GRANT_REVOKED, target_type: TARGET_TYPE.GRANT, target_id: grant.id },
       });
       expect(auditRow).not.toBeNull();
     });

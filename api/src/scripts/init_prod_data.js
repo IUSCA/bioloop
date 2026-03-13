@@ -3,7 +3,7 @@
 /* eslint-disable no-console */
 require('module-alias/register');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, SUBJECT_TYPE } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
 const { GRANT_ACCESS_TYPES } = require('../constants');
 
@@ -91,6 +91,11 @@ async function main() {
   }));
 
   for (const user of admins.concat(operators).concat(users)) {
+    user.subject = {
+      create: {
+        type: SUBJECT_TYPE.USER,
+      },
+    };
     await prisma.user.upsert({
       where: { email: user.email },
       update: {},
