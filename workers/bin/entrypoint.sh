@@ -19,6 +19,19 @@ echo ".env file is ready. Starting the worker..."
 # Start the appropriate worker based on the container invoking this entrypoint script
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
+  
+  # Start the upload polling job in the background (runs every 30 seconds)
+  echo "Starting upload polling job in background..."
+  (
+    while true; do
+      sleep 30
+      echo "[$(date)] Running manage_upload_workflows..."
+      python -u -m workers.scripts.manage_upload_workflows --dry-run=False --max-retries=3 2>&1 || true
+    done
+  ) &
+  POLLING_PID=$!
+  echo "Upload polling job started with PID: $POLLING_PID"
+  
   exec python -m celery \
     -A workers.celery_app worker \
     --loglevel INFO \

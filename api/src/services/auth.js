@@ -116,15 +116,6 @@ const find_or_create_test_user = async ({ identifier }) => {
   return test_user;
 };
 
-function get_upload_token(file_path) {
-  // [^\w.-]+ matches one or more characters that are not word
-  // characters (letters, digits, or underscore), dots, or hyphens
-  const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
-  const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
-  return oAuth2SecureTransferClient.clientCredentials({
-    scope: [scope],
-  });
-}
 
 // Function to load and convert the public key to JWKS
 function getJWKS() {
@@ -242,7 +233,6 @@ module.exports = {
   get_user_profile,
   get_download_token,
   find_or_create_test_user,
-  get_upload_token,
   getJWKS,
   issueGrafanaToken,
   getLoginUser,
