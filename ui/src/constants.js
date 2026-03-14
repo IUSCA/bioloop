@@ -14,13 +14,13 @@ const exports = {
         children: [
           {
             feature_key: "import",
-            icon: "mdi-file-cog-outline",
+            icon: "mdi-file-import-outline",
             title: "Import",
             path: "/datasets/import",
           },
           {
             feature_key: "uploads",
-            icon: "mdi:folder-upload",
+            icon: "mdi-cloud-upload-outline",
             title: "Upload",
             path: "/datasets/uploads",
           },
