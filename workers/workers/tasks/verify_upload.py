@@ -21,13 +21,8 @@ The fixed register_process() function handles both WorkflowTask and regular Cele
 
 import logging
 
-from celery import Celery
-
 from workers import api, cmd
-import workers.config.celeryconfig as celeryconfig
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
 logger = logging.getLogger(__name__)
 
 
