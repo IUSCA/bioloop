@@ -86,8 +86,11 @@ def register_process(celery_task, process, process_start_time):
     try:
         hostname = socket.getfqdn()
         worker_process = api.register_process({
-            'workflow_id': celery_task.workflow_id,
-            'step': celery_task.step,
+            # `workflow_id` and `step` are WorkflowTask-only attributes; plain Celery
+            # tasks (i.e. tasks that are not part of a 'workflow') like `verify_upload_integrity`)
+            #  do not have them.
+            'workflow_id': getattr(celery_task, 'workflow_id', None),
+            'step': getattr(celery_task, 'step', None),
             'task_id': celery_task.id,
             'pid': process.pid,
             'hostname': hostname,
