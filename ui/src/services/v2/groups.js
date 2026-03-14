@@ -76,7 +76,7 @@ export default {
    * @param {number} version - current version from group object
    */
   update(id, data, version) {
-    return api.patch(`/groups/${id}`, data, { params: { version } });
+    return api.patch(`/groups/${id}`, { ...data, version });
   },
 
   /** Archive a group (soft delete). */

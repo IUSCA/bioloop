@@ -31,6 +31,8 @@ const props = defineProps({
 
 const roleColor = computed(() => {
   switch (props.roleName) {
+    case "PLATFORM_ADMIN":
+      return "text-red-700 bg-red-500/10 dark:text-red-400 dark:bg-red-400/10";
     case "ADMIN":
       return "text-amber-700 bg-amber-500/10 dark:text-amber-400 dark:bg-amber-400/10";
     case "MEMBER":
@@ -72,6 +74,8 @@ const iconSize = computed(() => {
 
 const roleIcon = computed(() => {
   switch (props.roleName) {
+    case "PLATFORM_ADMIN":
+      return "mdi-crown-outline";
     case "ADMIN":
       return "mdi-shield-crown-outline";
     case "MEMBER":
@@ -87,6 +91,8 @@ const roleIcon = computed(() => {
 
 const roleText = computed(() => {
   switch (props.roleName) {
+    case "PLATFORM_ADMIN":
+      return "Platform Admin";
     case "ADMIN":
       return "Admin";
     case "MEMBER":

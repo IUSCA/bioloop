@@ -16,6 +16,7 @@ module.exports = {
   },
   rules: {
     "vue/multi-word-component-names": "off",
+    "vuejs-accessibility/label-has-for": "off",
     "no-unused-vars": [
       "error", // or "warn"
       {

@@ -308,6 +308,7 @@
     "useAudit": true,
     "useAuditCategories": true,
     "useAuditRecord": true,
-    "useAuditTimestamp": true
+    "useAuditTimestamp": true,
+    "useChangeTracker": true
   }
 }

@@ -97,7 +97,7 @@
           :ancestors="ancestors"
           :counts="counts"
           :can-edit="can('edit_metadata')"
-          @archive="showArchiveModal = true"
+          @archive="openArchiveModal"
         />
 
         <GroupMembersTab
@@ -143,14 +143,14 @@
 
       <!-- Archive confirm modal -->
       <ArchiveConfirmModal
-        v-model="showArchiveModal"
+        ref="archiveModal"
+        :group-id="props.id"
         :group-name="group.name"
         :group-slug="group.slug"
         :affected-members="counts.members"
         :affected-datasets="counts.datasets"
         :affected-subgroups="counts.subgroups"
-        :loading="archiving"
-        @confirm="handleArchive"
+        @update="handleUpdate"
       />
     </template>
   </div>
@@ -161,12 +161,10 @@ import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
 import { useNavStore } from "@/stores/nav";
-import { useToast } from "vuestic-ui";
 
 const props = defineProps({ id: { type: String, required: true } });
 
 const nav = useNavStore();
-const { init: toast } = useToast();
 
 // ── Group state ───────────────────────────────────────────────────────────
 const group = ref(null);
@@ -317,29 +315,14 @@ function handleCollectionsUpdate() {
 }
 
 // ── Archive ───────────────────────────────────────────────────────────────
-const showArchiveModal = ref(false);
-const archiving = ref(false);
+const archiveModal = ref(null);
 
-async function handleArchive() {
-  archiving.value = true;
-  try {
-    await GroupService.archive(props.id);
-    toast({
-      message: "Group archived.",
-      color: "success",
-      position: "bottom-right",
-    });
-    showArchiveModal.value = false;
-    await fetchGroupData();
-  } catch (err) {
-    toast({
-      message: err?.response?.data?.message ?? "Failed to archive group.",
-      color: "danger",
-      position: "bottom-right",
-    });
-  } finally {
-    archiving.value = false;
-  }
+function openArchiveModal() {
+  archiveModal.value?.show();
+}
+
+async function handleUpdate() {
+  await fetchGroupData();
 }
 
 onMounted(() => fetchGroupData());

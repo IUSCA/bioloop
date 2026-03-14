@@ -12,6 +12,7 @@
               preset="plain"
               size="small"
               icon="edit"
+              @click="openEditModal"
             >
               Edit Metadata
             </VaButton>
@@ -50,12 +51,11 @@
                 Status
               </dt>
               <dd>
-                <VaChip
+                <ModernChip
                   :color="props.group.is_archived ? 'secondary' : 'success'"
-                  size="small"
                 >
                   {{ props.group.is_archived ? "Archived" : "Active" }}
-                </VaChip>
+                </ModernChip>
               </dd>
             </div>
             <div class="py-2.5 flex gap-4">
@@ -63,14 +63,9 @@
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
               >
-                User Contrib.
+                Member Contrib.
               </dt>
               <dd class="text-sm">
-                <!-- {{
-                  props.group.allow_user_contributions
-                    ? "✅ Enabled"
-                    : "❌ Disabled"
-                }} -->
                 <div class="flex items-center gap-1">
                   <i-mdi-check-circle-outline
                     v-if="props.group.allow_user_contributions"
@@ -124,53 +119,64 @@
       </VaCard>
 
       <!-- Ancestry panel -->
-      <VaCard v-if="sortedAncestors.length > 0">
+      <VaCard>
         <VaCardContent>
           <h2 class="text-sm font-semibold mb-3">ANCESTRY</h2>
-          <div class="flex flex-col text-sm font-mono">
+          <div v-if="sortedAncestors.length > 0">
+            <div class="flex flex-col text-sm font-mono">
+              <div
+                v-for="item in treeItems"
+                :key="item.isCurrent ? 'current' : item.id"
+                class="flex items-center leading-6"
+                :style="{
+                  paddingLeft:
+                    item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
+                }"
+              >
+                <span
+                  v-if="item.level > 0"
+                  class="mr-1 select-none"
+                  style="color: var(--va-secondary)"
+                  >└──</span
+                >
+                <RouterLink
+                  v-if="!item.isCurrent"
+                  :to="`/v2/groups/${item.id}`"
+                  class="hover:underline"
+                  style="color: var(--va-primary)"
+                >
+                  {{ item.name }}
+                </RouterLink>
+                <span
+                  v-else
+                  class="font-semibold text-gray-800 dark:text-gray-200"
+                >
+                  {{ item.name }}
+                </span>
+              </div>
+            </div>
+
             <div
-              v-for="item in treeItems"
-              :key="item.isCurrent ? 'current' : item.id"
-              class="flex items-center leading-6"
-              :style="{
-                paddingLeft:
-                  item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
-              }"
+              class="mt-5 flex items-center gap-2 rounded-md px-3 py-2.5 text-xs bg-blue-50 dark:bg-blue-900/20 border border-solid border-blue-200 dark:border-blue-800"
             >
-              <span
-                v-if="item.level > 0"
-                class="mr-1 select-none"
-                style="color: var(--va-secondary)"
-                >└──</span
-              >
-              <RouterLink
-                v-if="!item.isCurrent"
-                :to="`/v2/groups/${item.id}`"
-                class="hover:underline"
-                style="color: var(--va-primary)"
-              >
-                {{ item.name }}
-              </RouterLink>
-              <span
-                v-else
-                class="font-semibold text-gray-800 dark:text-gray-200"
-              >
-                {{ item.name }}
+              <i-mdi-information-outline
+                class="text-sm shrink-0 mt-0.5 text-blue-600 dark:text-blue-400"
+              />
+              <span class="text-blue-800 dark:text-blue-300">
+                Admins of ancestor groups have oversight visibility over this
+                group and its resources. They cannot modify governance settings.
               </span>
             </div>
           </div>
-
-          <div
-            v-if="nearestAncestor"
-            class="mt-5 flex items-center gap-2 rounded-md px-3 py-2.5 text-xs bg-blue-50 dark:bg-blue-900/20 border border-solid border-blue-200 dark:border-blue-800"
-          >
-            <i-mdi-information-outline
-              class="text-sm shrink-0 mt-0.5 text-blue-600 dark:text-blue-400"
-            />
-            <span class="text-blue-800 dark:text-blue-300">
-              Admins of ancestor groups have oversight visibility over this
-              group and its resources. They cannot modify governance settings.
-            </span>
+          <div v-else>
+            <div class="flex flex-col items-center py-4 gap-1 text-center">
+              <i-mdi-sitemap-outline
+                class="text-3xl text-gray-300 dark:text-gray-600"
+              />
+              <p class="text-sm" style="color: var(--va-secondary)">
+                This is a top-level (root) group.
+              </p>
+            </div>
           </div>
         </VaCardContent>
       </VaCard>
@@ -286,6 +292,15 @@
       </VaCard>
     </div>
   </div>
+  <GroupEditMetadataModal
+    ref="editModalRef"
+    :group-id="props.group.id"
+    :name="props.group.name"
+    :description="props.group.description"
+    :allow-user-contributions="props.group.allow_user_contributions"
+    :version="props.group.version"
+    @updated="emit('updated')"
+  />
 </template>
 
 <script setup>
@@ -324,4 +339,9 @@ const treeItems = computed(() => [
 const nearestAncestor = computed(
   () => sortedAncestors.value[sortedAncestors.value.length - 1] ?? null,
 );
+
+const editModalRef = ref(null);
+function openEditModal() {
+  editModalRef.value?.show();
+}
 </script>

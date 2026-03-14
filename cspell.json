@@ -154,6 +154,7 @@
     "/ui/public",
     "/ui/auto-imports.d.ts",
     "ui/.eslintrc-auto-import.json",
+    "ui/.eslintrc.cjs",
     "/ui/components.d.ts",
     "ui/src/assets/",
     "api/users.json",
@@ -166,7 +167,8 @@
     "metrics/grafana/config/provisioning/dashboards/",
     "docs/public",
     "/todo*.md",
-    ".vscode"
+    ".vscode",
+    ".github/skills/"
   ],
   "ignoreRegExpList": [
     "mdi-.*"
