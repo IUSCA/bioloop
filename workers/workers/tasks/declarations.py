@@ -127,7 +127,9 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
 @app.task(bind=True, name='verify_upload_integrity',
           autoretry_for=(Exception,),
           max_retries=3,
-          default_retry_delay=5)
+          default_retry_delay=60,
+          time_limit=86400,
+          soft_time_limit=43200)
 def verify_upload_integrity(celery_task, dataset_id, **kwargs):
     from workers.tasks.verify_upload import verify_upload_integrity as task_body
     return task_body(celery_task, dataset_id)

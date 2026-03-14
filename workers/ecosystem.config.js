@@ -89,7 +89,7 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       error_file: "../logs/workers/manage_upload_workflows.err",
       out_file: "../logs/workers/manage_upload_workflows.log",
-      cron_restart: "*/30 * * * *",
+      cron_restart: '* * * * *', // Run every 1 minute - processes stalled uploads and retries failures
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,

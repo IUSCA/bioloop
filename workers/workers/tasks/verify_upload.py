@@ -54,13 +54,10 @@ def verify_upload_integrity(celery_task, dataset_id):
     
     logger.info(f"Spawning verification subprocess for dataset {dataset_id} (attempt {retry_count + 1}/{max_retries + 1})")
     
+    upload_log = api.get_dataset_upload_log(dataset_id)
+    worker_process_id = None
+
     try:
-        # Fetch upload log to store worker_process_id later
-        upload_log = api.get_dataset_upload_log(dataset_id)
-        
-        # Run verification as subprocess to automatically capture all logs
-        # This uses the same pattern as conversion tasks and other workflow tasks
-        # The subprocess script handles ALL the logic and error reporting
         verification_script_cmd = [
             'python', '-m', 'workers.scripts.verify_upload_integrity',
             str(dataset_id),
@@ -68,23 +65,35 @@ def verify_upload_integrity(celery_task, dataset_id):
             str(retry_count),
             str(max_retries)
         ]
-        
-        # execute_with_log_tracking will:
-        # 1. Register worker_process with PID and task_id
-        # 2. Capture all stdout/stderr from the subprocess
-        # 3. Post logs to database in real-time
-        # 4. Raise exception if subprocess exits with non-zero code
-        # 5. Return the worker_process_id so we can store it in upload metadata
+
         worker_process_id = cmd.execute_with_log_tracking(
             cmd=verification_script_cmd,
             celery_task=celery_task,
             cwd=None
         )
-        
-        # Store worker_process_id in upload log metadata so the UI's
-        # "Verification Task Logs" card can display the captured logs.
-        try:
-            if worker_process_id:
+
+        logger.info(f"Verification subprocess completed successfully for dataset {dataset_id}")
+        return {
+            'status': 'success',
+            'dataset_id': dataset_id,
+        }
+
+    except cmd.SubprocessError as e:
+        # Extract worker_process_id from the error so logs are still accessible in the UI
+        error_info = e.args[0] if e.args else {}
+        worker_process_id = error_info.get('worker_process_id') or worker_process_id
+        logger.error(f"Verification subprocess failed for dataset {dataset_id}: {e}")
+        raise
+
+    except Exception as e:
+        logger.error(f"Verification subprocess failed for dataset {dataset_id}: {e}")
+        raise
+
+    finally:
+        # Always store worker_process_id so the UI "Verification Task Logs" card
+        # can display logs regardless of whether verification succeeded or failed.
+        if worker_process_id:
+            try:
                 api.update_dataset_upload_log(
                     dataset_id=dataset_id,
                     log_data={
@@ -94,19 +103,6 @@ def verify_upload_integrity(celery_task, dataset_id):
                         }
                     }
                 )
-                logger.info(f"✓ Stored worker_process_id {worker_process_id} in upload_log metadata")
-        except Exception as e:
-            logger.warning(f"Failed to store worker_process_id in upload_log metadata: {e}")
-        
-        logger.info(f"Verification subprocess completed successfully for dataset {dataset_id}")
-        
-        return {
-            'status': 'success',
-            'dataset_id': dataset_id,
-        }
-        
-    except Exception as e:
-        # The subprocess handles all error logging and status updates
-        # We just need to let Celery retry
-        logger.error(f"Verification subprocess failed for dataset {dataset_id}: {e}")
-        raise  # Re-raise for Celery to handle retry
+                logger.info(f"Stored worker_process_id {worker_process_id} in upload_log metadata")
+            except Exception as e:
+                logger.warning(f"Failed to store worker_process_id in upload_log metadata: {e}")
