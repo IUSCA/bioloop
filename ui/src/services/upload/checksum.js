@@ -61,52 +61,57 @@ function _manifestPath(file) {
  * to avoid blocking the browser and hogging memory.
  *
  * OPTIMIZATION STRATEGY:
- * 1. Process file in 64 MB chunks (not all at once)
- * 2. Use File.slice() to read chunks incrementally (low memory)
- * 3. Yield to event loop between chunks (browser stays responsive)
- * 4. Update progress per chunk (smooth UI updates)
+ * 1. Reuse a single hasher instance across all files (hasher.init() resets
+ *    its internal WASM state without re-allocating WASM memory).  Creating a
+ *    new hasher per file accumulates WASM state objects faster than GC runs,
+ *    exhausting virtual address space after a few hundred files.
+ * 2. Process each file in 64 MB chunks via File.slice() (never the whole file
+ *    in memory at once).
+ * 3. Yield to the event loop between chunks so the browser stays responsive.
  *
  * Why 64 MB chunks?
  * - Too small (e.g., 1 MB): Too many yield points, slower overall
  * - Too large (e.g., 512 MB): High memory usage, browser can freeze
- * - 64 MB: Good balance for files ranging from 100 MB to 100 GB
+ * - 64 MB: Good balance for files ranging from small to 100+ GB
  *
  * @private
  * @param {File} file - File to hash
- * @param {Function} createBlake3 - BLAKE3 create function from hash-wasm
+ * @param {Object} hasher - Reusable hash-wasm BLAKE3 hasher (shared across calls)
  * @param {Function} [onProgress] - Optional progress callback (0-100)
  * @returns {Promise<string>} Hex hash string
  */
-async function _hashFile(file, createBlake3, onProgress = null) {
+async function _hashFile(file, hasher, onProgress = null) {
   const CHUNK_SIZE = 64 * 1024 * 1024; // 64 MB chunks
-  const hasher = await createBlake3();
-  
-  console.log(`[checksum.js] _hashFile: Hashing ${file.name} in chunks (${CHUNK_SIZE / 1024 / 1024} MB each)`);
-  
+
+  // Reset the shared hasher for this file — avoids allocating a new WASM
+  // state object, which is the root cause of the OOM on large file counts.
+  hasher.init();
+
   let offset = 0;
   const fileSize = file.size;
-  
+
+  if (fileSize === 0) {
+    // Zero-byte file: nothing to read; digest an empty stream.
+    return hasher.digest('hex');
+  }
+
   while (offset < fileSize) {
     const chunk = file.slice(offset, offset + CHUNK_SIZE);
     const arrayBuffer = await chunk.arrayBuffer();
     hasher.update(new Uint8Array(arrayBuffer));
-    
+
     offset += CHUNK_SIZE;
-    
-    // Report progress if callback provided
+
     if (onProgress) {
       const progress = Math.min(100, Math.round((offset / fileSize) * 100));
       onProgress(progress);
     }
-    
-    // Yield to event loop every chunk to avoid freezing the browser
-    // This allows UI updates, user interactions, etc.
+
+    // Yield to event loop every chunk to avoid freezing the browser.
     await new Promise(resolve => setTimeout(resolve, 0));
   }
-  
-  const hash = hasher.digest('hex');
-  console.log(`[checksum.js] _hashFile: Complete for ${file.name} - hash: ${hash}`);
-  return hash;
+
+  return hasher.digest('hex');
 }
 
 /**
@@ -140,85 +145,59 @@ export async function computeManifestHash(files, progressCallback = null) {
     console.log('[checksum.js] Loading BLAKE3 (streaming)...');
     const createBlake3 = await _loadBlake3();
 
+    // Create a SINGLE hasher instance reused across all files.
+    // Each _hashFile call resets it via hasher.init() — this avoids allocating
+    // a new WASM state object per file, which causes OOM on large file counts.
+    const hasher = await createBlake3();
+
     const manifest = [];
     const totalFiles = files.length;
     const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
     let processedBytes = 0;
 
-    // Hash each file with streaming
-    console.log(`[checksum.js] Starting to hash ${totalFiles} file(s)... (total: ${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB)`);
+    console.log(`[checksum.js] Hashing ${totalFiles} file(s) (${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB total)...`);
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      console.log(
-        `[checksum.js] Hashing file ${i + 1}/${totalFiles}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
-      );
+      console.log(`[checksum.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
 
-      // Hash file with per-file progress
-      const fileHash = await _hashFile(file, createBlake3, (fileProgress) => {
-        // Calculate overall progress based on bytes processed across all files
+      const fileHash = await _hashFile(file, hasher, (fileProgress) => {
         const currentFileBytes = (fileProgress / 100) * file.size;
         const overallProgress = Math.round(((processedBytes + currentFileBytes) / totalBytes) * 100);
-        
         if (progressCallback) {
           progressCallback(overallProgress);
         }
       });
-      
+
       processedBytes += file.size;
-      console.log(`[checksum.js]   ✓ Hash: ${fileHash}`);
 
       manifest.push({
         path: _manifestPath(file),
         size: file.size,
         hash: fileHash,
-        _webkitRelativePath: file.webkitRelativePath || '',
-        _fileName: file.name,
       });
 
-      // Report overall progress after each file completes
       if (progressCallback) {
-        const progress = Math.round((processedBytes / totalBytes) * 100);
-        console.log(`[checksum.js]   Overall progress: ${progress}%`);
-        progressCallback(progress);
+        progressCallback(Math.round((processedBytes / totalBytes) * 100));
       }
     }
 
     // Sort by path for deterministic order.
-    // Use code-point comparison (< >) to match Python's sorted() behaviour
-    // exactly — localeCompare is locale-sensitive and can differ from Python's
-    // byte-order sort for non-ASCII filenames or locale-special characters.
-    console.log('[checksum.js] Sorting manifest...');
+    // Use code-point comparison (< >) to match Python's sorted() exactly —
+    // localeCompare is locale-sensitive and can diverge for non-ASCII names.
     manifest.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
-    // DEBUG: log every manifest entry so the path/size/hash can be compared
-    // directly against the server's stdout output.
-    console.log('[checksum.js] Manifest entries (sorted):');
-    manifest.forEach((f, i) => {
-      console.log(`[checksum.js]   [${i}] path="${f.path}"  size=${f.size}  hash=${f.hash}`);
-      console.log(`[checksum.js]        webkitRelativePath="${f._webkitRelativePath}"  file.name="${f._fileName}"`);
-    });
-
-    // Create canonical manifest string
-    console.log('[checksum.js] Creating manifest string...');
     const manifestStr = [
       'blake3-manifest-v1',
       ...manifest.map((f) => `${f.path}\t${f.size}\t${f.hash}`),
     ].join('\n');
-    console.log('[checksum.js] Manifest string length:', manifestStr.length);
-    console.log('[checksum.js] Full manifest string:\n' + manifestStr);
 
-    // Hash the manifest itself (small, so we can do it directly)
-    console.log('[checksum.js] Hashing manifest itself...');
-    const manifestBytes = new TextEncoder().encode(manifestStr);
-    const manifestHasher = await createBlake3();
-    manifestHasher.update(manifestBytes);
-    const manifestHash = manifestHasher.digest('hex');
+    // Hash the manifest string itself using the same reusable hasher.
+    hasher.init();
+    hasher.update(new TextEncoder().encode(manifestStr));
+    const manifestHash = hasher.digest('hex');
     console.log('[checksum.js] ✓ Manifest hash:', manifestHash);
 
-    // Always manifest-v1: the format is identical whether there is one file or
-    // many (blake3-manifest-v1 header + one tab-separated entry per file).
-    // Using a consistent mode string means the server-side verifier never needs
-    // to branch on file count.
     const result = {
       algorithm: 'blake3',
       mode: 'manifest-v1',
@@ -228,7 +207,7 @@ export async function computeManifestHash(files, progressCallback = null) {
       computed_at: new Date().toISOString(),
     };
 
-    console.log('[checksum.js] ✓ Returning manifest hash object:', result);
+    console.log('[checksum.js] ✓ Done:', result);
     return result;
   } catch (error) {
     console.error('[checksum.js] ✗ Failed to compute manifest hash:', error);

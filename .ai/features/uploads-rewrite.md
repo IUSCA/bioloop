@@ -17,6 +17,7 @@
 - [ ] **Run linter** across changed `ui` and `api` files.
 - [ ] **Install dependencies** across `ui`, `api`, and `workers` to verify nothing is missing.
 - [ ] **Smoke test on dev** — run the full `UPLOADING → UPLOADED → VERIFYING → VERIFIED → COMPLETE` flow end-to-end, including a multi-file upload.
+- [ ] **Large-file upload test** — upload at least one file ≥ 10 GB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [ ] **Review any remaining unaddressed Copilot PR comments** before merge.
 - [ ] **Investigate OAuth token-scope validation at upload boundary** — the old architecture validated a scoped OAuth token in `secure_download` before accepting bytes onto the filesystem. That check was removed because uploads now go directly through the core API (not `secure_download`). Assess whether the current `onUploadCreate` auth check (standard Bearer token + dataset ownership) is sufficient, or whether a narrower upload-scoped token should be introduced for the TUS boundary.
 
