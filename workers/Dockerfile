@@ -13,7 +13,8 @@ RUN pip install poetry==$POETRY_VERSION
 # Copy only the necessary files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies
+# Install all dependencies including dev extras (pytest etc.) so the container
+# can run integration tests directly without a separate test image.
 RUN poetry config virtualenvs.create false && poetry install
 
 # Copy the rest of the application code

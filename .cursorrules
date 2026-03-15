@@ -436,6 +436,53 @@ See `.ai/` directory for detailed conventions.
 
 ---
 
+## 💬 Code Comments Convention
+
+### Write intent comments, not change-history comments
+
+Comments should explain **why** code is written the way it is — the design
+intent, the invariant it maintains, or the constraint it encodes.  They should
+NOT explain why the last fix was applied or describe the edge-case that prompted
+the change.  A reader who never saw the git history should still understand the
+comment fully.
+
+**Ask yourself:** "If this comment were written on day one of the project, would
+it still make sense?"  If yes, it's a good comment.  If it only makes sense in
+the context of "a recent bug", rewrite it.
+
+**Bad (fix-history flavor):**
+```python
+# Ignore test isolation dirs so watch.py doesn't register them as datasets.
+# Fixed to RAW_DATA — for tests that don't need per-type parameterization.
+# Must match the `rejects` pattern in docker.py so the production watch.py
+# process ignores these directories.
+# In Docker mode there is no HPSS/SDA — delete the locally-archived file directly.
+```
+
+**Good (design-intent flavor):**
+```python
+# Directories that should never be auto-registered as datasets.
+# RAW_DATA — used by tests whose behavior is independent of dataset type.
+# Directories with this prefix are excluded from production watch.py
+# registration (see `rejects` in workers/workers/config/docker.py).
+# In Docker, the SDA (HPSS) is not available; delete the archive file locally.
+```
+
+### Rules
+
+1. **State the purpose broadly.** Explain what the code achieves or what
+   invariant it maintains, not the specific sequence of events that led here.
+2. **Avoid negation-of-a-decision phrasing.** "for tests that don't X" →
+   "for tests whose behavior is independent of X".
+3. **Avoid "fix", "prevent from", "workaround".** These signal change-history.
+   Replace with the positive statement of what the code does.
+4. **Cross-references are fine.** "see `rejects` in docker.py" is good context.
+   Just don't make the cross-reference the *only* reason the comment exists.
+5. **Docstrings on functions/classes** should describe inputs, outputs, and
+   important side effects — not the story of why the function was refactored.
+
+---
+
 ## 🔤 Language & Spelling
 
 **Always use American English spelling** in all code, comments, docstrings, log messages, and documentation.

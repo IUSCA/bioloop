@@ -31,7 +31,7 @@ config = {
     'registration': {
         'RAW_DATA': {
             'source_dir': '/opt/sca/data/origin/raw_data',
-            # Ignore test isolation dirs so watch.py doesn't register them as datasets.
+            # Directories that should never be auto-registered as datasets.
             'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         'DATA_PRODUCT': {

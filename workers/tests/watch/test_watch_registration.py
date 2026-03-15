@@ -387,7 +387,7 @@ class TestWatchRegistration:
             staged_path == str(compute_staging_path(dataset)[0])
             staged directory exists on disk
             metadata.stage_alias == stage_alias(dataset)  ← deterministic alias
-            staged bundle .tar exists at get_bundle_staged_path(dataset)
+            staged bundle file exists at get_bundle_staged_path(dataset)
             staged bundle filename == get_bundle_name(dataset)
 
         validate_dataset
@@ -605,7 +605,7 @@ class TestWatchRegistration:
 
         bundle_staged = Path(get_bundle_staged_path(fresh))
         assert bundle_staged.exists(), (
-            f'id={_id} — staged bundle .tar missing: {bundle_staged}'
+            f'id={_id} — staged bundle file missing: {bundle_staged}'
         )
         assert bundle_staged.name == get_bundle_name(fresh), (
             f'id={_id} — staged bundle filename mismatch: '

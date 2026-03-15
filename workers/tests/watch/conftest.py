@@ -23,26 +23,23 @@ Each chain shares the same implementation via helper generators/factories.
 
 Isolation strategy
 ------------------
-Each test creates a uniquely-named isolation directory (_testObservedPath_*)
-inside source_dir.  The test Observer watches that isolation directory, so
-`origin_path` for registered datasets takes the form:
+Each test gets a uniquely-named isolation directory (_testObservedPath_*)
+inside source_dir.  The test Observer watches that directory, so `origin_path`
+for registered datasets takes the form:
 
     source_dir/_testObservedPath_<uuid>/testDataset_<uuid>
 
-The production watch.py process (running in the `watch` Docker service) also
-monitors source_dir.  To prevent it from registering the _testObservedPath_*
-wrapper directory as a dataset, _testObservedPath_* is listed in the `rejects`
-config for both dataset types in workers/workers/config/docker.py.  The watch
-service must be restarted after any change to that config file so it reloads
-the list (Python imports config at module-load time).
+The _testObservedPath_* prefix is listed in the `rejects` config
+(workers/workers/config/docker.py) so the production watch service does not
+auto-register test isolation directories as real datasets.
 
 Session-level cleanup
 ---------------------
 A session-scoped autouse fixture runs _purge_test_datasets() both before and
-after the full test session.  Before: removes leftovers from crashed previous
-runs.  After: catches anything the per-fixture teardown may have missed.
-The per-fixture teardown itself does NOT swallow exceptions — a teardown
-failure surfaces as a test error so it is never silently ignored.
+after the full test session.  The pre-session pass removes leftovers from
+previous runs; the post-session pass catches anything per-fixture teardown
+may have missed.  Fixture teardown does not swallow exceptions — cleanup
+failures fail the test immediately.
 """
 
 import logging
@@ -78,9 +75,9 @@ _FIXTURE_DIR_BY_TYPE: dict[str, Path] = {
 # Used by the session-level purge to find and clean up leftovers.
 _TEST_DATASET_PREFIX: str = 'testDataset_'
 
-# Prefix for the per-test isolation directory inside source_dir.
-# Must match the `rejects` pattern in workers/workers/config/docker.py so the
-# production watch.py process ignores these directories.
+# Prefix for per-test isolation directories inside source_dir.
+# Directories with this prefix are excluded from production watch.py
+# registration (see `rejects` in workers/workers/config/docker.py).
 _TEST_OBSERVED_PATH_PREFIX: str = '_testObservedPath_'
 
 
@@ -153,9 +150,9 @@ def _purge_leftover_test_datasets() -> Generator[None, None, None]:
 def _watched_dir_gen(dataset_type: str) -> Generator[Path, None, None]:
     """Setup/teardown: create and remove a per-test isolation directory inside source_dir.
 
-    The isolation directory is named _testObservedPath_<uuid> so it is matched
-    by the `rejects` pattern in workers/workers/config/docker.py and ignored by
-    the production watch.py process running in the `watch` container.
+    Each test gets its own uniquely-named directory so Observer state from one
+    test cannot bleed into another — the test Observer only ever sees datasets
+    created by the current test.
     """
     source_dir: Path = Path(config['registration'][dataset_type]['source_dir'])
     test_session_dir: Path = (
@@ -179,7 +176,7 @@ def _watched_dir_gen(dataset_type: str) -> Generator[Path, None, None]:
 
 
 def _make_type_observer(dataset_type: str, watched_dir: Path) -> Observer:
-    """Create and initialise an Observer wired to a Register for dataset_type."""
+    """Create and initialize an Observer wired to a Register for dataset_type."""
     register: Register = Register(
         dataset_type=dataset_type,
         default_wf_name='integrated',
@@ -300,12 +297,12 @@ def registered_dataset(
 
 # ---------------------------------------------------------------------------
 # Single-type fixtures — RAW_DATA only
-# (for tests that don't vary by dataset type — run once, not per-type)
+# Used by tests whose assertions are independent of dataset type.
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope='function')
 def primary_dataset_type() -> str:
-    """Fixed to RAW_DATA — for tests that don't need per-type parameterization."""
+    """RAW_DATA — used by tests whose behavior is independent of dataset type."""
     return 'RAW_DATA'
 
 
