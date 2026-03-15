@@ -114,9 +114,22 @@
     "testpaths",
     "watchlib",
     "weakcb",
-    "webassets"
+    "webassets",
+    "autoscale",
+    "cursorrules",
+    "conatainer",
+    "dbdump",
+    "gunicorn",
+    "isready",
+    "moutned",
+    "nuxt",
+    "uvicorn",
+    "venv"
   ],
   "ignorePaths": [
+    ".ai",
+    ".cursorrules",
+    "**/__pycache__/**",
     "cspell.json",
     "node_modules",
     "dist",

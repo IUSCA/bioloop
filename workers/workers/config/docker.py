@@ -36,6 +36,7 @@ config = {
             'source_dir': '/opt/sca/data/origin/data_products',
         },
         'recency_threshold_seconds': 5,  # fast enough for docker dev without being instant
+        'wait_between_stability_checks_seconds': 5,  # poll frequently in docker dev
         'minimum_dataset_size': TEN_MEGABYTES,
     },
     'register_ondemand': {

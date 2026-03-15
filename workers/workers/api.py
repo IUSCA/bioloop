@@ -153,20 +153,35 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str,
-                files: bool = False,
-                bundle: bool = False,
-                workflows: bool = False):
+def get_dataset(
+    dataset_id: str,
+    files: bool = False,
+    bundle: bool = False,
+    workflows: bool = False,
+    include_audit_logs: bool = False,
+):
     with APIServerSession() as s:
         payload = {
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
+            'include_audit_logs': include_audit_logs,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
-
         r.raise_for_status()
-        return dataset_getter(r.json())
+        dataset = dataset_getter(r.json())
+
+        if include_audit_logs:
+            # Flatten create_method from the creation audit entry onto the dataset
+            # so callers can access dataset['create_method'] directly.
+            create_entry = next(
+                (log for log in (dataset.get('audit_logs') or []) if log.get('action') == 'create'),
+                None,
+            )
+            if create_entry:
+                dataset['create_method'] = create_entry.get('create_method')
+
+        return dataset
 
 
 def get_workflows_for_dataset(

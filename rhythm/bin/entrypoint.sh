@@ -26,33 +26,44 @@ else
   touch "$api_env"
 fi
 
-if [ -f "keys/auth.key" ] && [ -f "keys/auth.pub" ]; then 
+KEYS_GENERATED=false
+if [ -f "keys/auth.key" ] && [ -f "keys/auth.pub" ]; then
   echo "Keys already exist. Skipping key generation."
 else
+  echo "Keys not found. Generating new keys..."
   cd keys/
   ./genkeys.sh
   cd ../
+  KEYS_GENERATED=true
 fi
 
-# Check if the string exists in the file
+# The token and signing keys must always be in sync.
+# If keys were just regenerated, any existing token was signed with the old
+# keys and is now invalid — it must be cleared and reissued.
 api_token="WORKFLOW_AUTH_TOKEN"
-echo "Checking if the string '${api_token}' exists in the file '$api_env'..."
-if grep -q "^${api_token}=" "$api_env"; then
+echo "Checking WORKFLOW_AUTH_TOKEN in '$api_env'..."
+
+if [ "$KEYS_GENERATED" = "false" ] && grep -q "^${api_token}=" "$api_env"; then
   value=$(grep "^${api_token}=" "$api_env" | cut -d'=' -f2)
   if [ -n "$value" ]; then
-    echo "The file contains the string '${api_token}' with a value: $value"
+    echo "Keys and token already exist and are in sync. Skipping token generation."
   else
-    echo "The string '${api_token}' exists but has no value."
-    sed -i '/^WORKFLOW_AUTH_TOKEN/d' "$api_env"
+    echo "Token entry exists but has no value. Regenerating token."
+    grep -v "^WORKFLOW_AUTH_TOKEN" "$api_env" > /tmp/_env_tmp && cat /tmp/_env_tmp > "$api_env" && rm /tmp/_env_tmp
     echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> "$api_env"
     echo "Created new API token."
-    echo "INFO: You MUST RESTART THE API in order to use the new token."
+    echo "INFO: Restart the API container to pick up the new token."
   fi
 else
-  echo "The string '${api_token}' does not exist in the file."
+  if [ "$KEYS_GENERATED" = "true" ]; then
+    echo "Keys were regenerated. Clearing stale token and issuing a new one."
+  else
+    echo "Token not found. Generating new token."
+  fi
+  grep -v "^WORKFLOW_AUTH_TOKEN" "$api_env" > /tmp/_env_tmp && cat /tmp/_env_tmp > "$api_env" && rm /tmp/_env_tmp
   echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> "$api_env"
   echo "Created new API token."
-  echo "INFO: You MUST RESTART THE API in order to use the new token."
+  echo "INFO: Restart the API container to pick up the new token."
 fi
 
 $*

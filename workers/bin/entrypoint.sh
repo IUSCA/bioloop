@@ -19,6 +19,7 @@ echo ".env file is ready. Starting the worker..."
 # Start the appropriate worker based on the container invoking this entrypoint script
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
+  rm -f celery_worker.pid
   exec python -m celery \
     -A workers.celery_app worker \
     --loglevel INFO \

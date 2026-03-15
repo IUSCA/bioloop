@@ -166,7 +166,11 @@ def registered_dataset(
             f'after Observer.watch(). Check API reachability and APP_API_TOKEN.'
         )
 
-    dataset: dict[str, Any] = api.get_dataset(dataset_id=matches[0]['id'], workflows=True)
+    dataset: dict[str, Any] = api.get_dataset(
+        dataset_id=matches[0]['id'],
+        workflows=True,
+        include_audit_logs=True,
+    )
     logger.info(f'Registered dataset: id={dataset["id"]}, name={dataset["name"]}, type={dataset_type}')
 
     yield {'dataset': dataset, 'path': dataset_path}
