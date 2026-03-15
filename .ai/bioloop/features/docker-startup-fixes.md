@@ -132,24 +132,97 @@ dataset = api.get_dataset(
 
 ---
 
-## Clean-Slate Procedure
+---
 
-To do a full fresh restart (e.g., after schema changes, broken credentials, or for CI):
+## Startup Performance Optimisations
+
+**Status:** Completed  
+**Measured improvement:** ~101s → ~44s cold start; warm restart of api/ui/secure_download drops from ~42s total to ~1s total.
+
+---
+
+### Opt 1 — Exhaustive timing added to all entrypoint scripts
+
+**Why:** There was no visibility into which step within an entrypoint was consuming time. The only signal was the overall container `healthy` timestamp in `docker compose up` output, which conflates wait time, npm install, migrations, and credential generation.
+
+**What was added:** A `ts()` helper function at the top of every entrypoint script (`api`, `rhythm`, `signet`, `ui`, `secure_download`, `workers`) that prints `[HH:MM:SS +Xs elapsed]` before every significant operation, and a per-step `_T=$(date +%s)` / `done (Xs)` pair around each timed block. Polling loops print the current timestamp on every iteration.
+
+**Effect:** Logs now show exactly how long each step takes, making future regressions immediately obvious.
+
+---
+
+### Opt 2 — `node_modules` cached in Docker named volumes (`docker-compose.yml`, entrypoints)
+
+**Why:** `api`, `ui`, and `secure_download` each run `npm install` inside a bind-mounted working directory on every container start. Because `node_modules` is part of the bind-mounted host directory, it is not shared with any Docker layer cache and must be fully reinstalled even when `package-lock.json` hasn't changed. On a warm restart this was pure waste: api 10s, ui 15s, secure_download 6s = **31s** wasted on every restart.
+
+**Fix:** Added three named volumes (`api_node_modules`, `ui_node_modules`, `secure_download_node_modules`) mounted over the respective `node_modules` paths inside each container. Named volumes are managed by Docker and persist across `docker compose down` (cleared only by `bin/docker-reset.sh` or `docker compose down -v`).
+
+**Hash-check guard:** A lockfile hash check was added to each entrypoint before running `npm install`. The MD5 of `package-lock.json` is written to `node_modules/.install_hash` after a successful install. On the next start, if the hash matches, `npm install` is skipped entirely. If `package-lock.json` changes (e.g., a developer adds a package), the hash mismatches and `npm install` runs normally.
+
+**Result:** On warm restart — api entrypoint completes in **1s** (was 18s), ui in **0s** (was 18s), secure_download in **0s** (was 6s).
+
+---
+
+### Opt 3 — `prisma generate` cached behind schema hash check (`api/bin/entrypoint.sh`)
+
+**Why:** `prisma generate` rewrites the Prisma client into `node_modules/@prisma/client` on every start, taking ~2s even when `prisma/schema.prisma` hasn't changed.
+
+**Fix:** Same hash-check pattern as `npm install`. MD5 of `prisma/schema.prisma` is written to `node_modules/.prisma_generate_hash` after a successful `prisma generate`. On subsequent starts, if the schema hash matches, generation is skipped. Because `node_modules` is now a named volume, this hash persists across restarts.
+
+**Result:** `prisma generate` is skipped on every warm restart unless the Prisma schema file is modified.
+
+---
+
+### Opt 4 — `prisma db seed` skipped on warm restarts via marker file (`api/bin/entrypoint.sh`)
+
+**Why:** The seed script runs unconditionally on every start. Most of its work is idempotent (`upsert`), but it also runs `deleteMany` + `createMany` for metrics, data access logs, staged logs, stage request logs, and instruments — regenerating ~1 year of fake analytics data every time. This takes ~4s and produces no meaningful change on a warm restart.
+
+**Fix:** After a successful seed run, the entrypoint writes `api/.db_seeded` (a zero-byte marker file in the bind-mounted `api/` directory). On subsequent starts, if the marker exists, the seed is skipped. `bin/docker-reset.sh` removes this file alongside the database data so that a Docker environment reset triggers a full re-seed.
+
+`api/.db_seeded` is added to `.gitignore`.
+
+**Result:** Seed step is skipped on every warm restart.
+
+---
+
+### Opt 5 — Health check intervals reduced from 30s to 5s (`docker-compose.yml`)
+
+**Why:** Docker's `depends_on: condition: service_healthy` blocks a dependent service from starting until the dependency's health check passes. With a 30s health check interval, the first check does not fire until 30s after the service starts — even if the service became healthy in 2s. This was the largest single bottleneck on the critical path: `signet` (on which `api` depends) was healthy after ~2s but the API container didn't start for another ~28s.
+
+**Fix:** Changed `interval: 30s` to `interval: 5s` and `retries: 5` to `retries: 10` on all health-checked services (`api`, `rhythm`, `signet`, `signet_db`, `secure_download`). Added `start_period` per service to give each one a grace period before failures count toward the retry limit, avoiding false unhealthy marks during slow cold starts.
+
+| Service | `start_period` | Rationale |
+|---|---|---|
+| `signet_db` | 5s | postgres starts in <2s |
+| `signet` | 10s | depends on signet_db |
+| `rhythm` | 15s | Python ASGI, RSA key gen on cold start |
+| `secure_download` | 15s | npm install on cold start |
+| `api` | 30s | npm + prisma + seed on cold start |
+
+**Result:** ~25s shaved off the `signet → api` dependency wait on cold starts.
+
+---
+
+### Opt 6 — TLS cert key size reduced from rsa:4096 to rsa:2048 (`ui/bin/entrypoint.sh`)
+
+**Why:** The UI entrypoint generates a self-signed TLS certificate on cold start using `openssl req -newkey rsa:4096`. 4096-bit key generation is significantly slower than 2048-bit, and there is no security reason to use 4096-bit for a local development certificate.
+
+**Fix:** Changed `-newkey rsa:4096` to `-newkey rsa:2048`. The cert is self-signed and only used for the local dev Nuxt server on port 443.
+
+**Result:** TLS cert generation drops from ~3s to <1s on cold start.
+
+---
+
+## Docker Environment Reset Procedure
+
+Use the script — it handles all steps safely and without `sudo`:
 
 ```bash
-# 1. Stop all containers and remove named volumes (rhythm_keys, queue_volume, etc.)
-docker compose down -v
-
-# 2. Clear bind-mount-persisted generated state
-rm -f api/.env workers/.env
-rm -f api/keys/auth.key api/keys/auth.pub
-rm -rf db/postgres/data/* db/mongo/data/*
-
-# 3. Bring back up — entrypoints regenerate all credentials automatically
-docker compose up -d
+bin/docker-reset.sh              # interactive (prompts before each step)
+bin/docker-reset.sh --no-confirm # non-interactive
 ```
 
-`docker compose down -v` alone is NOT sufficient because `api/.env`, `workers/.env`, and `api/keys/` are bind-mounted (host directories), not named volumes.
+See `.ai/bioloop/docker-reset.md` for a step-by-step breakdown of what the script removes and why.
 
 ---
 
@@ -169,9 +242,3 @@ tests/watch/test_watch_registration.py::TestWatchRegistration::test_observer_doe
 
 ======================== 8 passed, 1 warning in 22.96s =========================
 ```
-
----
-
-## Pending
-
-- **Startup performance audit** (todo `startup-perf`): Add timestamps to all entrypoint scripts and identify bottlenecks (npm install, prisma generate/migrate, wait loops).

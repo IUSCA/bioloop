@@ -11,6 +11,7 @@ services:
       - ui/.env.default
     volumes:
       - ./ui/:/opt/sca/app
+      - ui_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
@@ -27,6 +28,7 @@ services:
       # - api/.env? # For keys made after the first run
     volumes:
       - ./api:/opt/sca/app
+      - api_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
@@ -34,9 +36,10 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 30s
     depends_on:
       signet:
         condition: service_healthy
@@ -167,9 +170,10 @@ services:
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 15s
     depends_on:
       - queue
       - mongo
@@ -185,14 +189,16 @@ services:
     volumes:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
+      - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 15s
 
 # Signet containers
   # You must clone the signet repo and place it in the signet folder
@@ -209,9 +215,10 @@ services:
     command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 10s
     depends_on:
       signet_db:
         condition: service_healthy
@@ -229,9 +236,10 @@ services:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 5s
 
 # Dev containers
   docs:
@@ -321,4 +329,10 @@ volumes:
   docs_modules:
     external: false
   rhythm_keys:
+    external: false
+  api_node_modules:
+    external: false
+  ui_node_modules:
+    external: false
+  secure_download_node_modules:
     external: false
