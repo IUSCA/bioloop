@@ -891,16 +891,32 @@ async function create({
       });
 
       if (operatorRole) {
-        await tx.notification.create({
-          data: {
-            label: `${created_dataset.type} ${created_dataset.id} was created`,
-            role_notifications: {
-              create: {
-                role_id: operatorRole.id,
-              },
-            },
+        const operatorUserIds = await tx.user_role.findMany({
+          where: {
+            role_id: operatorRole.id,
+          },
+          select: {
+            user_id: true,
           },
         });
+        const recipientRows = operatorUserIds.map((row) => ({
+          user_id: row.user_id,
+          delivery_type: 'ROLE_BROADCAST',
+          delivery_role_id: operatorRole.id,
+        }));
+        if (recipientRows.length > 0) {
+          await tx.notification.create({
+            data: {
+              type: 'DATASET_CREATED',
+              label: `${created_dataset.type} ${created_dataset.id} was created`,
+              recipients: {
+                createMany: {
+                  data: recipientRows,
+                },
+              },
+            },
+          });
+        }
       }
     }
   } catch (e) {

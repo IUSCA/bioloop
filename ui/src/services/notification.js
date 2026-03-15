@@ -1,12 +1,24 @@
 import api from "@/services/api";
 
 class NotificationService {
-  getNotifications({ status = null } = {}) {
+  getNotifications({
+    read = null,
+    archived = null,
+    bookmarked = null,
+    search = null,
+  } = {}) {
     return api.get("/notifications", {
       params: {
-        status,
+        read,
+        archived,
+        bookmarked,
+        search,
       },
     });
+  }
+
+  updateNotificationState(id, data) {
+    return api.patch(`/notifications/${id}/state`, data);
   }
 }
 

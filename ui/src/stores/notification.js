@@ -5,10 +5,13 @@ import toast from "@/services/toast";
 export const useNotificationStore = defineStore("notification", () => {
   const loading = ref(false);
   const appNotifications = ref([]);
-  // expose sorted notifications
-  const notifications = computed(() => {
-    return appNotifications.value;
+  const filters = ref({
+    read: null,
+    archived: false,
+    bookmarked: null,
+    search: "",
   });
+  const notifications = computed(() => appNotifications.value);
 
   function addNotification(notification) {
     appNotifications.value.push(notification);
@@ -22,11 +25,25 @@ export const useNotificationStore = defineStore("notification", () => {
     appNotifications.value = notificationList;
   }
 
-  function fetchActiveNotifications() {
+  function setFilter(key, value) {
+    filters.value[key] = value;
+  }
+
+  function clearFilters() {
+    filters.value.read = null;
+    filters.value.archived = false;
+    filters.value.bookmarked = null;
+    filters.value.search = "";
+  }
+
+  function fetchNotifications() {
     loading.value = true;
     return notificationService
       .getNotifications({
-        status: "CREATED",
+        read: filters.value.read,
+        archived: filters.value.archived,
+        bookmarked: filters.value.bookmarked,
+        search: filters.value.search || null,
       })
       .then((res) => {
         setNotifications(res.data);
@@ -39,11 +56,24 @@ export const useNotificationStore = defineStore("notification", () => {
       });
   }
 
+  function updateNotificationState(id, data) {
+    return notificationService
+      .updateNotificationState(id, data)
+      .then(() => fetchNotifications())
+      .catch(() => {
+        toast.error("Could not update notification state.");
+      });
+  }
+
   return {
     notifications,
+    filters,
     addNotification,
     removeNotification,
-    fetchActiveNotifications,
+    fetchNotifications,
+    updateNotificationState,
+    setFilter,
+    clearFilters,
     loading,
   };
 });

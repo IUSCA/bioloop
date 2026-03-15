@@ -132,6 +132,10 @@ const grantsObject = {
     alerts: {
       'read:any': ['*'],
     },
+    notifications: {
+      'read:any': ['*'],
+      'update:any': ['*'],
+    },
   },
 
   // operator role permissions
