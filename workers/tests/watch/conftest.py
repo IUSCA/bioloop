@@ -35,11 +35,19 @@ auto-register test isolation directories as real datasets.
 
 Session-level cleanup
 ---------------------
-A session-scoped autouse fixture runs _purge_test_datasets() both before and
-after the full test session.  The pre-session pass removes leftovers from
-previous runs; the post-session pass catches anything per-fixture teardown
-may have missed.  Fixture teardown does not swallow exceptions — cleanup
-failures fail the test immediately.
+Two separate purge strategies are used to avoid deleting data created by other
+test processes or files:
+
+  Pre-session  — prefix-based query (testDataset_*): removes orphaned datasets
+                 left over from previously crashed runs of THIS suite whose IDs
+                 are unknown.  Best-effort; errors are logged as warnings.
+
+  Post-session — ID-based: deletes only the dataset IDs registered during THIS
+                 session, tracked in _SESSION_DATASET_IDS.  Never touches
+                 datasets created by other test processes or files.
+
+Fixture teardown does not swallow exceptions — cleanup failures fail the test
+immediately.
 """
 
 import logging
@@ -80,20 +88,27 @@ _TEST_DATASET_PREFIX: str = 'testDataset_'
 # registration (see `rejects` in workers/workers/config/docker.py).
 _TEST_OBSERVED_PATH_PREFIX: str = '_testObservedPath_'
 
+# IDs of every dataset registered by this test session.
+# The post-session purge deletes only these IDs so it never touches datasets
+# created by other test processes or files running concurrently.
+_SESSION_DATASET_IDS: list[int] = []
+
 
 # ---------------------------------------------------------------------------
 # Session-level dataset purge
 # ---------------------------------------------------------------------------
 
-def _purge_test_datasets() -> None:
-    """Delete all non-deleted test datasets from the API (best-effort).
+def _purge_orphaned_datasets() -> None:
+    """Delete test datasets that appear orphaned (best-effort, pre-session only).
 
-    Queries for datasets whose name contains _TEST_DATASET_PREFIX across all
-    types.      For each match the archive_path is cleared first (to avoid triggering the
-    asynchronous archive-delete workflow) then the dataset is soft-deleted via the API.
+    Queries by name prefix to find datasets left over from previously crashed
+    runs of this suite whose IDs were never recorded.  Errors are caught and
+    logged as warnings — this must not block test startup.
 
-    Errors are caught and logged as warnings — this is a best-effort safety
-    net and must not mask test failures.
+    WARNING: uses a broad prefix query and may match datasets created by other
+    test suites that share the same naming convention.  It is intentionally
+    limited to the pre-session pass where the risk of collision with a live
+    concurrent run is low.
     """
     try:
         found: list[dict[str, Any]] = api.get_all_datasets(
@@ -101,13 +116,13 @@ def _purge_test_datasets() -> None:
             match_name_exact=False,
         )
     except Exception as e:
-        logger.warning(f'_purge_test_datasets: could not query API: {e}')
+        logger.warning(f'_purge_orphaned_datasets: could not query API: {e}')
         return
 
     if not found:
         return
 
-    logger.info(f'Purging {len(found)} leftover test dataset(s): '
+    logger.info(f'Pre-session: purging {len(found)} orphaned test dataset(s): '
                 f'{[d["name"] for d in found]}')
 
     for dataset in found:
@@ -122,25 +137,54 @@ def _purge_test_datasets() -> None:
                 logger.info(f'  Cleared archive_path for id={dataset_id}')
             api.delete_dataset(dataset_id)
             logger.info(
-                f'  Purged: id={dataset_id} name={dataset["name"]} '
+                f'  Purged orphan: id={dataset_id} name={dataset["name"]} '
                 f'type={dataset.get("type")}'
             )
+        except Exception as e:
+            logger.warning(f'  Failed to purge orphan id={dataset_id}: {e}')
+
+
+def _purge_session_datasets() -> None:
+    """Delete only the datasets registered during this session (post-session).
+
+    Uses _SESSION_DATASET_IDS — populated by _registered_dataset_gen as each
+    dataset is created — so only this session's datasets are touched.  Safe to
+    run concurrently with other test processes.
+    """
+    if not _SESSION_DATASET_IDS:
+        return
+
+    logger.info(f'Post-session: purging {len(_SESSION_DATASET_IDS)} session '
+                f'dataset(s): {_SESSION_DATASET_IDS}')
+
+    for dataset_id in list(_SESSION_DATASET_IDS):
+        try:
+            current = api.get_dataset(dataset_id=dataset_id)
+            if current.get('archive_path'):
+                api.update_dataset(
+                    dataset_id=dataset_id,
+                    update_data={'archive_path': None},
+                )
+                logger.info(f'  Cleared archive_path for id={dataset_id}')
+            api.delete_dataset(dataset_id)
+            _SESSION_DATASET_IDS.remove(dataset_id)
+            logger.info(f'  Purged: id={dataset_id}')
         except Exception as e:
             logger.warning(f'  Failed to purge id={dataset_id}: {e}')
 
 
 @pytest.fixture(scope='session', autouse=True)
 def _purge_leftover_test_datasets() -> Generator[None, None, None]:
-    """Session-scoped autouse: purge test datasets before and after the session.
+    """Session-scoped autouse: pre- and post-session dataset cleanup.
 
-    Pre-session pass removes leftovers from previously crashed runs.
-    Post-session pass is the safety net for anything per-fixture teardown missed.
+    Pre-session:  prefix-based orphan sweep for datasets left by crashed runs.
+    Post-session: ID-based sweep limited to datasets created by this session.
     """
-    logger.info('Pre-session: purging any leftover test datasets...')
-    _purge_test_datasets()
+    logger.info('Pre-session: sweeping for orphaned test datasets...')
+    _purge_orphaned_datasets()
     yield
-    logger.info('Post-session: purging any remaining test datasets...')
-    _purge_test_datasets()
+    logger.info('Post-session: purging this session\'s remaining datasets...')
+    _purge_session_datasets()
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +292,10 @@ def _registered_dataset_gen(
         f'create_method={dataset.get("create_method")} '
         f'workflow_ids={workflow_ids}'
     )
+
+    # Track this ID so the post-session purge only deletes datasets created
+    # by this session, not datasets from other concurrently running tests.
+    _SESSION_DATASET_IDS.append(dataset['id'])
 
     yield {'dataset': dataset, 'path': dataset_path}
 
