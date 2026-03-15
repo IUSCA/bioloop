@@ -942,6 +942,7 @@ const onSubmit = async () => {
           try {
             isComputingChecksum.value = true;
             checksumProgress.value = 0;
+            submissionStatus.value = Constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS;
 
             const files = filesToUpload.value.map(f => f.file);
             const tChecksumStart = performance.now();

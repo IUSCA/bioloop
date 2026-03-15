@@ -36,13 +36,13 @@
     class="flex items-center space-x-2"
     data-testid="status-computing-checksums"
   >
-    <i-mdi-progress-helper
+    <i-mdi-fingerprint
       v-if="props.showIcon"
-      style="color: var(--va-primary)"
-      class="animate-spin text-2xl"
+      style="color: var(--va-warning)"
+      class="animate-pulse text-2xl"
       data-testid="icon-computing-checksums"
     />
-    <va-chip size="small" data-testid="chip-computing-checksums">
+    <va-chip size="small" color="warning" data-testid="chip-computing-checksums">
       Computing Checksums
     </va-chip>
   </div>
