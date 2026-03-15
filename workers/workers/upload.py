@@ -2,12 +2,13 @@
 Upload Verification Utilities
 
 Provides BLAKE3 manifest-based checksum verification for uploaded files.
-Falls back to file existence check when the client did not supply a checksum
-(e.g. legacy uploads or uploads where checksum computation failed/was disabled).
+Falls back to a file-existence check only when the client deliberately did not
+supply a checksum (feature disabled, or legacy upload with no metadata).
 
-Requires the 'blake3' package (pip install blake3) when checksum verification
-is used.  The package is only imported when actually needed so that the fallback
-path works even if blake3 is not installed.
+Requires the 'blake3' package (pip install blake3).  If a client-computed
+manifest hash is present in the upload log and blake3 is not installed, the
+worker raises an explicit error — it will NOT silently fall back to the
+existence check.
 """
 
 from pathlib import Path
@@ -50,14 +51,33 @@ def verify_upload_integrity(dataset, upload_log=None):
 
     origin = Path(origin_path)
 
-    # Extract client-supplied checksum from upload log metadata (may be absent).
+    # Extract client-supplied checksum metadata (may be absent, a full hash
+    # object, or a skip-marker set when client-side computation failed).
     client_checksum = None
+    client_skipped_reason = None
+    client_skipped_error = None
     if upload_log:
         metadata = upload_log.get('metadata') or {}
         checksum_meta = metadata.get('checksum') or {}
         client_checksum = checksum_meta.get('manifest_hash')
+        if checksum_meta.get('skipped'):
+            client_skipped_reason = checksum_meta.get('skipped_reason')
+            client_skipped_error = checksum_meta.get('error')
 
     if client_checksum:
+        # A client-computed BLAKE3 manifest hash is present — full verification
+        # is required.  Confirm blake3 is installed before doing any file I/O so
+        # the error message is actionable rather than a bare ImportError traceback.
+        try:
+            import blake3  # noqa: F401
+        except ImportError:
+            raise Exception(
+                "blake3 package is not installed on this worker node, but the "
+                "upload includes a client-computed BLAKE3 manifest hash that "
+                "must be verified.  Install blake3 (pip install blake3) on the "
+                "worker, or disable upload_verify_checksums in the UI config."
+            )
+
         print(f"Client-supplied manifest hash found — running BLAKE3 verification")
         print(f"  Expected: {client_checksum}")
         server_hash = _compute_manifest_hash(origin)
@@ -70,10 +90,30 @@ def verify_upload_integrity(dataset, upload_log=None):
                 f"Files may have been corrupted or tampered with during transfer."
             )
         print(f"✓ Manifest hash verified for dataset {dataset_id}")
+
+    elif client_skipped_reason:
+        # The client attempted checksum computation but it failed (e.g. the
+        # hash-wasm WASM module could not be loaded, or an OOM occurred during
+        # hashing).  This is distinct from the feature being intentionally
+        # disabled — the upload was made with end-to-end integrity in mind, but
+        # the client could not fulfil its part.  We cannot run a meaningful
+        # manifest comparison without the client-side hash, so we fall back to
+        # the file-existence check and log a clear explanation.
+        print()
+        print("⚠ WARNING: Manifest verification will be skipped.")
+        print(f"  Reason  : Client-side checksum computation failed during upload.")
+        print(f"  Code    : {client_skipped_reason}")
+        if client_skipped_error:
+            print(f"  Detail  : {client_skipped_error}")
+        print("  Falling back to file-existence check only.")
+        print("  End-to-end integrity cannot be guaranteed for this upload.")
+        print()
+        _verify_files_exist(origin_path)
+
     else:
-        # No checksum available — fall back to existence check.
-        # This covers: legacy uploads, uploads where the UI had checksum
-        # computation disabled, and uploads where computation failed gracefully.
+        # No checksum metadata at all — the UI had upload_verify_checksums
+        # disabled, or this is a legacy upload predating the checksum feature.
+        # Fall back to the lightweight existence check.
         print(f"No client checksum found — falling back to file existence check")
         _verify_files_exist(origin_path)
 
@@ -138,7 +178,7 @@ def _compute_manifest_hash(origin_path):
     Raises:
         Exception: If no files are found or hashing fails.
     """
-    import blake3  # deferred import — only required on the checksum path
+    import blake3  # already confirmed importable in verify_upload_integrity
 
     # 16 MB chunks — optimal for Lustre HPFS (>4 MB minimum, 10–32 MB ideal)
     CHUNK_SIZE = 16 * 1024 * 1024

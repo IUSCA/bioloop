@@ -76,6 +76,7 @@
                 v-if="isUpload"
                 :status="uploadLogStatus"
                 :integrated-status="integratedStatus"
+                :failure-reason="uploadLogFailureReason"
               />
               <!-- Admin: link to upload details page -->
               <router-link
@@ -128,14 +129,16 @@ const integratedStatus = computed(
   () => wfService.get_integrated_workflow_status(props.dataset?.workflows),
 );
 
-// Upload log status — fetched lazily for UPLOAD datasets.
+// Upload log status and failure reason — fetched lazily for UPLOAD datasets.
 const uploadLogStatus = ref(null);
+const uploadLogFailureReason = ref(null);
 
 async function fetchUploadStatus() {
   if (!isUpload.value || !props.dataset?.id) return;
   try {
     const res = await datasetService.getUploadLogByDatasetId(props.dataset.id);
     uploadLogStatus.value = res.data?.status ?? null;
+    uploadLogFailureReason.value = res.data?.metadata?.failure_reason ?? null;
   } catch {
     // silently ignore — badge falls back to unknown/null state
   }

@@ -120,9 +120,19 @@ async function _hashFile(file, hasher, onProgress = null) {
  * Creates a deterministic manifest string with file paths, sizes, and hashes,
  * then hashes the manifest itself for verification.
  *
+ * Return value semantics (important — the worker reads these):
+ *   null                            → feature disabled or no files; worker treats
+ *                                     as legacy/feature-off, falls back to existence check.
+ *   { algorithm, mode, manifest_hash, … } → success; worker runs full BLAKE3 verification.
+ *   { skipped: true, skipped_reason, error } → computation was attempted but failed
+ *                                     (e.g. hash-wasm WASM OOM, dynamic import error);
+ *                                     worker logs the reason and falls back to
+ *                                     existence check, distinguishing it from the
+ *                                     intentional feature-disabled case.
+ *
  * @param {File[]} files - Array of File objects to hash
  * @param {Function} [progressCallback] - Optional callback for progress updates (0-100)
- * @returns {Promise<Object|null>} Manifest hash object or null if feature disabled/no files
+ * @returns {Promise<Object|null>} See return value semantics above.
  */
 export async function computeManifestHash(files, progressCallback = null) {
   console.log('[checksum.js] computeManifestHash called');
@@ -212,8 +222,15 @@ export async function computeManifestHash(files, progressCallback = null) {
   } catch (error) {
     console.error('[checksum.js] ✗ Failed to compute manifest hash:', error);
     console.error('[checksum.js] Error stack:', error.stack);
-    // Don't fail upload if checksum computation fails
-    return null;
+    // Do not fail the upload — return a skip-marker so the API records that
+    // computation was attempted but failed.  The worker reads this marker and
+    // logs a clear explanation instead of silently treating the upload as a
+    // legacy/feature-disabled case.
+    return {
+      skipped: true,
+      skipped_reason: 'client_computation_failed',
+      error: String(error),
+    };
   }
 }
 

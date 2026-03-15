@@ -330,6 +330,27 @@
                     />
                   </div>
 
+                  <!-- Per-file failure summary — only shown when one or more files failed -->
+                  <div
+                    v-if="fileUploadErrors.length > 0"
+                    class="rounded-md px-3 py-2 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
+                  >
+                    <div class="flex items-center gap-2 text-sm font-semibold mb-2 text-red-700 dark:text-red-400">
+                      <Icon icon="mdi:alert-circle-outline" class="text-base flex-none" />
+                      <span>{{ fileUploadErrors.length }} file{{ fileUploadErrors.length === 1 ? '' : 's' }} failed to upload</span>
+                    </div>
+                    <ul class="text-xs text-red-700 dark:text-red-300 space-y-1 max-h-32 overflow-y-auto">
+                      <li
+                        v-for="err in fileUploadErrors"
+                        :key="err.relativePath"
+                        class="flex items-start gap-1"
+                      >
+                        <Icon icon="mdi:close-circle" class="flex-none mt-0.5" />
+                        <span class="break-all">{{ err.relativePath }}</span>
+                      </li>
+                    </ul>
+                  </div>
+
                 </div>
 
                 <!-- File list -->
@@ -337,7 +358,21 @@
                   <div v-for="file in displayedFilesToUpload" :key="file.name" class="mb-2 pb-2 border-b border-gray-200 last:border-b-0">
                     <div class="flex items-center justify-between">
                       <span class="truncate flex-grow mr-2">{{ file.name }}</span>
-                      <span class="text-sm text-gray-500 whitespace-nowrap">{{ file.formattedSize }}</span>
+                      <div class="flex items-center gap-1.5 flex-none">
+                        <!-- Upload-complete check (all succeeded, no per-file tracking needed) -->
+                        <Icon
+                          v-if="isUploadComplete && fileUploadErrors.length === 0"
+                          icon="mdi:check-circle"
+                          class="text-green-500 text-base"
+                        />
+                        <!-- Per-file failure indicator -->
+                        <Icon
+                          v-else-if="fileUploadErrorMap.has(file.webkitRelativePath || file.name)"
+                          icon="mdi:close-circle"
+                          class="text-red-500 text-base"
+                        />
+                        <span class="text-sm text-gray-500 whitespace-nowrap">{{ file.formattedSize }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -590,6 +625,14 @@ const uploadProgress = ref(0);
 const filesUploaded = ref(0);
 const totalFiles = ref(0);
 const lastUploadProcessId = ref(null); // A TUS process_id from this batch — sent to /complete as audit reference only
+
+// Per-file failure tracking — populated after upload; each entry:
+// { name: string, relativePath: string, message: string }
+const fileUploadErrors = ref([]);
+// O(1) lookup: relativePath → error message, for the file-list status icons
+const fileUploadErrorMap = computed(
+  () => new Map(fileUploadErrors.value.map((e) => [e.relativePath, e.message])),
+);
 const uploadRegistrationFailed = ref(false); // Track if final API call failed
 const isComputingChecksum = ref(false); // Track checksum computation state
 const checksumProgress = ref(0); // Track checksum computation progress (0-100)
@@ -924,6 +967,7 @@ const onSubmit = async () => {
   submissionAlert.value = null; // reset any alerts from previous submissions
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
+  fileUploadErrors.value = [];
 
   const t0 = performance.now();
 
@@ -951,7 +995,17 @@ const onSubmit = async () => {
             });
             tChecksumMs = performance.now() - tChecksumStart;
           } catch (error) {
-            // Don't fail upload - allow it to proceed without checksum
+            // computeManifestHash catches internally and returns a skip-marker.
+            // This outer catch is a safety net for any unexpected escape.
+            // Record the skip-marker so the worker knows computation was attempted
+            // (as opposed to feature-disabled / legacy), and doesn't retry on
+            // subsequent upload attempts.
+            console.error('[UploadDatasetStepper] Unexpected error during checksum computation:', error);
+            computedChecksum.value = {
+              skipped: true,
+              skipped_reason: 'client_computation_failed',
+              error: String(error),
+            };
           } finally {
             isComputingChecksum.value = false;
             checksumProgress.value = 0;
@@ -1048,8 +1102,14 @@ const handleSubmit = () => {
     .catch(() => {
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
-      submissionAlert.value = "An error occurred.";
-      submissionAlertColor.value = "warning";
+      // Only set a generic fallback if onSubmit() didn't already set a more
+      // specific message.  submissionAlert is reset to null at the start of
+      // each submission attempt, so any non-null value here was deliberately
+      // written by the failing code path and should be preserved.
+      if (!submissionAlert.value) {
+        submissionAlert.value = "An error occurred.";
+        submissionAlertColor.value = "warning";
+      }
       isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
@@ -1226,18 +1286,31 @@ const uploadFilesWithTus = async (files, endpoint) => {
     });
   });
 
-  try {
-    await Promise.all(uploadPromises);
-    return true;
-  } catch (error) {
-    console.error('[TUS-CLIENT] One or more uploads failed:', {
-      error_message: error.message,
-      error_type: error.constructor.name,
+  // allSettled lets every file run to success or exhausted-retries before we
+  // evaluate the outcome — we get the full failure list rather than stopping
+  // at the first rejection.
+  const results = await Promise.allSettled(uploadPromises);
+
+  const rejections = results
+    .map((r, i) => ({ result: r, file: files[i] }))
+    .filter(({ result }) => result.status === 'rejected');
+
+  if (rejections.length > 0) {
+    fileUploadErrors.value = rejections.map(({ result, file }) => ({
+      name: file.name,
+      relativePath: file.webkitRelativePath || file.name,
+      message: result.reason?.message || 'Upload failed',
+    }));
+    console.error('[TUS-CLIENT] Some uploads failed:', {
       total_files: files.length,
+      failed_count: rejections.length,
       uploaded_count: uploadedCount,
+      failed_files: fileUploadErrors.value.map((e) => e.relativePath),
     });
     return false;
   }
+
+  return true;
 };
 
 const handleUploadComplete = async () => {

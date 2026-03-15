@@ -114,13 +114,19 @@
         </div>
         <!-- Upload verification failed -->
         <div v-else-if="rowData.status === constants.UPLOAD_STATUSES.VERIFICATION_FAILED" class="flex justify-center">
-          <va-popover message="Upload verification failed">
+          <va-popover :message="rowData.metadata?.failure_reason ? `Verification failed: ${rowData.metadata.failure_reason}` : 'Upload verification failed'">
+            <va-icon name="error" color="danger" />
+          </va-popover>
+        </div>
+        <!-- Permanently failed -->
+        <div v-else-if="rowData.status === constants.UPLOAD_STATUSES.PERMANENTLY_FAILED" class="flex justify-center">
+          <va-popover :message="rowData.metadata?.failure_reason ? `Permanently failed: ${rowData.metadata.failure_reason}` : 'Upload permanently failed — all retries exhausted'">
             <va-icon name="error" color="danger" />
           </va-popover>
         </div>
         <!-- Processing failed -->
         <div v-else-if="rowData.status === constants.UPLOAD_STATUSES.PROCESSING_FAILED" class="flex justify-center">
-          <va-popover message="Processing failed">
+          <va-popover :message="rowData.metadata?.failure_reason ? `Processing failed: ${rowData.metadata.failure_reason}` : 'Processing failed'">
             <va-icon name="error" color="danger" />
           </va-popover>
         </div>
@@ -143,7 +149,7 @@
         </div>
         <!-- Upload failed -->
         <div v-else-if="rowData.status === constants.UPLOAD_STATUSES.UPLOAD_FAILED" class="flex justify-center">
-          <va-popover message="Upload failed">
+          <va-popover :message="rowData.metadata?.failure_reason ? `Upload failed: ${rowData.metadata.failure_reason}` : 'Upload failed'">
             <va-icon name="error" color="danger" />
           </va-popover>
         </div>

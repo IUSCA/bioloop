@@ -12,12 +12,17 @@
 
 ### Blocking (must fix before merge)
 
-- [ ] **Multi-file upload bug** — `/complete` endpoint only moves the last file. Must accept all `process_ids` and move every file to `origin_path`. Both API and UI changes required.
-- [ ] **`api/package-lock.json` not committed** — `@tus/file-store`, `@tus/server`, `ioredis` are in `package.json` but must also be in the lockfile. Run `npm install` in `api/`, commit the result. CI and container startup fail without it.
+- [x] **Multi-file upload bug** — `/complete` endpoint only moves the last file. Must accept all `process_ids` and move every file to `origin_path`. Both API and UI changes required.
+- [x] **`api/package-lock.json` not committed** — `@tus/file-store`, `@tus/server`, `ioredis` are in `package.json` but must also be in the lockfile. Run `npm install` in `api/`, commit the result. CI and container startup fail without it.
 - [ ] **Run linter** across changed `ui` and `api` files.
 - [ ] **Install dependencies** across `ui`, `api`, and `workers` to verify nothing is missing.
-- [ ] **Smoke test on dev** — run the full `UPLOADING → UPLOADED → VERIFYING → VERIFIED → COMPLETE` flow end-to-end, including a multi-file upload.
+- [x] **Smoke test on dev** — run the full `UPLOADING → UPLOADED → VERIFYING → VERIFIED → COMPLETE` flow end-to-end, including a multi-file upload.
+- [x] **Mid-file upload test** — upload at least one file around 500 MB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [ ] **Large-file upload test** — upload at least one file ≥ 10 GB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
+- [x] **Large-file-count upload test** — upload at least one directory with around 5000 files, to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
+- [x] **Performance comparison vs Google Drive** — upload the iseq-DI dataset to Google Drive and compare upload throughput, time-to-complete, and UX against Bioloop. Document findings.
+- [ ] **Strengthen no-checksum fallback verification** — when `upload_verify_checksums` is disabled, the worker currently only confirms files exist at `origin_path`. Investigate whether TUS stores per-file metadata (final offset, declared upload-length, etc.) that survives the move to `origin_path`, and if so use it to verify each file's size matches what TUS declared complete. At minimum, compare each file's `stat().st_size` against the size recorded in the upload log (sent by the UI in the `/complete` payload) without reading file content.
+- [ ] **Think through test strategy for verification task and upload management script** — see "Test Strategy" section at the bottom of this document for a list of ideas. Decide which are worth implementing now vs. post-merge.
 - [ ] **Review any remaining unaddressed Copilot PR comments** before merge.
 - [ ] **Investigate OAuth token-scope validation at upload boundary** — the old architecture validated a scoped OAuth token in `secure_download` before accepting bytes onto the filesystem. That check was removed because uploads now go directly through the core API (not `secure_download`). Assess whether the current `onUploadCreate` auth check (standard Bearer token + dataset ownership) is sufficient, or whether a narrower upload-scoped token should be introduced for the TUS boundary.
 
@@ -251,3 +256,81 @@ After a successful upload, wait for the worker pipeline to complete. Verify:
 ## Pending Work (Post-merge)
 
 - **Orphan Detection:** TUS uploads that complete but fail to register (no `process_id` in DB) need a detection/cleanup mechanism.
+
+---
+
+## Design Discussions (Decide Before or Shortly After Merge)
+
+### Dataset Name Uniqueness / Re-upload Redesign
+
+**Addresses failure analysis items C1, C2, L2.**
+
+**Problem:** `@@unique([name, type, is_deleted])` means any dataset whose upload failed or got stuck in UPLOADING permanently reserves the name. Users cannot re-upload under the same name without admin intervention. Two concurrent uploads with the same name produce a generic 500 instead of "name already taken."
+
+---
+
+#### Recommended Implementation: Tombstone-on-failure (zero schema changes)
+
+**Key insight:** `origin_path` already embeds the dataset `id` (`/uploads/{type}/{id}/{name}`), so it is always unique regardless of `name`. The `name` field's uniqueness constraint is the only blocker for re-upload.
+
+**How it works — on any terminal upload failure (UPLOAD_FAILED, VERIFICATION_FAILED, PERMANENTLY_FAILED):**
+1. Rename `dataset.name` → `{name}--{id}` (using the dataset's own DB id, always unique).
+2. Set `dataset.is_deleted = true`.
+
+This frees the `(name, type, is_deleted=false)` slot, allowing a new upload to use the same display name. The user can re-upload immediately without admin intervention.
+
+**Why this is safe:**
+- `origin_path` is stored in the DB and never re-derived from `name`, so renaming doesn't affect the filesystem or any code that reads `origin_path`.
+- `is_deleted = true` hides the tombstone dataset from all normal listings (they filter `is_deleted: false`). Admin upload history queries `dataset_upload_log` directly — it will show the tombstone name (`my-dataset--42`) for failed entries, which is acceptable in an admin-only view.
+- Workers read `dataset.name` only for logging — they won't be confused by a tombstone name since it only appears for failed uploads.
+- The `/:name/exists` endpoint already filters `is_deleted: false` by default — no change needed. ✓
+
+**Changes required (minimal — no schema migration, no new columns):**
+- `markUploadAsFailed()` in `api/src/routes/datasets/uploads.js`: after updating the log, also `update dataset set name = name || '--' || id, is_deleted = true`.
+- `PATCH /datasets/:id/upload-log` in the same file: when the incoming status is `VERIFICATION_FAILED` or `PERMANENTLY_FAILED`, add the same tombstone step on the dataset.
+- `POST /datasets/uploads`: catch Prisma P2002 (unique constraint violation) and return 409 "A dataset with that name already exists" instead of 500 — handles the L2 race condition.
+- Stale-UPLOADING cron (C1 fix, pending): when transitioning UPLOADING → UPLOAD_FAILED, same tombstone step.
+
+**What does NOT change:**
+- `dataset.name` usage in UI, workers, import pipelines — unchanged.
+- Existence check endpoint — unchanged.
+- Schema — no new columns, no migration.
+- `origin_path` — unchanged.
+
+---
+
+#### Alternative (if display-name vs. slug separation is wanted in future)
+
+The industry-standard approach (WordPress slugs, GitHub repos, PyPI) would add:
+1. **Display name** — user-entered, no uniqueness constraint.
+2. **Slug / canonical name** — derived from display name, unique, used as the machine identifier.
+
+This is the "proper" long-term architecture but requires a schema migration, updating `origin_path` construction, and updating every place the dataset name is displayed. It is a separate project, not scoped to this branch.
+
+---
+
+## Test Strategy (TODO: Flesh Out)
+
+### Upload Verification Task (`verify_upload_integrity.py` + `upload.py`)
+
+Ideas for unit/integration tests:
+- Mock `origin_path` with a known set of files; compute expected BLAKE3 manifest hash independently and assert equality.
+- Test hash mismatch path: write a single corrupted byte to one file after computing the expected hash; assert exception is raised with the expected/computed values in the message.
+- Test `blake3` not installed: mock `import blake3` to raise `ImportError`; assert the explicit error message is raised (not a silent fallback).
+- Test client skip-marker path: pass `metadata.checksum = { skipped: True, skipped_reason: 'client_computation_failed' }` in the upload log; assert `_verify_files_exist` is called and no exception is raised for a healthy directory.
+- Test legacy/feature-disabled path: pass `upload_log = None`; assert existence check runs.
+- Test empty `origin_path`: assert exception with "No files found".
+- Test missing `origin_path`: assert exception with "Origin path does not exist".
+- Test 0-byte files: include a 0-byte file in the test dataset; verify it is included in the manifest and hashed correctly.
+
+### Upload Management Script (`manage_upload_workflows.py`)
+
+Ideas:
+- Unit-test each `handle_*_status` function in isolation by mocking the API client and Celery.
+- `handle_uploaded_status`: mock `apply_async` to return a fake task; assert the correct single combined API write (status=VERIFYING + task_id) is made before `apply_async` is called.
+- `handle_verifying_status` — FAILURE fallback: mock Celery task state as FAILURE and DB status as VERIFYING; assert VERIFICATION_FAILED write is made.
+- `handle_verifying_status` — 24-hour timeout: set `updated_at` to 25 hours ago; assert timeout transition fires.
+- `handle_verified_status` — atomic write: mock `int_wf.start()` to succeed; assert the COMPLETE + `workflow_id` write is a single API call.
+- `handle_verified_status` — existing workflow guard: pre-populate a workflow row; assert `start()` is NOT called again and only the COMPLETE write is retried.
+- `process_stalled_uploads` / `process_failed_uploads`: mock the stalled/failed upload list; assert correct handler is dispatched for each status.
+- End-to-end integration test (heavier): spin up a test DB and a mock Celery backend; run the script against seeded upload log rows and assert final statuses.

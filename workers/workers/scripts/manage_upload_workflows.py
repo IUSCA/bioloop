@@ -69,9 +69,20 @@ def manage_upload_workflows(dry_run=False, max_retries=MAX_RETRY_COUNT):
         'verification_failed': 0,
         'failed_retried': 0,
         'permanently_failed': 0,
+        'stale_uploading_failed': 0,
         'errors': 0,
     }
-    
+
+    # Expire stale UPLOADING sessions first so their names are freed before
+    # we process any new uploads with the same names.
+    try:
+        stale_summary = process_stale_uploading(dry_run)
+        summary['stale_uploading_failed'] = stale_summary.get('failed', 0)
+        summary['errors'] += stale_summary['errors']
+    except Exception as e:
+        logger.error(f"Error processing stale UPLOADING records: {e}", exc_info=True)
+        summary['errors'] += 1
+
     try:
         stalled_summary = process_stalled_uploads(dry_run)
         summary['verification_spawned'] = stalled_summary.get('verification_spawned', 0)
@@ -93,6 +104,7 @@ def manage_upload_workflows(dry_run=False, max_retries=MAX_RETRY_COUNT):
     
     logger.info("="*60)
     logger.info("Upload workflow management complete")
+    logger.info(f"Stale UPLOADING sessions expired: {summary['stale_uploading_failed']}")
     logger.info(f"Verification tasks spawned: {summary['verification_spawned']}")
     logger.info(f"Verified uploads (workflow triggered): {summary['verified_triggered']}")
     logger.info(f"Failed uploads retried: {summary['failed_retried']}")
@@ -100,6 +112,78 @@ def manage_upload_workflows(dry_run=False, max_retries=MAX_RETRY_COUNT):
     logger.info(f"Errors: {summary['errors']}")
     logger.info("="*60)
     
+    return summary
+
+
+def process_stale_uploading(dry_run=False, age_days=0.25):
+    """
+    Transition uploads that have been stuck in UPLOADING for more than *age_days*
+    to UPLOAD_FAILED.
+
+    The default threshold of 0.25 days (6 hours) is intentionally generous.
+    A 100 GB upload over a slow research-network connection (100 Mbps) takes
+    roughly 2.2 hours, so 6 hours gives ample margin before declaring a session
+    abandoned.  Reduce it only if you know uploads will never take that long
+    on your network.
+
+    Scenarios that leave an upload stuck in UPLOADING:
+      - User closed the browser before /complete was called
+      - Token expired mid-transfer and the client gave up
+      - TUS onUploadCreate returned a non-retryable error (400/403/409)
+      - onUploadFinish failed with a filesystem error
+
+    Transitioning to UPLOAD_FAILED:
+      - Frees the dataset name for re-upload (the API tombstones the dataset
+        on UPLOAD_FAILED writes via the PATCH /:id/upload-log endpoint)
+      - Surfaces a visible failure status in the upload history UI
+      - Prevents infinite "Uploading…" spinners in the admin view
+
+    Returns a summary dict with keys 'failed' and 'errors'.
+    """
+    logger.info("\n" + "="*80)
+    logger.info("EXPIRING STALE UPLOADING SESSIONS")
+    logger.info(f"  Age threshold: {age_days} day(s) ({age_days * 24:.1f} hours)")
+    logger.info("="*80)
+
+    summary = {'failed': 0, 'errors': 0}
+
+    try:
+        response = api.get_expired_uploads(status=UPLOAD_STATUS['UPLOADING'], age_days=age_days)
+        uploads = response.get('uploads', [])
+        logger.info(f"Found {len(uploads)} stale UPLOADING session(s)")
+
+        for upload in uploads:
+            dataset_id = upload['dataset_id']
+            dataset_name = upload['dataset_name']
+            try:
+                logger.info(f"  Expiring stale upload: {dataset_name} (ID: {dataset_id})")
+                if not dry_run:
+                    api.update_dataset_upload_log(
+                        dataset_id=dataset_id,
+                        log_data={
+                            'status': UPLOAD_STATUS['UPLOAD_FAILED'],
+                            'metadata': {
+                                'failure_reason': (
+                                    f'Upload session expired after {age_days * 24:.1f} hour(s) '
+                                    f'in UPLOADING state. The browser tab may have been '
+                                    f'closed, the session timed out, or a server-side '
+                                    f'error occurred before the upload could complete.'
+                                ),
+                            },
+                        },
+                    )
+                    summary['failed'] += 1
+                    logger.info(f"    → UPLOAD_FAILED (name freed for re-upload)")
+                else:
+                    logger.info(f"    → [dry-run] would set UPLOAD_FAILED")
+            except Exception as e:
+                logger.error(f"  Error expiring upload {dataset_id}: {e}", exc_info=True)
+                summary['errors'] += 1
+
+    except Exception as e:
+        logger.error(f"Error fetching stale UPLOADING records: {e}", exc_info=True)
+        summary['errors'] += 1
+
     return summary
 
 
@@ -281,7 +365,7 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
     - Task still running
     - Task failed
     - Task stale (no task_id but VERIFYING for >5 min)
-    - Task hung (VERIFYING for >24 hours)
+    - Task hung (VERIFYING for >4 hours)
     
     Returns:
         str: Result key for summary
@@ -326,14 +410,22 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
             
             return handle_uploaded_status(dataset_id, dataset_name, upload_log, metadata, dry_run, verify_task)
     
-    if time_in_verifying > timedelta(hours=24):
+    # 4 hours is a safe upper bound: BLAKE3 hashing 100 GB across tens of
+    # thousands of small files on a research HPC filesystem peaks at roughly
+    # 45–90 minutes.  4 hours gives 2–4× headroom while cutting the previous
+    # 24-hour dead-man window by 6×, reducing the time a lost Celery message
+    # keeps the upload stuck in a spinning "Verifying…" state.
+    VERIFICATION_TIMEOUT = timedelta(hours=4)
+
+    if time_in_verifying > VERIFICATION_TIMEOUT:
+        timeout_hours = int(VERIFICATION_TIMEOUT.total_seconds() // 3600)
         logger.error("="*80)
-        logger.error("FAILURE MODE: VERIFICATION TIMEOUT (>24 HOURS)")
+        logger.error(f"FAILURE MODE: VERIFICATION TIMEOUT (>{timeout_hours} HOURS)")
         logger.error(f"Dataset ID: {dataset_id}")
         logger.error(f"Dataset name: {dataset_name}")
         logger.error(f"Task ID: {task_id}")
         logger.error(f"Time in VERIFYING: {time_in_verifying}")
-        logger.error("Cause: Task exceeded 24-hour hard limit or never completed")
+        logger.error(f"Cause: Task exceeded {timeout_hours}-hour hard limit or Celery message was lost")
         logger.error("Expected resolution: Mark as VERIFICATION_FAILED")
         logger.error("                     Admin will be notified")
         logger.error("                     Admin should check Celery logs for task")
@@ -346,7 +438,7 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
                     'status': UPLOAD_STATUS['VERIFICATION_FAILED'],
                     'metadata': {
                         **metadata,
-                        'failure_reason': f'Verification timeout (>24 hours). Task ID: {task_id}',
+                        'failure_reason': f'Verification timeout (>{timeout_hours} hours). Task ID: {task_id}',
                         'failed_at': datetime.utcnow().isoformat(),
                     }
                 }
@@ -471,7 +563,7 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
         logger.error("  - Celery broker (RabbitMQ) unreachable")
         logger.error("  - Task ID invalid or expired")
         logger.error("Expected resolution: Will retry check on next script run")
-        logger.error("                     If persists >24h, will be caught by timeout handler")
+        logger.error("                     If persists >4h, will be caught by timeout handler")
         logger.error("="*80)
         return 'errors'
 

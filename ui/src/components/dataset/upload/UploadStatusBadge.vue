@@ -70,14 +70,21 @@
 
   <!-- VERIFICATION_FAILED -->
   <div v-else-if="props.status === constants.UPLOAD_STATUSES.VERIFICATION_FAILED" class="flex items-center">
-    <va-popover message="Upload verification failed">
+    <va-popover :message="props.failureReason ? `Verification failed: ${props.failureReason}` : 'Upload verification failed'">
+      <va-icon name="error" color="danger" />
+    </va-popover>
+  </div>
+
+  <!-- PERMANENTLY_FAILED -->
+  <div v-else-if="props.status === constants.UPLOAD_STATUSES.PERMANENTLY_FAILED" class="flex items-center">
+    <va-popover :message="props.failureReason ? `Permanently failed: ${props.failureReason}` : 'Upload permanently failed — all retries exhausted'">
       <va-icon name="error" color="danger" />
     </va-popover>
   </div>
 
   <!-- PROCESSING_FAILED -->
   <div v-else-if="props.status === constants.UPLOAD_STATUSES.PROCESSING_FAILED" class="flex items-center">
-    <va-popover message="Processing failed">
+    <va-popover :message="props.failureReason ? `Processing failed: ${props.failureReason}` : 'Processing failed'">
       <va-icon name="error" color="danger" />
     </va-popover>
   </div>
@@ -103,7 +110,7 @@
 
   <!-- UPLOAD_FAILED -->
   <div v-else-if="props.status === constants.UPLOAD_STATUSES.UPLOAD_FAILED" class="flex items-center">
-    <va-popover message="Upload failed">
+    <va-popover :message="props.failureReason ? `Upload failed: ${props.failureReason}` : 'Upload failed'">
       <va-icon name="error" color="danger" />
     </va-popover>
   </div>
@@ -129,6 +136,11 @@ const props = defineProps({
   },
   /** Result of wfService.get_integrated_workflow_status(dataset.workflows) */
   integratedStatus: {
+    type: String,
+    default: null,
+  },
+  /** Optional failure reason from upload_log.metadata.failure_reason */
+  failureReason: {
     type: String,
     default: null,
   },

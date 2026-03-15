@@ -4,31 +4,38 @@ const logger = require('@/services/logger');
 
 /**
  * Reads the TUS sidecar (.json) file to extract the original filename and raw
- * TUS metadata.  Falls back to sensible defaults when the sidecar is absent.
+ * TUS metadata.  Throws if the sidecar is absent.
+ *
+ * The old behaviour silently fell back to `originalFilename = 'uploaded_file'`
+ * when the sidecar was missing.  In a multi-file upload this caused every
+ * sidecar-missing file to target the same destination path; the idempotent
+ * move guard skipped all but the first, silently dropping the rest.  Throwing
+ * here surfaces the problem immediately rather than allowing silent data loss.
+ *
  * Returns { originalFilename, tusMetadata }.
  */
 function readTusFileInfo({ tusInfoPath, datasetId, process_id }) {
-  let tusMetadata = {};
-  let originalFilename = 'uploaded_file';
-
-  if (fs.existsSync(tusInfoPath)) {
-    const infoContent = fs.readFileSync(tusInfoPath, 'utf8');
-    tusMetadata = JSON.parse(infoContent);
-    originalFilename = tusMetadata.metadata?.filename
-      || tusMetadata.metadata?.name
-      || originalFilename;
-    logger.info('[TUS] Metadata read', {
-      dataset_id: datasetId,
-      process_id,
-      filename: originalFilename,
-    });
-  } else {
-    logger.warn('[TUS] Info file not found (using defaults)', {
+  if (!fs.existsSync(tusInfoPath)) {
+    const msg = `TUS sidecar not found — cannot determine filename for upload (process_id: ${process_id})`;
+    logger.error('[TUS] ' + msg, {
       dataset_id: datasetId,
       process_id,
       expected_path: tusInfoPath,
     });
+    throw new Error(msg);
   }
+
+  const infoContent = fs.readFileSync(tusInfoPath, 'utf8');
+  const tusMetadata = JSON.parse(infoContent);
+  const originalFilename = tusMetadata.metadata?.filename
+    || tusMetadata.metadata?.name
+    || 'uploaded_file';
+
+  logger.info('[TUS] Metadata read', {
+    dataset_id: datasetId,
+    process_id,
+    filename: originalFilename,
+  });
 
   return { originalFilename, tusMetadata };
 }

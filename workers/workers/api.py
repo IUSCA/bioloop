@@ -291,6 +291,17 @@ def get_stalled_uploads():
         return r.json()
 
 
+def get_expired_uploads(status='UPLOADING', age_days=0.25):
+    """Get uploads that have been stuck in *status* for longer than *age_days*."""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/expired', params={
+            'status': status,
+            'age_days': age_days,
+        })
+        r.raise_for_status()
+        return r.json()
+
+
 def get_failed_uploads(max_retry_count=2, max_age_hours=72):
     """Get PROCESSING_FAILED uploads eligible for retry"""
     with APIServerSession() as s:

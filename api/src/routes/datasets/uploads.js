@@ -65,6 +65,57 @@ async function findUploadLogForDataset(datasetId) {
 }
 
 
+// Renames the dataset to "<name>--<id>" and soft-deletes it so its original
+// name is freed in the unique constraint (name, type, is_deleted).
+//
+// Called whenever an upload reaches a terminal failure state
+// (UPLOAD_FAILED, VERIFICATION_FAILED, PERMANENTLY_FAILED).  After this runs:
+//   - is_deleted=false slot for the original name is available for a new upload
+//   - The tombstone record remains queryable via the upload-log join for audit
+//   - origin_path is unchanged (it embeds the dataset id, so no path conflict)
+//
+// Accepts an optional Prisma transaction client `tx`; falls back to the global
+// prisma client when omitted (for callers that don't already have a tx).
+//
+// Errors are caught and logged — never re-thrown, so a tombstone failure never
+// obscures the primary failure response that prompted the tombstone.
+async function tombstoneDataset(datasetId, tx = null) {
+  const client = tx || prisma;
+  try {
+    const dataset = await client.dataset.findUnique({
+      where: { id: datasetId },
+      select: { id: true, name: true, is_deleted: true },
+    });
+
+    if (!dataset) {
+      logger.warn('[TOMBSTONE] Dataset not found — skipping tombstone', { dataset_id: datasetId });
+      return;
+    }
+
+    if (dataset.is_deleted) {
+      logger.info('[TOMBSTONE] Dataset already tombstoned — skipping', { dataset_id: datasetId });
+      return;
+    }
+
+    const tombstoneName = `${dataset.name}--${dataset.id}`;
+    await client.dataset.update({
+      where: { id: datasetId },
+      data: { name: tombstoneName, is_deleted: true },
+    });
+
+    logger.info('[TOMBSTONE] Dataset tombstoned — name freed for re-upload', {
+      dataset_id: datasetId,
+      original_name: dataset.name,
+      tombstone_name: tombstoneName,
+    });
+  } catch (err) {
+    logger.error('[TOMBSTONE] Failed to tombstone dataset — name may remain reserved', {
+      dataset_id: datasetId,
+      error: err.message,
+    });
+  }
+}
+
 // Sets the dataset upload log status to UPLOAD_FAILED and records the failure
 // reason in the log's metadata.  PROCESSING_FAILED is intentionally not used
 // here: that status is reserved for failures that occur after the integrated
@@ -101,6 +152,9 @@ async function markUploadAsFailed(datasetId, error) {
       error: updateError.message,
     });
   }
+
+  // Free the dataset name so the user can re-upload with the same name.
+  await tombstoneDataset(datasetId);
 }
 
 // ============================================================================
@@ -612,6 +666,19 @@ router.post(
 
       res.json(dataset_upload_log);
     } catch (error) {
+      // Prisma P2002 = unique constraint violation: two concurrent users raced
+      // through the name-existence check and both tried to insert the same name.
+      // Return 409 with an actionable message instead of a generic 500.
+      if (error.code === 'P2002') {
+        logger.warn('[UPLOAD-CREATE] Name collision (P2002) — concurrent upload with same name', {
+          user: req.user?.username,
+          dataset_name: name,
+        });
+        return res.status(409).json({
+          error: 'A dataset with that name already exists. Please choose a different name.',
+        });
+      }
+
       logger.error('[UPLOAD-CREATE] FAILED: Error registering dataset upload', {
         user: req.user?.username,
         dataset_name: name,
@@ -725,6 +792,30 @@ router.post(
           upload_log_id: uploadLog.id,
         });
         return res.json({ success: true, upload_log: uploadLog });
+      }
+
+      // Guard: if the upload has already advanced past the upload stage (e.g.
+      // the cron picked it up very quickly and set VERIFYING before the client
+      // called /complete), regressing it back to UPLOADED would trigger
+      // re-verification of already-verified data.  Return 409 so the caller
+      // knows the upload is fine and does not need to be retried.
+      const ADVANCED_STATUSES = [
+        CONSTANTS.UPLOAD_STATUSES.VERIFYING,
+        CONSTANTS.UPLOAD_STATUSES.VERIFIED,
+        CONSTANTS.UPLOAD_STATUSES.PROCESSING,
+        CONSTANTS.UPLOAD_STATUSES.COMPLETE,
+        CONSTANTS.UPLOAD_STATUSES.VERIFICATION_FAILED,
+        CONSTANTS.UPLOAD_STATUSES.PERMANENTLY_FAILED,
+      ];
+      if (ADVANCED_STATUSES.includes(uploadLog.status)) {
+        logger.warn('[UPLOAD-COMPLETE] Status has advanced past UPLOADING — rejecting regression', {
+          dataset_id: datasetId,
+          current_status: uploadLog.status,
+        });
+        return res.status(409).json({
+          error: 'Upload has already advanced past the upload stage',
+          status: uploadLog.status,
+        });
       }
 
       const updateData = {
@@ -1041,6 +1132,23 @@ router.patch(
       new_retry_count: updated.retry_count,
       user: req.user?.username,
     });
+
+    // On terminal failure transitions, tombstone the dataset so the original
+    // name is freed for re-upload.  Tombstone runs outside the transaction
+    // above to keep the transaction tight; a tombstone failure is logged but
+    // never surfaces as a 500 (the status update already succeeded).
+    // UPLOAD_FAILED is included so that the stale-UPLOADING cron (which
+    // transitions abandoned sessions via this endpoint) also frees the name.
+    // markUploadAsFailed() tombstones directly (not via this endpoint), so
+    // there is no double-tombstone risk for that path.
+    const TERMINAL_FAILURE_STATUSES = [
+      CONSTANTS.UPLOAD_STATUSES.UPLOAD_FAILED,
+      CONSTANTS.UPLOAD_STATUSES.VERIFICATION_FAILED,
+      CONSTANTS.UPLOAD_STATUSES.PERMANENTLY_FAILED,
+    ];
+    if (status && TERMINAL_FAILURE_STATUSES.includes(status)) {
+      await tombstoneDataset(datasetId);
+    }
 
     res.json({ success: true, upload_log: updated });
   }),
