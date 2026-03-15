@@ -1,22 +1,23 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <Transition name="fade-slide" mode="out-in" class="flex flex-col gap-4">
     <!-- Loading -->
-    <template v-if="loading">
+    <div v-if="loading">
       <VaSkeleton variant="text" height="32px" width="200px" />
       <VaSkeleton variant="text" height="32px" width="280px" />
-      <VaSkeleton variant="rounded" height="360px" />
-    </template>
+      <VaSkeleton variant="squared" height="360px" />
+    </div>
 
     <!-- Error -->
-    <ErrorState
-      v-else-if="error"
-      :title="'Failed to load group'"
-      :message="error?.message"
-      @retry="fetchGroupData"
-    />
+    <div v-else-if="error" class="py-12 px-6">
+      <ErrorState
+        :title="'Failed to load group'"
+        :message="error?.message"
+        @retry="fetchGroupData"
+      />
+    </div>
 
     <!-- Loaded -->
-    <template v-else-if="group">
+    <div v-else-if="group">
       <!-- Page header -->
       <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
@@ -28,6 +29,11 @@
             <h1 class="text-xl font-semibold">
               {{ group.name }}
             </h1>
+          </div>
+          <div>
+            <ModernChip v-if="group.is_archived" color="accent" class="ml-2">
+              Archived
+            </ModernChip>
           </div>
         </div>
 
@@ -95,37 +101,40 @@
           :group="group"
           :ancestors="ancestors"
           :counts="counts"
-          :can-edit="can('edit_metadata')"
-          @archive="openArchiveModal"
+          :can-edit="can('edit_metadata') && !group.is_archived"
+          :can-archive="can('archive') && !group.is_archived"
+          :can-unarchive="can('unarchive') && group.is_archived"
+          @toggle-archive="openArchiveModal"
+          @update="fetchGroupData"
         />
 
         <GroupMembersTab
           v-else-if="activeTab === 'members'"
           :group-id="props.id"
-          :can-add="can('add_member')"
-          :can-remove="can('remove_member')"
-          :can-edit-role="can('edit_member_role')"
+          :can-add="can('add_member') && !group.is_archived"
+          :can-remove="can('remove_member') && !group.is_archived"
+          :can-edit-role="can('edit_member_role') && !group.is_archived"
           @count-changed="handleMembersUpdate"
         />
 
         <GroupSubgroupsTab
           v-else-if="activeTab === 'subgroups'"
           :group-id="props.id"
-          :can-create="can('create_child')"
+          :can-create="can('create_child') && !group.is_archived"
           @count-changed="handleSubgroupsUpdate"
         />
 
         <GroupDatasetsTab
           v-else-if="activeTab === 'datasets'"
           :group-id="props.id"
-          :can-create="can('add_dataset')"
+          :can-create="can('add_dataset') && !group.is_archived"
           @count-changed="handleDatasetsUpdate"
         />
 
         <GroupCollectionsTab
           v-else-if="activeTab === 'collections'"
           :group-id="props.id"
-          :can-create="can('add_collection')"
+          :can-create="can('add_collection') && !group.is_archived"
           @count-changed="handleCollectionsUpdate"
         />
 
@@ -149,13 +158,14 @@
         :group-id="props.id"
         :group-name="group.name"
         :group-slug="group.slug"
+        :is-archived="group.is_archived"
         :affected-members="counts.members"
         :affected-datasets="counts.datasets"
         :affected-subgroups="counts.subgroups"
         @update="handleUpdate"
       />
-    </template>
-  </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup>

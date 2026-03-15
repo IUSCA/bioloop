@@ -36,7 +36,11 @@
               </VaChip>
             </div>
 
-            <VaButton size="small" @click="handleCreateSubgroup" disabled>
+            <VaButton
+              size="small"
+              @click="handleCreateSubgroup"
+              v-if="props.canCreate"
+            >
               <div class="flex items-center justify-between gap-2 mx-1">
                 <i-mdi-plus class="text-sm" />
                 Create Sub Group

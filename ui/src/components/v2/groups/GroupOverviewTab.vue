@@ -52,7 +52,7 @@
               </dt>
               <dd>
                 <ModernChip
-                  :color="props.group.is_archived ? 'secondary' : 'success'"
+                  :color="props.group.is_archived ? 'accent' : 'success'"
                 >
                   {{ props.group.is_archived ? "Archived" : "Active" }}
                 </ModernChip>
@@ -183,7 +183,7 @@
 
       <!-- Danger Zone -->
       <VaCard
-        v-if="props.canEdit"
+        v-if="props.canArchive || props.canUnarchive"
         class="border border-solid border-red-200 dark:border-red-800"
       >
         <VaCardContent>
@@ -192,18 +192,27 @@
           </h2>
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-sm font-medium">Archive this group</p>
+              <p class="text-sm font-medium">
+                {{
+                  props.group.is_archived
+                    ? "Unarchive this group"
+                    : "Archive this group"
+                }}
+              </p>
               <p class="text-xs mt-0.5" style="color: var(--va-secondary)">
-                Freezes membership and blocks new governance actions.
+                {{
+                  props.group.is_archived
+                    ? "Unfreezes membership and allows new governance actions."
+                    : "Freezes membership and blocks new governance actions."
+                }}
               </p>
             </div>
             <VaButton
               color="danger"
               size="small"
-              :disabled="props.group.is_archived"
-              @click="emit('archive')"
+              @click="emit('toggle-archive')"
             >
-              {{ props.group.is_archived ? "Archived" : "Archive" }}
+              {{ props.group.is_archived ? "Unarchive" : "Archive" }}
             </VaButton>
           </div>
         </VaCardContent>
@@ -299,7 +308,7 @@
     :description="props.group.description"
     :allow-user-contributions="props.group.allow_user_contributions"
     :version="props.group.version"
-    @updated="emit('updated')"
+    @update="emit('update')"
   />
 </template>
 
@@ -312,9 +321,11 @@ const props = defineProps({
   /** counts.members / counts.subgroups / counts.resources — null while loading */
   counts: { type: Object, default: () => ({}) },
   canEdit: { type: Boolean, default: false },
+  canArchive: { type: Boolean, default: false },
+  canUnarchive: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["archive"]);
+const emit = defineEmits(["toggle-archive", "update"]);
 
 // sorted from root (highest depth) → nearest parent
 const sortedAncestors = computed(() =>

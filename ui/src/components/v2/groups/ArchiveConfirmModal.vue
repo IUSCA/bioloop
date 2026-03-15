@@ -11,10 +11,10 @@
         <VaButton
           :loading="loading"
           :disabled="!confirmationValid"
-          :color="props.unarchive ? 'success' : 'danger'"
+          :color="props.isArchived ? 'success' : 'danger'"
           @click="confirm"
         >
-          {{ props.unarchive ? "Unarchive Group" : "Archive Group" }}
+          {{ props.isArchived ? "Unarchive Group" : "Archive Group" }}
         </VaButton>
       </div>
     </template>
@@ -22,7 +22,7 @@
     <VaInnerLoading :loading="loading">
       <div class="space-y-6">
         <!-- Unarchive variant -->
-        <template v-if="props.unarchive">
+        <template v-if="props.isArchived">
           <div
             class="rounded-xl border border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
           >
@@ -43,8 +43,8 @@
                   }}</span>
                 </p>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
-                  The group will return to active state and members can be
-                  managed again.
+                  The group will return to active state and members, resources,
+                  and grants can be managed again.
                 </p>
               </div>
             </div>
@@ -94,7 +94,7 @@
           <!-- Affected counts -->
           <div
             v-if="affectedItems.length > 0"
-            class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300"
+            class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300 border border-solid border-gray-300 dark:border-gray-700"
           >
             <div class="mb-2 font-semibold text-gray-700 dark:text-gray-200">
               Affected
@@ -146,7 +146,7 @@ const props = defineProps({
   /** Slug of the group, used for confirmation input. */
   groupSlug: { type: String, default: "" },
   /** If true, shows unarchive wording. */
-  unarchive: { type: Boolean, default: false },
+  isArchived: { type: Boolean, default: false },
   /** Number of affected members (optional, shown in summary). */
   affectedMembers: { type: Number, default: null },
   /** Number of affected datasets (optional, shown in summary). */
@@ -182,14 +182,14 @@ async function confirm() {
   loading.value = true;
 
   try {
-    if (props.unarchive) {
+    if (props.isArchived) {
       await GroupService.unarchive(props.groupId);
     } else {
       await GroupService.archive(props.groupId);
     }
 
     hide();
-    toast.success(props.unarchive ? "Group unarchived." : "Group archived.");
+    toast.success(props.isArchived ? "Group unarchived." : "Group archived.");
     emit("update");
   } catch (err) {
     toast.error(
@@ -204,13 +204,11 @@ async function confirm() {
 defineExpose({ show, hide });
 
 const modalTitle = computed(() =>
-  props.unarchive
-    ? `Unarchive "${props.groupName}"?`
-    : `Archive "${props.groupName}"?`,
+  props.isArchived ? "Unarchive" : `Archive "${props.groupName}"?`,
 );
 
 const confirmationValid = computed(() => {
-  if (props.unarchive) return true;
+  if (props.isArchived) return true;
   if (!props.groupSlug) return true;
   return confirmationText.value === props.groupSlug;
 });

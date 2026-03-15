@@ -106,7 +106,7 @@ export function useChangeTracker(
       () => {
         init();
       },
-      { deep: true },
+      { deep: true, once: true },
     );
   }
 

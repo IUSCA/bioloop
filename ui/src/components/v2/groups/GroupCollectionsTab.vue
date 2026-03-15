@@ -38,8 +38,8 @@
 
             <VaButton
               size="small"
-              :disabled="!props.canCreate"
               @click="navigateToCreateCollection"
+              v-if="props.canCreate"
             >
               <div class="flex items-center justify-between gap-2 mx-1">
                 <i-mdi-plus class="text-sm" />
