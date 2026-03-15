@@ -218,12 +218,13 @@ const noLogsExplanation = computed(() => {
     case S.VERIFYING:
       return upload.value?.metadata?.verification_task_id
         ? `A verification task was dispatched (Celery task ID: ${upload.value.metadata.verification_task_id}) but the worker has not yet registered its process ID. This normally resolves within seconds. If it persists, the task may have crashed before it could start logging — check the Celery worker logs.`
-        : 'The upload status is VERIFYING but no verification task ID has been recorded. The upload-management job may be mid-dispatch. If this persists, check the upload-management job logs for errors.';
+        : 'The upload is VERIFYING but no task ID was recorded. The VERIFYING status and task ID are written atomically, so this state is unexpected — the upload-management job may have encountered an error before the write completed. Check the upload-management job logs.';
     case S.VERIFIED:
-    case S.PROCESSING:
     case S.PROCESSING_FAILED:
     case S.COMPLETE:
-      return 'Verification ran successfully but no worker process ID was captured — this can happen if the upload predates process-ID tracking or if the worker node did not write back to the upload metadata. The verification outcome is reflected in the status above.';
+      return 'Verification completed but the worker did not register a process ID — most likely the process-registration API call failed transiently before the subprocess started. The verification outcome is still reflected in the status above.';
+    case S.PROCESSING:
+      return 'This upload is in a legacy PROCESSING state from a prior retry attempt. It should have been transitioned to COMPLETE or PROCESSING_FAILED automatically. If it persists, check the upload-management job logs.';
     case S.VERIFICATION_FAILED:
     case S.PERMANENTLY_FAILED:
       return 'The verification or processing pipeline reached a terminal failure state before the worker could register its process ID. Check the Failure Reason above for details, and inspect the Celery worker logs on the worker node for the full error.';

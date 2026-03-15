@@ -1251,10 +1251,42 @@ const buildDatasetCreateQuery = (data) => {
   return create_query;
 };
 
+/**
+ * Creates the Postgres `workflow` row that associates a workflow with a dataset.
+ *
+ * Unlike `create_workflow`, this function does NOT touch MongoDB / sca_rhythm.
+ * It is intended for use by callers that have already created and started the
+ * workflow externally (e.g. the upload-verification Celery worker) and only
+ * need to register the association in the relational DB.
+ *
+ * Accepts an optional `tx` parameter so it can participate in an existing
+ * `prisma.$transaction` call — if omitted it uses the global prisma client.
+ *
+ * @param {Object}  params
+ * @param {Object}  [params.tx]          Prisma transaction client (optional).
+ * @param {number}  params.datasetId     Dataset to associate.
+ * @param {string}  params.workflowId    sca_rhythm workflow _id.
+ * @param {number}  [params.initiatorId] User ID to record as initiator.
+ * @returns {Promise<Object>} The created workflow row.
+ */
+async function associateWorkflow({
+  tx, datasetId, workflowId, initiatorId,
+}) {
+  const client = tx || prisma;
+  return client.workflow.create({
+    data: {
+      id: workflowId,
+      dataset_id: datasetId,
+      ...(initiatorId && { initiator_id: initiatorId }),
+    },
+  });
+}
+
 module.exports = {
   soft_delete,
   get_dataset,
   create_workflow,
+  associateWorkflow,
   create_filetree,
   files_ls,
   search_files,

@@ -19,6 +19,7 @@ import traceback
 from datetime import datetime
 
 from workers import api
+from workers.config import config
 from workers.constants.upload import UPLOAD_STATUS
 from workers.upload import verify_upload_integrity as verify_integrity_impl
 
@@ -136,29 +137,32 @@ def main():
                 print(f"✗ Failed to update status: {update_error}")
             
             # Send admin notification
-            try:
-                api.create_notification({
-                    'title': f'Upload Verification Failed: {dataset.get("name", dataset_id)}',
-                    'message': (
-                        f'Upload verification permanently failed after {retry_count + 1} attempts.\n\n'
-                        f'Dataset ID: {dataset_id}\n'
-                        f'Dataset Name: {dataset.get("name")}\n'
-                        f'Task ID: {task_id}\n'
-                        f'Error: {str(e)}\n\n'
-                        f'Manual intervention required.\n'
-                        f'View logs at /uploads/:id (check dataset uploads table for upload log ID)'
-                    ),
-                    'type': 'error',
-                    'metadata': {
-                        'dataset_id': dataset_id,
-                        'task_id': task_id,
-                        'error': str(e),
-                        'timestamp': datetime.utcnow().isoformat(),
-                    },
-                })
-                print("✓ Admin notification sent")
-            except Exception as notify_error:
-                print(f"✗ Failed to send admin notification: {notify_error}")
+            if not config.get('enabled_features', {}).get('notifications', False):
+                print("Notifications disabled — skipping admin notification")
+            else:
+                try:
+                    api.create_notification({
+                        'title': f'Upload Verification Failed: {dataset.get("name", dataset_id)}',
+                        'message': (
+                            f'Upload verification permanently failed after {retry_count + 1} attempts.\n\n'
+                            f'Dataset ID: {dataset_id}\n'
+                            f'Dataset Name: {dataset.get("name")}\n'
+                            f'Task ID: {task_id}\n'
+                            f'Error: {str(e)}\n\n'
+                            f'Manual intervention required.\n'
+                            f'View logs at /uploads/:id (check dataset uploads table for upload log ID)'
+                        ),
+                        'type': 'error',
+                        'metadata': {
+                            'dataset_id': dataset_id,
+                            'task_id': task_id,
+                            'error': str(e),
+                            'timestamp': datetime.utcnow().isoformat(),
+                        },
+                    })
+                    print("✓ Admin notification sent")
+                except Exception as notify_error:
+                    print(f"✗ Failed to send admin notification: {notify_error}")
         else:
             print(f"Expected resolution: Celery will retry in 60 seconds")
             print(f"                     Retry attempt {retry_count + 2}/{max_retries + 1} will start soon")

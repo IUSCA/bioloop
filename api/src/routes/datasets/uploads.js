@@ -905,6 +905,11 @@ router.get(
 //   - metadata     key/value pairs to merge into the existing metadata object
 //   - status       new UPLOAD_STATUS value
 //   - retry_count  new retry counter value
+//   - workflow_id  sca_rhythm workflow _id to associate with the dataset in the
+//                  same transaction as the upload-log update.  Provides atomicity
+//                  for the VERIFIED → COMPLETE transition so that the workflow row
+//                  and the COMPLETE status are either both committed or both rolled
+//                  back, removing the stuck-at-VERIFIED failure mode.
 //
 // Response:
 //   - success:     true
@@ -914,16 +919,19 @@ router.patch(
   isPermittedTo('update'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Update dataset upload log metadata, status, or retry count'
+    // #swagger.summary = 'Update dataset upload log metadata, status, retry count, and optionally associate a workflow'
 
     const datasetId = parseInt(req.params.id, 10);
-    const { metadata, status, retry_count } = req.body;
+    const {
+      metadata, status, retry_count, workflow_id,
+    } = req.body;
 
     logger.info('[UPLOAD-LOG-UPDATE] Updating upload log', {
       dataset_id: datasetId,
       has_metadata: !!metadata,
       new_status: status,
       new_retry_count: retry_count,
+      workflow_id: workflow_id || null,
       user: req.user?.username,
     });
 
@@ -948,30 +956,30 @@ router.patch(
       current_retry_count: uploadLog.retry_count,
     });
 
-    const updateData = {};
-
+    // Metadata: use an atomic Postgres JSONB merge (|| operator) instead of the
+    // read-modify-write pattern.  Two concurrent callers (e.g. the PM2 cron writing
+    // verification_task_id and the Celery worker writing worker_process_id) would
+    // otherwise race: both read the same snapshot, and whichever writes second
+    // silently discards the first writer's keys.  The raw SQL merge serializes at
+    // the row-lock level so both callers' keys are preserved.
     if (metadata) {
-      const existingMetadata = uploadLog.metadata || {};
-      updateData.metadata = { ...existingMetadata, ...metadata };
-      logger.info('[UPLOAD-LOG-UPDATE] Merging metadata', {
+      logger.info('[UPLOAD-LOG-UPDATE] Merging metadata (atomic JSONB merge)', {
         dataset_id: datasetId,
-        existing_metadata: existingMetadata,
         new_metadata: metadata,
-        merged_metadata: updateData.metadata,
       });
     }
 
+    const scalarData = {};
     if (status) {
-      updateData.status = status;
+      scalarData.status = status;
       logger.info('[UPLOAD-LOG-UPDATE] Updating status', {
         dataset_id: datasetId,
         old_status: uploadLog.status,
         new_status: status,
       });
     }
-
     if (retry_count !== undefined) {
-      updateData.retry_count = retry_count;
+      scalarData.retry_count = retry_count;
       logger.info('[UPLOAD-LOG-UPDATE] Updating retry count', {
         dataset_id: datasetId,
         old_retry_count: uploadLog.retry_count,
@@ -979,17 +987,50 @@ router.patch(
       });
     }
 
-    const updated = await prisma.dataset_upload_log.update({
-      where: { id: uploadLog.id },
-      data: updateData,
-      include: {
-        dataset: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+    // Wrap the metadata merge (raw SQL) and scalar update (Prisma) in a single
+    // interactive transaction so a partial failure never leaves the row with
+    // metadata written but status un-updated (or vice-versa).
+    const updated = await prisma.$transaction(async (tx) => {
+      if (metadata) {
+        await tx.$executeRaw`
+          UPDATE "dataset_upload_log"
+          SET metadata = COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb
+          WHERE id = ${uploadLog.id}
+        `;
+      }
+
+      // If the caller supplied a workflow_id, register the workflow↔dataset
+      // association in the same transaction so both writes are atomic.  This
+      // eliminates the stuck-at-VERIFIED failure mode where the workflow row
+      // was created but the COMPLETE status write failed (or vice-versa).
+      if (workflow_id) {
+        logger.info('[UPLOAD-LOG-UPDATE] Associating workflow with dataset', {
+          dataset_id: datasetId,
+          workflow_id,
+        });
+        await datasetService.associateWorkflow({
+          tx,
+          datasetId,
+          workflowId: workflow_id,
+          initiatorId: req.user?.id,
+        });
+        logger.info('[UPLOAD-LOG-UPDATE] Workflow associated', { workflow_id });
+      }
+
+      // Always finish with a read that returns the final record.  If there are
+      // scalar fields to update, fold them into the read via update; otherwise
+      // use findUnique so we don't issue a no-op update.
+      if (Object.keys(scalarData).length > 0) {
+        return tx.dataset_upload_log.update({
+          where: { id: uploadLog.id },
+          data: scalarData,
+          include: { dataset: { select: { id: true, name: true } } },
+        });
+      }
+      return tx.dataset_upload_log.findUnique({
+        where: { id: uploadLog.id },
+        include: { dataset: { select: { id: true, name: true } } },
+      });
     });
 
     logger.info('[UPLOAD-LOG-UPDATE] SUCCESS: Upload log updated', {

@@ -153,5 +153,8 @@ config = {
     },
     'inspect': {
         'file_metadata_batch_size': 25000
-    }
+    },
+    'enabled_features': {
+        'notifications': False,
+    },
 }

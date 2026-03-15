@@ -22,6 +22,7 @@ Usage:
 """
 
 import logging
+import uuid
 from datetime import datetime, timedelta
 
 import fire
@@ -31,6 +32,7 @@ from sca_rhythm import Workflow
 import workers.config.celeryconfig as celeryconfig
 import workers.workflow_utils as wf_utils
 from workers import api
+from workers.config import config
 from workers.constants.upload import MAX_RETRY_COUNT, UPLOAD_STATUS
 from workers.constants.workflow import WORKFLOWS
 
@@ -223,22 +225,17 @@ def handle_uploaded_status(dataset_id, dataset_name, upload_log, metadata, dry_r
         return 'verification_spawned'
     
     try:
-        logger.info("Setting status to VERIFYING...")
-        api.update_dataset_upload_log(
-            dataset_id=dataset_id,
-            log_data={'status': UPLOAD_STATUS['VERIFYING']}
-        )
-        logger.info("✓ Status set to VERIFYING")
-        
-        logger.info("Spawning verification task...")
-        task = verify_task.delay(dataset_id)
-        task_id = task.id
-        logger.info(f"✓ Verification task spawned: {task_id}")
-        
-        logger.info("Persisting task ID to metadata...")
+        # Pre-generate the task ID so status, task ID, and timestamp are all
+        # written in a single API call before the task is enqueued.  This closes
+        # the two-write gap where a crash between Write-1 (VERIFYING) and Write-2
+        # (task_id metadata) would leave the DB without a task ID to inspect.
+        task_id = str(uuid.uuid4())
+
+        logger.info(f"Setting status to VERIFYING and persisting task ID {task_id}...")
         api.update_dataset_upload_log(
             dataset_id=dataset_id,
             log_data={
+                'status': UPLOAD_STATUS['VERIFYING'],
                 'metadata': {
                     **metadata,
                     'verification_task_id': task_id,
@@ -246,7 +243,11 @@ def handle_uploaded_status(dataset_id, dataset_name, upload_log, metadata, dry_r
                 }
             }
         )
-        logger.info(f"✓ Task ID persisted: {task_id}")
+        logger.info(f"✓ Status set to VERIFYING, task ID persisted: {task_id}")
+
+        logger.info("Enqueuing verification task...")
+        verify_task.apply_async(args=[dataset_id], task_id=task_id)
+        logger.info(f"✓ Verification task enqueued: {task_id}")
         logger.info("Expected resolution: Task will verify integrity and update status")
         logger.info("                     Next script run will check task state")
         logger.info("Idempotency note: Verification is idempotent - safe to run multiple times")
@@ -396,12 +397,35 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
             logger.error("Note: This ALSO covers 'worker crash mid-hash' case:")
             logger.error("      If entire worker system goes down, Celery marks task as FAILURE")
             logger.error("      when system comes back up (worker didn't heartbeat)")
-            logger.error("Expected resolution: Task should have already:")
-            logger.error("                     - Set status to VERIFICATION_FAILED")
-            logger.error("                     - Sent admin notification (if final retry)")
-            logger.error("                     Upload will not be retried by this script")
-            logger.error("                     If system crashed before notification, check worker logs")
+            logger.error("Expected resolution: Task should have already set status to VERIFICATION_FAILED")
+            logger.error("                     Applying fallback DB update if status is still VERIFYING")
             logger.error("="*80)
+
+            if not dry_run:
+                # The subprocess normally writes VERIFICATION_FAILED itself before exiting.
+                # If the API was unreachable at that moment, the status stays VERIFYING
+                # indefinitely.  Re-fetch and apply a fallback write as a safety net.
+                current_upload_log = api.get_dataset_upload_log(dataset_id)
+                if current_upload_log.get('status') == UPLOAD_STATUS['VERIFYING']:
+                    logger.warning(f"Status still VERIFYING after task FAILURE — applying fallback VERIFICATION_FAILED")
+                    api.update_dataset_upload_log(
+                        dataset_id=dataset_id,
+                        log_data={
+                            'status': UPLOAD_STATUS['VERIFICATION_FAILED'],
+                            'metadata': {
+                                **metadata,
+                                'failure_reason': (
+                                    f'Verification task entered FAILURE state in Celery (task ID: {task_id}). '
+                                    f'Status was still VERIFYING — fallback applied by upload manager.'
+                                ),
+                                'failed_at': datetime.utcnow().isoformat(),
+                            }
+                        }
+                    )
+                    logger.warning("✓ Fallback VERIFICATION_FAILED status written")
+                else:
+                    logger.info(f"Status is already {current_upload_log.get('status')} — no fallback needed")
+
             return 'verification_failed'
             
         elif task_state == 'RETRY':
@@ -461,37 +485,58 @@ def handle_verified_status(dataset_id, dataset_name, dataset, dry_run):
     """
     logger.info("Action: Trigger integrated workflow")
     
-    active_integrated_wfs = [wf for wf in dataset.get('workflows', []) 
-                            if wf['name'] == WORKFLOWS['INTEGRATED']]
+    active_integrated_wfs = [wf for wf in dataset.get('workflows', [])
+                             if wf['name'] == WORKFLOWS['INTEGRATED']]
     if active_integrated_wfs:
-        logger.info(f"Integrated workflow already exists, skipping")
-        logger.info("Expected resolution: Upload is already being processed")
+        # A workflow row already exists in Postgres.  Since start() is called
+        # before the API write, the Celery chain was already enqueued on a
+        # previous run.  The only reason we are back here with VERIFIED status
+        # is that the COMPLETE status write failed on that run.  Retry the
+        # write now — no new workflow is created, preventing double-launch.
+        logger.info("Workflow row already exists (COMPLETE status write likely failed on a previous run)")
+        if not dry_run:
+            logger.info("Retrying COMPLETE status update...")
+            api.update_dataset_upload_log(
+                dataset_id=dataset_id,
+                log_data={'status': UPLOAD_STATUS['COMPLETE']}
+            )
+            logger.info("✓ Status updated to COMPLETE")
+        else:
+            logger.info("[DRY RUN] Would retry COMPLETE status update")
         return 'verified_triggered'
-    
+
     if dry_run:
         logger.info("[DRY RUN] Would trigger integrated workflow")
         return 'verified_triggered'
-    
+
     try:
         logger.info(f"Starting {WORKFLOWS['INTEGRATED']} workflow...")
         integrated_wf_body = wf_utils.get_wf_body(wf_name=WORKFLOWS['INTEGRATED'])
         int_wf = Workflow(celery_app=celery_app, **integrated_wf_body)
         int_wf_id = int_wf.workflow['_id']
-        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf_id)
+
+        # ORDERING: start() is called before the API write so that if start()
+        # fails, no Postgres workflow row is written.  Without that row the
+        # guard above won't fire, letting the next cron run retry from scratch.
         int_wf.start(dataset_id)
-        logger.info(f"✓ Workflow started: {int_wf_id}")
-        
-        logger.info("Updating status to COMPLETE...")
+        logger.info(f"✓ Workflow Celery chain enqueued: {int_wf_id}")
+
+        # Pass workflow_id to update_dataset_upload_log so the API associates
+        # the workflow row AND updates the status to COMPLETE in one DB
+        # transaction — eliminating the gap where workflow row exists but status
+        # is still VERIFIED (or vice-versa).
+        logger.info("Registering workflow row and updating status to COMPLETE (atomic)...")
         api.update_dataset_upload_log(
             dataset_id=dataset_id,
-            log_data={'status': UPLOAD_STATUS['COMPLETE']}
+            log_data={'status': UPLOAD_STATUS['COMPLETE']},
+            workflow_id=int_wf_id,
         )
-        logger.info("✓ Status updated to COMPLETE")
+        logger.info("✓ Workflow row registered and status updated to COMPLETE")
         logger.info("Expected resolution: Workflow will process upload")
         logger.info("                     Monitor via /workflows page")
-        
+
         return 'verified_triggered'
-        
+
     except Exception as e:
         logger.error("="*80)
         logger.error("FAILURE MODE: FAILED TO TRIGGER WORKFLOW")
@@ -555,30 +600,50 @@ def process_failed_uploads(dry_run=False, max_retries=MAX_RETRY_COUNT):
                         logger.info(f"  [DRY RUN] Would update retry_count to {new_retry_count}")
                     else:
                         dataset = api.get_dataset(dataset_id=dataset_id, workflows=True)
-                        
-                        active_integrated_wfs = [wf for wf in dataset.get('workflows', []) 
-                                                if wf['name'] == WORKFLOWS['INTEGRATED']]
+
+                        active_integrated_wfs = [wf for wf in dataset.get('workflows', [])
+                                                 if wf['name'] == WORKFLOWS['INTEGRATED']]
                         if active_integrated_wfs:
-                            logger.info(f"  Integrated workflow already exists, skipping")
+                            # Workflow row exists — start() was called on a previous run.
+                            # The Celery chain is already enqueued; only the COMPLETE
+                            # status write failed.  Retry it now (same logic as
+                            # handle_verified_status) rather than launching a second chain.
+                            logger.info(f"  Workflow row already exists (COMPLETE write likely failed) — retrying status update")
+                            api.update_dataset_upload_log(
+                                dataset_id=dataset_id,
+                                log_data={
+                                    'status': UPLOAD_STATUS['COMPLETE'],
+                                    'retry_count': new_retry_count,
+                                }
+                            )
+                            logger.info(f"  ✓ Status updated to COMPLETE")
                             summary['retried'] += 1
                             continue
-                        
-                        logger.info(f"  Updating status...")
-                        api.update_dataset_upload_log(
-                            dataset_id=dataset_id,
-                            log_data={
-                                'status': UPLOAD_STATUS['PROCESSING'],
-                            }
-                        )
-                        
-                        logger.info(f"  Starting {WORKFLOWS['INTEGRATED']} workflow...")
+
+                        logger.info(f"  Starting {WORKFLOWS['INTEGRATED']} workflow (retry {new_retry_count})...")
                         integrated_wf_body = wf_utils.get_wf_body(wf_name=WORKFLOWS['INTEGRATED'])
                         int_wf = Workflow(celery_app=celery_app, **integrated_wf_body)
                         int_wf_id = int_wf.workflow['_id']
-                        api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=int_wf_id)
+
+                        # start() before the API write — same rationale as
+                        # handle_verified_status: if start() fails, no Postgres
+                        # row is written, so the guard above won't block the
+                        # next retry attempt.
                         int_wf.start(dataset_id)
-                        
-                        logger.info(f"  Workflow restarted: {int_wf_id}")
+                        logger.info(f"  ✓ Workflow Celery chain enqueued: {int_wf_id}")
+
+                        # Pass workflow_id so the API associates the workflow
+                        # row AND updates COMPLETE + retry_count atomically in
+                        # one DB transaction.
+                        api.update_dataset_upload_log(
+                            dataset_id=dataset_id,
+                            log_data={
+                                'status': UPLOAD_STATUS['COMPLETE'],
+                                'retry_count': new_retry_count,
+                            },
+                            workflow_id=int_wf_id,
+                        )
+                        logger.info(f"  ✓ Workflow row registered and status updated to COMPLETE (retry_count={new_retry_count})")
                         summary['retried'] += 1
                         
                 except Exception as e:
@@ -628,13 +693,19 @@ def process_failed_uploads(dry_run=False, max_retries=MAX_RETRY_COUNT):
 def send_permanent_failure_notification(dataset_id, dataset_name, retry_count, last_error):
     """
     Send admin notification for permanently failed upload.
-    
+
+    No-ops when config.enabled_features.notifications is False.
+
     Args:
         dataset_id (int): Dataset ID
         dataset_name (str): Dataset name
         retry_count (int): Number of retry attempts made
         last_error (str): Last error message
     """
+    if not config.get('enabled_features', {}).get('notifications', False):
+        logger.info(f"  Notifications disabled — skipping admin notification for dataset {dataset_id}")
+        return
+
     try:
         notification_payload = {
             'title': f'Upload Permanently Failed: {dataset_name}',
@@ -655,10 +726,10 @@ def send_permanent_failure_notification(dataset_id, dataset_name, retry_count, l
                 'timestamp': datetime.utcnow().isoformat(),
             },
         }
-        
+
         api.create_notification(notification_payload)
         logger.info(f"  ✓ Admin notification sent for dataset {dataset_id}")
-        
+
     except Exception as e:
         logger.error(f"  ✗ Failed to send notification for dataset {dataset_id}: {e}")
 

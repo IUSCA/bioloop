@@ -323,10 +323,22 @@ def get_dataset_upload_log(dataset_id: int) -> dict:
         return r.json()
 
 
-def update_dataset_upload_log(dataset_id: int, log_data: dict) -> dict:
-    """Update upload log metadata"""
+def update_dataset_upload_log(
+    dataset_id: int,
+    log_data: dict,
+    workflow_id: str | None = None,
+) -> dict:
+    """Update upload log metadata, status, and/or retry count.
+
+    If *workflow_id* is supplied it is sent to the API which will associate the
+    workflow with the dataset inside the same DB transaction as the upload-log
+    update, providing atomicity for the VERIFIED → COMPLETE transition.
+    """
+    body = dict(log_data)
+    if workflow_id is not None:
+        body['workflow_id'] = workflow_id
     with APIServerSession() as s:
-        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=log_data)
+        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=body)
         r.raise_for_status()
         return r.json()
 

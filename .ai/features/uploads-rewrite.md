@@ -2,7 +2,7 @@
 
 **Feature:** TUS-based resumable uploads replacing old chunk-upload implementation  
 **Branch:** `uploads-rewrite---pr-feedback`  
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-15 (pipeline gap fixes)
 
 ---
 
@@ -23,11 +23,109 @@
 ### Non-Blocking (should fix before merge)
 
 - [ ] **Rewrite existing upload e2e tests** — existing tests were written for the old chunk-upload implementation and need to be rewritten for the new TUS-based flow.
+- [ ] **Failure-mode / adversarial testing** — systematically exercise every place the upload pipeline can break. Categories and specific cases to cover:
+  - **Client-side / pre-upload:**
+    - Special characters in filenames: spaces, unicode, emoji, `&`, `#`, `+`, null bytes
+    - Very long filenames or deeply nested directory paths (OS path-length limits)
+    - Symbolic links inside a directory upload (browser may expose or silently skip)
+    - File modified between hash computation and upload start (client hash vs. uploaded bytes mismatch)
+    - BLAKE3 WASM fails to load (hash-wasm import error) — verify graceful fallback or clear error in UI
+    - Very large number of files in one directory upload (hundreds / thousands)
+  - **Directory structure edge cases:**
+    - Root-level files mixed with nested subdirectory files
+    - Directory containing only zero-byte files (all marker files, no data)
+    - Deeply nested directories (e.g. 10+ levels)
+    - Hidden files (`.DS_Store`, `.gitkeep`, `.env`) — verify they are included/excluded consistently on both sides
+    - Duplicate filenames in different subdirectories (e.g. `a/data.csv` and `b/data.csv`)
+    - Directory whose name matches a dataset that already exists (name-collision handling)
+  - **Network / mid-upload failures:**
+    - Network cut during upload → TUS resume resumes from correct offset, no files re-sent from byte 0
+    - Browser tab closed mid-upload → re-opening UI and re-initiating resumes (or starts fresh cleanly)
+    - API process restart mid-upload → TUS state files survive; client reconnects and resumes
+    - Simulated PATCH failure via `X-Simulate-Failure` header at various offsets
+  - **API / server-side failures:**
+    - Disk full on TUS staging volume during upload
+    - `origin_path` does not exist when `onUploadFinish` fires (directory creation fails)
+    - `onUploadCreate` called for a dataset already in `COMPLETE` or `VERIFIED` status — verify rejection
+    - Expired / revoked Bearer token during a long upload (mid-stream 401 handling)
+    - TUS metadata missing required fields (`dataset_id`, `filename`) — verify 400, no partial state left
+    - Two concurrent uploads to the same dataset_id — verify no interleaving corruption
+  - **Worker / verification failures:**
+    - Worker process killed (SIGKILL) mid-hash — verify Celery retry picks up cleanly
+    - Origin path deleted or files moved after upload but before verification starts — verify `VERIFICATION_FAILED` and meaningful log
+    - Actual hash mismatch (manually corrupt one byte of an uploaded file on disk) — verify `VERIFICATION_FAILED` status, error logged, no silent pass-through
+    - Celery retry exhaustion (all 4 attempts fail) — verify status lands on `PERMANENTLY_FAILED`, not stuck in `VERIFYING`
+    - Verification of a very large file / directory near the 24-hour `time_limit` — verify `SoftTimeLimitExceeded` is handled gracefully
+    - `worker_process_id` missing from `upload_log.metadata` when worker logs page is visited (UI graceful "no logs yet" state)
+  - **State machine / pipeline edge cases:**
+    - Upload stuck in `UPLOADING` indefinitely (stale upload) — verify `manage_upload_workflows.py` detects and transitions it
+    - Upload stuck in `VERIFYING` (worker died before writing result) — verify stale-verification detection
+    - Re-uploading a dataset that previously reached `VERIFICATION_FAILED` — verify fresh attempt starts cleanly
+    - `/datasets/uploads/:id` page visited before `worker_process_id` is written — verify no JS crash, "logs pending" message shown
 - [ ] **Check for design/scratch files** — draft docs, commented-out prototype code, `TODO`/`FIXME` notes meant only for the design stage.
 - [ ] **PR description** — 56 files changed across API, UI, workers, migrations, docs. Write a summary covering: TUS upload flow, async verification pipeline, schema changes (`dataset_upload_log` direct `dataset_id` link, `create_method` on `dataset`).
 - [ ] **Update diagrams** — update architecture/flow diagrams in the design doc for the new TUS-based upload design (old diagrams reflect the chunk-upload + `process_dataset_upload` workflow).
 - [ ] **Update existing upload e2e tests** — existing specs under `tests/src/tests/view/authenticated/upload/` still navigate to the old route `/datasetUpload/new` and reference removed form fields (analysis type, genomic fields, source data product). All specs need updating to the new route `/datasets/uploads/new` and the new stepper structure.
 - [ ] **Write new upload e2e scenarios** — see "New Upload E2E Scenarios" section below.
+
+### Pipeline Robustness Fixes (applied 2026-03-15) — Test Before Merge
+
+Five transactional / ordering gaps in the upload pipeline were identified and patched.
+Each fix needs manual verification because they cover failure paths that can't be hit by the normal happy-path smoke test.
+
+---
+
+#### Gap B — VERIFIED → COMPLETE "permanently stuck" (HIGH)
+**What was fixed:** `handle_verified_status` used to write the Postgres `workflow` row *before* calling `int_wf.start()`. If `start()` or the subsequent COMPLETE status write failed, the row-existence guard silently skipped all future retries, leaving the upload stuck at VERIFIED forever. Fix: `start()` is now called first; if the row already exists on a retry, only the COMPLETE write is retried (no second Celery chain).
+
+**How to test (post-fix):**
+1. Temporarily monkey-patch `api.update_dataset_upload_log` in `manage_upload_workflows.py` to raise an exception on the COMPLETE write (e.g. add `raise Exception("injected")` immediately after `int_wf.start()`).
+2. Upload a dataset and let it reach VERIFIED.
+3. Run the cron script once — it should call `start()`, write the workflow row, then hit the injected exception. COMPLETE is NOT written.
+4. Remove the injection and run the cron again — it should detect the existing workflow row, skip `start()`, and write COMPLETE cleanly. Upload reaches COMPLETE; only one workflow exists in the DB.
+
+---
+
+#### Gap C2 — PROCESSING_FAILED retry strands in PROCESSING (HIGH)
+**What was fixed:** The retry path wrote `status=PROCESSING` first. If any subsequent step (workflow create, `start()`, or workflow-row write) failed, the upload was stranded in `PROCESSING` — invisible to both pollers (`get_stalled_uploads` looks for UPLOADED/VERIFYING/VERIFIED; `get_failed_uploads` looks for PROCESSING_FAILED). Also: a successful retry never wrote COMPLETE, leaving the upload stuck at PROCESSING even after the workflow ran. Fix: removed the PROCESSING write entirely; COMPLETE + updated retry_count are written atomically at the end.
+
+**How to test:**
+1. Force an upload to PROCESSING_FAILED status via SQL: `UPDATE dataset_upload_log SET status='PROCESSING_FAILED', retry_count=0 WHERE dataset_id=<id>;`
+2. Run `manage_upload_workflows.py` — verify it retries (creates workflow, starts Celery chain), writes COMPLETE, and updates retry_count.
+3. Repeat the SQL injection and run again with an injected failure on `int_wf.start()` — verify the upload stays at PROCESSING_FAILED (no stranded PROCESSING write) and is visible to the next retry cycle.
+
+---
+
+#### Gap C4 — Celery task FAILURE doesn't update DB status (MEDIUM)
+**What was fixed:** When Celery marks a verification task as FAILURE (e.g. worker crash), `handle_verifying_status` only logged it and returned. The verification subprocess is supposed to write VERIFICATION_FAILED itself, but if the API was unreachable at that moment, the status stayed VERIFYING until the 24-hour timeout. Fix: `handle_verifying_status` now re-fetches the upload log when `task_state == FAILURE`; if the status is still VERIFYING, it writes VERIFICATION_FAILED as a fallback.
+
+**How to test:**
+1. Start a verification task and kill the Celery worker mid-run (SIGKILL the process).
+2. Wait for Celery to mark the task as FAILURE (may require worker restart).
+3. Run `manage_upload_workflows.py` — verify the upload transitions to VERIFICATION_FAILED in the DB without waiting 24 hours.
+4. Alternatively: in `verify_upload_integrity.py` add `sys.exit(1)` before the `api.update_dataset_upload_log(VERIFICATION_FAILED)` call to simulate API unreachability, then confirm the fallback write in step 3.
+
+---
+
+#### Gap C1 — VERIFYING status + task_id were two separate API writes (LOW)
+**What was fixed:** `handle_uploaded_status` first wrote `status=VERIFYING`, then enqueued the Celery task, then wrote `task_id` to metadata. A crash between enqueue and the second write left the upload with VERIFYING status but no task_id, or with a task_id in DB from a task that was never enqueued. Fix: task_id is now pre-generated with `uuid.uuid4()`; both status and task_id are written in a single API call before `apply_async` is called.
+
+**How to test:**
+1. Inject a failure after the single combined write but before `apply_async` (simulate RabbitMQ being down).
+2. Verify the upload has `status=VERIFYING` AND `metadata.verification_task_id` set in the DB.
+3. Run `handle_verifying_status` — it should see `task_state=PENDING` (Celery has no record of this task_id). It will wait up to 24 h then time out to VERIFICATION_FAILED. Confirm the 24-hour timeout path reaches VERIFICATION_FAILED.
+4. (Normal path) Upload and let it reach UPLOADED, run the cron once — confirm a single DB write sets both status and task_id atomically (check API logs for one `[UPLOAD-LOG-UPDATE]` entry covering both fields).
+
+---
+
+#### Gap C5 — Metadata merge TOCTOU in `PATCH /:id/upload-log` (LOW)
+**What was fixed:** The endpoint did `findFirst → merge in JS → update`. Two concurrent callers (PM2 cron writing `verification_task_id`, Celery task writing `worker_process_id`) could race and the second write would silently overwrite the first's keys. Fix: metadata is now merged via a single atomic `UPDATE ... SET metadata = COALESCE(metadata,'{}') || $new::jsonb` Postgres statement, serialised at the row-lock level.
+
+**How to test:**
+1. Craft two concurrent `PATCH /datasets/:id/upload-log` requests — one with `metadata: {key_a: 1}` and one with `metadata: {key_b: 2}`. Fire them simultaneously (e.g. via a small script with `Promise.all`).
+2. After both complete, fetch the upload log and verify `metadata` contains BOTH `key_a` and `key_b`. Before the fix one of the keys would be missing roughly 50% of the time.
+
+---
 
 ### Open Questions / TODOs for Formal Doc
 
