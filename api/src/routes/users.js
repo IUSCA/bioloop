@@ -1,7 +1,6 @@
 const express = require('express');
 const { query, body } = require('express-validator');
 const createError = require('http-errors');
-const { Prisma } = require('@prisma/client');
 
 // const logger = require('@/services/logger');
 const prisma = require('@/db');
@@ -38,15 +37,15 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const {
-      search, sortBy, sort_order,
+      search, sortBy, sort_order, skip, take,
     } = req.query;
 
     const { users, count } = await userService.findAll({
       search,
       sortBy,
       sort_order,
-      skip: req.query.skip ?? Prisma.skip,
-      take: req.query.take ?? Prisma.take,
+      skip,
+      take,
     });
     return res.json({
       metadata: { count },

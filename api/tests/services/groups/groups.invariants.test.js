@@ -156,11 +156,11 @@ describe('groups - invariants', () => {
 
     it('every newly created child group also has its own self-closure row', async () => {
       const parent = await newGroup('_child_self_closure_parent');
-      const child = await groupsService.createChildGroup(
-        parent.id,
-        { name: `Child self closure ${Date.now()}`, description: 'test' },
-        actor.subject_id,
-      );
+      const child = await groupsService.createGroup({
+        parent_id: parent.id,
+        data: { name: `Child self closure ${Date.now()}`, description: 'test' },
+        actor_id: actor.subject_id,
+      });
       groupsToDelete.push(child.id);
 
       const row = await prisma.group_closure.findUnique({
@@ -183,12 +183,18 @@ describe('groups - invariants', () => {
   describe('slug uniqueness', () => {
     it('two groups with the same name get distinct slugs', async () => {
       const sameName = `Identical Name ${Date.now()}`;
-      const g1 = await groupsService.createGroup({ name: sameName, description: 'first' }, actor.subject_id);
+      const g1 = await groupsService.createGroup({
+        data: { name: sameName, description: 'first' },
+        actor_id: actor.subject_id,
+      });
       groupsToDelete.push(g1.id);
 
       // Second group must fail because `name` has a @unique constraint in the schema
       await expect(
-        groupsService.createGroup({ name: sameName, description: 'second' }, actor.subject_id),
+        groupsService.createGroup({
+          data: { name: sameName, description: 'second' },
+          actor_id: actor.subject_id,
+        }),
       ).rejects.toThrow();
     });
 

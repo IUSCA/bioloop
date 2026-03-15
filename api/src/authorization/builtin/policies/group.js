@@ -93,9 +93,6 @@ groupPolicies
     add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     edit_member_role: Policy.or([isPlatformAdmin, isGroupAdmin]),
-
-    // view collections and datasets owned by the group
-    view_resources: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
   })
   .attributes({
     // * - any action

@@ -83,7 +83,7 @@ router.post(
   }),
 );
 
-// Create a new group
+// Create a new root group
 router.post(
   '/',
   authorize('group', 'create'),
@@ -91,13 +91,23 @@ router.post(
     body('name').isString().notEmpty(),
     body('description').optional().isString().notEmpty(),
     body('allow_user_contributions').optional().isBoolean().toBoolean(),
+    body('members').optional().isArray(),
+    body('members.*').isUUID(),
+    body('admins').optional().isArray(),
+    body('admins.*').isUUID(),
   ]),
   asyncHandler(async (req, res) => {
   // #swagger.tags = ['Groups']
-  // #swagger.summary = 'Create a new group'
+  // #swagger.summary = 'Create a new root group'
 
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
-    const group = await groupService.createGroup(data, req.user.subject_id);
+    const { members = [], admins = [] } = req.body;
+    const group = await groupService.createGroup({
+      data,
+      actor_id: req.user.subject_id,
+      members,
+      admins,
+    });
 
     res.status(201).json(req.permission.filter(group));
   }),
@@ -111,6 +121,10 @@ router.post(
     body('name').isString().notEmpty(),
     body('description').optional().isString().notEmpty(),
     body('allow_user_contributions').optional().isBoolean().toBoolean(),
+    body('members').optional().isArray(),
+    body('members.*').isUUID(),
+    body('admins').optional().isArray(),
+    body('admins.*').isUUID(),
   ]),
   authorize('group', 'create_child'),
   asyncHandler(async (req, res) => {
@@ -119,8 +133,21 @@ router.post(
 
     const { id } = req.params;
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
+    const { members = [], admins = [] } = req.body;
 
-    const childGroup = await groupService.createChildGroup(id, data, req.user.subject_id);
+    // if not platform admin, add user as admin of the child group by default to ensure they have access to manage the child group they created
+    const isPlatformAdmin = req.user?.roles?.includes('admin') === true;
+    if (!isPlatformAdmin && !admins.includes(req.user.subject_id)) {
+      admins.push(req.user.subject_id);
+    }
+
+    const childGroup = await groupService.createGroup({
+      data,
+      actor_id: req.user.subject_id,
+      parent_id: id,
+      members,
+      admins,
+    });
 
     res.status(201).json(req.permission.filter(childGroup));
   }),
@@ -393,13 +420,13 @@ router.delete(
   authorize('group', 'edit_member_role'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Remove an admin from the group'
+    // #swagger.summary = 'Demote an admin to a member of the group'
 
     const { id, userId } = req.params;
 
     await ensureNotRemovingLastAdmin(id, userId);
 
-    await groupService.removeGroupAdmin(id, { user_id: userId, actor_id: req.user.subject_id });
+    await groupService.demoteAdminToMember(id, { user_id: userId, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );

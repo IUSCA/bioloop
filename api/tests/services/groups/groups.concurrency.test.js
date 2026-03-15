@@ -54,11 +54,11 @@ async function newGroup(tag = '') {
 }
 
 async function newChildGroup(parentId, tag = '') {
-  const g = await groupsService.createChildGroup(
-    parentId,
-    { name: `Concurrent Child ${Date.now()}${tag}`, description: 'test' },
-    actor.subject_id,
-  );
+  const g = await groupsService.createGroup({
+    parent_id: parentId,
+    data: { name: `Concurrent Child ${Date.now()}${tag}`, description: 'test' },
+    actor_id: actor.subject_id,
+  });
   groupsToDelete.push(g.id);
   return g;
 }
@@ -207,7 +207,7 @@ describe('groups - concurrency', () => {
     });
   });
 
-  describe('concurrent promoteGroupMemberToAdmin and removeGroupAdmin', () => {
+  describe('concurrent promoteGroupMemberToAdmin and demoteAdminToMember', () => {
     it('final role is a valid GROUP_MEMBER_ROLE value (no corruption)', async () => {
       const g = await newGroup('_promo_demote_race');
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
@@ -219,7 +219,7 @@ describe('groups - concurrency', () => {
       // Race between a second promote and a demote
       await Promise.allSettled([
         groupsService.promoteGroupMemberToAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
-        groupsService.removeGroupAdmin(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
+        groupsService.demoteAdminToMember(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
       ]);
 
       const membership = await prisma.group_user.findUnique({

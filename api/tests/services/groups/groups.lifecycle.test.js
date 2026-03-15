@@ -53,12 +53,14 @@ async function newGroup(tag = '', overrides = {}) {
   return g;
 }
 
-async function newChildGroup(parentId, tag = '') {
-  const g = await groupsService.createChildGroup(
-    parentId,
-    { name: `Test Child ${Date.now()}${tag}`, description: 'child' },
-    actor.subject_id,
-  );
+async function newChildGroup(parentId, tag = '', addActorAsAdmin = true) {
+  const admins = addActorAsAdmin ? [actor.subject_id] : [];
+  const g = await groupsService.createGroup({
+    parent_id: parentId,
+    data: { name: `Test Child ${Date.now()}${tag}`, description: 'child' },
+    actor_id: actor.subject_id,
+    admins,
+  });
   groupsToDelete.push(g.id);
   return g;
 }
@@ -148,9 +150,9 @@ describe('groups - lifecycle', () => {
       expect(ids).toContain(parent.id);
     });
 
-    it('actor is automatically added as ADMIN member of child group', async () => {
+    it('actor is added as ADMIN member of child group', async () => {
       const parent = await newGroup('_auto_admin_parent');
-      const child = await newChildGroup(parent.id, '_auto_admin_child');
+      const child = await newChildGroup(parent.id, '_auto_admin_child', true);
 
       const membership = await prisma.group_user.findUnique({
         where: { group_id_user_id: { group_id: child.id, user_id: actor.subject_id } },
@@ -320,7 +322,7 @@ describe('groups - lifecycle', () => {
     });
   });
 
-  describe('promoteGroupMemberToAdmin / removeGroupAdmin', () => {
+  describe('promoteGroupMemberToAdmin / demoteAdminToMember', () => {
     it('promotion changes role to ADMIN', async () => {
       const g = await newGroup('_promote');
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
@@ -337,7 +339,7 @@ describe('groups - lifecycle', () => {
         user_id: memberUser.subject_id,
         actor_id: actor.subject_id,
       });
-      const result = await groupsService.removeGroupAdmin(g.id, {
+      const result = await groupsService.demoteAdminToMember(g.id, {
         user_id: memberUser.subject_id,
         actor_id: actor.subject_id,
       });
@@ -398,11 +400,11 @@ describe('groups - lifecycle', () => {
       });
 
       // create child under parent, actor will not be a member
-      child = await groupsService.createChildGroup(
-        parent.id,
-        { name: `Filter Child ${Date.now()}`, description: 'test' },
-        memberUser.subject_id, // membership/administration belongs to memberUser
-      );
+      child = await groupsService.createGroup({
+        parent_id: parent.id,
+        data: { name: `Filter Child ${Date.now()}`, description: 'test' },
+        actor_id: memberUser.subject_id, // membership/administration belongs to memberUser
+      });
       groupsToDelete.push(child.id);
     });
 

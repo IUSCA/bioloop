@@ -6,7 +6,7 @@ const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 
 const { generate_slug } = require('@/utils/slug');
-const { AUTH_EVENT_TYPE, TARGET_TYPE, SUBJECT_TYPE } = require('@/authorization/builtin/audit');
+const audit = require('@/authorization/builtin/audit');
 const { resolveUserNames, resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const assert = require('assert');
@@ -16,6 +16,42 @@ const PRISMA_GROUP_INCLUDES = {};
 // eslint-disable-next-line max-len
 const CONFLICT_ERROR_MESSAGE = 'Failed to update group metadata due to concurrent modification. Please refresh and try again.';
 const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived group.';
+
+/** Helper function to create audit records for group member role changes
+ * @param {Prisma.TransactionClient} tx - Prisma transaction client
+ * @param {string} eventType - audit.AUTH_EVENT_TYPE to record
+ * @param {string} actor_id - UUID of the user performing the action
+ * @param {Array<string>} user_ids - UUIDs of the affected users
+ * @param {string} group_id - UUID of the group
+ * @param {string} groupName - Name of the group
+ * @param {string} role - GROUP_MEMBER_ROLE being assigned
+ * @returns {Promise<void>}
+ */
+async function createMembershipAuditRecords(tx, {
+  eventType, actor_id, user_ids, group_id, groupName, role,
+}) {
+  if (user_ids.length === 0) return;
+
+  const allIds = [actor_id, ...user_ids];
+  const userNames = await resolveUserNames(tx, allIds);
+
+  await tx.authorization_audit.createMany({
+    data: user_ids.map((user_id) => ({
+      event_type: eventType,
+      actor_id,
+      actor_name: userNames.get(actor_id),
+      subject_id: user_id,
+      subject_name: userNames.get(user_id),
+      subject_type: audit.SUBJECT_TYPE.USER,
+      target_type: audit.TARGET_TYPE.GROUP,
+      target_id: group_id,
+      target_name: groupName,
+      metadata: {
+        role,
+      },
+    })),
+  });
+}
 
 async function _getGroup(by, value) {
   assert(by === 'id' || by === 'slug', 'Invalid "by" parameter');
@@ -132,79 +168,22 @@ function make_slug_unique_fn(tx) {
 }
 
 /**
- * Create a new group
- * @param {Object} data - Group creation data
- * @param {string} data.name - Group name (unique)
- * @param {string} [data.description] - Optional description
- * @param {boolean} [data.allow_user_contributions] - Whether users can upload
- * @param {Object} [data.metadata] - Additional metadata
- * @param {string} actor_id - UUID of the user creating the group
- * @returns {Promise<Object>} Created group with closure entries
- */
-async function createGroup(data, actor_id) {
-  return prisma.$transaction(async (tx) => {
-    // create slug - URL-friendly identifier based on name, e.g. "My Group" -> "my-group"
-    const slug = await generate_slug({
-      name: data.name,
-      is_slug_unique_fn: make_slug_unique_fn(tx),
-    });
-
-    const id = randomUUID();
-
-    // subject row must be created first — group.id is a direct FK to subject.id
-    await tx.subject.create({ data: { id, type: 'GROUP' } });
-
-    // create group without any members
-    const _group = await tx.group.create({
-      data: {
-        id,
-        name: data.name,
-        slug,
-        description: data.description ?? Prisma.skip,
-        allow_user_contributions: data.allow_user_contributions ?? Prisma.skip,
-        metadata: data.metadata ?? Prisma.skip,
-      },
-      include: PRISMA_GROUP_INCLUDES,
-    });
-
-    // create closure entry for group being its own ancestor
-    await tx.group_closure.create({
-      data: {
-        ancestor_id: _group.id,
-        descendant_id: _group.id,
-        depth: 0,
-      },
-    });
-
-    // create audit record for group creation
-    const actorNames = await resolveUserNames(tx, [actor_id]);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
-        actor_id,
-        actor_name: actorNames.get(actor_id),
-        target_type: TARGET_TYPE.GROUP,
-        target_id: _group.id,
-        target_name: _group.name,
-      },
-    });
-
-    return _group;
-  });
-}
-
-/**
  * Create a new child group under a parent group
- * @param {string} parent_id - ID of the parent group
- * @param {Object} data - Group creation data
- * @param {string} data.name - Group name (unique)
- * @param {string} [data.description] - Optional description
- * @param {boolean} [data.allow_user_contributions] - Whether users can upload
- * @param {Object} [data.metadata] - Additional metadata
- * @param {string} actor_id - UUID of the user creating the group
+ * @param {Object} options - Optional members and admins to add to the group
+ * @param {Object} options.data - Group creation data
+ * @param {string} options.data.name - Group name (unique)
+ * @param {string} [options.data.description] - Optional description
+ * @param {boolean} [options.data.allow_user_contributions] - Whether users can upload
+ * @param {Object} [options.data.metadata] - Additional metadata
+ * @param {string} [options.parent_id] - ID of the parent group
+ * @param {string} options.actor_id - UUID of the user creating the group
+ * @param {Array<string>} [options.members] - UUIDs of users to add as members
+ * @param {Array<string>} [options.admins] - UUIDs of users to add as admins
  * @returns {Promise<Object>} Created group with closure entries
  */
-async function createChildGroup(parent_id, data, actor_id) {
+async function createGroup({
+  data, actor_id, parent_id = null, members = [], admins = [],
+}) {
   return prisma.$transaction(async (tx) => {
     // create slug - URL-friendly identifier based on name, e.g. "My Group" -> "my-group"
     const slug = await generate_slug({
@@ -226,12 +205,6 @@ async function createChildGroup(parent_id, data, actor_id) {
         description: data.description ?? Prisma.skip,
         allow_user_contributions: data.allow_user_contributions ?? Prisma.skip,
         metadata: data.metadata ?? Prisma.skip,
-        members: {
-          create: {
-            user_id: actor_id,
-            role: GROUP_MEMBER_ROLE.ADMIN,
-          },
-        },
       },
       include: PRISMA_GROUP_INCLUDES,
     });
@@ -245,19 +218,22 @@ async function createChildGroup(parent_id, data, actor_id) {
         descendant_id: _group.id,
         depth: 0,
       },
-      {
-        ancestor_id: parent_id,
-        descendant_id: _group.id,
-        depth: 1,
-      },
     ];
+    let ancestorClosureEntries = [];
 
-    const ancestorGroups = await getAncestorGroups(tx, parent_id);
-    const ancestorClosureEntries = ancestorGroups.map((ancestor) => ({
-      ancestor_id: ancestor.id,
-      descendant_id: _group.id,
-      depth: ancestor.depth + 1,
-    }));
+    if (parent_id != null) {
+      const parentAncestorEntries = await tx.group_closure.findMany({
+        where: { descendant_id: parent_id, depth: { gte: 0 } },
+        orderBy: {
+          depth: 'asc',
+        },
+      });
+      ancestorClosureEntries = parentAncestorEntries.map((row) => ({
+        ancestor_id: row.ancestor_id,
+        descendant_id: _group.id,
+        depth: row.depth + 1,
+      }));
+    }
     await tx.group_closure.createMany({
       data: [...closureEntries, ...ancestorClosureEntries],
     });
@@ -267,21 +243,84 @@ async function createChildGroup(parent_id, data, actor_id) {
 
     // create audit record for group creation
     const actorNames = await resolveUserNames(tx, [actor_id]);
-    const parentName = await resolveEntityName(tx, 'group', parent_id);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_CREATED,
-        actor_id,
-        actor_name: actorNames.get(actor_id),
-        target_type: TARGET_TYPE.GROUP,
-        target_id: _group.id,
-        target_name: _group.name,
-        metadata: {
-          parent_id,
-          parent_name: parentName,
-        },
+
+    const auditData = {
+      event_type: audit.AUTH_EVENT_TYPE.GROUP_CREATED,
+      actor_id,
+      actor_name: actorNames.get(actor_id),
+      target_type: audit.TARGET_TYPE.GROUP,
+      target_id: _group.id,
+      target_name: _group.name,
+      metadata: {
+        group_hierarchy_type: parent_id ? 'CHILD' : 'ROOT',
       },
+    };
+    if (parent_id != null) {
+      const parentName = await resolveEntityName(tx, 'group', parent_id);
+      auditData.metadata.parent_id = parent_id;
+      auditData.metadata.parent_name = parentName;
+    }
+    await tx.authorization_audit.create({
+      data: auditData,
     });
+
+    // Add members and admins if provided
+    // deduplicate user IDs
+    const membersSet = new Set(members);
+    const adminsSet = new Set(admins);
+    const allUserIds = [...membersSet, ...adminsSet];
+
+    if (allUserIds.length > 0) {
+      // Determine IDs to add as members (exclude those who will be admins)
+      const memberIds = members.filter((_id) => !admins.includes(_id));
+      const groupName = _group.name;
+
+      // Add regular members
+      if (memberIds.length > 0) {
+        const createdMemberRecords = await tx.$queryRaw`
+          INSERT INTO group_user (group_id, user_id, role)
+          SELECT ${_group.id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.MEMBER)}
+          FROM "user" u
+          WHERE u.subject_id = ANY(${memberIds}::text[])
+          ON CONFLICT (group_id, user_id) DO NOTHING
+          RETURNING user_id;
+        `;
+        const createdMemberUserIds = createdMemberRecords.map((record) => record.user_id);
+
+        // Create audit records for member additions
+        await createMembershipAuditRecords(tx, {
+          eventType: audit.AUTH_EVENT_TYPE.GROUP_MEMBER_ADDED,
+          actor_id,
+          user_ids: createdMemberUserIds,
+          group_id: _group.id,
+          groupName,
+          role: GROUP_MEMBER_ROLE.MEMBER,
+        });
+      }
+
+      // Add admins
+      if (admins.length > 0) {
+        const createdAdminRecords = await tx.$queryRaw`
+          INSERT INTO group_user (group_id, user_id, role)
+          SELECT ${_group.id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+          FROM "user" u
+          WHERE u.subject_id = ANY(${admins}::text[])
+          ON CONFLICT (group_id, user_id) DO NOTHING
+          RETURNING user_id;
+        `;
+        const createdAdminUserIds = createdAdminRecords.map((record) => record.user_id);
+
+        // Create audit records for admin additions
+        await createMembershipAuditRecords(tx, {
+          eventType: audit.AUTH_EVENT_TYPE.GROUP_ADMIN_ADDED,
+          actor_id,
+          user_ids: createdAdminUserIds,
+          group_id: _group.id,
+          groupName,
+          role: GROUP_MEMBER_ROLE.ADMIN,
+        });
+      }
+    }
 
     return _group;
   });
@@ -371,10 +410,10 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
         const actorNames = await resolveUserNames(tx, [actor_id]);
         await tx.authorization_audit.create({
           data: {
-            event_type: AUTH_EVENT_TYPE.GROUP_METADATA_UPDATED,
+            event_type: audit.AUTH_EVENT_TYPE.GROUP_METADATA_UPDATED,
             actor_id,
             actor_name: actorNames.get(actor_id),
-            target_type: TARGET_TYPE.GROUP,
+            target_type: audit.TARGET_TYPE.GROUP,
             target_id: group_id,
             target_name: updatedGroup.name,
             metadata: {
@@ -410,10 +449,10 @@ async function archiveGroup(group_id, actor_id) {
     const actorNames = await resolveUserNames(tx, [actor_id]);
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_ARCHIVED,
+        event_type: audit.AUTH_EVENT_TYPE.GROUP_ARCHIVED,
         actor_id,
         actor_name: actorNames.get(actor_id),
-        target_type: TARGET_TYPE.GROUP,
+        target_type: audit.TARGET_TYPE.GROUP,
         target_id: group_id,
         target_name: updatedGroup.name,
       },
@@ -443,10 +482,10 @@ async function unarchiveGroup(group_id, actor_id) {
     const actorNames = await resolveUserNames(tx, [actor_id]);
     await tx.authorization_audit.create({
       data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_UNARCHIVED,
+        event_type: audit.AUTH_EVENT_TYPE.GROUP_UNARCHIVED,
         actor_id,
         actor_name: actorNames.get(actor_id),
-        target_type: TARGET_TYPE.GROUP,
+        target_type: audit.TARGET_TYPE.GROUP,
         target_id: group_id,
         target_name: updatedGroup.name,
       },
@@ -639,24 +678,14 @@ async function removeGroupMembers(group_id, {
     const deletedUserIds = deletedRecords.map((record) => record.user_id);
 
     // create audit records for removing group members
-    const allIds = [actor_id, ...deletedUserIds];
-    const userNames = await resolveUserNames(tx, allIds);
     const groupName = await resolveEntityName(tx, 'group', group_id);
-    await tx.authorization_audit.createMany({
-      data: deletedUserIds.map((user_id) => ({
-        event_type: AUTH_EVENT_TYPE.GROUP_MEMBER_REMOVED,
-        actor_id,
-        actor_name: userNames.get(actor_id),
-        subject_id: user_id,
-        subject_name: userNames.get(user_id),
-        subject_type: SUBJECT_TYPE.USER,
-        target_type: TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: groupName,
-        metadata: {
-          role: GROUP_MEMBER_ROLE.MEMBER,
-        },
-      })),
+    await createMembershipAuditRecords(tx, {
+      eventType: audit.AUTH_EVENT_TYPE.GROUP_MEMBER_REMOVED,
+      actor_id,
+      user_ids: deletedUserIds,
+      group_id,
+      groupName,
+      role: GROUP_MEMBER_ROLE.MEMBER,
     });
 
     return deletedUserIds;
@@ -697,24 +726,14 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
     const createdUserIds = createdRecords.map((record) => record.user_id);
 
     // create audit record for adding group members
-    const allIds = [actor_id, ...createdUserIds];
-    const userNames = await resolveUserNames(tx, allIds);
     const groupName = await resolveEntityName(tx, 'group', group_id);
-    await tx.authorization_audit.createMany({
-      data: createdUserIds.map((user_id) => ({
-        event_type: AUTH_EVENT_TYPE.GROUP_MEMBER_ADDED,
-        actor_id,
-        actor_name: userNames.get(actor_id),
-        subject_id: user_id,
-        subject_name: userNames.get(user_id),
-        subject_type: SUBJECT_TYPE.USER,
-        target_type: TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: groupName,
-        metadata: {
-          role: GROUP_MEMBER_ROLE.MEMBER,
-        },
-      })),
+    await createMembershipAuditRecords(tx, {
+      eventType: audit.AUTH_EVENT_TYPE.GROUP_MEMBER_ADDED,
+      actor_id,
+      user_ids: createdUserIds,
+      group_id,
+      groupName,
+      role: GROUP_MEMBER_ROLE.MEMBER,
     });
   });
 }
@@ -761,23 +780,14 @@ async function promoteGroupMemberToAdmin(group_id, {
     });
 
     // create audit record for promoting group member to admin
-    const userNames = await resolveUserNames(tx, [actor_id, user_id]);
     const groupName = await resolveEntityName(tx, 'group', group_id);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_ADMIN_ADDED,
-        actor_id,
-        actor_name: userNames.get(actor_id),
-        subject_id: user_id,
-        subject_name: userNames.get(user_id),
-        subject_type: SUBJECT_TYPE.USER,
-        target_type: TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: groupName,
-        metadata: {
-          role: GROUP_MEMBER_ROLE.ADMIN,
-        },
-      },
+    await createMembershipAuditRecords(tx, {
+      eventType: audit.AUTH_EVENT_TYPE.GROUP_ADMIN_ADDED,
+      actor_id,
+      user_ids: [user_id],
+      group_id,
+      groupName,
+      role: GROUP_MEMBER_ROLE.ADMIN,
     });
     return updatedMembership;
   });
@@ -792,7 +802,7 @@ async function promoteGroupMemberToAdmin(group_id, {
  * @returns {Promise<Object>} Updated membership object
  * @throws {createError.Conflict} If the user is not a member of the group
  */
-async function removeGroupAdmin(group_id, {
+async function demoteAdminToMember(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
@@ -825,23 +835,14 @@ async function removeGroupAdmin(group_id, {
     });
 
     // create audit record for demoting group admin to member
-    const userNames = await resolveUserNames(tx, [actor_id, user_id]);
     const groupName = await resolveEntityName(tx, 'group', group_id);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.GROUP_ADMIN_REMOVED,
-        actor_id,
-        actor_name: userNames.get(actor_id),
-        subject_id: user_id,
-        subject_name: userNames.get(user_id),
-        subject_type: SUBJECT_TYPE.USER,
-        target_type: TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: groupName,
-        metadata: {
-          role: GROUP_MEMBER_ROLE.MEMBER,
-        },
-      },
+    await createMembershipAuditRecords(tx, {
+      eventType: audit.AUTH_EVENT_TYPE.GROUP_ADMIN_REMOVED,
+      actor_id,
+      user_ids: [user_id],
+      group_id,
+      groupName,
+      role: GROUP_MEMBER_ROLE.MEMBER,
     });
     return updatedMembership;
   });
@@ -1144,7 +1145,6 @@ async function getGroupDescendants(group_id, opts = {}) {
 
 module.exports = {
   createGroup,
-  createChildGroup,
   getGroupById,
   getGroupBySlug,
   updateGroupMetadata,
@@ -1154,7 +1154,7 @@ module.exports = {
   removeGroupMembers,
   addGroupMembers,
   promoteGroupMemberToAdmin,
-  removeGroupAdmin,
+  demoteAdminToMember,
   getAncestorGroups,
   getDescendantGroups,
   searchAllGroups,

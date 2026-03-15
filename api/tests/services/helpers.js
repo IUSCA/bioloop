@@ -52,15 +52,15 @@ async function createTestUser(tag = '') {
  */
 async function createTestGroup(actorId, tag = '', overrides = {}) {
   const suffix = `${Date.now()}${tag}`;
-  return groupsService.createGroup(
-    {
+  return groupsService.createGroup({
+    data: {
       name: `Test Group ${suffix}`,
       description: 'Created by test helper',
       allow_user_contributions: false,
       ...overrides,
     },
-    actorId,
-  );
+    actor_id: actorId,
+  });
 }
 
 /**
@@ -72,16 +72,16 @@ async function createTestGroup(actorId, tag = '', overrides = {}) {
  */
 async function createTestChildGroup(parentId, actorId, tag = '', overrides = {}) {
   const suffix = `${Date.now()}${tag}`;
-  return groupsService.createChildGroup(
-    parentId,
-    {
+  return groupsService.createGroup({
+    parent_id: parentId,
+    data: {
       name: `Test Child Group ${suffix}`,
       description: 'Created by test helper',
       allow_user_contributions: false,
       ...overrides,
     },
-    actorId,
-  );
+    actor_id: actorId,
+  });
 }
 
 // ─────────────────────────────────────────────
