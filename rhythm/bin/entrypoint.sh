@@ -2,7 +2,11 @@
 
 set -e
 
-# Always run from the app root so relative paths map to the mounted volumes
+_START_TIME=$(date +%s)
+ts() { printf "[%s +%ds] " "$(date '+%H:%M:%S')" "$(( $(date +%s) - _START_TIME ))"; }
+
+ts; echo "=== Rhythm entrypoint start ==="
+
 APP_ROOT="/app"
 if [ -d "$APP_ROOT" ]; then
   cd "$APP_ROOT"
@@ -16,54 +20,51 @@ fi
 
 api_env="${API_DIR}/.env"
 
-echo "Starting Rhythm API..."
-
-# Check if .env file exists in api directory
 if [ -f "$api_env" ]; then
-  echo ".env file exists in api directory."
+  ts; echo "api/.env exists."
 else
-  echo "Creating .env file in api directory..."
+  ts; echo "Creating api/.env..."
   touch "$api_env"
 fi
 
 KEYS_GENERATED=false
 if [ -f "keys/auth.key" ] && [ -f "keys/auth.pub" ]; then
-  echo "Keys already exist. Skipping key generation."
+  ts; echo "RSA keys already exist. Skipping generation."
 else
-  echo "Keys not found. Generating new keys..."
+  ts; echo "Generating RSA keys..."
+  _T=$(date +%s)
   cd keys/
   ./genkeys.sh
   cd ../
   KEYS_GENERATED=true
+  ts; echo "RSA key generation done ($(( $(date +%s) - _T ))s)"
 fi
 
-# The token and signing keys must always be in sync.
-# If keys were just regenerated, any existing token was signed with the old
-# keys and is now invalid — it must be cleared and reissued.
 api_token="WORKFLOW_AUTH_TOKEN"
-echo "Checking WORKFLOW_AUTH_TOKEN in '$api_env'..."
+ts; echo "Checking WORKFLOW_AUTH_TOKEN in '$api_env'..."
 
 if [ "$KEYS_GENERATED" = "false" ] && grep -q "^${api_token}=" "$api_env"; then
   value=$(grep "^${api_token}=" "$api_env" | cut -d'=' -f2)
   if [ -n "$value" ]; then
-    echo "Keys and token already exist and are in sync. Skipping token generation."
+    ts; echo "Keys and token already exist and are in sync. Skipping token generation."
   else
-    echo "Token entry exists but has no value. Regenerating token."
+    ts; echo "Token entry exists but has no value. Regenerating token..."
+    _T=$(date +%s)
     grep -v "^WORKFLOW_AUTH_TOKEN" "$api_env" > /tmp/_env_tmp && cat /tmp/_env_tmp > "$api_env" && rm /tmp/_env_tmp
     echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> "$api_env"
-    echo "Created new API token."
-    echo "INFO: Restart the API container to pick up the new token."
+    ts; echo "Token regenerated ($(( $(date +%s) - _T ))s). Restart API to pick it up."
   fi
 else
   if [ "$KEYS_GENERATED" = "true" ]; then
-    echo "Keys were regenerated. Clearing stale token and issuing a new one."
+    ts; echo "Keys were just generated — clearing stale token and issuing a new one..."
   else
-    echo "Token not found. Generating new token."
+    ts; echo "Token not found. Generating..."
   fi
+  _T=$(date +%s)
   grep -v "^WORKFLOW_AUTH_TOKEN" "$api_env" > /tmp/_env_tmp && cat /tmp/_env_tmp > "$api_env" && rm /tmp/_env_tmp
   echo "WORKFLOW_AUTH_TOKEN=$(python -m rhythm_api.scripts.issue_token --sub bioloop-dev.sca.iu.edu)" >> "$api_env"
-  echo "Created new API token."
-  echo "INFO: Restart the API container to pick up the new token."
+  ts; echo "Token generated ($(( $(date +%s) - _T ))s). Restart API to pick it up."
 fi
 
+ts; echo "=== Rhythm entrypoint complete — total $(( $(date +%s) - _START_TIME ))s ==="
 $*

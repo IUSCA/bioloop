@@ -1,58 +1,70 @@
 #!/bin/bash
 
+_START_TIME=$(date +%s)
+ts() { printf "[%s +%ds] " "$(date '+%H:%M:%S')" "$(( $(date +%s) - _START_TIME ))"; }
+
+ts; echo "=== API entrypoint start ==="
+
 # check if .env file exists
 if [ ! -f "workers/.env" ]; then
-  echo "Creating .env file..."
+  ts; echo "Creating workers/.env..."
   touch workers/.env
 fi
 
 # Check if pre-requisites are installed
+ts; echo "Waiting for WORKFLOW_AUTH_TOKEN in .env..."
+_WAIT_START=$(date +%s)
 while ! grep -q "^WORKFLOW_AUTH_TOKEN=[^ ]\+" ".env"; do
-  echo "Waiting for .env file to be ready and contain WORKFLOW_AUTH_TOKEN..."
+  echo "  [$(date '+%H:%M:%S')] Still waiting for .env / WORKFLOW_AUTH_TOKEN..."
   sleep 1
 done
+ts; echo "WORKFLOW_AUTH_TOKEN ready (waited $(( $(date +%s) - _WAIT_START ))s)"
 
 # Dynamically load environment variables from .env file
-# This will export all variables in the .env file to the environment
-# This ensure that the script can access the variables we generated during startup
 export $(grep -v '^#' .env | xargs)
 
 # Check if keys exists
 if [ -f "keys/auth.pub" ] && [ -f "keys/auth.key" ]; then
-  echo "Keys already exist. Skipping key generation." 
+  ts; echo "RSA keys already exist. Skipping generation."
 else
-  echo "Keys not found. Generating keys..."
-  cd keys 
+  ts; echo "Generating RSA keys..."
+  _T=$(date +%s)
+  cd keys
   openssl genrsa -out auth.key 2048
   chmod 600 auth.key
   openssl rsa -in auth.key -pubout > auth.pub
-  cd .. 
+  cd ..
+  ts; echo "RSA key generation done ($(( $(date +%s) - _T ))s)"
 fi
 
 # Install dependencies
+ts; echo "Running npm install..."
+_T=$(date +%s)
 npm install
+ts; echo "npm install done ($(( $(date +%s) - _T ))s)"
 
 # Generate Prisma client
-npx prisma generate 
+ts; echo "Running prisma generate..."
+_T=$(date +%s)
+npx prisma generate
+ts; echo "prisma generate done ($(( $(date +%s) - _T ))s)"
 
 # Run database migrations
+ts; echo "Running prisma migrate deploy..."
+_T=$(date +%s)
 npx prisma migrate deploy
+ts; echo "prisma migrate deploy done ($(( $(date +%s) - _T ))s)"
 
-echo "Checking if the database needs seeding..."
-# if ! npx prisma db seed --preview-feature --dry-run | grep -q "No seeders found"; then
-#   echo "Database needs seeding. Running the seed command..."
-#   npx prisma db seed
-# else
-#   echo "Database is already seeded or no seeders are available."
-# fi
+# Seed database
+ts; echo "Running prisma db seed..."
+_T=$(date +%s)
 npx prisma db seed
+ts; echo "prisma db seed done ($(( $(date +%s) - _T ))s)"
 
-echo "Checking if the required environment variables are set..."
-
-# Check if the required environment variable is set
+ts; echo "Checking OAuth client credentials..."
 if [ "${OAUTH_DOWNLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_DOWNLOAD_CLIENT_SECRET}" = "xxx" ] || [ "${OAUTH_UPLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_UPLOAD_CLIENT_SECRET}" = "xxx" ]; then
-
-  echo "One or more required environment variables are set to 'xxx'. Generating new OAuth client credentials..."
+  ts; echo "Generating OAuth client credentials via signet..."
+  _T=$(date +%s)
   response=$(curl --silent --request POST \
     --url http://signet:5050/create_client \
     --header 'Content-Type: application/x-www-form-urlencoded' \
@@ -63,17 +75,10 @@ if [ "${OAUTH_DOWNLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_DOWNLOAD_CLIENT_SECRE
     --data grant_type=client_credentials)
 
   echo "Response from server: $response"
-
-  # Extract the client_id and client_secret from the response JSON
   client_id=$(echo "$response" | grep -oP '(?<="client_id":")[^"]*')
   client_secret=$(echo "$response" | grep -oP '(?<="client_secret":")[^"]*')
-
-
   echo "Client ID: $client_id"
-  echo "Client Secret: $client_secret" 
-
-  echo "Updating .env file with new OAuth client credentials..."
-  
+  echo "Client Secret: $client_secret"
 
   grep -v "^OAUTH_DOWNLOAD_CLIENT_ID\|^OAUTH_DOWNLOAD_CLIENT_SECRET\|^OAUTH_UPLOAD_CLIENT_ID\|^OAUTH_UPLOAD_CLIENT_SECRET" .env > /tmp/_env_tmp && cat /tmp/_env_tmp > .env && rm /tmp/_env_tmp
   echo "OAUTH_DOWNLOAD_CLIENT_ID=$client_id" >> .env
@@ -84,27 +89,29 @@ if [ "${OAUTH_DOWNLOAD_CLIENT_ID}" = "xxx" ] || [ "${OAUTH_DOWNLOAD_CLIENT_SECRE
   export OAUTH_UPLOAD_CLIENT_ID=$client_id
   echo "OAUTH_UPLOAD_CLIENT_SECRET=$client_secret" >> .env
   export OAUTH_UPLOAD_CLIENT_SECRET=$client_secret
+  ts; echo "OAuth credentials written ($(( $(date +%s) - _T ))s)"
+else
+  ts; echo "OAuth credentials already set. Skipping."
 fi
 
-
 if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
-  echo "Generating APP_API_TOKEN"
+  ts; echo "Generating APP_API_TOKEN..."
+  _T=$(date +%s)
   APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)
   if [ $? -ne 0 ] || [ -z "$APP_API_TOKEN" ]; then
-    echo "ERROR: Failed to generate APP_API_TOKEN. Error from issue_token.js:"
+    echo "ERROR: Failed to generate APP_API_TOKEN."
     node src/scripts/issue_token.js svc_tasks
     exit 1
   fi
-  echo "Writing APP_API_TOKEN to workers/.env"
   echo "APP_API_TOKEN=$APP_API_TOKEN" >> workers/.env
+  ts; echo "APP_API_TOKEN written ($(( $(date +%s) - _T ))s)"
+else
+  ts; echo "APP_API_TOKEN already set. Skipping."
 fi
 
-# Dynamically load environment variables from .env file
-# This will export all variables in the .env file to the environment
-# This ensure that the script can access the variables we generated during startup
 if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
 fi
 
-# Run the application
+ts; echo "=== API entrypoint complete — total $(( $(date +%s) - _START_TIME ))s ==="
 $*
