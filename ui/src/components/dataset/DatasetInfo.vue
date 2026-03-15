@@ -71,6 +71,12 @@
                 :create-method="props.dataset.create_method"
                 :origin-path="props.dataset.origin_path"
               />
+              <!-- Upload status indicator (all roles) -->
+              <UploadStatusBadge
+                v-if="isUpload"
+                :status="uploadLogStatus"
+                :integrated-status="integratedStatus"
+              />
               <!-- Admin: link to upload details page -->
               <router-link
                 v-if="isUpload && auth.canAdmin"
@@ -81,12 +87,6 @@
               >
                 <va-icon name="open_in_new" size="small" />
               </router-link>
-              <!-- Non-admin: live upload status indicator -->
-              <UploadStatusBadge
-                v-else-if="isUpload && !auth.canAdmin"
-                :status="uploadLogStatus"
-                :integrated-status="integratedStatus"
-              />
             </div>
           </td>
         </tr>
