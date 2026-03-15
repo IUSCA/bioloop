@@ -171,6 +171,8 @@ export async function computeManifestHash(files, progressCallback = null) {
         path: _manifestPath(file),
         size: file.size,
         hash: fileHash,
+        _webkitRelativePath: file.webkitRelativePath || '',
+        _fileName: file.name,
       });
 
       // Report overall progress after each file completes
@@ -188,6 +190,14 @@ export async function computeManifestHash(files, progressCallback = null) {
     console.log('[checksum.js] Sorting manifest...');
     manifest.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
+    // DEBUG: log every manifest entry so the path/size/hash can be compared
+    // directly against the server's stdout output.
+    console.log('[checksum.js] Manifest entries (sorted):');
+    manifest.forEach((f, i) => {
+      console.log(`[checksum.js]   [${i}] path="${f.path}"  size=${f.size}  hash=${f.hash}`);
+      console.log(`[checksum.js]        webkitRelativePath="${f._webkitRelativePath}"  file.name="${f._fileName}"`);
+    });
+
     // Create canonical manifest string
     console.log('[checksum.js] Creating manifest string...');
     const manifestStr = [
@@ -195,6 +205,7 @@ export async function computeManifestHash(files, progressCallback = null) {
       ...manifest.map((f) => `${f.path}\t${f.size}\t${f.hash}`),
     ].join('\n');
     console.log('[checksum.js] Manifest string length:', manifestStr.length);
+    console.log('[checksum.js] Full manifest string:\n' + manifestStr);
 
     // Hash the manifest itself (small, so we can do it directly)
     console.log('[checksum.js] Hashing manifest itself...');
