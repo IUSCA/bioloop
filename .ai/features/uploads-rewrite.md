@@ -2,7 +2,7 @@
 
 **Feature:** TUS-based resumable uploads replacing old chunk-upload implementation  
 **Branch:** `uploads-rewrite---pr-feedback`  
-**Last Updated:** 2026-03-12
+**Last Updated:** 2026-03-13
 
 ---
 
@@ -22,6 +22,7 @@
 
 ### Non-Blocking (should fix before merge)
 
+- [ ] **Rewrite existing upload e2e tests** — existing tests were written for the old chunk-upload implementation and need to be rewritten for the new TUS-based flow.
 - [ ] **Check for design/scratch files** — draft docs, commented-out prototype code, `TODO`/`FIXME` notes meant only for the design stage.
 - [ ] **PR description** — 56 files changed across API, UI, workers, migrations, docs. Write a summary covering: TUS upload flow, async verification pipeline, schema changes (`dataset_upload_log` direct `dataset_id` link, `create_method` on `dataset`).
 - [ ] **Update diagrams** — update architecture/flow diagrams in the design doc for the new TUS-based upload design (old diagrams reflect the chunk-upload + `process_dataset_upload` workflow).
