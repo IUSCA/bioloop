@@ -93,21 +93,49 @@ function moveTusFileToDestination({
   }
 
   if (!fs.existsSync(finalPath)) {
-    logger.info('[TUS] Moving file', {
-      dataset_id: datasetId,
-      source: tusFilePath,
-      destination: finalPath,
-    });
-    fs.renameSync(tusFilePath, finalPath);
-    logger.info('[TUS] File moved successfully', {
-      dataset_id: datasetId,
-      destination: finalPath,
-    });
+    if (fs.existsSync(tusFilePath)) {
+      // Normal case: TUS staged a data file — move it to its final location.
+      logger.info('[TUS] Moving file', {
+        dataset_id: datasetId,
+        source: tusFilePath,
+        destination: finalPath,
+      });
+      fs.renameSync(tusFilePath, finalPath);
+      logger.info('[TUS] File moved successfully', {
+        dataset_id: datasetId,
+        destination: finalPath,
+      });
+    } else {
+      // 0-byte file: @tus/file-store v1.4 normally creates an empty data file
+      // on create(), but as a safety net handle the case where it doesn't.
+      logger.info('[TUS] 0-byte file — creating empty file at destination', {
+        dataset_id: datasetId,
+        destination: finalPath,
+      });
+      fs.writeFileSync(finalPath, '');
+    }
   } else {
     logger.info('[TUS] File already exists at destination (idempotent)', {
       dataset_id: datasetId,
       destination: finalPath,
     });
+  }
+
+  // @tus/server v1.6 PostHandler calls store.getUpload() AFTER onUploadFinish
+  // to add the Upload-Expires response header.  getUpload() calls fs.stat() on
+  // the TUS staging data file — if we have already moved it the stat fails with
+  // ENOENT and TUS turns that into a 410 Gone error sent back to the client.
+  // Recreate an empty placeholder at the staging path so the stat succeeds.
+  // TUS's own 7-day expiry sweep will clean it up later.
+  // (The PatchHandler's expiry check explicitly skips complete uploads without
+  // calling getUpload(), so this placeholder is only critical for 0-byte files
+  // whose onUploadFinish fires during the POST creation request itself.)
+  if (!fs.existsSync(tusFilePath)) {
+    logger.info('[TUS] Recreating TUS staging placeholder (PostHandler expiry compat)', {
+      dataset_id: datasetId,
+      path: tusFilePath,
+    });
+    fs.writeFileSync(tusFilePath, '');
   }
 
   return finalPath;

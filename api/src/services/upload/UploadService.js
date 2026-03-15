@@ -244,12 +244,18 @@ class UploadService {
       },
 
       onResponseError: (req, res, err) => {
-        logger.error(`[TUS] Response error on ${req.method} ${req.url}: ${err.message}`, {
-          method: req.method,
-          url: req.url,
-          error: err.message,
-          status_code: err.status_code || 500,
-        });
+        // TUS-internal errors (ResponseError) carry `status_code` and `body`
+        // rather than `message`, so log both to make diagnosis straightforward.
+        logger.error(
+          `[TUS] Response error on ${req.method} ${req.url}: ${err.message ?? err.body ?? err}`,
+          {
+            method: req.method,
+            url: req.url,
+            error_message: err.message,
+            error_body: err.body,
+            status_code: err.status_code || 500,
+          },
+        );
       },
     });
 
