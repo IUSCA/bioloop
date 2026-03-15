@@ -52,8 +52,9 @@ echo "Checking WORKFLOW_AUTH_TOKEN in '$api_env'..."
 # invalid and will cause the API to receive 401s from Rhythm.  When new keys
 # are generated, any existing token is replaced unconditionally.
 #
-# grep -v | cat is used instead of sed -i because macOS virtiofs bind mounts
-# do not support in-place file edits.
+# grep -v | cat is used instead of sed -i to avoid in-place edit failures
+# that occur on some bind mount implementations (e.g. virtiofs on macOS
+# Docker Desktop).  This pattern is portable and works on any platform.
 if [ "$KEYS_GENERATED" = "false" ] && grep -q "^${api_token}=" "$api_env"; then
   value=$(grep "^${api_token}=" "$api_env" | cut -d'=' -f2)
   if [ -n "$value" ]; then
