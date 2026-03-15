@@ -131,7 +131,8 @@
     "longrepr",
     "longreprtext",
     "nodeid",
-    "virtualenvs"
+    "virtualenvs",
+    "virtiofs"
   ],
   "ignorePaths": [
     ".ai",

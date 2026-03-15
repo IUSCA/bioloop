@@ -195,9 +195,9 @@ def get_workflows_for_dataset(
     Returns { metadata: { total: N, ... }, results: [...] }.
 
     When total == 0 the API returns immediately from Postgres without calling
-    the Rhythm API.  When total > 0 the results are Rhythm-enriched; if Rhythm
-    is unreachable the API returns a 5xx and raise_for_status() will raise,
-    failing the caller loudly rather than silently returning an empty list.
+    the Rhythm API.  When total > 0 each result is hydrated with live workflow
+    details from Rhythm; if Rhythm is unreachable the API returns a 5xx and
+    raise_for_status() will raise, failing loudly rather than returning stale data.
     """
     with APIServerSession() as s:
         r = s.get(
@@ -220,8 +220,9 @@ def get_workflow(
     """
     Fetch a single workflow by ID via GET /workflows/<workflow_id>.
 
-    Returns the full Rhythm-enriched workflow document including per-step
-    status and task-run history.  Raises HTTPError if Rhythm is unreachable.
+    Returns the workflow document hydrated with live task-run details from
+    Rhythm, including per-step status and run history.  Raises HTTPError if
+    Rhythm is unreachable.
     """
     with APIServerSession() as s:
         r = s.get(

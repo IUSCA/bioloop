@@ -16,7 +16,8 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     sda_path = dataset['archive_path']
 
     if app_env == 'docker':
-        # In Docker mode there is no HPSS/SDA — delete the locally-archived file directly.
+        # In Docker mode, remote archive storage is not available — delete the
+        # locally-archived file directly.
         if sda_path:
             archive_file = Path(sda_path)
             if archive_file.exists():

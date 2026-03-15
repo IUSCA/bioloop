@@ -1,20 +1,21 @@
 #!/bin/bash
 
-_START_TIME=$(date +%s)
-ts() { printf "[%s +%ds] " "$(date '+%H:%M:%S')" "$(( $(date +%s) - _START_TIME ))"; }
+# Signet (OAuth2 authorization server) entrypoint.
 
-ts; echo "=== Signet entrypoint start ==="
+echo "=== Signet entrypoint start ==="
 
+# RSA key pair used by Signet to sign OAuth2 access tokens.
+# Other services (API, secure_download) use the corresponding public key to
+# verify those tokens without needing to contact Signet on every request.
 if [ -f "keys/auth.key" ] && [ -f "keys/auth.pub" ]; then
-  ts; echo "RSA keys already exist. Skipping generation."
+  echo "RSA keys already exist. Skipping generation."
 else
-  ts; echo "Generating RSA keys..."
-  _T=$(date +%s)
+  echo "Generating RSA keys..."
   cd keys/
   ./genkeys.sh
   cd ../
-  ts; echo "RSA key generation done ($(( $(date +%s) - _T ))s)"
+  echo "RSA key generation done."
 fi
 
-ts; echo "=== Signet entrypoint complete — total $(( $(date +%s) - _START_TIME ))s ==="
+echo "=== Signet entrypoint complete ==="
 $*

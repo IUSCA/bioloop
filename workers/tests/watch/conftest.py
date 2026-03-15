@@ -89,8 +89,8 @@ def _purge_test_datasets() -> None:
     """Delete all non-deleted test datasets from the API (best-effort).
 
     Queries for datasets whose name contains _TEST_DATASET_PREFIX across all
-    types.  For each match the archive_path is cleared first (to skip the
-    async SDA delete workflow) then the dataset is soft-deleted via the API.
+    types.      For each match the archive_path is cleared first (to avoid triggering the
+    asynchronous archive-delete workflow) then the dataset is soft-deleted via the API.
 
     Errors are caught and logged as warnings — this is a best-effort safety
     net and must not mask test failures.
@@ -203,9 +203,9 @@ def _registered_dataset_gen(
 ) -> Generator[dict[str, Any], None, None]:
     """Setup/teardown: copy fixture, trigger Observer, yield dataset; delete on teardown.
 
-    Teardown deliberately avoids triggering an async SDA delete workflow:
-    archive_path is cleared first (if set) so the API's soft_delete always
-    takes the direct-DB path — synchronous, no Celery job required.
+    Teardown clears archive_path before deleting (if it was set) so the API's
+    soft-delete takes the direct-DB path — synchronous, without queuing an
+    asynchronous archive-delete workflow via Celery.
 
     Errors are NOT swallowed: a failed teardown fails the test so problems
     are never silently ignored.
