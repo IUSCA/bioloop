@@ -298,25 +298,38 @@
               <va-card-title>{{ isUploadComplete ? 'Files Uploaded' : 'Files to Upload' }}</va-card-title>
               <va-card-content>
                 <!-- Upload progress (always shown, above file list) -->
-                <div class="mb-4 pb-4 border-b border-gray-300">
-                  <!-- Checksum computation progress -->
-                  <div v-if="isComputingChecksum" class="mb-3">
-                    <div class="text-sm font-semibold mb-2">
-                      Computing checksum: {{ checksumProgress }}%
+                <div class="mb-4 pb-4 border-b border-gray-300 flex flex-col gap-3">
+
+                  <!-- Checksum computation progress — amber/warning treatment -->
+                  <div
+                    v-if="isComputingChecksum"
+                    class="rounded-md px-3 py-2 border border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20"
+                  >
+                    <div class="flex items-center gap-2 text-sm font-semibold mb-2 text-amber-700 dark:text-amber-400">
+                      <Icon icon="mdi:fingerprint" class="text-base flex-none" />
+                      <span>Computing checksum… {{ checksumProgress }}%</span>
                     </div>
-                    <va-progress-bar :model-value="checksumProgress" color="info" />
+                    <va-progress-bar :model-value="checksumProgress" color="warning" />
                   </div>
 
-                  <!-- Overall upload progress -->
-                  <div>
-                    <div class="text-sm font-semibold mb-2">
-                      Upload Progress: {{ submitAttempted ? `${filesUploaded} / ${totalFiles} files (${uploadProgress}%)` : 'Not started' }}
+                  <!-- Overall upload progress — primary treatment -->
+                  <div class="rounded-md px-3 py-2 border border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/10">
+                    <div class="flex items-center gap-2 text-sm font-semibold mb-2 text-blue-700 dark:text-blue-400">
+                      <Icon icon="mdi:cloud-upload-outline" class="text-base flex-none" />
+                      <span>
+                        {{ submitAttempted && !isComputingChecksum
+                          ? `Uploading… ${filesUploaded} / ${totalFiles} files (${uploadProgress}%)`
+                          : isComputingChecksum
+                            ? 'Upload queued'
+                            : 'Upload Progress: Not started' }}
+                      </span>
                     </div>
                     <va-progress-bar
-                      :model-value="submitAttempted ? uploadProgress : 0"
-                      :color="submitAttempted ? 'primary' : 'secondary'"
+                      :model-value="submitAttempted && !isComputingChecksum ? uploadProgress : 0"
+                      :color="submitAttempted && !isComputingChecksum ? 'primary' : 'secondary'"
                     />
                   </div>
+
                 </div>
 
                 <!-- File list -->
@@ -912,22 +925,30 @@ const onSubmit = async () => {
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
 
+  const t0 = performance.now();
+
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
         submissionSuccess.value = true;
 
+        const totalBytes = filesToUpload.value.reduce((sum, f) => sum + f.file.size, 0);
+        const fileCount = filesToUpload.value.length;
+
         // COMPUTE CHECKSUMS FIRST (before upload starts)
         // Skip if already computed (e.g., on retry after upload failure)
+        let tChecksumMs = null;
         if (isChecksumVerificationEnabled() && !computedChecksum.value) {
           try {
             isComputingChecksum.value = true;
             checksumProgress.value = 0;
 
             const files = filesToUpload.value.map(f => f.file);
+            const tChecksumStart = performance.now();
             computedChecksum.value = await computeManifestHash(files, (progress) => {
               checksumProgress.value = progress;
             });
+            tChecksumMs = performance.now() - tChecksumStart;
           } catch (error) {
             // Don't fail upload - allow it to proceed without checksum
           } finally {
@@ -939,16 +960,39 @@ const onSubmit = async () => {
         // NOW START UPLOAD
         submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOADING;
 
-        // Use resumable upload protocol instead of old chunk system
-        // Get the actual File objects to upload
         const filesToUploadList = filesToUpload.value.map(f => f.file);
 
         totalFiles.value = filesToUploadList.length;
         filesUploaded.value = 0;
         uploadProgress.value = 0;
 
+        const tUploadStart = performance.now();
         const uploadServiceURL = _getUploadServiceURL(window.location.origin);
         const uploaded = await uploadFilesWithTus(filesToUploadList, uploadServiceURL);
+        const tUploadMs = performance.now() - tUploadStart;
+        const tTotalMs = performance.now() - t0;
+
+        const fmt = (ms) => ms >= 60_000
+          ? `${(ms / 60_000).toFixed(1)} min`
+          : `${(ms / 1_000).toFixed(2)} s`;
+        const fmtBytes = (b) => b >= 1_073_741_824
+          ? `${(b / 1_073_741_824).toFixed(2)} GB`
+          : b >= 1_048_576
+            ? `${(b / 1_048_576).toFixed(1)} MB`
+            : `${(b / 1_024).toFixed(1)} KB`;
+
+        console.group('[UPLOAD TIMING]');
+        console.log(`  Files    : ${fileCount} file${fileCount !== 1 ? 's' : ''}, ${fmtBytes(totalBytes)}`);
+        if (tChecksumMs !== null) {
+          const checksumThroughput = totalBytes / (tChecksumMs / 1_000);
+          console.log(`  Checksum : ${fmt(tChecksumMs)}  (${fmtBytes(checksumThroughput)}/s)`);
+        } else {
+          console.log(`  Checksum : skipped (disabled or already computed)`);
+        }
+        const uploadThroughput = totalBytes / (tUploadMs / 1_000);
+        console.log(`  Upload   : ${fmt(tUploadMs)}  (${fmtBytes(uploadThroughput)}/s avg)`);
+        console.log(`  Total    : ${fmt(tTotalMs)}`);
+        console.groupEnd();
 
         if (uploaded) {
           handleUploadComplete();
