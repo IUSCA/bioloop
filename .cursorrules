@@ -436,6 +436,21 @@ See `.ai/` directory for detailed conventions.
 
 ---
 
+## 🔤 Language & Spelling
+
+**Always use American English spelling** in all code, comments, docstrings, log messages, and documentation.
+
+Common corrections:
+- `initialize` (not `initialise`)
+- `parameterized` (not `parameterised`)
+- `stabilized` (not `stabilised`)
+- `recognized` (not `recognised`)
+- `color` (not `colour`), `favor` (not `favour`), `behavior` (not `behaviour`)
+
+This repo uses `cspell` with `"language": "en"` (American English). British spellings will fail the pre-commit hook.
+
+---
+
 ## 📝 Constants vs Config
 
 **Constants** (business logic):

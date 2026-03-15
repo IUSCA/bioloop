@@ -14,7 +14,7 @@ RUN pip install poetry==$POETRY_VERSION
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-dev
+RUN poetry config virtualenvs.create false && poetry install
 
 # Copy the rest of the application code
 COPY . /opt/sca/app

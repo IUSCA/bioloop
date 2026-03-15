@@ -20,6 +20,7 @@
 # USAGE:
 #   bin/docker-reset.sh              # interactive — prompts before each step
 #   bin/docker-reset.sh --no-confirm # non-interactive — skips all prompts
+#   bin/docker-reset.sh -y           # shorthand for --no-confirm
 
 set -euo pipefail
 
@@ -37,7 +38,7 @@ success() { echo -e "${GRN}[ok]${NC}    $*"; }
 abort()   { echo -e "${RED}[abort]${NC} $*"; exit 1; }
 
 SKIP_PROMPTS=false
-[[ "${1:-}" == "--no-confirm" ]] && SKIP_PROMPTS=true
+[[ "${1:-}" == "--no-confirm" || "${1:-}" == "-y" ]] && SKIP_PROMPTS=true
 
 confirm() {
   if $SKIP_PROMPTS; then return 0; fi

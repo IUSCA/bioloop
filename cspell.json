@@ -124,7 +124,14 @@
     "moutned",
     "nuxt",
     "uvicorn",
-    "venv"
+    "venv",
+    "autouse",
+    "HPSS",
+    "logreport",
+    "longrepr",
+    "longreprtext",
+    "nodeid",
+    "virtualenvs"
   ],
   "ignorePaths": [
     ".ai",

@@ -31,9 +31,12 @@ config = {
     'registration': {
         'RAW_DATA': {
             'source_dir': '/opt/sca/data/origin/raw_data',
+            # Ignore test isolation dirs so watch.py doesn't register them as datasets.
+            'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         'DATA_PRODUCT': {
             'source_dir': '/opt/sca/data/origin/data_products',
+            'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         'recency_threshold_seconds': 5,  # fast enough for docker dev without being instant
         'wait_between_stability_checks_seconds': 5,  # poll frequently in docker dev

@@ -78,3 +78,6 @@ rhythm/rhythm_api
 signet/signet
 
 # .cursorrules
+
+# Test log output (written by pytest, bind-mounted to workers/test_logs/ on host)
+workers/test_logs/

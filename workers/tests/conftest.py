@@ -71,8 +71,33 @@ def pytest_runtest_teardown(
     nextitem: pytest.Item | None,
 ) -> None:
     """
-    Pytest hook: Log test completion.
+    Pytest hook: Log test completion (outcome logged separately via logreport).
     """
     logger.info("=" * 80)
-    logger.info(f"TEST COMPLETED: {item.name}")
+    logger.info(f"TEST TEARDOWN: {item.name}")
     logger.info("=" * 80 + "\n")
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    """
+    Pytest hook: Log the outcome (PASSED / FAILED / ERROR) for each test phase.
+
+    Called once per phase (setup, call, teardown).  Only the 'call' phase
+    carries the actual test result; 'setup' and 'teardown' failures are also
+    surfaced so fixture errors are visible in the log.
+    """
+    if report.when == 'call':
+        if report.passed:
+            logger.info(f"OUTCOME PASSED  :: {report.nodeid}")
+        elif report.failed:
+            logger.error(
+                f"OUTCOME FAILED  :: {report.nodeid}\n"
+                f"{report.longreprtext if hasattr(report, 'longreprtext') else report.longrepr}"
+            )
+        elif report.skipped:
+            logger.info(f"OUTCOME SKIPPED :: {report.nodeid}")
+    elif report.when in ('setup', 'teardown') and report.failed:
+        logger.error(
+            f"OUTCOME ERROR ({report.when.upper()}) :: {report.nodeid}\n"
+            f"{report.longreprtext if hasattr(report, 'longreprtext') else report.longrepr}"
+        )

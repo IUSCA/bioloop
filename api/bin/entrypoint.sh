@@ -43,7 +43,12 @@ fi
 ts; echo "Checking if npm install is needed..."
 _LOCKFILE_HASH=$(md5sum package-lock.json 2>/dev/null | awk '{print $1}')
 _HASH_FILE="node_modules/.install_hash"
-if [ -f "$_HASH_FILE" ] && [ "$(cat "$_HASH_FILE" 2>/dev/null)" = "$_LOCKFILE_HASH" ]; then
+_NODE_MODULES_VALID=false
+if [ -f "$_HASH_FILE" ] && [ "$(cat "$_HASH_FILE" 2>/dev/null)" = "$_LOCKFILE_HASH" ] \
+    && [ -d "node_modules/.bin" ] && [ -n "$(ls node_modules/.bin 2>/dev/null)" ]; then
+  _NODE_MODULES_VALID=true
+fi
+if $_NODE_MODULES_VALID; then
   ts; echo "node_modules up to date (lockfile unchanged). Skipping npm install."
 else
   ts; echo "Running npm install..."

@@ -12,6 +12,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import get_archive_bundle_name
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -46,8 +47,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
-    # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
+    bundle = Path(config["paths"][dataset["type"]]["bundle"]["generate"]) / get_archive_bundle_name(dataset)
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,

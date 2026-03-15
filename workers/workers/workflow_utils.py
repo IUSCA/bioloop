@@ -33,15 +33,14 @@ def get_wf_body(wf_name: str) -> dict:
     return wf_body
 
 
-def get_archive_dir(dataset_type: str) -> str:
+def get_archive_dir(dataset_type: str, create: bool = True) -> str:
     dataset_type_archive_dir = config["paths"][dataset_type]["archive"]
-    
-    # create the directory if it does not exist
-    if app_env == 'docker':
-        _dataset_type_archive_dir = Path(dataset_type_archive_dir)
-        _dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        sda.ensure_directory(dataset_type_archive_dir)
+
+    if create:
+        if app_env == 'docker':
+            Path(dataset_type_archive_dir).mkdir(parents=True, exist_ok=True)
+        else:
+            sda.ensure_directory(dataset_type_archive_dir)
 
     return dataset_type_archive_dir
 
