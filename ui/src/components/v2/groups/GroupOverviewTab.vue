@@ -230,7 +230,7 @@
         />
         <MetricCard
           label="Datasets"
-          icon="mdi-table"
+          icon="mdi-database"
           color="success"
           :value="props.counts.datasets"
           :loading="props.counts.datasets === null"

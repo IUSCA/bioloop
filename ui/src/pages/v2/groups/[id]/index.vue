@@ -2,9 +2,8 @@
   <div class="flex flex-col gap-4">
     <!-- Loading -->
     <template v-if="loading">
-      <VaSkeleton variant="text" height="16px" width="200px" />
+      <VaSkeleton variant="text" height="32px" width="200px" />
       <VaSkeleton variant="text" height="32px" width="280px" />
-      <VaSkeleton variant="rounded" height="44px" />
       <VaSkeleton variant="rounded" height="360px" />
     </template>
 
@@ -67,7 +66,7 @@
             </span>
           </VaTab>
 
-          <VaTab v-if="showResources" name="datasets">
+          <VaTab name="datasets">
             <span class="flex items-center gap-1.5">
               Datasets
               <span v-if="counts.datasets !== null" class="tab-count-badge">
@@ -76,7 +75,7 @@
             </span>
           </VaTab>
 
-          <VaTab v-if="showResources" name="collections">
+          <VaTab name="collections">
             <span class="flex items-center gap-1.5">
               Collections
               <span v-if="counts.collections !== null" class="tab-count-badge">
@@ -112,18 +111,21 @@
         <GroupSubgroupsTab
           v-else-if="activeTab === 'subgroups'"
           :group-id="props.id"
+          :can-create="can('create_child')"
           @count-changed="handleSubgroupsUpdate"
         />
 
         <GroupDatasetsTab
           v-else-if="activeTab === 'datasets'"
           :group-id="props.id"
+          :can-create="can('add_dataset')"
           @count-changed="handleDatasetsUpdate"
         />
 
         <GroupCollectionsTab
           v-else-if="activeTab === 'collections'"
           :group-id="props.id"
+          :can-create="can('add_collection')"
           @count-changed="handleCollectionsUpdate"
         />
 
@@ -198,7 +200,6 @@ function can(action) {
 
 const showMembers = computed(() => can("view_members"));
 const showDescendants = computed(() => can("view_descendants"));
-const showResources = computed(() => can("view_resources"));
 const showAuditLogs = computed(() => can("view_audit_logs"));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -253,23 +254,21 @@ async function fetchCounts() {
     );
   }
 
-  if (can("view_resources")) {
-    fetchers.push(
-      DatasetService.search({ limit: 0, owner_group_id: props.id })
-        .then((r) => {
-          counts.value.datasets = r.data.metadata.total;
-        })
-        .catch(() => {}),
-    );
+  fetchers.push(
+    DatasetService.search({ limit: 0, owner_group_id: props.id })
+      .then((r) => {
+        counts.value.datasets = r.data.metadata.total;
+      })
+      .catch(() => {}),
+  );
 
-    fetchers.push(
-      CollectionService.search({ owner_group_id: props.id, limit: 0 })
-        .then((r) => {
-          counts.value.collections = r.data.metadata.total;
-        })
-        .catch(() => {}),
-    );
-  }
+  fetchers.push(
+    CollectionService.search({ owner_group_id: props.id, limit: 0 })
+      .then((r) => {
+        counts.value.collections = r.data.metadata.total;
+      })
+      .catch(() => {}),
+  );
 
   await Promise.all(fetchers);
 }
@@ -295,23 +294,19 @@ function handleSubgroupsUpdate() {
 }
 
 function handleDatasetsUpdate() {
-  if (can("view_resources")) {
-    DatasetService.search({ owner_group_id: props.id, limit: 0 })
-      .then((r) => {
-        counts.value.datasets = r.data.metadata.total;
-      })
-      .catch(() => {});
-  }
+  DatasetService.search({ owner_group_id: props.id, limit: 0 })
+    .then((r) => {
+      counts.value.datasets = r.data.metadata.total;
+    })
+    .catch(() => {});
 }
 
 function handleCollectionsUpdate() {
-  if (can("view_resources")) {
-    CollectionService.search({ owner_group_id: props.id, limit: 0 })
-      .then((r) => {
-        counts.value.collections = r.data.metadata.total;
-      })
-      .catch(() => {});
-  }
+  CollectionService.search({ owner_group_id: props.id, limit: 0 })
+    .then((r) => {
+      counts.value.collections = r.data.metadata.total;
+    })
+    .catch(() => {});
 }
 
 // ── Archive ───────────────────────────────────────────────────────────────

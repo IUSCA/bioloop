@@ -19,6 +19,19 @@ a {
   word-break: break-all;
 }
 
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
 @layer utilities {
   .spacing-normal {
     word-spacing: normal;

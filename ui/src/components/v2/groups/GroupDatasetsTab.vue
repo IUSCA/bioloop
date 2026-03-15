@@ -1,183 +1,192 @@
 <template>
   <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-4 max-w-4xl mx-auto min-h-[200px]">
+    <div class="flex flex-col gap-3 max-w-5xl mx-auto">
       <!-- Header row -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <!-- Search input -->
-        <div class="flex-1">
-          <va-input
-            v-model="searchTerm"
-            class="w-full"
-            placeholder="Search datasets…"
-            outline
-            clearable
-            @update:model-value="debouncedFetch"
-          >
-            <template #prependInner>
-              <Icon icon="material-symbols:search" class="text-xl" />
-            </template>
-          </va-input>
-        </div>
-
-        <!-- Status filter chips -->
-        <div class="flex items-center gap-2">
-          <VaChip
-            v-for="f in statusFilters"
-            :key="f.value"
-            :color="activeStatus === f.value ? 'primary' : 'secondary'"
-            class="cursor-pointer"
-            size="small"
-            :outline="activeStatus !== f.value"
-            @click="setStatus(f.value)"
-          >
-            {{ f.label }}
-          </VaChip>
-        </div>
-
-        <VaButton size="small" disabled>
-          <div class="flex items-center justify-between gap-2 mx-1">
-            <i-mdi-plus class="text-sm" />
-            New Dataset
-          </div>
-        </VaButton>
-      </div>
-
-      <ErrorState
-        v-if="error"
-        title="Failed to load datasets"
-        :message="error?.message"
-        @retry="fetchDatasets"
-      />
-      <div v-else>
-        <div v-if="datasets.length > 0">
-          <VaDataTable
-            :items="datasets"
-            :columns="columns"
-            class="datasets-table"
-            hoverable
-            striped
-            v-model:sort-by="sortBy"
-            v-model:sorting-order="sortOrder"
-            disable-client-side-sorting
-          >
-            <template #cell(name)="{ row }">
-              <RouterLink
-                :to="`/v2/datasets/${row.rowData.id}`"
-                class="text-sm font-medium hover:underline"
-                style="color: var(--va-primary)"
+      <VaCard class="header card">
+        <VaCardContent>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Search input -->
+            <div class="flex-1">
+              <va-input
+                v-model="searchTerm"
+                class="w-full"
+                placeholder="Search datasets…"
+                outline
+                clearable
+                @update:model-value="debouncedFetch"
               >
-                {{ row.rowData.name }}
-              </RouterLink>
-            </template>
-
-            <template #cell(type)="{ row }">
-              <ModernChip
-                v-if="row.rowData.type"
-                color="secondary"
-                size="small"
-              >
-                {{ row.rowData.type }}
-              </ModernChip>
-              <span v-else class="text-sm va-text-secondary">—</span>
-            </template>
-
-            <template #cell(description)="{ value }">
-              <span class="text-sm va-text-secondary line-clamp-1">
-                {{ value || "—" }}
-              </span>
-            </template>
-
-            <template #cell(size)="{ value }">
-              <span class="text-sm">
-                {{ value != null ? formatBytes(value) : "—" }}
-              </span>
-            </template>
-
-            <template #cell(created_at)="{ value }">
-              <span class="text-sm">
-                {{ datetime.date(value) }}
-              </span>
-            </template>
-
-            <template #cell(updated_at)="{ value }">
-              <span class="text-sm">
-                {{ datetime.date(value) }}
-              </span>
-            </template>
-
-            <template #cell(status)="{ rowData }">
-              <ModernChip
-                :color="rowData.is_deleted ? 'secondary' : 'success'"
-                size="small"
-              >
-                {{ rowData.is_deleted ? "Archived" : "Active" }}
-              </ModernChip>
-            </template>
-          </VaDataTable>
-
-          <Pagination
-            class="mt-5 px-5"
-            v-model:page="currentPage"
-            v-model:page_size="itemsPerPage"
-            :total_results="total"
-            :curr_items="datasets.length"
-            :page_size_options="ITEMS_PER_PAGE_OPTIONS"
-          />
-        </div>
-
-        <!-- no results -->
-        <div v-else-if="!loading && areFiltersActive" class="py-20 px-6">
-          <EmptyState
-            title="No results found"
-            message="Try adjusting your filters."
-            @reset="resetFilters"
-          />
-        </div>
-
-        <!-- no data -->
-        <div
-          v-else-if="!loading && !areFiltersActive"
-          class="flex flex-col items-center justify-center gap-8 py-20 px-6"
-        >
-          <!-- Icon -->
-          <div class="flex items-center justify-center">
-            <i-mdi-database-outline
-              class="text-5xl text-gray-400 dark:text-gray-500"
-            />
-          </div>
-
-          <!-- Content -->
-          <div
-            class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
-          >
-            <h3 class="text-2xl font-semibold tracking-tight">
-              No datasets available
-            </h3>
-            <p class="text-base leading-relaxed">
-              <template v-if="props.canCreateDataset">
-                This group has no datasets yet. Add the first dataset to get
-                started.
-              </template>
-              <template v-else>
-                No datasets are currently available to you in this group. This
-                group may have no datasets, or you may not have been granted
-                access. Contact your group administrator for assistance.
-              </template>
-            </p>
-          </div>
-
-          <!-- Call to action -->
-          <VaButton
-            v-if="props.canCreateDataset"
-            @click="navigateToCreateDataset"
-          >
-            <div class="flex items-center gap-3 px-2">
-              <i-mdi-plus class="text-lg" />
-              <span class="font-medium">Add Dataset</span>
+                <template #prependInner>
+                  <Icon icon="material-symbols:search" class="text-xl" />
+                </template>
+              </va-input>
             </div>
-          </VaButton>
-        </div>
-      </div>
+
+            <!-- Status filter chips -->
+            <div class="flex items-center gap-2">
+              <VaChip
+                v-for="f in statusFilters"
+                :key="f.value"
+                :color="activeStatus === f.value ? 'primary' : 'secondary'"
+                class="cursor-pointer"
+                size="small"
+                :outline="activeStatus !== f.value"
+                @click="setStatus(f.value)"
+              >
+                {{ f.label }}
+              </VaChip>
+            </div>
+
+            <VaButton size="small" disabled>
+              <div class="flex items-center justify-between gap-2 mx-1">
+                <i-mdi-plus class="text-sm" />
+                New Dataset
+              </div>
+            </VaButton>
+          </div>
+        </VaCardContent>
+      </VaCard>
+
+      <!-- keeps layout stable when swapping views -->
+      <VaCard class="min-h-[360px]">
+        <VaCardContent>
+          <Transition name="fade-slide" mode="out-in">
+            <div v-if="error" class="py-12 px-6">
+              <ErrorState
+                title="Failed to load datasets"
+                :message="error?.message"
+                @retry="fetchDatasets"
+              />
+            </div>
+
+            <div v-else-if="datasets.length > 0">
+              <VaDataTable
+                :items="datasets"
+                :columns="columns"
+                class="datasets-table"
+                hoverable
+                striped
+                v-model:sort-by="sortBy"
+                v-model:sorting-order="sortOrder"
+                disable-client-side-sorting
+              >
+                <template #cell(name)="{ row }">
+                  <RouterLink
+                    :to="`/v2/datasets/${row.rowData.id}`"
+                    class="text-sm font-medium hover:underline"
+                    style="color: var(--va-primary)"
+                  >
+                    {{ row.rowData.name }}
+                  </RouterLink>
+                </template>
+
+                <template #cell(type)="{ row }">
+                  <ModernChip
+                    v-if="row.rowData.type"
+                    color="secondary"
+                    size="small"
+                  >
+                    {{ row.rowData.type }}
+                  </ModernChip>
+                  <span v-else class="text-sm va-text-secondary">—</span>
+                </template>
+
+                <template #cell(description)="{ value }">
+                  <span class="text-sm va-text-secondary line-clamp-1">
+                    {{ value || "—" }}
+                  </span>
+                </template>
+
+                <template #cell(size)="{ value }">
+                  <span class="text-sm">
+                    {{ value != null ? formatBytes(value) : "—" }}
+                  </span>
+                </template>
+
+                <template #cell(created_at)="{ value }">
+                  <span class="text-sm">
+                    {{ datetime.date(value) }}
+                  </span>
+                </template>
+
+                <template #cell(updated_at)="{ value }">
+                  <span class="text-sm">
+                    {{ datetime.date(value) }}
+                  </span>
+                </template>
+
+                <template #cell(status)="{ rowData }">
+                  <ModernChip
+                    :color="rowData.is_deleted ? 'secondary' : 'success'"
+                    size="small"
+                  >
+                    {{ rowData.is_deleted ? "Archived" : "Active" }}
+                  </ModernChip>
+                </template>
+              </VaDataTable>
+
+              <Pagination
+                class="mt-5 px-5"
+                v-model:page="currentPage"
+                v-model:page_size="itemsPerPage"
+                :total_results="total"
+                :curr_items="datasets.length"
+                :page_size_options="ITEMS_PER_PAGE_OPTIONS"
+              />
+            </div>
+
+            <!-- no results -->
+            <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
+              <EmptyState
+                title="No results found"
+                message="Try adjusting your filters."
+                @reset="resetFilters"
+              />
+            </div>
+
+            <!-- no data -->
+            <div
+              v-else-if="!loading && !areFiltersActive"
+              class="flex flex-col items-center justify-center gap-8 py-12 px-6"
+            >
+              <!-- Icon -->
+              <div class="flex items-center justify-center">
+                <i-mdi-database-outline
+                  class="text-5xl text-gray-400 dark:text-gray-500"
+                />
+              </div>
+
+              <!-- Content -->
+              <div
+                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+              >
+                <h3 class="text-2xl font-semibold tracking-tight">
+                  No datasets available
+                </h3>
+                <p class="text-base leading-relaxed va-text-secondary">
+                  <template v-if="props.canCreate">
+                    This group has no datasets yet. Add the first dataset to get
+                    started.
+                  </template>
+                  <template v-else>
+                    No datasets are currently available to you in this group.
+                    This group may have no datasets, or you may not have been
+                    granted access. Contact your group administrator for
+                    assistance.
+                  </template>
+                </p>
+              </div>
+
+              <!-- Call to action -->
+              <VaButton v-if="props.canCreate" @click="navigateToCreateDataset">
+                <div class="flex items-center gap-3 px-2">
+                  <i-mdi-plus class="text-lg" />
+                  <span class="font-medium">Add Dataset</span>
+                </div>
+              </VaButton>
+            </div>
+          </Transition>
+        </VaCardContent>
+      </VaCard>
     </div>
   </VaInnerLoading>
 </template>
@@ -186,17 +195,18 @@
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/v2/datasets";
+import { VaCardContent } from "vuestic-ui/web-components";
 
 const props = defineProps({
   groupId: { type: String, required: true },
-  canCreateDataset: { type: Boolean, required: true },
+  canCreate: { type: Boolean, required: true },
 });
 
 // const emit = defineEmits(["count-changed"]);
 
 const datasets = ref([]);
 const error = ref(null);
-const loading = ref(false);
+const loading = ref(true);
 const activeStatus = ref("all"); // 'all' | 'active' | 'archived'
 const searchTerm = ref("");
 const total = ref(0);
@@ -307,5 +317,8 @@ onMounted(() => {
 <style scoped>
 .datasets-table {
   --va-data-table-cell-padding: 8px;
+}
+.card.header {
+  --va-card-padding: 0.8rem;
 }
 </style>

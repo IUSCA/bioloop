@@ -1,15 +1,11 @@
 <template>
-  <div
-    class="flex flex-col items-center justify-center gap-4 py-16 px-6 text-center"
-  >
-    <div
-      class="flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800"
-    >
-      <i-mdi-magnify class="text-3xl text-gray-400 dark:text-gray-500" />
+  <div class="flex flex-col items-center justify-center gap-4 text-center">
+    <div class="flex items-center justify-center w-16 h-16 rounded-full">
+      <i-mdi-magnify class="text-5xl text-gray-400 dark:text-gray-500" />
     </div>
 
     <div class="flex flex-col items-center gap-1 max-w-sm">
-      <p class="text-base font-semibold text-gray-900 dark:text-gray-100">
+      <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">
         {{ props.title }}
       </p>
       <p

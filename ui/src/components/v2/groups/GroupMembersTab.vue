@@ -1,195 +1,215 @@
 <template>
   <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-4 max-w-4xl mx-auto min-h-[200px]">
+    <div class="flex flex-col gap-3 max-w-5xl mx-auto">
       <!-- Header row -->
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <!-- Search input -->
-        <div class="flex-1">
-          <va-input
-            v-model="searchTerm"
-            class="w-full"
-            placeholder="Search group members…"
-            outline
-            clearable
-            @update:model-value="debouncedFetch"
-          >
-            <template #prependInner>
-              <Icon icon="material-symbols:search" class="text-xl" />
-            </template>
-          </va-input>
-        </div>
+      <VaCard class="header card">
+        <VaCardContent>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Search input -->
+            <div class="flex-1">
+              <va-input
+                v-model="searchTerm"
+                class="w-full"
+                placeholder="Search group members…"
+                outline
+                clearable
+                @update:model-value="debouncedFetch"
+              >
+                <template #prependInner>
+                  <Icon icon="material-symbols:search" class="text-xl" />
+                </template>
+              </va-input>
+            </div>
 
-        <!-- Scope filter chips -->
-        <div class="flex items-center gap-2">
-          <VaChip
-            v-for="f in scopeFilters"
-            :key="f.value"
-            :color="activeScope === f.value ? 'primary' : 'secondary'"
-            class="cursor-pointer"
-            size="small"
-            :outline="activeScope !== f.value"
-            @click="setScope(f.value)"
-          >
-            {{ f.label }}
-          </VaChip>
-        </div>
+            <!-- Scope filter chips -->
+            <div class="flex items-center gap-2">
+              <VaChip
+                v-for="f in scopeFilters"
+                :key="f.value"
+                :color="activeScope === f.value ? 'primary' : 'secondary'"
+                class="cursor-pointer"
+                size="small"
+                :outline="activeScope !== f.value"
+                @click="setScope(f.value)"
+              >
+                {{ f.label }}
+              </VaChip>
+            </div>
 
-        <VaButton
-          v-if="props.canAdd"
-          size="small"
-          @click="showAddModal = true"
-          disabled
-        >
-          <div class="flex items-center justify-between gap-2 mx-1">
-            <i-mdi-account-plus class="text-sm" />
-            Add Member
+            <VaButton
+              v-if="props.canAdd"
+              size="small"
+              @click="showAddModal = true"
+              disabled
+            >
+              <div class="flex items-center justify-between gap-2 mx-1">
+                <i-mdi-account-plus class="text-sm" />
+                Add Member
+              </div>
+            </VaButton>
           </div>
-        </VaButton>
-      </div>
+        </VaCardContent>
+      </VaCard>
 
-      <ErrorState
-        v-if="error"
-        title="Failed to load group members"
-        :message="error?.message"
-        @retry="fetchMembers"
-      />
-      <div v-else>
-        <VaDataTable
-          v-if="members.length > 0"
-          :items="members"
-          :columns="columns"
-          class="group-membership-table"
-        >
-          <template #cell(name)="{ rowData }">
-            <div class="flex items-center gap-3 text-sm">
-              <UserAvatar
-                :username="rowData.user.username"
-                :name="rowData.user.name"
+      <VaCard class="content card min-h-[360px]">
+        <VaCardContent>
+          <Transition name="fade-slide" mode="out-in">
+            <div v-if="error" class="py-12 px-6">
+              <ErrorState
+                title="Failed to load group members"
+                :message="error?.message"
+                @retry="fetchMembers"
               />
-              <span> {{ rowData.user.name }} </span>
             </div>
-          </template>
 
-          <template #cell(email)="{ rowData }">
-            <span class="text-sm va-text-secondary" :title="rowData.user.email">
-              {{ rowData.user.email }}
-            </span>
-          </template>
-
-          <template #cell(effective_role)="{ value }">
-            <GroupMemberRoleBadge :role-name="value" />
-          </template>
-
-          <template #cell(membership_via)="{ source }">
-            <div class="text-sm">
-              <span
-                v-if="source.type === 'DIRECT'"
-                class="text-[var(--va-success)]"
+            <div v-else-if="members.length > 0">
+              <VaDataTable
+                :items="members"
+                :columns="columns"
+                class="group-membership-table"
               >
-                ● Direct
-              </span>
-              <span
-                v-else
-                class="text-[11px] text-slate-700 bg-slate-100 border border-solid border-slate-300 rounded-sm px-1.5 py-px inline-flex items-center gap-1 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-700"
-              >
-                <span class="font-mono"> ↗ </span>
-                <span> via </span>
-                <RouterLink
-                  :to="`/v2/groups/${source.id}`"
-                  class="text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 max-w-24 truncate"
-                >
-                  {{ source.name }}
-                </RouterLink>
-              </span>
+                <template #cell(name)="{ rowData }">
+                  <div class="flex items-center gap-3 text-sm">
+                    <UserAvatar
+                      :username="rowData.user.username"
+                      :name="rowData.user.name"
+                    />
+                    <span> {{ rowData.user.name }} </span>
+                  </div>
+                </template>
+
+                <template #cell(email)="{ rowData }">
+                  <span
+                    class="text-sm va-text-secondary"
+                    :title="rowData.user.email"
+                  >
+                    {{ rowData.user.email }}
+                  </span>
+                </template>
+
+                <template #cell(effective_role)="{ value }">
+                  <GroupMemberRoleBadge :role-name="value" />
+                </template>
+
+                <template #cell(membership_via)="{ source }">
+                  <div class="text-sm">
+                    <span
+                      v-if="source.type === 'DIRECT'"
+                      class="text-[var(--va-success)]"
+                    >
+                      ● Direct
+                    </span>
+                    <span
+                      v-else
+                      class="text-[11px] text-slate-700 bg-slate-100 border border-solid border-slate-300 rounded-sm px-1.5 py-px inline-flex items-center gap-1 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-700"
+                    >
+                      <span class="font-mono"> ↗ </span>
+                      <span> via </span>
+                      <RouterLink
+                        :to="`/v2/groups/${source.id}`"
+                        class="text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 max-w-24 truncate"
+                      >
+                        {{ source.name }}
+                      </RouterLink>
+                    </span>
+                  </div>
+                </template>
+
+                <template #cell(assigned_at)="{ value }">
+                  <span class="text-sm va-text-secondary">
+                    {{ datetime.date(value) }}
+                  </span>
+                </template>
+
+                <template #cell(actions)="{ rowData }">
+                  <div v-if="rowData.effective_role !== 'TRANSITIVE_MEMBER'">
+                    <VaButtonDropdown preset="primary" class="" size="small">
+                      <div class="flex flex-col items-center gap-2">
+                        <VaButton
+                          v-if="props.canEditRole"
+                          @click="handleEditRole(rowData)"
+                          size="small"
+                          preset="secondary"
+                          disabled
+                        >
+                          <div class="flex items-center gap-1">
+                            <i-mdi-pencil class="text-sm" />
+                            Edit Role
+                          </div>
+                        </VaButton>
+
+                        <VaButton
+                          v-if="props.canRemove"
+                          @click="handleRemove(rowData)"
+                          size="small"
+                          preset="secondary"
+                          color="danger"
+                        >
+                          <div class="flex items-center gap-1">
+                            <i-mdi-close class="text-sm" />
+                            Remove
+                          </div>
+                        </VaButton>
+                      </div>
+                    </VaButtonDropdown>
+                  </div>
+                </template>
+              </VaDataTable>
+
+              <Pagination
+                class="mt-5 px-5"
+                v-model:page="currentPage"
+                v-model:page_size="itemsPerPage"
+                :total_results="total"
+                :curr_items="members.length"
+                :page_size_options="ITEMS_PER_PAGE_OPTIONS"
+              />
             </div>
-          </template>
 
-          <template #cell(assigned_at)="{ value }">
-            <span class="text-sm va-text-secondary">
-              {{ datetime.date(value) }}
-            </span>
-          </template>
+            <!-- no results after filtering -->
+            <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
+              <EmptyState
+                title="No results found"
+                message="Try adjusting your filters."
+                @reset="resetFilters"
+              />
+            </div>
 
-          <template #cell(actions)="{ rowData }">
-            <div v-if="rowData.effective_role !== 'TRANSITIVE_MEMBER'">
-              <VaButtonDropdown preset="primary" class="" size="small">
-                <div class="flex flex-col items-center gap-2">
-                  <VaButton
-                    v-if="props.canEditRole"
-                    @click="handleEditRole(rowData)"
-                    size="small"
-                    preset="secondary"
-                    disabled
-                  >
-                    <div class="flex items-center gap-1">
-                      <i-mdi-pencil class="text-sm" />
-                      Edit Role
-                    </div>
-                  </VaButton>
+            <!-- no data -->
+            <div
+              v-else-if="!loading && !areFiltersActive"
+              class="flex flex-col items-center justify-center gap-4 py-12 px-6"
+            >
+              <div class="flex items-center justify-center">
+                <i-mdi-account-multiple
+                  class="text-5xl text-gray-400 dark:text-gray-500"
+                />
+              </div>
 
-                  <VaButton
-                    v-if="props.canRemove"
-                    @click="handleRemove(rowData)"
-                    size="small"
-                    preset="secondary"
-                    color="danger"
-                  >
-                    <div class="flex items-center gap-1">
-                      <i-mdi-close class="text-sm" />
-                      Remove
-                    </div>
-                  </VaButton>
+              <div
+                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+              >
+                <h3 class="text-2xl font-semibold tracking-tight">
+                  Group is currently empty
+                </h3>
+                <p class="text-base leading-relaxed va-text-secondary">
+                  <template v-if="props.canAdd">
+                    This group currently has no members. Add the first member to
+                    get started.
+                  </template>
+                </p>
+              </div>
+
+              <VaButton v-if="props.canAdd" @click="navigateToCreateCollection">
+                <div class="flex items-center gap-3 px-2">
+                  <i-mdi-plus class="text-lg" />
+                  <span class="font-medium">Add Member</span>
                 </div>
-              </VaButtonDropdown>
+              </VaButton>
             </div>
-          </template>
-        </VaDataTable>
-
-        <EmptyState
-          v-else-if="!loading && areFiltersActive"
-          title="No results found"
-          message="Try adjusting your filters."
-          @reset="resetFilters"
-        />
-
-        <div
-          v-else-if="!loading && !areFiltersActive"
-          class="flex flex-col items-center justify-center gap-4 py-12"
-        >
-          <div class="text-center">
-            <h3 class="text-lg font-semibold mb-2">
-              No members have been added to this group yet.
-            </h3>
-          </div>
-          <VaButton v-if="props.canAdd" @click="showAddModal = true" disabled>
-            <div class="flex items-center justify-between gap-2 mx-1">
-              <i-mdi-account-plus class="text-sm" />
-              Add Member
-            </div>
-          </VaButton>
-        </div>
-
-        <!-- <GroupMemberTable
-          :members="members"
-          :loading="loading"
-          :can-mutate="props.canMutate"
-          @remove="handleRemove"
-        />
-
-        <UserSearchModal
-          v-model="showAddModal"
-          :loading="adding"
-          @add="handleAdd"
-        /> -->
-        <Pagination
-          class="mt-5 px-5"
-          v-model:page="currentPage"
-          v-model:page_size="itemsPerPage"
-          :total_results="total"
-          :curr_items="members.length"
-          :page_size_options="ITEMS_PER_PAGE_OPTIONS"
-        />
-      </div>
+          </Transition>
+        </VaCardContent>
+      </VaCard>
     </div>
   </VaInnerLoading>
 </template>
@@ -198,7 +218,7 @@
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
-import { useModal } from "vuestic-ui";
+import { useModal, VaCardContent } from "vuestic-ui";
 
 const { confirm } = useModal();
 
@@ -213,7 +233,7 @@ const emit = defineEmits(["count-changed"]);
 
 const members = ref([]);
 const error = ref(null);
-const loading = ref(false);
+const loading = ref(true);
 const activeScope = ref("all"); // 'all' | 'direct' | 'transitive'
 const showAddModal = ref(false);
 const searchTerm = ref("");
@@ -400,5 +420,8 @@ onMounted(() => {
 <style scoped>
 .group-membership-table {
   --va-data-table-cell-padding: 8px;
+}
+.card.header {
+  --va-card-padding: 0.8rem;
 }
 </style>
