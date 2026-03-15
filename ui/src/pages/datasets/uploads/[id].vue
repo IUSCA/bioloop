@@ -105,21 +105,23 @@
                 </div>
               </div>
               <div v-else class="text-center py-8">
-                No logs available yet
+                <div class="font-medium">No logs available yet.</div>
+                <div class="text-sm mt-2 text-gray-500">
+                  The verification task registered its process ID but has not written any log entries yet.
+                  This usually resolves within a few seconds — the page refreshes automatically every 10 s.
+                </div>
               </div>
             </va-inner-loading>
           </va-card-content>
         </va-card>
 
-        <!-- No Logs Message -->
+        <!-- No Logs Message — shown when worker_process_id is absent -->
         <va-card v-else>
           <va-card-content>
             <div class="text-center py-8">
               <Icon icon="mdi:information-outline" class="text-4xl mb-2" />
-              <div>No verification task logs available for this upload.</div>
-              <div class="text-sm mt-1">
-                Logs will appear here once verification begins.
-              </div>
+              <div class="font-medium">No verification task logs available for this upload.</div>
+              <div class="text-sm mt-2 text-gray-500 max-w-lg mx-auto">{{ noLogsExplanation }}</div>
             </div>
           </va-card-content>
         </va-card>
@@ -200,6 +202,35 @@ const fetchLogs = async () => {
     loadingLogs.value = false;
   }
 };
+
+// Contextual explanation for why verification logs are absent, keyed on upload
+// status.  Shown only when worker_process_id is not yet in upload metadata.
+const noLogsExplanation = computed(() => {
+  const status = upload.value?.status;
+  const S = constants.UPLOAD_STATUSES;
+  switch (status) {
+    case S.UPLOADING:
+      return 'Files are still being transferred. The upload-management job dispatches a verification task only after the upload reaches UPLOADED status.';
+    case S.UPLOAD_FAILED:
+      return 'The upload failed before all files were transferred. No verification task was dispatched. Check the Failure Reason above.';
+    case S.UPLOADED:
+      return 'All files have been received. The upload-management job (runs on a schedule) will dispatch a verification task on its next cycle. Logs will appear here once that task starts.';
+    case S.VERIFYING:
+      return upload.value?.metadata?.verification_task_id
+        ? `A verification task was dispatched (Celery task ID: ${upload.value.metadata.verification_task_id}) but the worker has not yet registered its process ID. This normally resolves within seconds. If it persists, the task may have crashed before it could start logging — check the Celery worker logs.`
+        : 'The upload status is VERIFYING but no verification task ID has been recorded. The upload-management job may be mid-dispatch. If this persists, check the upload-management job logs for errors.';
+    case S.VERIFIED:
+    case S.PROCESSING:
+    case S.PROCESSING_FAILED:
+    case S.COMPLETE:
+      return 'Verification ran successfully but no worker process ID was captured — this can happen if the upload predates process-ID tracking or if the worker node did not write back to the upload metadata. The verification outcome is reflected in the status above.';
+    case S.VERIFICATION_FAILED:
+    case S.PERMANENTLY_FAILED:
+      return 'The verification or processing pipeline reached a terminal failure state before the worker could register its process ID. Check the Failure Reason above for details, and inspect the Celery worker logs on the worker node for the full error.';
+    default:
+      return 'Logs will appear here once the verification task starts.';
+  }
+});
 
 // Status helpers
 const getStatusColor = (status) => {
