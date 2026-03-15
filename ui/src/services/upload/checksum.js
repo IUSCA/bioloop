@@ -32,14 +32,28 @@ async function _loadBlake3() {
 }
 
 /**
- * Normalize file path for cross-platform consistency
+ * Derive the relative path for a file as it will appear in the manifest.
+ *
+ * For directory uploads the browser sets webkitRelativePath to
+ * "<rootDirName>/…/filename".  The server stores files under origin_path
+ * which IS the root directory, so relative_to(origin_path) strips the root
+ * directory name.  We must strip it here too so both sides build identical
+ * manifest lines.
+ *
+ * For single-file uploads webkitRelativePath is empty; fall back to file.name.
+ *
  * @private
- * @param {string} path - File path to normalize
- * @returns {string} Normalized path with forward slashes
+ * @param {File} file
+ * @returns {string} Forward-slash path with no leading root directory
  */
-function _normalizePath(path) {
-  // Use forward slashes, remove leading ./
-  return path.replace(/\\/g, '/').replace(/^\.\//, '');
+function _manifestPath(file) {
+  if (file.webkitRelativePath) {
+    // "rootDir/sub/file.txt" → "sub/file.txt"
+    const parts = file.webkitRelativePath.replace(/\\/g, '/').split('/');
+    return parts.slice(1).join('/');
+  }
+  // Single-file upload — just the filename.
+  return file.name.replace(/\\/g, '/').replace(/^\.\//, '');
 }
 
 /**
@@ -154,7 +168,7 @@ export async function computeManifestHash(files, progressCallback = null) {
       console.log(`[checksum.js]   ✓ Hash: ${fileHash}`);
 
       manifest.push({
-        path: _normalizePath(file.webkitRelativePath || file.name),
+        path: _manifestPath(file),
         size: file.size,
         hash: fileHash,
       });
@@ -167,9 +181,12 @@ export async function computeManifestHash(files, progressCallback = null) {
       }
     }
 
-    // Sort by path for deterministic order
+    // Sort by path for deterministic order.
+    // Use code-point comparison (< >) to match Python's sorted() behaviour
+    // exactly — localeCompare is locale-sensitive and can differ from Python's
+    // byte-order sort for non-ASCII filenames or locale-special characters.
     console.log('[checksum.js] Sorting manifest...');
-    manifest.sort((a, b) => a.path.localeCompare(b.path));
+    manifest.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 
     // Create canonical manifest string
     console.log('[checksum.js] Creating manifest string...');
