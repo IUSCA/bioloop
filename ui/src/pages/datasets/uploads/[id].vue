@@ -222,12 +222,12 @@ const noLogsExplanation = computed(() => {
     case S.VERIFIED:
     case S.PROCESSING_FAILED:
     case S.COMPLETE:
-      return 'Verification completed but the worker did not register a process ID — most likely the process-registration API call failed transiently before the subprocess started. The verification outcome is still reflected in the status above.';
+      return 'Verification completed but the worker never successfully registered its process ID — the process-registration API call failed on every attempt during the subprocess run, so no logs were captured. The verification outcome is still reflected in the status above.';
     case S.PROCESSING:
       return 'This upload is in a legacy PROCESSING state from a prior retry attempt. It should have been transitioned to COMPLETE or PROCESSING_FAILED automatically. If it persists, check the upload-management job logs.';
     case S.VERIFICATION_FAILED:
     case S.PERMANENTLY_FAILED:
-      return 'The verification or processing pipeline reached a terminal failure state before the worker could register its process ID. Check the Failure Reason above for details, and inspect the Celery worker logs on the worker node for the full error.';
+      return 'The pipeline reached a terminal failure state and the worker never successfully registered its process ID, so no logs were captured. Check the Failure Reason above for details, and inspect the Celery worker logs on the worker node for the full error.';
     default:
       return 'Logs will appear here once the verification task starts.';
   }
