@@ -1126,7 +1126,9 @@ const uploadFilesWithTus = async (files, endpoint) => {
           filename: file.name,
           filetype: file.type || 'application/octet-stream',
           selection_mode: selectingDirectory.value ? 'directory' : 'files',
-          relative_path: file.webkitRelativePath || file.name,
+          relative_path: (selectingDirectory.value && file.webkitRelativePath)
+            ? file.webkitRelativePath.split('/').slice(1).join('/')
+            : (file.webkitRelativePath || file.name),
           directory_name: selectingDirectory.value && selectedDirectory.value ? selectedDirectory.value.name : '',
         },
         headers: {

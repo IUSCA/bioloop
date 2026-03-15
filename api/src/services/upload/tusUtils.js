@@ -38,7 +38,7 @@ function readTusFileInfo({ tusInfoPath, datasetId, process_id }) {
  * origin_path.  Handles two upload modes:
  *
  *   - 'directory' mode: preserves relative directory structure under
- *     origin_path/<directory_name>/<relative_path>
+ *     origin_path/<relative_path>  (relative_path has the root directory stripped)
  *   - single-file / 'files' mode: places the file at
  *     origin_path/<originalFilename>
  *
@@ -60,8 +60,9 @@ function moveTusFileToDestination({
   let finalPath;
 
   if (selection_mode === 'directory' && relative_path) {
-    const datasetUploadDir = path.join(baseOriginPath, directory_name || 'upload');
-    finalPath = path.join(datasetUploadDir, relative_path);
+    // relative_path has the root directory stripped on the client side, so files
+    // land directly under origin_path preserving the inner directory structure.
+    finalPath = path.join(baseOriginPath, relative_path);
 
     logger.info('[TUS] Directory upload mode', {
       dataset_id: datasetId,
