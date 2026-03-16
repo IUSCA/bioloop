@@ -28,6 +28,8 @@ DATABASE_PASSWORD='example'
 DATABASE_URL="postgresql://appuser:example@localhost:5432/app?schema=public"
 ```
 
+If the API runs on the host but the database is the Postgres container, use port **5433** (see `docker-compose.yml`).
+
 Run `pnpm install` and `pnpm start` to start the API server.
 
 ## Features:

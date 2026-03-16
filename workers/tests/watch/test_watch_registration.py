@@ -67,10 +67,7 @@ Run commands (from the repo root, inside the celery_worker container):
     pytest tests/watch/test_watch_registration.py
     pytest tests/watch/test_watch_registration.py -x -v
 
-Test logs:
-    Persistent:  workers/test_logs/watch_tests.log  (appended across runs)
-    Per-run:     workers/test_logs/test_run_YYYYMMDD_HHMMSS.log
-    Both files are bind-mounted from the container: /opt/sca/app/test_logs/ -> workers/test_logs/
+Test logs: /tmp/bioloop_test_logs/ in container.
 -------------------------------------------------------------------------------
 """
 

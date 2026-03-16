@@ -71,13 +71,30 @@ logger = logging.getLogger(__name__)
 # Override via env var: WATCH_TEST_RECENCY_THRESHOLD=10 poetry run pytest ...
 _RECENCY_THRESHOLD: int = int(os.getenv('WATCH_TEST_RECENCY_THRESHOLD', '5'))
 
-FIXTURES_DIR: Path = Path(__file__).parent / 'fixtures'
+# Container-only path; these tests run in Docker only.
+FIXTURES_DIR: Path = Path('/tmp/bioloop_watch_test_fixtures')
 
-# Fixture directory name per dataset type.
+# Fixture directory name per dataset type. Created on first use if missing.
 _FIXTURE_DIR_BY_TYPE: dict[str, Path] = {
     'RAW_DATA': FIXTURES_DIR / 'raw_data_type_dataset',
     'DATA_PRODUCT': FIXTURES_DIR / 'data_product_type_dataset',
 }
+
+
+def _ensure_fixture_dirs() -> None:
+    """Create fixture dirs with a small placeholder file if missing so copytree works.
+
+    The file must have size > 0 so the integrated workflow's inspect step sets
+    du_size/size/num_files > 0 and test_integrated_workflow_steps_all_succeed passes.
+    """
+    for path in _FIXTURE_DIR_BY_TYPE.values():
+        path.mkdir(parents=True, exist_ok=True)
+        placeholder = path / '.placeholder'
+        if not placeholder.exists() or placeholder.stat().st_size == 0:
+            placeholder.write_bytes(b'x')
+
+
+_ensure_fixture_dirs()
 
 # Prefix shared by all test-generated dataset directories.
 # Used by the session-level purge to find and clean up leftovers.

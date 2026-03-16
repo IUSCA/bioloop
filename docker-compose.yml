@@ -36,10 +36,10 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 5s
+      interval: 10s
       timeout: 10s
-      retries: 10
-      start_period: 30s
+      retries: 18
+      start_period: 180s
     depends_on:
       signet:
         condition: service_healthy
@@ -53,7 +53,8 @@ services:
     expose:
       - 5432
     ports:
-      - 127.0.0.1:5432:5432
+      # Published on host as 5433; use localhost:5433 for host-side DB access (e.g. psql, GUI)
+      - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:

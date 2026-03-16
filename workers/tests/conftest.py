@@ -11,34 +11,28 @@ from pathlib import Path
 
 import pytest
 
-# Log output is configured in pytest.ini (log_file, log_file_level, log_cli).
-# pytest_sessionstart below also writes a per-run timestamped file alongside
-# the persistent watch_tests.log managed by pytest itself.
-#
-# Log locations (Docker):
-#   container: /opt/sca/app/test_logs/
-#   host:      workers/test_logs/   (volume: ./workers/:/opt/sca/app)
-# Log locations (local/non-Docker):
-#   workers/test_logs/
-#
-# Per-run file:   test_logs/test_run_YYYYMMDD_HHMMSS.log
-# Persistent log: test_logs/watch_tests.log  (controlled by pytest.ini log_file)
-TEST_LOGS_DIR: Path = Path(__file__).parent.parent / 'test_logs'
+# Log output: pytest.ini log_file + per-run file. Container-only; tests run in Docker only.
+TEST_LOGS_DIR: Path = Path('/tmp/bioloop_test_logs')
 
 logging.getLogger().setLevel(logging.DEBUG)
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    """Send pytest log_file to container /tmp (tests run in Docker only)."""
+    log_dir = Path('/tmp/bioloop_test_logs')
+    log_dir.mkdir(exist_ok=True)
+    config.option.log_file = str(log_dir / 'watch_tests.log')
+    config.option.log_file_mode = 'a'
+
+
 def pytest_sessionstart(session: pytest.Session) -> None:
     """
     Pytest hook: Add a per-run timestamped FileHandler to the root logger.
-
-    This creates test_logs/test_run_YYYYMMDD_HHMMSS.log alongside the
-    persistent watch_tests.log that pytest writes via pytest.ini log_file.
-    Both files land in the same test_logs/ directory.
+    Log dir is TEST_LOGS_DIR (/tmp in container).
     """
-    TEST_LOGS_DIR.mkdir(exist_ok=True)
+    TEST_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp: str = datetime.now().strftime('%Y%m%d_%H%M%S')
     run_log_path: Path = TEST_LOGS_DIR / f'test_run_{timestamp}.log'
 
@@ -52,7 +46,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     logger.info("=" * 80)
     logger.info(f"TEST RUN STARTED: {timestamp}")
     logger.info(f"Per-run log:   {run_log_path}")
-    logger.info(f"Persistent log: {TEST_LOGS_DIR / 'watch_tests.log'} (pytest.ini log_file)")
+    logger.info(f"Persistent log: {TEST_LOGS_DIR / 'watch_tests.log'}")
     logger.info("=" * 80)
 
 
