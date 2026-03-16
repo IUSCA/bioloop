@@ -1,3 +1,10 @@
+/* In dark mode, Vuestic defaults --va-shadow to rgba(255,255,255,0.12) which causes a white glow.
+ * Override it with a dark shadow so depth is preserved without the white glow effect.
+ */
+:root.dark {
+  --va-shadow: rgba(0, 0, 0, 0.4);
+}
+
 :root {
   --va-popover-content-font-size: 0.8rem;
   --va-popover-content-padding: 0.5rem 0.5rem;
