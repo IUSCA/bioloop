@@ -38,6 +38,8 @@
 
             <VaButton
               size="small"
+              color="success"
+              preset="primary"
               @click="handleCreateSubgroup"
               v-if="props.canCreate"
             >
@@ -90,10 +92,8 @@
               <div
                 class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
               >
-                <h3 class="text-2xl font-semibold tracking-tight">
-                  No subgroups
-                </h3>
-                <p class="text-base leading-relaxed va-text-secondary">
+                <h3 class="font-semibold tracking-tight">No subgroups</h3>
+                <p class="text-sm leading-relaxed va-text-secondary">
                   <template v-if="props.canCreate">
                     This group currently has no subgroups. Create the first
                     subgroup to get started.
@@ -110,7 +110,12 @@
             </div>
 
             <!-- Table -->
-            <VaDataTable v-else :items="subgroups" :columns="columns" striped>
+            <VaDataTable
+              v-else-if="subgroups.length > 0"
+              :items="subgroups"
+              :columns="columns"
+              striped
+            >
               <template #cell(name)="{ rowData }">
                 <RouterLink :to="`/v2/groups/${rowData.id}`" class="text-sm">
                   {{ rowData.name }}
@@ -137,18 +142,23 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+  <GroupCreateModal
+    ref="createEditModal"
+    :is-subgroup="true"
+    :parent-group="props.group"
+    @update="handleSubgroupCreated"
+  />
 </template>
 
 <script setup>
-import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
 
 const props = defineProps({
-  groupId: { type: String, required: true },
+  group: { type: Object, required: true },
   canCreate: { type: Boolean, default: false },
 });
 
-// const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed"]);
 
 const subgroups = ref([]);
 const error = ref(null);
@@ -195,7 +205,7 @@ async function fetchSubgroups() {
     if (activeScope.value === "direct") {
       params.max_depth = 1;
     }
-    const { data } = await GroupService.getDescendants(props.groupId, params);
+    const { data } = await GroupService.getDescendants(props.group.id, params);
     subgroups.value = Array.isArray(data) ? data : [];
     error.value = null;
   } catch (err) {
@@ -206,15 +216,22 @@ async function fetchSubgroups() {
   }
 }
 
+const createEditModal = ref(null);
 function handleCreateSubgroup() {
-  toast.info("Create sub group button clicked");
-  // TODO: implement create subgroup flow
-  // emit("count-changed");
+  createEditModal.value?.show();
 }
 
 function resetFilters() {
   searchTerm.value = "";
   setScope("all");
+}
+
+function handleSubgroupCreated() {
+  // Refresh the list to include the newly created subgroup
+  fetchSubgroups();
+
+  // Optionally, emit an event to update subgroup count in parent component
+  emit("count-changed");
 }
 
 onMounted(() => fetchSubgroups());

@@ -8,6 +8,7 @@ export default {
    *
    * Returns {metadata: {total, offset, limit}, data: [groups]}
    */
+  // TODO: remove this endpoint - used in groups store
   mine(params) {
     return api.get("/groups/mine", { params });
   },
@@ -47,25 +48,43 @@ export default {
   },
 
   /** Create a new top-level group (platform admin only). */
-  create({ name, description, allow_user_contributions, metadata } = {}) {
+  create({
+    name,
+    description,
+    allow_user_contributions,
+    metadata,
+    members,
+    admins,
+  } = {}) {
     return api.post("/groups/", {
       name,
       description,
       allow_user_contributions,
       metadata,
+      members,
+      admins,
     });
   },
 
   /** Create a child group under the given parent group. */
   createChild(
     parentId,
-    { name, description, allow_user_contributions, metadata } = {},
+    {
+      name,
+      description,
+      allow_user_contributions,
+      metadata,
+      members,
+      admins,
+    } = {},
   ) {
     return api.post(`/groups/${parentId}/children`, {
       name,
       description,
       allow_user_contributions,
       metadata,
+      members,
+      admins,
     });
   },
 
@@ -81,12 +100,12 @@ export default {
 
   /** Archive a group (soft delete). */
   archive(id) {
-    return api.patch(`/groups/${id}/archive`);
+    return api.post(`/groups/${id}/archive`);
   },
 
   /** Unarchive a group (platform admin only). */
   unarchive(id) {
-    return api.patch(`/groups/${id}/unarchive`);
+    return api.post(`/groups/${id}/unarchive`);
   },
 
   /**

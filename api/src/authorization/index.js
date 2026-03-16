@@ -50,6 +50,7 @@ const { collectionPolicies } = require('./builtin/policies/collection');
 const { datasetPolicies } = require('./builtin/policies/dataset');
 const { accessRequestPolicies } = require('./builtin/policies/access_request');
 const { grantPolicies } = require('./builtin/policies/grant');
+const { userPolicies } = require('./builtin/policies/user');
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
@@ -72,6 +73,7 @@ policyRegistry.register(collectionPolicies);
 policyRegistry.register(datasetPolicies);
 policyRegistry.register(accessRequestPolicies);
 policyRegistry.register(grantPolicies);
+policyRegistry.register(userPolicies);
 
 // Register derived app policy containers here
 

@@ -27,7 +27,9 @@ if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter);
 }
 
-router.use('/datasets/v2', require('./datasets_v2'));
+router.use('/v2/datasets', require('./datasets_v2'));
+router.use('/v2/users', require('./users_v2'));
+
 router.use('/datasets', require('./datasets'));
 router.use('/metrics', require('./metrics'));
 router.use('/users', require('./users'));

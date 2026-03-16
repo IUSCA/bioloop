@@ -83,9 +83,16 @@ async function _getGroup(by, value) {
           },
         },
       },
+      _count: {
+        select: {
+          members: true,
+        },
+      },
     },
   });
-  const { ancestor_edges, members, ...groupData } = group;
+  const {
+    ancestor_edges, members, _count, ...groupData
+  } = group;
   const ancestors = ancestor_edges
     .filter((edge) => edge.depth > 0) // exclude self-edge with depth 0
     .map((edge) => ({
@@ -95,6 +102,7 @@ async function _getGroup(by, value) {
   return {
     ancestors,
     admins: members.map((member) => member.user),
+    size: _count.members,
     ...groupData,
   };
 }
@@ -962,7 +970,9 @@ async function searchGroupsForUser({
       limit,
       offset,
     },
-    data: results.map(_.omit(['total_count'])),
+    data: results
+      .map(_.omit(['total_count']))
+      .map((group) => ({ ...group, size: Number(group.size) })),
   };
 }
 
@@ -1073,7 +1083,9 @@ async function searchAllGroups({
       limit,
       offset,
     },
-    data: results.map(_.omit(['total_count'])),
+    data: results
+      .map(_.omit(['total_count']))
+      .map((group) => ({ ...group, size: Number(group.size) })),
   };
 }
 

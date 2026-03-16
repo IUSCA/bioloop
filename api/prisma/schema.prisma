@@ -614,7 +614,7 @@ model collection_dataset {
 // GRANTS - Durable authorization facts
 //
 // Has an exclusion constraint to prevent overlapping grants. Defined in the migration script.
-// For the same (subject_type, subject_id, resource_type, resource_id, access_type_id) tuple, 
+// For the same (subject_id, resource_id, access_type_id) tuple, 
 // there must never exist two non-revoked grants whose validity intervals overlap.
 // ============================================================================
 
@@ -639,7 +639,7 @@ model grant {
   valid_period Unsupported("tsrange")? @default(dbgenerated("tsrange(valid_from, valid_until, '[)'::text)"))
   // valid_period is a generated column defined in the migration SQL to leverage PostgreSQL's range types for efficient overlap checks
   // https://github.com/prisma/prisma/discussions/24880#discussioncomment-15783547
-  // I had to 1. create migration, 2. apply it, 3. npx prisma db pull, 4. copy the generated column definition from the schema.prisma
+  // I had to 1. create migration and edit how we want, 2. apply it, 3. npx prisma db pull, 4. copy the generated column definition from the schema.prisma
   // 4. git reset --hard, 5. paste the generated column definition back into schema.prisma, 6. commit the changes. 
   // Otherwise, Prisma would try to drop and recreate the column on every migration since it doesn't recognize it as a generated column.
 

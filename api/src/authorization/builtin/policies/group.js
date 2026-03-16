@@ -50,6 +50,14 @@ const canAccessResourcesOwnedByGroup = new GroupPolicy({
   evaluate: (user, group) => user.accessible_owner_group_ids.includes(group.id),
 });
 
+const isMemberContributionsAllowed = new GroupPolicy({
+  name: 'isMemberContributionsAllowed',
+  requires: {
+    resource: ['allow_user_contributions'],
+  },
+  evaluate: (user, group) => group.allow_user_contributions === true,
+});
+
 // Create the policy container for Group resource
 const groupPolicies = new PolicyContainer({
   resourceType: 'group',
@@ -77,7 +85,7 @@ groupPolicies
     create: isPlatformAdmin,
     create_child: Policy.or([isPlatformAdmin, isGroupAdmin]),
 
-    archive: isPlatformAdmin,
+    archive: Policy.or([isPlatformAdmin, isGroupAdmin]),
     unarchive: isPlatformAdmin,
 
     view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
@@ -93,26 +101,37 @@ groupPolicies
     add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
     edit_member_role: Policy.or([isPlatformAdmin, isGroupAdmin]),
+
+    add_dataset: Policy.or([isPlatformAdmin, isGroupAdmin, isMemberContributionsAllowed]),
+    add_collection: Policy.or([isPlatformAdmin, isGroupAdmin]),
   })
   .attributes({
     // * - any action
     '*': [
       {
-        policy: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
+        policy: isPlatformAdmin,
+        attribute_filters: ['*'], // * - all attributes
+      },
+      {
+        policy: isGroupAdmin,
+        attribute_filters: ['*'], // * - all attributes
+      },
+      {
+        policy: hasGroupOversight,
         attribute_filters: ['*'], // * - all attributes
       },
       {
         policy: isGroupMember,
         attribute_filters: [
-          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at', 'allow_user_contributions',
-          'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].description',
+          'id', 'name', 'slug', 'description', 'is_archived', 'metadata.type', 'created_at', 'allow_user_contributions',
+          'size', 'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].description',
           'ancestors[*].is_archived', 'ancestors[*].depth', 'ancestors[*].metadata',
           'admins[*].id', 'admins[*].name', 'admins[*].email', 'admins[*].username', 'admins[*].subject_id',
         ],
       },
       {
         policy: canAccessResourcesOwnedByGroup,
-        attribute_filters: ['id', 'name', 'slug', 'description', 'is_archived'],
+        attribute_filters: ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', 'size'],
       },
     ],
     view_members: [

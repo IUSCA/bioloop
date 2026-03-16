@@ -152,10 +152,10 @@
               <div
                 class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
               >
-                <h3 class="text-2xl font-semibold tracking-tight">
+                <h3 class="font-semibold tracking-tight">
                   No collections available
                 </h3>
-                <p class="text-base leading-relaxed va-text-secondary">
+                <p class="text-sm leading-relaxed va-text-secondary">
                   <template v-if="props.canCreate">
                     This group has no collections yet. Add the first collection
                     to get started.

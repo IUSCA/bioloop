@@ -35,15 +35,15 @@ const breakpoint = useBreakpoint();
 
 // How many breadcrumb items to show per breakpoint (before collapsing)
 const BREAKPOINT_MAX_BREADCRUMBS = {
-  xs: 3,
-  sm: 3,
+  xs: 4,
+  sm: 4,
   md: 4,
   lg: 5,
   xl: 6,
 };
 
 const maxBreadcrumbs = computed(
-  () => BREAKPOINT_MAX_BREADCRUMBS[breakpoint.current] ?? 3,
+  () => BREAKPOINT_MAX_BREADCRUMBS[breakpoint.current] ?? 4,
 );
 
 const displayedBreadcrumbs = computed(() => {
@@ -55,6 +55,7 @@ const displayedBreadcrumbs = computed(() => {
   if (crumbs.length <= maxBreadcrumbs.value) return mapped;
   return [
     mapped[0],
+    mapped[1],
     { label: "…", isEllipsis: true },
     mapped[crumbs.length - 2],
     mapped[crumbs.length - 1],

@@ -6,25 +6,25 @@ export default {
    * @param {{ type?: 'RAW_DATA'|'DATA_PRODUCT' }} [params]
    */
   getStats(params = {}) {
-    return api.get("/datasets/v2/stats", { params });
+    return api.get("/v2/datasets/stats", { params });
   },
 
   search(params = {}) {
-    return api.get("/datasets/v2/", { params });
+    return api.get("/v2/datasets/", { params });
   },
 
   /** Get a single dataset by ID. */
   get(id, params = {}) {
-    return api.get(`/datasets/v2/${id}`, { params });
+    return api.get(`/v2/datasets/${id}`, { params });
   },
 
   /** Archive a dataset. */
   archive(id) {
-    return api.patch(`/datasets/v2/${id}`, { is_deleted: true });
+    return api.patch(`/v2/datasets/${id}`, { is_deleted: true });
   },
 
   /** Update dataset metadata. */
   update(id, data) {
-    return api.patch(`/datasets/v2/${id}`, data);
+    return api.patch(`/v2/datasets/${id}`, data);
   },
 };

@@ -19,6 +19,7 @@ This document defines coding standards for the Bioloop UI project. These standar
 - **Always** use Tailwind CSS utility classes instead of writing custom CSS or inline styles.
 - Tailwind provides a consistent, scalable design system with comprehensive utilities for layout, spacing, sizing, and typography.
 - Custom styles should only be used in exceptional cases where Tailwind cannot meet the requirement.
+- **When using borders**, Tailwind does not apply a border style by default; you must explicitly add `border-solid` (or another border style) along with `border`, `border-2`, etc.
 
 **Examples:**
 ```vue
@@ -64,11 +65,14 @@ Use iconify icons with the `mdi-` prefix for generic components and standalone u
 
 **Example:**
 ```vue
-<!-- Simple icon -->
+<!-- ✅ GOOD: Simple icon -->
 <i-mdi-alert class="text-red-500 dark:text-red-300" />
 
-<!-- Icon with custom sizing -->
+<!-- ✅ GOOD: Icon with custom sizing -->
 <Icon icon="mdi-check-circle" class="text-2xl text-green-600 dark:text-green-400" />
+
+<!-- ❌ BAD: Using <i>; it does not work -->
+<i class="mdi mdi-alert text-red-500"></i> 
 ```
 
 #### 2. Material Icons (Material Design Components)
@@ -438,6 +442,11 @@ const props = defineProps({
   <div class="w-full md:w-1/2">Right content</div>
 </div>
 ```
+
+### Transitions
+- Use `<TransitionGroup name="list" tag="div">` for list/item animations (e.g., `v-for` lists).
+- Use `<Transition name="fade-slide">` for `v-if` / `v-else-if` content swaps.
+- The transition CSS for `list` and `fade-slide` is defined globally in `ui/src/styles/main.css`, so you don’t need to add custom styles unless you want different behavior.
 
 ### Performance
 - Use computed properties to avoid recalculating values on every render.

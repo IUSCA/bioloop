@@ -8,10 +8,7 @@
         <!-- Header: name + role badge -->
         <div class="flex-shrink-0 flex items-start gap-4">
           <!-- Icon -->
-          <i-mdi-account-group
-            class="shrink-0 w-9 h-9 rounded-lg p-1.5"
-            :class="typeColor"
-          />
+          <GroupIcon :group="props.group" class="shrink-0" />
 
           <!-- Name + type -->
           <div class="flex-1 min-w-0">
@@ -30,7 +27,10 @@
           </div>
 
           <!-- Role badge -->
-          <GroupMemberRoleBadge :role-name="props.group.user_role" />
+          <GroupMemberRoleBadge
+            :role-name="props.group.user_role"
+            v-if="props.group.user_role"
+          />
         </div>
 
         <!-- Description -->
@@ -88,21 +88,6 @@ const props = defineProps({
 });
 
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
-
-const typeColor = computed(() => {
-  switch (props.group.metadata?.type) {
-    case "lab":
-      return "text-teal-600 bg-teal-100 dark:text-teal-300 dark:bg-teal-900/40";
-    case "project":
-      return "text-violet-600 bg-violet-100 dark:text-violet-300 dark:bg-violet-900/40";
-    case "center":
-      return "text-orange-600 bg-orange-100 dark:text-orange-300 dark:bg-orange-900/40";
-    case "core":
-      return "text-rose-600 bg-rose-100 dark:text-rose-300 dark:bg-rose-900/40";
-    default:
-      return "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/40";
-  }
-});
 </script>
 
 <style scoped>

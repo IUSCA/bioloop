@@ -119,7 +119,7 @@
 
         <GroupSubgroupsTab
           v-else-if="activeTab === 'subgroups'"
-          :group-id="props.id"
+          :group="group"
           :can-create="can('create_child') && !group.is_archived"
           @count-changed="handleSubgroupsUpdate"
         />

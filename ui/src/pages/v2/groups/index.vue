@@ -6,7 +6,12 @@
         <p class="">Browse and manage organizational groups.</p>
       </div>
       <!-- Create Group — platform admin only -->
-      <VaButton v-if="auth.canAdmin" preset="primary" icon="add" disabled>
+      <VaButton
+        v-if="auth.canAdmin"
+        preset="primary"
+        icon="add"
+        @click="openCreateGroupModal"
+      >
         Create Group
       </VaButton>
     </div>
@@ -15,18 +20,19 @@
     <div class="flex flex-wrap items-center gap-3">
       <!-- Search input -->
       <div class="flex-1">
-        <va-input
+        <VaInput
           v-model="searchTerm"
           class="w-full"
           placeholder="Search groups…"
           outline
           clearable
+          :disabled="loading"
           @update:model-value="debouncedFetch"
         >
           <template #prependInner>
             <Icon icon="material-symbols:search" class="text-xl" />
           </template>
-        </va-input>
+        </VaInput>
       </div>
 
       <!-- Scope filter chips -->
@@ -38,7 +44,8 @@
           class="cursor-pointer"
           size="small"
           :outline="activeScope !== f.value"
-          @click="setScope(f.value)"
+          :disabled="loading"
+          @click="!loading && setScope(f.value)"
         >
           {{ f.label }}
         </VaChip>
@@ -47,45 +54,51 @@
 
     <!-- ── Results ──────────────────────────────────────────────────── -->
 
-    <!-- Loading skeleton -->
-    <div
-      v-if="loading"
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-    >
-      <VaSkeleton v-for="n in 6" :key="n" variant="rounded" height="96px" />
-    </div>
-
-    <!-- Error -->
-    <ErrorState
-      v-else-if="error?.message"
-      :title="'Failed to load groups'"
-      :message="error?.message"
-      @retry="fetchGroups"
-    />
-
-    <!-- Empty state -->
-    <EmptyState
-      v-else-if="groups.length === 0"
-      title="No groups found"
-      message="Try adjusting your search or filters to find what you're looking for."
-      @reset="resetFilters"
-    />
-
-    <div v-else class="flex flex-col gap-6">
-      <!-- Group cards grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <GroupCard v-for="group in groups" :key="group.id" :group="group" />
+    <Transition name="fade-slide" mode="out-in">
+      <!-- Loading skeleton -->
+      <div
+        v-if="loading"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      >
+        <VaSkeleton v-for="n in 9" :key="n" variant="rounded" height="96px" />
       </div>
 
-      <!-- Pagination -->
-      <Pagination
-        v-model:page="currentPage"
-        v-model:page_size="itemsPerPage"
-        :total_results="total"
-        :curr_items="groups.length"
-      />
-    </div>
+      <!-- Error -->
+      <div v-else-if="error?.message" class="py-12 px-6">
+        <ErrorState
+          :title="'Failed to load groups'"
+          :message="error?.message"
+          @retry="fetchGroups"
+        />
+      </div>
+
+      <!-- Empty state -->
+      <div v-else-if="groups.length === 0" class="py-12 px-6">
+        <EmptyState
+          title="No groups found"
+          message="Try adjusting your search or filters to find what you're looking for."
+          @reset="resetFilters"
+        />
+      </div>
+
+      <!-- results -->
+      <div v-else class="flex flex-col gap-6">
+        <!-- Group cards grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <GroupCard v-for="group in groups" :key="group.id" :group="group" />
+        </div>
+
+        <!-- Pagination -->
+        <Pagination
+          v-model:page="currentPage"
+          v-model:page_size="itemsPerPage"
+          :total_results="total"
+          :curr_items="groups.length"
+        />
+      </div>
+    </Transition>
   </div>
+  <GroupCreateModal ref="groupCreateModal" @update="fetchGroups" />
 </template>
 
 <script setup>
@@ -188,6 +201,11 @@ onMounted(() => {
   activeScope.value = auth.canAdmin ? "all" : "mine";
   fetchGroups();
 });
+
+const groupCreateModal = ref(null);
+function openCreateGroupModal() {
+  groupCreateModal.value?.show();
+}
 </script>
 
 <route lang="yaml">
