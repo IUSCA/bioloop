@@ -6,7 +6,7 @@
     @cancel="hide"
   >
     <template #footer>
-      <div class="flex items-center justify-end gap-5">
+      <div class="flex items-center justify-end gap-5 mt-5">
         <VaButton preset="secondary" @click="hide">Cancel</VaButton>
         <VaButton
           :loading="loading"
@@ -53,32 +53,117 @@
 
         <!-- Archive variant -->
         <template v-else>
-          <!-- Warning box -->
-          <div
-            class="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50/80 to-amber-100/60 p-4 shadow-sm dark:border-amber-700 dark:from-amber-950/40 dark:to-amber-950/30"
-          >
-            <div class="flex items-start gap-3">
-              <div
-                class="grid h-10 w-10 place-items-center rounded-full bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200"
-              >
-                <i-mdi-alert class="text-xl" />
-              </div>
+          <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            This action represents a governance boundary closure. Review what
+            changes.
+          </p>
 
-              <div class="space-y-2 text-sm">
-                <p class="font-semibold text-amber-900 dark:text-amber-100">
-                  This will permanently freeze the group.
-                </p>
-                <p class="text-amber-800 dark:text-amber-300">
-                  Membership becomes read-only — no members can be added or
-                  removed.
-                </p>
-                <p class="text-amber-800 dark:text-amber-300">
-                  No new datasets, collections, or grants can be created under
-                  this group.
-                </p>
-                <p class="text-amber-600 dark:text-amber-400">
-                  Existing grants and dataset ownership remain intact.
-                </p>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div
+              class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/40"
+            >
+              <div class="flex items-start gap-3">
+                <div
+                  class="grid h-10 w-10 place-items-center rounded-full bg-emerald-600/15 text-emerald-600 dark:bg-emerald-300/15 dark:text-emerald-200"
+                >
+                  <i-mdi-check-circle-outline class="text-2xl" />
+                </div>
+
+                <div class="space-y-2">
+                  <p
+                    class="text-sm font-semibold text-emerald-900 dark:text-emerald-100"
+                  >
+                    PRESERVED
+                  </p>
+                  <ul
+                    class="space-y-1 text-sm text-emerald-800 dark:text-emerald-200"
+                  >
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
+                      />
+                      Dataset and Collection ownership
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
+                      />
+                      All existing grants
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
+                      />
+                      Membership (frozen)
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
+                      />
+                      Audit history
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
+                      />
+                      Hierarchy relationships
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="rounded-xl border border-rose-200 bg-rose-50/70 p-4 shadow-sm dark:border-rose-700 dark:bg-rose-950/40"
+            >
+              <div class="flex items-start gap-3">
+                <div
+                  class="grid h-10 w-10 place-items-center rounded-full bg-rose-500/15 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200"
+                >
+                  <i-mdi-alert class="text-xl" />
+                </div>
+
+                <div class="space-y-2">
+                  <p
+                    class="text-sm font-semibold text-rose-900 dark:text-rose-100"
+                  >
+                    PROHIBITED AFTER ARCHIVE
+                  </p>
+                  <ul
+                    class="space-y-1 text-sm text-rose-800 dark:text-rose-200"
+                  >
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
+                      />
+                      Add / remove members
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
+                      />
+                      Create new grants or revoke existing grants
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
+                      />
+                      Create new datasets
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
+                      />
+                      Create collections
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span
+                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
+                      />
+                      Modify collection contents
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -105,7 +190,7 @@
                 :key="item.label"
                 class="inline-flex items-center gap-2 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200"
               >
-                <span class="font-semibold">{{ item.count }}</span>
+                <span class="font-semibold">{{ intl.format(item.count) }}</span>
                 <span>{{ item.label }}</span>
               </span>
             </div>
@@ -121,7 +206,7 @@
               to confirm.
             </p>
             <VaInput
-              class="w-full max-w-lg"
+              class="w-full"
               ref="confirmationInput"
               v-model="confirmationText"
               :placeholder="props.groupSlug"
@@ -136,6 +221,7 @@
 
 <script setup>
 import toast from "@/services/toast";
+import { maybePluralize } from "@/services/utils";
 import GroupService from "@/services/v2/groups";
 
 const props = defineProps({
@@ -203,8 +289,12 @@ async function confirm() {
 
 defineExpose({ show, hide });
 
+const intl = new Intl.NumberFormat();
+
 const modalTitle = computed(() =>
-  props.isArchived ? "Unarchive" : `Archive "${props.groupName}"?`,
+  props.isArchived
+    ? `UNARCHIVE GROUP: ${props.groupName}`
+    : `ARCHIVE GROUP: ${props.groupName}`,
 );
 
 const confirmationValid = computed(() => {
@@ -217,19 +307,25 @@ const affectedItems = computed(() =>
   [
     props.affectedMembers != null && {
       count: props.affectedMembers,
-      label: props.affectedMembers === 1 ? "member" : "members",
+      label: maybePluralize(props.affectedMembers, "member", {
+        showCount: false,
+      }),
     },
     props.affectedDatasets != null && {
       count: props.affectedDatasets,
-      label: props.affectedDatasets === 1 ? "dataset" : "datasets",
+      label: maybePluralize(props.affectedDatasets, "dataset", {
+        showCount: false,
+      }),
     },
-    props.affectedSubgroups != null && {
-      count: props.affectedSubgroups,
-      label: props.affectedSubgroups === 1 ? "subgroup" : "subgroups",
-    },
+    // props.affectedSubgroups != null && {
+    //   count: props.affectedSubgroups,
+    //   label: maybePluralize(props.affectedSubgroups, "subgroup", {showCount: false,}),
+    // },
     props.affectedCollections != null && {
       count: props.affectedCollections,
-      label: props.affectedCollections === 1 ? "collection" : "collections",
+      label: maybePluralize(props.affectedCollections, "collection", {
+        showCount: false,
+      }),
     },
   ].filter(Boolean),
 );

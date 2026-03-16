@@ -50,19 +50,6 @@
         </VaCardContent>
       </VaCard>
 
-      <AddGroupMemberModal
-        ref="addMemberModal"
-        :group-id="props.groupId"
-        @update="handleMemberAdded"
-      />
-
-      <EditGroupMemberRoleModal
-        ref="editRoleModal"
-        :group-id="props.groupId"
-        :member="selectedMember"
-        @update="handleMemberAdded"
-      />
-
       <VaCard class="content card min-h-[360px]">
         <VaCardContent>
           <Transition name="fade-slide" mode="out-in">
@@ -223,6 +210,19 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+
+  <AddGroupMemberModal
+    ref="addMemberModal"
+    :group-id="props.groupId"
+    @update="handleMemberAdded"
+  />
+
+  <EditGroupMemberRoleModal
+    ref="editRoleModal"
+    :group-id="props.groupId"
+    :member="selectedMember"
+    @update="handleMemberAdded"
+  />
 </template>
 
 <script setup>

@@ -153,7 +153,7 @@
       </div>
 
       <!-- Archive confirm modal -->
-      <ArchiveConfirmModal
+      <GroupArchiveConfirmModal
         ref="archiveModal"
         :group-id="props.id"
         :group-name="group.name"
@@ -161,7 +161,7 @@
         :is-archived="group.is_archived"
         :affected-members="counts.members"
         :affected-datasets="counts.datasets"
-        :affected-subgroups="counts.subgroups"
+        :affected-collections="counts.collections"
         @update="handleUpdate"
       />
     </div>

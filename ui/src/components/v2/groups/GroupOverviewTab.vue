@@ -1,7 +1,7 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4 items-start">
+  <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3 items-start">
     <!-- Left column -->
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
       <!-- Group Details panel -->
       <VaCard>
         <VaCardContent>
@@ -220,7 +220,7 @@
     </div>
 
     <!-- Right column -->
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
       <!-- Stat cards (2×2 grid) -->
       <div class="grid grid-cols-2 gap-3">
         <MetricCard
