@@ -180,7 +180,7 @@ const nav = useNavStore();
 
 // ── Group state ───────────────────────────────────────────────────────────
 const group = ref(null);
-const loading = ref(false);
+const loading = ref(true);
 const error = ref(null);
 
 // ── Tab state ─────────────────────────────────────────────────────────────

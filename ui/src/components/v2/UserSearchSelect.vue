@@ -1,7 +1,6 @@
 <template>
   <AutoCompleteSearch
     :autocomplete-fn="searchUsers"
-    placeholder="Search users to add as admins..."
     @select="(user) => emit('select', user)"
   >
     <template #result-item="{ item }">

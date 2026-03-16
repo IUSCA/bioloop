@@ -1,7 +1,10 @@
 <template>
   <div class="w-full">
     <div class="mb-3">
-      <UserSearchSelect @select="onSelectUser" />
+      <UserSearchSelect
+        placeholder="Search users to add as admins..."
+        @select="onSelectUser"
+      />
       <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
         You will be added as admin automatically. Add others here.
       </p>

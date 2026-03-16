@@ -39,8 +39,7 @@
             <VaButton
               v-if="props.canAdd"
               size="small"
-              @click="showAddModal = true"
-              disabled
+              @click="openAddMemberModal"
             >
               <div class="flex items-center justify-between gap-2 mx-1">
                 <i-mdi-account-plus class="text-sm" />
@@ -50,6 +49,12 @@
           </div>
         </VaCardContent>
       </VaCard>
+
+      <AddGroupMemberModal
+        ref="addMemberModal"
+        :group-id="props.groupId"
+        @update="handleMemberAdded"
+      />
 
       <VaCard class="content card min-h-[360px]">
         <VaCardContent>
@@ -200,7 +205,7 @@
                 </p>
               </div>
 
-              <VaButton v-if="props.canAdd" @click="navigateToCreateCollection">
+              <VaButton v-if="props.canAdd" @click="openAddMemberModal">
                 <div class="flex items-center gap-3 px-2">
                   <i-mdi-plus class="text-lg" />
                   <span class="font-medium">Add Member</span>
@@ -235,7 +240,7 @@ const members = ref([]);
 const error = ref(null);
 const loading = ref(true);
 const activeScope = ref("all"); // 'all' | 'direct' | 'transitive'
-const showAddModal = ref(false);
+const addMemberModal = ref(null);
 const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
@@ -250,6 +255,16 @@ const transitiveMembershipCount = computed(
   () => totalMembershipCount.value - directMembershipCount.value,
 );
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
+
+function openAddMemberModal() {
+  addMemberModal.value?.show?.();
+}
+
+function handleMemberAdded() {
+  emit("count-changed");
+  fetchMembers();
+  fetchCounts();
+}
 
 const areFiltersActive = computed(() => {
   return searchTerm.value !== "" || activeScope.value !== "all";
@@ -366,20 +381,6 @@ function fetchCounts() {
       countsLoading.value = false;
     });
 }
-
-// async function handleAdd(user) {
-//   adding.value = true;
-//   try {
-//     await GroupService.addMember(props.groupId, user.subject_id);
-//     toast.success(`${user.name ?? user.username} added to group.`);
-//     showAddModal.value = false;
-//     await fetchMembers();
-//   } catch (err) {
-//     toast.error(err?.response?.data?.message ?? "Failed to add member.");
-//   } finally {
-//     adding.value = false;
-//   }
-// }
 
 async function handleRemove(membership) {
   try {

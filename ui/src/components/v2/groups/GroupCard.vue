@@ -44,7 +44,7 @@
 
         <!-- Footer -->
         <div
-          class="flex-shrink-0 flex items-center gap-3 pt-1.5 border-solid border-t border-slate-100 dark:border-slate-800"
+          class="flex-shrink-0 flex flex-wrap items-center gap-3 pt-1.5 border-solid border-t border-slate-100 dark:border-slate-800"
         >
           <!-- Member count -->
           <span

@@ -1115,7 +1115,7 @@ async function searchAllGroups({
       offset,
     },
     data: results
-      .map((group) => ({ ...group, size: Number(group.size) })),
+      .map((group) => ({ ...group, size: Number(group.size), depth: Number(group.depth) })),
   };
 }
 
