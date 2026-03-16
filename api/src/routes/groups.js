@@ -45,7 +45,7 @@ router.post(
     body('search_term').isString().optional(),
     body('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     body('offset').default(0).isInt({ min: 0 }).toInt(),
-    body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    body('sort_by').default('depth').isIn(['name', 'created_at', 'updated_at', 'depth']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
     body('direct_membership_only').optional().isBoolean(),

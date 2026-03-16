@@ -20,7 +20,7 @@
             </h3>
             <p
               v-if="props.group.metadata?.type"
-              class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 capitalize"
+              class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 capitalize"
             >
               {{ props.group.metadata?.type }}
             </p>
@@ -56,6 +56,22 @@
                 formatter: number_formatter.format,
               })
             }}
+          </span>
+
+          <!-- Top-level vs subgroup -->
+          <span
+            v-if="group.depth === 0"
+            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500"
+          >
+            <i-mdi-star-outline class="text-xs" />
+            Top-level group
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500"
+          >
+            <i-mdi-layers-outline class="text-xs" />
+            Subgroup
           </span>
 
           <!-- Contributions status -->

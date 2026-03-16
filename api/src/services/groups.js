@@ -930,40 +930,58 @@ async function searchGroupsForUser({
     ' AND ',
   );
 
-  const sql = Prisma.sql`
-    WITH results AS (
-      WITH all_groups AS (
-        SELECT DISTINCT group_id AS id
-        FROM effective_user_groups
-        WHERE user_id = ${user_id}
-      ),
-      oversight_groups AS (
-        SELECT DISTINCT group_id AS id
-        FROM effective_user_oversight_groups
-        WHERE user_id = ${user_id}
-      )
-      SELECT 
-        g.*, 
-        COALESCE(
-          gu.role::text,
-          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
-          'TRANSITIVE_MEMBER'
-        ) AS user_role,
-        ( select count(*) from group_user where group_id = g.id ) as size
-      FROM "group" g
-      LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
-      LEFT JOIN oversight_groups og ON og.id = g.id
-      LEFT JOIN all_groups ag ON ag.id = g.id
-      ${finalWhereClause}
+  const dataSql = Prisma.sql`
+    WITH all_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_groups
+      WHERE user_id = ${user_id}
+    ),
+    oversight_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_oversight_groups
+      WHERE user_id = ${user_id}
     )
-    SELECT *, COUNT(*) OVER () AS total_count
-    FROM results
+    SELECT 
+      g.*, 
+      COALESCE(
+        gu.role::text,
+        CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
+        'TRANSITIVE_MEMBER'
+      ) AS user_role,
+      ( select count(*) from group_user where group_id = g.id ) as size,
+      ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
+    FROM "group" g
+    -- 1-on-1 join because of unique constraint on (group_id, user_id)
+    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
+    LEFT JOIN oversight_groups og ON og.id = g.id -- 1-on-1 join because of distinct in CTE
+    LEFT JOIN all_groups ag ON ag.id = g.id -- 1-on-1 join because of distinct in CTE; for where clause
+    ${finalWhereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} OFFSET ${offset}
   `;
 
-  const results = await prisma.$queryRaw(sql);
-  const total = Number(results.length > 0 ? results[0].total_count : 0);
+  const countSql = Prisma.sql`
+    WITH all_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_groups
+      WHERE user_id = ${user_id}
+    ),
+    oversight_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_oversight_groups
+      WHERE user_id = ${user_id}
+    )
+    SELECT COUNT(DISTINCT g.id) as total_count
+    FROM "group" g
+    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
+    LEFT JOIN oversight_groups og ON og.id = g.id
+    LEFT JOIN all_groups ag ON ag.id = g.id
+    ${finalWhereClause}
+  `;
+
+  const [results, countResult] = await Promise.all([prisma.$queryRaw(dataSql), prisma.$queryRaw(countSql)]);
+  const total = Number(countResult[0].total_count);
+
   return {
     metadata: {
       total,
@@ -971,8 +989,7 @@ async function searchGroupsForUser({
       offset,
     },
     data: results
-      .map(_.omit(['total_count']))
-      .map((group) => ({ ...group, size: Number(group.size) })),
+      .map((group) => ({ ...group, size: Number(group.size), depth: Number(group.depth) })),
   };
 }
 
@@ -1051,8 +1068,7 @@ async function searchAllGroups({
   // Groups they are members of
   // Parent groups of those groups
   // if admin of any group, also show all descendant groups for oversight purposes
-  const sql = Prisma.sql`
-    WITH results AS (
+  const dataSql = Prisma.sql`
       WITH oversight_groups AS (
         SELECT DISTINCT group_id AS id
         FROM effective_user_oversight_groups
@@ -1064,19 +1080,34 @@ async function searchAllGroups({
           gu.role::text,
           CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
         ) AS user_role,
-        ( select count(*) from group_user where group_id = g.id ) as size
+        ( select count(*) from group_user where group_id = g.id ) as size,
+        ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
       FROM "group" g
       LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
       LEFT JOIN oversight_groups og ON og.id = g.id
       ${finalWhereClause}
-    )
-    SELECT *, COUNT(*) OVER () AS total_count
-    FROM results
-    ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
-    LIMIT ${limit} OFFSET ${offset}
+      ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+      LIMIT ${limit} OFFSET ${offset}
   `;
-  const results = await prisma.$queryRaw(sql);
-  const total = Number(results.length > 0 ? results[0].total_count : 0);
+
+  const countSql = Prisma.sql`
+    WITH oversight_groups AS (
+      SELECT DISTINCT group_id AS id
+      FROM effective_user_oversight_groups
+      WHERE user_id = ${user_id}
+    )
+    SELECT COUNT(DISTINCT g.id) as total_count
+    FROM "group" g
+    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN oversight_groups og ON og.id = g.id
+    ${finalWhereClause}
+  `;
+
+  const [results, countResults] = await Promise.all([
+    prisma.$queryRaw(dataSql),
+    prisma.$queryRaw(countSql),
+  ]);
+  const total = Number(countResults.length > 0 ? countResults[0].total_count : 0);
   return {
     metadata: {
       total,
@@ -1084,7 +1115,6 @@ async function searchAllGroups({
       offset,
     },
     data: results
-      .map(_.omit(['total_count']))
       .map((group) => ({ ...group, size: Number(group.size) })),
   };
 }

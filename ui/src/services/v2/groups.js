@@ -18,28 +18,8 @@ export default {
    * Platform admins search all groups; others search only accessible groups.
    * Returns {metadata: {total, offset, limit}, data: [groups]}.
    */
-  search({
-    search_term = "",
-    limit = 100,
-    offset = 0,
-    sort_by = "created_at",
-    sort_order = "asc",
-    is_archived,
-    direct_membership_only,
-    oversight_only,
-    admin_only,
-  } = {}) {
-    return api.post("/groups/search", {
-      search_term,
-      limit,
-      offset,
-      sort_by,
-      sort_order,
-      ...(is_archived !== undefined && { is_archived }),
-      ...(direct_membership_only !== undefined && { direct_membership_only }),
-      ...(oversight_only !== undefined && { oversight_only }),
-      ...(admin_only !== undefined && { admin_only }),
-    });
+  search(params = {}) {
+    return api.post("/groups/search", params);
   },
 
   /** Get group details by ID. */
