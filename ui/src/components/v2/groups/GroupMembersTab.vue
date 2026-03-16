@@ -56,6 +56,13 @@
         @update="handleMemberAdded"
       />
 
+      <EditGroupMemberRoleModal
+        ref="editRoleModal"
+        :group-id="props.groupId"
+        :member="selectedMember"
+        @update="handleMemberAdded"
+      />
+
       <VaCard class="content card min-h-[360px]">
         <VaCardContent>
           <Transition name="fade-slide" mode="out-in">
@@ -135,7 +142,6 @@
                           @click="handleEditRole(rowData)"
                           size="small"
                           preset="secondary"
-                          disabled
                         >
                           <div class="flex items-center gap-1">
                             <i-mdi-pencil class="text-sm" />
@@ -241,6 +247,9 @@ const error = ref(null);
 const loading = ref(true);
 const activeScope = ref("all"); // 'all' | 'direct' | 'transitive'
 const addMemberModal = ref(null);
+const editRoleModal = ref(null);
+const selectedMember = ref(null);
+
 const searchTerm = ref("");
 const total = ref(0);
 const currentPage = ref(1);
@@ -403,8 +412,9 @@ async function handleRemove(membership) {
   }
 }
 
-function handleEditRole() {
-  // TODO: implement role editing flow
+function handleEditRole(member) {
+  selectedMember.value = member;
+  editRoleModal.value?.show?.();
 }
 
 function resetFilters() {
