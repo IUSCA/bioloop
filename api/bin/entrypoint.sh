@@ -88,7 +88,7 @@ echo "prisma migrate deploy done."
 
 # Seed the database with initial data (roles, lookup tables, default users, etc.).
 # The .db_seeded marker lives in the bind-mounted api/ directory and is removed by
-# bin/docker-reset.sh alongside the database data, keeping seed state and DB in sync.
+# bin/reset_docker.sh alongside the database data, keeping seed state and DB in sync.
 if [ -f ".db_seeded" ]; then
   echo "DB already seeded (.db_seeded marker present). Skipping seed."
 else
