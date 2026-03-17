@@ -12,7 +12,7 @@ require('./db');
 const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
-const { validateGrantAccessTypes } = require('./validateGrantAccessTypes');
+const { validateGrantAccessTypes } = require('./scripts/validateGrantAccessTypes');
 
 // log a warning when auto sign up is enabled
 if (config.get('auth.auto_sign_up.enabled')) {

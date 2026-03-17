@@ -92,32 +92,31 @@ router.post(
 
 // List grants for a subject
 router.get(
-  '/subject/:subjectType/:subjectId',
+  '/subject/:subject_type/:subject_id',
   validate([
-    param('subjectType').isIn(['USER', 'GROUP']),
-    param('subjectId').isUUID(),
+    param('subject_type').isIn(['USER', 'GROUP']),
+    param('subject_id').isUUID(),
     query('active').optional().isBoolean().toBoolean(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_subject', {
     resourceIdFn: () => null, // no specific resource to check for listing grants of a subject
     preFetchedResourceFn: (req) => ({
-      subject_id: req.params.subjectId,
-      subject_type: req.params.subjectType,
+      subject_id: req.params.subject_id,
+      subject_type: req.params.subject_type,
     }),
   }),
   asyncHandler(async (req, res) => {
-    const { subjectType, subjectId } = req.params;
+    const { subject_id } = req.params;
     const {
       active, offset, limit, sort_by, sort_order,
     } = req.query;
 
     const grants = await grantService.listGrantsForSubject({
-      subjectType,
-      subjectId,
+      subject_id,
       active,
       offset,
       limit,
@@ -134,31 +133,36 @@ router.get(
 
 // List grants for a resource
 router.get(
-  '/resource/:resourceType/:resourceId',
+  '/resource/:resource_type/:resource_id',
   validate([
-    param('resourceType').isIn(['DATASET', 'COLLECTION']),
-    param('resourceId').isUUID(),
+    param('resource_type').isIn(['DATASET', 'COLLECTION']),
+    param('resource_id').isUUID(),
     query('active').optional().isBoolean().toBoolean(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_resource', {
-    resourceIdFn: (req) => req.params.resourceId,
+    resourceIdFn: (req) => req.params.resource_id,
     preFetchedResourceFn: (req) => ({
-      resource_id: req.params.resourceId,
-      resource_type: req.params.resourceType,
+      resource_id: req.params.resource_id,
+      resource_type: req.params.resource_type,
     }),
   }),
   asyncHandler(async (req, res) => {
-    const { resourceType, resourceId } = req.params;
+    const { resource_id } = req.params;
     const {
       active, offset, limit, sort_by, sort_order,
     } = req.query;
 
     const grants = await grantService.listGrantsForResource({
-      resourceType, resourceId, active, offset, limit, sort_by, sort_order,
+      resource_id,
+      active,
+      offset,
+      limit,
+      sort_by,
+      sort_order,
     });
     const filteredGrants = grants.data.map((g) => req.permission.filter(g));
     res.json({

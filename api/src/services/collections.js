@@ -14,6 +14,7 @@ const PRISMA_COLLECTION_INCLUDES = {
   _count: {
     select: { datasets: true },
   },
+  owner_group: true,
 };
 const CONFLICT_ERROR_MESSAGE = 'Collection was updated by another process. Please refresh and try again.';
 const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived collection.';
@@ -541,7 +542,13 @@ async function searchCollectionsForUser({
   ]);
 
   const total_count = Number(countResult[0]?.total_count || 0);
-  return { metadata: { total: total_count, limit, offset }, data: collections };
+  return {
+    metadata: { total: total_count, limit, offset },
+    data: collections.map((collection) => ({
+      ...collection,
+      size: Number(collection.size),
+    })),
+  };
 }
 
 /**
@@ -599,7 +606,13 @@ async function searchAllCollections({
     orderBy,
   });
   const total = await prisma.collection.count({ where });
-  return { metadata: { total, limit, offset }, data: collections };
+  return {
+    metadata: { total, limit, offset },
+    data: collections.map((collection) => ({
+      ...collection,
+      size: collection._count.datasets,
+    })),
+  };
 }
 
 /**

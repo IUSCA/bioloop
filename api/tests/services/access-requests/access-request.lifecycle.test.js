@@ -25,10 +25,12 @@ const {
   createTestUser,
   createTestGroup,
   createTestDataset,
+  createTestCollection,
   getAccessTypeId,
   deleteUser,
   deleteGroup,
   deleteDataset,
+  deleteCollection,
   deleteGrantsForResource,
 } = require('../helpers');
 
@@ -43,6 +45,7 @@ let downloadTypeId;
 const userIds = [];
 const groupIds = [];
 const datasetIds = [];
+const collectionIds = [];
 // access_request IDs created in each test — tracked to ensure cleanup
 const arIds = [];
 
@@ -80,6 +83,7 @@ afterAll(async () => {
   }
   await deleteGrantsForResource(dataset.resource_id).catch(() => {});
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
+  for (const id of collectionIds) await deleteCollection(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
   for (const id of userIds) await deleteUser(id).catch(() => {});
   await prisma.$disconnect();
@@ -466,6 +470,42 @@ describe('access requests - lifecycle', () => {
       // Withdraw to clean up
       await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
+
+    it('filters by resource_id and resource_type', async () => {
+      const collection = await createTestCollection(ownerGroup.id, requester.subject_id, '_ar_ct');
+      collectionIds.push(collection.id);
+      const collectionViewTypeId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
+
+      const collectionRequest = await newDraftRequest(
+        [{ access_type_id: collectionViewTypeId }],
+        { resource_id: collection.id },
+      );
+
+      const resourceIdResult = await arService.getRequestsByUser({
+        requester_id: requester.subject_id,
+        resource_id: collection.id,
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        offset: 0,
+        limit: 100,
+      });
+
+      expect(resourceIdResult.data.every((r) => r.resource_id === collection.id)).toBe(true);
+
+      const resourceTypeResult = await arService.getRequestsByUser({
+        requester_id: requester.subject_id,
+        resource_type: 'COLLECTION',
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        offset: 0,
+        limit: 100,
+      });
+
+      expect(resourceTypeResult.data.every((r) => r.resource.type === 'COLLECTION')).toBe(true);
+
+      // Withdraw to clean up
+      await arService.withdrawRequest({ request_id: collectionRequest.id, requester_id: requester.subject_id });
+    });
   });
 
   describe('getRequestsPendingReviewForUser', () => {
@@ -487,6 +527,31 @@ describe('access requests - lifecycle', () => {
 
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(submitted.id);
+
+      await arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id });
+    });
+
+    it('filters by resource_type for pending review requests', async () => {
+      const collection = await createTestCollection(ownerGroup.id, requester.subject_id, '_ar_ct');
+      collectionIds.push(collection.id);
+      const collectionViewTypeId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
+
+      const ar = await newDraftRequest(
+        [{ access_type_id: collectionViewTypeId }],
+        { resource_id: collection.id },
+      );
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+
+      const result = await arService.getRequestsPendingReviewForUser({
+        reviewer_id: reviewer.subject_id,
+        resource_type: 'COLLECTION',
+        sort_by: 'created_at',
+        sort_order: 'desc',
+        offset: 0,
+        limit: 100,
+      });
+
+      expect(result.data.every((r) => r.resource.type === 'COLLECTION')).toBe(true);
 
       await arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id });
     });
@@ -516,6 +581,34 @@ describe('access requests - lifecycle', () => {
 
       const ids = result.data.map((r) => r.id);
       expect(ids).toContain(submitted.id);
+    });
+
+    it('filters reviewed requests by resource_type', async () => {
+      const collection = await createTestCollection(ownerGroup.id, requester.subject_id, '_ar_ct');
+      collectionIds.push(collection.id);
+      const collectionViewTypeId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
+
+      const ar = await newDraftRequest(
+        [{ access_type_id: collectionViewTypeId }],
+        { resource_id: collection.id },
+      );
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await arService.submitReview({
+        request_id: submitted.id,
+        reviewer_id: reviewer.subject_id,
+        options: { review_items: allRejectItems(submitted) },
+      });
+
+      const result = await arService.getRequestsReviewedByUser({
+        user_id: reviewer.subject_id,
+        resource_type: 'COLLECTION',
+        sort_by: 'reviewed_at',
+        sort_order: 'desc',
+        offset: 0,
+        limit: 100,
+      });
+
+      expect(result.data.every((r) => r.resource.type === 'COLLECTION')).toBe(true);
     });
   });
 });

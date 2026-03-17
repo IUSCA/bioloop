@@ -14,7 +14,7 @@ const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
-const { enumToSql } = require('@/utils/sql');
+const { enumToSql, buildWhereClause } = require('@/utils/sql');
 const { TARGET_TYPE } = require('@/authorization/builtin/audit');
 
 const config = {
@@ -633,6 +633,8 @@ async function expireStaleRequests({ max_age_days }) {
 
 /** * Get access requests for a user (as requester)
  * @param {string} requester_id - UUID of the user creating the request
+ * @param {string} [resource_id] - Filter by resource ID
+ * @param {string} [resource_type] - Filter by resource type (e.g. 'DATASET' or 'COLLECTION')
  * @param {string} [status] - Filter by request status
  * @param {string} [sort_by] - Field to sort by (e.g. 'created_at')
  * @param {string} [sort_order] - 'asc' or 'desc'
@@ -641,11 +643,19 @@ async function expireStaleRequests({ max_age_days }) {
  * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
  */
 async function getRequestsByUser({
-  requester_id, status, sort_by, sort_order, offset, limit,
+  requester_id, status, sort_by, sort_order, offset, limit, resource_id, resource_type,
 }) {
   const where = { requester_id };
   if (status) {
     where.status = status;
+  }
+  if (resource_id) {
+    where.resource_id = resource_id;
+  }
+  if (resource_type) {
+    where.resource = {
+      type: resource_type,
+    };
   }
   const data = await prisma.access_request.findMany({
     where,
@@ -671,6 +681,8 @@ async function getRequestsByUser({
  * Get requests pending review for a user (as reviewer)
  * A user can review a request if they are a reviewer for the resource's owning group
  * @param {string} reviewer_id - UUID of the user performing the review
+ * @param {string} [resource_id] - Filter by resource ID
+ * @param {string} [resource_type] - Filter by resource type (e.g. 'DATASET' or 'COLLECTION')
  * @param {string} sort_by - Field to sort by (e.g. 'submitted_at')
  * @param {string} sort_order - 'asc' or 'desc'
  * @param {number} offset - Pagination offset
@@ -678,41 +690,72 @@ async function getRequestsByUser({
  * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
  */
 async function getRequestsPendingReviewForUser({
-  reviewer_id, sort_by, sort_order, offset, limit,
+  reviewer_id, sort_by, sort_order, offset, limit, resource_id, resource_type,
 }) {
-  const sql = Prisma.sql`
-    WITH results AS (
-      WITH reviewer_admin_groups AS (
-        SELECT gu.group_id
-        FROM group_user gu
-        WHERE gu.user_id = ${reviewer_id}
-          AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-      ),
-      owned_resources AS (
-        SELECT d.resource_id
-        FROM dataset d
-        JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
+  const statusFilter = Prisma.sql`ar.status = ${enumToSql(ACCESS_REQUEST_STATUS.UNDER_REVIEW)}`;
+  const resourceFilter = resource_id ? Prisma.sql`ar.resource_id = ${resource_id}` : Prisma.empty;
+  const typeFilter = resource_type ? Prisma.sql`r.type = ${enumToSql(resource_type)}` : Prisma.empty;
+  const whereClause = buildWhereClause([statusFilter, resourceFilter, typeFilter], 'AND');
 
-        UNION
+  const dataSql = Prisma.sql`
+    WITH reviewer_admin_groups AS (
+      SELECT gu.group_id
+      FROM group_user gu
+      WHERE gu.user_id = ${reviewer_id}
+        AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+    ),
+    owned_resources AS (
+      SELECT r.id AS resource_id, r.type
+      FROM resource r
+      JOIN dataset d ON d.resource_id = r.id
+      JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
 
-        SELECT c.id
-        FROM collection c
-        JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
-      )
-      SELECT ar.*
-      FROM access_request ar
-      JOIN owned_resources r
-        ON ar.resource_id = r.resource_id
-      WHERE ar.status = ${enumToSql(ACCESS_REQUEST_STATUS.UNDER_REVIEW)}
+      UNION
+
+      SELECT r.id AS resource_id, r.type
+      FROM resource r
+      JOIN collection c ON c.id = r.id
+      JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
     )
-    SELECT id, count(*) OVER () as total_count
-    FROM results
+    SELECT ar.*
+    FROM access_request ar
+    JOIN owned_resources r
+      ON ar.resource_id = r.resource_id
+    ${whereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     OFFSET ${offset}
     LIMIT ${limit}
   `;
-  const result = await prisma.$queryRaw(sql);
-  const total = Number(result.length > 0 ? result[0].total_count : 0);
+
+  const countSql = Prisma.sql`
+    WITH reviewer_admin_groups AS (
+      SELECT gu.group_id
+      FROM group_user gu
+      WHERE gu.user_id = ${reviewer_id}
+        AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+    ),
+    owned_resources AS (
+      SELECT r.id AS resource_id, r.type
+      FROM resource r
+      JOIN dataset d ON d.resource_id = r.id
+      JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
+
+      UNION
+
+      SELECT r.id AS resource_id, r.type
+      FROM resource r
+      JOIN collection c ON c.id = r.id
+      JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
+    )
+    SELECT COUNT(*) AS total_count
+    FROM access_request ar
+    JOIN owned_resources r
+      ON ar.resource_id = r.resource_id
+    ${whereClause}
+  `;
+
+  const [result, countResult] = await Promise.all([prisma.$queryRaw(dataSql), prisma.$queryRaw(countSql)]);
+  const total = Number(countResult[0].total_count);
   const requestIds = result.map((row) => row.id);
 
   const data = await prisma.access_request.findMany({
@@ -725,6 +768,8 @@ async function getRequestsPendingReviewForUser({
 /**
  * Get requests reviewed by a user (as reviewer)
  * @param {string} user_id - UUID of the user performing the review
+ * @param {string} [resource_id] - Filter by resource ID
+ * @param {string} [resource_type] - Filter by resource type (e.g. 'DATASET' or 'COLLECTION')
  * @param {string} sort_by - Field to sort by (e.g. 'reviewed_at')
  * @param {string} sort_order - 'asc' or 'desc'
  * @param {number} offset - Pagination offset
@@ -732,12 +777,21 @@ async function getRequestsPendingReviewForUser({
  * @returns {Promise<{metadata: {total: number, offset: number, limit: number}, data: Array}>}
  */
 async function getRequestsReviewedByUser({
-  user_id, sort_by, sort_order, offset, limit,
+  user_id, sort_by, sort_order, offset, limit, resource_id, resource_type,
 }) {
+  const where = {
+    reviewed_by: user_id,
+  };
+  if (resource_id) {
+    where.resource_id = resource_id;
+  }
+  if (resource_type) {
+    where.resource = {
+      type: resource_type,
+    };
+  }
   const data = await prisma.access_request.findMany({
-    where: {
-      reviewed_by: user_id,
-    },
+    where,
     include: INCLUDES_CONFIG,
     orderBy: {
       [sort_by]: sort_order,

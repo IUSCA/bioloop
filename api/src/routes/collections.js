@@ -9,7 +9,7 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const collectionService = require('@/services/collections');
 // const prisma = require('@/db');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 
 const router = express.Router();
@@ -62,10 +62,17 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('collection', 'view_metadata'),
+  authorize('collection', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
   asyncHandler(async (req, res) => {
     const collection = await collectionService.getCollectionById(req.params.id, req.user.subject_id);
-    res.json(req.permission.filter(collection));
+    // res.json(req.permission.filter(collection));
+    res.json({
+      ...req.permission.filter(collection),
+      _meta: {
+        caller_role: req.permission.callerRole,
+        capabilities: toCapabilitiesArray(req.permission.capabilities),
+      },
+    });
   }),
 );
 

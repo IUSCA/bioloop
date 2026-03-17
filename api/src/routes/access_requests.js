@@ -1,6 +1,7 @@
 const express = require('express');
 const { param, query, body } = require('express-validator');
 const _ = require('lodash/fp');
+const { RESOURCE_TYPE } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -18,6 +19,8 @@ const router = express.Router();
 router.get(
   '/requested-by-me',
   validate([
+    query('resource_id').optional().isUUID(),
+    query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
     query('status').optional().isIn(accessRequestsService.accessRequestStates),
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
@@ -35,6 +38,8 @@ router.get(
       sort_order: req.query.sort_order,
       offset: req.query.offset,
       limit: req.query.limit,
+      resource_id: req.query.resource_id,
+      resource_type: req.query.resource_type,
     });
     // TODO: attribute filter
     res.json(requests);
@@ -76,6 +81,8 @@ router.post(
 router.get(
   '/my-pending-reviews',
   validate([
+    query('resource_id').optional().isUUID(),
+    query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
@@ -86,7 +93,7 @@ router.get(
     // #swagger.summary = 'Get access requests pending user\'s review'
 
     const {
-      sort_by, sort_order, offset, limit,
+      sort_by, sort_order, offset, limit, resource_id, resource_type,
     } = req.query;
     const { metadata, data } = await accessRequestsService.getRequestsPendingReviewForUser({
       reviewer_id: req.user.subject_id,
@@ -94,6 +101,8 @@ router.get(
       sort_order,
       offset,
       limit,
+      resource_id,
+      resource_type,
     });
     // TODO: attribute filter
     res.json({ metadata, data });
@@ -104,6 +113,8 @@ router.get(
 router.get(
   '/reviewed-by-me',
   validate([
+    query('resource_id').optional().isUUID(),
+    query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
@@ -114,7 +125,7 @@ router.get(
     // #swagger.summary = 'Get access requests reviewed by the user'
 
     const {
-      sort_by, sort_order, offset, limit,
+      sort_by, sort_order, offset, limit, resource_id, resource_type,
     } = req.query;
     const { metadata, data } = await accessRequestsService.getRequestsReviewedByUser({
       user_id: req.user.subject_id,
@@ -122,6 +133,8 @@ router.get(
       sort_order,
       offset,
       limit,
+      resource_id,
+      resource_type,
     });
     // TODO: attribute filter
     res.json({ metadata, data });

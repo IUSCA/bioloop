@@ -9,7 +9,7 @@ const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
-const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
 // const collectionService = require('@/services/collections');
@@ -152,17 +152,6 @@ router.post(
     res.status(201).json(req.permission.filter(childGroup));
   }),
 );
-
-function toCapabilitiesArray(capabilitiesObj) {
-  if (!capabilitiesObj || typeof capabilitiesObj !== 'object') {
-    return [];
-  }
-  return Object.entries(capabilitiesObj)
-  // eslint-disable-next-line no-unused-vars
-    .filter(([_key, value]) => value === true)
-    // eslint-disable-next-line no-unused-vars
-    .map(([key, _value]) => key);
-}
 
 // Get group details
 router.get(
