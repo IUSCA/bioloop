@@ -12,6 +12,7 @@ require('./db');
 const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
+const { validateGrantAccessTypes } = require('./validateGrantAccessTypes');
 
 // log a warning when auto sign up is enabled
 if (config.get('auth.auto_sign_up.enabled')) {
@@ -22,28 +23,38 @@ This feature can be exploited to create multiple user accounts without rate limi
 
 const port = config.get('express.port');
 const host = config.get('express.host');
-const server = app.listen(port, () => {
-  logger.info(`Listening: http://${host}:${port}`);
-});
 
-const shutdown = () => {
-  logger.warn('server: closing');
-  server.close((err) => {
-    if (err) {
-      logger.error('server: closed with ERROR', err);
-      process.exit(1);
-    }
-    logger.warn('server: closed');
-    process.exit();
+async function init() {
+  await validateGrantAccessTypes();
+
+  const server = app.listen(port, () => {
+    logger.info(`Listening: http://${host}:${port}`);
   });
-};
 
-process.on('SIGINT', () => {
-  logger.warn('process received SIGINT');
-  shutdown();
-});
+  const shutdown = () => {
+    logger.warn('server: closing');
+    server.close((err) => {
+      if (err) {
+        logger.error('server: closed with ERROR', err);
+        process.exit(1);
+      }
+      logger.warn('server: closed');
+      process.exit();
+    });
+  };
 
-process.on('SIGTERM', () => {
-  logger.warn('process received SIGTERM');
-  shutdown();
+  process.on('SIGINT', () => {
+    logger.warn('process received SIGINT');
+    shutdown();
+  });
+
+  process.on('SIGTERM', () => {
+    logger.warn('process received SIGTERM');
+    shutdown();
+  });
+}
+
+init().catch((err) => {
+  logger.error(err);
+  process.exit(1);
 });

@@ -73,6 +73,8 @@ const CallerRole = Object.freeze({
   RESOURCE_ACCESS: 'RESOURCE_ACCESS',
 });
 
+const PUBLIC_ATTRIBUTES = ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', 'size'];
+
 groupPolicies
   .roles([
     { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
@@ -131,7 +133,7 @@ groupPolicies
       },
       {
         policy: canAccessResourcesOwnedByGroup,
-        attribute_filters: ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', 'size'],
+        attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],
     view_members: [
@@ -151,13 +153,12 @@ groupPolicies
       },
       {
         policy: Policy.always,
-        attribute_filters: [
-          'id', 'name', 'slug', 'description', 'is_archived', 'metadata', 'created_at',
-          'allow_user_contributions', 'size', 'user_role', 'depth', 'path',
-        ],
+        attribute_filters: PUBLIC_ATTRIBUTES.concat([
+          'created_at', 'allow_user_contributions', 'user_role', 'depth', 'path',
+        ]),
       },
     ],
   })
   .freeze();
 
-module.exports = { groupPolicies, CallerRole };
+module.exports = { groupPolicies, CallerRole, PUBLIC_ATTRIBUTES };

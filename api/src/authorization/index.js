@@ -38,6 +38,7 @@ const {
   evaluateCapabilitySet,
   CapabilityEvaluationError,
   deriveCallerRole,
+  toCapabilitiesArray,
 } = require('./core');
 
 // ============================================================================
@@ -179,4 +180,5 @@ module.exports = {
   evaluateCapabilitySet,
   CapabilityEvaluationError,
   deriveCallerRole,
+  toCapabilitiesArray,
 };

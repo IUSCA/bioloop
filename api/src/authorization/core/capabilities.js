@@ -177,4 +177,17 @@ async function deriveCallerRole({
   return role;
 }
 
-module.exports = { evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole };
+function toCapabilitiesArray(capabilitiesObj) {
+  if (!capabilitiesObj || typeof capabilitiesObj !== 'object') {
+    return [];
+  }
+  return Object.entries(capabilitiesObj)
+  // eslint-disable-next-line no-unused-vars
+    .filter(([_key, value]) => value === true)
+    // eslint-disable-next-line no-unused-vars
+    .map(([key, _value]) => key);
+}
+
+module.exports = {
+  evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole, toCapabilitiesArray,
+};

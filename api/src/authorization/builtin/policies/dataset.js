@@ -1,6 +1,9 @@
+const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { isPlatformAdmin } = require('./utils/index');
+
+const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
 
 class DatasetPolicy extends Policy {
   constructor({ name, requires, evaluate }) {
@@ -61,15 +64,20 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
  * a Set<string> pre-fetched once per request by the ContextHydrator virtual attribute
  * `active_grant_access_types`.  No DB call fires inside evaluate().
  */
-const userHasGrant = (access_type) => new DatasetPolicy({
-  name: `userHasGrant(${access_type})`,
-  requires: {
-    user: [],
-    resource: [],
-    context: ['active_grant_access_types'],
-  },
-  evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
-});
+const userHasGrant = (access_type) => {
+  if (!VALID_GRANT_NAMES.has(access_type)) {
+    throw new Error(`Unknown grant access type: '${access_type}'`);
+  }
+  return new DatasetPolicy({
+    name: `userHasGrant(${access_type})`,
+    requires: {
+      user: [],
+      resource: [],
+      context: ['active_grant_access_types'],
+    },
+    evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
+  });
+};
 
 const callerRoles = Object.freeze({
   PLATFORM_ADMIN: 'ADMIN',
@@ -128,7 +136,7 @@ datasetPolicies
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-      userHasGrant('view_metadata'),
+      userHasGrant('DATASET:VIEW_METADATA'),
     ]),
 
     // ------------------------------------------------------------------
@@ -141,7 +149,7 @@ datasetPolicies
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-      userHasGrant('view_sensitive_metadata'),
+      userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
     ]),
 
     list: Policy.always, // anyone can list, but service layer filters to only what they have access to
@@ -156,7 +164,7 @@ datasetPolicies
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-      userHasGrant('list_files'),
+      userHasGrant('DATASET:READ_DATA'),
     ]),
 
     // ------------------------------------------------------------------
@@ -168,19 +176,19 @@ datasetPolicies
     read_data: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
-      userHasGrant('read_data'),
+      userHasGrant('DATASET:READ_DATA'),
     ]),
 
     download: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
-      userHasGrant('download'),
+      userHasGrant('DATASET:DOWNLOAD'),
     ]),
 
     compute: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
-      userHasGrant('compute'),
+      userHasGrant('DATASET:COMPUTE'),
     ]),
 
     // ------------------------------------------------------------------
@@ -191,7 +199,8 @@ datasetPolicies
     request_stage: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
-      userHasGrant('request_stage'),
+      userHasGrant('DATASET:DOWNLOAD'),
+      userHasGrant('DATASET:COMPUTE'),
     ]),
 
     // ------------------------------------------------------------------
@@ -290,13 +299,13 @@ datasetPolicies
       // Grant holders (view_metadata): public-facing attributes only.
       // Infrastructure paths and sensitive metadata are excluded.
       {
-        policy: userHasGrant('view_metadata'),
+        policy: userHasGrant('DATASET:VIEW_METADATA'),
         attribute_filters: PUBLIC_ATTRIBUTES,
       },
 
       // Grant holders (view_sensitive_metadata): adds infrastructure paths
       {
-        policy: userHasGrant('view_sensitive_metadata'),
+        policy: userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
         attribute_filters: [
           'id', 'name', 'type', 'description',
           'num_directories', 'num_files', 'size', 'du_size', 'bundle_size',
@@ -325,13 +334,12 @@ datasetPolicies
     { policy: hasDatasetOwningGroupOversight, role: callerRoles.DATASET_OWNER_GROUP_OVERSIGHT },
     {
       policy: Policy.or([
-        userHasGrant('view_metadata'),
-        userHasGrant('list_files'),
-        userHasGrant('view_sensitive_metadata'),
-        userHasGrant('read_data'),
-        userHasGrant('download'),
-        userHasGrant('compute'),
-        userHasGrant('request_stage'),
+        userHasGrant('DATASET:VIEW_METADATA'),
+        userHasGrant('DATASET:READ_DATA'),
+        userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
+        userHasGrant('DATASET:READ_DATA'),
+        userHasGrant('DATASET:DOWNLOAD'),
+        userHasGrant('DATASET:COMPUTE'),
       ]),
       role: callerRoles.GRANT_HOLDER,
     },
