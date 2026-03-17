@@ -18,13 +18,13 @@ router.use('/env', require('./env'));
 router.use(authenticate);
 
 /**
- * Note: The `/datasets/uploads` route needs to be registered before the `/datasets` route.
- * If the `/datasets` route is registered first, Express interprets the path `/datasets/uploads`
- * as a call to the `/datasets/:datasetId` API.
+ * Sub-routes under /datasets must be registered before /datasets itself,
+ * otherwise Express interprets /datasets/anything as /datasets/:datasetId.
  */
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
+router.use('/datasets/imports', require('./datasets/imports') /* #swagger.security = [{"BearerAuth": []}] */);
 
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
@@ -38,6 +38,7 @@ router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {
+  // eslint-disable-next-line global-require
   router.use('/fs', require('./fs') /* #swagger.security = [{"BearerAuth": []}] */);
 }
 

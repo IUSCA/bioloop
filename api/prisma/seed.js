@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+  console.error('Seed script should not be run in production mode. Run bin/init_prod_data.sh instead.');
   process.exit(1);
 }
 
@@ -96,6 +96,31 @@ async function main() {
     create: role,
     update: role,
   })));
+
+  // Seed import sources for non-production environments
+  const importSources = [
+    {
+      path: '/opt/sca/data/imports/entrypoint',
+      label: 'Imports',
+      description: 'Default import source for docker/dev environment',
+      sort_order: 1,
+    },
+    {
+      path: '/opt/sca/data/project/entrypoint',
+      label: 'Project',
+      description: 'Project filesystem import source for docker/dev environment',
+      sort_order: 2,
+    },
+  ];
+  await Promise.all(
+    importSources.map((source) => prisma.import_source.upsert({
+      where: { path: source.path },
+      create: source,
+      update: { label: source.label, description: source.description, sort_order: source.sort_order },
+    })),
+  );
+  // eslint-disable-next-line no-console
+  console.log(`seeded ${importSources.length} import sources`);
 
   // Create default admins
   const additional_admins = readUsersFromJSON('admins.json');

@@ -157,6 +157,13 @@ module.exports = {
         use: { ...devices['Desktop Chrome'] },
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
+      /** Import tests */
+      {
+        name: 'admin_import',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/import/*.spec.js',
+      },
 
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
