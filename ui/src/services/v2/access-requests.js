@@ -5,8 +5,8 @@ export default {
    * GET /access-requests/requested-by-me — all requests raised by the current user.
    * Returns {metadata:{total, limit, offset}, data: Array}
    */
-  requestedByMe() {
-    return api.get("/access-requests/requested-by-me");
+  requestedByMe(params = {}) {
+    return api.get("/access-requests/requested-by-me", { params });
   },
 
   /**
@@ -14,16 +14,16 @@ export default {
    * Only returns data for group admins and platform admins.
    * Returns {metadata:{total, limit, offset}, data: Array}
    */
-  pendingReview() {
-    return api.get("/access-requests/my-pending-reviews");
+  pendingReview(params = {}) {
+    return api.get("/access-requests/my-pending-reviews", { params });
   },
 
   /**
    * GET /access-requests/reviewed-by-me — requests already reviewed by the current user.
    * Returns {metadata:{total, limit, offset}, data: Array}
    */
-  reviewedByMe() {
-    return api.get("/access-requests/reviewed-by-me");
+  reviewedByMe(params = {}) {
+    return api.get("/access-requests/reviewed-by-me", { params });
   },
 
   /** GET /access-requests/:id — get a specific request by ID. */

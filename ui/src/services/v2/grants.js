@@ -1,22 +1,32 @@
 import api from "@/services/api";
 
+/* List grants for a subject */
+function listGrantsForSubject(subject_type, subject_id, params = {}) {
+  return api.get(`/grants/subject/${subject_type}/${subject_id}`, { params });
+}
+
+/* List grants for a resource */
+function listGrantsForResource(resource_type, resource_id, params = {}) {
+  return api.get(`/grants/resource/${resource_type}/${resource_id}`, {
+    params,
+  });
+}
+
 export default {
-  /**
-   * List grants matching the given filters.
-   * @param {object} params
-   * @param {'DATASET'|'COLLECTION'} [params.resource_type]
-   * @param {number|string} [params.resource_id]
-   * @param {'USER'|'GROUP'} [params.subject_type]
-   * @param {number|string} [params.subject_id]
-   * @param {boolean} [params.active_only] - filter to non-revoked, non-expired grants
-   * @param {boolean} [params.expiring_soon] - grants expiring within 30 days
-   * @param {number} [params.limit]
-   * @param {number} [params.offset]
-   *
-   * Returns {metadata:{total, limit, offset}, data: Array<Grant>}
-   */
-  list(params = {}) {
-    return api.get("/grants", { params });
+  listGrantsForSubject,
+  listGrantsForResource,
+
+  listGrantsForDataset(resource_id, params = {}) {
+    return listGrantsForResource("DATASET", resource_id, params);
+  },
+  listGrantsForCollection(resource_id, params = {}) {
+    return listGrantsForResource("COLLECTION", resource_id, params);
+  },
+  listGrantsForGroup(subject_id, params = {}) {
+    return listGrantsForSubject("GROUP", subject_id, params);
+  },
+  listGrantsForUser(subject_id, params = {}) {
+    return listGrantsForSubject("USER", subject_id, params);
   },
 
   /**

@@ -169,7 +169,8 @@
     "docs/public",
     "/todo*.md",
     ".vscode",
-    ".github/skills/"
+    ".github/skills/",
+    ".gitignore"
   ],
   "ignoreRegExpList": [
     "mdi-.*"

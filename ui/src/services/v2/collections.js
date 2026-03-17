@@ -25,11 +25,15 @@ export default {
   },
 
   /**
+  /**
    * Update collection metadata.
    * `version` must be included in data for optimistic concurrency control.
+   * @param {string} id
+   * @param {object} data
+   * @param {number} version
    */
-  update(id, data) {
-    return api.patch(`/collections/${id}`, data);
+  update(id, data, version) {
+    return api.patch(`/collections/${id}`, { ...data, version });
   },
 
   /** Permanently delete a collection. */
@@ -39,12 +43,12 @@ export default {
 
   /** Archive a collection. */
   archive(id) {
-    return api.patch(`/collections/${id}/archive`);
+    return api.post(`/collections/${id}/archive`);
   },
 
-  /** Unarchive a collection (platform admin only). */
+  /** Unarchive a collection. */
   unarchive(id) {
-    return api.patch(`/collections/${id}/unarchive`);
+    return api.post(`/collections/${id}/unarchive`);
   },
 
   /** List datasets within the collection. */
