@@ -1,7 +1,7 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop-local
+name: bioloop-feature-notifications
 services:
   ui:
     image: node:21
@@ -11,6 +11,7 @@ services:
       - ui/.env.default
     volumes:
       - ./ui/:/opt/sca/app
+      - ui_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
@@ -27,6 +28,7 @@ services:
       # - api/.env? # For keys made after the first run
     volumes:
       - ./api:/opt/sca/app
+      - api_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
@@ -34,9 +36,10 @@ services:
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 5
+      retries: 18
+      start_period: 180s
     depends_on:
       signet:
         condition: service_healthy
@@ -160,16 +163,17 @@ services:
       - rhythm/.env.default # For all default settings
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
-      - ./rhythm/keys:/opt/sca/keys # This is where the keys are stored.  You can mount this to a local folder to use your own keys.
+      - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
       - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
     command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 15s
     depends_on:
       - queue
       - mongo
@@ -185,14 +189,16 @@ services:
     volumes:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
+      - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 15s
 
 # Signet containers
   # You must clone the signet repo and place it in the signet folder
@@ -209,9 +215,10 @@ services:
     command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 10s
     depends_on:
       signet_db:
         condition: service_healthy
@@ -229,9 +236,10 @@ services:
       - signet_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 30s
+      interval: 5s
       timeout: 10s
-      retries: 5
+      retries: 10
+      start_period: 5s
 
 # Dev containers
   docs:
@@ -319,4 +327,12 @@ volumes:
   landing_volume:
     external: false
   docs_modules:
+    external: false
+  rhythm_keys:
+    external: false
+  api_node_modules:
+    external: false
+  ui_node_modules:
+    external: false
+  secure_download_node_modules:
     external: false

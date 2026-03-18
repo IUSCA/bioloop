@@ -33,15 +33,21 @@ def get_wf_body(wf_name: str) -> dict:
     return wf_body
 
 
-def get_archive_dir(dataset_type: str) -> str:
+def get_archive_dir(dataset_type: str, create: bool = True) -> str:
+    """Return the archive directory path for the given dataset type.
+
+    When create=True (default) the directory is created if it does not already
+    exist.  Pass create=False when only the path value is needed (e.g. to
+    compute an expected path in tests) without creating the directory as a
+    side effect.
+    """
     dataset_type_archive_dir = config["paths"][dataset_type]["archive"]
-    
-    # create the directory if it does not exist
-    if app_env == 'docker':
-        _dataset_type_archive_dir = Path(dataset_type_archive_dir)
-        _dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
-    else:
-        sda.ensure_directory(dataset_type_archive_dir)
+
+    if create:
+        if app_env == 'docker':
+            Path(dataset_type_archive_dir).mkdir(parents=True, exist_ok=True)
+        else:
+            sda.ensure_directory(dataset_type_archive_dir)
 
     return dataset_type_archive_dir
 
