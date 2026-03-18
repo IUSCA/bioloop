@@ -170,6 +170,7 @@
     "/todo*.md",
     ".vscode",
     ".github/skills/",
+    ".github/agents/",
     ".gitignore"
   ],
   "ignoreRegExpList": [
