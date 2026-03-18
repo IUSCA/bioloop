@@ -20,6 +20,7 @@ const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
 const { GRANT_ACCESS_TYPES } = require('../src/constants');
+const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
 
 const prisma = new PrismaClient();
 
@@ -465,6 +466,7 @@ async function main() {
 
   // // create collections
   const collections = groupData.generateCollections(20, datasets);
+  // console.log(JSON.stringify(collections, null, 2));
   await Promise.all(
     collections.map(({ dataset_ids: _dsIds, ...c }) => prisma.$transaction(async (tx) => {
       // create resource with type COLLECTION for this collection to reference
@@ -501,6 +503,41 @@ async function main() {
           },
         })),
       );
+    })),
+  );
+
+  // Seed some sample access requests + grants for UI / test coverage (derived from groups/users/datasets)
+  const groupsWithMembers = await prisma.group.findMany({
+    include: {
+      members: true,
+      owned_datasets: true,
+      owned_collections: true,
+    },
+  });
+
+  const accessSeedData = generateGroupAccessSeedData({
+    groups: groupsWithMembers,
+    systemAdminSubjectId: systemAdmin.subject_id,
+  });
+
+  await prisma.grant.createMany({
+    data: accessSeedData.grants,
+    skipDuplicates: true,
+  });
+
+  await Promise.all(
+    accessSeedData.accessRequests.map((r) => prisma.access_request.upsert({
+      where: { id: r.id },
+      update: {},
+      create: r,
+    })),
+  );
+
+  await Promise.all(
+    accessSeedData.accessRequestItems.map((item) => prisma.access_request_item.upsert({
+      where: { id: item.id },
+      update: {},
+      create: item,
     })),
   );
 

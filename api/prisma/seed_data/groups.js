@@ -18,6 +18,8 @@
 //     Project: “Cancer Pathways AI” (Kim Lab, uses Imaging Core)
 //     Project: “Unified Immune Signature” (joint project across Patel Lab and Cores)
 
+const { createDeterministicUuidGenerator } = require('./deterministic_uuid');
+
 const groups = [
   {
     id: 'ad8d83b2-c82e-4b72-b03e-1393d272a904',
@@ -195,39 +197,6 @@ const simpleHash = (str) => {
   return Math.abs(hash);
 };
 
-function createDeterministicUuidGenerator(start = 0n) {
-  let counter = BigInt(start);
-
-  return function generate() {
-    const bytes = new Uint8Array(16);
-
-    // Write counter into last 8 bytes (big-endian)
-    let temp = counter++;
-    for (let i = 15; i >= 8; i--) {
-      bytes[i] = Number(temp & 0xffn);
-      temp >>= 8n;
-    }
-
-    // Set version (4)
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-
-    // Set variant (RFC 4122)
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-
-    const hex = [...bytes]
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    return (
-      `${hex.slice(0, 8)}-`
-      + `${hex.slice(8, 12)}-`
-      + `${hex.slice(12, 16)}-`
-      + `${hex.slice(16, 20)}-`
-      + `${hex.slice(20)}`
-    );
-  };
-}
-
 function generateGroupUserMemberships(userIds, systemAdminId) {
   const memberships = [];
 
@@ -305,6 +274,7 @@ function generateCollections(n, datasets) {
     return acc;
   }, {});
 
+  // Start the generator at 2000 so generated UUIDs are distinct from other seeded fixtures.
   const generate = createDeterministicUuidGenerator(1);
   const collections = [];
   for (let i = 1; i <= n; i++) {
