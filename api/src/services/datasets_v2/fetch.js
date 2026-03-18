@@ -4,6 +4,7 @@ const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
 const prisma = require('@/db');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
+const { RESOURCE_SCOPES } = require('../resources');
 
 /**
  * Create an includes object for Prisma queries based on requested includes.
@@ -283,6 +284,44 @@ async function searchAllDatasets({
   return { data: datasets, metadata: { total: total_count } };
 }
 
+function createAccessibleDatasetIdsCte(user_id, scope = RESOURCE_SCOPES.ALL) {
+  const includeAll = scope === RESOURCE_SCOPES.ALL;
+  const parts = [];
+
+  if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
+    parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id)})`);
+  }
+
+  if (includeAll || scope === RESOURCE_SCOPES.OWNERSHIP) {
+    parts.push(Prisma.sql`
+      SELECT d.resource_id
+      FROM "dataset" d
+      JOIN group_user gu ON d.owner_group_id = gu.group_id
+      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+    `);
+  }
+
+  if (includeAll || scope === RESOURCE_SCOPES.OVERSIGHT) {
+    parts.push(Prisma.sql`
+      SELECT d.resource_id
+      FROM "dataset" d
+      JOIN effective_user_oversight_groups eug 
+        ON eug.user_id = ${user_id} AND d.owner_group_id = eug.group_id
+    `);
+  }
+
+  if (parts.length === 0) {
+    // No known scope provided; return no rows to avoid granting access.
+    parts.push(Prisma.sql`SELECT NULL::text AS resource_id WHERE FALSE`);
+  }
+
+  return Prisma.sql`
+    WITH accessible_ids AS (
+      ${Prisma.join(parts, Prisma.sql`\n\nUNION\n\n`)}
+    )
+  `;
+}
+
 async function searchDatasetsForUser({
   user_id, filters, pagination, sort, includes,
 }) {
@@ -290,31 +329,11 @@ async function searchDatasetsForUser({
   // OR user has oversight of the group that owns the dataset
   // OR user has any grant on dataset
 
-  const whereClause = createSqlWhere(filters);
+  const effectiveFilters = filters ?? {};
+  const { scope = RESOURCE_SCOPES.ALL } = effectiveFilters;
+  const whereClause = createSqlWhere(effectiveFilters);
   const orderByClause = createSqlOrderBy(sort);
-
-  const cte_query = Prisma.sql`
-    WITH accessible_ids AS (
-      -- via grants
-      (${grantService.accessibleDatasetIdsByGrantsQuery(user_id)})
-
-      UNION
-
-      -- via group ownership
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN group_user gu ON d.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-
-      UNION
-
-      -- via group oversight
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN effective_user_oversight_groups eug 
-        ON eug.user_id = ${user_id} AND d.owner_group_id = eug.group_id
-    )
-  `;
+  const cte_query = createAccessibleDatasetIdsCte(user_id, scope);
 
   const data_query = Prisma.sql`
     ${cte_query}
