@@ -1,14 +1,17 @@
 <template>
-  <div class="flex flex-wrap items-center gap-1">
+  <div
+    class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
+  >
     Group
     <GroupToken :name="record.target_name" :id="record.target_id" />
     created
 
-    <span v-if="record.metadata?.parent_name">
+    <span v-if="record.metadata?.parent_name" class="flex items-center gap-1">
       under
-      <span class="font-semibold">
-        {{ record.metadata?.parent_name }}
-      </span>
+      <GroupToken
+        :name="record.metadata?.parent_name"
+        :id="record.metadata?.parent_id"
+      />
     </span>
 
     by

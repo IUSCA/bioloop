@@ -1,8 +1,9 @@
 <template>
-  <div class="min-w-0 max-w-36 truncate" :title="props.name">
-    <RouterLink v-if="props.id" :to="`/users/${props.id}`">
-      {{ props.name }}
-    </RouterLink>
+  <div
+    class="min-w-0 max-w-48 truncate text-slate-900 dark:text-slate-100"
+    :title="props.name"
+  >
+    <span v-if="props.id === authStore?.user?.subject_id"> you </span>
     <span v-else>
       {{ props.name }}
     </span>
@@ -10,6 +11,10 @@
 </template>
 
 <script setup>
+import { useAuthStore } from "@/stores/auth";
+
+const authStore = useAuthStore();
+
 const props = defineProps({
   name: {
     type: String,

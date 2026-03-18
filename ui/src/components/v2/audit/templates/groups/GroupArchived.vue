@@ -1,5 +1,7 @@
 <template>
-  <div class="flex flex-wrap items-center gap-1">
+  <div
+    class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
+  >
     Group
     <GroupToken :name="record.target_name" :id="record.target_id" />
     archived by

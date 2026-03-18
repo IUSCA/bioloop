@@ -1,5 +1,7 @@
 <template>
-  <div class="flex flex-wrap items-center gap-1">
+  <div
+    class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
+  >
     <UserToken :name="record.subject_name" :id="record.subject_id" />
     added as
     <span class="font-semibold">
@@ -25,6 +27,6 @@ defineProps({
     required: true,
   },
 });
-const context = inject("context");
+const context = inject("context", "default");
 const inGroupContext = context === "group";
 </script>

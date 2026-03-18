@@ -1,5 +1,7 @@
 <template>
-  <div class="flex flex-wrap items-center gap-1">
+  <div
+    class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
+  >
     Access request for
     <ResourceToken
       :type="record.metadata?.resource_type"

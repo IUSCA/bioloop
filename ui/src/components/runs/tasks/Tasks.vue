@@ -116,7 +116,8 @@ function getTasks() {
       tasks_by_step.value = _obj;
 
       last_updated.value = new Date();
-    }).catch((err) => {
+    })
+    .catch((err) => {
       console.error("Unable to fetch active tasks", err);
       connection_error.value = true;
     });

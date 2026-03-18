@@ -264,6 +264,12 @@ async function fetchCollections() {
   try {
     const { data } = await CollectionService.search({
       owner_group_id: props.groupId,
+      is_archived:
+        activeStatus.value === "active"
+          ? false
+          : activeStatus.value === "archived"
+            ? true
+            : undefined,
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       search_term: searchTerm.value || undefined,
@@ -274,16 +280,16 @@ async function fetchCollections() {
     collections.value = data.data;
 
     // Filter by status if needed (client-side for now)
-    if (activeStatus.value !== "all") {
-      collections.value = collections.value.filter((c) => {
-        if (activeStatus.value === "active") {
-          return !c.is_archived;
-        } else if (activeStatus.value === "archived") {
-          return c.is_archived;
-        }
-        return true;
-      });
-    }
+    // if (activeStatus.value !== "all") {
+    //   collections.value = collections.value.filter((c) => {
+    //     if (activeStatus.value === "active") {
+    //       return !c.is_archived;
+    //     } else if (activeStatus.value === "archived") {
+    //       return c.is_archived;
+    //     }
+    //     return true;
+    //   });
+    // }
 
     total.value = data.metadata?.total ?? data.data.length;
   } catch (err) {

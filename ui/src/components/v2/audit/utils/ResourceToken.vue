@@ -1,6 +1,6 @@
 <template>
   <component v-if="tokenComponent" :is="tokenComponent" :name="name" :id="id" />
-  <span v-else class="font-semibold">
+  <span v-else class="font-semibold text-slate-900 dark:text-slate-100">
     {{ name }}
   </span>
 </template>

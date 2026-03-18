@@ -1,5 +1,7 @@
 <template>
-  <component :is="eventComponent" :record="record" />
+  <div class="min-w-0">
+    <component :is="eventComponent" :record="record" />
+  </div>
 </template>
 
 <script setup>

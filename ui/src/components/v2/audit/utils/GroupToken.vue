@@ -1,5 +1,8 @@
 <template>
-  <div class="min-w-0 max-w-36 truncate" :title="props.name">
+  <div
+    class="min-w-0 max-w-48 truncate font-semibold text-slate-900 dark:text-slate-100"
+    :title="props.name"
+  >
     <RouterLink :to="`/v2/groups/${props.id}`" v-if="props.id">
       {{ props.name }}
     </RouterLink>
