@@ -7,6 +7,7 @@ const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
+const { isPlatformAdmin } = require('@/services/auth');
 
 const router = express.Router();
 
@@ -171,5 +172,56 @@ router.get(
     });
   }),
 );
+
+// list expiring grants - scoped by caller's authority
+router.get(
+  '/expiring-soon',
+  validate([
+    query('within_days').default(30).isInt({ min: 1 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
+    query('sort_by').default('valid_to').isIn(['created_at', 'valid_from', 'valid_to']),
+    query('sort_order').default('asc').isIn(['asc', 'desc']),
+  ]),
+  authorize('grant', 'list'),
+  asyncHandler(async (req, res) => {
+    const {
+      within_days, offset, limit, sort_by, sort_order,
+    } = req.query;
+
+    let grants;
+    if (isPlatformAdmin(req)) {
+      // if platform admin, list all expiring grants
+      grants = await grantService.listExpiringGrants({
+        within_days,
+        offset,
+        limit,
+        sort_by,
+        sort_order,
+      });
+    } else {
+      grants = await grantService.listExpiringGrantsForAdmin({
+        within_days,
+        offset,
+        limit,
+        sort_by,
+        sort_order,
+        user_id: req.user.subject_id, // scope by caller's authority
+      });
+    }
+    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
+    res.json({
+      metadata: grants.metadata,
+      data: filteredGrants,
+    });
+  }),
+);
+
+// router.post('/search', asyncHandler(async (req, res) => {
+//   // #swagger.tags = ['Grants']
+//   // #swagger.summary = 'Search grants with complex filters (admin-only)'
+
+//   if (isPlatformAdmin(req)) {} else {}
+// }));
 
 module.exports = router;

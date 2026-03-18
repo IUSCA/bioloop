@@ -9,6 +9,7 @@ const { AUTH_EVENT_TYPE, TARGET_TYPE, SUBJECT_TYPE } = require('@/authorization/
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const grantService = require('@/services/grants');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { RESOURCE_SCOPES } = require('./resources');
 
 const PRISMA_COLLECTION_INCLUDES = {
   _count: {
@@ -428,6 +429,44 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
   });
 }
 
+function buildAccessibleCollectionIdsCte(user_id, scope) {
+  const includeAll = scope === RESOURCE_SCOPES.ALL;
+  const parts = [];
+
+  if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
+    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id)})`);
+  }
+
+  if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
+    parts.push(Prisma.sql`
+      SELECT c.id
+      FROM "collection" c
+      JOIN group_user gu ON c.owner_group_id = gu.group_id
+      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+    `);
+  }
+
+  if (includeAll || scope === RESOURCE_SCOPES.OVERSIGHT) {
+    parts.push(Prisma.sql`
+      SELECT c.id
+      FROM "collection" c
+      JOIN effective_user_oversight_groups eug
+        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
+    `);
+  }
+
+  if (parts.length === 0) {
+    // No known scope provided; return no rows to avoid granting access.
+    parts.push(Prisma.sql`SELECT NULL::text AS id WHERE FALSE`);
+  }
+
+  return Prisma.sql`
+    WITH accessible_ids AS (
+      ${Prisma.join(parts, Prisma.sql`\n\nUNION\n\n`)}
+    )
+  `;
+}
+
 /**
  * Search collections accessible to a user with optional filters and pagination
  * @param {string} user_id - UUID of the user performing the search
@@ -437,6 +476,9 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) collections
+ * @param {string|null} owner_group_id - Optional filter to include only collections owned by a specific group
+ * @param {string|null} dataset_id - Optional filter to include only collections containing a specific dataset
+ * @param {RESOURCE_SCOPES} scope - Scope of the search ('all', 'owned', 'grants', 'oversight') to determine which collections the user has access to
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching collections
  */
 async function searchCollectionsForUser({
@@ -449,6 +491,7 @@ async function searchCollectionsForUser({
   is_archived = null,
   owner_group_id = null,
   dataset_id = null,
+  scope = 'all',
 }) {
   // user is admin of the group that owns the collection
   // OR user has oversight of the group that owns the collection
@@ -489,31 +532,7 @@ async function searchCollectionsForUser({
 
   const whereClause = buildWhereClause([searchClause, archivedClause, ownerGroupClause, datasetClause], 'AND');
 
-  const cte_query = Prisma.sql`
-    WITH via_grants AS (
-      ${grantService.accessibleCollectionsByGrantsQuery(user_id)}
-    ),
-    accessible_ids AS (
-      -- via grants
-      SELECT id from via_grants
-
-      UNION
-
-      -- via group ownership
-      SELECT c.id
-      FROM "collection" c
-      JOIN group_user gu ON c.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-
-      UNION
-
-      -- via group oversight
-      SELECT c.id
-      FROM "collection" c
-      JOIN effective_user_oversight_groups eug 
-        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
-    )
-  `;
+  const cte_query = buildAccessibleCollectionIdsCte(user_id, scope);
 
   const data_query = Prisma.sql`
     ${cte_query}

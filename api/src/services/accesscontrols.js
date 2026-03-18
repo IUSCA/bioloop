@@ -81,6 +81,9 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    system: {
+      'read:any': ['*'],
+    },
   },
 
   // user role permissions

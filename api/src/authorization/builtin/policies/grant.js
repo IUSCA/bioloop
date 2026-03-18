@@ -113,6 +113,7 @@ grantPolicies
     revoke: Policy.or([isPlatformAdmin, isAdminOfResourceGroup]),
     list_for_resource: Policy.or([isPlatformAdmin, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
     list_for_subject: Policy.or([isPlatformAdmin, isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup]),
+    list: Policy.always, // listing grants is allowed, but the results will be filtered based on the user's permissions
   })
   .attributes({
     '*': [

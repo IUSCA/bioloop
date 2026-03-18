@@ -11,6 +11,8 @@ const collectionService = require('@/services/collections');
 // const prisma = require('@/db');
 const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
+const { isPlatformAdmin } = require('@/services/auth');
+const { RESOURCE_SCOPES } = require('@/services/resources');
 
 const router = express.Router();
 
@@ -30,6 +32,7 @@ router.post(
     body('is_archived').optional().isBoolean(),
     body('owner_group_id').optional().isUUID(),
     body('dataset_id').optional().isUUID(),
+    body('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)), // owned = collections owned by groups I belong to, accessible = collections I have any access to
   ]),
   authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
@@ -41,13 +44,16 @@ router.post(
     ])(req.body);
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
-    const isPlatformAdmin = req.user?.roles?.includes('admin') === true;
 
     let promise;
-    if (isPlatformAdmin) {
+    if (isPlatformAdmin(req)) {
       promise = collectionService.searchAllCollections(params);
     } else {
-      promise = collectionService.searchCollectionsForUser({ ...params, user_id: req.user.subject_id });
+      promise = collectionService.searchCollectionsForUser({
+        ...params,
+        scope: req.body.scope,
+        user_id: req.user.subject_id,
+      });
     }
 
     const { metadata, data } = await promise;

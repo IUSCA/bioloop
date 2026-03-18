@@ -5,6 +5,7 @@
 
 const {
   Prisma, GRANT_CREATION_TYPE, RESOURCE_TYPE,
+  GROUP_MEMBER_ROLE,
 } = require('@prisma/client');
 const createError = require('http-errors');
 
@@ -13,6 +14,7 @@ const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const { resolveEntityName, resolveGrant } = require('@/authorization/builtin/audit/helpers');
 const { EVERYONE_GROUP_ID } = require('@/constants');
 const { TARGET_TYPE } = require('@/authorization/builtin/audit');
+const { enumToSql } = require('@/utils/sql');
 
 const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
 
@@ -329,7 +331,7 @@ function ownerGroupIdsOfResourcesAccessibleByUserQuery(user_id) {
 function accessibleCollectionsByGrantsQuery(user_id) {
   // helper to find collections that are accessible by a user via grants (directly or via group membership)
   return Prisma.sql`
-    SELECT DISTINCT c.*
+    SELECT DISTINCT c.id
     FROM (${userValidGrantsQuery(user_id)}) g
     JOIN collection c ON g.resource_id = c.id
   `;
@@ -543,6 +545,116 @@ async function listAccessTypes() {
   });
 }
 
+/**
+ * List all grants that are expiring within a certain number of days
+ * @param {Object} params
+ * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
+ * @param {number} params.offset - Pagination offset
+ * @param {number} params.limit - Pagination limit
+ * @param {string} params.sort_by - Field to sort by (e.g. 'valid_until')
+ * @param {'asc'|'desc'} params.sort_order - Sort order
+ * @returns {Promise<Object>} Paginated list of grants expiring within the specified time frame
+ */
+async function listExpiringGrants({
+  within_days,
+  offset,
+  limit,
+  sort_by,
+  sort_order,
+}) {
+  const sql = Prisma.sql`
+    SELECT g.*
+    FROM valid_grants g
+    WHERE g.valid_until IS NOT NULL
+      AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
+    ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+    OFFSET ${offset}
+    LIMIT ${limit}
+  `;
+  const data = await prisma.$queryRaw(sql);
+
+  // For total count, we can run a separate query without OFFSET and LIMIT
+  const countSql = Prisma.sql`
+    SELECT COUNT(*)
+    FROM valid_grants g
+    WHERE g.valid_until IS NOT NULL
+      AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
+  `;
+  const countResult = await prisma.$queryRaw(countSql);
+  const total = parseInt(countResult[0].count, 10);
+
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
+}
+
+/**
+ * List all grants that are expiring within a certain number of days on resources that are owned by groups that user is an admin of
+ * @param {Object} params
+ * @param {string} params.user_id - UUID of the user
+ * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
+ * @param {number} params.offset - Pagination offset
+ * @param {number} params.limit - Pagination limit
+ * @param {string} params.sort_by - Field to sort by (e.g. 'valid_until')
+ * @param {'asc'|'desc'} params.sort_order - Sort order
+ * @returns {Promise<Object>} Paginated list of grants expiring within the specified time frame
+ */
+async function listExpiringGrantsForAdmin({
+  user_id,
+  within_days,
+  offset,
+  limit,
+  sort_by,
+  sort_order,
+}) {
+  const sql = ({ for_count = false } = {}) => {
+    const sort_sql = Prisma.sql`OFFSET ${offset} LIMIT ${limit}`;
+    return Prisma.sql`
+      WITH admin_groups AS (
+        SELECT gu.group_id
+        FROM group_user gu
+        WHERE gu.user_id = ${user_id}
+          AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+      ),
+      owned_resources AS (
+        SELECT d.resource_id AS resource_id
+        FROM dataset d
+        JOIN admin_groups ag ON d.owner_group_id = ag.group_id
+
+        UNION
+
+        SELECT c.id AS resource_id
+        FROM collection c
+        JOIN admin_groups ag ON c.owner_group_id = ag.group_id
+      )
+      SELECT ${for_count ? Prisma.sql`COUNT(*)` : Prisma.sql`g.*`}
+      FROM valid_grants g
+      JOIN owned_resources r ON g.resource_id = r.resource_id
+      WHERE g.valid_until IS NOT NULL
+        AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
+      ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
+      ${for_count ? Prisma.empty : sort_sql}
+    `;
+  };
+  const data = await prisma.$queryRaw(sql());
+  const countResult = await prisma.$queryRaw(sql({ for_count: true }));
+  const total = parseInt(countResult[0].count, 10);
+
+  return {
+    metadata: {
+      total,
+      offset,
+      limit,
+    },
+    data,
+  };
+}
+
 module.exports = {
   createGrant,
   revokeGrant,
@@ -564,4 +676,7 @@ module.exports = {
   listGrantsForSubject,
   listGrantsForResource,
   listAccessTypes,
+  listExpiringGrants,
+  listExpiringGrantsForAdmin,
+  getPrismaGrantValidityFilter,
 };
