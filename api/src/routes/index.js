@@ -3,6 +3,8 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const featureService = require('../services/features');
 const uploadRouter = require('./datasets/uploads');
+const importRouter = require('./datasets/imports');
+const fsRouter = require('./fs');
 
 const router = express.Router();
 
@@ -24,7 +26,9 @@ router.use(authenticate);
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
-router.use('/datasets/imports', require('./datasets/imports') /* #swagger.security = [{"BearerAuth": []}] */);
+if (featureService.isFeatureEnabled({ key: 'import' })) {
+  router.use('/datasets/imports', importRouter /* #swagger.security = [{"BearerAuth": []}] */);
+}
 
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
@@ -38,8 +42,7 @@ router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {
-  // eslint-disable-next-line global-require
-  router.use('/fs', require('./fs') /* #swagger.security = [{"BearerAuth": []}] */);
+  router.use('/fs', fsRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
 
 module.exports = router;

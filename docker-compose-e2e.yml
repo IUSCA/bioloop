@@ -1,14 +1,23 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop-feature-import-sources-e2e
+name: bioloop
 services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:13443:443
+      - 127.0.0.1:443:443
     env_file:
       - ui/.env.default
+    # environment:
+      # If this stack's UI port is remapped to something other than :443,
+      # override these so CAS/OAuth callbacks and upload API calls land on the
+      # correct port rather than the default.  Example for a stack on :13443:
+        # - VITE_CAS_RETURN=https://localhost:13443/auth/iucas
+        # - VITE_GOOGLE_RETURN=https://localhost:13443/auth/google
+        # - VITE_CILOGON_RETURN=https://localhost:13443/auth/cil
+        # - VITE_MICROSOFT_RETURN=https://localhost:13443/auth/microsoft
+        # - VITE_UPLOAD_API_BASE_PATH=http://localhost:<secure_download_port>
     volumes:
       - ./ui/:/opt/sca/app
       - ui_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
@@ -61,8 +70,8 @@ services:
     expose:
       - 5432
     ports:
-      # Published on host as 13432; use localhost:13432 for host-side DB access (e.g. psql, GUI)
-      - 127.0.0.1:13432:5432
+      # Published on host as 5433; use localhost:5433 for host-side DB access (e.g. psql, GUI)
+      - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -70,6 +79,10 @@ services:
       - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
+  # One-shot service that creates the directory structure expected by workers
+  # and import sources on the shared data volume.  Runs bin/init_dirs.sh and
+  # exits.  Other services that need those directories (celery_worker,
+  # init_test_data) depend on this completing successfully before they start.
   init_data_dirs:
     build:
       context: ./workers
@@ -80,6 +93,19 @@ services:
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
+  # One-shot service that populates the import source directories with small
+  # sample dataset directories so the import UI has browsable content and the
+  # e2e tests have real directories to browse and select.
+  # Runs bin/create_test_import_datasets.sh and exits.
+  #
+  # Prerequisites (enforced by depends_on):
+  #   - init_data_dirs must have completed so the import source paths exist.
+  #   - api must be healthy so the script can call the datasets API to check
+  #     whether a given dataset name is already registered before creating it.
+  #
+  # The script reads APP_API_TOKEN from workers/.env (written by the API on
+  # first startup) to authenticate its API calls.  It is idempotent: existing
+  # dataset directories are skipped on subsequent runs.
   init_test_data:
     build:
       context: ./workers
@@ -155,7 +181,7 @@ services:
     expose:
       - 5672
     ports:
-      - 127.0.0.1:13672:15672
+      - 127.0.0.1:15672:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -168,7 +194,7 @@ services:
     expose:
       - 27017
     ports:
-      - 127.0.0.1:13017:27017
+      - 127.0.0.1:27017:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
@@ -206,8 +232,8 @@ services:
   secure_download:
     image: node:19
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:13060:3060"
+    expose:
+      - 3060
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -274,7 +300,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:13173:5173
+      - 127.0.0.1:5173:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh
@@ -286,7 +312,7 @@ services:
   jupyter_ijs:
     image: darkbluestudios/jupyter-ijavascript-utils:latest
     ports:
-      - "127.0.0.1:13888:8888"
+      - "8888:8888"
     volumes:
       - ./api/notebooks:/home/jovyan/work/notebooks
       - ./api/node_modules:/home/jovyan/work/node_modules
@@ -327,7 +353,7 @@ services:
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
     ports:
-      - "127.0.0.1:13000:3000"
+      - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -347,11 +373,13 @@ services:
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules
+    # Separating entrypoint from command lets `docker compose run` override just
+    # the command, e.g.:
+    #   docker compose run --rm e2e test --project=admin_import
     entrypoint:
-      - sh
-      - -c
-      - |
-        /opt/sca/app/node_modules/.bin/playwright test
+      - /opt/sca/app/node_modules/.bin/playwright
+    command:
+      - test
     depends_on:
       api:
         condition: service_healthy

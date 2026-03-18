@@ -4,10 +4,11 @@ const { expect } = require('../fixtures');
  * Navigates to the next step in a stepper
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {string} [params.nextButtonTestId='upload-next-button'] - The test ID of the next button
+ * @param {string} params.nextButtonTestId - The test ID of the next button
  * @returns {Promise<void>}
  */
-async function navigateToNextStep({ page, nextButtonTestId = 'upload-next-button' }) {
+async function navigateToNextStep({ page, nextButtonTestId }) {
+  if (!nextButtonTestId) throw new Error('nextButtonTestId is required');
   const nextButton = page.getByTestId(nextButtonTestId);
   await expect(nextButton).toBeVisible();
   await nextButton.click();
@@ -17,10 +18,11 @@ async function navigateToNextStep({ page, nextButtonTestId = 'upload-next-button
  * Navigates to the previous step in a stepper
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {string} [params.previousButtonTestId='upload-previous-button'] - The test ID of the previous button
+ * @param {string} params.previousButtonTestId - The test ID of the previous button
  * @returns {Promise<void>}
  */
-async function navigateToPreviousStep({ page, previousButtonTestId = 'upload-previous-button' }) {
+async function navigateToPreviousStep({ page, previousButtonTestId }) {
+  if (!previousButtonTestId) throw new Error('previousButtonTestId is required');
   const previousButton = page.getByTestId(previousButtonTestId);
   await expect(previousButton).toBeVisible();
   await previousButton.click();

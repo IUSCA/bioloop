@@ -132,9 +132,6 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
-    import_sources: {
-      'read:any': ['*'],
-    },
     alerts: {
       'read:any': ['*'],
     },

@@ -19,7 +19,7 @@
       "enabledForRoles": []
     },
     "import": {
-      "enabledForRoles": ["admin", "operator"]
+      "enabledForRoles": ["admin"]
     }
   }
 }

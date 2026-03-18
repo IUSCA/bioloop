@@ -169,14 +169,6 @@
       }
     }
   },
-  "filesystem": {
-    "base_dir": {
-      "slateScratch": ""
-    },
-    "mount_dir": {
-      "slateScratch": ""
-    }
-  },
   "enabled_features": {
     "import": true,
     "upload": true,

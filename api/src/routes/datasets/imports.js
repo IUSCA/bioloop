@@ -6,7 +6,6 @@ const { accessControl } = require('@/middleware/auth');
 const isPermittedTo = accessControl('import_sources');
 const router = express.Router();
 
-// TODO: Future enhancement - filter import sources by user role or ownership
 router.get(
   '/sources',
   isPermittedTo('read'),

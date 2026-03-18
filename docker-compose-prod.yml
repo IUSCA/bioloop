@@ -24,8 +24,14 @@ services:
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
-      - ${FILESYSTEM_BASE_DIR_SCRATCH}:${FILESYSTEM_MOUNT_DIR_SCRATCH}
-      - ${FILESYSTEM_BASE_DIR_PROJECT}:${FILESYSTEM_MOUNT_DIR_PROJECT}
+      # Mount each import source directory so the API can read it.
+      # Add one entry per import_source row in the database, using the format:
+      #   - /canonical/path:/mount/point:ro
+      # If the canonical path and the mount point are the same, omit mounted_path
+      # on the import_source record.  If they differ, set mounted_path to the
+      # mount point so the API knows where to find the files.
+      # Example:
+      #   - /data/bioloop/genomics:/opt/sca/imports/genomics:ro
     expose:
       - 3030
     # entrypoint: [ "tail", "-f", "/dev/null" ]

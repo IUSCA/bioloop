@@ -11,7 +11,7 @@ test.describe('Dataset Import navigation', () => {
     await page.goto('/datasets/import');
 
     // Wait for the stepper to fully render before asserting visibility
-    await page.waitForSelector('[data-testid="step-button-0"]', { state: 'visible' });
+    await page.waitForSelector('[data-testid="step-button-0"]', { state: 'visible', timeout: 15000 });
     await expect(page.getByTestId('step-button-0')).toBeVisible();
     await expect(page.getByTestId('step-button-1')).toBeVisible();
     await expect(page.getByTestId('step-button-2')).toBeVisible();

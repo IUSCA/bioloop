@@ -14,28 +14,31 @@ global.__basedir = path.join(__dirname, '..', '..');
  *
  * [
  *   {
- *     "path": "/N/slate/bioloop/imports",
- *     "label": "Slate Imports"
- *   }
- *   {
- *     "path": "/N/project/bioloop/imports",
- *     "label": "Project Imports",
- *     "description": "Shared project filesystem import entrypoint",
+ *     "path": "/data/bioloop/genomics",
+ *     "label": "Genomics Lab Drops",
+ *     "description": "Instrument drop directory for the genomics lab",
  *     "sort_order": 1
  *   },
  *   {
- *     "path": "/N/scratch/bioloop/imports",
- *     "label": "Scratch Imports",
- *     "description": "Scratch filesystem import entrypoint",
- *     "sort_order": 2
+ *     "path": "/data/bioloop/proteomics",
+ *     "label": "Proteomics Lab Drops",
+ *     "description": "Instrument drop directory for the proteomics lab",
+ *     "sort_order": 2,
+ *     "mounted_path": "/opt/sca/imports/proteomics"
  *   }
  * ]
  *
  * Fields:
- *   path         (required) — absolute path on the filesystem; must be unique across all sources
- *   label        (optional) — human-readable name shown in the UI dropdown
- *   description  (optional) — longer description of this source
- *   sort_order   (optional) — integer; lower values appear first; omit or set null to sort last
+ *   path           (required) — canonical absolute path shown in the UI and stored in the
+ *                               database; must be unique across all sources
+ *   label          (optional) — human-readable name shown in the UI dropdown
+ *   description    (optional) — longer description of this source
+ *   sort_order     (optional) — integer; lower values appear first; omit or set null to sort last
+ *   mounted_path   (optional) — the path at which this source is accessible to the API
+ *                               process, when it differs from `path`.  Leave null/omit when
+ *                               the canonical path and the local mount point are the same.
+ *                               Must match the mount-point-side path in the volume mount
+ *                               for the api service.
  */
 
 const prisma = new PrismaClient();
@@ -62,6 +65,7 @@ async function main() {
         label: source.label ?? null,
         description: source.description ?? null,
         sort_order: source.sort_order ?? null,
+        mounted_path: source.mounted_path ?? null,
       },
     })),
   );

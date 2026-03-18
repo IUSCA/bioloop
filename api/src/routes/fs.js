@@ -5,7 +5,6 @@ const { query } = require('express-validator');
 const path = require('node:path');
 const createError = require('http-errors');
 
-const config = require('config');
 // eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');
 const prisma = require('@/db');
@@ -51,31 +50,24 @@ function directoryContainsExtension(dirPath, extension) {
 }
 
 /**
- * Given a path, find the configured mount mapping whose base_dir is a prefix
- * of that path. Returns { baseDir, mountDir } or null.
+ * Translate a canonical import source path to the path accessible by the API
+ * process.
+ *
+ * In most deployments the import source directory is accessible at the same
+ * absolute path stored in import_source.path, so no translation is needed.
+ * When the filesystem is mounted at a different location (e.g. the host path
+ * /data/genomics is mounted at /opt/sca/imports/genomics by the API process),
+ * set import_source.mounted_path to the mount point and this function will
+ * rebase the path accordingly.
+ *
+ * @param {string} userPath    - The path as stored in / derived from import_source.path
+ * @param {string} sourcePath  - import_source.path (canonical path shown in the UI)
+ * @param {string|null} mountedPath - import_source.mounted_path (local mount point, or null)
  */
-function findMountMapping(targetPath) {
-  const baseDirs = config.get('filesystem.base_dir');
-  const mountDirs = config.get('filesystem.mount_dir');
-
-  const matchingKey = Object.keys(baseDirs).find((key) => {
-    const baseDir = baseDirs[key];
-    if (!baseDir) return false;
-    const normalized = baseDir.endsWith('/') ? baseDir : `${baseDir}/`;
-    return targetPath === baseDir || targetPath.startsWith(normalized);
-  });
-
-  if (!matchingKey) return null;
-  return { baseDir: baseDirs[matchingKey], mountDir: mountDirs[matchingKey] };
-}
-
-/**
- * Translate a user-visible path (under baseDir) to the actual mounted path
- * accessible by the API process (under mountDir).
- */
-function toMountedPath(userPath, baseDir, mountDir) {
-  const relative = userPath.slice(baseDir.length);
-  return path.join(mountDir, relative);
+function toMountedPath(userPath, sourcePath, mountedPath) {
+  if (!mountedPath) return userPath;
+  const relative = userPath.slice(sourcePath.length);
+  return path.join(mountedPath, relative);
 }
 
 /**
@@ -83,8 +75,7 @@ function toMountedPath(userPath, baseDir, mountDir) {
  * configured import_source's path is a prefix of the requested path.
  *
  * This is the allowlist enforcement: paths are only served if they fall within
- * a configured import source. No client-supplied import source ID is needed —
- * the server derives policy entirely from the path itself.
+ * a configured import source.
  */
 async function resolveImportSource(req, res, next) {
   const { path: queryPath } = req.query;
@@ -117,22 +108,13 @@ async function resolveImportSource(req, res, next) {
     return res.status(403).send('Forbidden');
   }
 
-  // Find docker/container mount mapping for this source
-  const mapping = findMountMapping(importSource.path);
-  if (!mapping) {
-    logger.error('[FS] No mount mapping found for import source', { sourcePath: importSource.path });
-    return res.status(500).send('Filesystem configuration error');
-  }
-
   req.query.path = resolved;
   req.importSource = importSource;
-  req.mountMapping = mapping;
 
   logger.info('[FS] resolveImportSource passed', {
     sourcePath: importSource.path,
+    mountedPath: importSource.mounted_path ?? '(same as path)',
     resolvedPath: resolved,
-    baseDir: mapping.baseDir,
-    mountDir: mapping.mountDir,
     hasTrailingSlash: req.hasTrailingSlash,
   });
 
@@ -147,7 +129,7 @@ router.get(
   query('extension').optional().trim(),
   asyncHandler(async (req, res, next) => {
     const { dirs_only, path: query_path, extension } = req.query;
-    const { baseDir, mountDir } = req.mountMapping;
+    const { path: sourcePath, mounted_path: mountedPath } = req.importSource;
     const { hasTrailingSlash } = req;
 
     logger.info('[FS] Request received', {
@@ -164,11 +146,11 @@ router.get(
       return;
     }
 
-    const mounted_search_dir = toMountedPath(query_path, baseDir, mountDir);
+    const mounted_search_dir = toMountedPath(query_path, sourcePath, mountedPath);
 
     logger.info('[FS] Path resolution', {
-      baseDir,
-      mountDir,
+      sourcePath,
+      mountedPath: mountedPath ?? '(same as path)',
       mounted_search_dir,
       query_path,
     });
@@ -183,7 +165,7 @@ router.get(
 
         const parent_query_path = path.dirname(query_path);
         const search_term = path.basename(query_path);
-        const parent_mounted_dir = toMountedPath(parent_query_path, baseDir, mountDir);
+        const parent_mounted_dir = toMountedPath(parent_query_path, sourcePath, mountedPath);
 
         logger.info('[FS] Attempting case-insensitive substring match', {
           parent_query_path,
@@ -192,7 +174,6 @@ router.get(
         });
 
         // Ensure the parent path is still within the import source
-        const sourcePath = req.importSource.path;
         const sourcePathWithSlash = sourcePath.endsWith('/') ? sourcePath : `${sourcePath}/`;
         if (parent_query_path !== sourcePath && !parent_query_path.startsWith(sourcePathWithSlash)) {
           logger.warn('[FS] Parent path outside import source', { parent_query_path, sourcePath });
@@ -235,8 +216,8 @@ router.get(
             if (extension && dirs_only) {
               const extensionFilterPromises = matchingFiles.map(async (file) => {
                 if (!file.isDir) return file;
-                const mountedPath = toMountedPath(file.path, baseDir, mountDir);
-                const hasExtension = await directoryContainsExtension(mountedPath, extension);
+                const fileMountedPath = toMountedPath(file.path, sourcePath, mountedPath);
+                const hasExtension = await directoryContainsExtension(fileMountedPath, extension);
                 return hasExtension ? file : null;
               });
 
@@ -315,8 +296,8 @@ router.get(
         if (extension && dirs_only) {
           const extensionFilterPromises = filesData.map(async (file) => {
             if (!file.isDir) return file;
-            const mountedPath = path.join(mounted_search_dir, file.name);
-            const hasExtension = await directoryContainsExtension(mountedPath, extension);
+            const fileMountedPath = path.join(mounted_search_dir, file.name);
+            const hasExtension = await directoryContainsExtension(fileMountedPath, extension);
             return hasExtension ? file : null;
           });
 

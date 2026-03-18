@@ -12,7 +12,11 @@
                   <div v-if="!auth.canOperate">
                     {{ props.dataset.name }}
                   </div>
-                  <a v-else :href="`/datasets/${props.dataset.id}`">
+                  <a
+                    v-else
+                    :href="`/datasets/${props.dataset.id}`"
+                    data-testid="import-success-dataset-link"
+                  >
                     {{ props.dataset.name }}
                   </a>
                 </div>

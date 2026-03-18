@@ -1,13 +1,14 @@
 CREATE TABLE "import_source" (
-    "id"          SERIAL NOT NULL,
-    "path"        TEXT NOT NULL,
-    "label"       TEXT,
-    "description" TEXT,
-    "sort_order"  INTEGER,
-    "owner_id"    INTEGER,
-    "created_at"  TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at"  TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "metadata"    JSONB,
+    "id"           SERIAL NOT NULL,
+    "path"         TEXT NOT NULL,
+    "mounted_path" TEXT,
+    "label"        TEXT,
+    "description"  TEXT,
+    "sort_order"   INTEGER,
+    "owner_id"     INTEGER,
+    "created_at"   TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at"   TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "metadata"     JSONB,
 
     CONSTRAINT "import_source_pkey" PRIMARY KEY ("id")
 );

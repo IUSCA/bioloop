@@ -158,7 +158,7 @@ module.exports = {
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
       /**
-       * Import tests
+       * Role-Gated Feature Tests
        *
        * When a feature is role-gated, each role needs its own project so the
        * correct set of tests runs under the correct session.  The pattern is:

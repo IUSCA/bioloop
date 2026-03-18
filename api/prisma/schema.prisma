@@ -414,16 +414,17 @@ model alert {
 }
 
 model import_source {
-  id          Int       @id @default(autoincrement())
-  path        String    @unique
-  label       String?
-  description String?
-  sort_order  Int?
-  owner_id    Int?
-  owner       user?     @relation(fields: [owner_id], references: [id], onDelete: SetNull)
-  created_at  DateTime  @default(now()) @db.Timestamp(6)
-  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(6)
-  metadata    Json?
+  id             Int       @id @default(autoincrement())
+  path           String    @unique
+  mounted_path   String?
+  label          String?
+  description    String?
+  sort_order     Int?
+  owner_id       Int?
+  owner          user?     @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  metadata       Json?
 }
 
 enum access_type {

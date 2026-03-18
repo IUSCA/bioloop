@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import config from 'config';
-import { FEATURE_ROLE_SYNC_NOTE } from '../../../constants';
+import { FEATURE_ROLE_SYNC_NOTE } from '../../../../constants';
 
 // Which roles have access to the import feature, per the test environment config.
 // This must mirror the runtime UI feature config's enabledForRoles list.

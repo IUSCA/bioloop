@@ -1,7 +1,7 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop-feature-import-sources
+name: bioloop
 services:
   ui:
     image: node:21
@@ -62,6 +62,10 @@ services:
       - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
+  # One-shot service that creates the directory structure expected by workers
+  # and import sources on the shared data volume.  Runs bin/init_dirs.sh and
+  # exits.  Other services that need those directories (celery_worker,
+  # init_test_data) depend on this completing successfully before they start.
   init_data_dirs:
     build:
       context: ./workers
@@ -72,6 +76,18 @@ services:
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
+  # One-shot service that populates the import source directories with small
+  # sample dataset directories so the import UI has browsable content in the
+  # docker/dev environment.  Runs bin/create_test_import_datasets.sh and exits.
+  #
+  # Prerequisites (enforced by depends_on):
+  #   - init_data_dirs must have completed so the import source paths exist.
+  #   - api must be healthy so the script can call the datasets API to check
+  #     whether a given dataset name is already registered before creating it.
+  #
+  # The script reads APP_API_TOKEN from workers/.env (written by the API on
+  # first startup) to authenticate its API calls.  It is idempotent: existing
+  # dataset directories are skipped on subsequent runs.
   init_test_data:
     build:
       context: ./workers

@@ -50,13 +50,5 @@
         "username": "E2E_USER"
       }
     }
-  },
-  "filesystem": {
-    "base_dir": {
-      "slateScratch": "FILESYSTEM_BASE_DIR_SCRATCH"
-    },
-    "mount_dir": {
-      "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH"
-    }
   }
 }
