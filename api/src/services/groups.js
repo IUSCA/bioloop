@@ -611,7 +611,7 @@ async function listGroupMembers(group_id, {
       user: userMap.get(membership.user_id),
       assignor: userMap.get(membership.assigned_by),
       assigned_at: membership.assigned_at,
-      role: membership.effective_role,
+      role: membership.role,
       effective_role: membership.depth === 0 ? membership.role : 'TRANSITIVE_MEMBER',
       depth: membership.depth,
       membership_via: {
