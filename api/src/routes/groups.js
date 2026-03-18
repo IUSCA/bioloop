@@ -113,6 +113,38 @@ router.post(
   }),
 );
 
+// get hierarchical listing of groups with optional filters
+router.post(
+  '/hierarchy',
+  validate([
+    body('is_archived').optional().isBoolean().toBoolean(),
+    body('search_term').optional().isString(),
+    body('root_limit').default(10).isInt({ min: 1, max: 100 }).toInt(),
+    body('root_offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('group', 'view_hierarchy'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Get hierarchical listing of groups with optional filters'
+
+    const params = _.pick(['is_archived', 'search_term', 'root_limit', 'root_offset'])(req.body);
+
+    // results: [{ group info, _children: [{ group info, _children: [...] }, ...] }, ...]
+    const results = await groupService.getGroupHierarchy(params);
+
+    const filterHierarchy = (group) => {
+      const filtered = req.permission.filter(_.omit(['_children'], group));
+      if (Array.isArray(group._children) && group._children.length > 0) {
+        filtered._children = group._children.map(filterHierarchy);
+      }
+      return filtered;
+    };
+
+    const filteredResults = results.map(filterHierarchy);
+    res.json(filteredResults);
+  }),
+);
+
 // Create a new child group under a parent group
 router.post(
   '/:id/children',

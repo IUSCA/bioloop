@@ -1185,6 +1185,103 @@ async function getGroupDescendants(group_id, opts = {}) {
   return descendants.map(({ depth, descendant }) => ({ depth, ...descendant }));
 }
 
+/**
+ * Get a hierarchical (nested) representation of groups.
+ *
+ * This is a convenience helper that returns groups in a parent/children tree
+ * structure, with an optional filter on archived status or simple text search.
+ *
+ * @param {Object} options
+ * @param {boolean|null} options.is_archived - Filter by archived status. Null returns all.
+ * @param {string|null} options.search_term - Optional search term to filter groups by name/slug/description.
+ * @param {number} options.root_limit - Max number of root groups to return.
+ * @param {number} options.root_offset - Offset for root group pagination.
+ * @returns {Promise<Array<Object>>} Array of group objects with an `_children` array.
+ */
+async function getGroupHierarchy({
+  is_archived = null,
+  search_term = null,
+  root_limit = 10,
+  root_offset = 0,
+} = {}) {
+  const where = {};
+  if (is_archived != null) {
+    where.is_archived = is_archived;
+  }
+  if (search_term) {
+    where.OR = [
+      { name: { contains: search_term, mode: 'insensitive' } },
+      { slug: { contains: search_term, mode: 'insensitive' } },
+      { description: { contains: search_term, mode: 'insensitive' } },
+    ];
+  }
+
+  // fetch all groups matching the filter criteria
+  const _groups = await prisma.group.findMany({
+    where,
+    include: {
+      _count: {
+        select: {
+          members: true,
+          owned_datasets: true,
+          owned_collections: true,
+        },
+      },
+    },
+  });
+
+  const groups = _groups.map((group) => ({
+    ...group,
+    member_count: group._count.members,
+    dataset_count: group._count.owned_datasets,
+    collection_count: group._count.owned_collections,
+  }));
+
+  // build a map of group_id to group object for easy lookup, and an array of group IDs for querying closure table
+  const groupIds = groups.map((g) => g.id);
+  const groupMap = new Map(groups.map((g) => [g.id, { ...g, _children: [] }]));
+
+  if (groupIds.length === 0) {
+    return [];
+  }
+
+  // fetch all closure edges between the groups to determine parent-child relationships
+  const closureEdges = await prisma.group_closure.findMany({
+    where: {
+      ancestor_id: { in: groupIds },
+      descendant_id: { in: groupIds },
+      depth: 1,
+    },
+    select: {
+      ancestor_id: true,
+      descendant_id: true,
+    },
+  });
+
+  // keep track of which groups are children to identify root groups later
+  const childIds = new Set();
+  // build the tree by linking parents to children based on the closure edges
+  for (const edge of closureEdges) {
+    // for each parent-child edge, find the corresponding group objects and link them in the tree
+    // this works because JS Map stores references to the original group objects,
+    // so modifying the parent._children array modifies the original object in the map
+    const parent = groupMap.get(edge.ancestor_id);
+    const child = groupMap.get(edge.descendant_id);
+    if (parent && child) {
+      parent._children.push(child);
+      childIds.add(edge.descendant_id);
+    }
+  }
+
+  // the root groups are those that are never a child in any closure edge (i.e. their ID never appears as a descendant_id)
+  const roots = groups
+    .filter((g) => !childIds.has(g.id))
+    .map((g) => groupMap.get(g.id));
+
+  // apply pagination to the root groups; children are not paginated and will all be returned for each root
+  return roots.slice(root_offset, root_offset + root_limit);
+}
+
 module.exports = {
   createGroup,
   getGroupById,
@@ -1199,6 +1296,7 @@ module.exports = {
   demoteAdminToMember,
   getAncestorGroups,
   getDescendantGroups,
+  getGroupHierarchy,
   searchAllGroups,
   searchGroupsForUser,
   getGroupAncestors,
