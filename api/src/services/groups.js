@@ -1217,7 +1217,7 @@ async function getGroupHierarchy({
   }
 
   // fetch all groups matching the filter criteria
-  const _groups = await prisma.group.findMany({
+  const groups = await prisma.group.findMany({
     where,
     include: {
       _count: {
@@ -1229,13 +1229,6 @@ async function getGroupHierarchy({
       },
     },
   });
-
-  const groups = _groups.map((group) => ({
-    ...group,
-    member_count: group._count.members,
-    dataset_count: group._count.owned_datasets,
-    collection_count: group._count.owned_collections,
-  }));
 
   // build a map of group_id to group object for easy lookup, and an array of group IDs for querying closure table
   const groupIds = groups.map((g) => g.id);
@@ -1282,6 +1275,41 @@ async function getGroupHierarchy({
   return roots.slice(root_offset, root_offset + root_limit);
 }
 
+/**
+ * Get groups that do not have no admins or any active admins
+ * @returns {Promise<Array<Object>>} List of groups without active admins, including counts of members, owned datasets, and owned collections
+ */
+async function getGroupsWithoutActiveAdmins() {
+  // From all non-archived groups, remove groups that have at least one active admin user.
+  // An active admin user is defined as a user that is not deleted and has an admin role in the group.
+  const rows = await prisma.$queryRaw`
+    SELECT g.id
+    FROM "group" g
+    WHERE g.is_archived = false
+      AND NOT EXISTS (
+        SELECT 1
+        FROM group_user gu
+        JOIN "user" u ON u.subject_id = gu.user_id
+        WHERE gu.group_id = g.id
+          AND gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+          AND u.is_deleted = false
+      )
+  `;
+  const groupIds = rows.map((row) => row.id);
+  return prisma.group.findMany({
+    where: { id: { in: groupIds } },
+    include: {
+      _count: {
+        select: {
+          members: true,
+          owned_datasets: true,
+          owned_collections: true,
+        },
+      },
+    },
+  });
+}
+
 module.exports = {
   createGroup,
   getGroupById,
@@ -1301,4 +1329,5 @@ module.exports = {
   searchGroupsForUser,
   getGroupAncestors,
   getGroupDescendants,
+  getGroupsWithoutActiveAdmins,
 };

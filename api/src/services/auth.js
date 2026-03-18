@@ -235,6 +235,8 @@ function issueToken(claim) {
   return jsonwt.sign(claim, key, signOpt);
 }
 
+const isPlatformAdmin = (req) => req.user?.roles?.includes('admin') === true;
+
 module.exports = {
   onLogin,
   issueJWT,
@@ -248,4 +250,5 @@ module.exports = {
   getLoginUser,
   issueSignupToken,
   issueToken,
+  isPlatformAdmin,
 };

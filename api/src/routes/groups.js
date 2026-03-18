@@ -12,6 +12,7 @@ const groupService = require('@/services/groups');
 const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
+const { isPlatformAdmin } = require('@/services/auth');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
 
@@ -48,9 +49,7 @@ router.post(
     body('sort_by').default('depth').isIn(['name', 'created_at', 'updated_at', 'depth']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
-    body('direct_membership_only').optional().isBoolean(),
-    body('oversight_only').optional().isBoolean(),
-    body('admin_only').optional().isBoolean(),
+    body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
   ]),
   authorize('group', 'list'),
   asyncHandler(async (req, res) => {
@@ -59,11 +58,8 @@ router.post(
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order',
-      'is_archived', 'direct_membership_only', 'oversight_only', 'admin_only',
+      'is_archived', 'scope',
     ])(req.body);
-
-    // if user is platform admin, search all groups, otherwise search only groups the user has access to
-    const isPlatformAdmin = req.user?.roles?.includes('admin') === true;
 
     // check if search term is a valid UUID, if so, search by id instead of name/description
     if (params.search_term && isUUID(params.search_term)) {
@@ -71,15 +67,46 @@ router.post(
       delete params.search_term;
     }
 
+    let direct_membership_only; let oversight_only; let
+      admin_only;
+    if (params.scope !== 'all') {
+      if (params.scope === 'admin') {
+        admin_only = true;
+      } else if (params.scope === 'direct') {
+        direct_membership_only = true;
+      } else if (params.scope === 'oversight') {
+        oversight_only = true;
+      }
+    }
+
+    // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
-    if (isPlatformAdmin) {
-      promise = groupService.searchAllGroups({ ...params, user_id: req.user.subject_id });
+    if (isPlatformAdmin(req)) {
+      promise = groupService.searchAllGroups({
+        ...params, user_id: req.user.subject_id, direct_membership_only, oversight_only, admin_only,
+      });
     } else {
-      promise = groupService.searchGroupsForUser({ ...params, user_id: req.user.subject_id });
+      promise = groupService.searchGroupsForUser({
+        ...params, user_id: req.user.subject_id, direct_membership_only, oversight_only, admin_only,
+      });
     }
     const { metadata, data } = await promise;
     const filteredGroups = data.map((g) => req.permission.filter(g));
     res.json({ metadata, data: filteredGroups });
+  }),
+);
+
+// For platform admin use - get groups that do not have an active admin (e.g. for cleanup purposes)
+router.get(
+  '/without_active_admin',
+  authorize('group', 'list_invalid'),
+  asyncHandler(async (req, res) => {
+  // #swagger.tags = ['Groups']
+  // #swagger.summary = 'Get groups without an active admin'
+
+    const groups = await groupService.getGroupsWithoutActiveAdmin();
+    const filteredGroups = groups.map((g) => req.permission.filter(g));
+    res.json(filteredGroups);
   }),
 );
 
@@ -168,8 +195,7 @@ router.post(
     const { members = [], admins = [] } = req.body;
 
     // if not platform admin, add user as admin of the child group by default to ensure they have access to manage the child group they created
-    const isPlatformAdmin = req.user?.roles?.includes('admin') === true;
-    if (!isPlatformAdmin && !admins.includes(req.user.subject_id)) {
+    if (!isPlatformAdmin(req) && !admins.includes(req.user.subject_id)) {
       admins.push(req.user.subject_id);
     }
 
