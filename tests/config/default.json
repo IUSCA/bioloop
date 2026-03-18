@@ -17,6 +17,9 @@
   "enabledFeatures": {
     "notifications": {
       "enabledForRoles": []
+    },
+    "import": {
+      "enabledForRoles": ["admin", "operator"]
     }
   }
 }

@@ -21,10 +21,13 @@
         @click="setStep(i)"
         :disabled="isStepperButtonDisabled(i)"
         preset="secondary"
+        :data-testid="`step-button-${i}`"
       >
         <div class="flex flex-col items-center">
           <Icon :icon="s.icon" />
-          <span class="hidden sm:block"> {{ s.label }} </span>
+          <span class="hidden sm:block" data-testid="step-label">
+            {{ s.label }}
+          </span>
         </div>
       </va-button>
     </template>
@@ -46,6 +49,7 @@
             importSources.length === 0
           "
           :loading="loadingImportSources"
+          data-testid="import-source-select"
         />
 
         <div class="flex flex-col w-full">
@@ -61,9 +65,14 @@
             @open="onFileSearchAutocompleteOpen"
             @close="onFileSearchAutocompleteClose"
             :options="fileList"
+            :data-test-id="'import-file-autocomplete'"
           />
 
-          <div class="text-xs va-text-danger" v-if="!stepIsPristine">
+          <div
+            class="text-xs va-text-danger"
+            v-if="!stepIsPristine"
+            data-testid="import-source-error"
+          >
             {{ formErrors[STEP_KEYS.SELECT_DIRECTORY] }}
           </div>
         </div>
@@ -81,6 +90,7 @@
           label="Dataset Type"
           placeholder="Select dataset type"
           class="flex-grow"
+          data-testid="import-metadata-dataset-type-select"
         />
         <div class="flex items-center ml-2">
           <va-popover>
@@ -107,6 +117,7 @@
               color="primary"
               label="Assign source Raw Data"
               class="flex-grow"
+              data-testid="import-metadata-assign-source-checkbox"
             />
           </div>
         </div>
@@ -124,6 +135,7 @@
             class="flex-grow"
             :label="'Dataset'"
             :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+            data-test-id="import-metadata-dataset-autocomplete"
           >
           </DatasetSelectAutoComplete>
           <va-popover>
@@ -155,6 +167,7 @@
               color="primary"
               label="Assign Project"
               class="flex-grow"
+              data-testid="import-metadata-assign-project-checkbox"
             />
           </div>
         </div>
@@ -171,6 +184,7 @@
             class="flex-grow"
             :label="'Project'"
             :messages="noProjectsToAssign ? 'No Projects to select' : null"
+            data-test-id="import-metadata-project-autocomplete"
           >
           </ProjectAsyncAutoComplete>
           <va-popover>
@@ -205,6 +219,7 @@
               color="primary"
               label="Assign source Instrument"
               class="flex-grow"
+              data-testid="import-metadata-assign-instrument-checkbox"
             />
           </div>
         </div>
@@ -222,6 +237,7 @@
             :messages="
               noInstrumentsToAssign ? 'No Instruments to select' : null
             "
+            data-testid="import-metadata-source-instrument-select"
           />
           <div class="flex items-center ml-2">
             <va-popover>
@@ -265,6 +281,7 @@
             }
           "
           :disabled="isPreviousButtonDisabled"
+          data-testid="import-previous-button"
         >
           Previous
         </va-button>
@@ -273,6 +290,7 @@
           @click="onNextClick(nextStep)"
           :color="isLastStep ? 'success' : 'primary'"
           :disabled="isNextButtonDisabled"
+          data-testid="import-next-button"
         >
           {{ isLastStep ? submissionButtonText : "Next" }}
         </va-button>

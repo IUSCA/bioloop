@@ -97,18 +97,19 @@ async function main() {
     update: role,
   })));
 
-  // Seed import sources for non-production environments
+  // Seed import sources for non-production environments.
+  // These paths match the directories created by workers/bin/init_dirs.sh.
   const importSources = [
     {
-      path: '/opt/sca/data/imports/entrypoint',
-      label: 'Imports',
-      description: 'Default import source for docker/dev environment',
+      path: '/opt/sca/data/imports/genomics_lab_instrument_drop',
+      label: 'Genomics Lab',
+      description: 'Drop location for genomics lab instrument output',
       sort_order: 1,
     },
     {
-      path: '/opt/sca/data/project/entrypoint',
-      label: 'Project',
-      description: 'Project filesystem import source for docker/dev environment',
+      path: '/opt/sca/data/imports/proteomics_lab_instrument_drop',
+      label: 'Proteomics Lab',
+      description: 'Drop location for proteomics lab instrument output',
       sort_order: 2,
     },
   ];

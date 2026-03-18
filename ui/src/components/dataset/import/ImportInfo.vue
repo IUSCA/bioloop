@@ -1,5 +1,5 @@
 <template>
-  <va-card>
+  <va-card data-testid="import-info-card">
     <va-card-title>Import Details</va-card-title>
     <va-card-content>
       <div class="va-table-responsive">

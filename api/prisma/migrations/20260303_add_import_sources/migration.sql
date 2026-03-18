@@ -7,6 +7,7 @@ CREATE TABLE "import_source" (
     "owner_id"    INTEGER,
     "created_at"  TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at"  TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "metadata"    JSONB,
 
     CONSTRAINT "import_source_pkey" PRIMARY KEY ("id")
 );

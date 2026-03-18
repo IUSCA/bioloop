@@ -1,26 +1,27 @@
 #!/bin/bash
-# reset_docker.sh
+# reset_docker_e2e.sh
 #
-# Resets all Docker-managed state for this Bioloop instance: stops containers,
+# Resets all Docker-managed state for the e2e test stack: stops containers,
 # removes named volumes, clears bind-mounted database data, and deletes all
-# generated credentials, keys, and certs.  On the next `docker compose up`
-# every service starts as if the Docker environment had never been brought up.
+# generated credentials, keys, certs, and Playwright auth state.  On the
+# next `docker compose -f docker-compose-e2e.yml up` every service starts as
+# if the e2e environment had never been brought up.
 #
-# This script only operates on Docker resources.  It does not affect source
-# code, committed config files, or any non-Docker runtime.
+# This script only operates on Docker resources and e2e test artifacts.  It
+# does not affect source code or committed config files.
 #
 # SAFETY:
 #   - Requires Docker to be running (aborts otherwise).
-#   - Verifies this is a Docker-mode Bioloop project before proceeding.
+#   - Verifies this is the e2e compose file before proceeding.
 #   - The compose project name is read dynamically from the 'name:' field in
-#     docker-compose.yml. All Docker operations are scoped to that project;
-#     containers and volumes from other projects are never touched.
+#     docker-compose-e2e.yml.  All Docker operations are scoped to that
+#     project; containers and volumes from other projects are never touched.
 #   - You are prompted for confirmation before each destructive step.
 #
 # USAGE:
-#   bin/reset_docker.sh              # interactive — prompts before each step
-#   bin/reset_docker.sh --reset-all # non-interactive — skips all prompts
-#   bin/reset_docker.sh -a          # shorthand for --reset-all
+#   bin/reset_docker_e2e.sh              # interactive — prompts before each step
+#   bin/reset_docker_e2e.sh --reset-all  # non-interactive — skips all prompts
+#   bin/reset_docker_e2e.sh -a           # shorthand for --reset-all
 
 set -euo pipefail
 
@@ -48,8 +49,6 @@ confirm() {
 }
 
 # ── guard: Docker must be running ────────────────────────────────────────────
-# This script only resets Docker-managed resources.  If Docker is not running
-# there is nothing to reset and no point continuing.
 
 if ! docker info > /dev/null 2>&1; then
   abort "Docker is not running or not accessible. Start Docker Desktop and try again."
@@ -60,57 +59,47 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-if [[ ! -f "${REPO_ROOT}/docker-compose.yml" ]]; then
-  abort "docker-compose.yml not found at ${REPO_ROOT}. Run this script from the repo root."
+COMPOSE_FILE="${REPO_ROOT}/docker-compose-e2e.yml"
+
+if [[ ! -f "${COMPOSE_FILE}" ]]; then
+  abort "docker-compose-e2e.yml not found at ${REPO_ROOT}. Run this script from the repo root."
 fi
 
 # Read the compose project name directly from the file so this script stays
-# in sync with docker-compose.yml without requiring manual updates.
-COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "${REPO_ROOT}/docker-compose.yml")
+# in sync with docker-compose-e2e.yml without requiring manual updates.
+COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "${COMPOSE_FILE}")
 if [[ -z "${COMPOSE_PROJECT}" ]]; then
-  abort "docker-compose.yml does not declare a 'name:' field. Wrong repo or wrong branch?"
+  abort "docker-compose-e2e.yml does not declare a 'name:' field. Wrong repo or wrong branch?"
 fi
 
 # ── guard: verify this is a containerized project ────────────────────────────
-# Confirm that the compose file configures services with APP_ENV=docker or
-# APP_ENV=ci, meaning this is the Docker-based development/CI environment — not a
-# bare-metal or VM-based deployment.
 
-if ! grep -Eq 'APP_ENV=(docker|ci)' "${REPO_ROOT}/docker-compose.yml"; then
-  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose.yml. This does not appear to be a containerized environment."
+if ! grep -Eq 'APP_ENV=(docker|ci)' "${COMPOSE_FILE}"; then
+  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose-e2e.yml. This does not appear to be a containerized environment."
 fi
 
 cd "${REPO_ROOT}"
 info "Working directory: ${REPO_ROOT}"
+info "Compose file:      docker-compose-e2e.yml"
 info "Compose project:   ${COMPOSE_PROJECT}"
-
-# ── guard: refuse on production instances ────────────────────────────────────
-
-if grep -rq "APP_ENV=production" api/.env workers/.env 2>/dev/null; then
-  abort "APP_ENV=production detected in .env files. Refusing to reset a production instance."
-fi
 
 echo ""
 echo -e "${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${RED}║  WARNING: this will permanently delete all Docker-managed   ║${NC}"
-echo -e "${RED}║  state for this Bioloop instance (databases, keys, credentials).  ║${NC}"
+echo -e "${RED}║  state for the e2e stack (databases, keys, test auth state). ║${NC}"
 echo -e "${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-confirm "Proceed with Docker environment reset?" || abort "Cancelled by user."
+confirm "Proceed with e2e Docker environment reset?" || abort "Cancelled by user."
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 1 — Stop and remove containers (this project only).
-#
-# `docker compose down` is scoped to the compose project read from docker-compose.yml
-# and will not affect containers from other projects.
-# --remove-orphans cleans up containers whose service definitions were removed.
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 info "STEP 1 — Stop and remove containers (project: ${COMPOSE_PROJECT})"
 
 if confirm "Stop all ${COMPOSE_PROJECT} containers?"; then
-  docker compose down --remove-orphans
+  docker compose -f "${COMPOSE_FILE}" down --remove-orphans
   success "Containers stopped and removed."
 else
   warn "Skipped. Volumes and bind-mount data can still be cleaned, but database containers must be stopped first or data files may be locked."
@@ -118,10 +107,6 @@ fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 2 — Remove Docker named volumes (this project only).
-#
-# Volumes are identified strictly by the compose project label so only volumes
-# owned by this project are removed.  `docker volume prune` is NOT used
-# because it would affect every Docker project on the machine.
 #
 # Volumes removed (when present, prefixed by the compose project name):
 #   *_rhythm_keys               — RSA signing keys for Rhythm JWT service
@@ -134,6 +119,7 @@ fi
 #   *_api_node_modules          — cached npm packages for api
 #   *_ui_node_modules           — cached npm packages for ui
 #   *_secure_download_node_modules — cached npm packages for secure_download
+#   *_test_modules              — cached npm packages for the e2e test runner
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 info "STEP 2 — Remove Docker named volumes (project: ${COMPOSE_PROJECT})"
@@ -159,15 +145,8 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 3 — Remove bind-mounted database data directories.
 #
-# PostgreSQL and MongoDB persist data in host directories bind-mounted into
-# their containers.  Docker writes these files as root, so a throwaway Alpine
-# container is used to remove them — no host-level sudo required.
-#
 #   db/postgres/data — PostgreSQL cluster files
 #   db/mongo/data    — MongoDB data files
-#
-# Effect: the next `docker compose up` starts with empty databases.
-# Prisma migrations and mongo-init.js recreate the schema automatically.
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 info "STEP 3 — Remove bind-mounted database data"
@@ -197,7 +176,6 @@ for DATA_DIR in db/postgres/data db/mongo/data; do
 done
 
 # Remove the seed marker so the DB is re-seeded on next startup.
-# Written by api/bin/entrypoint.sh after a successful seed run.
 if [[ -f "api/.db_seeded" ]]; then
   rm -f api/.db_seeded
   success "Removed api/.db_seeded (DB will be re-seeded on next startup)."
@@ -205,10 +183,6 @@ fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 4 — Remove generated .env files.
-#
-# Entrypoint scripts write runtime credentials into .env files at startup.
-# These are NOT committed to git — .env.default files are the templates.
-# Removing them forces full credential re-generation on next startup.
 #
 #   api/.env     — WORKFLOW_AUTH_TOKEN, OAuth client credentials
 #   workers/.env — APP_API_TOKEN
@@ -232,14 +206,8 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 5 — Remove generated keys and certificates.
 #
-#   api/keys/auth.key, api/keys/auth.pub
-#     RSA key pair used by the API to sign and verify JWTs.
-#     Bind-mounted from api/keys/ — removing forces regeneration on next start.
-#     Rhythm keys are in the *_rhythm_keys named volume (removed in step 2).
-#
-#   ui/.cert/cert.pem, ui/.cert/key.pem
-#     Self-signed TLS cert for the Nuxt dev server on port 443.
-#     Bind-mounted from ui/.cert/ — removing forces regeneration on next start.
+#   api/keys/auth.key, api/keys/auth.pub — RSA key pair for JWT signing
+#   ui/.cert/cert.pem, ui/.cert/key.pem  — self-signed TLS cert for UI
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 info "STEP 5 — Remove generated keys and certificates"
@@ -273,10 +241,7 @@ fi
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 6 — Remove stale runtime files.
 #
-#   workers/celery_worker.pid
-#     Written by Celery on startup into the bind-mounted ./workers/ directory.
-#     Persists across container recreations.  If present when a new container
-#     starts, Celery refuses to start: "Pidfile already exists".
+#   workers/celery_worker.pid — Celery PID file; presence prevents restart.
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 info "STEP 6 — Remove stale runtime files"
@@ -289,17 +254,57 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
+# STEP 7 — Remove Playwright auth state and test artifacts.
+#
+#   tests/.auth/          — saved browser storage state (login sessions)
+#   tests/playwright-report/ — HTML test report from the last run
+#   tests/test-results/   — per-test screenshots, traces, and videos
+#
+# Removing auth state forces the login setup projects to re-authenticate on
+# the next test run, which is required after a database reset.
+# ─────────────────────────────────────────────────────────────────────────────
+echo ""
+info "STEP 7 — Remove Playwright auth state and test artifacts"
+
+E2E_ARTIFACT_DIRS=(
+  "tests/.auth"
+  "tests/playwright-report"
+  "tests/test-results"
+)
+
+E2E_DIRS_TO_REMOVE=()
+for d in "${E2E_ARTIFACT_DIRS[@]}"; do
+  [[ -d "$d" ]] && E2E_DIRS_TO_REMOVE+=("$d")
+done
+
+if [[ ${#E2E_DIRS_TO_REMOVE[@]} -eq 0 ]]; then
+  info "No Playwright artifact directories found. Nothing to remove."
+else
+  echo "  Directories to be removed:"
+  printf "    %s\n" "${E2E_DIRS_TO_REMOVE[@]}"
+
+  if confirm "Remove the above Playwright artifact directories?"; then
+    rm -rf "${E2E_DIRS_TO_REMOVE[@]}"
+    success "Playwright artifacts removed."
+  else
+    warn "Skipped Playwright artifact removal."
+  fi
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
 # DONE
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GRN}═══════════════════════════════════════════════════════════════${NC}"
-success "Docker environment reset complete."
+success "e2e Docker environment reset complete."
 echo -e "${GRN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
-info "To bring the stack back up:"
-echo "    docker compose up -d"
+info "To bring the e2e stack back up:"
+echo "    docker compose -f docker-compose-e2e.yml up -d"
+echo "    # or:"
+echo "    bin/deploy_containerized_e2e.sh"
 echo ""
 info "Allow 1–2 minutes on first startup for keys, credentials, and"
 info "database migrations to be generated.  Watch progress with:"
-echo "    docker compose logs -f"
+echo "    docker compose -f docker-compose-e2e.yml logs -f"
 echo ""

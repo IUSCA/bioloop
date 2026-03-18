@@ -80,7 +80,7 @@ const exports = {
       enabledForRoles: [],
     },
     import: {
-      enabledForRoles: ["admin"],
+      enabledForRoles: ["admin", "operator"],
     },
     downloads: true,
     signup: false,

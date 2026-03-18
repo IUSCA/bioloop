@@ -693,6 +693,151 @@ test('sidebar items visible', async ({ page }) => {
 
 ---
 
+### Pattern 6: Role-Gated Features
+
+Some features are only enabled for specific roles (e.g., import is enabled for admin and operator but never for user). Testing this correctly requires **three synchronized configs** and a consistent project layout in `playwright.config.js`.
+
+---
+
+#### The Three Files That Must Stay in Sync
+
+| File | Purpose | Field to update |
+|---|---|---|
+| `ui/src/config.js` | Runtime UI feature gate | `enabledFeatures.<feature>.enabledForRoles` |
+| `tests/config/default.json` | Test environment mirror of the UI config | Same `enabledFeatures.<feature>.enabledForRoles` |
+| `tests/playwright.config.js` | Routes each role's project to functional tests or the access-control check | `testMatch` / `testIgnore` per project |
+
+**Hard rule: `tests/config/default.json` must always mirror `ui/src/config.js` for every `enabledForRoles` list.**
+
+The UI config controls what the running application renders. The test config is read by `access_control.spec.js` (and any feature test that uses `test.skip`) to decide whether a test should run. If the two diverge, skip conditions fire incorrectly: tests that should run are silently skipped, or tests that should be skipped start failing.
+
+---
+
+#### The Three-Project Layout
+
+For each feature, create three kinds of Playwright projects:
+
+```javascript
+// playwright.config.js
+
+// --- Roles WITH access: run the full functional test suite ---
+{
+  name: 'admin_import',
+  use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+  dependencies: ['admin_login'],
+  testMatch: '/view/authenticated/import/*.spec.js',
+  // access_control.spec.js is excluded because admin CAN access the feature.
+  testIgnore: '/view/authenticated/import/access_control.spec.js',
+},
+{
+  name: 'operator_import',
+  use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+  dependencies: ['operator_login'],
+  testMatch: '/view/authenticated/import/*.spec.js',
+  testIgnore: '/view/authenticated/import/access_control.spec.js',
+},
+
+// --- Roles WITHOUT access: run only the "feature disabled" check ---
+{
+  name: 'user_import',
+  use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+  dependencies: ['user_login'],
+  // Only access_control.spec.js: verifies the "feature disabled" alert is shown.
+  testMatch: '/view/authenticated/import/access_control.spec.js',
+},
+```
+
+---
+
+#### The `access_control.spec.js` Pattern
+
+Each role-gated feature should have an `access_control.spec.js` alongside its other specs:
+
+```javascript
+// tests/view/authenticated/import/access_control.spec.js
+const { test, expect } = require('@playwright/test');
+const config = require('config');
+
+// Read which roles have access from tests/config/default.json.
+// This MUST match ui/src/config.js enabledFeatures.import.enabledForRoles.
+const importEnabledForRoles = config.enabledFeatures?.import?.enabledForRoles ?? [];
+
+test.describe('Dataset Import access control', () => {
+  test('should show a disabled-feature warning for roles without import access', async ({ page }) => {
+    // Guard against misconfiguration: if no role has access the test is pointless.
+    test.skip(
+      importEnabledForRoles.length === 0,
+      'Import feature is not configured for any role in this environment',
+    );
+
+    await page.goto('/datasets/import');
+
+    // Roles without access see this alert instead of the feature UI.
+    await expect(
+      page.locator('.va-alert').filter({ hasText: 'This feature is currently disabled' }),
+    ).toBeVisible({ timeout: 15000 });
+  });
+});
+```
+
+This spec is **only assigned** to projects whose role is NOT in `enabledForRoles` (i.e., roles that should see the disabled alert). It is **excluded** via `testIgnore` from projects whose role IS in `enabledForRoles`.
+
+---
+
+#### Adding a Role to a Feature's Access List
+
+When a feature becomes available to an additional role (e.g., enabling import for operator):
+
+1. **`ui/src/config.js`** — add the role:
+   ```javascript
+   import: { enabledForRoles: ["admin", "operator"] }
+   ```
+
+2. **`tests/config/default.json`** — mirror the change exactly:
+   ```json
+   "import": { "enabledForRoles": ["admin", "operator"] }
+   ```
+
+3. **`playwright.config.js`** — change the role's project from the access-control-only config to the full functional config:
+   ```javascript
+   // Before (role had no access):
+   { name: 'operator_import', testMatch: '/view/authenticated/import/access_control.spec.js' }
+
+   // After (role now has access):
+   {
+     name: 'operator_import',
+     testMatch: '/view/authenticated/import/*.spec.js',
+     testIgnore: '/view/authenticated/import/access_control.spec.js',
+   }
+   ```
+
+#### Removing a Role from a Feature's Access List
+
+Reverse the steps above: remove from both configs and switch the project back to `testMatch: 'access_control.spec.js'` (remove `testIgnore`).
+
+---
+
+#### Skip Conditions in Functional Tests
+
+Functional tests that depend on config-driven behavior should guard themselves with `test.skip`:
+
+```javascript
+const config = require('config');
+
+// Reads from tests/config/default.json — must mirror ui/src/config.js
+const importEnabledForRoles = config.enabledFeatures?.import?.enabledForRoles ?? [];
+
+test('import stepper renders', async ({ page }) => {
+  // Skip entirely if the feature is off for all roles (e.g., local dev with import disabled).
+  test.skip(importEnabledForRoles.length === 0, 'Import feature is disabled in this environment');
+
+  await page.goto('/datasets/import');
+  await expect(page.getByTestId('import-stepper')).toBeVisible();
+});
+```
+
+---
+
 ## Running Tests
 
 ### Locally (Docker Compose)

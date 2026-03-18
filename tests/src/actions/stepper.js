@@ -1,25 +1,27 @@
 const { expect } = require('../fixtures');
 
 /**
- * Navigates to the next step in the upload process
+ * Navigates to the next step in a stepper
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} [params.nextButtonTestId='upload-next-button'] - The test ID of the next button
  * @returns {Promise<void>}
  */
-async function navigateToNextStep({ page }) {
-  const nextButton = page.getByTestId('upload-next-button');
+async function navigateToNextStep({ page, nextButtonTestId = 'upload-next-button' }) {
+  const nextButton = page.getByTestId(nextButtonTestId);
   await expect(nextButton).toBeVisible();
   await nextButton.click();
 }
 
 /**
- * Navigates to the previous step in the upload process
+ * Navigates to the previous step in a stepper
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} [params.previousButtonTestId='upload-previous-button'] - The test ID of the previous button
  * @returns {Promise<void>}
  */
-async function navigateToPreviousStep({ page }) {
-  const previousButton = page.getByTestId('upload-previous-button');
+async function navigateToPreviousStep({ page, previousButtonTestId = 'upload-previous-button' }) {
+  const previousButton = page.getByTestId(previousButtonTestId);
   await expect(previousButton).toBeVisible();
   await previousButton.click();
 }

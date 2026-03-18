@@ -1,7 +1,7 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-feature-import-sources
 services:
   ui:
     image: node:21
@@ -72,6 +72,25 @@ services:
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
 
+  init_test_data:
+    build:
+      context: ./workers
+    environment:
+      - APP_ENV=docker
+      - API_BASE_URL=http://api:3030
+    env_file:
+      - workers/.env.default
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    command: ["bin/create_test_import_datasets.sh"]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+
   celery_worker:
     build:
       context: ./workers
@@ -89,10 +108,8 @@ services:
       - landing_volume:/opt/sca/data
     entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
-      init_data_dirs:
+      init_test_data:
         condition: service_completed_successfully
-      api:
-        condition: service_healthy
       mongo:
         condition: service_started
       queue:
@@ -116,10 +133,8 @@ services:
       - landing_volume:/opt/sca/data
     entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
-      init_data_dirs:
+      init_test_data:
         condition: service_completed_successfully
-      api:
-        condition: service_healthy
       mongo:
         condition: service_started
       queue:

@@ -66,7 +66,7 @@ module.exports = {
         name: 'operator_login',
         testMatch: path.join(
           __dirname,
-          '/tests/setup/operator_login.setup.js',
+          '/src/tests/setup/operator_login.setup.js',
         ),
       },
       /** Project to login as user */
@@ -157,12 +157,57 @@ module.exports = {
         use: { ...devices['Desktop Chrome'] },
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
-      /** Import tests */
+      /**
+       * Import tests
+       *
+       * When a feature is role-gated, each role needs its own project so the
+       * correct set of tests runs under the correct session.  The pattern is:
+       *
+       *  - Roles WITH access   → testMatch the full feature glob
+       *                          testIgnore access_control.spec.js
+       *                          (these roles reach the real UI, so the
+       *                          "feature disabled" check must not run for them)
+       *
+       *  - Roles WITHOUT access → testMatch ONLY access_control.spec.js,
+       *                           which asserts the "feature disabled" alert
+       *                           is shown instead of the feature UI
+       *
+       * IMPORTANT — three configs must stay in sync whenever the role list changes:
+       *   1. ui/src/config.js          enabledFeatures.<feature>.enabledForRoles
+       *   2. tests/config/default.json enabledFeatures.<feature>.enabledForRoles
+       *      (see the _sync_note key in that file)
+       *   3. This file                 testMatch / testIgnore per project below
+       *
+       * To give a role access to the feature:
+       *   - Add the role to both config files (steps 1 & 2).
+       *   - Switch the project's testMatch to the full glob and add testIgnore
+       *     for access_control.spec.js (step 3).
+       *
+       * To remove a role's access, reverse the steps above.
+       */
+
+      // admin — has import access: runs all functional tests
       {
         name: 'admin_import',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/import/*.spec.js',
+        testIgnore: '/view/authenticated/import/access_control.spec.js',
+      },
+      // operator — has import access: runs all functional tests
+      {
+        name: 'operator_import',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/import/*.spec.js',
+        testIgnore: '/view/authenticated/import/access_control.spec.js',
+      },
+      // user — no import access: only verifies the "feature disabled" alert
+      {
+        name: 'user_import',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/import/access_control.spec.js',
       },
 
       // { name: 'firefox', use: {
