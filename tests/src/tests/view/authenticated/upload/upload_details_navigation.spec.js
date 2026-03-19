@@ -32,7 +32,7 @@ test('finished upload navigates to details page with correct info', async ({
   await uploadInput.setInputFiles([
     `${attachmentManager.getPath()}/${attachments[0].name}`,
   ]);
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   await selectAutocompleteResult({
     page,
@@ -50,7 +50,7 @@ test('finished upload navigates to details page with correct info', async ({
     optionIndex: 0,
     verify: true,
   });
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   const token = await page.evaluate(() => localStorage.getItem('token'));
   const datasetName = await generateUniqueDatasetName({

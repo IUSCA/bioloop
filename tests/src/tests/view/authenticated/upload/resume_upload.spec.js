@@ -24,6 +24,28 @@ test('upload resumes after simulated mid-upload failure', async ({
   attachmentManager,
 }) => {
   const page = await browser.newPage();
+  let failedPatchResponses = 0;
+  let resumeHeadRequests = 0;
+
+  page.on('response', (response) => {
+    const request = response.request();
+    const url = request.url();
+    const method = request.method();
+
+    if (method === 'PATCH' && /\/uploads\/files\/[^/]+$/.test(url) && response.status() >= 500) {
+      failedPatchResponses += 1;
+    }
+  });
+
+  page.on('request', (request) => {
+    const url = request.url();
+    const method = request.method();
+
+    if (method === 'HEAD' && /\/uploads\/files\/[^/]+$/.test(url)) {
+      resumeHeadRequests += 1;
+    }
+  });
+
   await page.goto('/datasets/uploads/new');
 
   await setUploadFailureSimulation({
@@ -34,7 +56,7 @@ test('upload resumes after simulated mid-upload failure', async ({
 
   const filePath = `${attachmentManager.getPath()}/${attachments[0].name}`;
   await selectFiles({ page, filePaths: [filePath] });
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   await selectAutocompleteResult({
     page,
@@ -55,7 +77,7 @@ test('upload resumes after simulated mid-upload failure', async ({
     verify: true,
   });
 
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   const token = await page.evaluate(() => localStorage.getItem('token'));
   const datasetName = await generateUniqueDatasetName({
@@ -68,6 +90,8 @@ test('upload resumes after simulated mid-upload failure', async ({
 
   await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
   await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');
+  await expect(failedPatchResponses).toBeGreaterThan(0);
+  await expect(resumeHeadRequests).toBeGreaterThan(0);
 
   await setUploadFailureSimulation({ page });
   await page.close();

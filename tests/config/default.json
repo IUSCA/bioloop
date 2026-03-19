@@ -20,9 +20,7 @@
     },
     "uploads": {
       "enabledForRoles": [
-        "admin",
-        "operator",
-        "user"
+        "admin"
       ]
     }
   }

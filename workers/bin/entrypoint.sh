@@ -44,7 +44,7 @@ if [ $WORKER_TYPE == "celery_worker" ]; then
 
     # Start the upload polling job in the background (runs every 30 seconds)
   echo "Starting upload polling job in background..."
-  bash "$(dirname "$0")/poll_upload_workflows.sh" &
+  bash "$(dirname "$0")/start_uploads_poller.sh" &
   POLLING_PID=$!
   echo "Upload polling job started with PID: $POLLING_PID"
 elif [ $WORKER_TYPE == "watch" ]; then

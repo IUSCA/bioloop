@@ -25,7 +25,7 @@ test('user upload creates a new project when unassigned', async ({ browser, atta
   const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
   await selectFiles({ page, filePaths });
 
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
   await expect(datasetTypeSelect).toBeVisible();
@@ -60,7 +60,7 @@ test('user upload creates a new project when unassigned', async ({ browser, atta
     });
   }
 
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
   await expect(page.getByTestId('upload-details-dataset-name-input')).toBeVisible();
 
   const token = await page.evaluate(() => localStorage.getItem('token'));

@@ -36,7 +36,7 @@ test('directory upload succeeds with a zero-byte file', async ({
   }
   await expect(page.getByTestId('file-name')).toHaveCount(2);
 
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
   await selectAutocompleteResult({
     page,
     testId: 'upload-metadata-dataset-autocomplete',
@@ -56,7 +56,7 @@ test('directory upload succeeds with a zero-byte file', async ({
     verify: true,
   });
 
-  await navigateToNextStep({ page });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
   const token = await page.evaluate(() => localStorage.getItem('token'));
   const datasetName = await generateUniqueDatasetName({
