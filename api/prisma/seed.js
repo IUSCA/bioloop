@@ -1,5 +1,6 @@
 require('module-alias/register');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 global.__basedir = path.join(__dirname, '..');
 const { PrismaClient } = require('@prisma/client');
@@ -88,6 +89,25 @@ function createRandomUsers(num) {
     username: `user-${i}`,
     name: `name-${i}`,
   }));
+}
+
+function runNotificationSeedScript(usernames) {
+  const scriptPath = path.join(global.__basedir, 'src', 'scripts', 'seed-notifications.js');
+  usernames.forEach((username) => {
+    const result = spawnSync(
+      process.execPath,
+      [scriptPath, '--user', username, '--stable-only', '--force'],
+      {
+        cwd: global.__basedir,
+        env: process.env,
+        stdio: 'inherit',
+      },
+    );
+
+    if (result.status !== 0) {
+      throw new Error(`seed-notifications.js failed for user '${username}'`);
+    }
+  });
 }
 
 async function main() {
@@ -305,6 +325,9 @@ async function main() {
       host: `instrument ${i + 1}.iu.edu`,
     })),
   });
+
+  // Seed notification fixtures for E2E roles.
+  runNotificationSeedScript(['e2eAdmin', 'e2eOperator', 'e2eUser']);
 }
 
 main()

@@ -1,6 +1,6 @@
 {
-  "baseURL": "https://localhost",
-  "apiBaseURL": "http://localhost",
+  "baseURL": "https://localhost:14443",
+  "apiBaseURL": "https://localhost:14443/api",
   "e2e": {
     "users": {
       "admin": {
@@ -16,7 +16,7 @@
   },
   "enabledFeatures": {
     "notifications": {
-      "enabledForRoles": []
+      "enabledForRoles": ["admin", "operator", "user"]
     }
   }
 }

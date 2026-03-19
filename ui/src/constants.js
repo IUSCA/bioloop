@@ -160,6 +160,26 @@ const exports = {
       EXPIRED: "EXPIRED",
     },
   },
+  notificationTheme: {
+    filters: {
+      unread: { color: "primary", iconOn: "mdi:email", iconOff: "mdi:email-outline" },
+      read: { color: "info", iconOn: "mdi:email-open", iconOff: "mdi:email-open-outline" },
+      archived: { color: "warning", iconOn: "mdi:archive", iconOff: "mdi:archive-outline" },
+      bookmarked: { color: "success", iconOn: "mdi:bookmark", iconOff: "mdi:bookmark-outline" },
+      globallyDismissed: { color: "danger", iconOn: "mdi:eye-off", iconOff: "mdi:eye-off-outline" },
+    },
+    delivery: {
+      direct: { color: "info" },
+      roleBroadcast: { color: "primary" },
+    },
+    actions: {
+      read: { color: "info", icon: "mdi:email-open-outline" },
+      bookmark: { color: "success", icon: "mdi:bookmark-outline" },
+      archive: { color: "warning", icon: "mdi:archive-outline" },
+      globalDismiss: { color: "danger", icon: "mdi:eye-off-outline" },
+      link: { color: "primary", icon: "mdi:open-in-new" },
+    },
+  },
 };
 
 export default exports;

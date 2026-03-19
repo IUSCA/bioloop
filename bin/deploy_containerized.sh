@@ -48,13 +48,16 @@ if [[ ! -f "docker-compose.yml" ]]; then
   abort "docker-compose.yml not found at ${REPO_ROOT}. Run this script from the repo root."
 fi
 
-if ! grep -q '^name: bioloop' "docker-compose.yml"; then
-  abort "docker-compose.yml does not declare 'name: bioloop'. Wrong repo or wrong branch?"
+# Read the compose project name dynamically so this script stays in sync with
+# docker-compose.yml without requiring manual updates.
+COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "docker-compose.yml")
+if [[ -z "${COMPOSE_PROJECT}" ]]; then
+  abort "docker-compose.yml does not declare a 'name:' field. Wrong repo or wrong branch?"
 fi
 
-# Confirm this is a Docker-mode project before doing anything.
-if ! grep -q 'APP_ENV=docker' "docker-compose.yml"; then
-  abort "APP_ENV=docker not found in docker-compose.yml. This does not appear to be a Docker-mode environment."
+# Confirm this is a containerized project before doing anything.
+if ! grep -Eq 'APP_ENV=(docker|ci)' "docker-compose.yml"; then
+  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose.yml. This does not appear to be a containerized environment."
 fi
 
 if ! docker info > /dev/null 2>&1; then
@@ -68,6 +71,11 @@ if $FRESH; then
   echo ""
   bash "${SCRIPT_DIR}/reset_docker.sh" --reset-all
   echo ""
+  # Ensure the seed marker is gone even if reset_docker.sh exited early
+  # (e.g. interactive mode with DB step skipped, or a partial failure).
+  # The API entrypoint gates on this file — without removing it, the DB
+  # would not be re-seeded on the next startup despite a fresh DB.
+  rm -f "${REPO_ROOT}/api/.db_seeded"
 fi
 
 # ── start services ────────────────────────────────────────────────────────────

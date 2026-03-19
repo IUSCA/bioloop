@@ -77,7 +77,7 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
     notifications: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: ["admin", "operator", "user"],
     },
     import: {
       enabledForRoles: ["admin"],

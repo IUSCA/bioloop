@@ -450,3 +450,35 @@ export async function typeInputValue({
     await expect(inputElement).toHaveValue(value);
   }
 }
+
+/**
+ * Clears a text input that exposes a Vuestic reset button.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The data-testid of the input element
+ * @param {boolean} [params.verify=false] - Whether to verify the input value is empty
+ * @returns {Promise<void>}
+ */
+export async function clearInputByTestId({
+  page,
+  testId,
+  verify = false,
+}) {
+  const inputElement = page.locator(`input[data-testid="${testId}"], [data-testid="${testId}"] input`).first();
+  await expect(inputElement).toBeVisible();
+
+  const inputWrapper = inputElement.locator(
+    'xpath=ancestor::div[contains(@class, "va-input-wrapper")][1]',
+  );
+  await inputWrapper.hover();
+  const resetButton = inputWrapper.locator('[aria-label="reset"]').first();
+  if (await resetButton.count()) {
+    await resetButton.click({ force: true });
+  } else {
+    await inputElement.fill('');
+  }
+
+  if (verify) {
+    await expect(inputElement).toHaveValue('');
+  }
+}

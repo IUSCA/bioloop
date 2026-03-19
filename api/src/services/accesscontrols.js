@@ -133,8 +133,8 @@ const grantsObject = {
       'read:any': ['*'],
     },
     notifications: {
-      'read:any': ['*'],
-      'update:any': ['*'],
+      'read:own': ['*'],
+      'update:own': ['*'],
     },
   },
 
@@ -192,6 +192,7 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
+      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],

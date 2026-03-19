@@ -12,6 +12,9 @@ CREATE TABLE "notification" (
   "created_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "created_by_id" INTEGER,
+  "is_resolved" BOOLEAN NOT NULL DEFAULT false,
+  "resolved_at" TIMESTAMP(6),
+  "resolved_by_id" INTEGER,
   "type" TEXT,
   "label" TEXT NOT NULL,
   "text" TEXT,
@@ -45,6 +48,12 @@ CREATE INDEX "notification_recipient_user_id_is_archived_is_read_is_bookmarked_i
 ALTER TABLE "notification"
   ADD CONSTRAINT "notification_created_by_id_fkey"
   FOREIGN KEY ("created_by_id") REFERENCES "user"("id")
+  ON DELETE SET NULL
+  ON UPDATE CASCADE;
+
+ALTER TABLE "notification"
+  ADD CONSTRAINT "notification_resolved_by_id_fkey"
+  FOREIGN KEY ("resolved_by_id") REFERENCES "user"("id")
   ON DELETE SET NULL
   ON UPDATE CASCADE;
 

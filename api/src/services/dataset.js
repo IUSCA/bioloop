@@ -15,6 +15,7 @@ const workflowService = require('./workflow');
 const projectService = require('./project');
 const featureService = require('./features');
 const logger = require('./logger');
+const { buildNotificationPayload } = require('./notificationTypeService');
 
 const { log_axios_error } = require('../utils');
 const {
@@ -264,12 +265,12 @@ async function get_dataset({
       dataset.workflows = [];
     }
   }
-  dataset?.audit_logs?.forEach((log) => {
-    // eslint-disable-next-line no-param-reassign
-    if (log.user) {
-      log.user = log.user ? userService.transformUser(log.user) : null;
-    }
-  });
+  if (dataset?.audit_logs?.length > 0) {
+    dataset.audit_logs = dataset.audit_logs.map((log) => ({
+      ...log,
+      user: log.user ? userService.transformUser(log.user) : null,
+    }));
+  }
 
   return dataset;
 }
@@ -864,7 +865,7 @@ async function create({
     },
   });
   if (existingDataset) {
-    console.log('dataset already exists', existingDataset.name, 'existingDataset_id', existingDataset.id);
+    logger.info('dataset already exists', existingDataset.id);
     return;
   }
 
@@ -905,10 +906,17 @@ async function create({
           delivery_role_id: operatorRole.id,
         }));
         if (recipientRows.length > 0) {
+          const notificationPayload = buildNotificationPayload({
+            type: 'DATASET_CREATED',
+            context: {
+              dataset: created_dataset,
+            },
+          });
+
           await tx.notification.create({
             data: {
-              type: 'DATASET_CREATED',
-              label: `${created_dataset.type} ${created_dataset.id} was created`,
+              ...notificationPayload,
+              created_by_id: requester_id,
               recipients: {
                 createMany: {
                   data: recipientRows,

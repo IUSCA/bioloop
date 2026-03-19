@@ -66,7 +66,7 @@ module.exports = {
         name: 'operator_login',
         testMatch: path.join(
           __dirname,
-          '/tests/setup/operator_login.setup.js',
+          '/src/tests/setup/operator_login.setup.js',
         ),
       },
       /** Project to login as user */
@@ -110,13 +110,19 @@ module.exports = {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+        ],
       },
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['admin_notifications', 'operator_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+        ],
       },
       {
         name: 'user_notifications',

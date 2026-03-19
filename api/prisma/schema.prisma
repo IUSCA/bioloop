@@ -184,7 +184,8 @@ model user {
   project_datasets_assigned  project_dataset[]
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
-  created_notifications      notification[]         @relation("created_notifications")
+  created_notifications      notification[]      @relation("created_notifications")
+  resolved_notifications     notification[]      @relation("resolved_notifications")
   notification_recipients    notification_recipient[]
   owned_projects             project[]
   // created_datasets           dataset_create_log[]
@@ -221,6 +222,10 @@ model notification {
   updated_at    DateTime                 @default(now()) @updatedAt @db.Timestamp(6)
   created_by_id Int?
   created_by    user?                    @relation("created_notifications", fields: [created_by_id], references: [id], onDelete: SetNull)
+  is_resolved   Boolean                  @default(false)
+  resolved_at   DateTime?                @db.Timestamp(6)
+  resolved_by_id Int?
+  resolved_by   user?                    @relation("resolved_notifications", fields: [resolved_by_id], references: [id], onDelete: SetNull)
   type          String?
   label         String
   text          String?
