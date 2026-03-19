@@ -102,10 +102,18 @@ else
 fi
 
 info "Starting e2e stack with project '${PROJECT_NAME}'"
-docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d
+STACK_SERVICES=()
+while IFS= read -r svc; do
+  [[ -z "${svc}" ]] && continue
+  STACK_SERVICES+=("${svc}")
+done < <(docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" config --services | rg -v '^e2e$')
+if [[ ${#STACK_SERVICES[@]} -eq 0 ]]; then
+  abort "No non-e2e services found in ${COMPOSE_FILE}"
+fi
+docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" up -d "${STACK_SERVICES[@]}"
 
 echo ""
 success "E2E stack started."
 info "Run tests with:"
-echo "  docker compose -f docker-compose-e2e.yml -p ${PROJECT_NAME} run --rm e2e"
+echo "  ./bin/run_e2e_tests.sh [playwright args]"
 echo ""

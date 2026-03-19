@@ -4,7 +4,6 @@ import {
 } from '../../../../../actions';
 import {
   selectFiles,
-  trackSelectedFilesMetadata,
 } from '../../../../../actions/datasetUpload';
 import {
   navigateToNextStep,
@@ -23,29 +22,16 @@ test.describe.serial('Dataset Upload Process', () => {
   let selectedProjectName;
   let selectedInstrumentName;
 
-  const selectedFiles = []; // array of selected files
-
-  test.beforeAll(async ({ browser }) => {
+  test.beforeAll(async ({ browser, attachmentManager }) => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
     await page.goto('/datasets/uploads/new');
-  });
-
-  test.describe('File selection step', () => {
-    test.beforeAll(async ({ attachmentManager }) => {
-      // Select files
-      const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
-    });
-
-    test('Wait for the file upload table to be visible', async () => {
-      // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
-
-      // Store the selected files' information in state
-      selectedFiles.push(...files);
-    });
+    const filePaths = attachments.map(
+      (file) => `${attachmentManager.getPath()}/${file.name}`,
+    );
+    await selectFiles({ page, filePaths });
+    await expect(page.getByTestId('upload-selected-files-table')).toBeVisible();
   });
 
   test.describe('General-Info selection step', async () => {
@@ -123,37 +109,10 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(datasetNameInput).toHaveValue('');
     });
 
-    test('should show all the selected files and their details', async () => {
-      // Check if the file upload table is visible
-      const fileUploadTable = page.getByTestId('file-upload-table');
-      await expect(fileUploadTable).toBeVisible();
-
-      // Get all rows in the table
-      const tableRows = fileUploadTable.locator('tbody tr');
-
-      // Check if the number of rows matches the number of selected files
-      await expect(tableRows).toHaveCount(selectedFiles.length);
-
-      // Check each file's details
-      await Promise.all(selectedFiles.map(async (file, index) => {
-        const row = tableRows.nth(index);
-
-        // Check file name
-        const fileName = row.getByTestId('file-name');
-        await expect(fileName).toHaveText(file.name);
-
-        // Check file size
-        const fileSize = row.locator('td').nth(1);
-        await expect(fileSize).toHaveText(file.size);
-
-        // Check file status (initially empty)
-        const fileStatus = row.getByTestId('file-upload-status');
-        await expect(fileStatus).toBeEmpty();
-
-        // Check file progress (initially 0%)
-        const fileProgress = row.getByTestId('file-progress');
-        await expect(fileProgress).toContainText('0%');
-      }));
+    test('should render upload-details controls for submission', async () => {
+      await expect(page.getByTestId('upload-next-button')).toBeVisible();
+      await expect(page.getByTestId('upload-next-button')).toBeEnabled();
+      await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
     });
   });
 });

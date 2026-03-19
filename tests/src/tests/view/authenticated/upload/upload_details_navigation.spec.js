@@ -28,6 +28,7 @@ test('finished upload navigates to details page with correct info', async ({
   const uploadInput = page
     .locator('[data-testid="upload-file-select"] input[type="file"]')
     .first();
+  await uploadInput.waitFor({ state: 'attached' });
   await uploadInput.setInputFiles([
     `${attachmentManager.getPath()}/${attachments[0].name}`,
   ]);
@@ -60,8 +61,14 @@ test('finished upload navigates to details page with correct info', async ({
   await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
   await page.getByTestId('upload-next-button').click();
 
-  // Wait for upload completion
-  await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
+  // Wait for upload completion state
+  const uploadedChip = page.getByTestId('chip-uploaded');
+  const failedChip = page.getByTestId('chip-upload-failed');
+  await expect(uploadedChip.or(failedChip)).toBeVisible();
+  if (await failedChip.isVisible()) {
+    const failureMessage = await page.getByTestId('submission-alert').innerText();
+    throw new Error(`Upload failed before details navigation: ${failureMessage}`);
+  }
   await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');
 
   // Navigate to uploads list and click details link

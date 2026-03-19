@@ -16,20 +16,21 @@
 - [x] **`api/package-lock.json` not committed** — `@tus/file-store`, `@tus/server`, `ioredis` are in `package.json` but must also be in the lockfile. Run `npm install` in `api/`, commit the result. CI and container startup fail without it.
 - [ ] **Run linter** across changed `ui` and `api` files.
 - [ ] **Install dependencies** across `ui`, `api`, and `workers` to verify nothing is missing.
-- [ ] **Remove noisy upload UI console logs** — keep only operationally useful logs in upload UI code.
+- [x] **Remove noisy upload UI console logs** — keep only operationally useful logs in upload UI code.
+- [x] **Remove oversized e2e waits/timeouts in upload specs** — replace long timeout reliance with deterministic UI-state waits (stable testids / explicit readiness signals) and fix root race conditions.
 - [x] **Smoke test on dev** — run the full `UPLOADING → UPLOADED → VERIFYING → VERIFIED → COMPLETE` flow end-to-end, including a multi-file upload.
 - [x] **Mid-file upload test** — upload at least one file around 500 MB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [ ] **Large-file upload test** — upload at least one file ≥ 10 GB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [x] **Large-file-count upload test** — upload at least one directory with around 5000 files, to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [x] **Performance comparison vs Google Drive** — upload the iseq-DI dataset to Google Drive and compare upload throughput, time-to-complete, and UX against Bioloop. Document findings.
-- [ ] **Strengthen no-checksum fallback verification** — when `upload_verify_checksums` is disabled, the worker currently only confirms files exist at `origin_path`. Investigate whether TUS stores per-file metadata (final offset, declared upload-length, etc.) that survives the move to `origin_path`, and if so use it to verify each file's size matches what TUS declared complete. At minimum, compare each file's `stat().st_size` against the size recorded in the upload log (sent by the UI in the `/complete` payload) without reading file content.
-- [ ] **Think through test strategy for verification task and upload management script** — see "Test Strategy" section at the bottom of this document for a list of ideas. Decide which are worth implementing now vs. post-merge.
-- [ ] **Review any remaining unaddressed Copilot PR comments** before merge.
-- [ ] **Investigate OAuth token-scope validation at upload boundary** — the old architecture validated a scoped OAuth token in `secure_download` before accepting bytes onto the filesystem. That check was removed because uploads now go directly through the core API (not `secure_download`). Assess whether the current `onUploadCreate` auth check (standard Bearer token + dataset ownership) is sufficient, or whether a narrower upload-scoped token should be introduced for the TUS boundary.
+- [x] **Strengthen no-checksum fallback verification** — when `upload_verify_checksums` is disabled or client checksum computation is skipped, workers now validate a UI-supplied `metadata.size_manifest` (`path-size-v1`) by checking per-file existence and exact byte-size at `origin_path` (plus file-count/total-size consistency) before accepting verification fallback.
+- [x] **Think through test strategy for verification task and upload management script** — implemented targeted worker tests for upload verification fallback behavior and upload-manager timeout/failure handling paths (`workers/tests/upload/test_verify_upload_integrity.py`, `workers/tests/upload/test_manage_upload_workflows.py`).
+- [x] **Review any remaining unaddressed Copilot PR comments** before merge.
+- [x] **Investigate OAuth token-scope validation at upload boundary** — current design enforces auth on every TUS request plus dataset ownership/status checks in `onUploadCreate` before bytes are accepted. Conclusion: acceptable for this PR scope; upload-scoped JWT remains a hardening follow-up (smaller blast radius, explicit per-dataset + short TTL claims) rather than a merge blocker.
 
 ### Non-Blocking (should fix before merge)
 
-- [ ] **Rewrite existing upload e2e tests** — existing tests were written for the old chunk-upload implementation and need to be rewritten for the new TUS-based flow.
+- [x] **Rewrite existing upload e2e tests** — existing tests were written for the old chunk-upload implementation and need to be rewritten for the new TUS-based flow.
 - [ ] **Failure-mode / adversarial testing** — systematically exercise every place the upload pipeline can break. Categories and specific cases to cover:
   - **Client-side / pre-upload:**
     - Special characters in filenames: spaces, unicode, emoji, `&`, `#`, `+`, null bytes
@@ -73,7 +74,7 @@
 - [ ] **PR description** — 56 files changed across API, UI, workers, migrations, docs. Write a summary covering: TUS upload flow, async verification pipeline, schema changes (`dataset_upload_log` direct `dataset_id` link, `create_method` on `dataset`).
 - [ ] **Update diagrams** — update architecture/flow diagrams in the design doc for the new TUS-based upload design (old diagrams reflect the chunk-upload + `process_dataset_upload` workflow).
 - [x] **Update existing upload e2e routes** — specs under `tests/src/tests/view/authenticated/upload/` now use `/datasets/uploads/new`.
-- [ ] **Write new upload e2e scenarios** — see "New Upload E2E Scenarios" section below.
+- [x] **Write new upload e2e scenarios** — see "New Upload E2E Scenarios" section below.
 
 ### Pipeline Robustness Fixes (applied 2026-03-15) — Test Before Merge
 

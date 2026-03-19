@@ -90,3 +90,35 @@ def test_handle_verifying_status_failure_applies_fallback_update(monkeypatch):
     assert result == "verification_failed"
     assert len(updates) == 1
     assert updates[0]["log_data"]["status"] == UPLOAD_STATUS["VERIFICATION_FAILED"]
+
+
+def test_handle_verifying_status_timeout_marks_failed(monkeypatch):
+    updates = []
+
+    monkeypatch.setattr(
+        upload_manager.api,
+        "update_dataset_upload_log",
+        lambda dataset_id, log_data, workflow_id=None: updates.append(
+            {"dataset_id": dataset_id, "log_data": log_data, "workflow_id": workflow_id}
+        ),
+    )
+
+    result = upload_manager.handle_verifying_status(
+        dataset_id=2003,
+        dataset_name="upload-timeout",
+        upload_log={
+            "status": UPLOAD_STATUS["VERIFYING"],
+            "updated_at": datetime.utcnow() - timedelta(hours=5),
+        },
+        metadata={
+            "verification_task_id": "task-timeout",
+            "verification_started_at": (datetime.utcnow() - timedelta(hours=5)).isoformat(),
+        },
+        dry_run=False,
+        verify_task=_FakeVerifyTask(),
+    )
+
+    assert result == "verification_failed"
+    assert len(updates) == 1
+    assert updates[0]["log_data"]["status"] == UPLOAD_STATUS["VERIFICATION_FAILED"]
+    assert "timeout" in updates[0]["log_data"]["metadata"]["failure_reason"].lower()

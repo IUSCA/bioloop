@@ -2,8 +2,8 @@
 Upload Verification Utilities
 
 Provides BLAKE3 manifest-based checksum verification for uploaded files.
-Falls back to a file-existence check only when the client deliberately did not
-supply a checksum (feature disabled, or legacy upload with no metadata).
+Falls back to manifest-size verification (or existence checks for legacy uploads)
+when the client deliberately did not supply a checksum.
 
 Requires the 'blake3' package (pip install blake3).  If a client-computed
 manifest hash is present in the upload log and blake3 is not installed, the
@@ -22,15 +22,19 @@ def verify_upload_integrity(dataset, upload_log=None):
       1. If the upload log carries a client-computed BLAKE3 manifest hash in
          metadata.checksum.manifest_hash, recompute the hash server-side from
          the files at origin_path and compare. A mismatch raises immediately.
-      2. Otherwise fall back to a lightweight existence check — confirm that at
+      2. Otherwise, if metadata.size_manifest is present, verify every expected
+         path exists and its byte-size matches the client-reported size.
+      3. Otherwise fall back to a lightweight existence check — confirm that at
          least one file is present at origin_path.
 
     The two-path design means:
       - New uploads (UI computes and stores a checksum) get end-to-end integrity
         verification: client hash === server hash, or the upload is rejected.
-      - Legacy uploads or uploads where checksum computation failed/was skipped
-        are still accepted once their files land on disk, preserving backward
-        compatibility without a schema migration.
+      - Uploads where checksum computation failed/was skipped can still receive
+        path+size verification when the UI supplies metadata.size_manifest.
+      - Legacy uploads without checksum and without size manifest are still
+        accepted once their files land on disk, preserving backward
+        compatibility.
 
     Args:
         dataset (dict): Dataset dict; must contain 'id' and 'origin_path'.
@@ -56,9 +60,11 @@ def verify_upload_integrity(dataset, upload_log=None):
     client_checksum = None
     client_skipped_reason = None
     client_skipped_error = None
+    size_manifest = None
     if upload_log:
         metadata = upload_log.get('metadata') or {}
         checksum_meta = metadata.get('checksum') or {}
+        size_manifest = metadata.get('size_manifest') or None
         client_checksum = checksum_meta.get('manifest_hash')
         if checksum_meta.get('skipped'):
             client_skipped_reason = checksum_meta.get('skipped_reason')
@@ -108,14 +114,23 @@ def verify_upload_integrity(dataset, upload_log=None):
         print("  Falling back to file-existence check only.")
         print("  End-to-end integrity cannot be guaranteed for this upload.")
         print()
-        _verify_files_exist(origin_path)
+        if size_manifest:
+            print("  Using size manifest fallback verification.")
+            _verify_files_match_size_manifest(origin_path, size_manifest)
+        else:
+            _verify_files_exist(origin_path)
 
     else:
         # No checksum metadata at all — the UI had upload_verify_checksums
         # disabled, or this is a legacy upload predating the checksum feature.
-        # Fall back to the lightweight existence check.
-        print(f"No client checksum found — falling back to file existence check")
-        _verify_files_exist(origin_path)
+        # Fall back to size manifest verification when available, otherwise use
+        # the lightweight existence check.
+        if size_manifest:
+            print("No client checksum found — using size manifest fallback verification")
+            _verify_files_match_size_manifest(origin_path, size_manifest)
+        else:
+            print(f"No client checksum found — falling back to file existence check")
+            _verify_files_exist(origin_path)
 
     return True
 
@@ -149,6 +164,85 @@ def _verify_files_exist(origin_path):
         raise Exception(f"No files found at {origin_path}")
 
     print(f"✓ Found {file_count} file(s) at {origin_path}")
+
+
+def _verify_files_match_size_manifest(origin_path, size_manifest):
+    """
+    Fallback integrity check that validates file existence + byte size.
+
+    The UI sends metadata.size_manifest in the /complete payload even when
+    checksum verification is skipped. This allows workers to verify each
+    expected path exists and matches the client-observed size without reading
+    file content.
+
+    Args:
+        origin_path (str | Path): Root path where uploaded files were moved.
+        size_manifest (dict): Client-provided manifest with:
+            - mode: "path-size-v1"
+            - files: [{path: "<relative/path>", size: <bytes>}]
+            - file_count: int
+            - total_size: int
+
+    Raises:
+        Exception: If the manifest is invalid, files are missing, or any size
+            mismatch is detected.
+    """
+    origin = Path(origin_path)
+    if not origin.exists():
+        raise Exception(f"Origin path does not exist: {origin_path}")
+
+    mode = size_manifest.get('mode')
+    files = size_manifest.get('files') or []
+    expected_count = size_manifest.get('file_count')
+    expected_total_size = size_manifest.get('total_size')
+
+    if mode != 'path-size-v1':
+        raise Exception(f"Unsupported size manifest mode: {mode}")
+    if not files:
+        raise Exception("size_manifest is present but contains no files")
+
+    origin_resolved = origin.resolve()
+    actual_total_size = 0
+
+    for entry in files:
+        rel_path = entry.get('path')
+        expected_size = entry.get('size')
+
+        if not rel_path or expected_size is None:
+            raise Exception(f"Invalid size_manifest entry: {entry}")
+
+        candidate = (origin / rel_path).resolve()
+        if origin_resolved not in candidate.parents and candidate != origin_resolved:
+            raise Exception(f"size_manifest path escapes origin_path: {rel_path}")
+
+        if not candidate.exists() or not candidate.is_file():
+            raise Exception(f"Missing expected file from size_manifest: {rel_path}")
+
+        actual_size = candidate.stat().st_size
+        if actual_size != int(expected_size):
+            raise Exception(
+                f"Size mismatch for '{rel_path}': expected {expected_size}, got {actual_size}"
+            )
+
+        actual_total_size += actual_size
+
+    actual_count = sum(1 for f in origin.rglob('*') if f.is_file())
+    if expected_count is not None and int(expected_count) != len(files):
+        raise Exception(
+            f"size_manifest file_count mismatch: file_count={expected_count}, entries={len(files)}"
+        )
+    if expected_count is not None and actual_count != int(expected_count):
+        raise Exception(
+            f"File count mismatch at origin_path: expected {expected_count}, found {actual_count}"
+        )
+    if expected_total_size is not None and actual_total_size != int(expected_total_size):
+        raise Exception(
+            f"Total size mismatch: expected {expected_total_size}, got {actual_total_size}"
+        )
+
+    print(
+        f"✓ Size-manifest fallback verified {len(files)} file(s), {actual_total_size} bytes at {origin_path}"
+    )
 
 
 def _compute_manifest_hash(origin_path):

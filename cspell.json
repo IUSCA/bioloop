@@ -150,16 +150,11 @@
     "virtiofs"
   ],
   "ignorePaths": [
-    ".ai",
-    ".cursorrules",
     "**/__pycache__/**",
     "cspell.json",
     "node_modules",
     "dist",
     "docs/.vitepress",
-    ".cursor/**",
-    ".ai/**",
-    "**/.cursorrules",
     "/data",
     "/db",
     "logs",

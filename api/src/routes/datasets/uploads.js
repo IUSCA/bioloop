@@ -11,6 +11,7 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
+const { findUploadLogForDataset, tombstoneDataset, markUploadAsFailed } = require('@/services/upload/uploadLogService');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 const prisma = require('@/db');
@@ -51,107 +52,6 @@ async function getDatasetCreatorUsername(req) {
     );
     return null;
   }
-}
-
-// Returns the dataset_upload_log for a given dataset (with the dataset relation
-// included), or null if no log exists yet.
-async function findUploadLogForDataset(datasetId) {
-  return prisma.dataset_upload_log.findFirst({
-    where: { dataset_id: datasetId },
-    include: { dataset: true },
-  });
-}
-
-// Renames the dataset to "<name>--<id>" and soft-deletes it so its original
-// name is freed in the unique constraint (name, type, is_deleted).
-//
-// Called whenever an upload reaches a terminal failure state
-// (UPLOAD_FAILED, VERIFICATION_FAILED, PERMANENTLY_FAILED).  After this runs:
-//   - is_deleted=false slot for the original name is available for a new upload
-//   - The tombstone record remains queryable via the upload-log join for audit
-//   - origin_path is unchanged (it embeds the dataset id, so no path conflict)
-//
-// Accepts an optional Prisma transaction client `tx`; falls back to the global
-// prisma client when omitted (for callers that don't already have a tx).
-//
-// Errors are caught and logged — never re-thrown, so a tombstone failure never
-// obscures the primary failure response that prompted the tombstone.
-async function tombstoneDataset(datasetId, tx = null) {
-  const client = tx || prisma;
-  try {
-    const dataset = await client.dataset.findUnique({
-      where: { id: datasetId },
-      select: { id: true, name: true, is_deleted: true },
-    });
-
-    if (!dataset) {
-      logger.warn('[TOMBSTONE] Dataset not found — skipping tombstone', { dataset_id: datasetId });
-      return;
-    }
-
-    if (dataset.is_deleted) {
-      logger.info('[TOMBSTONE] Dataset already tombstoned — skipping', { dataset_id: datasetId });
-      return;
-    }
-
-    const tombstoneName = `${dataset.name}--${dataset.id}`;
-    await client.dataset.update({
-      where: { id: datasetId },
-      data: { name: tombstoneName, is_deleted: true },
-    });
-
-    logger.info('[TOMBSTONE] Dataset tombstoned — name freed for re-upload', {
-      dataset_id: datasetId,
-      original_name: dataset.name,
-      tombstone_name: tombstoneName,
-    });
-  } catch (err) {
-    logger.error('[TOMBSTONE] Failed to tombstone dataset — name may remain reserved', {
-      dataset_id: datasetId,
-      error: err.message,
-    });
-  }
-}
-
-// Sets the dataset upload log status to UPLOAD_FAILED and records the failure
-// reason in the log's metadata.  PROCESSING_FAILED is intentionally not used
-// here: that status is reserved for failures that occur after the integrated
-// workflow has started, so the background poller can safely restart it.  An
-// error during the file-move step means the files may not be at origin_path,
-// so triggering an automated workflow retry would be incorrect.  The UI shows
-// a Retry button instead, allowing the user to re-call /complete.
-// Errors during the status update are logged but not re-thrown so the caller's
-// error response is not obscured.
-async function markUploadAsFailed(datasetId, error) {
-  try {
-    logger.info('[UPLOAD-COMPLETE] Attempting to mark upload as failed', { dataset_id: datasetId });
-
-    const existingLog = await prisma.dataset_upload_log.findFirst({
-      where: { dataset_id: datasetId },
-      select: { metadata: true },
-    });
-
-    await prisma.dataset_upload_log.updateMany({
-      where: { dataset_id: datasetId },
-      data: {
-        status: CONSTANTS.UPLOAD_STATUSES.UPLOAD_FAILED,
-        metadata: {
-          ...(existingLog?.metadata || {}),
-          failure_reason: error.message,
-        },
-      },
-    });
-
-    logger.info('[UPLOAD-COMPLETE] Upload marked as UPLOAD_FAILED', { dataset_id: datasetId });
-  } catch (updateError) {
-    logger.error('[UPLOAD-COMPLETE] Failed to update upload log status', {
-      dataset_id: datasetId,
-      error: updateError.message,
-    });
-  }
-
-  // Free the dataset name so the user can re-upload with the same name.
-  await tombstoneDataset(datasetId);
 }
 
 // ============================================================================

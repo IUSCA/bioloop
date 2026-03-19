@@ -49,15 +49,38 @@ const generateUniqueUsername = async ({
   throw new Error(`Could not generate unique username. Generated name ${candidate} already exists.`);
 };
 
-const getRole = async ({ requestContext, token, role }) => {
+/**
+ * Returns an existing user for the given role (from e2e config) or creates one.
+ * Useful in test setup when you need a user of a specific role but don't care
+ * whether it already exists from a prior seed or test run.
+ *
+ * @param {Object}  params
+ * @param {string}  params.token - Admin-level auth token
+ * @param {string}  params.role  - Role name ('admin', 'operator', 'user')
+ * @returns {Promise<Object>} The user object
+ */
+const ensureRoleUser = async ({ token, role }) => {
+  const config = require('config');
+  const username = config.e2e.users[role].username;
+
   const response = await get({
-    requestContext,
-    url: `/users/${role}`,
     token,
+    url: `/users/${username}`,
+  });
+
+  if (response.status() === 200) {
+    return response.json();
+  }
+
+  return createTestUser({
+    token,
+    role,
+    data: { username },
   });
 };
 
 module.exports = {
   createTestUser,
+  ensureRoleUser,
   generateUniqueUsername,
 };

@@ -11,7 +11,10 @@ test.describe('Dataset Upload Process', () => {
   });
 
   test('should navigate from uploads list to new upload page', async () => {
-    await page.getByRole('button', { name: 'Upload Dataset' }).click();
+    await Promise.all([
+      page.waitForURL('**/datasets/uploads/new'),
+      page.getByRole('button', { name: 'Upload Dataset' }).click(),
+    ]);
     await expect(page).toHaveURL('/datasets/uploads/new');
     await expect(page.getByTestId('upload-dataset-stepper')).toBeVisible();
   });

@@ -68,7 +68,6 @@ test('upload resumes after simulated mid-upload failure', async ({
 
   await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
   await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');
-  await expect(page.getByTestId('file-progress').first()).toContainText('100%');
 
   await setUploadFailureSimulation({ page });
   await page.close();

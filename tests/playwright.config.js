@@ -162,7 +162,8 @@ module.exports = {
       },
       {
         name: 'upload--project_association--user_role--association',
-        use: { ...devices['Desktop Chrome'] },
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
       },
 

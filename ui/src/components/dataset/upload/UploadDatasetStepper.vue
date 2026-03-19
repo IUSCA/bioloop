@@ -1028,22 +1028,13 @@ const onSubmit = async () => {
   submitAttempted.value = true;
   fileUploadErrors.value = [];
 
-  const t0 = performance.now();
-
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
         submissionSuccess.value = true;
 
-        const totalBytes = filesToUpload.value.reduce(
-          (sum, f) => sum + f.file.size,
-          0,
-        );
-        const fileCount = filesToUpload.value.length;
-
         // COMPUTE CHECKSUMS FIRST (before upload starts)
         // Skip if already computed (e.g., on retry after upload failure)
-        let tChecksumMs = null;
         if (isChecksumVerificationEnabled() && !computedChecksum.value) {
           try {
             isComputingChecksum.value = true;
@@ -1052,14 +1043,12 @@ const onSubmit = async () => {
               Constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS;
 
             const files = filesToUpload.value.map((f) => f.file);
-            const tChecksumStart = performance.now();
             computedChecksum.value = await computeManifestHash(
               files,
               (progress) => {
                 checksumProgress.value = progress;
               },
             );
-            tChecksumMs = performance.now() - tChecksumStart;
           } catch (error) {
             // computeManifestHash catches internally and returns a skip-marker.
             // This outer catch is a safety net for any unexpected escape.
@@ -1090,44 +1079,11 @@ const onSubmit = async () => {
         filesUploaded.value = 0;
         uploadProgress.value = 0;
 
-        const tUploadStart = performance.now();
         const uploadServiceURL = _getUploadServiceURL(window.location.origin);
         const uploaded = await uploadFilesWithTus(
           filesToUploadList,
           uploadServiceURL,
         );
-        const tUploadMs = performance.now() - tUploadStart;
-        const tTotalMs = performance.now() - t0;
-
-        const fmt = (ms) =>
-          ms >= 60_000
-            ? `${(ms / 60_000).toFixed(1)} min`
-            : `${(ms / 1_000).toFixed(2)} s`;
-        const fmtBytes = (b) =>
-          b >= 1_073_741_824
-            ? `${(b / 1_073_741_824).toFixed(2)} GB`
-            : b >= 1_048_576
-              ? `${(b / 1_048_576).toFixed(1)} MB`
-              : `${(b / 1_024).toFixed(1)} KB`;
-
-        console.group("[UPLOAD TIMING]");
-        console.log(
-          `  Files    : ${fileCount} file${fileCount !== 1 ? "s" : ""}, ${fmtBytes(totalBytes)}`,
-        );
-        if (tChecksumMs !== null) {
-          const checksumThroughput = totalBytes / (tChecksumMs / 1_000);
-          console.log(
-            `  Checksum : ${fmt(tChecksumMs)}  (${fmtBytes(checksumThroughput)}/s)`,
-          );
-        } else {
-          console.log(`  Checksum : skipped (disabled or already computed)`);
-        }
-        const uploadThroughput = totalBytes / (tUploadMs / 1_000);
-        console.log(
-          `  Upload   : ${fmt(tUploadMs)}  (${fmtBytes(uploadThroughput)}/s avg)`,
-        );
-        console.log(`  Total    : ${fmt(tTotalMs)}`);
-        console.groupEnd();
 
         if (uploaded) {
           handleUploadComplete();
@@ -1279,21 +1235,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
   // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload') to enable
   // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times
   const simulateFailure = localStorage.getItem("SIMULATE_UPLOAD_FAILURE");
-  const simulateFailureCount = localStorage.getItem(
-    "SIMULATE_UPLOAD_FAILURE_COUNT",
-  );
-  if (simulateFailure) {
-    console.warn(
-      `🧪 [TEST MODE] Upload failure simulation ENABLED: ${simulateFailure}`,
-    );
-    console.warn(
-      `   Failure count: ${simulateFailureCount || "1"} (1=fail once then succeed, 5=exhaust retries)`,
-    );
-    console.warn(
-      `   To disable: localStorage.removeItem('SIMULATE_UPLOAD_FAILURE')`,
-    );
-  }
-
   const uploadPromises = files.map((file) => {
     return new Promise((resolve, reject) => {
       // TEST ONLY: Check for failure count configuration
@@ -1415,17 +1356,48 @@ const uploadFilesWithTus = async (files, endpoint) => {
   return true;
 };
 
+const buildSizeManifest = (files) => {
+  const normalized = files.map((file) => {
+    const relativePath = file.webkitRelativePath
+      ? file.webkitRelativePath
+          .replace(/\\/g, "/")
+          .split("/")
+          .slice(1)
+          .join("/")
+      : file.name.replace(/\\/g, "/").replace(/^\.\//, "");
+    return {
+      path: relativePath,
+      size: file.size,
+    };
+  });
+
+  normalized.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+
+  return {
+    mode: "path-size-v1",
+    file_count: normalized.length,
+    total_size: normalized.reduce((sum, f) => sum + f.size, 0),
+    files: normalized,
+  };
+};
+
 const handleUploadComplete = async () => {
   // Files are already at origin_path — the TUS onUploadFinish hook moved each
   // file as it completed.  This call just records the final status + metadata.
   try {
     const datasetId = datasetUploadLog.value.dataset.id;
 
+    const sizeManifest = buildSizeManifest(
+      filesToUpload.value.map((f) => f.file),
+    );
+    const metadataPayload = {
+      size_manifest: sizeManifest,
+      ...(computedChecksum.value ? { checksum: computedChecksum.value } : {}),
+    };
+
     const completePayload = {
       process_id: lastUploadProcessId.value,
-      metadata: computedChecksum.value
-        ? { checksum: computedChecksum.value }
-        : undefined,
+      metadata: metadataPayload,
     };
 
     await datasetService.completeDatasetUpload(datasetId, completePayload);

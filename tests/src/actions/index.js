@@ -129,6 +129,8 @@ export async function selectAutocompleteResult({
   // If no selection method is provided, default to the first result
   if (resultIndex == null && resultText == null) {
     _resultIndex = 0;
+  } else if (resultIndex != null) {
+    _resultIndex = resultIndex;
   }
 
   const searchInput = page.getByTestId(testId);

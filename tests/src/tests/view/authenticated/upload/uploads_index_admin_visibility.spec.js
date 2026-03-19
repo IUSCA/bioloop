@@ -1,16 +1,7 @@
 import { expect, test } from '../../../../fixtures';
 import { createTestUser } from '../../../../api/user';
 import { getTokenByRole } from '../../../../fixtures/auth';
-
-const config = require('config');
-
-async function loginAndGoToUploads(page, ticket) {
-  await page.goto(`${config.baseURL}/auth/iucas?ticket=${ticket}`);
-  // Wait for login to complete and app to initialize
-  await page.waitForLoadState('networkidle');
-  await page.goto('/datasets/uploads');
-  await page.waitForLoadState('networkidle');
-}
+import { loginAndNavigate } from '../../../../actions/auth';
 
 test.describe('Uploads list role visibility', () => {
   let userRoleUser;
@@ -27,7 +18,7 @@ test.describe('Uploads list role visibility', () => {
   test('admin sees Upload Details navigation column', async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAndGoToUploads(page, 'admin');
+    await loginAndNavigate({ page, ticket: 'admin', path: '/datasets/uploads' });
 
     await expect(page.locator('th', { hasText: 'Upload Details' })).toHaveCount(1);
 
@@ -37,7 +28,7 @@ test.describe('Uploads list role visibility', () => {
   test('user does not see Upload Details navigation column', async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await loginAndGoToUploads(page, userRoleUser.username);
+    await loginAndNavigate({ page, ticket: userRoleUser.username, path: '/datasets/uploads' });
 
     await expect(page.locator('th', { hasText: 'Upload Details' })).toHaveCount(0);
 
