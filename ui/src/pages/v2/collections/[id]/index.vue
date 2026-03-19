@@ -19,7 +19,7 @@
     <!-- Loaded -->
     <div v-else-if="collection">
       <!-- Page header -->
-      <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
+      <div class="flex items-center justify-start flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
           <i-mdi-folder-multiple
             class="text-2xl shrink-0"
@@ -39,14 +39,32 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
-          <ModernChip
+        <!-- archived badge -->
+        <div>
+          <ModernChip v-if="collection.is_archived" color="accent" class="ml-2">
+            Archived
+          </ModernChip>
+        </div>
+
+        <!-- owner group badge -->
+        <div class="flex items-center gap-1 shrink-0 text-sm va-text-secondary">
+          <span> Owned by </span>
+          <RouterLink
             v-if="collection.owner_group?.name"
-            class="px-3 py-1 max-w-md truncate"
-            no-color
+            class="max-w-md truncate"
+            :to="`/v2/groups/${collection.owner_group.id}`"
           >
             {{ collection.owner_group.name }}
-          </ModernChip>
+          </RouterLink>
+        </div>
+
+        <!-- resource role badge -->
+        <div class="ml-auto">
+          <ResourceRoleBadge
+            v-if="callerRole"
+            :role-name="callerRole"
+            size="base"
+          />
         </div>
       </div>
 
@@ -162,6 +180,7 @@ const counts = ref({ datasets: null, grants: null, requests: null });
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
 );
+const callerRole = computed(() => collection.value?._meta?.caller_role);
 
 function can(action) {
   return capabilities.value.has(action);

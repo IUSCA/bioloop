@@ -25,7 +25,7 @@ router.get(
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
@@ -86,7 +86,7 @@ router.get(
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
@@ -118,7 +118,7 @@ router.get(
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']

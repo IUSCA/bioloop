@@ -20,7 +20,7 @@
           <dl
             class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
           >
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -32,7 +32,7 @@
               </dd>
             </div>
 
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -44,7 +44,7 @@
               </dd>
             </div>
 
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -56,12 +56,14 @@
                   v-if="props.collection.owner_group"
                   :to="`/v2/groups/${props.collection.owner_group.id}`"
                 >
-                  {{ props.collection.owner_group?.name || "—" }}
+                  <div class="flex items-center gap-2">
+                    {{ props.collection.owner_group?.name || "—" }}
+                  </div>
                 </RouterLink>
               </dd>
             </div>
 
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -77,7 +79,10 @@
               </dd>
             </div>
 
-            <div v-if="props.collection.created_at" class="py-2.5 flex gap-4">
+            <div
+              v-if="props.collection.created_at"
+              class="py-2.5 flex items-center gap-4"
+            >
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -89,7 +94,10 @@
               </dd>
             </div>
 
-            <div v-if="props.collection.created_at" class="py-2.5 flex gap-4">
+            <div
+              v-if="props.collection.created_at"
+              class="py-2.5 flex items-center gap-4"
+            >
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"

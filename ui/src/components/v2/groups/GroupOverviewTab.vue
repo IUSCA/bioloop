@@ -21,7 +21,7 @@
           <dl
             class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
           >
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -32,7 +32,7 @@
                 {{ props.group.name }}
               </dd>
             </div>
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -43,7 +43,7 @@
                 {{ props.group.description || "—" }}
               </dd>
             </div>
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -58,7 +58,7 @@
                 </ModernChip>
               </dd>
             </div>
-            <div class="py-2.5 flex gap-4">
+            <div class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -86,7 +86,7 @@
                 </div>
               </dd>
             </div>
-            <div v-if="nearestAncestor" class="py-2.5 flex gap-4">
+            <div v-if="nearestAncestor" class="py-2.5 flex items-center gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
@@ -103,7 +103,10 @@
                 </RouterLink>
               </dd>
             </div>
-            <div v-if="props.group.created_at" class="py-2.5 flex gap-4">
+            <div
+              v-if="props.group.created_at"
+              class="py-2.5 flex items-center gap-4"
+            >
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"

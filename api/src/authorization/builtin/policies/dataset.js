@@ -80,9 +80,9 @@ const userHasGrant = (access_type) => {
 };
 
 const callerRoles = Object.freeze({
-  PLATFORM_ADMIN: 'ADMIN',
-  DATASET_OWNER_GROUP_ADMIN: 'ADMIN',
-  DATASET_OWNER_GROUP_OVERSIGHT: 'OVERSIGHT',
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
+  ADMIN: 'ADMIN',
+  OVERSIGHT: 'OVERSIGHT',
   GRANT_HOLDER: 'GRANT_HOLDER',
 });
 
@@ -330,8 +330,8 @@ datasetPolicies
   })
   .roles([
     { policy: isPlatformAdmin, role: callerRoles.PLATFORM_ADMIN },
-    { policy: isDatasetOwningGroupAdmin, role: callerRoles.DATASET_OWNER_GROUP_ADMIN },
-    { policy: hasDatasetOwningGroupOversight, role: callerRoles.DATASET_OWNER_GROUP_OVERSIGHT },
+    { policy: isDatasetOwningGroupAdmin, role: callerRoles.ADMIN },
+    { policy: hasDatasetOwningGroupOversight, role: callerRoles.OVERSIGHT },
     {
       policy: Policy.or([
         userHasGrant('DATASET:VIEW_METADATA'),

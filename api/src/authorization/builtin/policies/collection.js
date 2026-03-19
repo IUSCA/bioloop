@@ -50,6 +50,7 @@ const hasCollectionOversight = new CollectionPolicy({
 });
 
 const CallerRole = Object.freeze({
+  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
   OVERSIGHT: 'OVERSIGHT',
@@ -90,10 +91,14 @@ collectionPolicies
     transfer_ownership: Policy.or([isPlatformAdmin, isCollectionAdmin]),
     delete: Policy.or([isPlatformAdmin, isCollectionAdmin]),
     archive: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    unarchive: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+    unarchive: isPlatformAdmin,
+
+    list_grants: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
+    manage_grants: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+    review_requests: Policy.or([isPlatformAdmin, isCollectionAdmin]),
   })
   .roles([
-    { policy: isPlatformAdmin, role: CallerRole.ADMIN },
+    { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
     { policy: isCollectionAdmin, role: CallerRole.ADMIN },
     { policy: hasCollectionOversight, role: CallerRole.OVERSIGHT },
     {
