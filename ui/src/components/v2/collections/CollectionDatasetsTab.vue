@@ -147,7 +147,8 @@
             >
               <!-- Icon -->
               <div class="flex items-center justify-center">
-                <i-mdi-database-outline
+                <Icon
+                  :icon="getIcon('dataset')"
                   class="text-5xl text-gray-400 dark:text-gray-500"
                 />
               </div>
@@ -167,8 +168,8 @@
                   <template v-else>
                     No datasets are currently available to you in this
                     collection. This collection may have no datasets, or you may
-                    not have been granted access. Contact your collection
-                    administrator for assistance.
+                    not have been granted access. Contact the administrator for
+                    assistance.
                   </template>
                 </p>
               </div>
@@ -192,6 +193,7 @@
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/v2/datasets";
+import { getIcon } from "@/services/v2/icons";
 import { VaCardContent } from "vuestic-ui/web-components";
 
 const props = defineProps({

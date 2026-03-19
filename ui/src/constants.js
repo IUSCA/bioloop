@@ -1,3 +1,14 @@
+const icons = {
+  group: "mdi-account-group",
+  user: "mdi-account",
+  dataset: "mdi-file-document",
+  collection: "mdi-folder-multiple",
+  request: "mdi-lock-open",
+  grant: "mdi-certificate",
+  resource: "mdi-database",
+  members: "mdi-account-multiple",
+};
+
 const exports = {
   sidebar: {
     user_items: [
@@ -34,22 +45,22 @@ const exports = {
         test_id: "sidebar-v2-home",
       },
       {
-        icon: "mdi-account-group-outline",
+        icon: `${icons.group}-outline`,
         title: "Groups",
         path: "/v2/groups",
         test_id: "sidebar-v2-groups",
       },
       {
-        icon: "mdi-folder-multiple-outline",
+        icon: `${icons.collection}-outline`,
         title: "Collections",
         path: "/v2/collections",
         test_id: "sidebar-v2-collections",
       },
       {
-        icon: "mdi-key-outline",
-        title: "Access",
-        path: "/v2/access",
-        test_id: "sidebar-v2-access",
+        icon: `${icons.access_request}-outline`,
+        title: "Access Requests",
+        path: "/v2/access-requests",
+        test_id: "sidebar-v2-access-requests",
       },
     ],
     operator_items: [
@@ -142,14 +153,7 @@ const exports = {
         test_id: "sidebar-logout",
       },
     ],
-    admin_items: [
-      {
-        icon: "mdi-shield-crown-outline",
-        title: "Admin",
-        path: "/v2/admin",
-        test_id: "sidebar-v2-admin",
-      },
-    ],
+    admin_items: [],
   },
   UPLOAD_STATUSES: {
     // Statuses that only appear in the UI
@@ -192,6 +196,7 @@ const exports = {
       EXPIRED: "EXPIRED",
     },
   },
+  icons,
 };
 
 export default exports;

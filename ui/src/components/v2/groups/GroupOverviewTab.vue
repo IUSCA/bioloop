@@ -228,35 +228,35 @@
       <div class="grid grid-cols-2 gap-3">
         <MetricCard
           label="Members"
-          icon="mdi-account-multiple"
+          icon="mdi-account-multiple-outline"
           color="primary"
           :value="props.counts.members"
           :loading="props.counts.members === null"
         />
         <MetricCard
           label="Subgroups"
-          icon="mdi-sitemap"
+          icon="mdi-sitemap-outline"
           color="info"
           :value="props.counts.subgroups"
           :loading="props.counts.subgroups === null"
         />
         <MetricCard
           label="Datasets"
-          icon="mdi-database"
+          :icon="getIcon('dataset', { outlined: true })"
           color="success"
           :value="props.counts.datasets"
           :loading="props.counts.datasets === null"
         />
         <MetricCard
           label="Collections"
-          icon="mdi-folder-multiple"
+          :icon="getIcon('collection', { outlined: true })"
           color="success"
           :value="props.counts.collections"
           :loading="props.counts.collections === null"
         />
         <!-- <MetricCard
           label="Active Grants"
-          icon="mdi-key"
+          :icon="getIcon('grant', { outlined: true })"
           color="warning"
           :value="null"
         /> -->
@@ -317,6 +317,7 @@
 
 <script setup>
 import * as datetime from "@/services/datetime";
+import { getIcon } from "@/services/v2/icons";
 
 const props = defineProps({
   group: { type: Object, required: true },

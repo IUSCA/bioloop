@@ -151,7 +151,7 @@
       <div class="grid grid-cols-2 gap-3">
         <MetricCard
           label="Datasets"
-          icon="mdi-database"
+          :icon="getIcon('dataset', { outlined: true })"
           color="success"
           :value="props.counts.datasets"
           :loading="props.counts.datasets === null"
@@ -159,7 +159,7 @@
 
         <MetricCard
           label="Requests"
-          icon="mdi-file-document"
+          :icon="getIcon('request', { outlined: true })"
           color="info"
           :value="props.counts.requests"
           :loading="props.counts.requests === null"
@@ -167,7 +167,7 @@
 
         <MetricCard
           label="Grants"
-          icon="mdi-account"
+          :icon="getIcon('grant', { outlined: true })"
           color="warning"
           :value="props.counts.grants"
           :loading="props.counts.grants === null"
@@ -189,6 +189,7 @@
 <script setup>
 import CollectionEditMetadataModal from "@/components/v2/collections/CollectionEditMetadataModal.vue";
 import * as datetime from "@/services/datetime";
+import { getIcon } from "@/services/v2/icons";
 
 const props = defineProps({
   collection: { type: Object, required: true },
