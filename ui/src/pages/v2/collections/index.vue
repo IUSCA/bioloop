@@ -11,7 +11,6 @@
                 <Searchbar
                   v-model="searchTerm"
                   placeholder="Search collections…"
-                  @update:model-value="debouncedFetch"
                 />
               </div>
 
@@ -178,7 +177,7 @@
                   No collections available
                 </h3>
                 <p class="text-sm leading-relaxed va-text-secondary">
-                  <template v-if="props.canCreate">
+                  <template v-if="canCreate">
                     This group has no collections yet. Add the first collection
                     to get started.
                   </template>
@@ -191,10 +190,7 @@
                 </p>
               </div>
 
-              <VaButton
-                v-if="props.canCreate"
-                @click="navigateToCreateCollection"
-              >
+              <VaButton v-if="canCreate" @click="navigateToCreateCollection">
                 <div class="flex items-center gap-3 px-2">
                   <i-mdi-plus class="text-lg" />
                   <span class="font-medium">Create Collection</span>
@@ -279,21 +275,16 @@ const columns = [
   { key: "status", label: "Status", width: "100px" },
 ];
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value === 1) {
+watch(
+  [activeScope, activeStatus, itemsPerPage, searchTerm, sortBy, sortOrder],
+  () => {
+    if (currentPage.value !== 1) {
+      currentPage.value = 1;
+      return;
+    }
     fetchCollections();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
-watch([activeScope, activeStatus, itemsPerPage, sortBy, sortOrder], () => {
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
-    return;
-  }
-  fetchCollections();
-});
+  },
+);
 
 watch(currentPage, fetchCollections);
 
@@ -316,18 +307,6 @@ async function fetchCollections() {
     });
     error.value = null;
     collections.value = data.data;
-
-    // Filter by status if needed (client-side for now)
-    // if (activeStatus.value !== "all") {
-    //   collections.value = collections.value.filter((c) => {
-    //     if (activeStatus.value === "active") {
-    //       return !c.is_archived;
-    //     } else if (activeStatus.value === "archived") {
-    //       return c.is_archived;
-    //     }
-    //     return true;
-    //   });
-    // }
 
     total.value = data.metadata?.total ?? data.data.length;
   } catch (err) {

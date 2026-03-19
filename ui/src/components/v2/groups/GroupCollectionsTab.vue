@@ -10,7 +10,6 @@
               <Searchbar
                 v-model="searchTerm"
                 placeholder="Search collections…"
-                @update:model-value="debouncedFetch"
               />
             </div>
 
@@ -229,24 +228,11 @@ const columns = [
   { key: "status", label: "Status", width: "100px" },
 ];
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value === 1) {
-    fetchCollections();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
 function setStatus(value) {
   activeStatus.value = value;
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
-    return;
-  }
-  fetchCollections();
 }
 
-watch([itemsPerPage, sortBy, sortOrder], () => {
+watch([itemsPerPage, searchTerm, activeStatus, sortBy, sortOrder], () => {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
     return;
@@ -275,18 +261,6 @@ async function fetchCollections() {
     });
     error.value = null;
     collections.value = data.data;
-
-    // Filter by status if needed (client-side for now)
-    // if (activeStatus.value !== "all") {
-    //   collections.value = collections.value.filter((c) => {
-    //     if (activeStatus.value === "active") {
-    //       return !c.is_archived;
-    //     } else if (activeStatus.value === "archived") {
-    //       return c.is_archived;
-    //     }
-    //     return true;
-    //   });
-    // }
 
     total.value = data.metadata?.total ?? data.data.length;
   } catch (err) {

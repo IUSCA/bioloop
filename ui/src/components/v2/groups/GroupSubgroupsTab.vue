@@ -7,11 +7,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <!-- Search input -->
             <div class="flex-1">
-              <Searchbar
-                v-model="searchTerm"
-                placeholder="Search subgroups…"
-                @update:model-value="debouncedFetch"
-              />
+              <Searchbar v-model="searchTerm" placeholder="Search subgroups…" />
             </div>
 
             <!-- Scope filter chips -->
@@ -179,14 +175,13 @@ const columns = [
   { key: "status", label: "Status", width: "120px" },
 ];
 
-const debouncedFetch = useDebounceFn(() => {
-  fetchSubgroups();
-}, 350);
-
 function setScope(value) {
   activeScope.value = value;
-  fetchSubgroups();
 }
+
+watch([searchTerm, activeScope], () => {
+  fetchSubgroups();
+});
 
 async function fetchSubgroups() {
   loading.value = true;

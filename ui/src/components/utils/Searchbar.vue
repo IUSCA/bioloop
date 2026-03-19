@@ -1,5 +1,12 @@
 <template>
-  <va-input class="w-full" outline clearable :input-class="inputClass">
+  <va-input
+    :model-value="model"
+    @update:model-value="debouncedFn"
+    class="w-full"
+    outline
+    clearable
+    :input-class="inputClass"
+  >
     <template #prependInner>
       <Icon icon="material-symbols:search" class="text-xl" />
     </template>
@@ -7,7 +14,7 @@
     <template #appendInner>
       <div class="w-14 flex items-center justify-end">
         <span
-          class="hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded"
+          class="hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-200 dark:bg-slate-700 rounded"
         >
           <span class="font-medium"> {{ shortcutLabel }} </span>
         </span>
@@ -19,6 +26,22 @@
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import { getCurrentInstance } from "vue";
+
+const model = defineModel({
+  type: String,
+  default: "",
+});
+
+const props = defineProps({
+  debounceMs: {
+    type: Number,
+    default: 300,
+  },
+});
+
+const debouncedFn = useDebounceFn((value) => {
+  model.value = value;
+}, props.debounceMs);
 
 // Generate a unique class name for the input to avoid conflicts if multiple search bars are used on the same page
 // We use the component UID where possible so this is stable across SSR hydration.
@@ -45,7 +68,6 @@ const shortcutLabel = computed(() => {
 
 onMounted(() => {
   if (isMac()) {
-    console.log("detected Mac platform, using Meta key for shortcut");
     useSearchKeyShortcut({
       triggerKey: "k",
       targetElementClass: inputClass,

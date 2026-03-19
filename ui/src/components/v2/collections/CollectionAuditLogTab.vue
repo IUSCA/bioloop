@@ -17,9 +17,7 @@
             Add API endpoint to return the authorization audit log for a
             collection.
           </li>
-          <li>
-            Render audit events with timestamps, actors, and actions.
-          </li>
+          <li>Render audit events with timestamps, actors, and actions.</li>
         </ul>
       </div>
     </VaCardContent>
@@ -27,7 +25,7 @@
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
   collectionId: { type: String, required: false },
 });
 </script>

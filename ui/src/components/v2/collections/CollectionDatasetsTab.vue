@@ -7,18 +7,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <!-- Search input -->
             <div class="flex-1">
-              <va-input
-                v-model="searchTerm"
-                class="w-full"
-                placeholder="Search datasets…"
-                outline
-                clearable
-                @update:model-value="debouncedFetch"
-              >
-                <template #prependInner>
-                  <Icon icon="material-symbols:search" class="text-xl" />
-                </template>
-              </va-input>
+              <Searchbar v-model="searchTerm" placeholder="Search datasets…" />
             </div>
 
             <!-- Status filter chips -->
@@ -100,9 +89,13 @@
                   </span>
                 </template>
 
-                <template #cell(size)="{ value }">
+                <template #cell(size)="{ rowData }">
                   <span class="text-sm">
-                    {{ value != null ? formatBytes(value) : "—" }}
+                    {{
+                      rowData?._count?.datasets != null
+                        ? formatBytes(rowData._count.datasets)
+                        : "—"
+                    }}
                   </span>
                 </template>
 
@@ -240,24 +233,11 @@ const columns = [
   { key: "status", label: "Status", width: "100px" },
 ];
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value === 1) {
-    fetchDatasets();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
 function setStatus(value) {
   activeStatus.value = value;
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
-    return;
-  }
-  fetchDatasets();
 }
 
-watch([itemsPerPage, sortBy, sortOrder], () => {
+watch([itemsPerPage, searchTerm, activeStatus, sortBy, sortOrder], () => {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
     return;
@@ -275,7 +255,7 @@ async function fetchDatasets() {
       offset: (currentPage.value - 1) * itemsPerPage.value,
       name: searchTerm.value || undefined,
       collection_id: props.collectionId,
-      sort_by: sortBy.value,
+      sort_by: sortBy.value === "size" ? "_count.datasets" : sortBy.value,
       sort_order: sortOrder.value,
     });
 

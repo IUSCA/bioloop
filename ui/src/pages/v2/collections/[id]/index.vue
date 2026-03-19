@@ -57,19 +57,11 @@
       >
         <template #tabs>
           <VaTab name="overview">Overview</VaTab>
-          <VaTab name="datasets">
+          <VaTab name="datasets" v-if="can('list_datasets')">
             <span class="flex items-center gap-1.5">
               Datasets
               <span v-if="counts.datasets !== null" class="tab-count-badge">
                 {{ counts.datasets }}
-              </span>
-            </span>
-          </VaTab>
-          <VaTab name="access">
-            <span class="flex items-center gap-1.5">
-              Access
-              <span v-if="counts.access !== null" class="tab-count-badge">
-                {{ counts.access }}
               </span>
             </span>
           </VaTab>
@@ -81,7 +73,15 @@
               </span>
             </span>
           </VaTab>
-          <VaTab name="audit-log">Audit Log</VaTab>
+          <VaTab name="grants" v-if="can('list_grants')">
+            <span class="flex items-center gap-1.5">
+              Grants
+              <span v-if="counts.grants !== null" class="tab-count-badge">
+                {{ counts.grants }}
+              </span>
+            </span>
+          </VaTab>
+          <VaTab name="audit-log" v-if="can('list_grants')">Audit Log</VaTab>
         </template>
       </VaTabs>
 
@@ -91,7 +91,8 @@
           v-if="activeTab === 'overview'"
           :collection="collection"
           :counts="counts"
-          :can-edit="canEdit"
+          :can-edit="can('edit_metadata')"
+          :can-review="can('review_requests')"
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
           @update="fetchCollectionData"
@@ -103,17 +104,21 @@
           :collection-id="props.id"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
-          @count-changed="handleDatasetsUpdate"
+          @count-changed="fetchDatasetCount"
         />
 
-        <CollectionAccessTab
-          v-else-if="activeTab === 'access'"
+        <CollectionGrantsTab
+          v-else-if="activeTab === 'grants'"
           :collection-id="props.id"
+          :can-manage="can('manage_grants')"
+          @count-changed="fetchGrantsCount"
         />
 
         <CollectionRequestsTab
           v-else-if="activeTab === 'requests'"
           :collection-id="props.id"
+          :can-review="can('review_requests')"
+          @count-changed="fetchRequestCount"
         />
 
         <CollectionAuditLogTab
@@ -137,6 +142,7 @@
 </template>
 
 <script setup>
+import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantService from "@/services/v2/grants";
@@ -151,7 +157,7 @@ const loading = ref(true);
 const error = ref(null);
 
 const activeTab = ref("overview");
-const counts = ref({ datasets: null, access: null, requests: null });
+const counts = ref({ datasets: null, grants: null, requests: null });
 
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
@@ -160,8 +166,6 @@ const capabilities = computed(
 function can(action) {
   return capabilities.value.has(action);
 }
-
-const canEdit = computed(() => can("edit_metadata"));
 
 const canArchive = computed(
   () => can("archive") && collection.value?.is_archived === false,
@@ -173,7 +177,7 @@ const canUnarchive = computed(
 
 function setNavBreadcrumbs(c) {
   const items = [{ label: "Collections", to: "/v2/collections" }];
-  items.push({ label: c.name, to: `/v2/collections/${c.id}` });
+  items.push({ label: "...", to: `/v2/collections/${c.id}` });
   nav.setNavItems(items);
 }
 
@@ -186,15 +190,28 @@ async function fetchCollectionData() {
     collection.value = data;
     setNavBreadcrumbs(data);
 
-    await Promise.allSettled([fetchDatasetCount(), fetchAccessCount()]);
+    await fetchCounts();
+    // await Promise.allSettled([fetchDatasetCount(), fetchGrantsCount()]);
   } catch (err) {
-    error.value = err;
+    error.value = err?.response?.data?.message ?? "Failed to load collection.";
   } finally {
     loading.value = false;
   }
 }
 
+async function fetchCounts() {
+  await Promise.allSettled([
+    fetchDatasetCount(),
+    fetchGrantsCount(),
+    fetchRequestCount(),
+  ]);
+}
+
 async function fetchDatasetCount() {
+  if (!can("list_datasets")) {
+    return;
+  }
+
   try {
     const { data } = await DatasetService.search({
       collection_id: props.id,
@@ -206,20 +223,47 @@ async function fetchDatasetCount() {
   }
 }
 
-async function fetchAccessCount() {
+async function fetchGrantsCount() {
+  if (!can("list_grants")) {
+    return;
+  }
+
   try {
     const { data } = await GrantService.listGrantsForCollection(props.id, {
       active: true,
       limit: 0,
     });
-    counts.value.access = data.metadata?.total ?? null;
+    counts.value.grants = data.metadata?.total ?? null;
   } catch {
-    counts.value.access = null;
+    counts.value.grants = null;
   }
 }
 
-function handleDatasetsUpdate() {
-  fetchDatasetCount();
+async function fetchRequestCount() {
+  // if user can review requests, show count of pending review requests,
+  // otherwise show count of requests they have made
+
+  if (can("review_requests")) {
+    try {
+      const { data } = await AccessRequestService.pendingReview({
+        resource_id: props.id,
+        limit: 0,
+      });
+      counts.value.requests = data.metadata?.total ?? null;
+    } catch {
+      counts.value.requests = null;
+    }
+  } else {
+    try {
+      const { data } = await AccessRequestService.requestedByMe({
+        resource_id: props.id,
+        limit: 0,
+      });
+      counts.value.requests = data.metadata?.total ?? null;
+    } catch {
+      counts.value.requests = null;
+    }
+  }
 }
 
 onMounted(() => fetchCollectionData());

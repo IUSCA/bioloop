@@ -37,16 +37,6 @@
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
               >
-                Slug
-              </dt>
-              <dd class="text-sm font-mono">{{ props.collection.slug }}</dd>
-            </div>
-
-            <div class="py-2.5 flex gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
                 Description
               </dt>
               <dd class="text-sm line-clamp-2">
@@ -98,6 +88,18 @@
                 {{ datetime.displayDateTime(props.collection.created_at) }}
               </dd>
             </div>
+
+            <div v-if="props.collection.created_at" class="py-2.5 flex gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Updated
+              </dt>
+              <dd class="text-sm">
+                {{ datetime.fromNow(props.collection.updated_at) }}
+              </dd>
+            </div>
           </dl>
         </VaCardContent>
       </VaCard>
@@ -137,14 +139,32 @@
 
     <!-- Right column: stats -->
     <div class="flex flex-col gap-4">
-      <MetricCard
-        label="Datasets"
-        icon="mdi-database"
-        color="success"
-        :value="props.counts.datasets"
-        :loading="props.counts.datasets === null"
-      />
+      <!-- Stat cards (2×2 grid) -->
+      <div class="grid grid-cols-2 gap-3">
+        <MetricCard
+          label="Datasets"
+          icon="mdi-database"
+          color="success"
+          :value="props.counts.datasets"
+          :loading="props.counts.datasets === null"
+        />
 
+        <MetricCard
+          label="Requests"
+          icon="mdi-file-document"
+          color="info"
+          :value="props.counts.requests"
+          :loading="props.counts.requests === null"
+        />
+
+        <MetricCard
+          label="Grants"
+          icon="mdi-account"
+          color="warning"
+          :value="props.counts.grants"
+          :loading="props.counts.grants === null"
+        />
+      </div>
     </div>
   </div>
 
@@ -169,6 +189,7 @@ const props = defineProps({
     default: () => ({ datasets: null }),
   },
   canEdit: { type: Boolean, default: false },
+  canReview: { type: Boolean, default: false },
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
 });

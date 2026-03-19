@@ -7,11 +7,7 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <!-- Search input -->
             <div class="flex-1">
-              <Searchbar
-                v-model="searchTerm"
-                placeholder="Search datasets…"
-                @update:model-value="debouncedFetch"
-              />
+              <Searchbar v-model="searchTerm" placeholder="Search datasets…" />
             </div>
 
             <!-- Status filter chips -->
@@ -233,14 +229,6 @@ const columns = [
   { key: "status", label: "Status", width: "100px" },
 ];
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value === 1) {
-    fetchDatasets();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
 function setStatus(value) {
   activeStatus.value = value;
   if (currentPage.value !== 1) {
@@ -250,7 +238,7 @@ function setStatus(value) {
   fetchDatasets();
 }
 
-watch([itemsPerPage, sortBy, sortOrder], () => {
+watch([itemsPerPage, searchTerm, sortBy, sortOrder], () => {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
     return;

@@ -10,7 +10,6 @@
               <Searchbar
                 v-model="searchTerm"
                 placeholder="Search group members…"
-                @update:model-value="debouncedFetch"
               />
             </div>
 
@@ -311,26 +310,11 @@ const columns = computed(() => {
   return baseColumns;
 });
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value == 1) {
-    // If we're already on the first page, just refetch. Otherwise,
-    // go back to page 1 which will trigger a fetch via the watcher.
-    fetchMembers();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
 function setScope(value) {
   activeScope.value = value;
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
-    return;
-  }
-  fetchMembers();
 }
 
-watch(itemsPerPage, () => {
+watch([itemsPerPage, searchTerm, activeScope], () => {
   if (currentPage.value !== 1) {
     fetchMembers();
     return;

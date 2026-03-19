@@ -24,7 +24,6 @@
           v-model="searchTerm"
           placeholder="Search groups…"
           :disabled="loading"
-          @update:model-value="debouncedFetch"
         />
       </div>
 
@@ -150,18 +149,11 @@ async function fetchGroups() {
   }
 }
 
-const debouncedFetch = useDebounceFn(() => {
-  if (currentPage.value == 1) {
-    // If we're already on the first page, just refetch. Otherwise,
-    // go back to page 1 which will trigger a fetch via the watcher.
-    fetchGroups();
-    return;
-  }
-  currentPage.value = 1;
-}, 350);
-
 function setScope(scope) {
   activeScope.value = scope;
+}
+
+watch([searchTerm, activeScope], () => {
   if (currentPage.value == 1) {
     // If we're already on the first page, just refetch. Otherwise,
     // go back to page 1 which will trigger a fetch via the watcher.
@@ -169,19 +161,11 @@ function setScope(scope) {
     return;
   }
   currentPage.value = 1;
-}
+});
 
 function resetFilters() {
   searchTerm.value = "";
   activeScope.value = auth.canAdmin ? "all" : "mine";
-
-  if (currentPage.value == 1) {
-    // If we're already on the first page, just refetch. Otherwise,
-    // go back to page 1 which will trigger a fetch via the watcher.
-    fetchGroups();
-    return;
-  }
-  currentPage.value = 1;
 }
 
 watch(currentPage, () => {
