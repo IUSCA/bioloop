@@ -1,5 +1,5 @@
 <template>
-  <va-card>
+  <va-card data-testid="import-info-card">
     <va-card-title>Import Details</va-card-title>
     <va-card-content>
       <div class="va-table-responsive">
@@ -12,7 +12,11 @@
                   <div v-if="!auth.canOperate">
                     {{ props.dataset.name }}
                   </div>
-                  <a v-else :href="`/datasets/${props.dataset.id}`">
+                  <a
+                    v-else
+                    :href="`/datasets/${props.dataset.id}`"
+                    data-testid="import-success-dataset-link"
+                  >
                     {{ props.dataset.name }}
                   </a>
                 </div>

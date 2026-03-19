@@ -9,18 +9,35 @@ services:
       - 127.0.0.1:443:443
     env_file:
       - ui/.env.default
+    # environment:
+      # If this stack's UI port is remapped to something other than :443,
+      # override these so CAS/OAuth callbacks and upload API calls land on the
+      # correct port rather than the default.  Example for a stack on :13443:
+        # - VITE_CAS_RETURN=https://localhost:13443/auth/iucas
+        # - VITE_GOOGLE_RETURN=https://localhost:13443/auth/google
+        # - VITE_CILOGON_RETURN=https://localhost:13443/auth/cil
+        # - VITE_MICROSOFT_RETURN=https://localhost:13443/auth/microsoft
+        # - VITE_UPLOAD_API_BASE_PATH=http://localhost:<secure_download_port>
     volumes:
       - ./ui/:/opt/sca/app
       - ui_node_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"] 
+    command: ["npm", "run", "dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-k", "-f", "https://localhost:443"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 120s
 
   api:
     image: node:21
     restart: unless-stopped # This can help with loading conatainer after it has all the keys set up.
     expose:
       - 3030
+    environment:
+      - NODE_ENV=ci # Activates test-user auth flow (find_or_create_test_user) for e2e login setup
     env_file:
       - tests/.env.default # Variables needed for testing user information
       - db/postgres/.env.default # For Postgres connection settings
@@ -32,12 +49,15 @@ services:
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"] 
-    command: ["npm", "run", "dev"] 
+    entrypoint: ["bin/entrypoint.sh"]
+    command: ["npm", "run", "dev"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 10s
+      interval: 10s
       timeout: 10s
+      retries: 18
+      start_period: 180s
       retries: 18
       start_period: 180s
     depends_on:
@@ -61,6 +81,10 @@ services:
       - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
 
 # Workers
+  # One-shot service that creates the directory structure expected by workers
+  # and import sources on the shared data volume.  Runs bin/init_dirs.sh and
+  # exits.  Other services that need those directories (celery_worker,
+  # init_test_data) depend on this completing successfully before they start.
   init_data_dirs:
     build:
       context: ./workers
@@ -68,8 +92,41 @@ services:
       - APP_ENV=docker
     volumes:
       - ./workers/:/opt/sca/app
+      - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
+
+  # One-shot service that populates the import source directories with small
+  # sample dataset directories so the import UI has browsable content and the
+  # e2e tests have real directories to browse and select.
+  # Runs bin/create_test_import_datasets.sh and exits.
+  #
+  # Prerequisites (enforced by depends_on):
+  #   - init_data_dirs must have completed so the import source paths exist.
+  #   - api must be healthy so the script can call the datasets API to check
+  #     whether a given dataset name is already registered before creating it.
+  #
+  # The script reads APP_API_TOKEN from workers/.env (written by the API on
+  # first startup) to authenticate its API calls.  It is idempotent: existing
+  # dataset directories are skipped on subsequent runs.
+  init_test_data:
+    build:
+      context: ./workers
+    environment:
+      - APP_ENV=docker
+      - API_BASE_URL=http://api:3030
+    env_file:
+      - workers/.env.default
+    working_dir: /opt/sca/app
+    volumes:
+      - ./workers/:/opt/sca/app
+      - landing_volume:/opt/sca/data
+    command: ["bin/create_test_import_datasets.sh"]
+    depends_on:
+      init_data_dirs:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
 
   celery_worker:
     build:
@@ -88,10 +145,8 @@ services:
       - landing_volume:/opt/sca/data
     entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
-      init_data_dirs:
+      init_test_data:
         condition: service_completed_successfully
-      api:
-        condition: service_healthy
       mongo:
         condition: service_started
       queue:
@@ -115,10 +170,8 @@ services:
       - landing_volume:/opt/sca/data
     entrypoint: [ "bin/entrypoint.sh" ]
     depends_on:
-      init_data_dirs:
+      init_test_data:
         condition: service_completed_successfully
-      api:
-        condition: service_healthy
       mongo:
         condition: service_started
       queue:
@@ -164,6 +217,7 @@ services:
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
       - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
+      - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
       - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
@@ -171,7 +225,10 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 5s
+      interval: 5s
       timeout: 10s
+      retries: 10
+      start_period: 15s
       retries: 10
       start_period: 15s
     depends_on:
@@ -188,7 +245,9 @@ services:
       - secure_download/.env.default # For all default settings
     volumes:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
+      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
+      - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
       - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
@@ -196,7 +255,10 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
       interval: 5s
+      interval: 5s
       timeout: 10s
+      retries: 10
+      start_period: 15s
       retries: 10
       start_period: 15s
 
@@ -216,7 +278,10 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
       interval: 5s
+      interval: 5s
       timeout: 10s
+      retries: 10
+      start_period: 10s
       retries: 10
       start_period: 10s
     depends_on:
@@ -237,7 +302,10 @@ services:
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
       interval: 5s
+      interval: 5s
       timeout: 10s
+      retries: 10
+      start_period: 5s
       retries: 10
       start_period: 5s
 
@@ -316,7 +384,6 @@ services:
       - metrics
 
 
-
   e2e:
     build: tests
     restart: "no"
@@ -327,15 +394,20 @@ services:
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules
+    # Separating entrypoint from command lets `docker compose run` override just
+    # the command, e.g.:
+    #   docker compose run --rm e2e test --project=admin_import
     entrypoint:
-      - sh
-      - -c
-      - |
-        /opt/sca/app/node_modules/.bin/playwright test
+      - /opt/sca/app/node_modules/.bin/playwright
+    command:
+      - test
     depends_on:
-      # ensures that tests don't run until the API container is up
       api:
         condition: service_healthy
+      ui:
+        condition: service_healthy
+      init_test_data:
+        condition: service_completed_successfully
     network_mode: "host"
 
 volumes:
@@ -350,6 +422,14 @@ volumes:
   landing_volume:
     external: false
   docs_modules:
+    external: false
+  rhythm_keys:
+    external: false
+  api_node_modules:
+    external: false
+  ui_node_modules:
+    external: false
+  secure_download_node_modules:
     external: false
   rhythm_keys:
     external: false

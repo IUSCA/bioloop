@@ -278,7 +278,7 @@
       </div>
 
       <!-- Workflows -->
-      <div>
+      <div data-testid="dataset-workflows-section">
         <span class="flex text-xl my-2 font-bold">WORKFLOWS</span>
         <!-- TODO: add filter based on workflow status -->
         <!-- TODO: remove delete workflow feature. Instead have delete archive feature -->
@@ -287,6 +287,7 @@
             v-for="workflow in dataset.workflows"
             :key="workflow.id"
             v-model="workflow.collapse_model"
+            data-testid="workflow-item"
           >
             <template #header-content>
               <WorkflowCompact :workflow="workflow" />

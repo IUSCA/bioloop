@@ -88,6 +88,8 @@ const props = defineProps({
   },
 });
 
+defineEmits(["file-removed"]);
+
 const noFilesSelected = computed(() => {
   return props.files.length === 0;
 });

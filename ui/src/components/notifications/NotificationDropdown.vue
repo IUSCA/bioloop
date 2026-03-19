@@ -326,11 +326,11 @@
 </template>
 
 <script setup>
-import { useNotificationStore } from "@/stores/notification";
-import { useAuthStore } from "@/stores/auth";
-import { storeToRefs } from "pinia";
 import config from "@/config";
 import constants from "@/constants";
+import { useAuthStore } from "@/stores/auth";
+import { useNotificationStore } from "@/stores/notification";
+import { storeToRefs } from "pinia";
 
 const { notificationTheme: theme } = constants;
 

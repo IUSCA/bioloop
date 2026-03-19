@@ -1289,7 +1289,7 @@ const handleSubmit = () => {
         : Promise.reject();
     })
     .catch(() => {
-      // console.error(e);
+      // console.error(_e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
       submissionAlert.value = "An error occurred.";

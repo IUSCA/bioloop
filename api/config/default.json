@@ -169,19 +169,6 @@
       }
     }
   },
-  "filesystem_search_spaces": "",
-  "filesystem": {
-    "search_spaces": "",
-    "base_dir": {
-      "slateScratch": ""
-    },
-    "mount_dir": {
-      "slateScratch": ""
-    }
-  },
-  "restricted_import_dirs": {
-    "slateScratch": ""
-  },
   "enabled_features": {
     "import": true,
     "upload": true,

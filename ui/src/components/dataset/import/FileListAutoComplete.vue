@@ -16,6 +16,7 @@
     :loading="props.loading"
     @open="emit('open')"
     @close="emit('close')"
+    :data-test-id="props.dataTestId"
   >
     <template #prependInner>
       <va-badge
@@ -47,6 +48,7 @@ const props = defineProps({
   error: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   validating: { type: Boolean, default: false },
+  dataTestId: { type: String, default: "file-list-autocomplete" },
 });
 
 const emit = defineEmits([

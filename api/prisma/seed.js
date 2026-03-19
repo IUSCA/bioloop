@@ -22,7 +22,7 @@ const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_users.js instead.');
+  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_data.js instead.');
   process.exit(1);
 }
 
@@ -116,6 +116,32 @@ async function main() {
     create: role,
     update: role,
   })));
+
+  // Seed import sources for non-production environments.
+  // These paths match the directories created by workers/bin/init_dirs.sh.
+  const importSources = [
+    {
+      path: '/opt/sca/data/imports/genomics_lab_instrument_drop',
+      label: 'Genomics Lab',
+      description: 'Drop location for genomics lab instrument output',
+      sort_order: 1,
+    },
+    {
+      path: '/opt/sca/data/imports/proteomics_lab_instrument_drop',
+      label: 'Proteomics Lab',
+      description: 'Drop location for proteomics lab instrument output',
+      sort_order: 2,
+    },
+  ];
+  await Promise.all(
+    importSources.map((source) => prisma.import_source.upsert({
+      where: { path: source.path },
+      create: source,
+      update: { label: source.label, description: source.description, sort_order: source.sort_order },
+    })),
+  );
+  // eslint-disable-next-line no-console
+  console.log(`seeded ${importSources.length} import sources`);
 
   // Create default admins
   const additional_admins = readUsersFromJSON('admins.json');
