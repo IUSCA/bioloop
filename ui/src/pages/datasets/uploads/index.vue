@@ -39,11 +39,17 @@
     </div>
 
     <!-- table -->
-    <va-data-table :items="pastUploads" :columns="columns" :loading="loading">
+    <va-data-table
+      :items="pastUploads"
+      :columns="columns"
+      :loading="loading"
+      data-testid="uploads-history-table"
+    >
       <template #cell(link)="{ rowData }">
         <router-link
           :to="`/datasets/uploads/${rowData.uploaded_dataset.id}`"
           class="va-link"
+          data-testid="upload-details-link"
         >
           <Icon icon="mdi:open-in-new" />
         </router-link>

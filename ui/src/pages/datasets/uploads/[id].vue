@@ -3,7 +3,7 @@
     <va-inner-loading :loading="loading">
       <div v-if="upload">
         <!-- Upload Overview Card -->
-        <va-card class="mb-4">
+        <va-card class="mb-4" data-testid="upload-overview-card">
           <va-card-title>
             <div class="flex flex-nowrap items-center w-full">
               <span class="flex-auto text-lg"> Upload Overview </span>
@@ -11,12 +11,16 @@
           </va-card-title>
           <va-card-content>
             <div class="va-table-responsive">
-              <table class="va-table">
+              <table class="va-table" data-testid="upload-overview-table">
                 <tbody>
-                  <tr>
+                  <tr data-testid="upload-overview-uploaded-row">
                     <td>Uploaded</td>
                     <td>
-                      <router-link :to="getDatasetURL(upload)" class="va-link">
+                      <router-link
+                        :to="getDatasetURL(upload)"
+                        class="va-link"
+                        data-testid="upload-overview-dataset-link"
+                      >
                         {{ getDatasetDisplayName(upload) }}
                       </router-link>
                     </td>
@@ -27,12 +31,13 @@
                       <va-chip size="small" outline>Dataset</va-chip>
                     </td>
                   </tr> -->
-                  <tr>
+                  <tr data-testid="upload-overview-status-row">
                     <td>Status</td>
                     <td>
                       <va-chip
                         :color="getStatusColor(upload.status)"
                         size="small"
+                        data-testid="upload-overview-status-chip"
                       >
                         {{ upload.status }}
                       </va-chip>
@@ -42,10 +47,12 @@
                     <td>Last Updated</td>
                     <td>{{ formatDate(upload.updated_at) }}</td>
                   </tr>
-                  <tr v-if="upload.process_id">
+                  <tr v-if="upload.process_id" data-testid="upload-overview-process-id-row">
                     <td>Process ID</td>
                     <td>
-                      <code class="text-sm">{{ upload.process_id }}</code>
+                      <code class="text-sm" data-testid="upload-overview-process-id">
+                        {{ upload.process_id }}
+                      </code>
                     </td>
                   </tr>
                   <tr v-if="upload.metadata?.verification_task_id">

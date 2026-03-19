@@ -84,6 +84,11 @@ const find_or_create_test_user = async ({ identifier }) => {
 
   const test_user_config = is_test_user ? config.e2e.users[identifier] : null;
   const test_user_username = test_user_config ? test_user_config.username : identifier;
+  const requested_role = await prisma.role.findFirstOrThrow({
+    where: {
+      name: identifier,
+    },
+  });
 
   let test_user = await prisma.user.findUnique({
     where: {
@@ -92,12 +97,6 @@ const find_or_create_test_user = async ({ identifier }) => {
   });
 
   if (!test_user) {
-    const requested_role = await prisma.role.findFirstOrThrow({
-      where: {
-        name: identifier,
-      },
-    });
-
     test_user = await prisma.user.create({
       data: {
         username: test_user_username,
@@ -111,6 +110,34 @@ const find_or_create_test_user = async ({ identifier }) => {
         },
       },
     });
+  } else if (is_test_user) {
+    const existing_roles = await prisma.user_role.findMany({
+      where: {
+        user_id: test_user.id,
+      },
+      select: {
+        role_id: true,
+      },
+    });
+    const has_requested_role = existing_roles.some(
+      (role) => role.role_id === requested_role.id,
+    );
+
+    // Keep CI ticket behavior deterministic by ensuring each role ticket maps
+    // to a user whose effective role matches that ticket.
+    if (!has_requested_role || existing_roles.length !== 1) {
+      await prisma.user_role.deleteMany({
+        where: {
+          user_id: test_user.id,
+        },
+      });
+      await prisma.user_role.create({
+        data: {
+          user_id: test_user.id,
+          role_id: requested_role.id,
+        },
+      });
+    }
   }
 
   return test_user;

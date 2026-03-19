@@ -7,9 +7,7 @@ const config = require('config');
 
 setup('login', async ({ page }) => {
   await page.goto(`${config.baseURL}/auth/iucas?ticket=user`);
-
-  // do a test that page is finished loading - checking for username is good
-  // enough
+  // Verify authentication completed and username is displayed.
   await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.user.username);
 
   await page.context().storageState({ path: USER_STORAGE_STATE });

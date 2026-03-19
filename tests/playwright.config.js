@@ -150,7 +150,15 @@ module.exports = {
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/upload/**/*.spec.js',
-        testIgnore: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+        testIgnore: [
+          '/view/authenticated/upload/project_association/user_role/association.spec.js',
+          '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
+        ],
+      },
+      {
+        name: 'upload_role_visibility',
+        use: { ...devices['Desktop Chrome'] },
+        testMatch: '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
       },
       {
         name: 'upload--project_association--user_role--association',

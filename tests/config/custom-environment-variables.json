@@ -1,4 +1,6 @@
 {
+  "baseURL": "TEST_BASE_URL",
+  "apiBaseURL": "TEST_API_BASE_URL",
   "e2e": {
     "users": {
       "admin": {

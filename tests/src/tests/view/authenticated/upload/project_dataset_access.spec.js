@@ -122,7 +122,7 @@ test.describe.serial('Dataset Upload Process', () => {
         await userPage.goto(`${config.baseURL}/auth/iucas?ticket=${user.username}`);
 
         // Visit the dataset uploads page
-        await userPage.goto('/datasetUpload/new');
+        await userPage.goto('/datasets/uploads/new');
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
@@ -177,7 +177,7 @@ test.describe.serial('Dataset Upload Process', () => {
         await operatorPage.goto(`${config.baseURL}/auth/iucas?ticket=${operator.username}`);
 
         // Visit the dataset uploads page
-        await operatorPage.goto('/datasetUpload/new');
+        await operatorPage.goto('/datasets/uploads/new');
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
@@ -235,7 +235,7 @@ test.describe.serial('Dataset Upload Process', () => {
         await adminPage.goto(`${config.baseURL}/auth/iucas?ticket=${admin.username}`);
 
         // Visit the dataset uploads page
-        await adminPage.goto('/datasetUpload/new');
+        await adminPage.goto('/datasets/uploads/new');
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);

@@ -8,7 +8,7 @@
 
 ## Pre-PR Checklist
 
-> Canonical source also lives in `docs/design/upload-rewrite-notes.md`.
+> Canonical source also lives in `docs/design/upload-rewrite.md`.
 
 ### Blocking (must fix before merge)
 
@@ -16,6 +16,7 @@
 - [x] **`api/package-lock.json` not committed** — `@tus/file-store`, `@tus/server`, `ioredis` are in `package.json` but must also be in the lockfile. Run `npm install` in `api/`, commit the result. CI and container startup fail without it.
 - [ ] **Run linter** across changed `ui` and `api` files.
 - [ ] **Install dependencies** across `ui`, `api`, and `workers` to verify nothing is missing.
+- [ ] **Remove noisy upload UI console logs** — keep only operationally useful logs in upload UI code.
 - [x] **Smoke test on dev** — run the full `UPLOADING → UPLOADED → VERIFYING → VERIFIED → COMPLETE` flow end-to-end, including a multi-file upload.
 - [x] **Mid-file upload test** — upload at least one file around 500 MB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
 - [ ] **Large-file upload test** — upload at least one file ≥ 10 GB to verify TUS chunking, resumability, and that no proxy/server timeouts occur at scale.
@@ -71,7 +72,7 @@
 - [ ] **Check for design/scratch files** — draft docs, commented-out prototype code, `TODO`/`FIXME` notes meant only for the design stage.
 - [ ] **PR description** — 56 files changed across API, UI, workers, migrations, docs. Write a summary covering: TUS upload flow, async verification pipeline, schema changes (`dataset_upload_log` direct `dataset_id` link, `create_method` on `dataset`).
 - [ ] **Update diagrams** — update architecture/flow diagrams in the design doc for the new TUS-based upload design (old diagrams reflect the chunk-upload + `process_dataset_upload` workflow).
-- [ ] **Update existing upload e2e tests** — existing specs under `tests/src/tests/view/authenticated/upload/` still navigate to the old route `/datasetUpload/new` and reference removed form fields (analysis type, genomic fields, source data product). All specs need updating to the new route `/datasets/uploads/new` and the new stepper structure.
+- [x] **Update existing upload e2e routes** — specs under `tests/src/tests/view/authenticated/upload/` now use `/datasets/uploads/new`.
 - [ ] **Write new upload e2e scenarios** — see "New Upload E2E Scenarios" section below.
 
 ### Pipeline Robustness Fixes (applied 2026-03-15) — Test Before Merge
@@ -158,6 +159,7 @@ Each fix needs manual verification because they cover failure paths that can't b
 - [x] Set `create_method: 'ON_DEMAND'` in `register_dataset.py`
 - [x] Fixed Prisma migration `20260311000000_upload_rewrite` to handle `file_upload_log.status` enum dependency
 - [x] Docker Compose volume mount for `UPLOAD_HOST_DIR` in `docker-compose-prod.yml`
+- [x] Synced `.ai/features/uploads-rewrite.md` against `bioloop` and `bioloop-5` copies (no divergent decisions found)
 
 ---
 

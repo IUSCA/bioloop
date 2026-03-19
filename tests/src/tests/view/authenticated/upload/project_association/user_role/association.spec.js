@@ -39,7 +39,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.goto(`${config.baseURL}/auth/iucas?ticket=${testUser.username}`);
 
       // Visit the dataset uploads page
-      await page.goto('/datasetUpload/new');
+      await page.goto('/datasets/uploads/new');
 
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);

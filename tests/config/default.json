@@ -17,6 +17,13 @@
   "enabledFeatures": {
     "notifications": {
       "enabledForRoles": []
+    },
+    "uploads": {
+      "enabledForRoles": [
+        "admin",
+        "operator",
+        "user"
+      ]
     }
   }
 }

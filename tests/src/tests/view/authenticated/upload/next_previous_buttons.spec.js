@@ -20,7 +20,7 @@ test.describe.serial('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
   test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
