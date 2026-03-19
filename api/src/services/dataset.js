@@ -265,8 +265,8 @@ async function get_dataset({
     }
   }
   dataset?.audit_logs?.forEach((log) => {
-    // eslint-disable-next-line no-param-reassign
     if (log.user) {
+      // eslint-disable-next-line no-param-reassign
       log.user = log.user ? userService.transformUser(log.user) : null;
     }
   });
@@ -864,6 +864,7 @@ async function create({
     },
   });
   if (existingDataset) {
+    // eslint-disable-next-line no-console
     console.log('dataset already exists', existingDataset.name, 'existingDataset_id', existingDataset.id);
     return;
   }

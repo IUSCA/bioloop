@@ -79,7 +79,6 @@
 </template>
 
 <script setup>
-import config from "@/config";
 import constants from "@/constants";
 
 const props = defineProps({
@@ -89,7 +88,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["file-removed"]);
+defineEmits(["file-removed"]);
 
 const noFilesSelected = computed(() => {
   return props.files.length === 0;
