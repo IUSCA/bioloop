@@ -12,6 +12,10 @@ class UserService {
       },
     });
   }
+
+  getMe() {
+    return api.get("/v2/users/me");
+  }
 }
 
 export default new UserService();

@@ -63,6 +63,51 @@ function fromNow(value, withoutSuffix) {
   return dayjs(value).fromNow(withoutSuffix);
 }
 
+function fromNowShort(value, withoutSuffix) {
+  /**
+   * fromNowShort("2023-06-14T01:18:40.501Z") -> "2m ago"
+   * fromNowShort("2023-06-14T01:18:40.501Z", true) -> "2m"
+   *
+   * Dayjs does not natively support a compact "short" relative time format
+   * like "2m ago" or "in 3w" (it always emits full words like "2 months ago").
+   * So this helper explicitly chooses the first non-zero unit and maps it
+   * to a short suffix.
+   *
+   * Suffixes: y (years), mo (months), w (weeks), d (days), h (hours), m (minutes), s (seconds)
+   */
+  if (value == null) return null;
+
+  const now = dayjs();
+  const target = dayjs(value);
+  const isFuture = target.isAfter(now);
+
+  const units = [
+    { unit: "year", suffix: "y" },
+    { unit: "month", suffix: "mo" },
+    { unit: "week", suffix: "w" },
+    { unit: "day", suffix: "d" },
+    { unit: "hour", suffix: "h" },
+    { unit: "minute", suffix: "m" },
+    { unit: "second", suffix: "s" },
+  ];
+
+  for (const { unit, suffix } of units) {
+    // Calculate the absolute difference in the current unit (e.g., years, months, etc.)
+    // ex: if unit is "month", valueInUnit will be the absolute number of months between target and now
+    const valueInUnit = Math.abs(target.diff(now, unit));
+    if (valueInUnit > 0) {
+      const shortValue = `${valueInUnit}${suffix}`;
+      return withoutSuffix
+        ? shortValue
+        : isFuture
+          ? `in ${shortValue}`
+          : `${shortValue} ago`;
+    }
+  }
+
+  return withoutSuffix ? "0s" : "just now";
+}
+
 function daysFromNow(value) {
   /**
    * daysFromNow("2023-06-14T01:18:40.501Z") -> 2
@@ -151,6 +196,7 @@ export {
   displayDateTime,
   formatDuration,
   fromNow,
+  fromNowShort,
   getMidnightNextDay,
   readableDuration,
   time,

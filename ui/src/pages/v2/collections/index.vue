@@ -8,27 +8,6 @@
             <div class="flex items-center justify-between gap-5">
               <!-- Search input -->
               <div class="flex-1">
-                <!-- <va-input
-                  v-model="searchTerm"
-                  class="w-full"
-                  placeholder="Search collections…"
-                  outline
-                  clearable
-                  @update:model-value="debouncedFetch"
-                  input-class="search-input"
-                >
-                  <template #prependInner>
-                    <Icon icon="material-symbols:search" class="text-xl" />
-                  </template>
-
-                  <template #appendInner>
-                    <span
-                      class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded"
-                    >
-                      <span class="font-medium"> ⌘K </span>
-                    </span>
-                  </template>
-                </va-input> -->
                 <Searchbar
                   v-model="searchTerm"
                   placeholder="Search collections…"
@@ -49,7 +28,7 @@
               <!-- Scope filter chips -->
               <ModernButtonToggle
                 v-model="activeScope"
-                label="Access"
+                label="Access via"
                 :options="scopeFilters"
                 text-by="label"
                 value-by="value"
@@ -271,9 +250,9 @@ const areFiltersActive = computed(() => {
 
 const scopeFilters = [
   { label: "All", value: "all" },
-  { label: "Owned", value: "ownership" },
-  { label: "via Grants", value: "grants" },
-  { label: "via Oversight", value: "oversight" },
+  { label: "Ownership", value: "ownership" },
+  { label: "Grants", value: "grants" },
+  { label: "Oversight", value: "oversight" },
 ];
 
 const statusFilters = [
@@ -385,3 +364,9 @@ meta:
   title: Collections
   nav: [{ label: "Collections" }]
 </route>
+
+<style scoped>
+.collections-table {
+  --va-data-table-cell-padding: 8px;
+}
+</style>

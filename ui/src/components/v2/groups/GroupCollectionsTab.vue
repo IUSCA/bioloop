@@ -7,18 +7,11 @@
           <div class="flex flex-wrap items-center justify-between gap-3">
             <!-- Search input -->
             <div class="flex-1">
-              <va-input
+              <Searchbar
                 v-model="searchTerm"
-                class="w-full"
                 placeholder="Search collections…"
-                outline
-                clearable
                 @update:model-value="debouncedFetch"
-              >
-                <template #prependInner>
-                  <Icon icon="material-symbols:search" class="text-xl" />
-                </template>
-              </va-input>
+              />
             </div>
 
             <!-- Status filter chips -->

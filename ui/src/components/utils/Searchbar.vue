@@ -5,9 +5,9 @@
     </template>
 
     <template #appendInner>
-      <div class="w-14 text-right">
+      <div class="w-14 flex items-center justify-end">
         <span
-          class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded"
+          class="hidden sm:inline-flex items-center px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded"
         >
           <span class="font-medium"> {{ shortcutLabel }} </span>
         </span>

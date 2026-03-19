@@ -9,3 +9,9 @@ export const registry = {
   ...grantsEventRegistry,
   ...requestsEventRegistry,
 };
+
+const eventTypes = Object.keys(registry);
+
+export function getEventTypes() {
+  return eventTypes;
+}

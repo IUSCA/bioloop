@@ -20,19 +20,12 @@
     <div class="flex flex-wrap items-center gap-3">
       <!-- Search input -->
       <div class="flex-1">
-        <VaInput
+        <Searchbar
           v-model="searchTerm"
-          class="w-full"
           placeholder="Search groups…"
-          outline
-          clearable
           :disabled="loading"
           @update:model-value="debouncedFetch"
-        >
-          <template #prependInner>
-            <Icon icon="material-symbols:search" class="text-xl" />
-          </template>
-        </VaInput>
+        />
       </div>
 
       <!-- Scope filter chips -->
