@@ -142,11 +142,22 @@ fi
 # API requests.  Written to workers/.env, which the workers container reads on startup.
 if ! grep -q "^APP_API_TOKEN=[^ ]\+" "workers/.env"; then
   echo "Generating APP_API_TOKEN..."
-  APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks)
+  APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks 2>/dev/null)
   if [ $? -ne 0 ] || [ -z "$APP_API_TOKEN" ]; then
-    echo "ERROR: Failed to generate APP_API_TOKEN."
-    node src/scripts/issue_token.js svc_tasks
-    exit 1
+    # svc_tasks missing — the .db_seeded marker may be stale (e.g. after a partial
+    # reset where the marker file survived but the DB data was cleared, or vice versa).
+    # Remove the marker and re-seed to restore the expected DB state.
+    echo "svc_tasks user not found. Removing stale .db_seeded marker and re-seeding..."
+    rm -f .db_seeded
+    npx prisma db seed
+    touch .db_seeded
+    echo "Re-seed complete. Retrying APP_API_TOKEN generation..."
+    APP_API_TOKEN=$(node src/scripts/issue_token.js svc_tasks 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$APP_API_TOKEN" ]; then
+      echo "ERROR: Failed to generate APP_API_TOKEN even after re-seed."
+      node src/scripts/issue_token.js svc_tasks
+      exit 1
+    fi
   fi
   echo "APP_API_TOKEN=$APP_API_TOKEN" >> workers/.env
   echo "APP_API_TOKEN written."

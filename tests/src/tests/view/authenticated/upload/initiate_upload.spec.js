@@ -36,7 +36,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await selectFiles({ page, filePaths });
 
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
@@ -70,7 +70,7 @@ test.describe.serial('Dataset Upload Process', () => {
       });
 
       // Navigate to next step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       // Set the name of the dataset being uploaded
       const token = await page.evaluate(() => localStorage.getItem('token'));

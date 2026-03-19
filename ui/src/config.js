@@ -98,27 +98,6 @@ const exports = {
   alerts: {
     maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
-  filesystem_search_spaces: [
-    {
-      slateScratch: {
-        base_path:
-          import.meta.env.VITE_SCRATCH_BASE_DIR || "/bioloop/scratch/space",
-        mount_path:
-          import.meta.env.VITE_SCRATCH_MOUNT_DIR ||
-          "/bioloop/user/scratch/mount/dir",
-        key: "slateScratch",
-        label: "Slate-Scratch",
-      },
-    },
-  ],
-  restricted_import_dirs: {
-    slateScratch: {
-      paths:
-        import.meta.env.VITE_SCRATCH_IMPORT_RESTRICTED_DIRS ||
-        "/scratch/space/restricted",
-      key: "scratch",
-    },
-  },
   upload: {
     scope_prefix: "upload_file:",
     // Maximum size per individual file (bytes). Must match upload.max_file_size_bytes

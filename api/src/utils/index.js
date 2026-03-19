@@ -213,30 +213,34 @@ function decodeJWT(token) {
   return JSON.parse(Buffer.from(payload, 'base64').toString());
 }
 
-function readUsersFromJSON(fname) {
+/**
+ * Read a JSON array from a file relative to global.__basedir.
+ * Returns an empty array if the file does not exist, is not a JSON array, or cannot be read.
+ * @param {string} fname - Filename (e.g., 'admins.json'), resolved against global.__basedir
+ * @returns {Array}
+ */
+function readFromJSON(fname) {
   try {
     const fpath = path.join(global.__basedir, fname);
-
-    // check if file exists
     const exists = fs.existsSync(fpath, fs.constants.F_OK);
-
-    // read from file
     if (exists) {
-      const users_read = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-
-      // validate users_read is an array
-      if (Array.isArray(users_read)) {
-        return users_read;
+      const data = JSON.parse(fs.readFileSync(fpath, 'utf8'));
+      if (Array.isArray(data)) {
+        return data;
       }
       // eslint-disable-next-line no-console
-      console.log(`${fpath} is not an array. Skipping.`);
+      console.log(`${fpath} is not a JSON array. Skipping.`);
     }
     return [];
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log(`Unable to read users from file ${fname}. Skipping.`, e);
+    console.log(`Unable to read JSON from file ${fname}. Skipping.`, e);
     return [];
   }
+}
+
+function readUsersFromJSON(fname) {
+  return readFromJSON(fname);
 }
 
 class TransactionRetryError extends Error {
@@ -366,6 +370,7 @@ module.exports = {
   groupByAndAggregate,
   numericStringsToNumbers,
   decodeJWT,
+  readFromJSON,
   readUsersFromJSON,
   transactionWithRetry,
   TransactionRetryError,

@@ -93,6 +93,6 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
-    },
-  ],
-};
+    }
+  ]
+}

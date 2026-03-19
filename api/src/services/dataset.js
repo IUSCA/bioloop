@@ -264,12 +264,12 @@ async function get_dataset({
       dataset.workflows = [];
     }
   }
-  if (dataset?.audit_logs) {
-    dataset.audit_logs = dataset.audit_logs.map((log) => ({
-      ...log,
-      user: log.user ? userService.transformUser(log.user) : null,
-    }));
-  }
+  dataset?.audit_logs?.forEach((log) => {
+    if (log.user) {
+      // eslint-disable-next-line no-param-reassign
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
+  });
 
   return dataset;
 }

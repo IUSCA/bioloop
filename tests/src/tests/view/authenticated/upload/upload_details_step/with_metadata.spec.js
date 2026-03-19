@@ -37,7 +37,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('General-Info selection step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should allow selecting values in the General-Info form\'s fields', async () => {
@@ -79,7 +79,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload-Details step', () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show all the selected General-Info form\'s fields', async () => {

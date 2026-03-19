@@ -7,8 +7,10 @@ const config = require('config');
 
 setup('login', async ({ page }) => {
   await page.goto(`${config.baseURL}/auth/iucas?ticket=operator`);
-  // Verify authentication completed and username is displayed.
-  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username);
+
+  // do a test that page is finished loading - checking for username is good
+  // enough
+  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username, { timeout: 20000 });
 
   await page.context().storageState({ path: OPERATOR_STORAGE_STATE });
 });

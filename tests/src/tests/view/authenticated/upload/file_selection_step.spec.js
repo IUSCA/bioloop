@@ -21,7 +21,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test('Should allow selecting files', async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
 
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
@@ -29,7 +29,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
     test('Should show the correct number of files in the table', async () => {
       // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);

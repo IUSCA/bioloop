@@ -497,16 +497,16 @@ import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { _getUploadServiceURL } from "@/services/upload";
+import {
+  computeManifestHash,
+  isChecksumVerificationEnabled,
+} from "@/services/upload/checksum";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { Icon } from "@iconify/vue";
 import _ from "lodash";
 import * as tus from "tus-js-client";
 import { VaDivider, VaPopover } from "vuestic-ui";
-import {
-  computeManifestHash,
-  isChecksumVerificationEnabled,
-} from "@/services/upload/checksum";
 
 const auth = useAuthStore();
 
@@ -777,6 +777,8 @@ const uploadFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
+    ...(projectSelected.value &&
+      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(projectSelected.value &&
       !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {

@@ -4,14 +4,14 @@ const { expect } = require('../fixtures');
  * Tracks selected files metadata from the upload table
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.tableTestId - The test ID of the selected-files table
  * @returns {Promise<Array>} Array of file objects with name and size properties
  */
-async function trackSelectedFilesMetadata({ page }) {
-  // Wait for the file upload table to be visible
-  await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
+async function trackSelectedFilesMetadata({ page, tableTestId }) {
+  if (!tableTestId) throw new Error('tableTestId is required');
+  await expect(page.locator(`[data-testid="${tableTestId}"]`)).toBeVisible();
 
-  // Get all rows in the table
-  const tableRows = page.locator('[data-testid="upload-selected-files-table"] tbody tr');
+  const tableRows = page.locator(`[data-testid="${tableTestId}"] tbody tr`);
 
   // For each row, extract the file name and size
   const files = await tableRows.evaluateAll((rows) => rows.map((row) => {
@@ -32,11 +32,13 @@ async function trackSelectedFilesMetadata({ page }) {
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string[]} params.filePaths - Array of file paths to upload
+ * @param {string} params.fileSelectTestId - The test ID of the file-select trigger element
  * @returns {Promise<void>}
  */
 async function selectFiles({
   page,
   filePaths,
+  fileSelectTestId,
 }) {
   await page.locator('[data-testid="upload-container"]').first().waitFor({
     state: 'visible',
