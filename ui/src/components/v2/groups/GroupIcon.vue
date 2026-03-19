@@ -12,7 +12,7 @@ const props = defineProps({
   },
   size: {
     type: String,
-    default: "base", // base, sm, lg
+    default: "base", // xs, sm, base, lg
   },
 });
 
@@ -25,6 +25,7 @@ const iconMap = {
 };
 
 const sizeMap = {
+  xs: "w-6 h-6 text-xs",
   sm: "w-7 h-7 text-sm",
   base: "w-9 h-9 text-base",
   lg: "w-12 h-12 text-lg",

@@ -137,11 +137,11 @@ async function fetchGroups() {
       offset: (currentPage.value - 1) * itemsPerPage.value,
     };
     if (activeScope.value === "mine") {
-      params.direct_membership_only = true;
+      params.scope = "direct";
     } else if (activeScope.value === "admin") {
-      params.admin_only = true;
+      params.scope = "admin";
     } else if (activeScope.value === "oversight") {
-      params.oversight_only = true;
+      params.scope = "oversight";
     }
     const {
       data: { metadata, data: items },

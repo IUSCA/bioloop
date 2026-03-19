@@ -63,7 +63,7 @@ const collectionPolicies = new PolicyContainer({
 });
 
 const PUBLIC_ATTRIBUTES = [
-  'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'is_archived', 'size',
+  'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'is_archived', '_count.datasets',
 ].concat(GROUP_PUBLIC_ATTRIBUTES.map((attr) => `owner_group.${attr}`)); // include owner group attributes with 'owner_group.' prefix
 
 collectionPolicies

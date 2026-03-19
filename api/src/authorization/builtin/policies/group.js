@@ -73,7 +73,7 @@ const CallerRole = Object.freeze({
   RESOURCE_ACCESS: 'RESOURCE_ACCESS',
 });
 
-const PUBLIC_ATTRIBUTES = ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', 'size'];
+const PUBLIC_ATTRIBUTES = ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', '_count.members'];
 
 groupPolicies
   .roles([
@@ -126,12 +126,15 @@ groupPolicies
       },
       {
         policy: isGroupMember,
-        attribute_filters: [
-          'id', 'name', 'slug', 'description', 'is_archived', 'metadata.type', 'created_at', 'allow_user_contributions',
-          'size', 'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].description',
-          'ancestors[*].is_archived', 'ancestors[*].depth', 'ancestors[*].metadata',
-          'admins[*].id', 'admins[*].name', 'admins[*].email', 'admins[*].username', 'admins[*].subject_id',
-        ],
+        attribute_filters:
+        PUBLIC_ATTRIBUTES.concat(
+          [
+            'created_at', 'allow_user_contributions',
+            'ancestors[*].id', 'ancestors[*].name', 'ancestors[*].slug', 'ancestors[*].description',
+            'ancestors[*].is_archived', 'ancestors[*].depth', 'ancestors[*].metadata',
+            'admins[*].id', 'admins[*].name', 'admins[*].email', 'admins[*].username', 'admins[*].subject_id',
+          ],
+        ),
       },
       {
         policy: canAccessResourcesOwnedByGroup,

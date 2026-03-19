@@ -462,7 +462,7 @@ function buildAccessibleCollectionIdsCte(user_id, scope) {
 
   return Prisma.sql`
     WITH accessible_ids AS (
-      ${Prisma.join(parts, Prisma.sql`\n\nUNION\n\n`)}
+      ${Prisma.join(parts, '\n\nUNION\n\n')}
     )
   `;
 }
@@ -536,7 +536,14 @@ async function searchCollectionsForUser({
 
   const data_query = Prisma.sql`
     ${cte_query}
-    SELECT c.*, (SELECT COUNT(*) FROM collection_dataset cd WHERE cd.collection_id = c.id) AS "size"
+    SELECT 
+      c.*, 
+      (SELECT COUNT(*) FROM collection_dataset cd WHERE cd.collection_id = c.id) AS "dataset_count",
+      (
+        SELECT json_build_object('id', g.id, 'name', g.name, 'metadata', g.metadata) 
+        FROM "group" g 
+        WHERE g.id = c.owner_group_id
+      ) AS "owner_group"
     FROM collection c
     JOIN accessible_ids a ON a.id = c.id
     ${whereClause}
@@ -564,8 +571,10 @@ async function searchCollectionsForUser({
   return {
     metadata: { total: total_count, limit, offset },
     data: collections.map((collection) => ({
-      ...collection,
-      size: Number(collection.size),
+      ...(_.omit(['dataset_count'])(collection)),
+      _count: {
+        datasets: Number(collection.dataset_count),
+      },
     })),
   };
 }
@@ -612,8 +621,8 @@ async function searchAllCollections({
     where.owner_group_id = owner_group_id;
   }
 
-  // Handle sorting by computed 'size' field (dataset count)
-  const orderBy = sort_by === 'size'
+  // Handle sorting by computed '_count.datasets' field (dataset count)
+  const orderBy = sort_by === '_count.datasets'
     ? { _count: { datasets: sort_order } }
     : { [sort_by]: sort_order };
 
@@ -627,10 +636,7 @@ async function searchAllCollections({
   const total = await prisma.collection.count({ where });
   return {
     metadata: { total, limit, offset },
-    data: collections.map((collection) => ({
-      ...collection,
-      size: collection._count.datasets,
-    })),
+    data: collections,
   };
 }
 

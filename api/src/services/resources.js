@@ -1,6 +1,6 @@
-// owned = resources owned by groups I belong to,
+// owned = resources owned by groups I am admin of,
 // grants = resources I have any grants on,
-// oversight = resources owned by groups I don't belong to,
+// oversight = resources owned by groups I have oversight on,
 // all = all of the above
 const RESOURCE_SCOPES = Object.freeze({
   ALL: 'all',

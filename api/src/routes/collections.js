@@ -27,7 +27,7 @@ router.post(
     body('search_term').isString().optional(),
     body('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
     body('offset').default(0).isInt({ min: 0 }).toInt(),
-    body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at', 'size']),
+    body('sort_by').default('name').isIn(['name', 'created_at', 'updated_at', '_count.datasets']),
     body('sort_order').default('asc').isIn(['asc', 'desc']),
     body('is_archived').optional().isBoolean(),
     body('owner_group_id').optional().isUUID(),

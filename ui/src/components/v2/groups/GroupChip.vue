@@ -10,7 +10,7 @@
           {{ props.group.metadata.type }} ·
         </template>
         {{
-          maybePluralize(props.group.size, "member", {
+          maybePluralize(props.group._count?.members, "member", {
             formatter: number_formatter.format,
           })
         }}

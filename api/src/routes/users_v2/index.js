@@ -6,8 +6,39 @@ const userService = require('@/services/user');
 const { validate } = require('@/middleware/validators');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const auth = require('@/services/auth');
+const groupService = require('@/services/groups');
 
 const router = express.Router();
+
+router.get(
+  '/me',
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Users']
+    // returns the authenticated user's dashboard role information
+
+    const isPlatformAdmin = auth.isPlatformAdmin(req);
+
+    let isGroupAdmin = false;
+    if (!isPlatformAdmin) {
+      isGroupAdmin = await groupService.isGroupAdmin(req.user.subject_id);
+    }
+
+    // NOTE: these values are used for UI routing/dashboard selection only.
+    // They are not used for access control.
+    let uiPersona = 'standard_user';
+    if (isPlatformAdmin) {
+      uiPersona = 'platform_admin';
+    } else if (isGroupAdmin) {
+      uiPersona = 'group_admin';
+    }
+
+    return res.json({
+      user: req.user,
+      uiPersona,
+    });
+  }),
+);
 
 router.get(
   '/',

@@ -317,7 +317,7 @@ function createAccessibleDatasetIdsCte(user_id, scope = RESOURCE_SCOPES.ALL) {
 
   return Prisma.sql`
     WITH accessible_ids AS (
-      ${Prisma.join(parts, Prisma.sql`\n\nUNION\n\n`)}
+      ${Prisma.join(parts, '\n\nUNION\n\n')}
     )
   `;
 }

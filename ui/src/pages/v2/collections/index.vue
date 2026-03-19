@@ -1,51 +1,73 @@
 <template>
   <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-3 max-w-5xl mx-auto">
+    <div class="flex flex-col gap-3 max-w-7xl mx-auto">
       <!-- Header row -->
       <VaCard class="header card">
         <VaCardContent>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <!-- Search input -->
-            <div class="flex-1">
-              <va-input
-                v-model="searchTerm"
-                class="w-full"
-                placeholder="Search collections…"
-                outline
-                clearable
-                @update:model-value="debouncedFetch"
-              >
-                <template #prependInner>
-                  <Icon icon="material-symbols:search" class="text-xl" />
-                </template>
-              </va-input>
-            </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-5">
+              <!-- Search input -->
+              <div class="flex-1">
+                <!-- <va-input
+                  v-model="searchTerm"
+                  class="w-full"
+                  placeholder="Search collections…"
+                  outline
+                  clearable
+                  @update:model-value="debouncedFetch"
+                  input-class="search-input"
+                >
+                  <template #prependInner>
+                    <Icon icon="material-symbols:search" class="text-xl" />
+                  </template>
 
-            <!-- Status filter chips -->
-            <div class="flex items-center gap-2">
-              <VaChip
-                v-for="f in statusFilters"
-                :key="f.value"
-                :color="activeStatus === f.value ? 'primary' : 'secondary'"
-                class="cursor-pointer"
-                size="small"
-                :outline="activeStatus !== f.value"
-                @click="setStatus(f.value)"
-              >
-                {{ f.label }}
-              </VaChip>
-            </div>
-
-            <VaButton
-              size="small"
-              @click="navigateToCreateCollection"
-              v-if="props.canCreate"
-            >
-              <div class="flex items-center justify-between gap-2 mx-1">
-                <i-mdi-plus class="text-sm" />
-                Create Collection
+                  <template #appendInner>
+                    <span
+                      class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded"
+                    >
+                      <span class="font-medium"> ⌘K </span>
+                    </span>
+                  </template>
+                </va-input> -->
+                <Searchbar
+                  v-model="searchTerm"
+                  placeholder="Search collections…"
+                  @update:model-value="debouncedFetch"
+                />
               </div>
-            </VaButton>
+
+              <VaButton @click="navigateToCreateCollection" v-if="canCreate">
+                <div class="flex items-center justify-between gap-2 mx-1">
+                  <i-mdi-plus class="text-sm" />
+                  Create Collection
+                </div>
+              </VaButton>
+            </div>
+
+            <!-- filters -->
+            <div class="flex items-center gap-5">
+              <!-- Scope filter chips -->
+              <ModernButtonToggle
+                v-model="activeScope"
+                label="Access"
+                :options="scopeFilters"
+                text-by="label"
+                value-by="value"
+                color="blue"
+                size="sm"
+              />
+
+              <!-- Status filter chips -->
+              <ModernButtonToggle
+                v-model="activeStatus"
+                label="Status"
+                :options="statusFilters"
+                text-by="label"
+                value-by="value"
+                color="blue"
+                size="sm"
+              />
+            </div>
           </div>
         </VaCardContent>
       </VaCard>
@@ -68,8 +90,6 @@
                 :items="collections"
                 :columns="columns"
                 class="collections-table"
-                hoverable
-                striped
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
                 disable-client-side-sorting
@@ -90,6 +110,25 @@
                   </span>
                 </template>
 
+                <template #cell(owner_group)="{ rowData }">
+                  <div
+                    class="flex items-center gap-[0.4rem]"
+                    :title="rowData.owner_group?.name"
+                  >
+                    <GroupIcon
+                      :group="rowData.owner_group"
+                      size="xs"
+                      class="flex-shrink-0 min-w-0"
+                    />
+                    <RouterLink
+                      :to="`/v2/groups/${rowData.owner_group?.id}`"
+                      class="text-sm hover:underline va-text-secondary"
+                    >
+                      {{ rowData.owner_group?.name || "—" }}
+                    </RouterLink>
+                  </div>
+                </template>
+
                 <template #cell(size)="{ rowData }">
                   <span class="text-sm">
                     {{
@@ -107,8 +146,8 @@
                 </template>
 
                 <template #cell(updated_at)="{ value }">
-                  <span class="text-sm">
-                    {{ datetime.date(value) }}
+                  <span class="text-sm va-text-secondary">
+                    {{ datetime.fromNowShort(value) }}
                   </span>
                 </template>
 
@@ -193,20 +232,25 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 import CollectionService from "@/services/v2/collections";
-import { VaCardContent } from "vuestic-ui/web-components";
+import { useUIPersonaStore } from "@/stores/v2/uiPersona";
 
-const props = defineProps({
-  groupId: { type: String, required: true },
-  canCreate: { type: Boolean, default: false },
-});
+const uiPersonaStore = useUIPersonaStore();
+const canCreate = computed(
+  () => uiPersonaStore.isPlatformAdmin || uiPersonaStore.isGroupAdmin,
+);
 
-// const emit = defineEmits(["count-changed"]);
-
+// const props = defineProps({});
+// data
 const collections = ref([]);
 const error = ref(null);
 const loading = ref(true);
+
+// filters
+const activeScope = ref("all"); // 'ownership' | 'grants' | 'oversight' | 'all'
 const activeStatus = ref("all"); // 'all' | 'active' | 'archived'
 const searchTerm = ref("");
+
+// pagination & sorting
 const total = ref(0);
 const currentPage = ref(1);
 const itemsPerPage = ref(20);
@@ -218,8 +262,19 @@ const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 const number_formatter = Intl.NumberFormat("en");
 
 const areFiltersActive = computed(() => {
-  return searchTerm.value !== "" || activeStatus.value !== "all";
+  return (
+    searchTerm.value !== "" ||
+    activeStatus.value !== "all" ||
+    activeScope.value !== "all"
+  );
 });
+
+const scopeFilters = [
+  { label: "All", value: "all" },
+  { label: "Owned", value: "ownership" },
+  { label: "via Grants", value: "grants" },
+  { label: "via Oversight", value: "oversight" },
+];
 
 const statusFilters = [
   { label: "All", value: "all" },
@@ -229,9 +284,18 @@ const statusFilters = [
 
 const columns = [
   { key: "name", label: "Name", sortable: true },
-  { key: "description", label: "Description" },
-  { key: "size", label: "Size", width: "80px", sortable: true },
-  { key: "created_at", label: "Created On", width: "120px", sortable: true },
+  {
+    key: "owner_group",
+    label: "Owner Group",
+    width: "300px",
+    tdClass: "truncate",
+  },
+  { key: "size", label: "Datasets", width: "80px", sortable: true },
+  {
+    key: "description",
+    label: "Description",
+    tdStyle: "line-clamp-2", // wrap cell contents
+  },
   { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },
   { key: "status", label: "Status", width: "100px" },
 ];
@@ -244,16 +308,7 @@ const debouncedFetch = useDebounceFn(() => {
   currentPage.value = 1;
 }, 350);
 
-function setStatus(value) {
-  activeStatus.value = value;
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
-    return;
-  }
-  fetchCollections();
-}
-
-watch([itemsPerPage, sortBy, sortOrder], () => {
+watch([activeScope, activeStatus, itemsPerPage, sortBy, sortOrder], () => {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
     return;
@@ -267,13 +322,13 @@ async function fetchCollections() {
   loading.value = true;
   try {
     const { data } = await CollectionService.search({
-      owner_group_id: props.groupId,
       is_archived:
         activeStatus.value === "active"
           ? false
           : activeStatus.value === "archived"
             ? true
             : undefined,
+      scope: activeScope.value !== "all" ? activeScope.value : undefined,
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       search_term: searchTerm.value || undefined,
@@ -311,7 +366,8 @@ async function fetchCollections() {
 
 function resetFilters() {
   searchTerm.value = "";
-  setStatus("all");
+  activeScope.value = "all";
+  activeStatus.value = "all";
 }
 
 function navigateToCreateCollection() {
@@ -324,11 +380,8 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.collections-table {
-  --va-data-table-cell-padding: 8px;
-}
-.card.header {
-  --va-card-padding: 0.8rem;
-}
-</style>
+<route lang="yaml">
+meta:
+  title: Collections
+  nav: [{ label: "Collections" }]
+</route>

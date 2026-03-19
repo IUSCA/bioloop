@@ -52,7 +52,7 @@
           >
             <i-mdi-account-multiple class="text-sm" />
             {{
-              maybePluralize(group.size, "member", {
+              maybePluralize(group._count?.members, "member", {
                 formatter: number_formatter.format,
               })
             }}

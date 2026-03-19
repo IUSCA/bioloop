@@ -91,7 +91,7 @@ async function _getGroup(by, value) {
     },
   });
   const {
-    ancestor_edges, members, _count, ...groupData
+    ancestor_edges, members, ...groupData
   } = group;
   const ancestors = ancestor_edges
     .filter((edge) => edge.depth > 0) // exclude self-edge with depth 0
@@ -102,7 +102,6 @@ async function _getGroup(by, value) {
   return {
     ancestors,
     admins: members.map((member) => member.user),
-    size: _count.members,
     ...groupData,
   };
 }
@@ -989,7 +988,11 @@ async function searchGroupsForUser({
       offset,
     },
     data: results
-      .map((group) => ({ ...group, size: Number(group.size), depth: Number(group.depth) })),
+      .map((group) => ({
+        ...group,
+        _count: { members: Number(group.size) },
+        depth: Number(group.depth),
+      })),
   };
 }
 
@@ -1115,7 +1118,11 @@ async function searchAllGroups({
       offset,
     },
     data: results
-      .map((group) => ({ ...group, size: Number(group.size), depth: Number(group.depth) })),
+      .map((group) => ({
+        ...group,
+        _count: { members: Number(group.size) },
+        depth: Number(group.depth),
+      })),
   };
 }
 
@@ -1310,6 +1317,16 @@ async function getGroupsWithoutActiveAdmins() {
   });
 }
 
+async function isGroupAdmin(user_id) {
+  const row = await prisma.group_user.findFirst({
+    where: {
+      user_id,
+      role: GROUP_MEMBER_ROLE.ADMIN,
+    },
+  });
+  return row !== null;
+}
+
 module.exports = {
   createGroup,
   getGroupById,
@@ -1330,4 +1347,5 @@ module.exports = {
   getGroupAncestors,
   getGroupDescendants,
   getGroupsWithoutActiveAdmins,
+  isGroupAdmin,
 };
