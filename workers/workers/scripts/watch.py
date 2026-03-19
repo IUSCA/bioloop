@@ -1,6 +1,7 @@
 import fnmatch
 import logging
 from pathlib import Path
+from typing import Any
 
 from sca_rhythm import Workflow
 
@@ -17,11 +18,18 @@ logger = logging.getLogger(__name__)
 
 
 class Register:
-    def __init__(self, dataset_type, default_wf_name='integrated', **kwargs):
+    def __init__(
+        self,
+        dataset_type: str,
+        default_wf_name: str = 'integrated',
+        wf_start_kwargs: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         self.dataset_type = dataset_type
         self.reg_config = config['registration'][self.dataset_type]
         self.reject_patterns: set[str] = set(self.reg_config['rejects'])
         self.default_wf_name = default_wf_name
+        self.wf_start_kwargs: dict[str, Any] = wf_start_kwargs or {}
         self.batch_size: int = 100
         self.metadata = kwargs
 
@@ -114,7 +122,7 @@ class Register:
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
 
         # connects to celery - failure point
-        wf.start(dataset_id)
+        wf.start(dataset_id, **self.wf_start_kwargs)
 
 
 class RegisterDataProduct(Register):

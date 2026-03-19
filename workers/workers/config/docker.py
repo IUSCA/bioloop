@@ -32,11 +32,15 @@ config = {
     'registration': {
         'RAW_DATA': {
             'source_dir': '/opt/sca/data/origin/raw_data',
+            # Directories that should never be auto-registered as datasets.
+            'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         'DATA_PRODUCT': {
             'source_dir': '/opt/sca/data/origin/data_products',
+            'rejects': ['.snapshots', '_testObservedPath_*'],
         },
-        'recency_threshold_seconds': 10,
+        'recency_threshold_seconds': 300,
+        'wait_between_stability_checks_seconds': 5,  # poll frequently in docker dev
         'minimum_dataset_size': TEN_MEGABYTES,
     },
     'register_ondemand': {

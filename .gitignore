@@ -23,6 +23,7 @@ api/yarn-error.log
 api/.vscode
 api/node_modules
 api/.env
+api/.db_seeded
 
 api/config/auth*
 

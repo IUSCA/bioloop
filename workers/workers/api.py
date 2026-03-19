@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -152,20 +153,87 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str,
-                files: bool = False,
-                bundle: bool = False,
-                workflows: bool = False):
+def get_dataset(
+    dataset_id: str,
+    files: bool = False,
+    bundle: bool = False,
+    workflows: bool = False,
+    include_audit_logs: bool = False,
+):
     with APIServerSession() as s:
         payload = {
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
+            'include_audit_logs': include_audit_logs,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
-
         r.raise_for_status()
-        return dataset_getter(r.json())
+        dataset = dataset_getter(r.json())
+
+        if include_audit_logs:
+            # Flatten create_method from the creation audit entry onto the dataset
+            # so callers can access dataset['create_method'] directly.
+            create_entry = next(
+                (log for log in (dataset.get('audit_logs') or []) if log.get('action') == 'create'),
+                None,
+            )
+            if create_entry:
+                dataset['create_method'] = create_entry.get('create_method')
+
+        return dataset
+
+
+def get_workflows_for_dataset(
+    dataset_id: int,
+    last_task_runs: bool = False,
+    prev_task_runs: bool = False,
+) -> dict[str, Any]:
+    """
+    Fetch all workflows linked to a dataset via GET /workflows?dataset_id=<id>.
+
+    Returns { metadata: { total: N, ... }, results: [...] }.
+
+    When total == 0 the API returns immediately from Postgres without calling
+    the Rhythm API.  When total > 0 each result is hydrated with live workflow
+    details from Rhythm; if Rhythm is unreachable the API returns a 5xx and
+    raise_for_status() will raise, failing loudly rather than returning stale data.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            'workflows',
+            params={
+                'dataset_id': dataset_id,
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+def get_workflow(
+    workflow_id: str,
+    last_task_runs: bool = True,
+    prev_task_runs: bool = True,
+) -> dict[str, Any]:
+    """
+    Fetch a single workflow by ID via GET /workflows/<workflow_id>.
+
+    Returns the workflow document hydrated with live task-run details from
+    Rhythm, including per-step status and run history.  Raises HTTPError if
+    Rhythm is unreachable.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            f'workflows/{workflow_id}',
+            params={
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
 
 
 class DatasetAlreadyExistsError(Exception):

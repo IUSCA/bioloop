@@ -4,7 +4,7 @@ import urllib.parse
 
 from dotenv import load_dotenv
 
-load_dotenv()  # take environment variables from .env.
+load_dotenv(override=True)  # .env takes precedence over .env.default values pre-loaded by Docker Compose env_file
 YEAR = datetime.datetime.now().year
 APP_API_TOKEN = os.environ['APP_API_TOKEN']
 API_BASE_URL = os.environ['API_BASE_URL']
