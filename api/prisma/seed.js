@@ -21,7 +21,7 @@ const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run bin/init_prod_data.sh instead.');
+  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_data.js instead.');
   process.exit(1);
 }
 
