@@ -291,6 +291,17 @@ def get_stalled_uploads():
         return r.json()
 
 
+def get_expired_uploads(status='UPLOADING', age_days=0.25):
+    """Get uploads that have been stuck in *status* for longer than *age_days*."""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/expired', params={
+            'status': status,
+            'age_days': age_days,
+        })
+        r.raise_for_status()
+        return r.json()
+
+
 def get_failed_uploads(max_retry_count=2, max_age_hours=72):
     """Get PROCESSING_FAILED uploads eligible for retry"""
     with APIServerSession() as s:
@@ -323,10 +334,22 @@ def get_dataset_upload_log(dataset_id: int) -> dict:
         return r.json()
 
 
-def update_dataset_upload_log(dataset_id: int, log_data: dict) -> dict:
-    """Update upload log metadata"""
+def update_dataset_upload_log(
+    dataset_id: int,
+    log_data: dict,
+    workflow_id: str | None = None,
+) -> dict:
+    """Update upload log metadata, status, and/or retry count.
+
+    If *workflow_id* is supplied it is sent to the API which will associate the
+    workflow with the dataset inside the same DB transaction as the upload-log
+    update, providing atomicity for the VERIFIED → COMPLETE transition.
+    """
+    body = dict(log_data)
+    if workflow_id is not None:
+        body['workflow_id'] = workflow_id
     with APIServerSession() as s:
-        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=log_data)
+        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=body)
         r.raise_for_status()
         return r.json()
 

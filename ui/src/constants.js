@@ -14,15 +14,15 @@ const exports = {
         children: [
           {
             feature_key: "import",
-            icon: "mdi-file-cog-outline",
+            icon: "mdi-file-import-outline",
             title: "Import",
             path: "/datasets/import",
           },
           {
             feature_key: "uploads",
-            icon: "mdi:folder-upload",
+            icon: "mdi-cloud-upload-outline",
             title: "Upload",
-            path: "/datasetUpload",
+            path: "/datasets/uploads",
           },
         ],
       },
@@ -134,7 +134,6 @@ const exports = {
     PROCESSING: "PROCESSING",
     PROCESSING_FAILED: "PROCESSING_FAILED",
     COMPLETE: "COMPLETE",
-    FAILED: "FAILED",
     PERMANENTLY_FAILED: "PERMANENTLY_FAILED",
   },
   DATASET_CREATE_METHODS: {

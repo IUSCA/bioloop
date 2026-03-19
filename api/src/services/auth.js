@@ -116,7 +116,6 @@ const find_or_create_test_user = async ({ identifier }) => {
   return test_user;
 };
 
-
 // Function to load and convert the public key to JWKS
 function getJWKS() {
   // Parse the public key.  This will throw an error if the key is invalid.

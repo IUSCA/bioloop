@@ -2,6 +2,7 @@ const express = require('express');
 
 const { authenticate } = require('../middleware/auth');
 const featureService = require('../services/features');
+const fsRouter = require('./fs');
 const uploadRouter = require('./datasets/uploads');
 
 const router = express.Router();
@@ -34,11 +35,11 @@ router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAu
 router.use('/statistics', require('./statistics') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/notifications', require('./notifications') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/instruments', require('./instruments') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/uploads', require('./datasets/uploads') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {
-  router.use('/fs', require('./fs') /* #swagger.security = [{"BearerAuth": []}] */);
+  router.use('/fs', fsRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
 
 module.exports = router;

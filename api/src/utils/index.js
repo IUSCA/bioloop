@@ -2,9 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
-const config = require('config');
-
-const logger = require('../services/logger');
 
 function renameKey(oldKey, newKey) {
   return (obj) => {
