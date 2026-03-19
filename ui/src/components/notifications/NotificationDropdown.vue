@@ -9,13 +9,13 @@
           data-testid="notification-count"
         >
           <va-button
-            ref="notificationBellRef"
-            data-testid="notification-icon"
-            class="notification-bell"
+            ref="notificationOpenButtonRef"
+            data-testid="notification-open-button"
+            class="notification-open-button"
             plain
-            @click="onBellActivate"
-            @keydown.enter.prevent="onBellKeyboardToggle"
-            @keydown.space.prevent="onBellKeyboardToggle"
+            @click="onNotificationOpenActivate"
+            @keydown.enter="onNotificationOpenActivate"
+            @keydown.space="onNotificationOpenActivate"
           >
             <Icon icon="mdi-bell-outline" height="36px" width="36px" />
           </va-button>
@@ -26,9 +26,10 @@
         :key="menuRenderKey"
         class="notification-menu-panel max-h-96 overflow-y-auto"
         data-testid="notification-menu-items"
+        @scroll.passive="onMenuScroll"
       >
         <div class="px-3 py-2 border-b">
-          <div class="notification-top-controls" @keydown.capture="onTopControlsKeydown">
+          <div class="notification-top-controls">
             <va-popover message="Unread filter">
               <va-button
                 ref="firstTopControlRef"
@@ -36,14 +37,22 @@
                 size="small"
                 block
                 class="notification-top-control-button"
-                :color="isUnreadFilterActive ? theme.filters.unread.color : 'secondary'"
+                :color="
+                  isUnreadFilterActive
+                    ? theme.filters.unread.color
+                    : 'secondary'
+                "
                 data-testid="filter-unread"
                 aria-label="Unread filter"
                 :disabled="loading"
                 @click="toggleUnreadFilter"
               >
                 <Icon
-                  :icon="isUnreadFilterActive ? theme.filters.unread.iconOn : theme.filters.unread.iconOff"
+                  :icon="
+                    isUnreadFilterActive
+                      ? theme.filters.unread.iconOn
+                      : theme.filters.unread.iconOff
+                  "
                 />
               </va-button>
             </va-popover>
@@ -53,14 +62,20 @@
                 size="small"
                 block
                 class="notification-top-control-button"
-                :color="isReadFilterActive ? theme.filters.read.color : 'secondary'"
+                :color="
+                  isReadFilterActive ? theme.filters.read.color : 'secondary'
+                "
                 data-testid="filter-read"
                 aria-label="Read filter"
                 :disabled="loading"
                 @click="toggleReadFilter"
               >
                 <Icon
-                  :icon="isReadFilterActive ? theme.filters.read.iconOn : theme.filters.read.iconOff"
+                  :icon="
+                    isReadFilterActive
+                      ? theme.filters.read.iconOn
+                      : theme.filters.read.iconOff
+                  "
                 />
               </va-button>
             </va-popover>
@@ -70,14 +85,22 @@
                 size="small"
                 block
                 class="notification-top-control-button"
-                :color="isArchivedFilterActive ? theme.filters.archived.color : 'secondary'"
+                :color="
+                  isArchivedFilterActive
+                    ? theme.filters.archived.color
+                    : 'secondary'
+                "
                 data-testid="filter-archived"
                 aria-label="Archived filter"
                 :disabled="loading"
                 @click="toggleArchivedFilter"
               >
                 <Icon
-                  :icon="isArchivedFilterActive ? theme.filters.archived.iconOn : theme.filters.archived.iconOff"
+                  :icon="
+                    isArchivedFilterActive
+                      ? theme.filters.archived.iconOn
+                      : theme.filters.archived.iconOff
+                  "
                 />
               </va-button>
             </va-popover>
@@ -87,14 +110,22 @@
                 size="small"
                 block
                 class="notification-top-control-button"
-                :color="isBookmarkedFilterActive ? theme.filters.bookmarked.color : 'secondary'"
+                :color="
+                  isBookmarkedFilterActive
+                    ? theme.filters.bookmarked.color
+                    : 'secondary'
+                "
                 data-testid="filter-bookmarked"
                 aria-label="Bookmark filter"
                 :disabled="loading"
                 @click="toggleBookmarkedFilter"
               >
                 <Icon
-                  :icon="isBookmarkedFilterActive ? theme.filters.bookmarked.iconOn : theme.filters.bookmarked.iconOff"
+                  :icon="
+                    isBookmarkedFilterActive
+                      ? theme.filters.bookmarked.iconOn
+                      : theme.filters.bookmarked.iconOff
+                  "
                 />
               </va-button>
             </va-popover>
@@ -104,16 +135,22 @@
                 size="small"
                 block
                 class="notification-top-control-button"
-                :color="isGloballyDismissedFilterActive ? theme.filters.globallyDismissed.color : 'secondary'"
+                :color="
+                  isGloballyDismissedFilterActive
+                    ? theme.filters.globallyDismissed.color
+                    : 'secondary'
+                "
                 data-testid="filter-globally-dismissed"
                 aria-label="Globally dismissed filter"
                 :disabled="loading"
                 @click="toggleGloballyDismissedFilter"
               >
                 <Icon
-                  :icon="isGloballyDismissedFilterActive
-                    ? theme.filters.globallyDismissed.iconOn
-                    : theme.filters.globallyDismissed.iconOff"
+                  :icon="
+                    isGloballyDismissedFilterActive
+                      ? theme.filters.globallyDismissed.iconOn
+                      : theme.filters.globallyDismissed.iconOff
+                  "
                 />
               </va-button>
             </va-popover>
@@ -152,11 +189,7 @@
               </va-button>
             </va-popover>
           </div>
-          <div
-            class="mt-2"
-            @click.capture="onSearchInputClick"
-            @keydown.capture="onSearchContainerKeydown"
-          >
+          <div class="mt-2">
             <va-input
               v-model="searchInput"
               class="notification-search-input"
@@ -164,6 +197,7 @@
               clearable
               :disabled="loading"
               @keydown.stop
+              @click.capture="onSearchInputClick"
               @clear="clearSearchFilter"
               @focus="onSearchFocus"
               @blur="onSearchBlur"
@@ -308,10 +342,18 @@ const notificationQueryOpts = computed(() => ({
   username: auth.user?.username || null,
 }));
 
-const { notifications, filters, unreadCount, loading } = storeToRefs(notificationStore);
+const {
+  notifications,
+  filters,
+  unreadCount,
+  loading,
+  totalMatchedCount,
+  hasMoreNotifications,
+} = storeToRefs(notificationStore);
 const {
   refreshNotifications,
   fetchNotifications,
+  fetchMoreNotifications,
   updateNotificationState,
   markAllRead,
   dismissNotificationGlobally,
@@ -329,7 +371,7 @@ const hasPendingSseRefresh = ref(false);
 const isSseConnected = ref(false);
 const notificationStream = ref(null);
 const firstTopControlRef = ref(null);
-const notificationBellRef = ref(null);
+const notificationOpenButtonRef = ref(null);
 const TOP_CONTROL_IDS = [
   "filter-unread",
   "filter-read",
@@ -341,17 +383,7 @@ const TOP_CONTROL_IDS = [
 const normalizedSearch = computed(() =>
   (searchInput.value || "").trim().toLowerCase(),
 );
-const displayedNotifications = computed(() => {
-  if (!normalizedSearch.value) return notifications.value;
-  return notifications.value.filter((notification) => {
-    const label = (notification.label || "").toLowerCase();
-    const text = (notification.text || "").toLowerCase();
-    return (
-      label.includes(normalizedSearch.value) ||
-      text.includes(normalizedSearch.value)
-    );
-  });
-});
+const displayedNotifications = computed(() => notifications.value);
 const isUnreadFilterActive = computed(() => filters.value.read === false);
 const isReadFilterActive = computed(() => filters.value.read === true);
 const isArchivedFilterActive = computed(() => filters.value.archived === true);
@@ -373,7 +405,7 @@ const hasActiveFilters = computed(() => {
 });
 const badgeCount = computed(() => {
   if (hasActiveFilters.value) {
-    return displayedNotifications.value.length;
+    return totalMatchedCount.value;
   }
   return unreadCount.value;
 });
@@ -430,33 +462,6 @@ function getVisibleMenuPanelElement() {
   );
 }
 
-function focusMenuControlByTestId(testId) {
-  const panel = getVisibleMenuPanelElement();
-  if (!panel) return;
-  const node = panel.querySelector(`[data-testid="${testId}"]`);
-  if (node instanceof HTMLElement) {
-    node.focus();
-  }
-}
-
-function focusSearchInputField() {
-  const panel = getVisibleMenuPanelElement();
-  if (!panel) return;
-  const input = panel.querySelector('input[data-testid="notification-search"]');
-  if (input instanceof HTMLElement) {
-    input.focus();
-  }
-}
-
-function focusFirstNotificationAction() {
-  const panel = getVisibleMenuPanelElement();
-  if (!panel) return;
-  const action = panel.querySelector('[data-testid$="-toggle-read"]');
-  if (action instanceof HTMLElement) {
-    action.focus();
-  }
-}
-
 function getFocusableNode(target) {
   if (!target) return null;
   if (target instanceof HTMLElement) return target;
@@ -480,57 +485,99 @@ function focusFirstMenuControlSoon() {
       getFocusableNode(firstTopControlRef.value);
     if (node && node.offsetParent !== null) {
       node.focus();
+      // Vuestic may steal focus asynchronously; re-assert a few times.
+      if (document.activeElement !== node && attempts < 30) {
+        setTimeout(tryFocus, 30);
+        return;
+      }
       return;
     }
-    if (attempts < 10) {
-      setTimeout(tryFocus, 50);
+    if (attempts < 30) {
+      setTimeout(tryFocus, 30);
     }
   };
   setTimeout(tryFocus, 0);
 }
 
-function onBellKeyboardToggle() {
-  const bellNode = getFocusableNode(notificationBellRef.value);
-  if (!bellNode) return;
-  bellNode.click();
+function onNotificationOpenActivate() {
   focusFirstMenuControlSoon();
 }
 
-function onBellActivate() {
-  focusFirstMenuControlSoon();
+// Forcefully focus an element, retrying in rAF if the browser's native Tab
+// handling overrode our preventDefault (can happen with teleported menus).
+function assertFocus(targetNode) {
+  if (!(targetNode instanceof HTMLElement)) return;
+  targetNode.focus();
+  if (document.activeElement === targetNode) return;
+  requestAnimationFrame(() => targetNode.focus());
 }
 
-function onTopControlsKeydown(event) {
-  if (event.key !== "Tab") return;
-  const activeTestId = document.activeElement?.getAttribute("data-testid");
-  const index = TOP_CONTROL_IDS.indexOf(activeTestId);
-  if (index === -1) return;
-  event.preventDefault();
-  if (event.shiftKey) {
-    if (index === 0) {
-      focusFirstNotificationAction();
-      return;
+// Global keyboard handler attached to window in capture phase so it fires
+// before Vuestic's internal focus management can move focus away.
+function onGlobalTabKeydown(event) {
+  // Vuestic moves focus on bare Shift keydown inside menus; block that.
+  if (event.key === "Shift") {
+    const panel = getVisibleMenuPanelElement();
+    if (panel?.contains(document.activeElement)) {
+      event.stopImmediatePropagation();
     }
-    focusMenuControlByTestId(TOP_CONTROL_IDS[index - 1]);
     return;
   }
-  if (index === TOP_CONTROL_IDS.length - 1) {
-    focusSearchInputField();
-    return;
-  }
-  focusMenuControlByTestId(TOP_CONTROL_IDS[index + 1]);
-}
-
-function onSearchContainerKeydown(event) {
   if (event.key !== "Tab") return;
-  const activeTestId = document.activeElement?.getAttribute("data-testid");
-  if (activeTestId !== "notification-search") return;
-  event.preventDefault();
-  if (event.shiftKey) {
-    focusMenuControlByTestId("filter-globally-dismissed");
-    return;
+  const panel = getVisibleMenuPanelElement();
+  if (!panel) return;
+  const activeElement = document.activeElement;
+  if (!panel.contains(activeElement)) return;
+
+  const activeTestId =
+    activeElement?.getAttribute("data-testid") ||
+    activeElement?.closest?.("[data-testid]")?.getAttribute("data-testid");
+
+  // Resolve the element to focus for a given testId.
+  const resolveNode = (testId) =>
+    panel.querySelector(`[data-testid="${testId}"]`);
+
+  let target = null;
+
+  // Inside top controls
+  const controlIndex = TOP_CONTROL_IDS.indexOf(activeTestId);
+  if (controlIndex !== -1) {
+    if (event.shiftKey) {
+      target =
+        controlIndex === 0
+          ? panel.querySelector('[data-testid$="-toggle-read"]')
+          : resolveNode(TOP_CONTROL_IDS[controlIndex - 1]);
+    } else if (controlIndex === TOP_CONTROL_IDS.length - 1) {
+      target = panel.querySelector('input[data-testid="notification-search"]');
+    } else {
+      target = resolveNode(TOP_CONTROL_IDS[controlIndex + 1]);
+    }
   }
-  focusFirstNotificationAction();
+
+  // Inside search input
+  if (!target && activeTestId === "notification-search") {
+    target = event.shiftKey
+      ? resolveNode(TOP_CONTROL_IDS[TOP_CONTROL_IDS.length - 1])
+      : panel.querySelector('[data-testid$="-toggle-read"]');
+  }
+
+  // Shift+Tab from first notification action wraps back to search
+  if (
+    !target &&
+    event.shiftKey &&
+    (activeTestId?.includes("-toggle-") || activeTestId?.includes("-dismiss-"))
+  ) {
+    const firstAction = panel.querySelector('[data-testid$="-toggle-read"]');
+    if (firstAction && activeElement === firstAction) {
+      target = panel.querySelector('input[data-testid="notification-search"]');
+    }
+  }
+
+  if (target) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    assertFocus(target);
+  }
 }
 
 function onSearchFocus() {
@@ -547,6 +594,27 @@ function onSearchBlur() {
 
 function clearSearchFilter() {
   setFilter("search", "");
+}
+
+const triggerSearchFetch = useDebounceFn(() => {
+  fetchNotifications(notificationQueryOpts.value);
+}, 250);
+
+watch(
+  () => filters.value.search,
+  () => {
+    triggerSearchFetch();
+  },
+);
+
+function onMenuScroll(event) {
+  const panel = event?.target;
+  if (!(panel instanceof HTMLElement)) return;
+  if (!hasMoreNotifications.value || loading.value) return;
+  const nearBottom =
+    panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 80;
+  if (!nearBottom) return;
+  fetchMoreNotifications(notificationQueryOpts.value);
 }
 
 function applyReadFilter(value) {
@@ -664,7 +732,12 @@ function openNotificationStream() {
   const token = useLocalStorage("token", "");
   const authToken = token.value;
   if (!authToken) return;
-  const streamUrl = `${config.apiBasePath}/notifications/stream?token=${encodeURIComponent(authToken)}`;
+  const username = auth.user?.username;
+  const streamPath =
+    forSelf.value && username
+      ? `/notifications/${encodeURIComponent(username)}/stream`
+      : "/notifications/stream";
+  const streamUrl = `${config.apiBasePath}${streamPath}?token=${encodeURIComponent(authToken)}`;
   const source = new EventSource(streamUrl);
   source.addEventListener("ready", () => {
     isSseConnected.value = true;
@@ -690,16 +763,18 @@ const { resume } = useIntervalFn(
 
 onMounted(() => {
   openNotificationStream();
+  window.addEventListener("keydown", onGlobalTabKeydown, true);
   resume();
 });
 
 onUnmounted(() => {
+  window.removeEventListener("keydown", onGlobalTabKeydown, true);
   closeNotificationStream();
 });
 </script>
 
 <style lang="scss" scoped>
-.notification-bell {
+.notification-open-button {
   color: var(--va-text-primary) !important;
 }
 
@@ -804,5 +879,4 @@ onUnmounted(() => {
 .notification-filter-chip--secondary {
   color: var(--va-text-secondary);
 }
-
 </style>

@@ -162,11 +162,31 @@ const exports = {
   },
   notificationTheme: {
     filters: {
-      unread: { color: "primary", iconOn: "mdi:email", iconOff: "mdi:email-outline" },
-      read: { color: "info", iconOn: "mdi:email-open", iconOff: "mdi:email-open-outline" },
-      archived: { color: "warning", iconOn: "mdi:archive", iconOff: "mdi:archive-outline" },
-      bookmarked: { color: "success", iconOn: "mdi:bookmark", iconOff: "mdi:bookmark-outline" },
-      globallyDismissed: { color: "danger", iconOn: "mdi:eye-off", iconOff: "mdi:eye-off-outline" },
+      unread: {
+        color: "primary",
+        iconOn: "mdi:email",
+        iconOff: "mdi:email-outline",
+      },
+      read: {
+        color: "info",
+        iconOn: "mdi:email-open",
+        iconOff: "mdi:email-open-outline",
+      },
+      archived: {
+        color: "warning",
+        iconOn: "mdi:archive",
+        iconOff: "mdi:archive-outline",
+      },
+      bookmarked: {
+        color: "success",
+        iconOn: "mdi:bookmark",
+        iconOff: "mdi:bookmark-outline",
+      },
+      globallyDismissed: {
+        color: "danger",
+        iconOn: "mdi:eye-off",
+        iconOff: "mdi:eye-off-outline",
+      },
     },
     delivery: {
       direct: { color: "info" },

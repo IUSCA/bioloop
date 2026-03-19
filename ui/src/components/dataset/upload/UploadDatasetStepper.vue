@@ -127,7 +127,9 @@
               data-test-id="upload-metadata-dataset-autocomplete"
             >
             </DatasetSelectAutoComplete>
-            <va-popover data-testid="upload-metadata-dataset-autocomplete-popover">
+            <va-popover
+              data-testid="upload-metadata-dataset-autocomplete-popover"
+            >
               <template #body>
                 <div class="w-96" data-testid="raw-data-help-text">
                   Associating a Data Product with a source Raw Data establishes
@@ -184,7 +186,9 @@
               data-test-id="upload-metadata-project-autocomplete"
             >
             </ProjectAsyncAutoComplete>
-            <va-popover data-testid="upload-metadata-project-autocomplete-popover">
+            <va-popover
+              data-testid="upload-metadata-project-autocomplete-popover"
+            >
               <template #body>
                 <div class="w-96">
                   Assigning a dataset to a project establishes a connection
@@ -240,7 +244,9 @@
               data-testid="upload-metadata-source-instrument-select"
             />
             <div class="flex items-center ml-2">
-              <va-popover data-testid="upload-metadata-source-instrument-popover">
+              <va-popover
+                data-testid="upload-metadata-source-instrument-popover"
+              >
                 <template #body>
                   <div class="w-72">
                     Source instrument where this data was collected from.
@@ -602,7 +608,8 @@ const uploadFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
+    ...(projectSelected.value &&
+      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
     }),
@@ -1030,15 +1037,15 @@ const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
     !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
     uploadingFilesState.value[fileUploadLogId][
       "resumeFileUploadAtChunkIndex"
-      ] === chunkIndex
+    ] === chunkIndex
   );
 };
 
 const postChunkUploadAttempt = ({
-                                  fileUploadLogId,
-                                  chunkIndex,
-                                  isChunkUploaded,
-                                } = {}) => {
+  fileUploadLogId,
+  chunkIndex,
+  isChunkUploaded,
+} = {}) => {
   if (isChunkUploaded) {
     totalUploadedChunkCount.value += 1;
     uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
@@ -1107,7 +1114,7 @@ const uploadFileChunks = async (fileDetails) => {
     });
     let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
       "uploadedChunks"
-      ].includes(chunkData.get("index"));
+    ].includes(chunkData.get("index"));
     const willUploadChunk =
       !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
 
@@ -1129,7 +1136,7 @@ const uploadFileChunks = async (fileDetails) => {
       if (selectingDirectory.value) {
         selectedDirectory.value.progress = Math.trunc(
           (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
-          100,
+            100,
         );
       } else {
         fileDetails.progress = Math.trunc(
@@ -1277,11 +1284,11 @@ const handleSubmit = () => {
     .then(() => {
       return !uploadCancelled.value
         ? datasetService.processDatasetUpload(
-          datasetUploadLog.value.audit_log.dataset.id,
-        )
+            datasetUploadLog.value.audit_log.dataset.id,
+          )
         : Promise.reject();
     })
-    .catch((e) => {
+    .catch(() => {
       // console.error(e);
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
@@ -1318,11 +1325,11 @@ const preUpload = async () => {
 
   const logData = datasetUploadLog.value?.id
     ? {
-      status: Constants.UPLOAD_STATUSES.UPLOADING,
-    }
+        status: Constants.UPLOAD_STATUSES.UPLOADING,
+      }
     : {
-      ...uploadFormData.value,
-    };
+        ...uploadFormData.value,
+      };
 
   try {
     const res = await createOrUpdateUploadLog(logData);
@@ -1346,9 +1353,9 @@ const createOrUpdateUploadLog = (data) => {
     return !datasetUploadLog.value
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
-        datasetUploadLog.value?.audit_log?.dataset.id,
-        data,
-      );
+          datasetUploadLog.value?.audit_log?.dataset.id,
+          data,
+        );
   } else {
     return Promise.reject();
   }
@@ -1796,9 +1803,9 @@ onBeforeRouteLeave(() => {
   // Before navigating to a different route, show user a confirmation dialog
   return isUploadIncomplete.value
     ? window.confirm(
-      "Leaving this page before all files have been uploaded will" +
-      " cancel the upload. Do you wish to continue?",
-    )
+        "Leaving this page before all files have been uploaded will" +
+          " cancel the upload. Do you wish to continue?",
+      )
     : true;
 });
 

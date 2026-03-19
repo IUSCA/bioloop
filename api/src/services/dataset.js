@@ -15,7 +15,7 @@ const workflowService = require('./workflow');
 const projectService = require('./project');
 const featureService = require('./features');
 const logger = require('./logger');
-const { buildNotificationPayload } = require('./notificationTypeService');
+const { buildNotificationPayload } = require('./notifications/typeService');
 
 const { log_axios_error } = require('../utils');
 const {

@@ -479,7 +479,8 @@ const importFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
+    ...(projectSelected.value &&
+      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
     }),
@@ -572,7 +573,7 @@ const validateIfExists = (value) => {
         .then((res) => {
           resolve(res.data.exists);
         })
-        .catch((e) => {
+        .catch(() => {
           // console.error(e);
           reject();
         });
@@ -642,15 +643,14 @@ const setFormErrors = async () => {
     const restricted_dataset_paths = getRestrictedImportPaths();
     const origin_path_is_restricted = selectedFile.value
       ? restricted_dataset_paths.some((pattern) => {
-        const _path = selectedFile.value.path;
-        let isMatch = pm(pattern);
-        const matches = isMatch(_path, pattern);
-        return matches.isMatch;
-      })
+          const _path = selectedFile.value.path;
+          let isMatch = pm(pattern);
+          const matches = isMatch(_path, pattern);
+          return matches.isMatch;
+        })
       : false;
     if (origin_path_is_restricted) {
-      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] =
-        IMPORT_NOT_ALLOWED_ERROR;
+      formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = IMPORT_NOT_ALLOWED_ERROR;
       return;
     } else {
       formErrors.value[STEP_KEYS.SELECT_DIRECTORY] = null;
@@ -683,7 +683,7 @@ const fileList = ref([]);
 
 const searchSpace = ref(
   FILESYSTEM_SEARCH_SPACES instanceof Array &&
-  FILESYSTEM_SEARCH_SPACES.length > 0
+    FILESYSTEM_SEARCH_SPACES.length > 0
     ? FILESYSTEM_SEARCH_SPACES[0]
     : "",
 );
@@ -727,9 +727,7 @@ const setRetrievedFiles = (files) => {
 };
 
 const getRestrictedImportPaths = () => {
-  return config.restricted_import_dirs[searchSpace.value.key].paths.split(
-    ",",
-  );
+  return config.restricted_import_dirs[searchSpace.value.key].paths.split(",");
 };
 
 /**
@@ -1249,7 +1247,7 @@ onMounted(async () => {
 
   .va-stepper__step-content-wrapper {
     // flex: 1 to expand the element to available height
-    // min-height: 0 to shrink the elemenet to below its calculated min-height of children
+    // min-height: 0 to shrink the element below its calculated children min-height
     display: flex;
     flex-direction: column;
     flex: 1;

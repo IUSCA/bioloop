@@ -56,7 +56,7 @@ if $FRESH; then
   rm -f "${REPO_ROOT}/api/.db_seeded"
 fi
 
-info "Starting E2E services (detached)..."
+info "Starting E2E services (detached, excluding e2e test runner)..."
 docker compose -p "${COMPOSE_PROJECT}" -f "${COMPOSE_FILE}" up -d
 
 echo ""
@@ -64,4 +64,5 @@ success "E2E services started."
 echo ""
 info "Check status: docker compose -p ${COMPOSE_PROJECT} -f docker-compose-e2e.yml ps"
 info "Follow logs:  docker compose -p ${COMPOSE_PROJECT} -f docker-compose-e2e.yml logs -f"
+info "Run tests:    bin/run_containerized_e2e.sh [-- <playwright args>]"
 echo ""

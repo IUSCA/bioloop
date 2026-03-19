@@ -1,80 +1,28 @@
 const { test, expect } = require('@playwright/test');
 const config = require('config');
-const { post } = require('../../../../api');
 const { randomUUID } = require('node:crypto');
+const {
+  createDirectNotificationForUser,
+  openDirectSseWatcher,
+  openNotificationsMenu,
+  parseTokenProfile,
+} = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.includes('user');
 
 test.describe('Notifications', () => {
-  const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')).profile;
-
-  const openNotificationsMenu = async (page) => {
-    const menu = page.getByTestId('notification-menu-items');
-    for (let i = 0; i < 3; i += 1) {
-      if (await menu.isVisible()) {
-        return menu;
-      }
-      await page.getByTestId('notification-icon').click();
-      // eslint-disable-next-line no-await-in-loop
-      await page.waitForTimeout(300);
-    }
-    await expect(menu).toBeVisible();
-    return menu;
-  };
-
-  const getAdminToken = async (page) => {
-    const response = await page.request.post(`${config.apiBaseURL}/auth/cas/verify`, {
-      data: { ticket: 'admin' },
-    });
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    return body.token;
-  };
-
-  const getTokenByTicket = async ({ page, ticket }) => {
-    const response = await page.request.post(`${config.apiBaseURL}/auth/cas/verify`, {
-      data: { ticket },
-    });
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    return body.token;
-  };
-
-  const createDirectNotificationForUser = async ({ page, label, text }) => {
-    const adminToken = await getAdminToken(page);
-    const userToken = await getTokenByTicket({ page, ticket: 'user' });
-    const userId = parseTokenProfile(userToken).id;
-    const response = await post({
-      requestContext: page.request,
-      token: adminToken,
-      url: '/notifications',
-      data: {
-        type: 'E2E_TEST',
-        label,
-        text,
-        metadata: {},
-        user_ids: [userId],
-      },
-    });
-    if (response.status() !== 200) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(`Create notification failed: ${response.status()} ${JSON.stringify(body)}`);
-    }
-    return response.json();
-  };
-
   test('user can access notifications but cannot globally dismiss', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('notification-icon')).toBeVisible();
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
 
     const menu = page.getByTestId('notification-menu-items');
     for (let i = 0; i < 3; i += 1) {
       if (await menu.isVisible()) {
         break;
       }
-      await page.getByTestId('notification-icon').click();
+      await page.getByTestId('notification-open-button').click();
       // eslint-disable-next-line no-await-in-loop
       await page.waitForTimeout(300);
     }
@@ -100,7 +48,7 @@ test.describe('Notifications', () => {
   test('user can update own read/bookmark/archive states', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('notification-icon')).toBeVisible();
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
 
     const suffix = randomUUID().slice(0, 8);
     const created = await createDirectNotificationForUser({
@@ -136,7 +84,7 @@ test.describe('Notifications', () => {
   test('user sees direct notifications targeted only to them', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('notification-icon')).toBeVisible();
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
 
     const suffix = randomUUID().slice(0, 8);
     const created = await createDirectNotificationForUser({
@@ -148,5 +96,42 @@ test.describe('Notifications', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await openNotificationsMenu(page);
     await expect(page.getByTestId(`notification-${created.id}-label`)).toBeVisible();
+  });
+
+  test('user SSE stream connects successfully via ownership endpoint', async ({ page }) => {
+    test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
+
+    const userToken = await page.evaluate(() => localStorage.getItem('token'));
+    const userProfile = parseTokenProfile(userToken);
+
+    const streamPath = `/notifications/${encodeURIComponent(userProfile.username)}/stream`;
+    const watcher = openDirectSseWatcher({ token: userToken, streamPath });
+    try {
+      const readyPayload = await watcher.readyPromise;
+      expect(readyPayload).toBeTruthy();
+    } finally {
+      watcher.close();
+    }
+  });
+
+  test('user SSE stream is denied without ownership path', async ({ page }) => {
+    test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
+
+    const userToken = await page.evaluate(() => localStorage.getItem('token'));
+
+    const baseUrl = process.env.TEST_DIRECT_API_BASE_URL || process.env.TEST_API_BASE_URL || 'http://localhost';
+    const streamUrl = new URL(
+      `/notifications/stream?token=${encodeURIComponent(userToken)}`,
+      baseUrl,
+    );
+
+    const streamStatusRes = await page.request.get(streamUrl.toString());
+    expect(streamStatusRes.status()).toBe(403);
   });
 });

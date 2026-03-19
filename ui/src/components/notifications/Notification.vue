@@ -1,10 +1,7 @@
 <template>
   <div class="notification-anchor">
     <div class="flex gap-2 mb-2 flex-wrap">
-      <va-chip
-        size="small"
-        :color="deliveryChipColor"
-      >
+      <va-chip size="small" :color="deliveryChipColor">
         {{
           notification.delivery.type === "ROLE_BROADCAST"
             ? "Role Broadcast"
@@ -61,7 +58,9 @@
 
     <div
       class="notification-state-actions"
-      :style="{ gridTemplateColumns: `repeat(${actionButtonsCount}, minmax(0, 1fr))` }"
+      :style="{
+        gridTemplateColumns: `repeat(${actionButtonsCount}, minmax(0, 1fr))`,
+      }"
     >
       <va-button
         size="small"
@@ -74,7 +73,11 @@
         @click="$emit('toggle-read', notification)"
       >
         <Icon
-          :icon="notification.state.is_read ? 'mdi:email-outline' : theme.actions.read.icon"
+          :icon="
+            notification.state.is_read
+              ? 'mdi:email-outline'
+              : theme.actions.read.icon
+          "
           class="mr-1"
         />
         {{ notification.state.is_read ? "Mark unread" : "Mark read" }}
@@ -90,9 +93,11 @@
         @click="$emit('toggle-bookmarked', notification)"
       >
         <Icon
-          :icon="notification.state.is_bookmarked
-            ? 'mdi:bookmark-minus-outline'
-            : theme.actions.bookmark.icon"
+          :icon="
+            notification.state.is_bookmarked
+              ? 'mdi:bookmark-minus-outline'
+              : theme.actions.bookmark.icon
+          "
           class="mr-1"
         />
         {{ notification.state.is_bookmarked ? "Unbookmark" : "Bookmark" }}
@@ -108,9 +113,11 @@
         @click="$emit('toggle-archived', notification)"
       >
         <Icon
-          :icon="notification.state.is_archived
-            ? 'mdi:archive-arrow-up-outline'
-            : theme.actions.archive.icon"
+          :icon="
+            notification.state.is_archived
+              ? 'mdi:archive-arrow-up-outline'
+              : theme.actions.archive.icon
+          "
           class="mr-1"
         />
         {{ notification.state.is_archived ? "Unarchive" : "Archive" }}

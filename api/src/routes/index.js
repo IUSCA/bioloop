@@ -34,6 +34,7 @@ router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": [
 router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/statistics', require('./statistics') /* #swagger.security = [{"BearerAuth": []}] */);
+
 if (featureService.isFeatureEnabled({ key: 'notifications' })) {
   router.use('/notifications', notificationsRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }

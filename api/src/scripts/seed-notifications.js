@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/* eslint-disable no-console, no-restricted-syntax, no-await-in-loop, no-plusplus, no-continue, max-len */
 /**
  * seed-notifications.js
  *
@@ -58,6 +58,7 @@
 
 require('module-alias/register');
 const path = require('path');
+const fs = require('fs');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
@@ -71,7 +72,6 @@ const args = process.argv.slice(2);
 
 if (args.includes('--help') || args.includes('-h')) {
   // Re-print the block comment at the top of this file as help text.
-  const fs = require('fs');
   const src = fs.readFileSync(__filename, 'utf8');
   const match = src.match(/\/\*\*([\s\S]*?)\*\//);
   if (match) console.log(match[0]);
@@ -235,7 +235,9 @@ const STABLE_DEFINITIONS = [
       },
     },
     targeting: { type: 'direct' },
-    state: { is_read: true, read_at: new Date(), is_bookmarked: true, bookmarked_at: new Date() },
+    state: {
+      is_read: true, read_at: new Date(), is_bookmarked: true, bookmarked_at: new Date(),
+    },
   },
 
   // ── Read, label only ───────────────────────────────────────────────────────
@@ -478,7 +480,9 @@ function withTestNotificationPrefix({ id, text }) {
   return baseText ? `${prefix} ${baseText}` : prefix;
 }
 
-async function buildRecipientRows({ prismaClient, targeting, targetUser, roleByName }) {
+async function buildRecipientRows({
+  prismaClient, targeting, targetUser, roleByName,
+}) {
   if (targeting.type === 'direct') {
     return [{ user_id: targetUser.id, delivery_type: 'DIRECT', delivery_role_id: null }];
   }
@@ -530,7 +534,7 @@ async function buildRecipientRows({ prismaClient, targeting, targetUser, roleByN
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`\nseed-notifications.js`);
+  console.log('\nseed-notifications.js');
   console.log(`  target user : ${TARGET_USERNAME}`);
   console.log(`  force       : ${FORCE}`);
   console.log(`  dry-run     : ${DRY_RUN}`);
@@ -555,7 +559,9 @@ async function main() {
   // Use target user as the notification creator
   const creatorId = targetUser.id;
 
-  const summary = { created: 0, skipped: 0, recreated: 0, oneoff: 0, errors: 0 };
+  const summary = {
+    created: 0, skipped: 0, recreated: 0, oneoff: 0, errors: 0,
+  };
 
   // ── Stable notifications ───────────────────────────────────────────────────
 

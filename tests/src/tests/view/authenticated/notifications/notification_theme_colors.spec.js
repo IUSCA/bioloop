@@ -1,23 +1,13 @@
 const { randomUUID } = require('node:crypto');
 const { test, expect } = require('@playwright/test');
 const config = require('config');
-const { post } = require('../../../../api');
+const {
+  createDirectNotification,
+  fetchCurrentUser,
+  openNotificationsMenu,
+} = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
-
-const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')).profile;
-
-const openNotificationsMenu = async (page) => {
-  const menu = page.getByTestId('notification-menu-items');
-  for (let i = 0; i < 3; i += 1) {
-    if (await menu.isVisible()) return;
-    await page.getByTestId('notification-icon').click();
-    // Vuestic menu open animation.
-    // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(300);
-  }
-  await expect(menu).toBeVisible();
-};
 
 const resolveCssVarColor = async (page, cssVarName) => page.evaluate((name) => {
   const probe = document.createElement('div');
@@ -48,47 +38,11 @@ const expectElementColor = async ({ page, locator, cssVarName }) => {
   expect(normalizeColor(actual)).toBe(normalizeColor(expected));
 };
 
-const fetchCurrentUser = async (page) => {
-  const token = await page.evaluate(() => localStorage.getItem('token'));
-  const profile = parseTokenProfile(token);
-  return {
-    token,
-    userId: Number(profile.id),
-    username: profile.username,
-  };
-};
-
-const createDirectNotification = async ({
-  page,
-  token,
-  userId,
-  label,
-  text,
-}) => {
-  const response = await post({
-    requestContext: page.request,
-    token,
-    url: '/notifications',
-    data: {
-      type: 'E2E_TEST',
-      label,
-      text,
-      metadata: {},
-      user_ids: [userId],
-    },
-  });
-  if (response.status() !== 200) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(`Create notification failed: ${response.status()} ${JSON.stringify(body)}`);
-  }
-  return response.json();
-};
-
 test.describe.serial('Notifications theme colors', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('notification-icon')).toBeVisible();
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
     await openNotificationsMenu(page);
     const clearFiltersBtn = page.getByTestId('clear-notification-filters');
     if (await clearFiltersBtn.count()) {
@@ -151,7 +105,7 @@ test.describe.serial('Notifications theme colors', () => {
   });
 
   test('notification action controls keep mapped theme colors', async ({ page }) => {
-    const { token, userId } = await fetchCurrentUser(page);
+    const { token, userId } = await fetchCurrentUser({ page });
     const suffix = randomUUID().slice(0, 8);
     const created = await createDirectNotification({
       page,

@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
+const testRuntimeConfig = require('config');
 
 const USER_STORAGE_STATE = path.join(__dirname, '/.auth/user_storage_state.json');
 const OPERATOR_STORAGE_STATE = path.join(__dirname, '/.auth/operator_storage_state.json');
@@ -37,7 +38,7 @@ module.exports = {
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
       // baseURL: 'https://localhost',
-      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || testRuntimeConfig.baseURL || 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
@@ -113,6 +114,8 @@ module.exports = {
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
         ],
       },
       {
@@ -122,6 +125,8 @@ module.exports = {
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
         ],
       },
       {

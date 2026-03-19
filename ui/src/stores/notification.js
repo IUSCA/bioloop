@@ -1,11 +1,28 @@
-import notificationService from "@/services/notification";
+import notificationService from "@/services/notifications/client";
 import { defineStore } from "pinia";
 import toast from "@/services/toast";
 
+/**
+ * Pinia store for notification state, filters, pagination, and API interactions.
+ *
+ * Key design decisions:
+ * - `fetchRequestSeq` is a monotonic counter used to discard stale API
+ *   responses when rapid filter changes cause out-of-order completions.
+ * - `filters` is replaced immutably (spread + assign) so Vue's reactivity
+ *   picks up changes without deep-watch overhead and prevents stale DOM
+ *   reconciliation issues in the dropdown.
+ * - `unreadCount` is fetched separately from the main list so the bell
+ *   badge always reflects the true unread total, regardless of active
+ *   list filters.
+ */
 export const useNotificationStore = defineStore("notification", () => {
+  const pageSize = 20;
+  let fetchRequestSeq = 0;
   const loading = ref(false);
   const appNotifications = ref([]);
   const unreadCount = ref(0);
+  const totalMatchedCount = ref(0);
+  const hasMoreNotifications = ref(false);
   const filters = ref({
     read: false,
     archived: false,
@@ -19,14 +36,44 @@ export const useNotificationStore = defineStore("notification", () => {
     appNotifications.value.push(notification);
   }
 
+  /** Removes by index via copy-splice-reassign to trigger Vue reactivity. */
   function removeNotification(index) {
-    appNotifications.value = appNotifications.value.splice(index, 1);
+    const copy = [...appNotifications.value];
+    copy.splice(index, 1);
+    appNotifications.value = copy;
   }
 
   function setNotifications(notificationList) {
     appNotifications.value = notificationList;
   }
 
+  /** Appends new notifications, deduplicating by id to support infinite scroll. */
+  function appendNotifications(notificationList) {
+    const existingIds = new Set(appNotifications.value.map((n) => n.id));
+    const next = notificationList.filter((n) => !existingIds.has(n.id));
+    appNotifications.value = appNotifications.value.concat(next);
+  }
+
+  /**
+   * Normalizes the API response into `{ items, total, has_more }`.
+   * Handles both the current paginated shape and the legacy flat-array shape.
+   */
+  function getNotificationPagePayload(payload) {
+    if (Array.isArray(payload)) {
+      return {
+        items: payload,
+        total: payload.length,
+        has_more: false,
+      };
+    }
+    return {
+      items: Array.isArray(payload?.items) ? payload.items : [],
+      total: Number(payload?.total || 0),
+      has_more: Boolean(payload?.has_more),
+    };
+  }
+
+  /** Immutably replaces a single filter key to trigger Vue reactivity cleanly. */
   function setFilter(key, value) {
     filters.value = {
       ...filters.value,
@@ -44,6 +91,11 @@ export const useNotificationStore = defineStore("notification", () => {
     };
   }
 
+  /**
+   * Fetches the total unread count via a limit-1 query (only the total matters).
+   * Always queries with read=false, ignoring active list filters, so the bell
+   * badge shows the true unread count.
+   */
   function fetchUnreadCount({ forSelf = false, username = null } = {}) {
     if (forSelf && !username) {
       unreadCount.value = 0;
@@ -58,20 +110,42 @@ export const useNotificationStore = defineStore("notification", () => {
         bookmarked: null,
         globally_dismissed: false,
         search: null,
+        limit: 1,
+        offset: 0,
       })
       .then((res) => {
-        unreadCount.value = Array.isArray(res.data) ? res.data.length : 0;
+        const page = getNotificationPagePayload(res.data);
+        unreadCount.value = page.total;
       })
       .catch(() => {
         unreadCount.value = 0;
       });
   }
 
-  function fetchNotifications({ forSelf = false, username = null } = {}) {
+  /**
+   * Fetches a page of notifications using current filters.
+   * Stale responses (from a superseded request) are silently discarded
+   * via the `fetchRequestSeq` monotonic counter.
+   *
+   * @param {Object} [opts]
+   * @param {boolean} [opts.forSelf=false]
+   * @param {string|null} [opts.username]
+   * @param {number} [opts.offset=0] - Pagination offset
+   * @param {boolean} [opts.append=false] - Append to existing list (infinite scroll) vs. replace
+   */
+  function fetchNotifications({
+    forSelf = false,
+    username = null,
+    offset = 0,
+    append = false,
+  } = {}) {
     if (forSelf && !username) {
       setNotifications([]);
+      totalMatchedCount.value = 0;
+      hasMoreNotifications.value = false;
       return Promise.resolve();
     }
+    const requestSeq = ++fetchRequestSeq;
     loading.value = true;
     return notificationService
       .getNotifications({
@@ -81,21 +155,43 @@ export const useNotificationStore = defineStore("notification", () => {
         archived: filters.value.archived,
         bookmarked: filters.value.bookmarked,
         globally_dismissed: filters.value.globallyDismissed,
-        // Search is applied client-side in the dropdown to avoid focus loss
-        // caused by request-driven rerenders while typing.
-        search: null,
+        search: filters.value.search || null,
+        limit: pageSize,
+        offset,
       })
       .then((res) => {
-        setNotifications(res.data);
+        if (requestSeq !== fetchRequestSeq) return;
+        const page = getNotificationPagePayload(res.data);
+        if (append) {
+          appendNotifications(page.items);
+        } else {
+          setNotifications(page.items);
+        }
+        totalMatchedCount.value = page.total;
+        hasMoreNotifications.value = page.has_more;
       })
       .catch(() => {
+        if (requestSeq !== fetchRequestSeq) return;
         toast.error("Could not fetch notifications.");
       })
       .finally(() => {
+        if (requestSeq !== fetchRequestSeq) return;
         loading.value = false;
       });
   }
 
+  /** Loads the next page of notifications (infinite scroll trigger). No-ops if already loading or exhausted. */
+  function fetchMoreNotifications({ forSelf = false, username = null } = {}) {
+    if (loading.value || !hasMoreNotifications.value) return Promise.resolve();
+    return fetchNotifications({
+      forSelf,
+      username,
+      offset: appNotifications.value.length,
+      append: true,
+    });
+  }
+
+  /** Re-fetches both the notification list (page 1) and the unread count in parallel. */
   function refreshNotifications({ forSelf = false, username = null } = {}) {
     return Promise.all([
       fetchNotifications({ forSelf, username }),
@@ -185,10 +281,13 @@ export const useNotificationStore = defineStore("notification", () => {
   return {
     notifications,
     unreadCount,
+    totalMatchedCount,
+    hasMoreNotifications,
     filters,
     addNotification,
     removeNotification,
     fetchNotifications,
+    fetchMoreNotifications,
     fetchUnreadCount,
     refreshNotifications,
     updateNotificationState,

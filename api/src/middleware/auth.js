@@ -22,7 +22,7 @@ function authenticate(req, res, next) {
     token = bearerToken;
   } else {
     const isNotificationStream = req.method === 'GET'
-      && req.path.endsWith('/notifications/stream');
+      && /\/notifications(?:\/[^/]+)?\/stream$/.test(req.path);
     const queryToken = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
     if (isNotificationStream && queryToken) {
       token = queryToken;

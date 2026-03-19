@@ -77,9 +77,6 @@ rhythm/rhythm_api
 
 signet/signet
 
-# Docker runtime markers
-api/.db_seeded
-
 # AI-agent dirs
-# .cursorrules
-# .ai/
+.cursorrules
+.ai/

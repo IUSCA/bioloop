@@ -1,5 +1,4 @@
 const express = require('express');
-const config = require('config');
 const {
   query, body, param,
 } = require('express-validator');
@@ -10,201 +9,20 @@ const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
-const { resolveNotificationTemplate } = require('@/services/notificationTypeService');
-const { subscribeUser, publishToUsers } = require('@/services/notificationSse');
+const { subscribeUser, publishToUsers } = require('@/services/notifications/sse');
+const { resolveEligibleRecipients } = require('@/services/notifications/recipientService');
+const { hasRole, fetchCurrentUserNotifications } = require('@/services/notifications/queryService');
 
 const isPermittedTo = accessControl('notifications');
 const router = express.Router();
 
-function hasRole(user, roleName) {
-  return (user?.roles || []).includes(roleName);
-}
-
-function getMetadataObject(metadata) {
-  return metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {};
-}
-
-function isFeatureEnabledForRole(roleName) {
-  const featureSetting = config.get('enabled_features').notifications;
-  if (featureSetting == null) return true;
-  if (typeof featureSetting === 'boolean') return featureSetting;
-  if (typeof featureSetting !== 'object') return false;
-  if (!Array.isArray(featureSetting.enabledForRoles)) return false;
-  return featureSetting.enabledForRoles.includes(roleName);
-}
-
-function toTrustedLink(link, idx) {
-  if (!link || typeof link !== 'object') return null;
-  const href = typeof link.href === 'string' ? link.href.trim() : '';
-  if (!href) return null;
-
-  const isRelative = href.startsWith('/');
-  const isHttp = /^https?:\/\//i.test(href);
-  if (!isRelative && !isHttp) return null;
-  if (/^(javascript|data|file|vbscript):/i.test(href)) return null;
-
-  const trusted = isRelative ? true : Boolean(link.trusted);
-  return {
-    id: typeof link.id === 'string' && link.id.trim() ? link.id.trim() : `link-${idx + 1}`,
-    label: typeof link.label === 'string' && link.label.trim() ? link.label.trim() : href,
-    href,
-    trusted,
-    requires_confirmation: trusted ? false : (link.requires_confirmation ?? true),
-    open_in_new_tab: trusted ? Boolean(link.open_in_new_tab) : (link.open_in_new_tab ?? true),
-  };
-}
-
-function resolveNotificationForUser({ row, user }) {
-  const userRoles = user?.roles || [];
-  const canSeeResolverIdentity = hasRole(user, 'admin') || hasRole(user, 'operator');
-  const typeResolved = resolveNotificationTemplate({
-    type: row.notification.type,
-    label: row.notification.label,
-    text: row.notification.text,
-    metadata: row.notification.metadata,
-  });
-  const metadata = getMetadataObject(typeResolved.metadata);
-  const roleOverrides = getMetadataObject(metadata.role_overrides);
-  const roleAddons = getMetadataObject(metadata.role_addons);
-  let { label } = typeResolved;
-  let { text } = typeResolved;
-  let links = Array.isArray(metadata.links) ? [...metadata.links] : [];
-
-  userRoles.forEach((roleName) => {
-    const override = getMetadataObject(roleOverrides[roleName]);
-    if (typeof override.label === 'string') label = override.label;
-    if (typeof override.text === 'string') text = override.text;
-    if (Array.isArray(override.links)) links = [...override.links];
-    if (Array.isArray(override.link_addons)) links = links.concat(override.link_addons);
-  });
-
-  userRoles.forEach((roleName) => {
-    const addon = getMetadataObject(roleAddons[roleName]);
-    if (typeof addon.label_suffix === 'string') label = `${label}${addon.label_suffix}`;
-    if (typeof addon.text_suffix === 'string') text = `${text || ''}${addon.text_suffix}`;
-    if (Array.isArray(addon.links)) links = links.concat(addon.links);
-  });
-
-  const dedupedLinks = links
-    .map((link, idx) => toTrustedLink(link, idx))
-    .filter(Boolean)
-    .filter((link, idx, arr) => arr.findIndex((x) => x.href === link.href && x.label === link.label) === idx);
-
-  const canGloballyDismiss = hasRole(user, 'admin') || hasRole(user, 'operator');
-
-  return {
-    id: row.notification.id,
-    type: row.notification.type,
-    label,
-    text,
-    metadata,
-    state: {
-      is_read: row.is_read,
-      is_archived: row.is_archived,
-      is_bookmarked: row.is_bookmarked,
-    },
-    delivery: {
-      type: row.delivery_type,
-      role_name: row.delivery_role?.name || null,
-    },
-    global_dismissal: {
-      is_globally_dismissed: row.notification.is_resolved,
-      dismissed_at: row.notification.resolved_at,
-      dismissed_by: canSeeResolverIdentity ? row.notification.resolved_by || null : null,
-    },
-    can_global_dismiss: canGloballyDismiss,
-    allowed_links: dedupedLinks,
-    created_at: row.notification.created_at,
-    updated_at: row.notification.updated_at,
-  };
-}
-
-function buildNotificationWhere({
-  userId,
-  read,
-  archived,
-  bookmarked,
-  globallyDismissed,
-  search,
-}) {
-  const notificationWhere = _.omitBy(_.isUndefined)({
-    is_resolved: globallyDismissed,
-    OR: search ? [
-      {
-        label: {
-          contains: search,
-          mode: 'insensitive',
-        },
-      },
-      {
-        text: {
-          contains: search,
-          mode: 'insensitive',
-        },
-      },
-    ] : undefined,
-  });
-  return _.omitBy(_.isUndefined)({
-    user_id: userId,
-    is_read: read,
-    is_archived: archived,
-    is_bookmarked: bookmarked,
-    notification: notificationWhere,
-  });
-}
-
-async function fetchCurrentUserNotifications({ req }) {
-  const globallyDismissed = req.query.globally_dismissed ?? false;
-  const where = buildNotificationWhere({
-    userId: req.user.id,
-    read: req.query.read,
-    archived: req.query.archived,
-    bookmarked: req.query.bookmarked,
-    globallyDismissed,
-    search: req.query.search,
-  });
-
-  const notificationRows = await prisma.notification_recipient.findMany({
-    where,
-    include: {
-      notification: {
-        select: {
-          id: true,
-          type: true,
-          label: true,
-          text: true,
-          metadata: true,
-          created_by_id: true,
-          is_resolved: true,
-          resolved_at: true,
-          resolved_by: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-            },
-          },
-          created_at: true,
-          updated_at: true,
-        },
-      },
-      delivery_role: {
-        select: {
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      created_at: 'desc',
-    },
-  });
-
-  return notificationRows.map((row) => resolveNotificationForUser({
-    row,
-    user: req.user,
-  }));
-}
-
+/**
+ * Broadcasts an SSE invalidation event to the given users so their
+ * UI can refetch notifications. The `reason` field is informational
+ * (e.g. 'created', 'state_updated', 'global_dismissed').
+ *
+ * @param {{ userIds: number[], reason: string, notificationId?: number|null }} opts
+ */
 function publishNotificationInvalidation({
   userIds = [],
   reason,
@@ -220,125 +38,63 @@ function publishNotificationInvalidation({
   });
 }
 
-async function resolveEligibleRecipients({
-  tx, roleIds = [], userIds = [],
-}) {
-  const roleRows = roleIds.length > 0 ? await tx.role.findMany({
-    where: { id: { in: roleIds } },
-    select: { id: true, name: true },
-  }) : [];
-  const roleById = roleRows.reduce((acc, roleRow) => {
-    acc[roleRow.id] = roleRow;
-    return acc;
-  }, {});
+/**
+ * Express handler for SSE notification streams. Sends a `ready` event
+ * on connect, then forwards per-user invalidation events as
+ * `notification` events. A keepalive comment is sent every 25s to
+ * prevent proxy/connection timeouts.
+ *
+ * Mounted on both `/:username/stream` (checkOwnership for user role)
+ * and `/stream` (admin/operator).
+ */
+function sseStreamHandler(req, res) {
+  // #swagger.tags = ['notifications']
+  // #swagger.summary = Notification invalidation event stream
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
 
-  const roleUserRows = roleIds.length > 0 ? await tx.user_role.findMany({
-    where: {
-      role_id: { in: roleIds },
-    },
-    select: {
-      user_id: true,
-      role_id: true,
-    },
-  }) : [];
+  const sendEvent = (eventName, payload) => {
+    res.write(`event: ${eventName}\n`);
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
 
-  const allRequestedUserIds = Array.from(new Set([
-    ...userIds,
-    ...roleUserRows.map((row) => row.user_id),
-  ]));
-  const users = allRequestedUserIds.length > 0 ? await tx.user.findMany({
-    where: {
-      id: {
-        in: allRequestedUserIds,
-      },
-    },
-    include: {
-      user_role: {
-        select: {
-          roles: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-    },
-  }) : [];
-  const userById = users.reduce((acc, user) => {
-    acc[user.id] = user;
-    return acc;
-  }, {});
-
-  const recipientMap = new Map();
-  roleUserRows.forEach((row) => {
-    const user = userById[row.user_id];
-    const role = roleById[row.role_id];
-    if (!user || !role || !isFeatureEnabledForRole(role.name)) return;
-    const userRoles = user.user_role.map((ur) => ur.roles.name);
-    const isUserEligible = userRoles.some((roleName) => isFeatureEnabledForRole(roleName));
-    if (!isUserEligible) return;
-    if (!recipientMap.has(row.user_id)) {
-      recipientMap.set(row.user_id, {
-        user_id: row.user_id,
-        delivery_type: 'ROLE_BROADCAST',
-        delivery_role_id: row.role_id,
-      });
-    }
+  sendEvent('ready', {
+    type: 'READY',
+    timestamp: new Date().toISOString(),
   });
 
-  userIds.forEach((id) => {
-    const user = userById[id];
-    if (!user) return;
-    const userRoles = user.user_role.map((ur) => ur.roles.name);
-    const isUserEligible = userRoles.some((roleName) => isFeatureEnabledForRole(roleName));
-    if (!isUserEligible) return;
-    recipientMap.set(id, {
-      user_id: id,
-      delivery_type: 'DIRECT',
-      delivery_role_id: null,
-    });
+  const unsubscribe = subscribeUser({
+    userId: req.user.id,
+    handler: (payload) => sendEvent('notification', payload),
   });
+  const heartbeat = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 25000);
 
-  return Array.from(recipientMap.values());
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+    res.end();
+  });
 }
+
+router.get(
+  '/:username/stream',
+  isPermittedTo('read', { checkOwnership: true }),
+  validate([
+    param('username').trim().notEmpty(),
+  ]),
+  sseStreamHandler,
+);
 
 router.get(
   '/stream',
   isPermittedTo('read'),
-  (req, res) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Notification invalidation event stream
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    if (typeof res.flushHeaders === 'function') {
-      res.flushHeaders();
-    }
-
-    const sendEvent = (eventName, payload) => {
-      res.write(`event: ${eventName}\n`);
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    };
-
-    sendEvent('ready', {
-      type: 'READY',
-      timestamp: new Date().toISOString(),
-    });
-
-    const unsubscribe = subscribeUser({
-      userId: req.user.id,
-      handler: (payload) => sendEvent('notification', payload),
-    });
-    const heartbeat = setInterval(() => {
-      res.write(': keepalive\n\n');
-    }, 25000);
-
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      unsubscribe();
-      res.end();
-    });
-  },
+  sseStreamHandler,
 );
 
 router.get(
@@ -351,6 +107,8 @@ router.get(
     query('bookmarked').optional().isBoolean().toBoolean(),
     query('globally_dismissed').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['notifications']
@@ -369,6 +127,8 @@ router.get(
     query('bookmarked').optional().isBoolean().toBoolean(),
     query('globally_dismissed').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['notifications']

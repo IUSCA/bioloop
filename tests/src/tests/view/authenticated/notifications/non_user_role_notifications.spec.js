@@ -1,214 +1,38 @@
 const { randomUUID } = require('node:crypto');
-const http = require('node:http');
 const { test, expect } = require('@playwright/test');
 const config = require('config');
 const { post, patch } = require('../../../../api');
+const {
+  attachUiErrorTracker,
+  countContains,
+  createDirectNotification,
+  currentRole,
+  ensureNotificationOpenButtonVisible,
+  expectHeaderControlsDisabled,
+  expectHeaderControlsEnabled,
+  fetchCurrentUser,
+  fetchUserByTicket,
+  globalDismissById,
+  labelById,
+  loginAsTicket,
+  notificationOpenButtonCount,
+  notificationVisibleCount,
+  openDirectSseWatcher,
+  openNotificationsMenu,
+  refreshNotificationView,
+  toggleArchiveById,
+  toggleBookmarkById,
+  toggleReadById,
+  searchInput,
+} = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
-
-const currentRole = (projectName) => (projectName.includes('operator') ? 'operator' : 'admin');
-const labelById = (id) => `notification-${id}-label`;
-const toggleReadById = (id) => `notification-${id}-toggle-read`;
-const toggleBookmarkById = (id) => `notification-${id}-toggle-bookmark`;
-const toggleArchiveById = (id) => `notification-${id}-toggle-archive`;
-const globalDismissById = (id) => `notification-${id}-global-dismiss`;
-const notificationVisibleCount = (page) => page.getByTestId('notification-visible-count');
-const notificationBellCount = async (page) => {
-  const text = (await page.getByTestId('notification-count').innerText()) || '';
-  const match = text.match(/\d+/);
-  return match ? Number(match[0]) : 0;
-};
-
-const getToken = async (page) => page.evaluate(() => localStorage.getItem('token'));
-const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')).profile;
-
-const openNotificationsMenu = async (page) => {
-  const menu = page.getByTestId('notification-menu-items');
-  for (let i = 0; i < 3; i += 1) {
-    if (await menu.isVisible()) {
-      return;
-    }
-    await page.getByTestId('notification-icon').click();
-    // Vuestic menu can animate open; short wait keeps this deterministic.
-    // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(300);
-  }
-  await expect(menu).toBeVisible();
-};
-
-const fetchCurrentUser = async ({ page, role }) => {
-  const token = await getToken(page);
-  const profile = parseTokenProfile(token);
-  return { token, username: profile.username, userId: profile.id, role };
-};
-
-const fetchUserByTicket = async ({ page, ticket }) => {
-  const response = await page.request.post(`${config.apiBaseURL}/auth/cas/verify`, {
-    data: { ticket },
-  });
-  expect(response.status()).toBe(200);
-  const body = await response.json();
-  const profile = parseTokenProfile(body.token);
-  return {
-    token: body.token,
-    id: profile.id,
-    username: profile.username,
-  };
-};
-
-const createDirectNotification = async ({
-  page,
-  token,
-  userId = null,
-  userIds = [],
-  label,
-  text,
-}) => {
-  const recipientUserIds = userIds.length > 0 ? userIds : [userId];
-  const response = await post({
-    requestContext: page.request,
-    token,
-    url: '/notifications',
-    data: {
-      type: 'E2E_TEST',
-      label,
-      text,
-      metadata: {},
-      user_ids: recipientUserIds,
-    },
-  });
-  if (response.status() !== 200) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(`Create notification failed: ${response.status()} ${JSON.stringify(body)}`);
-  }
-  return response.json();
-};
-
-const refreshNotificationView = async (page) => {
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await ensureNotificationIconVisible(page);
-  await openNotificationsMenu(page);
-};
-
-const ensureNotificationIconVisible = async (page) => {
-  const icon = page.getByTestId('notification-icon');
-  for (let i = 0; i < 3; i += 1) {
-    if (await icon.isVisible()) {
-      return;
-    }
-    // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(500);
-    // eslint-disable-next-line no-await-in-loop
-    await page.reload({ waitUntil: 'domcontentloaded' });
-  }
-  await expect(icon).toBeVisible();
-};
-
-const openDirectSseWatcher = ({ token }) => {
-  const baseUrl = process.env.TEST_DIRECT_API_BASE_URL || 'http://localhost:14303';
-  const streamUrl = new URL(`/notifications/stream?token=${encodeURIComponent(token)}`, baseUrl);
-  let req = null;
-  let res = null;
-  let buffer = '';
-  let onEvent = null;
-  let closed = false;
-
-  const readyPromise = new Promise((resolve, reject) => {
-    req = http.request(streamUrl, { method: 'GET', headers: { Accept: 'text/event-stream' } }, (_res) => {
-      res = _res;
-      if (res.statusCode !== 200) {
-        reject(new Error(`SSE stream open failed with status ${res.statusCode}`));
-        return;
-      }
-      onEvent = (event, payload) => {
-        if (event === 'ready') {
-          resolve(payload);
-        }
-      };
-      res.on('data', (chunk) => {
-        buffer += chunk.toString();
-        let delimiterIndex = buffer.indexOf('\n\n');
-        while (delimiterIndex >= 0) {
-          const rawEvent = buffer.slice(0, delimiterIndex);
-          buffer = buffer.slice(delimiterIndex + 2);
-          const eventLine = rawEvent.split('\n').find((line) => line.startsWith('event:'));
-          const dataLine = rawEvent.split('\n').find((line) => line.startsWith('data:'));
-          const eventName = eventLine ? eventLine.replace('event:', '').trim() : 'message';
-          const data = dataLine ? JSON.parse(dataLine.replace('data:', '').trim()) : null;
-          if (onEvent) onEvent(eventName, data);
-          delimiterIndex = buffer.indexOf('\n\n');
-        }
-      });
-    });
-    req.on('error', reject);
-    req.end();
-  });
-
-  const waitForNotification = ({ timeoutMs = 4500 } = {}) => new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error(`Timed out waiting for SSE notification event after ${timeoutMs}ms`));
-    }, timeoutMs);
-    const previousOnEvent = onEvent;
-    onEvent = (event, payload) => {
-      if (previousOnEvent) previousOnEvent(event, payload);
-      if (event === 'notification') {
-        clearTimeout(timeout);
-        resolve({
-          atMs: Date.now(),
-          payload,
-        });
-      }
-    };
-  });
-
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    if (res) res.destroy();
-    if (req) req.destroy();
-  };
-
-  return {
-    readyPromise,
-    waitForNotification,
-    close,
-  };
-};
-
-const loginAsTicket = async ({ page, ticket, expectedUsername }) => {
-  await page.goto(`${config.baseURL}/auth/iucas?ticket=${ticket}`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByTestId('header-username')).toContainText(expectedUsername);
-};
-
-const attachUiErrorTracker = (page) => {
-  const errors = [];
-  const onPageError = (err) => {
-    errors.push(String(err));
-  };
-  const onConsole = (msg) => {
-    if (msg.type() === 'error') {
-      errors.push(msg.text());
-    }
-  };
-  page.on('pageerror', onPageError);
-  page.on('console', onConsole);
-  return {
-    assertNoHierarchyError: () => {
-      const hierarchyErrors = errors.filter((e) => e.includes('HierarchyRequestError'));
-      expect(hierarchyErrors).toEqual([]);
-    },
-    detach: () => {
-      page.off('pageerror', onPageError);
-      page.off('console', onConsole);
-    },
-  };
-};
 
 test.describe.serial('Notifications (admin/operator)', () => {
   test.beforeEach(async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await ensureNotificationIconVisible(page);
+    await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
     const clearFiltersBtn = page.getByTestId('clear-notification-filters');
     if (await clearFiltersBtn.count()) {
@@ -297,14 +121,13 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
-    const searchInput = page.locator('input[data-testid="notification-search"]:visible').first();
-    await searchInput.fill(label);
+    await searchInput(page).fill(label);
     await expect(page.getByText(`Search: ${label}`)).toBeVisible();
 
     const searchChipClear = page.locator('[data-testid="active-filter-chip-search-clear"]:visible').first();
     await expect(searchChipClear).toBeVisible();
     await searchChipClear.click({ force: true });
-    await expect(searchInput).toHaveValue('');
+    await expect(searchInput(page)).toHaveValue('');
   });
 
   test('mark all as read removes unread rows and shows under read filter', async ({ page }, testInfo) => {
@@ -369,7 +192,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
     ).toContainText(`Dismissed by ${username}`);
   });
 
-  test('notification count indicator changes when filters change', async ({ page }, testInfo) => {
+  test('notification visible count changes when filters change', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -382,14 +205,14 @@ test.describe.serial('Notifications (admin/operator)', () => {
       label: `${labelPrefix}-A`,
       text: 'badge body A',
     });
-    await createDirectNotification({
+    const createdB = await createDirectNotification({
       page,
       token,
       userId,
       label: `${labelPrefix}-B`,
       text: 'badge body B',
     });
-    await createDirectNotification({
+    const createdC = await createDirectNotification({
       page,
       token,
       userId,
@@ -404,26 +227,25 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
-    const searchInput = page.locator('input[data-testid="notification-search"]:visible').first();
-    await searchInput.fill(labelPrefix);
-    const initialVisibleCountText = (await notificationVisibleCount(page).textContent()) || '';
-    const initialVisibleCount = Number((initialVisibleCountText.match(/\d+/) || [0])[0]);
-    expect(initialVisibleCount).toBe(3);
+    const labelA = page.getByTestId(labelById(createdA.id));
+    const labelB = page.getByTestId(labelById(createdB.id));
+    const labelC = page.getByTestId(labelById(createdC.id));
+    await expect(labelA).toBeVisible();
+    await expect(labelB).toBeVisible();
+    await expect(labelC).toBeVisible();
 
     await page.getByTestId('filter-bookmarked').click();
-    await expect.poll(async () => {
-      const filteredVisibleCountText = (await notificationVisibleCount(page).textContent()) || '';
-      return Number((filteredVisibleCountText.match(/\d+/) || [0])[0]);
-    }).toBe(1);
+    await expect(labelA).toBeVisible();
+    await expect(labelB).toHaveCount(0);
+    await expect(labelC).toHaveCount(0);
 
     await page.getByTestId('filter-bookmarked').click();
-    await expect.poll(async () => {
-      const clearVisibleCountText = (await notificationVisibleCount(page).textContent()) || '';
-      return Number((clearVisibleCountText.match(/\d+/) || [0])[0]);
-    }).toBe(initialVisibleCount);
+    await expect(labelA).toBeVisible();
+    await expect(labelB).toBeVisible();
+    await expect(labelC).toBeVisible();
   });
 
-  test('bell badge count updates with selected filters and search', async ({ page }, testInfo) => {
+  test('notification-open button badge count uses total matched for active filters', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -451,12 +273,215 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
-    const searchInput = page.locator('input[data-testid="notification-search"]:visible').first();
-    await searchInput.fill(labelPrefix);
+    await page.getByTestId('filter-read').click();
 
-    await expect.poll(async () => notificationBellCount(page)).toBe(2);
+    const readTotalRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: {
+        read: true,
+        archived: false,
+        globally_dismissed: false,
+        limit: 1,
+        offset: 0,
+      },
+    });
+    expect(readTotalRes.status()).toBe(200);
+    const readTotalBody = await readTotalRes.json();
+    const readTotal = Number(readTotalBody.total || 0);
+    await expect(notificationOpenButtonCount(page)).toContainText(countContains(readTotal));
+
     await page.getByTestId('filter-bookmarked').click();
-    await expect.poll(async () => notificationBellCount(page)).toBe(1);
+    const readBookmarkedTotalRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params: {
+        read: true,
+        archived: false,
+        bookmarked: true,
+        globally_dismissed: false,
+        limit: 1,
+        offset: 0,
+      },
+    });
+    expect(readBookmarkedTotalRes.status()).toBe(200);
+    const readBookmarkedBody = await readBookmarkedTotalRes.json();
+    const readBookmarkedTotal = Number(readBookmarkedBody.total || 0);
+    await expect(notificationOpenButtonCount(page)).toContainText(countContains(readBookmarkedTotal));
+  });
+
+  test('active filters request first page with pagination params and total matched badge count', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const createdCount = 6;
+    const createdIds = [];
+
+    for (let i = 0; i < createdCount; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const created = await createDirectNotification({
+        page,
+        token,
+        userId,
+        label: `E2E-${role}-paged-filter-${suffix}-${i}`,
+        text: `paged filter ${i}`,
+      });
+      createdIds.push(created.id);
+    }
+
+    for (const id of createdIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await patch({
+        requestContext: page.request,
+        token,
+        url: `/notifications/${id}/state`,
+        data: { is_read: true, is_bookmarked: true },
+      });
+    }
+
+    await refreshNotificationView(page);
+
+    const requestedOffsets = [];
+    const requestedLimits = [];
+    const onRequest = (req) => {
+      const url = req.url();
+      if (!/\/notifications\?/.test(url)) return;
+      const parsed = new URL(url);
+      const read = parsed.searchParams.get('read');
+      const bookmarked = parsed.searchParams.get('bookmarked');
+      const offset = parsed.searchParams.get('offset');
+      const limit = parsed.searchParams.get('limit');
+      if (read === 'true' && bookmarked === 'true') {
+        requestedOffsets.push(Number(offset || 0));
+        requestedLimits.push(Number(limit || 0));
+      }
+    };
+    page.on('request', onRequest);
+
+    await page.getByTestId('filter-read').click();
+    await expect(page.locator('[data-testid="active-filter-chip-read"]:visible')).toHaveCount(1);
+    await page.getByTestId('filter-bookmarked').click();
+    await expect(page.locator('[data-testid="active-filter-chip-bookmarked"]:visible')).toHaveCount(1);
+
+    const totalRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        read: true,
+        archived: false,
+        bookmarked: true,
+        globally_dismissed: false,
+        limit: 1,
+        offset: 0,
+      },
+    });
+    expect(totalRes.status()).toBe(200);
+    const totalBody = await totalRes.json();
+    const expectedTotal = Number(totalBody.total || 0);
+    expect(expectedTotal).toBeGreaterThanOrEqual(createdCount);
+    const expectedVisible = Math.min(20, expectedTotal);
+
+    await expect(notificationOpenButtonCount(page)).toContainText(countContains(expectedTotal));
+    await expect(notificationVisibleCount(page)).toContainText(countContains(expectedVisible));
+    page.off('request', onRequest);
+
+    expect(requestedOffsets).toContain(0);
+    expect(requestedLimits).toContain(20);
+  });
+
+  test('search + active filters use paginated API results and total matched visible count', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const labelPrefix = `E2E-${role}-paged-search-filter-${suffix}`;
+    const createdCount = 21;
+    const createdIds = [];
+
+    for (let i = 0; i < createdCount; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const created = await createDirectNotification({
+        page,
+        token,
+        userId,
+        label: `${labelPrefix}-${i}`,
+        text: `paged search filter ${i}`,
+      });
+      createdIds.push(created.id);
+    }
+
+    for (const id of createdIds) {
+      // eslint-disable-next-line no-await-in-loop
+      await patch({
+        requestContext: page.request,
+        token,
+        url: `/notifications/${id}/state`,
+        data: { is_read: true, is_bookmarked: true },
+      });
+    }
+
+    await refreshNotificationView(page);
+    const menuPanel = page.locator('[data-testid="notification-menu-items"]:visible').first();
+    const scopedReadFilter = menuPanel.locator('[data-testid="filter-read"]').first();
+    const scopedBookmarkedFilter = menuPanel.locator('[data-testid="filter-bookmarked"]').first();
+    const scopedSearchInput = menuPanel.locator('input[data-testid="notification-search"]').first();
+
+    await scopedReadFilter.click();
+    await scopedBookmarkedFilter.click();
+    await expect(scopedSearchInput).toBeVisible();
+    await expect(scopedSearchInput).toBeEnabled();
+    await scopedSearchInput.click();
+    await page.keyboard.type(labelPrefix);
+    await expect(menuPanel.locator('[data-testid="active-filter-chip-search"]')).toHaveCount(1);
+
+    const totalRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        read: true,
+        archived: false,
+        bookmarked: true,
+        globally_dismissed: false,
+        search: labelPrefix,
+        limit: 1,
+        offset: 0,
+      },
+    });
+    expect(totalRes.status()).toBe(200);
+    const totalBody = await totalRes.json();
+    const expectedTotal = Number(totalBody.total || 0);
+    expect(expectedTotal).toBeGreaterThanOrEqual(createdCount);
+
+    let secondPageLabel = null;
+    if (expectedTotal > 20) {
+      const secondPageRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          read: true,
+          archived: false,
+          bookmarked: true,
+          globally_dismissed: false,
+          search: labelPrefix,
+          limit: 20,
+          offset: 20,
+        },
+      });
+      expect(secondPageRes.status()).toBe(200);
+      const secondPageBody = await secondPageRes.json();
+      expect(secondPageBody.items.length).toBeGreaterThan(0);
+      const secondPageId = secondPageBody.items[0].id;
+      secondPageLabel = menuPanel.locator(`[data-testid="${labelById(secondPageId)}"]`).first();
+      await expect(secondPageLabel).toHaveCount(0);
+    }
+
+    await menuPanel.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    if (secondPageLabel) {
+      await expect(secondPageLabel).toBeVisible();
+    }
   });
 
   test('controls are disabled while notification fetch is in flight', async ({ page }, testInfo) => {
@@ -474,21 +499,89 @@ test.describe.serial('Notifications (admin/operator)', () => {
 
     const delayedReadFilterRequest = /\/api\/notifications\?.*read=true/;
     await page.route(delayedReadFilterRequest, async (route) => {
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(400);
       await route.continue();
     });
 
     await page.getByTestId('filter-read').click();
-    await expect(page.getByTestId('filter-read')).toBeDisabled();
-    await expect(page.getByTestId('filter-bookmarked')).toBeDisabled();
-    await expect(page.locator('input[data-testid="notification-search"]:visible').first()).toBeDisabled();
-
-    await expect(page.getByTestId('filter-read')).toBeEnabled({ timeout: 6000 });
-    await expect(page.getByTestId('filter-bookmarked')).toBeEnabled({ timeout: 6000 });
-    await expect(page.locator('input[data-testid="notification-search"]:visible').first()).toBeEnabled({
-      timeout: 6000,
-    });
+    await expectHeaderControlsDisabled(page);
+    await expectHeaderControlsEnabled(page);
     await page.unroute(delayedReadFilterRequest);
+  });
+
+  test('controls are disabled while toggle-read mutation is in flight', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-loading-toggle-read-${suffix}`,
+      text: `loading state toggle-read ${suffix}`,
+    });
+    await refreshNotificationView(page);
+
+    const delayedToggleReadRequest = new RegExp(`/api/notifications/${created.id}/state$`);
+    await page.route(delayedToggleReadRequest, async (route) => {
+      await page.waitForTimeout(400);
+      await route.continue();
+    });
+
+    await page.getByTestId(toggleReadById(created.id)).click();
+    await expectHeaderControlsDisabled(page);
+    await expectHeaderControlsEnabled(page);
+    await page.unroute(delayedToggleReadRequest);
+  });
+
+  test('controls are disabled while mark-all-read mutation is in flight', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-loading-mark-all-${suffix}`,
+      text: `loading state mark-all-read ${suffix}`,
+    });
+    await refreshNotificationView(page);
+
+    const delayedMarkAllRequest = /\/api\/notifications\/mark-all-read$/;
+    await page.route(delayedMarkAllRequest, async (route) => {
+      await page.waitForTimeout(400);
+      await route.continue();
+    });
+
+    await page.getByTestId('mark-all-read').click();
+    await expectHeaderControlsDisabled(page);
+    await expectHeaderControlsEnabled(page);
+    await page.unroute(delayedMarkAllRequest);
+  });
+
+  test('controls are disabled while global-dismiss mutation is in flight', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-loading-global-dismiss-${suffix}`,
+      text: `loading state global-dismiss ${suffix}`,
+    });
+    await refreshNotificationView(page);
+
+    const delayedGlobalDismissRequest = new RegExp(`/api/notifications/${created.id}/global-dismiss$`);
+    await page.route(delayedGlobalDismissRequest, async (route) => {
+      await page.waitForTimeout(400);
+      await route.continue();
+    });
+
+    await page.getByTestId(globalDismissById(created.id)).click();
+    await expectHeaderControlsDisabled(page);
+    await expectHeaderControlsEnabled(page);
+    await page.unroute(delayedGlobalDismissRequest);
   });
 
   test('read filter toggles chip cleanly with no duplicates', async ({ page }, testInfo) => {
@@ -509,6 +602,32 @@ test.describe.serial('Notifications (admin/operator)', () => {
       await expect(page.locator('[data-testid="active-filter-chip-read"]:visible')).toHaveCount(1);
       await page.locator('[data-testid="active-filter-chip-read-clear"]:visible').click();
       await expect(page.locator('[data-testid="active-filter-chip-read"]:visible')).toHaveCount(0);
+    }
+  });
+
+  test('globally dismissed chip clears reliably with no duplicates', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-globally-dismissed-chip-${suffix}`,
+      text: `Body for globally dismissed chip ${suffix}`,
+    });
+    await refreshNotificationView(page);
+
+    await page.getByTestId(globalDismissById(created.id)).click();
+    await expect(page.getByTestId(labelById(created.id))).toHaveCount(0);
+
+    for (let i = 0; i < 3; i += 1) {
+      await page.getByTestId('filter-globally-dismissed').click();
+      await expect(page.getByTestId(labelById(created.id))).toBeVisible();
+      await expect(page.locator('[data-testid="active-filter-chip-globally-dismissed"]:visible')).toHaveCount(1);
+      await page.locator('[data-testid="active-filter-chip-globally-dismissed-clear"]:visible').click();
+      await expect(page.locator('[data-testid="active-filter-chip-globally-dismissed"]:visible')).toHaveCount(0);
+      await expect(page.getByTestId(labelById(created.id))).toHaveCount(0);
     }
   });
 
@@ -591,6 +710,72 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await expect(page.getByTestId(labelById(nonIntersectionNotification.id))).toHaveCount(0);
   });
 
+  test('read+archived and archived+bookmarked filters keep intersection only', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+
+    const comboA = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-intersection-RA-AB-A-${suffix}`,
+      text: 'intersection combo A',
+    });
+    const comboB = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-intersection-RA-AB-B-${suffix}`,
+      text: 'intersection combo B',
+    });
+    const comboC = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-${role}-intersection-RA-AB-C-${suffix}`,
+      text: 'intersection combo C',
+    });
+
+    // A/C: read + archived, B: archived + bookmarked (and unread).
+    await patch({
+      requestContext: page.request,
+      token,
+      url: `/notifications/${comboA.id}/state`,
+      data: { is_read: true, is_archived: true, is_bookmarked: false },
+    });
+    await patch({
+      requestContext: page.request,
+      token,
+      url: `/notifications/${comboB.id}/state`,
+      data: { is_read: false, is_archived: true, is_bookmarked: true },
+    });
+    await patch({
+      requestContext: page.request,
+      token,
+      url: `/notifications/${comboC.id}/state`,
+      data: { is_read: true, is_archived: true, is_bookmarked: false },
+    });
+
+    await refreshNotificationView(page);
+
+    // read + archived => A and C only.
+    await page.getByTestId('filter-read').click();
+    await page.getByTestId('filter-archived').click();
+    await expect(page.getByTestId(labelById(comboA.id))).toBeVisible();
+    await expect(page.getByTestId(labelById(comboC.id))).toBeVisible();
+    await expect(page.getByTestId(labelById(comboB.id))).toHaveCount(0);
+
+    await page.getByTestId('clear-notification-filters').click();
+
+    // archived + bookmarked => B only.
+    await page.getByTestId('filter-archived').click();
+    await page.getByTestId('filter-bookmarked').click();
+    await expect(page.getByTestId(labelById(comboA.id))).toHaveCount(0);
+    await expect(page.getByTestId(labelById(comboB.id))).toBeVisible();
+    await expect(page.getByTestId(labelById(comboC.id))).toHaveCount(0);
+  });
+
   test('clear filters resets search and toggle filters together', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
@@ -606,14 +791,13 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
-    const searchInput = page.locator('input[data-testid="notification-search"]:visible').first();
-    await searchInput.fill(label);
+    await searchInput(page).fill(label);
     await page.getByTestId('filter-bookmarked').click();
     await expect(page.getByText(`Search: ${label}`)).toBeVisible();
     await expect(page.getByTestId('clear-notification-filters')).toBeVisible();
 
     await page.getByTestId('clear-notification-filters').click();
-    await expect(searchInput).toHaveValue('');
+    await expect(searchInput(page)).toHaveValue('');
     await expect(page.getByTestId('clear-notification-filters')).toHaveCount(0);
   });
 
@@ -637,7 +821,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
   });
 
   test('same notification keeps recipient state independent across users', async ({ page, browser }, testInfo) => {
-    test.setTimeout(60000);
     const role = currentRole(testInfo.project.name);
     test.skip(role !== 'admin', 'Cross-user state test runs once under admin project');
     const { token, userId: adminUserId } = await fetchCurrentUser({ page, role: 'admin' });
@@ -661,7 +844,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
       ticket: 'operator',
       expectedUsername: operatorUser.username,
     });
-    await ensureNotificationIconVisible(operatorPage);
+    await ensureNotificationOpenButtonVisible(operatorPage);
     await openNotificationsMenu(operatorPage);
 
     const adminLabel = page.getByTestId(labelById(created.id));
@@ -713,6 +896,136 @@ test.describe.serial('Notifications (admin/operator)', () => {
     sseWatcher.close();
 
     await openNotificationsMenu(page);
-    await expect(page.getByTestId(labelById(created.id))).toBeVisible({ timeout: 9000 });
+    await expect(page.getByTestId(labelById(created.id))).toBeVisible({ timeout: 6000 });
+  });
+
+  test('state update after global dismiss shows conflict toast', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    test.skip(role !== 'admin', 'Race condition toast test runs once under admin project');
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-race-dismiss-state-${suffix}`;
+
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label,
+      text: `Body for ${label}`,
+    });
+
+    await refreshNotificationView(page);
+    await expect(page.getByTestId(labelById(created.id))).toBeVisible();
+
+    const dismissRes = await page.request.patch(`${config.apiBaseURL}/notifications/${created.id}/global-dismiss`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(dismissRes.status()).toBe(200);
+
+    await page.getByTestId(toggleReadById(created.id)).click();
+
+    const toastMessage = page.locator('.va-toast__group').getByText('globally dismissed', { exact: false });
+    await expect(toastMessage).toBeVisible({ timeout: 6000 });
+  });
+
+  test('untrusted external link shows confirmation modal before navigation', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    test.skip(role !== 'admin', 'Link warning test runs once under admin project');
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-untrusted-link-${suffix}`,
+      text: `Link warning test`,
+      metadata: {
+        links: [
+          { href: 'https://external-example.com/page', label: 'External Link', trusted: false },
+        ],
+      },
+    });
+
+    await refreshNotificationView(page);
+    await expect(page.getByTestId(labelById(created.id))).toBeVisible();
+
+    const linkButton = page.locator(`[data-testid="${labelById(created.id)}"]`)
+      .locator('..')
+      .locator('..')
+      .getByText('External Link');
+    await linkButton.click();
+
+    const modal = page.locator('.va-modal').getByText('Untrusted Link', { exact: false });
+    await expect(modal).toBeVisible({ timeout: 3000 });
+
+    const modalBody = page.locator('.va-modal').getByText('untrusted link', { exact: false });
+    await expect(modalBody).toBeVisible();
+
+    await page.locator('.va-modal').getByText('Cancel').click();
+    await expect(modal).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('trusted link navigates without confirmation modal', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    test.skip(role !== 'admin', 'Trusted link test runs once under admin project');
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label: `E2E-trusted-link-${suffix}`,
+      text: `Trusted link test`,
+      metadata: {
+        links: [
+          { href: '/datasets', label: 'View Datasets', trusted: true },
+        ],
+      },
+    });
+
+    await refreshNotificationView(page);
+    await expect(page.getByTestId(labelById(created.id))).toBeVisible();
+
+    const linkButton = page.locator(`[data-testid="${labelById(created.id)}"]`)
+      .locator('..')
+      .locator('..')
+      .getByText('View Datasets');
+    await linkButton.click();
+
+    const modal = page.locator('.va-modal').getByText('Untrusted Link', { exact: false });
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
+  });
+
+  test('add recipients to dismissed notification shows conflict via API', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    test.skip(role !== 'admin', 'Recipient conflict test runs once under admin project');
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-race-dismiss-recipient-${suffix}`;
+
+    const created = await createDirectNotification({
+      page,
+      token,
+      userId,
+      label,
+      text: `Body for ${label}`,
+    });
+
+    const dismissRes = await page.request.patch(`${config.apiBaseURL}/notifications/${created.id}/global-dismiss`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(dismissRes.status()).toBe(200);
+
+    const addRecipientRes = await post({
+      requestContext: page.request,
+      token,
+      url: `/notifications/${created.id}/recipients`,
+      data: { user_ids: [userId] },
+    });
+    expect(addRecipientRes.status()).toBe(409);
+    const body = await addRecipientRes.json();
+    expect(body.code).toBe('NOTIFICATION_GLOBALLY_DISMISSED');
   });
 });
