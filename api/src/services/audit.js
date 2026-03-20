@@ -92,7 +92,6 @@ async function getAuditRecords({
   const sortDir = sort_order === 'asc' ? 'asc' : 'desc';
   orderBy[sortField] = sortDir;
 
-  // Execute queries in parallel
   const records = await prisma.authorization_audit.findMany({
     where,
     orderBy,

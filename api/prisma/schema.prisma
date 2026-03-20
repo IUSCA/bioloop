@@ -52,6 +52,8 @@ model dataset {
   // @@index([resource_id])
 
   @@unique([name, type, is_deleted])
+  @@index([owner_group_id])
+  @@index([resource_id])
 }
 
 model dataset_hierarchy {
@@ -217,7 +219,7 @@ model user {
   //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
   subject                   subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 
-  // @@index([subject_id])
+  @@index([subject_id])
 }
 
 model user_password {
@@ -473,9 +475,9 @@ model subject {
   id   String       @id @default(uuid())
   type SUBJECT_TYPE
 
-  user       user?
-  group      group?
-  grants     grant[]
+  user   user?
+  group  group?
+  grants grant[]
 }
 
 // created everyone group and added rules to protect modification in migration script
@@ -507,6 +509,8 @@ model group {
   // Reverse cascade (group deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "group" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.id
   subject           subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
+  issued_grants     grant[]                     @relation("grant_issuing_authority")
+  revoked_grants    grant[]                     @relation("grant_revoking_authority")
 }
 
 // Closure table for efficient hierarchy traversal
@@ -644,12 +648,27 @@ model grant {
   // Otherwise, Prisma would try to drop and recreate the column on every migration since it doesn't recognize it as a generated column.
 
   // Provenance
-  granted_by    String
-  justification String? // Optional justification for the grant creation or revocation
-  created_at    DateTime            @default(now()) @db.Timestamp(6)
-  revoked_at    DateTime?           @db.Timestamp(6)
-  revoked_by    String?
-  creation_type GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
+  granted_by            String
+  justification         String? // Optional justification for the grant creation or revocation
+  created_at            DateTime            @default(now()) @db.Timestamp(6)
+  revoked_at            DateTime?           @db.Timestamp(6)
+  revoked_by            String?
+  revocation_reason     String? // Optional reason for revocation
+  creation_type         GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
+  
+  // The group under whose governance authority this grant was issued.
+  // Captures resource.owner_group_id at grant creation time.
+  // Cannot be reconstructed after an ownership transfer — the new owner_group_id reflects the
+  // new owner, not the group that originally authorized the grant.
+  // Useful for: transfer review ("which grants were issued under the prior owner?"),
+  // audit queries ("all grants issued under Group X's authority"), and provenance explanation.
+  // NULL means the grant was issued by a platform admin acting outside any group's authority.
+  issuing_authority_id  String?
+  issuing_authority     group?              @relation(fields: [issuing_authority_id], references: [id], onDelete: SetNull, name: "grant_issuing_authority")
+  
+  // The group under whose governance authority this grant was revoked, if applicable. Same logic as issuing_authority_id.
+  revoking_authority_id String?
+  revoking_authority    group?              @relation(fields: [revoking_authority_id], references: [id], onDelete: SetNull, name: "grant_revoking_authority")
 
   // Relations
   grantor user  @relation("grants_created", fields: [granted_by], references: [subject_id], onDelete: Restrict)
@@ -788,7 +807,7 @@ model authorization_audit {
   actor      user?   @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
 
   // Subject — who/what was acted upon (distinct from actor)
-  subject_id   String? 
+  subject_id   String?
   subject_name String? // Snapshot of subject name at write-time
   subject_type String? // 'USER', 'GROUP', or used for access checks
 
@@ -796,7 +815,6 @@ model authorization_audit {
   // resource_id   String?
   // resource_type String? // 'DATASET', 'COLLECTION', etc.
   // resource_name String? // Snapshot of resource name at write-time
-
 
   // Target — what resource is being accessed/modified (collection, dataset, grant, etc.)
   target_id   String?

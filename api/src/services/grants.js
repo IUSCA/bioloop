@@ -17,6 +17,23 @@ const { TARGET_TYPE } = require('@/authorization/builtin/audit');
 const { enumToSql } = require('@/utils/sql');
 
 const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
+const GRANT_INCLUDES = {
+  resource: {
+    include: {
+      dataset: true,
+      collection: true,
+    },
+  },
+  subject: {
+    include: {
+      user: true,
+      group: true,
+    },
+  },
+  access_type: true,
+  grantor: true,
+  revoker: true,
+};
 
 // ============================================================================
 // Grant Creation
@@ -24,6 +41,27 @@ const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
 
 const GRANT_OVERLAP_ERROR_MSG = 'An active grant with overlapping validity already exists'
   + ' for this subject, resource, and access type';
+
+/**
+ * Helper to get the owner group ID for a resource (dataset or collection)
+ * @param {*} tx - Prisma transaction
+ * @param {string} resource_id - UUID of the resource
+ * @returns {Promise<string|null>} Owner group ID, or null if not found
+ */
+async function getResourceOwnerGroupId(tx, resource_id) {
+  const resource = await tx.resource.findUnique({
+    where: { id: resource_id },
+    include: { collection: true, dataset: true },
+  });
+  if (!resource) return null;
+  if (resource.type === RESOURCE_TYPE.DATASET) {
+    return resource.dataset.owner_group_id;
+  }
+  if (resource.type === RESOURCE_TYPE.COLLECTION) {
+    return resource.collection.owner_group_id;
+  }
+  return null;
+}
 
 /**
  * Check whether a non-revoked grant already exists that would overlap with the requested validity window.
@@ -65,6 +103,9 @@ async function _assertNoOverlappingGrant(tx, data) {
 }
 
 async function _createGrant(tx, data, granted_by) {
+  // Capture the issuing authority (owner group of the resource at grant creation time)
+  const issuing_authority_id = await getResourceOwnerGroupId(tx, data.resource_id);
+
   let grant;
   try {
     grant = await tx.grant.create({
@@ -77,6 +118,7 @@ async function _createGrant(tx, data, granted_by) {
         valid_until: data.valid_until ?? Prisma.skip,
         granted_by,
         justification: data.justification ?? Prisma.skip,
+        issuing_authority_id: issuing_authority_id ?? Prisma.skip,
       },
     });
   } catch (e) {
@@ -141,6 +183,18 @@ async function createGrant(data, granted_by, txn = null) {
  */
 async function revokeGrant(grant_id, { actor_id, reason }) {
   return prisma.$transaction(async (tx) => {
+    // Fetch the grant to get resource_id for authority capture
+    const grantToRevoke = await tx.grant.findUniqueOrThrow({
+      where: { id: grant_id },
+      select: { resource_id: true, revoked_at: true },
+    });
+    if (grantToRevoke.revoked_at !== null) {
+      throw createError.NotFound('Grant not found or already revoked');
+    }
+
+    // Capture the revoking authority (owner group of the resource at revocation time)
+    const revoking_authority_id = await getResourceOwnerGroupId(tx, grantToRevoke.resource_id);
+
     // if a grant with given id is not found or already revoked
     // PrismaClientKnownRequestError with code 'P2025' will be thrown
     // this error is caught and re-thrown as 404 Not Found by the route handler, which is the desired behavior
@@ -149,7 +203,8 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
       data: {
         revoked_at: new Date(),
         revoked_by: actor_id,
-        justification: reason ?? Prisma.skip,
+        revocation_reason: reason ?? Prisma.skip,
+        revoking_authority_id: revoking_authority_id ?? Prisma.skip,
       },
     });
 
@@ -424,6 +479,7 @@ async function userHasGrant({
 async function getGrantById(grant_id) {
   return prisma.grant.findUnique({
     where: { id: grant_id },
+    include: GRANT_INCLUDES,
   });
 }
 
@@ -472,17 +528,19 @@ async function listGrantsForSubject({
   };
   Object.assign(where, getPrismaGrantValidityFilter(active));
 
-  const data = await prisma.grant.findMany({
+  const dataPromise = prisma.grant.findMany({
     where,
+    include: GRANT_INCLUDES,
     skip: offset,
     take: limit,
     orderBy: {
       [sort_by]: sort_order,
     },
   });
-  const total = await prisma.grant.count({
+  const totalPromise = prisma.grant.count({
     where,
   });
+  const [data, total] = await Promise.all([dataPromise, totalPromise]);
   return {
     metadata: {
       total,
@@ -516,17 +574,19 @@ async function listGrantsForResource({
     resource_id,
   };
   Object.assign(where, getPrismaGrantValidityFilter(active));
-  const data = await prisma.grant.findMany({
+  const dataPromise = prisma.grant.findMany({
     where,
+    include: GRANT_INCLUDES,
     skip: offset,
     take: limit,
     orderBy: {
       [sort_by]: sort_order,
     },
   });
-  const total = await prisma.grant.count({
+  const totalPromise = prisma.grant.count({
     where,
   });
+  const [data, total] = await Promise.all([dataPromise, totalPromise]);
   return {
     metadata: {
       total,
@@ -563,7 +623,7 @@ async function listExpiringGrants({
   sort_order,
 }) {
   const sql = Prisma.sql`
-    SELECT g.*
+    SELECT g.id
     FROM valid_grants g
     WHERE g.valid_until IS NOT NULL
       AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
@@ -571,7 +631,6 @@ async function listExpiringGrants({
     OFFSET ${offset}
     LIMIT ${limit}
   `;
-  const data = await prisma.$queryRaw(sql);
 
   // For total count, we can run a separate query without OFFSET and LIMIT
   const countSql = Prisma.sql`
@@ -580,8 +639,14 @@ async function listExpiringGrants({
     WHERE g.valid_until IS NOT NULL
       AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
   `;
-  const countResult = await prisma.$queryRaw(countSql);
-  const total = parseInt(countResult[0].count, 10);
+  const [data, countResult] = await Promise.all([prisma.$queryRaw(sql), prisma.$queryRaw(countSql)]);
+  const total = Number(countResult[0].count);
+
+  const grantIds = data.map((row) => row.id);
+  const grants = await prisma.grant.findMany({
+    where: { id: { in: grantIds } },
+    include: GRANT_INCLUDES,
+  });
 
   return {
     metadata: {
@@ -589,7 +654,7 @@ async function listExpiringGrants({
       offset,
       limit,
     },
-    data,
+    data: grants,
   };
 }
 
@@ -632,7 +697,7 @@ async function listExpiringGrantsForAdmin({
         FROM collection c
         JOIN admin_groups ag ON c.owner_group_id = ag.group_id
       )
-      SELECT ${for_count ? Prisma.sql`COUNT(*)` : Prisma.sql`g.*`}
+      SELECT ${for_count ? Prisma.sql`COUNT(*)` : Prisma.sql`g.id`}
       FROM valid_grants g
       JOIN owned_resources r ON g.resource_id = r.resource_id
       WHERE g.valid_until IS NOT NULL
@@ -641,9 +706,18 @@ async function listExpiringGrantsForAdmin({
       ${for_count ? Prisma.empty : sort_sql}
     `;
   };
-  const data = await prisma.$queryRaw(sql());
-  const countResult = await prisma.$queryRaw(sql({ for_count: true }));
-  const total = parseInt(countResult[0].count, 10);
+
+  const [data, countResult] = await Promise.all([
+    prisma.$queryRaw(sql()),
+    prisma.$queryRaw(sql({ for_count: true })),
+  ]);
+  const total = Number(countResult[0].count);
+
+  const grantIds = data.map((row) => row.id);
+  const grants = await prisma.grant.findMany({
+    where: { id: { in: grantIds } },
+    include: GRANT_INCLUDES,
+  });
 
   return {
     metadata: {
@@ -651,7 +725,7 @@ async function listExpiringGrantsForAdmin({
       offset,
       limit,
     },
-    data,
+    data: grants,
   };
 }
 

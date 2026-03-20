@@ -3,6 +3,7 @@ const datasetService = require('@/services/datasets_v2');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { isPlatformAdmin } = require('./utils/index');
+const baseAttributes = require('./base_attributes');
 
 class GrantPolicy extends Policy {
   constructor({ name, requires, evaluate }) {
@@ -119,7 +120,7 @@ grantPolicies
     '*': [
       {
         policy: Policy.always,
-        attribute_filters: ['*'],
+        attribute_filters: baseAttributes.grant,
       },
     ],
   })
