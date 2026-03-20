@@ -1,6 +1,6 @@
 <template>
-  <div class="flex items-start gap-3 min-w-0">
-    <span class="mt-2 h-2 w-2 flex-shrink-0 rounded-full" :class="dotClass" />
+  <div class="flex items-center gap-3 min-w-0">
+    <ColoredDot :color="dotColor" />
 
     <span
       class="flex-shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-100"
@@ -19,6 +19,7 @@
 </template>
 
 <script setup>
+import ColoredDot from "@/components/utils/ColoredDot.vue";
 import AuditLogMessage from "@/components/v2/audit/AuditLogMessage.vue";
 import * as datetime from "@/services/datetime";
 import { snakeCaseToTitleCase } from "@/services/utils";
@@ -39,26 +40,27 @@ const eventLabel = computed(() => {
   return snakeCaseToTitleCase(props.record.event_type);
 });
 
-const dotClass = computed(() => {
+const colorMap = {
+  created: "emerald",
+  approved: "emerald",
+  granted: "emerald",
+  submitted: "sky",
+  updated: "sky",
+  added: "emerald",
+  removed: "rose",
+  revoked: "rose",
+  rejected: "rose",
+  deleted: "rose",
+  expired: "amber",
+  archived: "amber",
+  unarchived: "amber",
+};
+
+const dotColor = computed(() => {
   const eventType = (props.record?.event_type || "").toLowerCase();
   const action = eventType.split("_").pop();
 
-  const mapping = {
-    created: "bg-emerald-500",
-    approved: "bg-emerald-500",
-    granted: "bg-emerald-500",
-    submitted: "bg-sky-500",
-    updated: "bg-sky-500",
-    added: "bg-emerald-500",
-    removed: "bg-rose-500",
-    revoked: "bg-rose-500",
-    rejected: "bg-rose-500",
-    deleted: "bg-rose-500",
-    expired: "bg-amber-500",
-    archived: "bg-amber-500",
-  };
-
-  return mapping[action] ?? "bg-slate-300";
+  return colorMap[action] ?? "slate";
 });
 
 const relativeTime = computed(() => {
