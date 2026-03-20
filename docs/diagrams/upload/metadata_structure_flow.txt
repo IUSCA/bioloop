@@ -1,6 +1,6 @@
 flowchart TD
     M[metadata JSONB]
-    C[checksum\nmanifest_hash OR skipped flags]
+    C[manifest-hash metadata\nmanifest_hash OR skipped flags]
     S[size_manifest\nmode,file_count,total_size,files_list]
     W[worker metadata\nverification_task_id,failure_reason,...]
 

@@ -26,7 +26,7 @@ sequenceDiagram
     CRON->>DB: read UPLOADED
     CRON->>DB: set VERIFYING + task metadata
     CRON->>CELERY: enqueue verification
-    CELERY->>FS: verify checksum or size-manifest/existence
+    CELERY->>FS: verify manifest-hash or size-manifest/existence
     CELERY->>DB: set VERIFIED or VERIFICATION_FAILED
 
     CRON->>WF: start workflow (when VERIFIED)

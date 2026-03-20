@@ -601,7 +601,7 @@ router.post(
 //   5. Moves the file from TUS staging to the dataset's origin_path,
 //      preserving directory structure for directory-mode uploads.
 //   6. Updates the upload log to UPLOADED and stores any caller-supplied
-//      metadata (e.g. a manifest hash provided by the UI).
+//      metadata (e.g. a manifest-hash provided by the UI).
 //   7. On any failure: marks the log as UPLOAD_FAILED.  PROCESSING_FAILED is
 //      intentionally NOT used here because process_failed_uploads would then
 //      try to restart an integrated workflow on a dataset whose files may never
@@ -635,7 +635,7 @@ router.post(
 // File I/O is handled by the TUS onUploadFinish hook as each file completes —
 // by the time this endpoint is called every file is already at origin_path.
 // This endpoint's only job is to transition the upload log to UPLOADED and
-// record any metadata the UI supplies (e.g. the BLAKE3 manifest hash).
+// record any metadata the UI supplies (e.g. the BLAKE3 manifest-hash).
 //
 // Path params:
 //   - id           the dataset ID
@@ -721,7 +721,7 @@ router.post(
         updated_at: new Date(),
       };
 
-      // Merge caller-supplied metadata (e.g. manifest hash from the UI) into
+      // Merge caller-supplied metadata (e.g. manifest-hash from the UI) into
       // any existing metadata fields already stored on the log.
       if (metadata) {
         updateData.metadata = {
@@ -876,14 +876,14 @@ router.get(
 // individual fields without losing existing ones.
 //
 // Typical uses:
-//   - Workers record a manifest hash after verifying file integrity:
+//   - Workers record a manifest-hash after verifying file integrity:
 //       PATCH { metadata: { manifest_hash: '<hash>' } }
 //   - Workers advance the status through post-upload processing stages:
 //       PATCH { status: 'VERIFYING' }
 //   - Workers increment the retry counter after a failed attempt:
 //       PATCH { retry_count: <n> }
 //
-// Used by: UI (to store the manifest hash computed client-side), Workers
+// Used by: UI (to store the manifest-hash computed client-side), Workers
 // (to update status and metadata during post-upload processing).
 //
 // Path params:

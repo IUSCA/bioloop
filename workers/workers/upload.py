@@ -1,12 +1,12 @@
 """
 Upload Verification Utilities
 
-Provides BLAKE3 manifest-based checksum verification for uploaded files.
+Provides BLAKE3 manifest-hash verification for uploaded files.
 Falls back to manifest-size verification (or existence checks for legacy uploads)
-when the client deliberately did not supply a checksum.
+when the client deliberately did not supply a manifest-hash.
 
 Requires the 'blake3' package (pip install blake3).  If a client-computed
-manifest hash is present in the upload log and blake3 is not installed, the
+manifest-hash is present in the upload log and blake3 is not installed, the
 worker raises an explicit error — it will NOT silently fall back to the
 existence check.
 """
@@ -19,7 +19,7 @@ def verify_upload_integrity(dataset, upload_log=None):
     Verify upload integrity.
 
     Strategy (in priority order):
-      1. If the upload log carries a client-computed BLAKE3 manifest hash in
+      1. If the upload log carries a client-computed BLAKE3 manifest-hash in
          metadata.checksum.manifest_hash, recompute the hash server-side from
          the files at origin_path and compare. A mismatch raises immediately.
       2. Otherwise, if metadata.size_manifest is present, verify every expected
@@ -28,11 +28,11 @@ def verify_upload_integrity(dataset, upload_log=None):
          least one file is present at origin_path.
 
     The two-path design means:
-      - New uploads (UI computes and stores a checksum) get end-to-end integrity
+      - New uploads (UI computes and stores a manifest-hash payload) get end-to-end integrity
         verification: client hash === server hash, or the upload is rejected.
-      - Uploads where checksum computation failed/was skipped can still receive
+      - Uploads where manifest-hash computation failed/was skipped can still receive
         path+size verification when the UI supplies metadata.size_manifest.
-      - Legacy uploads without checksum and without size manifest are still
+      - Legacy uploads without manifest-hash and without size manifest are still
         accepted once their files land on disk, preserving backward
         compatibility.
 
@@ -45,7 +45,7 @@ def verify_upload_integrity(dataset, upload_log=None):
         bool: True when verification passes.
 
     Raises:
-        Exception: If files are missing or the manifest hash does not match.
+        Exception: If files are missing or the manifest-hash does not match.
     """
     dataset_id = dataset['id']
     origin_path = dataset.get('origin_path')
@@ -55,9 +55,9 @@ def verify_upload_integrity(dataset, upload_log=None):
 
     origin = Path(origin_path)
 
-    # Extract client-supplied checksum metadata (may be absent, a full hash
+    # Extract client-supplied manifest-hash metadata (may be absent, a full hash
     # object, or a skip-marker set when client-side computation failed).
-    client_checksum = None
+    client_manifest_hash = None
     client_skipped_reason = None
     client_skipped_error = None
     size_manifest = None
@@ -65,13 +65,13 @@ def verify_upload_integrity(dataset, upload_log=None):
         metadata = upload_log.get('metadata') or {}
         checksum_meta = metadata.get('checksum') or {}
         size_manifest = metadata.get('size_manifest') or None
-        client_checksum = checksum_meta.get('manifest_hash')
+        client_manifest_hash = checksum_meta.get('manifest_hash')
         if checksum_meta.get('skipped'):
             client_skipped_reason = checksum_meta.get('skipped_reason')
             client_skipped_error = checksum_meta.get('error')
 
-    if client_checksum:
-        # A client-computed BLAKE3 manifest hash is present — full verification
+    if client_manifest_hash:
+        # A client-computed BLAKE3 manifest-hash is present — full verification
         # is required.  Confirm blake3 is installed before doing any file I/O so
         # the error message is actionable rather than a bare ImportError traceback.
         try:
@@ -79,26 +79,26 @@ def verify_upload_integrity(dataset, upload_log=None):
         except ImportError:
             raise Exception(
                 "blake3 package is not installed on this worker node, but the "
-                "upload includes a client-computed BLAKE3 manifest hash that "
+                "upload includes a client-computed BLAKE3 manifest-hash that "
                 "must be verified.  Install blake3 (pip install blake3) on the "
                 "worker, or disable upload_verify_checksums in the UI config."
             )
 
-        print(f"Client-supplied manifest hash found — running BLAKE3 verification")
-        print(f"  Expected: {client_checksum}")
+        print(f"Client-supplied manifest-hash found — running BLAKE3 verification")
+        print(f"  Expected: {client_manifest_hash}")
         server_hash = _compute_manifest_hash(origin)
         print(f"  Computed: {server_hash}")
-        if server_hash != client_checksum:
+        if server_hash != client_manifest_hash:
             raise Exception(
                 f"Manifest hash mismatch for dataset {dataset_id}.\n"
-                f"  Expected (client): {client_checksum}\n"
+                f"  Expected (client): {client_manifest_hash}\n"
                 f"  Computed (server): {server_hash}\n"
                 f"Files may have been corrupted or tampered with during transfer."
             )
         print(f"✓ Manifest hash verified for dataset {dataset_id}")
 
     elif client_skipped_reason:
-        # The client attempted checksum computation but it failed (e.g. the
+        # The client attempted manifest-hash computation but it failed (e.g. the
         # hash-wasm WASM module could not be loaded, or an OOM occurred during
         # hashing).  This is distinct from the feature being intentionally
         # disabled — the upload was made with end-to-end integrity in mind, but
@@ -107,7 +107,7 @@ def verify_upload_integrity(dataset, upload_log=None):
         # the file-existence check and log a clear explanation.
         print()
         print("⚠ WARNING: Manifest verification will be skipped.")
-        print(f"  Reason  : Client-side checksum computation failed during upload.")
+        print(f"  Reason  : Client-side manifest-hash computation failed during upload.")
         print(f"  Code    : {client_skipped_reason}")
         if client_skipped_error:
             print(f"  Detail  : {client_skipped_error}")
@@ -121,15 +121,15 @@ def verify_upload_integrity(dataset, upload_log=None):
             _verify_files_exist(origin_path)
 
     else:
-        # No checksum metadata at all — the UI had upload_verify_checksums
-        # disabled, or this is a legacy upload predating the checksum feature.
+        # No manifest-hash metadata at all — the UI had upload_verify_checksums
+        # disabled, or this is a legacy upload predating the manifest-hash feature.
         # Fall back to size manifest verification when available, otherwise use
         # the lightweight existence check.
         if size_manifest:
-            print("No client checksum found — using size manifest fallback verification")
+            print("No client manifest-hash found — using size manifest fallback verification")
             _verify_files_match_size_manifest(origin_path, size_manifest)
         else:
-            print(f"No client checksum found — falling back to file existence check")
+            print(f"No client manifest-hash found — falling back to file existence check")
             _verify_files_exist(origin_path)
 
     return True
@@ -171,7 +171,7 @@ def _verify_files_match_size_manifest(origin_path, size_manifest):
     Fallback integrity check that validates file existence + byte size.
 
     The UI sends metadata.size_manifest in the /complete payload even when
-    checksum verification is skipped. This allows workers to verify each
+    manifest-hash verification is skipped. This allows workers to verify each
     expected path exists and matches the client-observed size without reading
     file content.
 
@@ -247,7 +247,7 @@ def _verify_files_match_size_manifest(origin_path, size_manifest):
 
 def _compute_manifest_hash(origin_path):
     """
-    Compute BLAKE3 manifest hash from the files at origin_path.
+    Compute BLAKE3 manifest-hash from the files at origin_path.
 
     The algorithm mirrors the client-side implementation in
     ui/src/services/upload/checksum.js exactly so that the two hashes can be
@@ -267,7 +267,7 @@ def _compute_manifest_hash(origin_path):
         origin_path (Path): Root directory of the uploaded files.
 
     Returns:
-        str: Hex digest of the manifest hash.
+        str: Hex digest of the manifest-hash.
 
     Raises:
         Exception: If no files are found or hashing fails.

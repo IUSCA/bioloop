@@ -84,7 +84,7 @@ const exports = {
     uploads: {
       enabledForRoles: ["admin"],
     },
-    // Compute and send a BLAKE3 manifest hash before each upload so the
+    // Compute and send a BLAKE3 manifest-hash before each upload so the
     // verification worker can confirm file integrity end-to-end.
     upload_verify_checksums: true,
     auto_create_project_on_dataset_creation: {

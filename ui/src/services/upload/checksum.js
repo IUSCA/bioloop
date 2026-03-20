@@ -1,7 +1,7 @@
 /**
- * Upload Checksum Service
+ * Upload Manifest-Hash Service
  *
- * Provides BLAKE3 manifest-based checksum computation for upload verification.
+ * Provides BLAKE3 manifest-hash computation for upload verification.
  * Uses hash-wasm for browser-compatible BLAKE3 hashing.
  */
 
@@ -23,7 +23,7 @@ async function _loadBlake3() {
     const hashWasm = await import("hash-wasm");
     // Use createBLAKE3 for streaming (not blake3 which loads entire file)
     blake3Fn = hashWasm.createBLAKE3;
-    console.log("[checksum.js] ✓ BLAKE3 (streaming) loaded");
+    console.log("[manifest-hash.js] ✓ BLAKE3 (streaming) loaded");
     return blake3Fn;
   } catch (error) {
     console.error("Failed to load hash-wasm module:", error);
@@ -115,7 +115,7 @@ async function _hashFile(file, hasher, onProgress = null) {
 }
 
 /**
- * Compute BLAKE3 manifest hash for uploaded files.
+ * Compute BLAKE3 manifest-hash for uploaded files.
  *
  * Creates a deterministic manifest string with file paths, sizes, and hashes,
  * then hashes the manifest itself for verification.
@@ -130,29 +130,32 @@ async function _hashFile(file, hasher, onProgress = null) {
  *                                     existence check, distinguishing it from the
  *                                     intentional feature-disabled case.
  *
- * @param {File[]} files - Array of File objects to hash
+ * @param {File[]} files - Array of File objects to manifest-hash
  * @param {Function} [progressCallback] - Optional callback for progress updates (0-100)
  * @returns {Promise<Object|null>} See return value semantics above.
  */
 export async function computeManifestHash(files, progressCallback = null) {
-  console.log("[checksum.js] computeManifestHash called");
-  console.log("[checksum.js]   files:", files?.length || 0);
-  console.log("[checksum.js]   progressCallback:", typeof progressCallback);
+  console.log("[manifest-hash.js] computeManifestHash called");
+  console.log("[manifest-hash.js]   files:", files?.length || 0);
+  console.log(
+    "[manifest-hash.js]   progressCallback:",
+    typeof progressCallback,
+  );
 
   // Guard: callers should check _isChecksumVerificationEnabled() first,
   // but this provides a safe fallback if called directly.
   if (!config.enabledFeatures.upload_verify_checksums) {
-    console.log("[checksum.js] Feature disabled via config");
+    console.log("[manifest-hash.js] Feature disabled via config");
     return null;
   }
 
   if (!files || files.length === 0) {
-    console.log("[checksum.js] No files to hash");
+    console.log("[manifest-hash.js] No files to manifest-hash");
     return null;
   }
 
   try {
-    console.log("[checksum.js] Loading BLAKE3 (streaming)...");
+    console.log("[manifest-hash.js] Loading BLAKE3 (streaming)...");
     const createBlake3 = await _loadBlake3();
 
     // Create a SINGLE hasher instance reused across all files.
@@ -166,13 +169,13 @@ export async function computeManifestHash(files, progressCallback = null) {
     let processedBytes = 0;
 
     console.log(
-      `[checksum.js] Hashing ${totalFiles} file(s) (${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB total)...`,
+      `[manifest-hash.js] Hashing ${totalFiles} file(s) (${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB total)...`,
     );
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       console.log(
-        `[checksum.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+        `[manifest-hash.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
       );
 
       const fileHash = await _hashFile(file, hasher, (fileProgress) => {
@@ -212,7 +215,7 @@ export async function computeManifestHash(files, progressCallback = null) {
     hasher.init();
     hasher.update(new TextEncoder().encode(manifestStr));
     const manifestHash = hasher.digest("hex");
-    console.log("[checksum.js] ✓ Manifest hash:", manifestHash);
+    console.log("[manifest-hash.js] ✓ Manifest-hash:", manifestHash);
 
     const result = {
       algorithm: "blake3",
@@ -223,11 +226,14 @@ export async function computeManifestHash(files, progressCallback = null) {
       computed_at: new Date().toISOString(),
     };
 
-    console.log("[checksum.js] ✓ Done:", result);
+    console.log("[manifest-hash.js] ✓ Done:", result);
     return result;
   } catch (error) {
-    console.error("[checksum.js] ✗ Failed to compute manifest hash:", error);
-    console.error("[checksum.js] Error stack:", error.stack);
+    console.error(
+      "[manifest-hash.js] ✗ Failed to compute manifest-hash:",
+      error,
+    );
+    console.error("[manifest-hash.js] Error stack:", error.stack);
     // Do not fail the upload — return a skip-marker so the API records that
     // computation was attempted but failed.  The worker reads this marker and
     // logs a clear explanation instead of silently treating the upload as a
@@ -241,7 +247,7 @@ export async function computeManifestHash(files, progressCallback = null) {
 }
 
 /**
- * Check if checksum verification is enabled
+ * Check if manifest-hash verification is enabled
  * @returns {boolean} True if feature is enabled
  */
 export function isChecksumVerificationEnabled() {

@@ -19,7 +19,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 ### Objectives
 
 - Support large-file and large-directory browser uploads without restarts.
-- Preserve file integrity with optional end-to-end checksum validation.
+- Preserve file integrity with optional end-to-end manifest-hash validation.
 - Keep upload registration and post-upload processing idempotent.
 - Make failure states explicit and recoverable.
 
@@ -48,7 +48,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 `POST /datasets/uploads/:id/complete`
 
 - Transitions upload log to `UPLOADED` in an idempotent manner.
-- Records `process_id` and optional metadata (e.g. checksum manifest hash, size manifest).
+- Records `process_id` and optional metadata (e.g. upload manifest-hash, size manifest).
 - Rejects status regression if upload already advanced beyond upload stage.
 
 ### 4) Worker-Orchestrated Post-Upload Pipeline
@@ -99,7 +99,7 @@ Persisted statuses:
 
 UI-only transient statuses:
 
-- `PROCESSING` (pre-upload registration/checksum phase label)
+- `PROCESSING` (pre-upload registration/manifest-hash phase label)
 - `COMPUTING_CHECKSUMS`
 - `CHECKSUM_COMPUTATION_FAILED`
 
@@ -107,20 +107,20 @@ UI-only transient statuses:
 
 ### Checksum Path (Primary)
 
-- UI computes BLAKE3 manifest hash (feature-flag controlled).
-- Worker recomputes hash from `origin_path`.
+- UI computes BLAKE3 manifest-hash (feature-flag controlled).
+- Worker recomputes the manifest-hash from `origin_path`.
 - Mismatch yields `VERIFICATION_FAILED`.
 
 ### Size-Manifest Fallback
 
-- When checksum computation fails or is disabled, the UI sends a `size_manifest`
+- When manifest-hash computation fails or is disabled, the UI sends a `size_manifest`
   containing per-file paths and byte sizes in the `/complete` payload.
 - Worker validates every expected path exists and its byte-size matches.
 - Catches missing files, extra files, truncated files, and path mismatches.
 
 ### File-Existence Fallback (Compatibility)
 
-- If neither checksum nor size manifest is available, worker confirms files
+- If neither manifest-hash metadata nor size manifest is available, worker confirms files
   exist at `origin_path`.
 
 ## Failure Simulation (TUS Resume Testing)
@@ -249,7 +249,7 @@ before starting the next upload is sufficient.
   the UI shows a failure state. Clicking "Retry" creates a **new** TUS upload
   with a new upload ID, so failure counters reset. Clear localStorage flags
   before retrying unless you want the new upload to fail as well.
-- **Checksum is cached.** If BLAKE3 checksum computation ran before the first
+- **Manifest-hash is cached.** If BLAKE3 manifest-hash computation ran before the first
   attempt, the cached result is reused on retry — it is not recomputed.
 - **Minimum file size for meaningful testing:** Files under ~1 MB may complete
   within the first write chunk, before the 1 MB failure threshold is reached,
@@ -282,7 +282,7 @@ The migration (`20260311000000_upload_rewrite`):
 
 ### Environment Variable — API Host
 
-Set `UPLOAD_HOST_DIR` in the API `.env` before restarting:
+Set `UPLOAD_HOST_DIR` in the API `.env` before restarting. This is the path where uploaded content will be written to:
 
 ```
 UPLOAD_HOST_DIR=/N/scratch/scadev/bioloop/dev/uploads
@@ -337,5 +337,5 @@ python -m workers.scripts.setup_dirs --create # create missing dirs
 
 - E2E UI coverage: route + stepper flow, file and directory uploads,
   simulated mid-upload failure with resume, zero-byte file in directory upload.
-- Worker coverage: manifest hash success/mismatch, size-manifest fallback,
+- Worker coverage: manifest-hash success/mismatch, size-manifest fallback,
   fallback existence verification, `manage_upload_workflows` edge cases.

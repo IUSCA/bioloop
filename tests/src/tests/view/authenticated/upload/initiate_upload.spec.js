@@ -88,7 +88,7 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     // Assert that "Processing" status is shown when Upload button is clicked
-    // (to indicate that checksum-computation is in progress)
+    // (to indicate that manifest-hash computation is in progress)
     test('Should show `Processing` status when Upload button is clicked', async () => {
       const statusRow = page.getByTestId('status-row');
       await expect(statusRow).toBeVisible();
@@ -97,9 +97,9 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(processingChip.or(uploadingChip)).toBeVisible();
     });
 
-    // Assert that after checksum-computation is complete, "Uploading" status
+    // Assert that after manifest-hash computation is complete, "Uploading" status
     // is shown
-    test('Should show `Uploading` status after checksum-computation is complete', async () => {
+    test('Should show `Uploading` status after manifest-hash computation is complete', async () => {
       const statusRow = page.getByTestId('status-row');
       await expect(statusRow).toBeVisible();
       const statusChip = statusRow.getByTestId('chip-uploading');

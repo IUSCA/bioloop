@@ -308,7 +308,7 @@
                 <div
                   class="mb-4 pb-4 border-b border-gray-300 flex flex-col gap-3"
                 >
-                  <!-- Checksum computation progress — amber/warning treatment -->
+                  <!-- Manifest-hash computation progress — amber/warning treatment -->
                   <div
                     v-if="isComputingChecksum"
                     class="rounded-md px-3 py-2 border border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20"
@@ -320,7 +320,9 @@
                         icon="mdi:fingerprint"
                         class="text-base flex-none"
                       />
-                      <span>Computing checksum… {{ checksumProgress }}%</span>
+                      <span
+                        >Computing manifest-hash… {{ checksumProgress }}%</span
+                      >
                     </div>
                     <va-progress-bar
                       :model-value="checksumProgress"
@@ -693,9 +695,9 @@ const fileUploadErrorMap = computed(
   () => new Map(fileUploadErrors.value.map((e) => [e.relativePath, e.message])),
 );
 const uploadRegistrationFailed = ref(false); // Track if final API call failed
-const isComputingChecksum = ref(false); // Track checksum computation state
-const checksumProgress = ref(0); // Track checksum computation progress (0-100)
-const computedChecksum = ref(null); // Store computed checksum before upload
+const isComputingChecksum = ref(false); // Track manifest-hash computation state
+const checksumProgress = ref(0); // Track manifest-hash computation progress (0-100)
+const computedChecksum = ref(null); // Store computed manifest-hash payload before upload
 
 /**
  * Computed: Determine if upload completed successfully
@@ -1035,7 +1037,7 @@ const onSubmit = async () => {
       .then(async () => {
         submissionSuccess.value = true;
 
-        // COMPUTE CHECKSUMS FIRST (before upload starts)
+        // COMPUTE MANIFEST-HASH FIRST (before upload starts)
         // Skip if already computed (e.g., on retry after upload failure)
         if (isChecksumVerificationEnabled() && !computedChecksum.value) {
           try {
@@ -1058,7 +1060,7 @@ const onSubmit = async () => {
             // (as opposed to feature-disabled / legacy), and doesn't retry on
             // subsequent upload attempts.
             console.error(
-              "[UploadDatasetStepper] Unexpected error during checksum computation:",
+              "[UploadDatasetStepper] Unexpected error during manifest-hash computation:",
               error,
             );
             computedChecksum.value = {

@@ -82,7 +82,7 @@
                     <td>{{ upload.retry_count }}</td>
                   </tr>
                   <tr v-if="upload.metadata?.checksum">
-                    <td>Checksum Algorithm</td>
+                    <td>Manifest-Hash Algorithm</td>
                     <td>
                       <code>{{ upload.metadata.checksum.algorithm }}</code>
                     </td>

@@ -5,7 +5,7 @@ stateDiagram-v2
 
     UPLOADED --> VERIFYING: cron enqueues verification task
     VERIFYING --> VERIFIED: verification passes
-    VERIFYING --> VERIFICATION_FAILED: checksum/manifest mismatch or timeout/task failure
+    VERIFYING --> VERIFICATION_FAILED: manifest-hash mismatch or timeout/task failure
 
     VERIFIED --> PROCESSING: workflow trigger started
     PROCESSING --> COMPLETE: workflow registration succeeds

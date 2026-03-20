@@ -18,7 +18,7 @@
     >
   </div>
 
-  <!-- COMPUTING_CHECKSUMS: amber / fingerprint — mirrors the checksum progress bar -->
+  <!-- COMPUTING_CHECKSUMS: amber / fingerprint -->
   <div
     v-else-if="
       props.submissionStatus === constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS
@@ -38,7 +38,7 @@
       color="warning"
       data-testid="chip-computing-checksums"
     >
-      Computing Checksums
+      Computing Manifest-Hash
     </va-chip>
   </div>
 
@@ -59,7 +59,7 @@
     >
   </div>
 
-  <!-- CHECKSUM_COMPUTATION_FAILED -->
+  <!-- CHECKSUM_COMPUTATION_FAILED: manifest-hash computation failed -->
   <div
     v-else-if="
       props.submissionStatus ===
@@ -80,7 +80,7 @@
       color="warning"
       data-testid="chip-checksum-computation-failed"
     >
-      Checksum Failed
+      Manifest-Hash Failed
     </va-chip>
   </div>
 
@@ -124,8 +124,8 @@
 </template>
 
 <script setup>
-import { Icon } from "@iconify/vue";
 import constants from "@/constants";
+import { Icon } from "@iconify/vue";
 
 const props = defineProps({
   submissionStatus: {
