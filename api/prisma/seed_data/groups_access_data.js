@@ -248,6 +248,7 @@ function generateGroupAccessSeedData({
       id: generate(),
       type: 'NEW',
       resource_id,
+      subject_id: requester_id, // request is for self in this seed data
       requester_id,
       purpose: `Seeded request (${status})`,
       status,

@@ -86,10 +86,11 @@ afterAll(async () => {
 // Helpers
 // ─────────────────────────────────────────────
 
-async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }]) {
+async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }], subjectId = null) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
     resource_id: dataset.resource_id,
+    subject_id: subjectId || requester.subject_id,
     items,
   }, requester.subject_id);
   arIds.push(ar.id);
@@ -341,6 +342,69 @@ describe('access requests - concurrency', () => {
       expect(submitted.status).toBe('UNDER_REVIEW');
 
       await arService.withdrawRequest({ request_id: ar2.id, requester_id: requester.subject_id });
+    });
+  });
+
+  describe('concurrent operations on subject-based (group) requests', () => {
+    let testGroup;
+
+    beforeAll(async () => {
+      testGroup = await createTestGroup(requester.subject_id, '_arc_grp');
+      groupIds.push(testGroup.id);
+
+      await prisma.group_user.create({
+        data: {
+          group_id: testGroup.id,
+          user_id: requester.subject_id,
+          role: 'ADMIN',
+        },
+      });
+    });
+
+    afterEach(async () => {
+      // Revoke grants created for the group
+      await prisma.grant.updateMany({
+        where: {
+          subject_id: testGroup.id,
+          resource_id: dataset.resource_id,
+          revoked_at: null,
+        },
+        data: { revoked_at: new Date() },
+      });
+    });
+
+    it('concurrent submit on same DRAFT group request — exactly one succeeds', async () => {
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+
+      const results = await Promise.allSettled([
+        arService.submitRequest(ar.id, requester.subject_id),
+        arService.submitRequest(ar.id, requester.subject_id),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason.status).toBe(409);
+
+      // Cleanup
+      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
+    });
+
+    it('concurrent in-flight checks prevent duplicate group requests', async () => {
+      const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+
+      // Submit ar1
+      await arService.submitRequest(ar1.id, requester.subject_id);
+
+      // Try to submit ar2 — should fail because ar1 is still UNDER_REVIEW
+      await expect(
+        arService.submitRequest(ar2.id, requester.subject_id),
+      ).rejects.toMatchObject({ status: 409 });
+
+      // Cleanup
+      await arService.withdrawRequest({ request_id: ar1.id, requester_id: requester.subject_id });
     });
   });
 });

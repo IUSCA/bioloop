@@ -93,10 +93,11 @@ afterAll(async () => {
 // Helpers
 // ─────────────────────────────────────────────
 
-async function newDraftRequest(items, overrides = {}) {
+async function newDraftRequest(items, overrides = {}, subjectId = null) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
     resource_id: dataset.resource_id,
+    subject_id: subjectId || requester.subject_id,
     items,
     ...overrides,
   }, requester.subject_id);
@@ -609,6 +610,137 @@ describe('access requests - lifecycle', () => {
       });
 
       expect(result.data.every((r) => r.resource.type === 'COLLECTION')).toBe(true);
+    });
+  });
+
+  describe('subject_id - self-request', () => {
+    it('creates a request with subject_id = requester_id for self-request', async () => {
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], {}, requester.subject_id);
+      expect(ar.subject_id).toBe(requester.subject_id);
+    });
+
+    it('grant is created for the subject (requester) when request is approved', async () => {
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], {}, requester.subject_id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await arService.submitReview({
+        request_id: submitted.id,
+        reviewer_id: reviewer.subject_id,
+        options: { review_items: allApproveItems(submitted) },
+      });
+
+      // Grant should exist with subject_id == requester
+      const grant = await prisma.grant.findFirst({
+        where: {
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
+          access_type_id: viewMetadataTypeId,
+          revoked_at: null,
+        },
+      });
+      expect(grant).not.toBeNull();
+      expect(grant.subject_id).toBe(requester.subject_id);
+    });
+  });
+
+  describe('subject_id - group request', () => {
+    let testGroup;
+    let groupMember;
+
+    beforeAll(async () => {
+      // Create a test group for group-based requests
+      testGroup = await createTestGroup(reviewer.subject_id, '_ar_test_group');
+      groupIds.push(testGroup.id);
+
+      // Create a member for the group
+      groupMember = await createTestUser('_ar_group_member');
+      userIds.push(groupMember.id);
+
+      // Add requester as ADMIN to testGroup
+      await prisma.group_user.create({
+        data: {
+          group_id: testGroup.id,
+          user_id: requester.subject_id,
+          role: 'ADMIN',
+        },
+      });
+
+      // Add groupMember as MEMBER to testGroup
+      await prisma.group_user.create({
+        data: {
+          group_id: testGroup.id,
+          user_id: groupMember.subject_id,
+          role: 'MEMBER',
+        },
+      });
+    });
+
+    afterEach(async () => {
+      // Revoke grants created for the group
+      await prisma.grant.updateMany({
+        where: {
+          subject_id: testGroup.id,
+          resource_id: dataset.resource_id,
+          revoked_at: null,
+        },
+        data: { revoked_at: new Date() },
+      });
+    });
+
+    it('creates a request with subject_id = group.id for group request', async () => {
+      const ar = await newDraftRequest(
+        [{ access_type_id: viewMetadataTypeId }],
+        {},
+        testGroup.id,
+      );
+      expect(ar.subject_id).toBe(testGroup.id);
+    });
+
+    it('grant is created for the subject (group) when request is approved', async () => {
+      const ar = await newDraftRequest(
+        [{ access_type_id: viewMetadataTypeId }],
+        {},
+        testGroup.id,
+      );
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await arService.submitReview({
+        request_id: submitted.id,
+        reviewer_id: reviewer.subject_id,
+        options: { review_items: allApproveItems(submitted) },
+      });
+
+      // Grant should exist with subject_id == group
+      const grant = await prisma.grant.findFirst({
+        where: {
+          subject_id: testGroup.id,
+          resource_id: dataset.resource_id,
+          access_type_id: viewMetadataTypeId,
+          revoked_at: null,
+        },
+      });
+      expect(grant).not.toBeNull();
+      expect(grant.subject_id).toBe(testGroup.id);
+    });
+
+    it('group members inherit access from group grant', async () => {
+      const ar = await newDraftRequest(
+        [{ access_type_id: viewMetadataTypeId }],
+        {},
+        testGroup.id,
+      );
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await arService.submitReview({
+        request_id: submitted.id,
+        reviewer_id: reviewer.subject_id,
+        options: { review_items: allApproveItems(submitted) },
+      });
+
+      // groupMember should have access via group membership
+      const hasAccess = await grantsService.userHasGrant({
+        user_id: groupMember.subject_id,
+        resource_id: dataset.resource_id,
+        access_type_id: viewMetadataTypeId,
+      });
+      expect(hasAccess).toBe(true);
     });
   });
 });

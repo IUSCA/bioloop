@@ -234,8 +234,10 @@ describe('grants - lifecycle', () => {
         try {
           await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
         } catch (error) {
-          // Ignore P2025 errors (grant already revoked) - safe to ignore in cleanup
-          if (error.code !== 'P2025') throw error;
+          // NotFoundError: Grant not found or already revoked
+          if (error.name !== 'NotFoundError') {
+            throw error;
+          }
         }
       }
     });

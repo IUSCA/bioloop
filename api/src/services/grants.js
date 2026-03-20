@@ -195,9 +195,6 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
     // Capture the revoking authority (owner group of the resource at revocation time)
     const revoking_authority_id = await getResourceOwnerGroupId(tx, grantToRevoke.resource_id);
 
-    // if a grant with given id is not found or already revoked
-    // PrismaClientKnownRequestError with code 'P2025' will be thrown
-    // this error is caught and re-thrown as 404 Not Found by the route handler, which is the desired behavior
     const revokedGrant = await tx.grant.update({
       where: { id: grant_id, revoked_at: null }, // only allow revocation of non-revoked grants
       data: {

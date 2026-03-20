@@ -89,11 +89,50 @@ async function getRequestById(request_id) {
   return _getRequestById(prisma, request_id);
 }
 
+async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
+  const subject = await tx.subject.findUnique({
+    where: { id: subject_id },
+  });
+
+  if (!subject) {
+    throw createError.NotFound('Subject not found');
+  }
+
+  // Self-request: subject must exactly match requester subject and must be a USER subject
+  if (subject_id === requester_id) {
+    if (subject.type !== SUBJECT_TYPE.USER) {
+      throw createError.Forbidden('Self access request must target a user subject');
+    }
+    return;
+  }
+
+  // Group request: subject must be a GROUP and requester must be ADMIN of that group
+  if (subject.type === SUBJECT_TYPE.GROUP) {
+    const isAdmin = await tx.group_user.findFirst({
+      where: {
+        group_id: subject_id,
+        user_id: requester_id,
+        role: GROUP_MEMBER_ROLE.ADMIN,
+      },
+    });
+
+    if (isAdmin) {
+      return;
+    }
+
+    throw createError.Forbidden('Requester must be an admin of the requested group');
+  }
+
+  // All other-user requests are not allowed
+  throw createError.Forbidden('Requesting on behalf of another user is not allowed');
+}
+
 /**
  * Create a new access request
  * @param {Object} data
  * @param {string} data.type - 'NEW' or 'RENEWAL'
  * @param {number} data.resource_id - UUID of the resource
+ * @param {string} data.subject_id - UUID of the subject (user or group) for whom access is being requested
  * @param {string} [data.purpose] - Justification for the request
  * @param {Array<{access_type_id: number, requested_until?: Date}>} data.items - Access types being requested, must be unique within the request
  * @param {string[]} [data.previous_grant_ids] - For renewals, reference to expired grants
@@ -104,12 +143,15 @@ async function getRequestById(request_id) {
  */
 async function createAccessRequest(data, requester_id) {
   return prisma.$transaction(async (tx) => {
+    await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
+
     // Create the access request
     const accessRequest = await tx.access_request.create({
       data: {
         type: data.type,
         resource_id: data.resource_id,
         requester_id,
+        subject_id: data.subject_id,
         purpose: data.purpose ?? Prisma.skip,
         previous_grant_ids: data.previous_grant_ids ?? Prisma.skip,
         status: ACCESS_REQUEST_STATUS.DRAFT,
@@ -130,22 +172,34 @@ async function createAccessRequest(data, requester_id) {
 
     // Create audit record for request creation
     const requesterName = await resolveEntityName(tx, 'user', requester_id);
-    // const resourceName = await resolveEntityName(tx, data.resource_type?.toLowerCase() || 'dataset', data.resource_id);
+    const resource = await tx.resource.findUnique({
+      where: { id: data.resource_id },
+      select: { dataset: { select: { name: true } }, collection: { select: { name: true } }, type: true },
+    });
+    const resourceName = resource.dataset?.name ?? resource?.collection?.name;
+
+    // Resolve subject name and type
+    const subject = await tx.subject.findUnique({
+      where: { id: data.subject_id },
+      include: { user: true, group: true },
+    });
+    const subjectType = subject?.type;
+    const subjectName = subjectType === SUBJECT_TYPE.USER ? subject.user?.name : subject.group?.name;
 
     await tx.authorization_audit.create({
       data: {
         event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
         actor_id: requester_id,
         actor_name: requesterName,
-        subject_id: requester_id,
-        subject_name: requesterName,
-        subject_type: SUBJECT_TYPE.USER,
+        subject_id: data.subject_id,
+        subject_name: subjectName,
+        subject_type: subjectType,
         target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: accessRequest.id,
         metadata: {
           resource_id: data.resource_id,
-          // resource_type: data.resource_type,
-          // resource_name: resourceName,
+          resource_type: resource?.type,
+          resource_name: resourceName,
           status: ACCESS_REQUEST_STATUS.DRAFT,
         },
       },
@@ -238,7 +292,7 @@ async function updateAccessRequest(request_id, requester_id, data) {
 }
 
 /**
- * Throws if the requester already holds an active (non-revoked, currently valid) direct USER grant
+ * Throws if the subject already holds an active (non-revoked, currently valid) grant
  * for any of the access types in this request.
  * Group-mediated access is intentionally excluded — the user may still want a personal grant.
  * @param {Object} request - access_request with access_request_items included
@@ -249,7 +303,7 @@ async function _assertNoActiveGrants(request) {
 
   const conflicting = await prisma.grant.findMany({
     where: {
-      subject_id: request.requester_id,
+      subject_id: request.subject_id,
       resource_id: request.resource_id,
       access_type_id: { in: itemAccessTypeIds },
       revoked_at: null,
@@ -273,7 +327,7 @@ async function _assertNoActiveGrants(request) {
 }
 
 /**
- * Throws if the requester already has another UNDER_REVIEW request for the same
+ * Throws if the subject already has another UNDER_REVIEW request for the same
  * resource that overlaps with any of the access types in this request.
  * @param {Object} request - access_request with access_request_items included
  */
@@ -283,7 +337,7 @@ async function _assertNoInFlightRequests(request) {
   const conflicting = await prisma.access_request.findMany({
     where: {
       id: { not: request.id },
-      requester_id: request.requester_id,
+      subject_id: request.subject_id,
       resource_id: request.resource_id,
       status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
       access_request_items: {
@@ -413,7 +467,7 @@ function _updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
 
 function _createGrant(tx, currentRequest, reviewItem, granted_by) {
   const data = {
-    subject_id: currentRequest.requester_id,
+    subject_id: currentRequest.subject_id,
     resource_id: currentRequest.resource_id,
     access_type_id: reviewItem.access_type_id,
     valid_until: reviewItem.approved_until,

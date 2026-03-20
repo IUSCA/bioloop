@@ -16,6 +16,15 @@ Consult [UI Coding Standards](../docs/ui/coding_standards.md) for:
 - **Material Icons:** https://fonts.google.com/icons?icon.set=Material+Icons
 - **Material Design Icons (MDI):** https://pictogrammers.com/library/mdi/
 
+## Engineering Principles
+
+Prefer simple, modular solutions with clear boundaries. Before implementing:
+- Favor KISS and DRY; avoid speculative abstractions
+- Design extension points at likely change seams, not everywhere
+- Minimal implementation today; low-risk additions tomorrow
+
+For deep design analysis, invoke `/design-thoughtfully`.
+
 ## API Service Tests (`api/src/services/` & `api/tests/services/`)
 
 Consult [API Service Tests Skill](../skills/api-service-tests/SKILL.md) when:

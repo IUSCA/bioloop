@@ -81,10 +81,11 @@ afterAll(async () => {
 // Helpers
 // ─────────────────────────────────────────────
 
-async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }]) {
+async function newDraftRequest(items = [{ access_type_id: viewMetadataTypeId }], subjectId = null) {
   const ar = await arService.createAccessRequest({
     type: 'NEW',
     resource_id: dataset.resource_id,
+    subject_id: subjectId || requester.subject_id,
     items,
   }, requester.subject_id);
   arIds.push(ar.id);
@@ -121,6 +122,54 @@ describe('access requests - invariants', () => {
   afterEach(async () => {
     await revokeAllRequesterGrants();
     await withdrawOpen();
+  });
+
+  describe('createAccessRequest subject validation', () => {
+    it('allows self-request when subject_id equals requester_id', async () => {
+      const ar = await arService.createAccessRequest({
+        type: 'NEW',
+        resource_id: dataset.resource_id,
+        subject_id: requester.subject_id,
+        items: [{ access_type_id: viewMetadataTypeId }],
+      }, requester.subject_id);
+      arIds.push(ar.id);
+
+      expect(ar.subject_id).toBe(requester.subject_id);
+      expect(ar.requester_id).toBe(requester.subject_id);
+      expect(ar.status).toBe('DRAFT');
+    });
+
+    it('allows group request when requester is admin of the group', async () => {
+      const requestGroup = await createTestGroup(requester.subject_id, '_ari_group_request');
+      groupIds.push(requestGroup.id);
+      await prisma.group_user.create({
+        data: { group_id: requestGroup.id, user_id: requester.subject_id, role: 'ADMIN' },
+      });
+
+      const ar = await arService.createAccessRequest({
+        type: 'NEW',
+        resource_id: dataset.resource_id,
+        subject_id: requestGroup.id,
+        items: [{ access_type_id: viewMetadataTypeId }],
+      }, requester.subject_id);
+      arIds.push(ar.id);
+
+      expect(ar.subject_id).toBe(requestGroup.id);
+      expect(ar.requester_id).toBe(requester.subject_id);
+      expect(ar.status).toBe('DRAFT');
+    });
+
+    it('rejects request on behalf of another user', async () => {
+      const otherUser = await createTestUser('_ari_other_user');
+      userIds.push(otherUser.id);
+
+      await expect(arService.createAccessRequest({
+        type: 'NEW',
+        resource_id: dataset.resource_id,
+        subject_id: otherUser.subject_id,
+        items: [{ access_type_id: viewMetadataTypeId }],
+      }, requester.subject_id)).rejects.toMatchObject({ status: 403 });
+    });
   });
 
   describe('_assertNoActiveGrants invariant', () => {
@@ -391,6 +440,119 @@ describe('access requests - invariants', () => {
       });
       expect(item.created_grant_id).not.toBeNull();
       expect(item.decision).toBe('APPROVED');
+    });
+  });
+
+  describe('subject_id invariant', () => {
+    let testGroup;
+
+    beforeAll(async () => {
+      testGroup = await createTestGroup(requester.subject_id, '_ari_test_grp');
+      groupIds.push(testGroup.id);
+
+      // Add requester as ADMIN to testGroup
+      await prisma.group_user.create({
+        data: {
+          group_id: testGroup.id,
+          user_id: requester.subject_id,
+          role: 'ADMIN',
+        },
+      });
+    });
+
+    afterEach(async () => {
+      await prisma.grant.updateMany({
+        where: { resource_id: dataset.resource_id, revoked_at: null },
+        data: { revoked_at: new Date() },
+      });
+    });
+
+    it('stores subject_id correctly for self-request', async () => {
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], requester.subject_id);
+      expect(ar.subject_id).toBe(requester.subject_id);
+    });
+
+    it('stores subject_id correctly for group request', async () => {
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      expect(ar.subject_id).toBe(testGroup.id);
+    });
+
+    it('grant is created with subject_id from the request (not requester_id)', async () => {
+      // Create a group-targeted request
+      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+
+      // Approve it
+      await arService.submitReview({
+        request_id: submitted.id,
+        reviewer_id: reviewer.subject_id,
+        options: {
+          review_items: submitted.access_request_items.map((i) => ({
+            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          })),
+        },
+      });
+
+      // Grant must have subject_id == testGroup, not requester
+      const grant = await prisma.grant.findFirst({
+        where: {
+          subject_id: testGroup.id,
+          resource_id: dataset.resource_id,
+          access_type_id: viewMetadataTypeId,
+          revoked_at: null,
+        },
+      });
+      expect(grant).not.toBeNull();
+      expect(grant.subject_id).toBe(testGroup.id);
+
+      // No grant should exist for requester directly
+      const requesterGrant = await prisma.grant.findFirst({
+        where: {
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
+          access_type_id: viewMetadataTypeId,
+          revoked_at: null,
+        },
+      });
+      expect(requesterGrant).toBeNull();
+    });
+
+    it('_assertNoActiveGrants checks subject_id, not requester_id', async () => {
+      // Create and approve a request for testGroup
+      const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      const submitted1 = await arService.submitRequest(ar1.id, requester.subject_id);
+      await arService.submitReview({
+        request_id: submitted1.id,
+        reviewer_id: reviewer.subject_id,
+        options: {
+          review_items: submitted1.access_request_items.map((i) => ({
+            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          })),
+        },
+      });
+
+      // Now try to create another request for testGroup for the same access type
+      const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      // Submit should fail because testGroup already has an active grant
+      await expect(
+        arService.submitRequest(ar2.id, requester.subject_id),
+      ).rejects.toMatchObject({ status: 409 });
+    });
+
+    it('_assertNoInFlightRequests checks subject_id, not requester_id', async () => {
+      // Create and submit a request for testGroup
+      const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      const submitted1 = await arService.submitRequest(ar1.id, requester.subject_id);
+
+      // Try to create and submit another request for testGroup (same resource, same access type)
+      const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
+      // Second submit should fail because ar1 is already UNDER_REVIEW
+      await expect(
+        arService.submitRequest(ar2.id, requester.subject_id),
+      ).rejects.toMatchObject({ status: 409 });
+
+      // Cleanup
+      await arService.withdrawRequest({ request_id: submitted1.id, requester_id: requester.subject_id });
     });
   });
 });

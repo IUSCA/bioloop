@@ -56,6 +56,7 @@ const { userPolicies } = require('./builtin/policies/user');
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
 const { contextHydrator } = require('./builtin/hydrators/context');
+const { accessRequestHydrator } = require('./builtin/hydrators/access_request');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
@@ -88,6 +89,7 @@ const hydratorRegistry = new HydratorRegistry(createDefaultHydrator);
 // Register builtin hydrators
 hydratorRegistry.register('user', userHydrator);
 hydratorRegistry.register('context', contextHydrator);
+hydratorRegistry.register('access_request', accessRequestHydrator);
 
 // Register custom hydrators (add yours here in derived apps)
 

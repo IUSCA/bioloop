@@ -6,7 +6,7 @@ description: Write Jest integration/unit tests for API services in api/src/servi
 # Skill: API Service Tests
 
 Integration and unit tests for Node.js services in `api/src/services/`.  
-Tests live at `api/tests/services/`. Run: `cd api && npx jest tests/services/<path>`
+Tests live at `api/tests/services/`. Run: `cd api && npx jest --runInBand tests/services/<path>`
 
 ---
 

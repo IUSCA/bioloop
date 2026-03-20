@@ -51,8 +51,8 @@ router.post(
   '/',
   validate([
     body('type').isIn(['NEW']), // 'RENEWAL' is not implemented yet
-    body('resource_type').isIn(['DATASET', 'COLLECTION']),
     body('resource_id').isUUID(),
+    body('subject_id').isUUID().notEmpty(), // Who/what this request is for
     body('purpose').isString().notEmpty(),
     body('items').isArray({ min: 1 }),
     body('items.*.access_type_id').isInt(),
@@ -64,7 +64,7 @@ router.post(
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Create a new access request'
 
-    const data = _.pick(['type', 'resource_type', 'resource_id', 'purpose', 'items'], req.body);
+    const data = _.pick(['type', 'resource_id', 'subject_id', 'purpose', 'items'], req.body);
 
     // validate items are unique by access_type_id within the request
     const accessTypeIds = data.items.map((item) => item.access_type_id);

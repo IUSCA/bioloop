@@ -475,9 +475,10 @@ model subject {
   id   String       @id @default(uuid())
   type SUBJECT_TYPE
 
-  user   user?
-  group  group?
-  grants grant[]
+  user            user?
+  group           group?
+  grants          grant[]
+  access_requests access_request[]
 }
 
 // created everyone group and added rules to protect modification in migration script
@@ -648,14 +649,14 @@ model grant {
   // Otherwise, Prisma would try to drop and recreate the column on every migration since it doesn't recognize it as a generated column.
 
   // Provenance
-  granted_by            String
-  justification         String? // Optional justification for the grant creation or revocation
-  created_at            DateTime            @default(now()) @db.Timestamp(6)
-  revoked_at            DateTime?           @db.Timestamp(6)
-  revoked_by            String?
-  revocation_reason     String? // Optional reason for revocation
-  creation_type         GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
-  
+  granted_by        String
+  justification     String? // Optional justification for the grant creation or revocation
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  revoked_at        DateTime?           @db.Timestamp(6)
+  revoked_by        String?
+  revocation_reason String? // Optional reason for revocation
+  creation_type     GRANT_CREATION_TYPE // How was this grant created (manual admin action, system bootstrap, access request approval, etc.)
+
   // The group under whose governance authority this grant was issued.
   // Captures resource.owner_group_id at grant creation time.
   // Cannot be reconstructed after an ownership transfer — the new owner_group_id reflects the
@@ -663,12 +664,12 @@ model grant {
   // Useful for: transfer review ("which grants were issued under the prior owner?"),
   // audit queries ("all grants issued under Group X's authority"), and provenance explanation.
   // NULL means the grant was issued by a platform admin acting outside any group's authority.
-  issuing_authority_id  String?
-  issuing_authority     group?              @relation(fields: [issuing_authority_id], references: [id], onDelete: SetNull, name: "grant_issuing_authority")
-  
+  issuing_authority_id String?
+  issuing_authority    group?  @relation(fields: [issuing_authority_id], references: [id], onDelete: SetNull, name: "grant_issuing_authority")
+
   // The group under whose governance authority this grant was revoked, if applicable. Same logic as issuing_authority_id.
   revoking_authority_id String?
-  revoking_authority    group?              @relation(fields: [revoking_authority_id], references: [id], onDelete: SetNull, name: "grant_revoking_authority")
+  revoking_authority    group?  @relation(fields: [revoking_authority_id], references: [id], onDelete: SetNull, name: "grant_revoking_authority")
 
   // Relations
   grantor user  @relation("grants_created", fields: [granted_by], references: [subject_id], onDelete: Restrict)
@@ -717,9 +718,15 @@ model access_request {
   resource_id String
   resource    resource @relation(fields: [resource_id], references: [id], onDelete: Cascade)
 
-  // Requester
+  // Requester — who filed the request
   requester_id String
   requester    user   @relation("access_requests_created", fields: [requester_id], references: [subject_id], onDelete: Restrict)
+
+  // Subject — who/what the request is for (USER or GROUP)
+  // For self-requests: subject_id == requester_id (the user's subject_id)
+  // For group requests: subject_id == group.id (which equals group.subject_id)
+  subject_id String
+  subject    subject @relation(fields: [subject_id], references: [id], onDelete: Restrict)
 
   // Justification
   purpose String?
@@ -747,8 +754,9 @@ model access_request {
   access_request_items access_request_item[]
 
   @@index([requester_id, status])
+  @@index([subject_id, status])
   @@index([resource_id, status])
-  @@index([status, submitted_at])
+  @@index([status])
 }
 
 model access_request_item {
