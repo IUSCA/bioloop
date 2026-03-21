@@ -1,0 +1,516 @@
+# Bioloop Project Rules for AI Agents
+
+## 🤖 Agent Initialization Protocol
+
+**When starting a new chat session (especially after "hi", "new task", or similar):**
+
+### Step 1: Auto-Read Core Files (Lazy Loading)
+Immediately read these **4 core files** in parallel (~15k tokens):
+
+1. `.ai/PRODUCTION_ENVIRONMENT.md` - ⚠️ Production warnings and restrictions
+2. `.ai/AI_PROTOCOL.md` - How to work with this repo
+3. `.ai/bioloop/README.md` - Platform core overview
+4. `.ai/bioloop/architecture.md` - System architecture (includes workflow patterns)
+
+**DO NOT auto-read:** Conventions, pitfalls, or feature docs. Load these on-demand in later steps.
+
+### Step 2: Report & Confirm
+Respond with:
+```
+✅ Core initialization complete (~15k tokens loaded)
+
+📚 I've read:
+- Production environment warnings & restrictions
+- AI protocol and repo workflow
+- Platform architecture (microservices, workflows, DB)
+
+⚠️ Production restrictions active:
+- NEVER reset DB without permission
+- NEVER docker exec/restart
+- No sudo access
+
+📂 Available features (load on-demand):
+Platform: Datasets, Workflows, Users/Projects, Imports/Downloads, Uploads
+
+🎯 What would you like to work on?
+```
+
+### Step 3: Load Feature Context (On-Demand)
+When user specifies a feature or begins work:
+
+**Load feature documentation:**
+- Read `.ai/bioloop/features/<feature>.md`
+- Confirm: "✅ Loaded <feature> documentation"
+
+**Then ask:** "What type of work? (API/UI/Worker/Database/General)"
+
+### Step 4: Load Conventions (On-Demand)
+Load conventions based on the type of work:
+
+**For API work:**
+- Read `.ai/bioloop/api_conventions.md`
+- Read `.ai/bioloop/pitfalls.md`
+
+**For UI work:**
+- Read `.ai/bioloop/ui_conventions.md`
+- Read `.ai/bioloop/pitfalls.md`
+
+**For Worker work:**
+- Read `.ai/bioloop/worker_conventions.md`
+- Read `.ai/bioloop/pitfalls.md`
+
+**For Database work:**
+- Read `.ai/bioloop/database_patterns.md`
+- Read `.ai/bioloop/pitfalls.md`
+
+**For E2E Testing work:**
+- Read `.ai/bioloop/e2e_testing_conventions.md`
+- Read `.ai/bioloop/e2e_tes*For General work:**
+- Load conventions as needed when editing specific file types
+
+**Note:** This lazy loading approach:
+- Reduces initial context from ~70k to ~15k tokens (saves 55k tokens)
+- Leaves more room for conversation and code context
+- Reduces "lost in the middle" effect
+- Still provides complete documentation when needed
+
+---
+
+## ⚠️ PRODUCTION ENVIRONMENT WARNINGS
+
+**THIS IS THE PRODUCTION ENVIRONMENT.**
+
+### Repository Paths
+
+- **Service Host**: Runs docker-compose-prod.yml (UI, API, postgres, monitoring)
+- **Worker Hosts**: Runs workers via PM2 (celery, conversions, watch, metrics)
+- **Secure Download Host**: Runs the secure download service
+
+### Access Restrictions
+
+You only have access to:
+- The service host repo directory (code changes only)
+- Worker host repo directories (code changes only)
+- `/tmp` for temporary read/write/delete operations
+
+**Note:** Paths beginning with data directories referenced in codebase/env vars only apply when `NODE_ENV='docker'` or `APP_ENV='docker'`. In proion, these paths do not exist. See `.ai/PRODUCTION_ENVIRONMENT.md` for details.
+
+### Critical Restrictions
+
+#### ❌ NEVER Allowed (Unless User Explicitly Permits):
+
+**File System:**
+- **ALWAYS** delete anything written to `/tmp` after work is done
+
+**Database:**
+- **NEVER** reset the database on service host
+
+**Docker:**
+- **NEVER** run ANY docker commands (not even read-only: `docker ps`, `docker logs`, etc.)
+- **NEVER** exec into docker containers or restart them
+
+**Workers:**
+- **NEVER** restart/kill/stop workers (PM2 commands: `pm2 restart`, `pm2 stop`, `pm2 delete`)
+- Can view logs: `pm2 logs`, `pm2 monit`
+- Can enter poetry shell: `poetry shell`
+
+**System Services:**
+- **NEVER** restart system services (docker, nginx, apache, etc.)
+- **NEVER** use sudo (you do NOT have sudo access)
+
+**Git:**
+- **NEVER** do git write operations (`git pull`, `git push`, `git rebase`, `git merge`, `git commit`)
+- Can do read-only operations (`git status`, `git diff`, `git log`, `git reflog`, etc.)
+
+**nodemon:**
+- **NEVE* use nodemon in production (except UI service)
+- Not allowed in Dockerfiles, package.json scripts, or any config files
+
+#### ✅ Always Allowed:
+
+- Safe read-only operations for debugging on any host
+- Reading logs, viewing process status
+- File inspection with `cat`, `grep`, `ls`, etc. (except `.env` files)
+- Git read-only operations
+- `poetry shell` in workers directory
+
+### Host Restrictions
+
+- You can only make **code changes** on appropriate hosts
+- **Exception:** All restrictions can be overridden if user explicitly permits in chat
+
+---
+
+## 📚 Documentation & Conventions
+
+**All architectural and coding patterns are documented in the `.ai/` directory.**
+
+### Quick Reference
+
+**Start Here:**
+- `.ai/AI_PROTOCOL.md` - How to work with this repo
+
+**Platform Core:**
+- `.ai/bioloop/architecture.md` - System architecture
+- `.ai/bioloop/api_conventions.md` - API patterns
+- `.ai/bioloop/ui_conventions.md` - UI patterns
+- `.ai/bioloop/worker_conventions.md` - Worker patterns
+- `.ai/bioloop/database_patterns.m Database patterns
+- `.ai/bioloop/pitfalls.md` - Common mistakes
+- `.ai/bioloop/features/*.md` - Platform features
+
+### Priority Order of Truth
+
+1. `.ai/bioloop/features/<feature>.md` (highest - feature-specific)
+2. `.ai/bioloop/*.md` (platform conventions)
+3. Repository code
+4. Chat history (lowest)
+
+**Chats explore. Changelogs decide. Files persist.**
+
+---
+
+## 📝 Documentation Policy
+
+### What to Document
+
+**REQUIRED (per AI_PROTOCOL.md):**
+- Update feature changelogs in `.ai/features/<feature>.md` when:
+  - A design decision is made
+  - Behavior is clarified
+  - Constraints are introduced or removed
+  - Architecture or data flow changes
+  - An assumption is confirmed or rejected
+
+**ALLOWED (when helpful):**
+- Update existing user-facing documentation (e.g., usage guides, READMEs)
+- Update existing technical documentation when code changes
+
+### What NOT to Document
+
+**DO NOT create these files (unless explicitly requested by user):**
+- ❌ Refactor summary files (e.g., `*_REFACTOR.md`, `*_CHANGES.md`)
+- ❌ "What changed" summary files
+- ❌ Migration guide files (separate from feature changelogs)
+- ❌ Change documentation files
+- ❌ Implementation summary files
+
+**Why:** This information belongs in:
+1. Feature changelogs (`.ai/features/<feature>.md`) - for design decisions
+2. Existing usage documentation - for user guidance
+3. The code itself - implementation details are self-documenting
+4. Git history - for change tracking
+
+**Exception:** Only create additional documentation files if the user explicitlyem.
+
+---
+
+## 🔒 Sensitive File Restrictions
+
+### .env Files (Secret Files vs Templates)
+
+**NEVER read, write, display, or print the contents of `.env` files that contain secrets.**
+
+**File Structure:**
+- `.env.deult` files ALWAYS exist (templates with example/default values)
+- `.env` files MAY exist alongside `.env.default` (contain actual secrets)
+- `.env` files NEVER exist without a corresponding `.env.default`
+
+#### ❌ FORBIDDEN Files (Contain Secrets)
+- Any `.env` file (without `.default`, `.example`, or `.template` suffix)
+  - `api/.env`
+  - `workers/.env`
+  - `secure_download/.env`
+  - `ui/.env`
+  - Any other `.env` files containing secrets
+
+#### ✅ ALLOWED Files (Templates Only)
+- `.env.default` - Default configuration templates (ALWAYS exist)
+- `.env.example` - Example configurations
+- `.env.template` - Configuration templates
+- Any file with these suffixes is safe to read/display
+
+#### Forbidden Operations on .env Files
+
+**File Operations:**
+- Reading with `read_file` tool
+- Writing with `write` or `search_replace` tools
+- Copying or moving `.env` files
+- Deleting `.env` files
+
+**Terminal Commands:**
+- `cat`, `head`, `tail`, `less`, `more` - on any `.env` file
+- `grep` - when searching in `.env` files
+- `echo`, `printf` - when diying `.env` contents
+- Any command that would reveal `.env` file contents
+
+**Output:**
+- Printing contents to console or chat
+- Including contents in code blocks or explanations
+- Logging or displaying `.env` file contents
+
+#### Before Running Any File Operation
+
+1. Check if the file path ends with `.env` (and NOT `.env.default`, `.env.example`, etc.)
+2. If yes, **STOP** and decline the operation
+3. Explain to the user that `.env` files contain secrets and cannot be accessed
+
+#### Example Commands
+
+**❌ FORBIDDEN:**
+```bash
+cat api/.env
+grep SECRET workers/.env
+head -n 5 secure_download/.env
+read_file("api/.env")
+```
+
+**✅ ALLOWED:**
+```bash
+cat api/.env.default
+grep EXAMPLE workers/.env.example
+head -n 10 ui/.env.template
+read_file("api/.env.default")
+```
+
+#### If User Requests .env File Access
+
+**Response:**
+```
+Inot access `.env` files as they contain secrets and sensitive credentials.
+
+Instead, I can:
+- Read `.env.default` or `.env.example` files for configuration structure
+- Help you understand what configuration values are needed
+- Guide you to manually provide specific (non-secret) configuration values
+
+If you need to share specific values, please provide them directly (without secrets).
+```
+
+**Exception:**
+- User may explicitly override this restriction by stating in the same message:
+  - "I authorize you to read [specific .env file]" OR
+  - "Override security: read [specific .env file]"
+
+---
+
+## 🔒 Allowlisted Commands (Read-Only + Safe)
+
+### System Information
+- hostname, whoami, uname -a, lsb_release -a, cat /etc/os-release
+- df -h, du -sh *, free -h, top -n 1, uptime, date
+- env, printenv
+
+### Directory & File Inspection
+- ls, tree, pwd, stat, file
+- head -n 50, tail -n 50, cat, less, more, wc -l
+- grep, find . -type f, find . -type d
+
+### Networking (Read-Only)
+- ifconfig, ip addr, ip route
+- netstat -tulpn, ss -tulpn
+- ping -c 4, curl -I, wget --spider
+
+### Git & Repo Status (Read-Only)
+- git status, git diff, git log, git show, git blame
+- git reflog, git branch, git tag
+- git rev-parse, git describe
+- git ls-files, git ls-tree, git cat-file
+- git grep,it shortlog
+- git remote -v, git submodule status
+
+**❌ FORBIDDEN Git Commands:**
+- git pull, git push, git fetch
+- git commit, git rebase, git merge
+- git reset, git checkout (file modifications)
+- Any command that modifies repository state
+
+### Node.js & NPM (Read-Only)
+- node -v, npm -v, npm list --depth=0
+
+### Python & Pip (Read-Only)
+- python3 --version, pip --version, pip list
+
+---
+
+## 🚀 Development Workflow
+
+### Docker Restart Pattern
+
+After bringing down containers, restart with:
+`sh
+docker compose up -d
+```
+
+**Reason:** Bringing down one container can affect others; always use `up -d` to restart the full stack.
+
+### Hot Module Replacement (HMR)
+
+API and UI changes should **NOT** require restarts unless:
+- API configuration changes (`config/*.json`)
+- New npm package installed
+- Prisma schema changes (requires `npx prisma generate`)
+
+### Linter Policy
+
+**Do NOT fix linter errors unless explicitly asked.**
+- Console statements in CLI scripts are OK
+- Focus on functionality first
+- Clean up linter errors only when requested
+
+### Linting Workflow
+
+**IMPORTANT:** The agent's built-in `ReadLints` tool uses an internal formatter that may not match the project's preferred style (ESLint + Prettier config). Always use `npm run lint` to apply authoritative project formatting.
+
+Both `ui` and `api` have two lint scripts:
+- `npm run lint` — lints and auto-fixes all files in the service directory
+- `npm run lint:file -- <relative-path>` — lints and auto-fixes a single file
+
+#### In Docker/Localhost Mode
+
+Run lint from within the container using `docker compose exec` (from the repo root):
+
+```bash
+# Lint entire ui service
+docker compose exec ui npm run lint
+
+# Lint entire api service
+docker compose exec api npm run lint
+
+# Lint a single file (path relative to service root)
+docker compose exec ui npm run lint:file -- src/components/dataset/import/ImportStepper.vue
+docker compose exec api npm run lint:file -- src/routes/datasets/uploads.js
+```
+
+#### In Production Mode (No Docker Access)
+
+In production there are no containers. Install dependencies on the host first (if not alr installed), then run lint directly:
+
+```bash
+# Lint ui (run from repo root or ui/ directory)
+cd ui && npm install && npm run lint
+
+# Lint api (run from repo root or api/ directory)
+cd api && npm install && npm run lint
+
+# Lint a single file
+cd ui && npm run lint:file -- src/components/dataset/import/ImportStepper.vue
+cd api && npm run lint:file -- src/routes/datasets/uploads.js
+```
+
+**Note:** `npm install` is only needed if `node_modules/` is absent. In production, dependencies are typically already installed, so `npm run lint` alone should suffice.
+
+### Emoji Usage Policy
+
+**NEVER use emojis in code:**
+- ❌ Code comments
+- ❌ Logging statements (`logger.info()`, `console.log()`, etc.)
+- ❌ Error messages
+- ❌ Variable/function names or code identifiers
+
+**Emojis ALLOWED in documentation only:**
+- ✅ Markdown doc files (`.md`)
+- ✅ Strictly documentational emojis for visual clarity (✅ ❌ ⚠️ 📖)
+
+**Exception:** May use in extremely complex debugging scripts when visual markers would significantly aid debugging (rare, mustd).
+
+**Rationale:** Code/logs should be text-based, grep-friendly, and parseable. Documentation can use emojis for readability.
+
+---
+
+## 🎯 Key Architectural Reminders
+
+### Microservice Architecture
+This is a microservice architecture with separate UI, API, and Worker components.  
+**Always consider the impact of changes across all services.**
+
+### Key Patterns
+- Use `auth.canAdmin` and `auth.canOperate` (not `auth.hasRole(['admin', 'operator'])`)
+- User-specific endpoints use `/:username` pattern with `checkOwnership: true`
+- Use transactions for data consistency
+- Page components should be minimal, delegating to list components
+- Use icons instead of buttons for actions
+- Always check permissions before allowing operations
+
+See `.ai/` directory for detailed conventions.
+
+---
+
+## 💬 Code Comments Convention
+
+### Write intent comments, not change-history comments
+
+Comments should explain **why** code is written the way it is — the design
+intent, the invariant it maintains, or the constraint it encodes.  They should
+NOT explain why the last fix was applied or describe the edge-case that prompted
+the change.  A reader who never saw the git history should still understand the
+comment fully.
+
+**Ask yourself:** "If this comment were written on day one of the project, would
+it still make sense?"  If yes, it's a good comment.  If it only makes sense in
+the context of "a recent bug", rewrite it.
+
+**Bad (fix-history flavor):**
+```python
+# Ignore test isolation dirs so watch.py doesn't register them as datasets.
+# Fixed to RAW_DATA — for tests that don't need per-type parameterization.
+# Must match the `rejects` pattern in docker.py so the production watch.py
+# process ignores these directories.
+# In Docker mode there is no HPSS/SDA — delete the locally-archived file directly.
+```
+
+**Good (design-intent flavor):**
+```python
+# Directories that should never be auto-registered as datasets.
+# RAW_DATA — used by tests whose behavior is independent of dataset type.
+# Directories with this prefix are excluded from production watch.py
+# registration (see `rejects` in workers/workers/config/docker.py).
+# In Docker, the SDA (HPSS) is not available; delete the archive file locally.
+```
+
+### Rules
+
+1. **State the purpose broadly.** Explain what the code achieves or what
+   invariant it maintains, not the specific sequence of events that led here.
+2. **Avoid negation-of-a-decision phrasing.** "for tests that don't X" →
+   "for tests whose behavior is independent of X".
+3. **Avoid "fix", "prevent from", "workaround".** These signal change-history.
+   Replace with the positive statement of what the code does.
+4. **Cross-references are fine.** "see `rejects` in docker.py" is good context.
+   Just don't make the cross-reference the *only* reason the comment exists.
+5. **Docstrings on functions/classes** should describe inputs, outputs, and
+   important side effects — not the story of why the function was refactored.
+
+---
+
+## 🔤 Language & Spelling
+
+**Always use American English spelling** in all code, comments, docstrings, log messages, and documentation.
+
+Common corrections:
+- `initialize` (not `initialise`)
+- `parameterized` (not `parameterised`)
+- `stabilized` (not `stabilised`)
+- `recognized` (not `recognised`)
+- `color` (not `colour`), `favor` (not `favour`), `behavior` (not `behaviour`)
+
+This repo uses `cspell` with `"language": "en"` (American English). British spellings will fail the pre-commit hook.
+
+---
+
+## 📝 Constants vs Config
+
+**Constants** (business logic):
+- `api/src/constants.js`, `ui/src/constants.js`, `workers/config/common.py`
+- Browser types, genome mappings, file type enums, role names
+
+**Config** (runtime behavior):
+pi/config/*.json`, `ui/src/config.js`, `workers/config/common.py`
+- Data paths, feature toggles, API URLs, ports, timeouts
+
+See `.ai/ARCHITECTURE.md` for details.
+
+---
+
+**Last Updated:** 2026-03-13
+

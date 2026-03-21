@@ -78,5 +78,6 @@ rhythm/rhythm_api
 signet/signet
 
 # AI-agent dirs
-.cursorrules
-.ai/
+# .cursorrules
+# .cursor/
+# .ai/
