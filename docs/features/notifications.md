@@ -1,145 +1,170 @@
-# Notifications Feature Design
+# Notifications Design
 
 ## Purpose
 
-This document defines the current design for the notifications redesign across API, UI, and E2E testing.
+This document describes the current notifications design across API, UI, and E2E tests.
 
-The redesign goals were to:
-- stabilize filter/search behavior and eliminate chip/UI desynchronization
-- improve accessibility and interaction consistency in the notification menu
-- support paginated, filter-aware querying with reliable total counts
-- harden role/ownership authorization behavior and race-condition handling
-- increase confidence with targeted, deterministic E2E coverage
+Primary goals:
+- keep filter/search/chip state synchronized and deterministic
+- provide consistent keyboard and pointer interactions
+- support paginated, filter-aware queries with accurate totals
+- enforce role/ownership boundaries for all state transitions
+- preserve predictable behavior under race conditions
 
 ## Scope
 
 Included:
-- notification menu UX behavior (filters, search, chips, actions)
-- API contract for listing, state updates, global dismissal, SSE
-- role/ownership enforcement for user/admin/operator flows
-- pagination semantics for filters and search
-- E2E test coverage and helper refactor for maintainability
+- notification menu UX (filters, chips, search, row actions)
+- listing/state/global-dismiss APIs
+- role and ownership authorization behavior
+- SSE invalidation plus polling fallback
+- E2E coverage for behavior, accessibility, and role differences
 
 Out of scope:
-- replacing polling fallback with SSE-only architecture
-- multi-instance pub/sub implementation for SSE fanout
-- broad cross-feature UI redesign outside notifications
+- replacing polling fallback with SSE-only behavior
+- multi-instance SSE fanout infrastructure (for example Redis pub/sub)
+- unrelated UI redesign outside notifications
 
-## User Roles and Access Model
+## Roles and Access
 
-- `admin` and `operator` can access general notification routes and can globally dismiss notifications.
-- `user` role uses ownership-scoped routes (`/:username/...`) with `checkOwnership: true`.
-- User role cannot globally dismiss notifications.
+- `admin` and `operator` can use general notification routes and global dismissal.
+- `user` uses ownership-scoped routes (`/:username/...`) with `checkOwnership: true`.
+- `user` cannot globally dismiss notifications.
 - Resolver identity visibility:
-  - visible to `admin`/`operator`
+  - visible to `admin` and `operator`
   - hidden for `user`
 
-## Data Model and Concepts
+## Data Model
 
-Notification model is split into:
-- global event: `notification`
-- per-recipient state: `notification_recipient`
+Notifications are split between:
+- `notification` (global event and global lifecycle)
+- `notification_recipient` (per-user delivery and per-user state)
 
-Per-recipient state fields:
+Per-recipient fields:
 - `is_read`
 - `is_archived`
 - `is_bookmarked`
 
 Global lifecycle fields:
-- `is_resolved` (global dismissal)
+- `is_resolved`
 - `resolved_at`
 - `resolved_by_id`
 
 Delivery metadata:
-- `DIRECT` (explicit user targeting)
-- `ROLE_BROADCAST` (role-targeted recipient resolution)
-- `delivery_role_id` persisted for role-broadcast provenance
+- `DIRECT` for direct user targeting
+- `ROLE_BROADCAST` for role-based delivery
+- `delivery_role_id` to preserve role-broadcast provenance
 
-## UI Design
+## UI Behavior
 
 ### Menu Structure
 
-- Top controls row contains filter toggles and supporting controls.
-- Search input supports combined filter + search behavior.
-- Active filters are represented as chips with explicit clear actions.
-- Notification cards display delivery badges and action controls.
+- Top control row includes unread/read/archived/bookmarked/globally-dismissed toggles and mark-all-read.
+- Search input combines with active filters.
+- Active filters render as chips with explicit clear controls.
+- Row-level actions are available per notification card.
 
 ### Interaction Rules
 
-- Menu width is deterministic per breakpoint and does not fluctuate by content.
-- Filter buttons/chips/search stay synchronized from a single source of truth.
-- Controls are disabled and loading state is shown during notification API requests.
-- Bell badge count behavior:
+- Menu width is deterministic by breakpoint.
+- Filter/search state is driven from a single reactive source.
+- During mutation/list loading states, actionable controls are disabled.
+- Bell badge count:
   - no active filters: unread count
-  - active filters/search: total matched count for current query
+  - active filters or search: matched total for the active query
 
 ### Accessibility
 
-- Keyboard flow is deterministic:
-  - open via keyboard from notification-open control
-  - tab order enters top controls first, then search, then per-item actions
-  - reverse tab order works without focus traps
+- Keyboard opening from the bell moves focus into menu controls.
+- Forward and reverse tab order are deterministic and trap-free.
+- Chip clear controls are keyboard actionable with `Enter`/`Space`.
+- Chip clear controls expose a visible `:focus-visible` ring so keyboard focus is discoverable.
 
-## API Design
+## API Behavior
 
 ### Listing and Pagination
 
-Notification listing supports:
+Supported query inputs:
 - filters: `read`, `archived`, `bookmarked`, `globally_dismissed`
 - `search`
 - pagination: `limit`, `offset`
 
-Response shape:
-- `items`: paginated notification records
-- `total`: total matched records for the active query
-- `offset`, `limit`
+Response contract:
+- `items`
+- `total`
+- `offset`
+- `limit`
 - `has_more`
 
-Contract requirement:
-- pagination applies to all query combinations, including search + active filters
+Pagination semantics apply to all combinations of filters and search.
 
 ### State Updates and Conflict Semantics
 
-Per-user state update on globally dismissed notification:
-- returns `409 NOTIFICATION_GLOBALLY_DISMISSED`
+When a notification is globally dismissed:
+- per-user state updates return `409` with code `NOTIFICATION_GLOBALLY_DISMISSED`
+- recipient assignment operations return `409` with code `NOTIFICATION_GLOBALLY_DISMISSED`
 
-Adding recipients to globally dismissed notification:
-- returns `409 NOTIFICATION_GLOBALLY_DISMISSED`
-
-UI behavior on conflict:
-- show explicit toast
+UI conflict handling:
+- show a clear conflict toast
 - refresh relevant list state
 
-### Global Dismissal
+Recommended error shape:
 
-- allowed for admin/operator only
-- user role denied
-- resolver metadata persisted for auditability
+```json
+{
+  "code": "NOTIFICATION_GLOBALLY_DISMISSED",
+  "message": "Notification is globally dismissed and no longer actionable."
+}
+```
 
-### SSE and Polling
+### Global Dismissal Rules
 
-- SSE used for invalidation signaling (`ready`, `notification` events)
-- polling remains fallback for resilience
-- current SSE fanout is in-memory emitter (single-process scope)
-- multi-instance consistency requires external pub/sub adapter
+- allowed: `admin`, `operator`
+- denied: `user` (`403`)
+- `resolved_by_id` and `resolved_at` are persisted for auditability
+
+## Global Resolve Edge Cases
+
+1. User toggles read/unread while an admin globally dismisses:
+   - stale per-user action returns `409`
+   - UI shows conflict feedback and refreshes
+2. Recipient assignment attempted after global dismissal:
+   - operation returns `409`
+   - UI surfaces conflict and refreshes list/form state
+3. Role drift after dismissal:
+   - audit fields preserve resolver identity and timestamp
+4. Filter semantics:
+   - default unread view excludes globally dismissed notifications
+   - globally dismissed filter explicitly includes resolved notifications
+5. Badge semantics:
+   - unread count excludes globally dismissed notifications
+   - filtered/search views use `total` for matched-count badge behavior
+6. Authorization boundaries:
+   - server authorization is authoritative even when UI hides controls
+
+## Real-Time Model
+
+- SSE provides invalidation (`ready`, `notification`) for near-real-time refresh.
+- Polling remains enabled as a resilience fallback.
+- Current fanout is process-local; multi-instance consistency requires shared pub/sub.
 
 ## Recipient Resolution Policy
 
-Recipient resolution is centralized in notifications services:
-- deduplicates recipients by user
-- enforces notifications feature gating by role
-- applies deterministic role precedence for `ROLE_BROADCAST`
-- prevents duplicate recipient rows and duplicate notifications per target user
+Recipient resolution is centralized in notifications services and:
+- deduplicates recipients by user id
+- enforces feature gating by role
+- applies deterministic precedence for role-broadcast collisions
+- prevents duplicate recipient rows per notification/user
 
-Precedence behavior:
-- role-broadcast candidates for the same user are reduced to one deterministic winner
-- direct targeting of the same user wins over role-broadcast delivery type
+Precedence rules:
+- when multiple broadcast roles match the same user, choose one deterministic winner
+- direct targeting takes precedence over broadcast delivery for the same target user
 
-## Security and Link Handling
+## Link Security
 
-Allowed notification links:
+Allowed link categories:
 - relative links (trusted)
-- `http/https` links (subject to trust policy)
+- `http/https` links under trust policy
 
 Blocked schemes:
 - `javascript:`
@@ -147,97 +172,39 @@ Blocked schemes:
 - `file:`
 - `vbscript:`
 
-Untrusted external links:
-- require explicit confirmation in UI before navigation
+Untrusted external links require explicit user confirmation before navigation.
 
 ## Service Organization
 
-Notification logic is organized under:
-- `api/src/services/notifications/*`
-- `ui/src/services/notifications/*`
+Notifications code is organized by feature:
+- API services: `api/src/services/notifications/*`
+- UI services: `ui/src/services/notifications/*`
 
-Route/helper logic was moved into services where appropriate.
-Legacy notification service shims were removed after imports were migrated.
+Routes and components keep orchestration concerns, while feature behavior belongs in these service modules.
 
 ## Testing Strategy
 
 ### E2E Coverage Areas
 
-- filter and chip synchronization (including clear behavior)
-- search + filter combinations
-- pagination with correct totals and on-demand loading behavior
-- loading/disabled control behavior during API calls
-- keyboard accessibility and focus order
-- role-specific authorization behavior
-- SSE connection behavior for ownership endpoint
-- race-condition UX handling via toasts
+- filter/chip synchronization and clear behavior
+- search and filter combinations
+- pagination and matched-count correctness
+- loading/disabled control behavior during mutations
+- keyboard accessibility and focus ordering
+- role-based authorization and visibility behavior
+- SSE invalidation behavior for ownership/general views
+- race-condition conflict handling via user-visible feedback
 - trusted/untrusted link behavior
-- responsive layout and theme-color scenarios
+- responsive layout and theme color behavior
 
-### Test Stability Principles
+### Stability Principles
 
-- prefer deterministic DOM/testid assertions over broad timing waits
-- reduce unnecessary `test.slow`, explicit timeouts, and sleep-based waits
-- share notification test helpers to reduce duplication and maintenance burden
+- prefer deterministic `data-testid` assertions
+- minimize broad sleeps and unnecessary global timeouts
+- keep shared helpers for repeated notification flows
 
-## Known Constraints and Follow-ups
+## Constraints and Follow-ups
 
-- SSE fanout is currently process-local; cross-instance propagation is not guaranteed without pub/sub.
-- Polling fallback remains intentionally enabled for reliability.
-- Additional production-scale observability can be added for SSE lifecycle metrics if needed.
-
-## Global Resolve Notes (Merged)
-
-This section merges the previously separate global-resolve notes into the main notifications design page.
-
-### Baseline Model
-
-- `notification` is the global event.
-- `notification_recipient` stores per-user delivery/state (`is_read`, `is_archived`, `is_bookmarked`).
-- Global dismissal is event-level lifecycle, distinct from per-recipient state.
-
-### Edge Cases and Handling
-
-1. Race: user toggles read/unread while admin globally dismisses
-   - API returns `409` for stale per-user update attempts.
-   - UI shows a "no longer actionable" toast and refreshes list state.
-
-2. Race: recipient assignment after global dismissal
-   - API returns `409` when adding recipients to globally dismissed notifications.
-   - UI shows conflict toast and refreshes state.
-
-3. Role/permission drift
-   - Persist `resolved_by_id` and `resolved_at` for auditability.
-
-4. Filter semantics
-   - Default unread view excludes globally dismissed notifications.
-   - Explicit globally dismissed filter is used to view resolved items.
-
-5. Unread/badge consistency
-   - Unread excludes globally dismissed.
-   - Active filters/search use matched total count.
-
-6. Idempotency
-   - Re-dismissing an already dismissed notification should remain consistent and deterministic.
-
-7. Authorization boundaries
-   - Non-admin/non-operator global dismissal is forbidden (`403`).
-   - Server authorization remains authoritative.
-
-### Real-Time Options (Global Dismissal Updates)
-
-- Option A: Polling only
-  - lowest complexity, eventual consistency
-- Option B: SSE invalidation (current design + fallback polling)
-  - near-real-time updates with moderate complexity
-  - multi-instance requires shared pub/sub for fanout consistency
-- Option C: WebSockets
-  - highest complexity; not required for current one-way invalidation needs
-
-### E2E Scenarios to Preserve
-
-- Non-admin/non-operator global dismissal attempts are denied and surfaced clearly.
-- Global-dismiss race conflicts surface via toast and refreshed list state.
-- Recipient assignment after dismissal returns conflict and is surfaced in UI.
-- Resolver identity visibility differs correctly by role.
-- Globally dismissed filter includes resolved and excludes active notifications.
+- process-local SSE fanout is not sufficient for multi-instance consistency
+- polling fallback remains intentionally enabled for reliability
+- additional SSE lifecycle observability can be added if production needs it

@@ -368,6 +368,10 @@
 <script setup>
 import config from "@/config";
 import constants from "@/constants";
+import {
+  getVisibleNotificationMenuPanel,
+  removeVisibleSearchFilterChips,
+} from "@/services/notifications/filterChipDom";
 import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
@@ -469,15 +473,6 @@ function onSearchInputClick(event) {
   }
 }
 
-function getVisibleMenuPanelElement() {
-  const panels = Array.from(
-    document.querySelectorAll('[data-testid="notification-menu-items"]'),
-  );
-  return panels.find(
-    (panel) => panel instanceof HTMLElement && panel.offsetParent !== null,
-  );
-}
-
 function focusableControl(el) {
   if (!(el instanceof HTMLElement)) return null;
   if (
@@ -497,7 +492,7 @@ function focusFirstMenuControlSoon() {
   const maxAttempts = 400;
   const tryFocus = () => {
     attempts += 1;
-    const panel = getVisibleMenuPanelElement();
+    const panel = getVisibleNotificationMenuPanel();
     const anchor =
       panel?.querySelector('[data-testid="filter-unread"]')
       || (firstTopControlRef.value?.$el instanceof HTMLElement
@@ -545,11 +540,7 @@ function clearSearchFilter() {
   setSearchEchoLock(true);
   setFilter("search", "");
   nextTick(() => {
-    const panel = getVisibleMenuPanelElement();
-    if (!(panel instanceof HTMLElement)) return;
-    panel
-      .querySelectorAll('[data-testid="active-filter-chip-search"]')
-      .forEach((chip) => chip.remove());
+    removeVisibleSearchFilterChips();
   });
   fetchNotifications(notificationQueryOpts.value);
 }
@@ -630,11 +621,7 @@ function handleClearFilters() {
   setSearchEchoLock(true);
   clearFilters();
   nextTick(() => {
-    const panel = getVisibleMenuPanelElement();
-    if (!(panel instanceof HTMLElement)) return;
-    panel
-      .querySelectorAll('[data-testid="active-filter-chip-search"]')
-      .forEach((chip) => chip.remove());
+    removeVisibleSearchFilterChips();
   });
   fetchNotifications(notificationQueryOpts.value);
 }
@@ -818,6 +805,12 @@ onUnmounted(() => {
   border: 0;
   padding: 0;
   cursor: pointer;
+}
+
+.notification-filter-chip__clear:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 9999px;
 }
 
 .notification-filter-chip--primary {

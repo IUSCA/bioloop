@@ -92,7 +92,7 @@ function createRandomUsers(num) {
 }
 
 function runNotificationSeedScript(usernames) {
-  const scriptPath = path.join(global.__basedir, 'src', 'scripts', 'seed-notifications.js');
+  const scriptPath = path.join(global.__basedir, 'prisma', 'seed_data', 'seed-notifications.js');
   usernames.forEach((username) => {
     const result = spawnSync(
       process.execPath,

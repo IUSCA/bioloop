@@ -77,7 +77,11 @@ rhythm/rhythm_api
 
 signet/signet
 
-# AI-agent dirs
+# # AI-agent dirs
 # .cursorrules
 # .cursor/
 # .ai/
+# # Notification-specific ignores
+# tests/tools/notifications/
+# # e2e-test-specific ignores
+# bin/*e2e*.sh

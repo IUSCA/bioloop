@@ -26,11 +26,9 @@ The test suite can be run via Docker Compose, using `./docker-compose-e2e.yml`.
 
 ```
 # in bioloop root dir
-bash bin/deploy_containerized_e2e.sh
-bash bin/run_containerized_e2e.sh
+docker-compose -f "docker-compose-e2e.yml" build
+docker-compose -f "docker-compose-e2e.yml" up -d
 ```
-
-The `run_containerized_e2e.sh` script runs the `e2e` service with `docker compose run --rm`, so the test-runner container is removed after each run (success or failure) while the rest of the E2E stack keeps running.
 
 ### Viewing artifacts
 - The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.

@@ -7,7 +7,7 @@
  * metadata features (links, role_overrides, role_addons), and one-off events.
  *
  * USAGE
- *   node src/scripts/seed-notifications.js [OPTIONS]
+ *   node prisma/seed_data/seed-notifications.js [OPTIONS]
  *
  * OPTIONS
  *   --user <username>   Username to receive direct notifications (default: e2eUser)
@@ -32,13 +32,13 @@
  *   a user expects to accumulate over time.  They are logged as [oneoff].
  *
  * EXAMPLES
- *   node src/scripts/seed-notifications.js
- *   node src/scripts/seed-notifications.js --user e2eUser --force
- *   node src/scripts/seed-notifications.js --dry-run
- *   node src/scripts/seed-notifications.js --oneoff-only
- *   node src/scripts/seed-notifications.js --stable-only --user ccbrandt
+ *   node prisma/seed_data/seed-notifications.js
+ *   node prisma/seed_data/seed-notifications.js --user e2eUser --force
+ *   node prisma/seed_data/seed-notifications.js --dry-run
+ *   node prisma/seed_data/seed-notifications.js --oneoff-only
+ *   node prisma/seed_data/seed-notifications.js --stable-only --user ccbrandt
  *
- * EXPECTED UI BEHAVIOUR (for e2eUser / user role)
+ * EXPECTED UI BEHAVIOR (for e2eUser / user role)
  *
  *   Filter            Expected visible notifications
  *   ─────────────── ─────────────────────────────────────────────────────
@@ -52,7 +52,7 @@
  *   Search "pipeline"  error.workflow, workflow.nightly
  *   Search "dataset"   warning.quota, success.upload, dataset.approved
  *
- *   Role-override / role-addon behaviour:
+ *   Role-override / role-addon behavior:
  *     - admin-role recipients see admin-specific override/addon payloads
  *     - user-role recipients see base payloads
  */

@@ -313,6 +313,33 @@ test.describe('Notification keyboard accessibility', () => {
     expect(firstChipIdx).toBeLessThan(clearAllIdx);
   });
 
+  test('chip clear control shows visible focus indicator for keyboard focus', async ({
+    page,
+  }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await ensureNotificationOpenButtonVisible(page);
+    await openNotificationsMenu(page);
+    const menu = visibleNotificationMenu(page);
+    await menu.getByTestId('filter-read').click();
+    await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
+    const clearButton = menu.getByTestId('active-filter-chip-read-clear');
+    const input = searchInput(page);
+    await input.focus();
+    await shiftTabUntilLocatorFocused(page, clearButton, { maxTabs: 8 });
+    await expect.poll(async () => clearButton.evaluate((node) => {
+      const styles = window.getComputedStyle(node);
+      return {
+        style: styles.outlineStyle,
+        width: styles.outlineWidth,
+        offset: styles.outlineOffset,
+      };
+    })).toEqual({
+      style: 'solid',
+      width: '2px',
+      offset: '2px',
+    });
+  });
+
   test('Enter and Space on mark-all-read marks every visible row as read', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
