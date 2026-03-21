@@ -246,7 +246,7 @@ describe('access requests - invariants', () => {
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: partialItems },
+          options: { item_decisions: partialItems, decision_reason: 'Test' },
         }),
       ).rejects.toMatchObject({ status: 409 });
 
@@ -270,14 +270,14 @@ describe('access requests - invariants', () => {
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
           options: {
-            review_items: [
+            item_decisions: [
               ...submitted.access_request_items.map((i) => ({
                 id: i.id,
-                access_type_id: i.access_type_id,
                 decision: 'REJECTED',
               })),
               foreignItem,
             ],
+            decision_reason: 'Test',
           },
         }),
       ).rejects.toMatchObject({ status: 409 });
@@ -310,9 +310,10 @@ describe('access requests - invariants', () => {
         request_id: submitted.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          item_decisions: submitted.access_request_items.map((i) => ({
+            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           })),
+          decision_reason: 'Test',
         },
       });
       expect(reviewed.status).toBe('APPROVED');
@@ -326,9 +327,10 @@ describe('access requests - invariants', () => {
         request_id: submitted.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'REJECTED',
+          item_decisions: submitted.access_request_items.map((i) => ({
+            id: i.id, decision: 'REJECTED',
           })),
+          decision_reason: 'Test',
         },
       });
       expect(reviewed.closed_at).not.toBeNull();
@@ -403,9 +405,10 @@ describe('access requests - invariants', () => {
         request_id: submitted.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          item_decisions: submitted.access_request_items.map((i) => ({
+            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           })),
+          decision_reason: 'Test',
         },
       });
 
@@ -428,9 +431,10 @@ describe('access requests - invariants', () => {
         request_id: submitted.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          item_decisions: submitted.access_request_items.map((i) => ({
+            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           })),
+          decision_reason: 'Test',
         },
       });
 
@@ -487,9 +491,10 @@ describe('access requests - invariants', () => {
         request_id: submitted.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          item_decisions: submitted.access_request_items.map((i) => ({
+            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           })),
+          decision_reason: 'Test',
         },
       });
 
@@ -525,9 +530,10 @@ describe('access requests - invariants', () => {
         request_id: submitted1.id,
         reviewer_id: reviewer.subject_id,
         options: {
-          review_items: submitted1.access_request_items.map((i) => ({
-            id: i.id, access_type_id: i.access_type_id, decision: 'APPROVED',
+          item_decisions: submitted1.access_request_items.map((i) => ({
+            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
           })),
+          decision_reason: 'Test',
         },
       });
 

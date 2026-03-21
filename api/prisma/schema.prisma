@@ -675,8 +675,9 @@ model grant {
   grantor user  @relation("grants_created", fields: [granted_by], references: [subject_id], onDelete: Restrict)
   revoker user? @relation("grants_revoked", fields: [revoked_by], references: [subject_id], onDelete: SetNull)
 
-  // If created via access request approval, link back to the request item that led to this grant
-  accessRequestItems access_request_item[]
+  // If created via access request approval, link back to the request that led to this grant
+  source_access_request_id String?
+  source_access_request    access_request? @relation(fields: [source_access_request_id], references: [id], onDelete: Restrict)
 
   // valid_period generated column and grant_no_overlap exclusion constraint are defined in the migration SQL
   // For the same (subject_id, resource_id, access_type_id) tuple,
@@ -685,6 +686,8 @@ model grant {
   @@index([subject_id])
   @@index([resource_id])
   @@index([valid_from, valid_until])
+
+  revocation_type GRANT_REVOCATION_TYPE?
 }
 
 enum GRANT_CREATION_TYPE {
@@ -693,15 +696,45 @@ enum GRANT_CREATION_TYPE {
   SYSTEM_BOOTSTRAP
 }
 
+enum GRANT_REVOCATION_TYPE {
+  MANUAL
+  SUPERSEDED
+}
+
 model grant_access_type {
   id          Int     @id @default(autoincrement())
   name        String
   description String?
 
-  grants             grant[]
-  accessRequestItems access_request_item[]
+  grants               grant[]
+  access_request_items access_request_item[]
+  presets              grant_preset_item[]
 
   @@unique([name])
+}
+
+// Platform-seeded, effectively immutable after initial config.
+// Defined by platform admins; referenced by group admins and requesters.
+
+model grant_preset {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique // "Standard Researcher Access"
+  slug        String  @unique // "standard_researcher"
+  description String?
+  is_active   Boolean @default(true) // soft-disable; never delete
+
+  access_type_items    grant_preset_item[]
+  access_request_items access_request_item[]
+}
+
+model grant_preset_item {
+  preset_id      Int
+  access_type_id Int
+
+  preset      grant_preset      @relation(fields: [preset_id], references: [id], onDelete: Cascade)
+  access_type grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Restrict)
+
+  @@id([preset_id, access_type_id])
 }
 
 // ============================================================================
@@ -752,6 +785,7 @@ model access_request {
   reviewer user? @relation("access_requests_reviewed", fields: [reviewed_by], references: [subject_id], onDelete: SetNull)
 
   access_request_items access_request_item[]
+  grants               grant[]
 
   @@index([requester_id, status])
   @@index([subject_id, status])
@@ -759,20 +793,26 @@ model access_request {
   @@index([status])
 }
 
+// access_type_id and preset_id are strictly mutually exclusive - exactly one must be non-null to indicate whether this item is for a specific access type or an entire preset. 
+// This is enforced by DB constraint check defined in the migration SQL
 model access_request_item {
-  id                String                       @id @default(uuid())
+  id                String @id @default(uuid())
   access_request_id String
-  access_type_id    Int // What was requested
-  requested_until   DateTime?
-  decision          ACCESS_REQUEST_ITEM_DECISION @default(PENDING) // Review outcome
-  created_grant_id  String?
 
-  access_request access_request    @relation(fields: [access_request_id], references: [id], onDelete: Cascade)
-  access_type    grant_access_type @relation(fields: [access_type_id], references: [id], onDelete: Restrict)
-  created_grant  grant?            @relation(fields: [created_grant_id], references: [id], onDelete: SetNull)
+  access_type_id Int? // What was requested
+  preset_id      Int? // If applicable, which preset(s) was requested that includes this access type
+
+  requested_until DateTime?
+  approved_until  DateTime?
+  decision        ACCESS_REQUEST_ITEM_DECISION @default(PENDING) // Review outcome
+
+  access_request access_request     @relation(fields: [access_request_id], references: [id], onDelete: Cascade)
+  access_type    grant_access_type? @relation(fields: [access_type_id], references: [id], onDelete: Restrict)
+  preset         grant_preset?      @relation(fields: [preset_id], references: [id], onDelete: Restrict)
 
   // Prevent Duplicate Items Inside Same Request
-  @@unique([access_request_id, access_type_id])
+  @@unique([access_request_id, access_type_id]) // no duplicate access types within the same request
+  @@unique([access_request_id, preset_id]) // no duplicate presets within the same request
 }
 
 enum ACCESS_REQUEST_TYPE {

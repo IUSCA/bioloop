@@ -5,13 +5,13 @@
 
 const {
   Prisma, GROUP_MEMBER_ROLE, ACCESS_REQUEST_STATUS, ACCESS_REQUEST_ITEM_DECISION, GRANT_CREATION_TYPE,
-  SUBJECT_TYPE,
+  GRANT_REVOCATION_TYPE, SUBJECT_TYPE,
 } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName, resolveGrant } = require('@/authorization/builtin/audit/helpers');
 const { createGrant } = require('@/services/grants');
 const { setsEqual } = require('@/utils');
 const { enumToSql, buildWhereClause } = require('@/utils/sql');
@@ -66,6 +66,15 @@ const INCLUDES_CONFIG = {
   access_request_items: {
     include: {
       access_type: true,
+      preset: {
+        include: {
+          access_type_items: {
+            include: {
+              access_type: true,
+            },
+          },
+        },
+      },
     },
   },
   requester: true,
@@ -77,6 +86,33 @@ const INCLUDES_CONFIG = {
     },
   },
 };
+
+/**
+ * Expand access_request_items that have preset_id set to their constituent access_type_id values.
+ * Direct access_type_id items are included as-is.
+ * Returns a deduplicated Set of access_type_id numbers.
+ * @param {*} tx - Prisma transaction
+ * @param {Array} items - access_request_items with preset_id and/or access_type_id set
+ * @returns {Promise<Set<number>>} Unique access_type_ids
+ */
+async function _expandItemsToAccessTypeIds(tx, items) {
+  const accessTypeIds = new Set();
+
+  for (const item of items) {
+    if (item.access_type_id) {
+      accessTypeIds.add(item.access_type_id);
+    } else if (item.preset_id) {
+      // Fetch the preset items and add their access type IDs
+      const presetItems = await tx.grant_preset_item.findMany({
+        where: { preset_id: item.preset_id },
+        select: { access_type_id: true },
+      });
+      presetItems.forEach((pi) => accessTypeIds.add(pi.access_type_id));
+    }
+  }
+
+  return accessTypeIds;
+}
 
 async function _getRequestById(tx, request_id) {
   return tx.access_request.findUnique({
@@ -127,18 +163,38 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
   throw createError.Forbidden('Requesting on behalf of another user is not allowed');
 }
 
+async function _enrichItemsWithPresetName(tx, items) {
+  if (!items || items.length === 0) {
+    return items;
+  }
+
+  const presetIds = [...new Set(items.filter((it) => it.preset_id != null).map((it) => it.preset_id))];
+  if (presetIds.length === 0) {
+    return items;
+  }
+
+  const presets = await tx.grant_preset.findMany({
+    where: { id: { in: presetIds } },
+    select: { id: true, name: true },
+  });
+  const presetNameMap = new Map(presets.map((p) => [p.id, p.name]));
+
+  return items.map((item) => ({
+    ...item,
+    source_preset_name: item.preset_id ? (presetNameMap.get(item.preset_id) ?? null) : undefined,
+  }));
+}
+
 /**
  * Create a new access request
  * @param {Object} data
  * @param {string} data.type - 'NEW' or 'RENEWAL'
- * @param {number} data.resource_id - UUID of the resource
+ * @param {string} data.resource_id - UUID of the resource
  * @param {string} data.subject_id - UUID of the subject (user or group) for whom access is being requested
  * @param {string} [data.purpose] - Justification for the request
- * @param {Array<{access_type_id: number, requested_until?: Date}>} data.items - Access types being requested, must be unique within the request
+ * @param {Array<{access_type_id?: number, preset_id?: number, requested_until?: Date}>} data.items - Access types or presets being requested, must be unique within the request. Each item must have exactly one of access_type_id or preset_id.
  * @param {string[]} [data.previous_grant_ids] - For renewals, reference to expired grants
  * @param {string} requester_id - UUID of the user creating the request
- * @param {Object} [options]
- * @param {boolean} [options.submit=false] - If true, immediately submit the request for review
  * @returns {Promise<Object>} Created access request
  */
 async function createAccessRequest(data, requester_id) {
@@ -158,12 +214,15 @@ async function createAccessRequest(data, requester_id) {
       },
     });
 
-    // Create access request items
+    // Create access request items (each with either access_type_id or preset_id, never both)
     if (data.items && data.items.length > 0) {
+      const enrichedItems = await _enrichItemsWithPresetName(tx, data.items);
       await tx.access_request_item.createMany({
-        data: data.items.map((item) => ({
+        data: enrichedItems.map((item) => ({
           access_request_id: accessRequest.id,
-          access_type_id: item.access_type_id,
+          access_type_id: item.access_type_id ?? Prisma.skip,
+          preset_id: item.preset_id ?? Prisma.skip,
+          source_preset_name: item.preset_id ? (item.source_preset_name ?? Prisma.skip) : Prisma.skip,
           requested_until: item.requested_until ?? Prisma.skip,
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
@@ -212,6 +271,15 @@ async function createAccessRequest(data, requester_id) {
         access_request_items: {
           include: {
             access_type: true,
+            preset: {
+              include: {
+                access_type_items: {
+                  include: {
+                    access_type: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -225,7 +293,7 @@ async function createAccessRequest(data, requester_id) {
  * @param {string} requester_id - UUID of the user creating the request
  * @param {Object} data
  * @param {string} [data.purpose] - Updated justification
- * @param {Array<{access_type_id: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing) must be unique within the request
+ * @param {Array<{access_type_id?: number, preset_id?: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing). Each item must have exactly one of access_type_id or preset_id.
  * @returns {Promise<Object>} Updated access request
  */
 async function updateAccessRequest(request_id, requester_id, data) {
@@ -263,10 +331,13 @@ async function updateAccessRequest(request_id, requester_id, data) {
       });
 
       // Create new items
+      const enrichedItems = await _enrichItemsWithPresetName(tx, data.items);
       await tx.access_request_item.createMany({
-        data: data.items.map((item) => ({
+        data: enrichedItems.map((item) => ({
           access_request_id: request_id,
-          access_type_id: item.access_type_id,
+          access_type_id: item.access_type_id ?? Prisma.skip,
+          preset_id: item.preset_id ?? Prisma.skip,
+          source_preset_name: item.preset_id ? (item.source_preset_name ?? Prisma.skip) : Prisma.skip,
           requested_until: item.requested_until ?? Prisma.skip,
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
@@ -293,46 +364,22 @@ async function updateAccessRequest(request_id, requester_id, data) {
 
 /**
  * Throws if the subject already holds an active (non-revoked, currently valid) grant
- * for any of the access types in this request.
+ * for any of the access types in this request (including those expanded from presets).
  * Group-mediated access is intentionally excluded — the user may still want a personal grant.
  * @param {Object} request - access_request with access_request_items included
  */
-async function _assertNoActiveGrants(request) {
-  const now = new Date();
-  const itemAccessTypeIds = request.access_request_items.map((item) => item.access_type_id);
-
-  const conflicting = await prisma.grant.findMany({
-    where: {
-      subject_id: request.subject_id,
-      resource_id: request.resource_id,
-      access_type_id: { in: itemAccessTypeIds },
-      revoked_at: null,
-      valid_from: { lte: now },
-      OR: [
-        { valid_until: null },
-        { valid_until: { gt: now } },
-      ],
-    },
-    select: { access_type_id: true },
-  });
-
-  if (conflicting.length > 0) {
-    const ids = [...new Set(conflicting.map((g) => g.access_type_id))];
-    throw createError.Conflict('Access is already granted for one or more of the requested access types', {
-      details: {
-        access_type_ids: ids,
-      },
-    });
-  }
-}
-
 /**
  * Throws if the subject already has another UNDER_REVIEW request for the same
- * resource that overlaps with any of the access types in this request.
+ * resource that overlaps with any of the access types in this request (direct or preset-expanded).
  * @param {Object} request - access_request with access_request_items included
  */
 async function _assertNoInFlightRequests(request) {
-  const itemAccessTypeIds = request.access_request_items.map((item) => item.access_type_id);
+  const expandedAccessTypeIds = await _expandItemsToAccessTypeIds(prisma, request.access_request_items);
+
+  if (expandedAccessTypeIds.size === 0) {
+    // No access types to check
+    return;
+  }
 
   const conflicting = await prisma.access_request.findMany({
     where: {
@@ -340,28 +387,37 @@ async function _assertNoInFlightRequests(request) {
       subject_id: request.subject_id,
       resource_id: request.resource_id,
       status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-      access_request_items: {
-        some: { access_type_id: { in: itemAccessTypeIds } },
-      },
     },
     include: {
-      // Only include the overlapping items so we can report them
       access_request_items: {
-        where: { access_type_id: { in: itemAccessTypeIds } },
-        select: { access_type_id: true },
+        select: { id: true, access_type_id: true, preset_id: true },
       },
     },
   });
 
-  if (conflicting.length > 0) {
-    const conflictingTypeIds = [...new Set(
-      conflicting.flatMap((r) => r.access_request_items.map((i) => i.access_type_id)),
-    )];
-    const requestIds = conflicting.map((r) => r.id);
+  if (conflicting.length === 0) {
+    return;
+  }
+
+  // For each conflicting request, expand its items and check for overlap
+  const conflictingTypeIds = new Set();
+  const conflictingRequestIds = [];
+
+  for (const otherRequest of conflicting) {
+    const otherExpandedIds = await _expandItemsToAccessTypeIds(prisma, otherRequest.access_request_items);
+    for (const id of otherExpandedIds) {
+      if (expandedAccessTypeIds.has(id)) {
+        conflictingTypeIds.add(id);
+        conflictingRequestIds.push(otherRequest.id);
+      }
+    }
+  }
+
+  if (conflictingTypeIds.size > 0) {
     throw createError.Conflict('One or more pending requests already exist for some of the same access types', {
       details: {
-        access_type_ids: conflictingTypeIds,
-        request_ids: requestIds,
+        access_type_ids: Array.from(conflictingTypeIds),
+        request_ids: [...new Set(conflictingRequestIds)],
       },
     });
   }
@@ -380,10 +436,7 @@ async function submitRequest(request_id, requester_id) {
     throw createError.Conflict('Request is no longer in DRAFT status');
   }
 
-  // 1. Reject if the requester already holds active grants for any requested access type
-  await _assertNoActiveGrants(request);
-
-  // 2. Reject if another in-flight request covers any of the same access types
+  // 1. Reject if another in-flight request covers any of the same access types
   await _assertNoInFlightRequests(request);
 
   return prisma.$transaction(async (tx) => {
@@ -455,25 +508,118 @@ function _determineFinalStatus(approvedCount, rejectedCount) {
   return { finalStatus, eventType };
 }
 
-function _updateRequestItem(tx, reviewItem, { grant_id = null } = {}) {
+function _updateRequestItem(tx, reviewItem) {
   return tx.access_request_item.update({
     where: { id: reviewItem.id },
     data: {
       decision: reviewItem.decision,
-      created_grant_id: grant_id ?? Prisma.skip,
     },
   });
 }
 
-function _createGrant(tx, currentRequest, reviewItem, granted_by) {
-  const data = {
-    subject_id: currentRequest.subject_id,
-    resource_id: currentRequest.resource_id,
-    access_type_id: reviewItem.access_type_id,
-    valid_until: reviewItem.approved_until,
-    creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST,
-  };
-  return createGrant(data, granted_by, tx);
+/**
+ * Create grants for all approved items in a request
+ * Expands preset items to their constituent access types, deduplicates, and creates one grant per unique access type
+ * @param {*} tx - Prisma transaction
+ * @param {Object} currentRequest - The access_request being reviewed
+ * @param {Array} approvedItems - Items that were approved (each has { id, decision, approved_until, access_type_id?, preset_id? })
+ * @param {string} granted_by - UUID of the reviewer
+ * @returns {Promise<void>}
+ */
+async function _createGrantsForApprovedItems(tx, currentRequest, approvedItems, granted_by) {
+  // Build a map: access_type_id -> latest approved_until date from any item providing it
+  const accessTypeExpirations = new Map();
+
+  for (const item of approvedItems) {
+    let itemAccessTypeIds = [];
+
+    if (item.access_type_id) {
+      itemAccessTypeIds = [item.access_type_id];
+    } else if (item.preset_id) {
+      // Fetch preset items
+      const presetItems = await tx.grant_preset_item.findMany({
+        where: { preset_id: item.preset_id },
+        select: { access_type_id: true },
+      });
+      itemAccessTypeIds = presetItems.map((pi) => pi.access_type_id);
+    }
+
+    // Record or update expiration for each access type
+    for (const accessTypeId of itemAccessTypeIds) {
+      const existing = accessTypeExpirations.get(accessTypeId);
+      const newExpiration = item.approved_until;
+
+      // Use the later (more distant) expiration date
+      if (!existing || (newExpiration && (!existing || newExpiration > existing))) {
+        accessTypeExpirations.set(accessTypeId, newExpiration);
+      }
+    }
+  }
+
+  // Create one grant per unique access type, superseding any existing active grant for the same tuple.
+  for (const [accessTypeId, validUntil] of accessTypeExpirations.entries()) {
+    const now = new Date();
+
+    const existingGrant = await tx.grant.findFirst({
+      where: {
+        subject_id: currentRequest.subject_id,
+        resource_id: currentRequest.resource_id,
+        access_type_id: accessTypeId,
+        revoked_at: null,
+        valid_from: { lte: now },
+        OR: [
+          { valid_until: null },
+          { valid_until: { gt: now } },
+        ],
+      },
+    });
+
+    const grantData = {
+      subject_id: currentRequest.subject_id,
+      resource_id: currentRequest.resource_id,
+      access_type_id: accessTypeId,
+      valid_from: existingGrant ? now : Prisma.skip,
+      valid_until: validUntil ?? Prisma.skip,
+      creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST,
+      source_access_request_id: currentRequest.id,
+    };
+
+    if (existingGrant) {
+      await tx.grant.update({
+        where: { id: existingGrant.id },
+        data: {
+          valid_until: now,
+          revocation_type: GRANT_REVOCATION_TYPE.SUPERSEDED,
+        },
+      });
+
+      const actorName = await resolveEntityName(tx, 'user', granted_by);
+      const fullGrant = await resolveGrant(tx, existingGrant.id);
+
+      await tx.authorization_audit.create({
+        data: {
+          event_type: AUTH_EVENT_TYPE.GRANT_SUPERSEDED,
+          actor_id: granted_by,
+          actor_name: actorName,
+          subject_id: fullGrant.subject_id,
+          subject_name: fullGrant.subject.name,
+          subject_type: fullGrant.subject.type,
+          metadata: {
+            resource_id: fullGrant.resource_id,
+            resource_type: fullGrant.resource.type,
+            resource_name: fullGrant.resource.name,
+            access_type_name: fullGrant.access_type.name,
+            superseded_by_request_id: currentRequest.id,
+          },
+          target_type: TARGET_TYPE.GRANT,
+          target_id: fullGrant.id,
+        },
+      });
+    }
+
+    // eslint-disable-next-line no-await-in-loop
+    await createGrant(grantData, granted_by, tx);
+  }
 }
 
 /**
@@ -481,35 +627,56 @@ function _createGrant(tx, currentRequest, reviewItem, granted_by) {
  * Reviewer approves or rejects each request item and submits the review.
  * Approved items will have grants created automatically.
  *
+ * Presets are expanded to grants at this stage, with deduplication at the access_type level.
  * Protection against concurrent reviews or withdrawals is implemented - optimistic concurrency control
  *
  * @param {string} request_id
  * @param {string} reviewer_id - UUID of the user performing the review
  * @param {Object} options
- * @param {Array<{id: number, access_type_id: number, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.review_items - Decision for each item
+ * @param {Array<{id: string, decision: 'APPROVED' | 'REJECTED', approved_until?: Date}>} options.item_decisions - Decision for each item (identified by UUID)
  * @param {string} [options.decision_reason] - Overall review comment
  * @returns {Promise<Object>} Updated access request with review decisions
  */
 async function submitReview({ request_id, reviewer_id, options = {} }) {
-  const { review_items: reviewItems, decision_reason } = options;
+  const { item_decisions: itemDecisions, decision_reason } = options;
 
   // Fetch current request with items
   const currentRequest = await prisma.access_request.findUniqueOrThrow({
     where: { id: request_id },
     include: {
-      access_request_items: true,
+      access_request_items: {
+        select: {
+          id: true, access_type_id: true, preset_id: true, requested_until: true,
+        },
+      },
     },
   });
 
   // validate decisions match request items
-  _validateReviewItems(currentRequest.access_request_items, reviewItems);
+  _validateReviewItems(currentRequest.access_request_items, itemDecisions);
 
-  // Count approvals and rejections
-  const { approvedCount, rejectedCount } = reviewItems.reduce((acc, curr) => {
-    if (curr.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) acc.approvedCount += 1;
-    else if (curr.decision === ACCESS_REQUEST_ITEM_DECISION.REJECTED) acc.rejectedCount += 1;
-    return acc;
-  }, { approvedCount: 0, rejectedCount: 0 });
+  // Count approvals and rejections, and collect approved items
+  let approvedCount = 0;
+  let rejectedCount = 0;
+  const approvedItems = [];
+
+  const itemDecisionMap = new Map(itemDecisions.map((d) => [d.id, d]));
+
+  for (const item of currentRequest.access_request_items) {
+    const decision = itemDecisionMap.get(item.id);
+    if (decision.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) {
+      approvedCount += 1;
+      approvedItems.push({
+        id: item.id,
+        decision: decision.decision,
+        approved_until: decision.approved_until,
+        access_type_id: item.access_type_id,
+        preset_id: item.preset_id,
+      });
+    } else if (decision.decision === ACCESS_REQUEST_ITEM_DECISION.REJECTED) {
+      rejectedCount += 1;
+    }
+  }
 
   // Determine final request status based on item decisions
   const { finalStatus, eventType } = _determineFinalStatus(approvedCount, rejectedCount);
@@ -534,23 +701,20 @@ async function submitReview({ request_id, reviewer_id, options = {} }) {
       throw createError.Conflict('Request is no longer under review');
     }
 
-    // fetch updated request items to ensure we have the latest data after locking the request
+    // fetch updated request for audit
     const latestRequest = await tx.access_request.findUniqueOrThrow({
       where: { id: request_id },
     });
 
-    // create grants for approved items and update request items with decisions and grant references
-    // eslint-disable-next-line no-restricted-syntax
-    for (const reviewItem of reviewItems) {
-      if (reviewItem.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) {
-        // eslint-disable-next-line no-await-in-loop
-        const grant = await _createGrant(tx, latestRequest, reviewItem, reviewer_id);
-        // eslint-disable-next-line no-await-in-loop
-        await _updateRequestItem(tx, reviewItem, { grant_id: grant.id });
-      } else {
-        // eslint-disable-next-line no-await-in-loop
-        await _updateRequestItem(tx, reviewItem);
-      }
+    // Create grants for all approved items at once (presets are expanded and deduplicated)
+    if (approvedItems.length > 0) {
+      await _createGrantsForApprovedItems(tx, latestRequest, approvedItems, reviewer_id);
+    }
+
+    // Update all request items with their decisions
+    for (const itemDecision of itemDecisions) {
+      // eslint-disable-next-line no-await-in-loop
+      await _updateRequestItem(tx, itemDecision);
     }
 
     // Create audit record for review
@@ -879,5 +1043,5 @@ module.exports = {
   getRequestsByUser,
   getRequestsPendingReviewForUser,
   getRequestsReviewedByUser,
-  accessRequestStates: config.states,
+  ACCESS_REQUEST_STATES: config.states,
 };

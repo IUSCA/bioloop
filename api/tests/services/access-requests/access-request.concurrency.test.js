@@ -158,7 +158,6 @@ describe('access requests - concurrency', () => {
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
-        access_type_id: item.access_type_id,
         decision: 'REJECTED',
       }));
 
@@ -166,12 +165,12 @@ describe('access requests - concurrency', () => {
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
       ]);
 
@@ -192,22 +191,73 @@ describe('access requests - concurrency', () => {
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
-        access_type_id: item.access_type_id,
         decision: 'APPROVED',
+        approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
       }));
 
       await Promise.allSettled([
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
       ]);
+
+      const grantCount = await prisma.grant.count({
+        where: {
+          subject_id: requester.subject_id,
+          resource_id: dataset.resource_id,
+          access_type_id: viewMetadataTypeId,
+          revoked_at: null,
+        },
+      });
+      expect(grantCount).toBe(1);
+    });
+
+    it('concurrent preset-based review only creates one set of grants', async () => {
+      const preset = await prisma.grant_preset.create({
+        data: {
+          name: `test-concurrent-preset-${Date.now()}`,
+          slug: `test-concurrent-preset-${Date.now()}`,
+          is_active: true,
+          access_type_items: {
+            create: [{ access_type_id: viewMetadataTypeId }],
+          },
+        },
+      });
+
+      const ar = await newDraftRequest([{ preset_id: preset.id }]);
+      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+
+      const reviewItems = submitted.access_request_items.map((item) => ({
+        id: item.id,
+        decision: 'APPROVED',
+        approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      }));
+
+      const results = await Promise.allSettled([
+        arService.submitReview({
+          request_id: submitted.id,
+          reviewer_id: reviewer.subject_id,
+          options: { item_decisions: reviewItems },
+        }),
+        arService.submitReview({
+          request_id: submitted.id,
+          reviewer_id: reviewer.subject_id,
+          options: { item_decisions: reviewItems },
+        }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason).toMatchObject({ status: 409 });
 
       const grantCount = await prisma.grant.count({
         where: {
@@ -228,7 +278,6 @@ describe('access requests - concurrency', () => {
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
-        access_type_id: item.access_type_id,
         decision: 'REJECTED',
       }));
 
@@ -236,7 +285,7 @@ describe('access requests - concurrency', () => {
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
         arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
       ]);
@@ -255,7 +304,6 @@ describe('access requests - concurrency', () => {
 
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
-        access_type_id: item.access_type_id,
         decision: 'REJECTED',
       }));
 
@@ -263,7 +311,7 @@ describe('access requests - concurrency', () => {
         arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
-          options: { review_items: reviewItems },
+          options: { item_decisions: reviewItems },
         }),
         arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
       ]);
@@ -371,6 +419,14 @@ describe('access requests - concurrency', () => {
         },
         data: { revoked_at: new Date() },
       });
+
+      // Clean up any remaining requests for the test group
+      await prisma.access_request.deleteMany({
+        where: {
+          subject_id: testGroup.id,
+          resource_id: dataset.resource_id,
+        },
+      }).catch(() => {});
     });
 
     it('concurrent submit on same DRAFT group request — exactly one succeeds', async () => {

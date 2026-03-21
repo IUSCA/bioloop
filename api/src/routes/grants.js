@@ -22,6 +22,15 @@ router.get(
   }),
 );
 
+// List grant presets
+router.get(
+  '/presets',
+  asyncHandler(async (req, res) => {
+    const presets = await grantService.listPresets();
+    res.json(presets);
+  }),
+);
+
 // Create a grant
 router.post(
   '/',

@@ -260,6 +260,44 @@ async function deleteUser(userId) {
   // subject row is deleted by DB trigger after user deletion
 }
 
+// ─────────────────────────────────────────────
+// Grant & General
+// ─────────────────────────────────────────────
+
+/**
+ * Create a test grant directly via Prisma.
+ * @param {Object} data - Grant data
+ * @param {string} data.subject_id - Subject receiving the grant
+ * @param {string} data.resource_id - Resource being granted
+ * @param {number} data.access_type_id - Access type
+ * @param {string} data.granted_by - User grant on behalf of
+ * @param {Date} [data.revoked_at] - Optional revocation timestamp
+ */
+async function createTestGrant({
+  subject_id, resource_id, access_type_id, granted_by, revoked_at = null,
+}) {
+  return prisma.grant.create({
+    data: {
+      subject_id,
+      resource_id,
+      access_type_id,
+      granted_by,
+      revoked_at,
+      creation_type: 'MANUAL',
+    },
+  });
+}
+
+/**
+ * Generic entity deletion function.
+ * Attempts to delete a resource by ID.
+ * @param {string} id - Resource ID or other entity ID
+ */
+async function deleteEntity(id) {
+  // Try to delete as a resource (dataset, collection, etc.)
+  await prisma.resource.deleteMany({ where: { id } }).catch(() => {});
+}
+
 module.exports = {
   createTestUser,
   createTestGroup,
@@ -275,4 +313,7 @@ module.exports = {
   deleteCollection,
   deleteGroup,
   deleteUser,
+  // grants & general
+  createTestGrant,
+  deleteEntity,
 };

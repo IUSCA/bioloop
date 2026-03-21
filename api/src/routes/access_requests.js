@@ -21,7 +21,7 @@ router.get(
   validate([
     query('resource_id').optional().isUUID(),
     query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
-    query('status').optional().isIn(accessRequestsService.accessRequestStates),
+    query('status').optional().isIn(accessRequestsService.ACCESS_REQUEST_STATES),
     query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
@@ -55,8 +55,18 @@ router.post(
     body('subject_id').isUUID().notEmpty(), // Who/what this request is for
     body('purpose').isString().notEmpty(),
     body('items').isArray({ min: 1 }),
-    body('items.*.access_type_id').isInt(),
+    body('items.*.access_type_id').optional().isInt(),
+    body('items.*.preset_id').optional().isInt(),
     body('items.*.requested_until').optional().isISO8601().toDate(),
+    // Custom validator: each item must have exactly one of access_type_id or preset_id
+    body('items.*').custom((item) => {
+      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+        throw new Error('Item must have exactly one of access_type_id or preset_id');
+      }
+      return true;
+    }),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
   authorize('access_request', 'create'),
@@ -66,10 +76,20 @@ router.post(
 
     const data = _.pick(['type', 'resource_id', 'subject_id', 'purpose', 'items'], req.body);
 
-    // validate items are unique by access_type_id within the request
-    const accessTypeIds = data.items.map((item) => item.access_type_id);
+    // Validate access_type_id items are unique within the request
+    const accessTypeIds = data.items
+      .filter((item) => item.access_type_id !== undefined)
+      .map((item) => item.access_type_id);
     if (new Set(accessTypeIds).size !== accessTypeIds.length) {
       return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+    }
+
+    // Validate preset_id items are unique within the request
+    const presetIds = data.items
+      .filter((item) => item.preset_id !== undefined)
+      .map((item) => item.preset_id);
+    if (new Set(presetIds).size !== presetIds.length) {
+      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
     }
 
     const record = await accessRequestsService.createAccessRequest(data, req.user.subject_id);
@@ -164,8 +184,18 @@ router.put(
     param('id').isUUID(),
     body('purpose').optional().isString().notEmpty(),
     body('items').optional().isArray({ min: 1 }),
-    body('items.*.access_type_id').isInt(),
+    body('items.*.access_type_id').optional().isInt(),
+    body('items.*.preset_id').optional().isInt(),
     body('items.*.requested_until').optional().isISO8601().toDate(),
+    // Custom validator: each item must have exactly one of access_type_id or preset_id
+    body('items.*').custom((item) => {
+      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+        throw new Error('Item must have exactly one of access_type_id or preset_id');
+      }
+      return true;
+    }),
   ]),
   authorize('access_request', 'update'),
   asyncHandler(async (req, res) => {
@@ -174,11 +204,20 @@ router.put(
 
     const data = pickNonNil(_.pick(['purpose', 'items'], req.body));
 
-    // validate items are unique by access_type_id within the request if items are provided
+    // Validate items are unique by access_type_id and preset_id if items are provided
     if (data.items) {
-      const accessTypeIds = data.items.map((item) => item.access_type_id);
+      const accessTypeIds = data.items
+        .filter((item) => item.access_type_id !== undefined)
+        .map((item) => item.access_type_id);
       if (new Set(accessTypeIds).size !== accessTypeIds.length) {
         return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+      }
+
+      const presetIds = data.items
+        .filter((item) => item.preset_id !== undefined)
+        .map((item) => item.preset_id);
+      if (new Set(presetIds).size !== presetIds.length) {
+        return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
       }
     }
 
@@ -209,9 +248,8 @@ router.post(
   validate([
     param('id').isUUID(),
     body('item_decisions').isArray({ min: 1 }),
-    body('item_decisions.*.id').isInt(),
-    body('item_decisions.*.decision').isIn(['APPROVE', 'REJECT']),
-    body('item_decisions.*.access_type_id').isInt(),
+    body('item_decisions.*.id').isUUID(),
+    body('item_decisions.*.decision').isIn(['APPROVED', 'REJECTED']),
     body('item_decisions.*.approved_until').optional().isISO8601().toDate(),
     body('decision_reason').isString().notEmpty(),
   ]),

@@ -4,7 +4,7 @@
  */
 
 const {
-  Prisma, GRANT_CREATION_TYPE, RESOURCE_TYPE,
+  Prisma, GRANT_CREATION_TYPE, GRANT_REVOCATION_TYPE, RESOURCE_TYPE,
   GROUP_MEMBER_ROLE,
 } = require('@prisma/client');
 const createError = require('http-errors');
@@ -119,6 +119,7 @@ async function _createGrant(tx, data, granted_by) {
         granted_by,
         justification: data.justification ?? Prisma.skip,
         issuing_authority_id: issuing_authority_id ?? Prisma.skip,
+        source_access_request_id: data.source_access_request_id ?? Prisma.skip,
       },
     });
   } catch (e) {
@@ -201,6 +202,7 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
         revoked_at: new Date(),
         revoked_by: actor_id,
         revocation_reason: reason ?? Prisma.skip,
+        revocation_type: GRANT_REVOCATION_TYPE.MANUAL,
         revoking_authority_id: revoking_authority_id ?? Prisma.skip,
       },
     });
@@ -603,6 +605,24 @@ async function listAccessTypes() {
 }
 
 /**
+ * List all active grant presets with their access types
+ * @returns {Promise<Array>} List of active presets with nested access_type_items
+ */
+async function listPresets() {
+  return prisma.grant_preset.findMany({
+    where: { is_active: true },
+    include: {
+      access_type_items: {
+        include: {
+          access_type: true,
+        },
+      },
+    },
+    orderBy: { name: 'asc' },
+  });
+}
+
+/**
  * List all grants that are expiring within a certain number of days
  * @param {Object} params
  * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
@@ -727,6 +747,8 @@ async function listExpiringGrantsForAdmin({
 }
 
 module.exports = {
+  GRANT_OVERLAP_ERROR_MSG,
+
   createGrant,
   revokeGrant,
 
@@ -747,6 +769,7 @@ module.exports = {
   listGrantsForSubject,
   listGrantsForResource,
   listAccessTypes,
+  listPresets,
   listExpiringGrants,
   listExpiringGrantsForAdmin,
   getPrismaGrantValidityFilter,

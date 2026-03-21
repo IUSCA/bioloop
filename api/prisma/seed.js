@@ -525,6 +525,23 @@ async function main() {
     skipDuplicates: true,
   });
 
+  if (accessSeedData.grantPresets?.length) {
+    await Promise.all(
+      accessSeedData.grantPresets.map((p) => prisma.grant_preset.upsert({
+        where: { id: p.id },
+        update: {},
+        create: p,
+      })),
+    );
+  }
+
+  if (accessSeedData.grantPresetItems?.length) {
+    await prisma.grant_preset_item.createMany({
+      data: accessSeedData.grantPresetItems,
+      skipDuplicates: true,
+    });
+  }
+
   await Promise.all(
     accessSeedData.accessRequests.map((r) => prisma.access_request.upsert({
       where: { id: r.id },
