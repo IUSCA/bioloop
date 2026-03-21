@@ -16,6 +16,7 @@
  *   --dry-run           Print what would be created/skipped without touching the DB
  *   --oneoff-only       Only create one-off notifications; skip stable ones
  *   --stable-only       Only create stable notifications; skip one-offs
+ *   --no-text-prefix    Do not prepend "(test notification #id)" to body text
  *   --help, -h          Show this help text and exit
  *
  * IDEMPOTENCY
@@ -82,6 +83,7 @@ const FORCE = args.includes('--force') || args.includes('-f');
 const DRY_RUN = args.includes('--dry-run');
 const ONEOFF_ONLY = args.includes('--oneoff-only');
 const STABLE_ONLY = args.includes('--stable-only');
+const NO_TEXT_PREFIX = args.includes('--no-text-prefix');
 
 let TARGET_USERNAME = 'e2eUser';
 const userIdx = args.indexOf('--user');
@@ -212,8 +214,8 @@ const STABLE_DEFINITIONS = [
     seed_key: 'dataset.approved',
     data: {
       type: 'dataset',
-      label: 'Dataset approved',
-      text: 'genomics_dataset_001 has been approved by an operator and is now available for download.',
+      label: 'Dataset created',
+      text: 'genomics_dataset_001 was registered.',
       metadata: {
         _seed_key: 'dataset.approved',
         links: [
@@ -540,6 +542,7 @@ async function main() {
   console.log(`  dry-run     : ${DRY_RUN}`);
   console.log(`  oneoff-only : ${ONEOFF_ONLY}`);
   console.log(`  stable-only : ${STABLE_ONLY}`);
+  console.log(`  no-text-prefix : ${NO_TEXT_PREFIX}`);
   console.log('');
 
   // Resolve target user
@@ -623,15 +626,17 @@ async function main() {
           });
         }
 
-        await prisma.notification.update({
-          where: { id: notif.id },
-          data: {
-            text: withTestNotificationPrefix({
-              id: notif.id,
-              text: notif.text,
-            }),
-          },
-        });
+        if (!NO_TEXT_PREFIX) {
+          await prisma.notification.update({
+            where: { id: notif.id },
+            data: {
+              text: withTestNotificationPrefix({
+                id: notif.id,
+                text: notif.text,
+              }),
+            },
+          });
+        }
 
         log(existing ? 'recreate' : 'create', def.seed_key, `id=${notif.id}`);
       } catch (err) {
@@ -669,15 +674,17 @@ async function main() {
           },
         });
 
-        await prisma.notification.update({
-          where: { id: notif.id },
-          data: {
-            text: withTestNotificationPrefix({
-              id: notif.id,
-              text: notif.text,
-            }),
-          },
-        });
+        if (!NO_TEXT_PREFIX) {
+          await prisma.notification.update({
+            where: { id: notif.id },
+            data: {
+              text: withTestNotificationPrefix({
+                id: notif.id,
+                text: notif.text,
+              }),
+            },
+          });
+        }
 
         log('oneoff', def.data.label, `id=${notif.id}`);
         summary.oneoff++;

@@ -18,11 +18,15 @@ import toast from "@/services/toast";
 export const useNotificationStore = defineStore("notification", () => {
   const pageSize = 20;
   let fetchRequestSeq = 0;
-  const loading = ref(false);
+  /** True while the paginated notification list is being fetched (GET). */
+  const listFetching = ref(false);
+  /** True while a mutating request runs (state PATCH, mark-all, global dismiss). */
+  const mutationPending = ref(false);
   const appNotifications = ref([]);
   const unreadCount = ref(0);
   const totalMatchedCount = ref(0);
   const hasMoreNotifications = ref(false);
+  const searchEchoLock = ref(false);
   const filters = ref({
     read: false,
     archived: false,
@@ -75,10 +79,25 @@ export const useNotificationStore = defineStore("notification", () => {
 
   /** Immutably replaces a single filter key to trigger Vue reactivity cleanly. */
   function setFilter(key, value) {
+    if (key === "search") {
+      const normalized = value == null ? "" : String(value);
+      if (searchEchoLock.value && normalized.trim() !== "") {
+        return;
+      }
+      filters.value = {
+        ...filters.value,
+        [key]: normalized,
+      };
+      return;
+    }
     filters.value = {
       ...filters.value,
       [key]: value,
     };
+  }
+
+  function setSearchEchoLock(locked) {
+    searchEchoLock.value = Boolean(locked);
   }
 
   function clearFilters() {
@@ -146,7 +165,7 @@ export const useNotificationStore = defineStore("notification", () => {
       return Promise.resolve();
     }
     const requestSeq = ++fetchRequestSeq;
-    loading.value = true;
+    listFetching.value = true;
     return notificationService
       .getNotifications({
         forSelf,
@@ -176,13 +195,13 @@ export const useNotificationStore = defineStore("notification", () => {
       })
       .finally(() => {
         if (requestSeq !== fetchRequestSeq) return;
-        loading.value = false;
+        listFetching.value = false;
       });
   }
 
   /** Loads the next page of notifications (infinite scroll trigger). No-ops if already loading or exhausted. */
   function fetchMoreNotifications({ forSelf = false, username = null } = {}) {
-    if (loading.value || !hasMoreNotifications.value) return Promise.resolve();
+    if (listFetching.value || !hasMoreNotifications.value) return Promise.resolve();
     return fetchNotifications({
       forSelf,
       username,
@@ -207,7 +226,7 @@ export const useNotificationStore = defineStore("notification", () => {
     if (forSelf && !username) {
       return Promise.resolve();
     }
-    loading.value = true;
+    mutationPending.value = true;
     return notificationService
       .updateNotificationState(id, data, { forSelf, username })
       .then(() => refreshNotifications({ forSelf, username }))
@@ -221,7 +240,7 @@ export const useNotificationStore = defineStore("notification", () => {
         toast.error("Could not update notification state.");
       })
       .finally(() => {
-        loading.value = false;
+        mutationPending.value = false;
       });
   }
 
@@ -229,7 +248,7 @@ export const useNotificationStore = defineStore("notification", () => {
     if (forSelf && !username) {
       return Promise.resolve();
     }
-    loading.value = true;
+    mutationPending.value = true;
     return notificationService
       .markAllRead({ forSelf, username })
       .then((res) => {
@@ -245,7 +264,7 @@ export const useNotificationStore = defineStore("notification", () => {
         toast.error("Could not mark all notifications as read.");
       })
       .finally(() => {
-        loading.value = false;
+        mutationPending.value = false;
       });
   }
 
@@ -256,7 +275,7 @@ export const useNotificationStore = defineStore("notification", () => {
     if (forSelf && !username) {
       return Promise.resolve();
     }
-    loading.value = true;
+    mutationPending.value = true;
     return notificationService
       .dismissNotificationGlobally(id)
       .then(() => refreshNotifications({ forSelf, username }))
@@ -274,7 +293,7 @@ export const useNotificationStore = defineStore("notification", () => {
         toast.error("Could not globally dismiss notification.");
       })
       .finally(() => {
-        loading.value = false;
+        mutationPending.value = false;
       });
   }
 
@@ -284,6 +303,7 @@ export const useNotificationStore = defineStore("notification", () => {
     totalMatchedCount,
     hasMoreNotifications,
     filters,
+    searchEchoLock,
     addNotification,
     removeNotification,
     fetchNotifications,
@@ -294,7 +314,9 @@ export const useNotificationStore = defineStore("notification", () => {
     markAllRead,
     dismissNotificationGlobally,
     setFilter,
+    setSearchEchoLock,
     clearFilters,
-    loading,
+    listFetching,
+    mutationPending,
   };
 });

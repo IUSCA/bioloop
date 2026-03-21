@@ -189,7 +189,6 @@ const exports = {
       },
     },
     delivery: {
-      direct: { color: "info" },
       roleBroadcast: { color: "primary" },
     },
     actions: {

@@ -9,6 +9,7 @@
  * (e.g. 'admin', 'user') that the stub resolves into a real JWT.
  */
 const http = require('node:http');
+const https = require('node:https');
 const { expect } = require('@playwright/test');
 const config = require('config');
 const { post } = require('../../../../api');
@@ -30,7 +31,31 @@ const notificationVisibleCount = (page) => page.getByTestId('notification-visibl
  */
 const notificationOpenButtonCount = (page) =>
   page.locator('[data-testid="notification-count"]:has([data-testid="notification-open-button"]:visible)').first();
-const searchInput = (page) => page.locator('input[data-testid="notification-search"]:visible').first();
+
+/** Visible notification dropdown panel (avoids hidden Vuestic menu clones in the DOM). */
+const visibleNotificationMenu = (page) =>
+  page.locator('[data-testid="notification-menu-items"]:visible').first();
+
+const searchInput = (page) =>
+  visibleNotificationMenu(page).getByPlaceholder('Search notifications').first();
+
+/**
+ * Vuestic often moves focus to an inner node (icon, inner button) while the
+ * interactive control is the outer host. Use this instead of expect(loc).toBeFocused().
+ */
+const locatorContainsActiveElement = async (locator) =>
+  locator.evaluate((el) => {
+    const active = document.activeElement;
+    return Boolean(active && (el === active || el.contains(active)));
+  });
+
+/**
+ * Fails if the search filter chip is still attached and visible in the menu.
+ * Prefer this over toHaveCount(0), which can miss visible duplicates outside the scoped locator.
+ */
+const expectSearchFilterChipHidden = async (menu, { timeout = 15000 } = {}) => {
+  await expect(menu.getByTestId('active-filter-chip-search')).toBeHidden({ timeout });
+};
 
 const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')).profile;
 const getToken = async (page) => page.evaluate(() => localStorage.getItem('token'));
@@ -40,7 +65,7 @@ const getToken = async (page) => page.evaluate(() => localStorage.getItem('token
  * Vuestic's menu open animation. Returns the menu locator.
  */
 const openNotificationsMenu = async (page) => {
-  const menu = page.getByTestId('notification-menu-items');
+  const menu = visibleNotificationMenu(page);
   for (let i = 0; i < 3; i += 1) {
     if (await menu.isVisible()) return menu;
     await page.getByTestId('notification-open-button').click();
@@ -148,6 +173,37 @@ const createDirectNotification = async ({
 };
 
 /**
+ * Creates a ROLE_BROADCAST notification for one or more roles (Prisma role ids).
+ */
+const createRoleBroadcastNotification = async ({
+  page,
+  token,
+  label,
+  text,
+  roleIds,
+  metadata = {},
+  type = 'E2E_TEST',
+}) => {
+  const response = await post({
+    requestContext: page.request,
+    token,
+    url: '/notifications',
+    data: {
+      type,
+      label,
+      text,
+      metadata,
+      role_ids: roleIds,
+    },
+  });
+  if (response.status() !== 200) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(`Create role broadcast notification failed: ${response.status()} ${JSON.stringify(body)}`);
+  }
+  return response.json();
+};
+
+/**
  * Convenience wrapper: creates a notification targeted at the 'user' fixture
  * account, using an admin token for authorization.
  */
@@ -190,16 +246,33 @@ const expectHeaderControlsEnabled = async (page) => {
  * @param {{ token: string, streamPath?: string }} opts
  */
 const openDirectSseWatcher = ({ token, streamPath = '/notifications/stream' }) => {
-  const baseUrl = process.env.TEST_DIRECT_API_BASE_URL || process.env.TEST_API_BASE_URL || 'http://localhost';
-  const streamUrl = new URL(`${streamPath}?token=${encodeURIComponent(token)}`, baseUrl);
+  const base = (
+    process.env.TEST_DIRECT_API_BASE_URL
+    || process.env.TEST_API_BASE_URL
+    || 'http://localhost/api'
+  ).replace(/\/$/, '');
+  const path = streamPath.startsWith('/') ? streamPath : `/${streamPath}`;
+  const streamUrl = new URL(`${base}${path}?token=${encodeURIComponent(token)}`);
   let req = null;
   let res = null;
   let buffer = '';
   let onEvent = null;
   let closed = false;
 
+  const client = streamUrl.protocol === 'https:' ? https : http;
+  const requestOpts = {
+    method: 'GET',
+    headers: { Accept: 'text/event-stream' },
+  };
+  if (
+    streamUrl.protocol === 'https:'
+    && (streamUrl.hostname === 'localhost' || streamUrl.hostname === '127.0.0.1')
+  ) {
+    requestOpts.rejectUnauthorized = false;
+  }
+
   const readyPromise = new Promise((resolve, reject) => {
-    req = http.request(streamUrl, { method: 'GET', headers: { Accept: 'text/event-stream' } }, (_res) => {
+    req = client.request(streamUrl, requestOpts, (_res) => {
       res = _res;
       if (res.statusCode !== 200) {
         reject(new Error(`SSE stream open failed with status ${res.statusCode}`));
@@ -300,6 +373,7 @@ module.exports = {
   countContains,
   createDirectNotification,
   createDirectNotificationForUser,
+  createRoleBroadcastNotification,
   currentRole,
   ensureNotificationOpenButtonVisible,
   expectHeaderControlsDisabled,
@@ -317,6 +391,9 @@ module.exports = {
   openDirectSseWatcher,
   openNotificationsMenu,
   parseTokenProfile,
+  visibleNotificationMenu,
+  locatorContainsActiveElement,
+  expectSearchFilterChipHidden,
   refreshNotificationView,
   searchInput,
   toggleArchiveById,

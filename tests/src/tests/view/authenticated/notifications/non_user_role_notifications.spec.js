@@ -6,10 +6,12 @@ const {
   attachUiErrorTracker,
   countContains,
   createDirectNotification,
+  createRoleBroadcastNotification,
   currentRole,
   ensureNotificationOpenButtonVisible,
   expectHeaderControlsDisabled,
   expectHeaderControlsEnabled,
+  expectSearchFilterChipHidden,
   fetchCurrentUser,
   fetchUserByTicket,
   globalDismissById,
@@ -24,6 +26,7 @@ const {
   toggleBookmarkById,
   toggleReadById,
   searchInput,
+  visibleNotificationMenu,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
@@ -58,7 +61,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const createdLabel = page.getByTestId(labelById(created.id));
     await expect(createdLabel).toBeVisible();
     await expect(createdLabel.locator('xpath=ancestor::div[contains(@class, "notification-anchor")]'))
-      .toContainText('Direct');
+      .not.toContainText('Direct');
 
     await page.getByTestId(toggleReadById(created.id)).click();
     await expect(createdLabel).toHaveCount(0);
@@ -68,6 +71,34 @@ test.describe.serial('Notifications (admin/operator)', () => {
 
     await page.locator('[data-testid="active-filter-chip-read-clear"]:visible').click();
     await expect(createdLabel).toHaveCount(0);
+  });
+
+  test('privileged viewer sees every broadcast target role on multi-role notifications', async ({ page }, testInfo) => {
+    test.setTimeout(120000);
+    const role = currentRole(testInfo.project.name);
+    const { token } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-broadcast-roles-${suffix}`;
+    const isAdminProject = testInfo.project.name.includes('admin');
+    const roleIds = isAdminProject ? [1, 3] : [2, 3];
+    const expectedRoleChips = isAdminProject ? ['admin', 'user'] : ['operator', 'user'];
+    const created = await createRoleBroadcastNotification({
+      page,
+      token,
+      label,
+      text: `body-${suffix}`,
+      roleIds,
+    });
+
+    await refreshNotificationView(page);
+    const createdLabel = page.locator(`[data-testid="${labelById(created.id)}"]:visible`).first();
+    await expect(createdLabel).toBeVisible({ timeout: 15000 });
+    await createdLabel.scrollIntoViewIfNeeded();
+    const anchor = createdLabel.locator('xpath=ancestor::div[contains(@class, "notification-anchor")]');
+    await expect(anchor).toContainText('Role Broadcast');
+    for (const roleName of expectedRoleChips) {
+      await expect(anchor).toContainText(roleName);
+    }
   });
 
   test('bookmark/archive filters can be toggled and cleared via chips', async ({ page }, testInfo) => {
@@ -121,13 +152,84 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
+    const menu = visibleNotificationMenu(page);
     await searchInput(page).fill(label);
-    await expect(page.getByText(`Search: ${label}`)).toBeVisible();
+    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
+    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
 
-    const searchChipClear = page.locator('[data-testid="active-filter-chip-search-clear"]:visible').first();
-    await expect(searchChipClear).toBeVisible();
-    await searchChipClear.click({ force: true });
+    await menu.getByTestId('active-filter-chip-search-clear').click();
     await expect(searchInput(page)).toHaveValue('');
+    await expectSearchFilterChipHidden(menu);
+  });
+
+  test('search chip stays single when refining query and clears with clear-all-filters', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-${role}-search-refine-${suffix}`;
+
+    await createDirectNotification({
+      page,
+      token,
+      userId,
+      label,
+      text: `Body for ${label}`,
+    });
+
+    await refreshNotificationView(page);
+    const menu = visibleNotificationMenu(page);
+    const input = searchInput(page);
+    await input.fill('E2E');
+    await page.waitForTimeout(400);
+    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
+    await input.pressSequentially(`-${role}-search-refine-${suffix}`);
+    await page.waitForTimeout(400);
+    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
+    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
+
+    await menu.getByTestId('clear-notification-filters').click();
+    await expect(input).toHaveValue('');
+    await expectSearchFilterChipHidden(menu);
+  });
+
+  test('each active filter chip appears at most once and clears individually', async ({ page }, testInfo) => {
+    const role = currentRole(testInfo.project.name);
+    const { token, userId } = await fetchCurrentUser({ page, role });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-${role}-chips-dedup-${suffix}`;
+
+    await createDirectNotification({
+      page,
+      token,
+      userId,
+      label,
+      text: `Body for ${label}`,
+    });
+
+    await refreshNotificationView(page);
+    const menu = visibleNotificationMenu(page);
+    await menu.getByTestId('filter-read').click();
+    await menu.getByTestId('filter-archived').click();
+    await menu.getByTestId('filter-bookmarked').click();
+    await menu.getByTestId('filter-globally-dismissed').click();
+    await searchInput(page).fill(label.slice(0, 12));
+
+    await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
+    await expect(menu.getByTestId('active-filter-chip-archived')).toHaveCount(1);
+    await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(1);
+    await expect(menu.getByTestId('active-filter-chip-globally-dismissed')).toHaveCount(1);
+    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
+
+    await menu.getByTestId('active-filter-chip-search-clear').click();
+    await expectSearchFilterChipHidden(menu);
+    await menu.getByTestId('active-filter-chip-read-clear').click();
+    await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
+    await menu.getByTestId('active-filter-chip-archived-clear').click();
+    await expect(menu.getByTestId('active-filter-chip-archived')).toHaveCount(0);
+    await menu.getByTestId('active-filter-chip-bookmarked-clear').click();
+    await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(0);
+    await menu.getByTestId('active-filter-chip-globally-dismissed-clear').click();
+    await expect(menu.getByTestId('active-filter-chip-globally-dismissed')).toHaveCount(0);
   });
 
   test('mark all as read removes unread rows and shows under read filter', async ({ page }, testInfo) => {
@@ -422,15 +524,23 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const menuPanel = page.locator('[data-testid="notification-menu-items"]:visible').first();
     const scopedReadFilter = menuPanel.locator('[data-testid="filter-read"]').first();
     const scopedBookmarkedFilter = menuPanel.locator('[data-testid="filter-bookmarked"]').first();
-    const scopedSearchInput = menuPanel.locator('input[data-testid="notification-search"]').first();
+    const scopedSearchInput = menuPanel.getByPlaceholder('Search notifications').first();
 
     await scopedReadFilter.click();
     await scopedBookmarkedFilter.click();
     await expect(scopedSearchInput).toBeVisible();
     await expect(scopedSearchInput).toBeEnabled();
     await scopedSearchInput.click();
-    await page.keyboard.type(labelPrefix);
-    await expect(menuPanel.locator('[data-testid="active-filter-chip-search"]')).toHaveCount(1);
+    const searchListRequest = page.waitForResponse(
+      (r) =>
+        r.request().method() === 'GET' &&
+        r.url().includes('/api/notifications') &&
+        r.url().includes(encodeURIComponent(labelPrefix)),
+      { timeout: 15000 },
+    );
+    await scopedSearchInput.fill(labelPrefix);
+    await expect(scopedSearchInput).toHaveValue(labelPrefix, { timeout: 10000 });
+    await searchListRequest;
 
     const totalRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
       headers: {
@@ -451,7 +561,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const expectedTotal = Number(totalBody.total || 0);
     expect(expectedTotal).toBeGreaterThanOrEqual(createdCount);
 
-    let secondPageLabel = null;
+    let secondPageId = null;
     if (expectedTotal > 20) {
       const secondPageRes = await page.request.get(`${config.apiBaseURL}/notifications`, {
         headers: {
@@ -470,21 +580,32 @@ test.describe.serial('Notifications (admin/operator)', () => {
       expect(secondPageRes.status()).toBe(200);
       const secondPageBody = await secondPageRes.json();
       expect(secondPageBody.items.length).toBeGreaterThan(0);
-      const secondPageId = secondPageBody.items[0].id;
-      secondPageLabel = menuPanel.locator(`[data-testid="${labelById(secondPageId)}"]`).first();
+      secondPageId = secondPageBody.items[0].id;
+      const secondPageLabel = menuPanel.locator(`[data-testid="${labelById(secondPageId)}"]`).first();
       await expect(secondPageLabel).toHaveCount(0);
-    }
 
-    await menuPanel.evaluate((el) => {
-      el.scrollTop = el.scrollHeight;
-    });
-
-    if (secondPageLabel) {
-      await expect(secondPageLabel).toBeVisible();
+      const appendRequest = page.waitForResponse(
+        (r) =>
+          r.request().method() === 'GET' &&
+          r.url().includes('/api/notifications') &&
+          r.url().includes('offset=20'),
+        { timeout: 15000 },
+      );
+      await page.getByTestId('notification-menu-scroll').evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
+      await appendRequest;
+      await expect(notificationVisibleCount(page)).toContainText(
+        countContains(expectedTotal),
+      );
+    } else {
+      await page.getByTestId('notification-menu-scroll').evaluate((el) => {
+        el.scrollTop = el.scrollHeight;
+      });
     }
   });
 
-  test('controls are disabled while notification fetch is in flight', async ({ page }, testInfo) => {
+  test('header controls stay usable while notification list fetch is in flight', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -504,7 +625,9 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await page.getByTestId('filter-read').click();
-    await expectHeaderControlsDisabled(page);
+    await page.waitForTimeout(120);
+    await expectHeaderControlsEnabled(page);
+    await page.waitForTimeout(350);
     await expectHeaderControlsEnabled(page);
     await page.unroute(delayedReadFilterRequest);
   });
@@ -791,14 +914,16 @@ test.describe.serial('Notifications (admin/operator)', () => {
     });
 
     await refreshNotificationView(page);
+    const menu = visibleNotificationMenu(page);
     await searchInput(page).fill(label);
-    await page.getByTestId('filter-bookmarked').click();
-    await expect(page.getByText(`Search: ${label}`)).toBeVisible();
-    await expect(page.getByTestId('clear-notification-filters')).toBeVisible();
+    await menu.getByTestId('filter-bookmarked').click();
+    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
+    await expect(menu.getByTestId('clear-notification-filters')).toBeVisible();
 
-    await page.getByTestId('clear-notification-filters').click();
+    await menu.getByTestId('clear-notification-filters').click();
     await expect(searchInput(page)).toHaveValue('');
-    await expect(page.getByTestId('clear-notification-filters')).toHaveCount(0);
+    await expectSearchFilterChipHidden(menu);
+    await expect(menu.getByTestId('clear-notification-filters')).toHaveCount(0);
   });
 
   test('direct notification to user stays invisible to admin/operator', async ({ page }, testInfo) => {
@@ -956,14 +1081,16 @@ test.describe.serial('Notifications (admin/operator)', () => {
       .getByText('External Link');
     await linkButton.click();
 
-    const modal = page.locator('.va-modal').getByText('Untrusted Link', { exact: false });
-    await expect(modal).toBeVisible({ timeout: 3000 });
+    const modalTitle = page
+      .locator('.va-modal .va-modal__title')
+      .getByText('Untrusted Link', { exact: true });
+    await expect(modalTitle).toBeVisible({ timeout: 3000 });
 
-    const modalBody = page.locator('.va-modal').getByText('untrusted link', { exact: false });
-    await expect(modalBody).toBeVisible();
+    const modalBody = page.locator('.va-modal .va-modal__message');
+    await expect(modalBody).toContainText(/untrusted link/i);
 
     await page.locator('.va-modal').getByText('Cancel').click();
-    await expect(modal).not.toBeVisible({ timeout: 3000 });
+    await expect(modalTitle).not.toBeVisible({ timeout: 3000 });
   });
 
   test('trusted link navigates without confirmation modal', async ({ page }, testInfo) => {

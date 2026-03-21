@@ -9,78 +9,20 @@ const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
-const { subscribeUser, publishToUsers } = require('@/services/notifications/sse');
+const { publishNotificationInvalidation } = require('@/services/notifications/invalidation');
 const { resolveEligibleRecipients } = require('@/services/notifications/recipientService');
-const { hasRole, fetchCurrentUserNotifications } = require('@/services/notifications/queryService');
+const {
+  fetchCurrentUserNotifications,
+  isPrivilegedNotificationViewer,
+} = require('@/services/notifications/queryService');
+const {
+  requireAdminOrOperatorNotificationStream,
+  sseStreamHandler,
+} = require('@/services/notifications/streamHandlers');
+const { updateNotificationStateHandler } = require('@/services/notifications/stateUpdateHandler');
 
 const isPermittedTo = accessControl('notifications');
 const router = express.Router();
-
-/**
- * Broadcasts an SSE invalidation event to the given users so their
- * UI can refetch notifications. The `reason` field is informational
- * (e.g. 'created', 'state_updated', 'global_dismissed').
- *
- * @param {{ userIds: number[], reason: string, notificationId?: number|null }} opts
- */
-function publishNotificationInvalidation({
-  userIds = [],
-  reason,
-  notificationId = null,
-}) {
-  publishToUsers({
-    userIds,
-    payload: {
-      type: 'INVALIDATE',
-      reason,
-      notification_id: notificationId,
-    },
-  });
-}
-
-/**
- * Express handler for SSE notification streams. Sends a `ready` event
- * on connect, then forwards per-user invalidation events as
- * `notification` events. A keepalive comment is sent every 25s to
- * prevent proxy/connection timeouts.
- *
- * Mounted on both `/:username/stream` (checkOwnership for user role)
- * and `/stream` (admin/operator).
- */
-function sseStreamHandler(req, res) {
-  // #swagger.tags = ['notifications']
-  // #swagger.summary = Notification invalidation event stream
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  if (typeof res.flushHeaders === 'function') {
-    res.flushHeaders();
-  }
-
-  const sendEvent = (eventName, payload) => {
-    res.write(`event: ${eventName}\n`);
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  };
-
-  sendEvent('ready', {
-    type: 'READY',
-    timestamp: new Date().toISOString(),
-  });
-
-  const unsubscribe = subscribeUser({
-    userId: req.user.id,
-    handler: (payload) => sendEvent('notification', payload),
-  });
-  const heartbeat = setInterval(() => {
-    res.write(': keepalive\n\n');
-  }, 25000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    unsubscribe();
-    res.end();
-  });
-}
 
 router.get(
   '/:username/stream',
@@ -93,6 +35,7 @@ router.get(
 
 router.get(
   '/stream',
+  requireAdminOrOperatorNotificationStream,
   isPermittedTo('read'),
   sseStreamHandler,
 );
@@ -298,94 +241,6 @@ router.post(
   }),
 );
 
-const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
-  // #swagger.tags = ['notifications']
-  // #swagger.summary = Update current user's per-notification state
-
-  const hasStateUpdate = ['is_read', 'is_archived', 'is_bookmarked'].some((key) => req.body[key] !== undefined);
-  if (!hasStateUpdate) {
-    return next(createError.BadRequest('At least one state field must be provided'));
-  }
-
-  let readAt;
-  if (req.body.is_read === undefined) readAt = undefined;
-  else if (req.body.is_read) readAt = new Date();
-  else readAt = null;
-
-  let archivedAt;
-  if (req.body.is_archived === undefined) archivedAt = undefined;
-  else if (req.body.is_archived) archivedAt = new Date();
-  else archivedAt = null;
-
-  let bookmarkedAt;
-  if (req.body.is_bookmarked === undefined) bookmarkedAt = undefined;
-  else if (req.body.is_bookmarked) bookmarkedAt = new Date();
-  else bookmarkedAt = null;
-
-  const data = _.omitBy(_.isUndefined)({
-    is_read: req.body.is_read,
-    read_at: readAt,
-    is_archived: req.body.is_archived,
-    archived_at: archivedAt,
-    is_bookmarked: req.body.is_bookmarked,
-    bookmarked_at: bookmarkedAt,
-  });
-
-  const recipient = await prisma.notification_recipient.findUnique({
-    where: {
-      notification_id_user_id: {
-        notification_id: req.params.id,
-        user_id: req.user.id,
-      },
-    },
-    include: {
-      notification: {
-        select: {
-          is_resolved: true,
-        },
-      },
-    },
-  });
-
-  if (!recipient) {
-    return next(createError.NotFound('Notification not found for current user'));
-  }
-  if (recipient.notification.is_resolved) {
-    return res.status(409).json({
-      code: 'NOTIFICATION_GLOBALLY_DISMISSED',
-      message: 'Notification is globally dismissed and no longer actionable.',
-    });
-  }
-
-  const updated = await prisma.notification_recipient.update({
-    where: {
-      notification_id_user_id: {
-        notification_id: req.params.id,
-        user_id: req.user.id,
-      },
-    },
-    data: {
-      ...data,
-    },
-  });
-
-  publishNotificationInvalidation({
-    userIds: [req.user.id],
-    reason: 'state_updated',
-    notificationId: req.params.id,
-  });
-
-  return res.json({
-    notification_id: req.params.id,
-    user_id: req.user.id,
-    state: {
-      is_read: updated.is_read,
-      is_archived: updated.is_archived,
-      is_bookmarked: updated.is_bookmarked,
-    },
-  });
-});
-
 router.patch(
   '/:username/mark-all-read',
   isPermittedTo('update', { checkOwnership: true }),
@@ -500,8 +355,7 @@ router.patch(
       return next(createError.NotFound('Notification not found'));
     }
 
-    const canGloballyDismiss = hasRole(req.user, 'admin') || hasRole(req.user, 'operator');
-    if (!canGloballyDismiss) {
+    if (!isPrivilegedNotificationViewer(req.user)) {
       return next(createError.Forbidden('Only admin or operator can globally dismiss'));
     }
 

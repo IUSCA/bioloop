@@ -3,6 +3,8 @@ const config = require('config');
 const { randomUUID } = require('node:crypto');
 const {
   createDirectNotificationForUser,
+  createRoleBroadcastNotification,
+  getAdminToken,
   openDirectSseWatcher,
   openNotificationsMenu,
   parseTokenProfile,
@@ -36,7 +38,7 @@ test.describe('Notifications', () => {
 
     if (notificationCount > 0) {
       const firstNotification = anchors.first();
-      await expect(firstNotification).toContainText(/Direct|Role Broadcast/);
+      await expect(firstNotification).not.toContainText('Direct');
       await expect(firstNotification.getByRole('button', { name: 'Dismiss globally' })).toHaveCount(0);
       await expect(page.getByTestId('header-username')).toContainText(userProfile.username);
       return;
@@ -98,6 +100,30 @@ test.describe('Notifications', () => {
     await expect(page.getByTestId(`notification-${created.id}-label`)).toBeVisible();
   });
 
+  test('user does not see role broadcast target chips on role-targeted notifications', async ({ page }) => {
+    test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('notification-open-button')).toBeVisible();
+
+    const adminToken = await getAdminToken(page);
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-user-hidden-broadcast-meta-${suffix}`;
+    const created = await createRoleBroadcastNotification({
+      page,
+      token: adminToken,
+      label,
+      text: `body-${suffix}`,
+      roleIds: [1, 3],
+    });
+
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await openNotificationsMenu(page);
+    const createdLabel = page.locator(`[data-testid="notification-${created.id}-label"]:visible`).first();
+    await expect(createdLabel).toBeVisible({ timeout: 15000 });
+    const anchor = createdLabel.locator('xpath=ancestor::div[contains(@class, "notification-anchor")]');
+    await expect(anchor.getByText('Role Broadcast', { exact: true })).toHaveCount(0);
+  });
+
   test('user SSE stream connects successfully via ownership endpoint', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
 
@@ -125,13 +151,14 @@ test.describe('Notifications', () => {
 
     const userToken = await page.evaluate(() => localStorage.getItem('token'));
 
-    const baseUrl = process.env.TEST_DIRECT_API_BASE_URL || process.env.TEST_API_BASE_URL || 'http://localhost';
-    const streamUrl = new URL(
-      `/notifications/stream?token=${encodeURIComponent(userToken)}`,
-      baseUrl,
-    );
+    const base = (
+      process.env.TEST_DIRECT_API_BASE_URL
+      || process.env.TEST_API_BASE_URL
+      || 'http://localhost/api'
+    ).replace(/\/$/, '');
+    const streamUrl = `${base}/notifications/stream?token=${encodeURIComponent(userToken)}`;
 
-    const streamStatusRes = await page.request.get(streamUrl.toString());
+    const streamStatusRes = await page.request.get(streamUrl);
     expect(streamStatusRes.status()).toBe(403);
   });
 });

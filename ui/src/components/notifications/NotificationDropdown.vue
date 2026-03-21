@@ -1,7 +1,6 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <va-menu placement="left-bottom" :close-on-content-click="false">
-      <template #anchor>
+  <va-menu placement="left-bottom" :close-on-content-click="false">
+    <template #anchor>
         <va-badge
           :offset="[-3, 10]"
           :text="`${badgeCount > 0 ? badgeCount : ''}`"
@@ -20,15 +19,15 @@
             <Icon icon="mdi-bell-outline" height="36px" width="36px" />
           </va-button>
         </va-badge>
-      </template>
+    </template>
 
+    <div
+      class="notification-menu-panel flex flex-col max-h-96"
+      data-testid="notification-menu-items"
+    >
       <div
-        :key="menuRenderKey"
-        class="notification-menu-panel max-h-96 overflow-y-auto"
-        data-testid="notification-menu-items"
-        @scroll.passive="onMenuScroll"
+        class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
       >
-        <div class="px-3 py-2 border-b">
           <div class="notification-top-controls">
             <va-popover message="Unread filter">
               <va-button
@@ -44,8 +43,10 @@
                 "
                 data-testid="filter-unread"
                 aria-label="Unread filter"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="toggleUnreadFilter"
+                @keydown.enter.prevent="toggleUnreadFilter"
+                @keydown.space.prevent="toggleUnreadFilter"
               >
                 <Icon
                   :icon="
@@ -67,8 +68,10 @@
                 "
                 data-testid="filter-read"
                 aria-label="Read filter"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="toggleReadFilter"
+                @keydown.enter.prevent="toggleReadFilter"
+                @keydown.space.prevent="toggleReadFilter"
               >
                 <Icon
                   :icon="
@@ -92,8 +95,10 @@
                 "
                 data-testid="filter-archived"
                 aria-label="Archived filter"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="toggleArchivedFilter"
+                @keydown.enter.prevent="toggleArchivedFilter"
+                @keydown.space.prevent="toggleArchivedFilter"
               >
                 <Icon
                   :icon="
@@ -117,8 +122,10 @@
                 "
                 data-testid="filter-bookmarked"
                 aria-label="Bookmark filter"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="toggleBookmarkedFilter"
+                @keydown.enter.prevent="toggleBookmarkedFilter"
+                @keydown.space.prevent="toggleBookmarkedFilter"
               >
                 <Icon
                   :icon="
@@ -142,8 +149,10 @@
                 "
                 data-testid="filter-globally-dismissed"
                 aria-label="Globally dismissed filter"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="toggleGloballyDismissedFilter"
+                @keydown.enter.prevent="toggleGloballyDismissedFilter"
+                @keydown.space.prevent="toggleGloballyDismissedFilter"
               >
                 <Icon
                   :icon="
@@ -162,8 +171,10 @@
                 class="notification-top-control-button"
                 data-testid="mark-all-read"
                 aria-label="Mark all as read"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="onMarkAllRead"
+                @keydown.enter.prevent="onMarkAllRead"
+                @keydown.space.prevent="onMarkAllRead"
               >
                 <Icon :icon="theme.actions.read.icon" />
               </va-button>
@@ -182,31 +193,17 @@
                 size="small"
                 data-testid="clear-notification-filters"
                 aria-label="Clear filters"
-                :disabled="loading"
+                :disabled="mutationPending"
                 @click="handleClearFilters"
+                @keydown.enter.prevent="handleClearFilters"
+                @keydown.space.prevent="handleClearFilters"
               >
                 <Icon icon="mdi:filter-remove-outline" />
               </va-button>
             </va-popover>
           </div>
-          <div class="mt-2">
-            <va-input
-              v-model="searchInput"
-              class="notification-search-input"
-              placeholder="Search notifications"
-              clearable
-              :disabled="loading"
-              @keydown.stop
-              @click.capture="onSearchInputClick"
-              @clear="clearSearchFilter"
-              @focus="onSearchFocus"
-              @blur="onSearchBlur"
-              data-testid="notification-search"
-            />
-          </div>
           <div
             v-if="hasActiveFilterChips"
-            :key="filterChipsRenderKey"
             class="flex gap-2 mt-2 flex-wrap"
           >
             <div
@@ -220,8 +217,11 @@
                 class="notification-filter-chip__clear"
                 aria-label="Clear Read filter"
                 data-testid="active-filter-chip-read-clear"
-                :disabled="loading"
+                tabindex="0"
+                :disabled="mutationPending"
                 @click.prevent.stop="clearReadFilter"
+                @keydown.enter.prevent.stop="clearReadFilter"
+                @keydown.space.prevent.stop="clearReadFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
@@ -237,8 +237,11 @@
                 class="notification-filter-chip__clear"
                 aria-label="Clear Archived filter"
                 data-testid="active-filter-chip-archived-clear"
-                :disabled="loading"
+                tabindex="0"
+                :disabled="mutationPending"
                 @click.prevent.stop="clearArchivedFilter"
+                @keydown.enter.prevent.stop="clearArchivedFilter"
+                @keydown.space.prevent.stop="clearArchivedFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
@@ -254,8 +257,11 @@
                 class="notification-filter-chip__clear"
                 aria-label="Clear Bookmarked filter"
                 data-testid="active-filter-chip-bookmarked-clear"
-                :disabled="loading"
+                tabindex="0"
+                :disabled="mutationPending"
                 @click.prevent.stop="clearBookmarkedFilter"
+                @keydown.enter.prevent.stop="clearBookmarkedFilter"
+                @keydown.space.prevent.stop="clearBookmarkedFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
@@ -271,63 +277,98 @@
                 class="notification-filter-chip__clear"
                 aria-label="Clear Globally Dismissed filter"
                 data-testid="active-filter-chip-globally-dismissed-clear"
-                :disabled="loading"
+                tabindex="0"
+                :disabled="mutationPending"
                 @click.prevent.stop="clearGloballyDismissedFilter"
+                @keydown.enter.prevent.stop="clearGloballyDismissedFilter"
+                @keydown.space.prevent.stop="clearGloballyDismissedFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
             </div>
             <div
-              v-if="searchInput.trim()"
+              v-if="activeSearchFilter"
               class="notification-filter-chip notification-filter-chip--secondary"
               data-testid="active-filter-chip-search"
             >
-              Search: {{ searchInput }}
+              Search: {{ activeSearchFilter }}
               <button
                 type="button"
                 class="notification-filter-chip__clear"
                 aria-label="Clear Search filter"
                 data-testid="active-filter-chip-search-clear"
-                :disabled="loading"
+                tabindex="0"
+                :disabled="mutationPending"
                 @click.prevent.stop="clearSearchFilter"
+                @keydown.enter.prevent.stop="clearSearchFilter"
+                @keydown.space.prevent.stop="clearSearchFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
             </div>
           </div>
-        </div>
-
-        <va-menu-item v-if="displayedNotifications.length === 0">
-          {{
-            filters.globallyDismissed
-              ? "No globally dismissed notifications"
-              : "No pending notifications"
-          }}
-        </va-menu-item>
-
-        <va-menu-item
-          v-else
-          v-for="notification in displayedNotifications"
-          :key="notification.id"
-        >
-          <notification
-            :notification="notification"
-            :disabled="loading"
-            @toggle-read="onToggleRead"
-            @toggle-archived="onToggleArchived"
-            @toggle-bookmarked="onToggleBookmarked"
-            @toggle-global-dismiss="onGlobalDismiss"
-          ></notification>
-          <va-divider />
-        </va-menu-item>
+          <div class="mt-2">
+            <va-input
+              v-model="searchInput"
+              class="notification-search-input"
+              placeholder="Search notifications"
+              clearable
+              :disabled="mutationPending"
+              @keydown.stop="onSearchInputKeydown"
+              @click.capture="onSearchInputClick"
+              @clear="clearSearchFilter"
+              @focus="onSearchFocus"
+              @blur="onSearchBlur"
+              data-testid="notification-search"
+            />
+          </div>
       </div>
-    </va-menu>
-  </va-inner-loading>
+
+      <div
+        class="notification-menu-list flex-1 min-h-0 overflow-y-auto relative"
+        data-testid="notification-menu-scroll"
+        @scroll.passive="onMenuScroll"
+      >
+        <va-inner-loading :loading="listFetching || mutationPending">
+          <template v-if="displayedNotifications.length === 0">
+            <div
+              class="px-3 py-3 text-sm text-secondary"
+              data-testid="notification-empty-state"
+            >
+              {{
+                filters.globallyDismissed
+                  ? "No globally dismissed notifications"
+                  : "No pending notifications"
+              }}
+            </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="notification in displayedNotifications"
+              :key="notification.id"
+              class="px-3 py-2"
+            >
+              <notification
+                :notification="notification"
+                :disabled="mutationPending"
+                @toggle-read="onToggleRead"
+                @toggle-archived="onToggleArchived"
+                @toggle-bookmarked="onToggleBookmarked"
+                @toggle-global-dismiss="onGlobalDismiss"
+              ></notification>
+              <va-divider class="mt-2" />
+            </div>
+          </template>
+        </va-inner-loading>
+      </div>
+    </div>
+  </va-menu>
 </template>
 
 <script setup>
 import config from "@/config";
 import constants from "@/constants";
+import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
@@ -336,19 +377,24 @@ const { notificationTheme: theme } = constants;
 
 const notificationStore = useNotificationStore();
 const auth = useAuthStore();
-const forSelf = computed(() => !(auth.canOperate || auth.canAdmin));
+const { canOperate, user: authUser } = storeToRefs(auth);
+const forSelf = computed(
+  () => !viewerHasPrivilegedNotificationAccess(canOperate.value),
+);
 const notificationQueryOpts = computed(() => ({
   forSelf: forSelf.value,
-  username: auth.user?.username || null,
+  username: authUser.value?.username || null,
 }));
 
 const {
   notifications,
   filters,
   unreadCount,
-  loading,
+  listFetching,
+  mutationPending,
   totalMatchedCount,
   hasMoreNotifications,
+  searchEchoLock,
 } = storeToRefs(notificationStore);
 const {
   refreshNotifications,
@@ -358,13 +404,21 @@ const {
   markAllRead,
   dismissNotificationGlobally,
   setFilter,
+  setSearchEchoLock,
   clearFilters,
 } = notificationStore;
 const searchInput = computed({
-  get: () => filters.value.search || "",
-  set: (val) => {
-    setFilter("search", val || "");
+  get() {
+    return filters.value.search || "";
   },
+  set(val) {
+    const next = val == null ? "" : String(val);
+    setFilter("search", next);
+  },
+});
+const activeSearchFilter = computed(() => {
+  if (searchEchoLock.value) return "";
+  return (filters.value.search || "").trim();
 });
 const isSearchFocused = ref(false);
 const hasPendingSseRefresh = ref(false);
@@ -372,17 +426,6 @@ const isSseConnected = ref(false);
 const notificationStream = ref(null);
 const firstTopControlRef = ref(null);
 const notificationOpenButtonRef = ref(null);
-const TOP_CONTROL_IDS = [
-  "filter-unread",
-  "filter-read",
-  "filter-archived",
-  "filter-bookmarked",
-  "filter-globally-dismissed",
-  "mark-all-read",
-];
-const normalizedSearch = computed(() =>
-  (searchInput.value || "").trim().toLowerCase(),
-);
 const displayedNotifications = computed(() => notifications.value);
 const isUnreadFilterActive = computed(() => filters.value.read === false);
 const isReadFilterActive = computed(() => filters.value.read === true);
@@ -400,7 +443,7 @@ const hasActiveFilters = computed(() => {
     isArchivedFilterActive.value ||
     isBookmarkedFilterActive.value ||
     isGloballyDismissedFilterActive.value ||
-    Boolean(searchInput.value.trim())
+    Boolean(activeSearchFilter.value)
   );
 });
 const badgeCount = computed(() => {
@@ -415,36 +458,9 @@ const hasActiveFilterChips = computed(() => {
     isArchivedFilterActive.value ||
     isBookmarkedFilterActive.value ||
     isGloballyDismissedFilterActive.value ||
-    Boolean(searchInput.value.trim())
+    Boolean(activeSearchFilter.value)
   );
 });
-const menuRenderKey = computed(() => {
-  return [
-    filters.value.read,
-    filters.value.archived,
-    filters.value.bookmarked,
-    filters.value.globallyDismissed,
-    normalizedSearch.value,
-  ].join("|");
-});
-const filterChipsRenderKey = computed(() => {
-  const readKey = filters.value.read === true ? "read" : "not-read";
-  const archivedKey = filters.value.archived ? "archived" : "not-archived";
-  const bookmarkedKey =
-    filters.value.bookmarked === true ? "bookmarked" : "not-bookmarked";
-  const globallyDismissedKey = filters.value.globallyDismissed
-    ? "globally-dismissed"
-    : "not-globally-dismissed";
-  const searchKey = normalizedSearch.value || "no-search";
-  return [
-    readKey,
-    archivedKey,
-    bookmarkedKey,
-    globallyDismissedKey,
-    searchKey,
-  ].join("|");
-});
-
 function onSearchInputClick(event) {
   const target = event?.target;
   if (!target || typeof target.closest !== "function") return;
@@ -462,37 +478,41 @@ function getVisibleMenuPanelElement() {
   );
 }
 
-function getFocusableNode(target) {
-  if (!target) return null;
-  if (target instanceof HTMLElement) return target;
-  const root = target.$el instanceof HTMLElement ? target.$el : null;
-  if (!root) return null;
-  if (root.matches("button, [href], input, select, textarea, [tabindex]")) {
-    return root;
+function focusableControl(el) {
+  if (!(el instanceof HTMLElement)) return null;
+  if (
+    el.matches(
+      'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+    )
+  ) {
+    return el;
   }
-  return root.querySelector(
-    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  return el.querySelector(
+    'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
   );
 }
 
 function focusFirstMenuControlSoon() {
   let attempts = 0;
+  const maxAttempts = 400;
   const tryFocus = () => {
     attempts += 1;
     const panel = getVisibleMenuPanelElement();
-    const node =
-      panel?.querySelector('[data-testid="filter-unread"]') ||
-      getFocusableNode(firstTopControlRef.value);
+    const anchor =
+      panel?.querySelector('[data-testid="filter-unread"]')
+      || (firstTopControlRef.value?.$el instanceof HTMLElement
+        ? firstTopControlRef.value.$el
+        : null);
+    const node = focusableControl(anchor);
     if (node && node.offsetParent !== null) {
       node.focus();
-      // Vuestic may steal focus asynchronously; re-assert a few times.
-      if (document.activeElement !== node && attempts < 30) {
+      if (document.activeElement !== node && attempts < maxAttempts) {
         setTimeout(tryFocus, 30);
         return;
       }
       return;
     }
-    if (attempts < 30) {
+    if (attempts < maxAttempts) {
       setTimeout(tryFocus, 30);
     }
   };
@@ -500,88 +520,17 @@ function focusFirstMenuControlSoon() {
 }
 
 function onNotificationOpenActivate() {
+  setSearchEchoLock(false);
   focusFirstMenuControlSoon();
 }
 
-// Forcefully focus an element, retrying in rAF if the browser's native Tab
-// handling overrode our preventDefault (can happen with teleported menus).
-function assertFocus(targetNode) {
-  if (!(targetNode instanceof HTMLElement)) return;
-  targetNode.focus();
-  if (document.activeElement === targetNode) return;
-  requestAnimationFrame(() => targetNode.focus());
-}
-
-// Global keyboard handler attached to window in capture phase so it fires
-// before Vuestic's internal focus management can move focus away.
-function onGlobalTabKeydown(event) {
-  // Vuestic moves focus on bare Shift keydown inside menus; block that.
-  if (event.key === "Shift") {
-    const panel = getVisibleMenuPanelElement();
-    if (panel?.contains(document.activeElement)) {
-      event.stopImmediatePropagation();
-    }
-    return;
-  }
-  if (event.key !== "Tab") return;
-  const panel = getVisibleMenuPanelElement();
-  if (!panel) return;
-  const activeElement = document.activeElement;
-  if (!panel.contains(activeElement)) return;
-
-  const activeTestId =
-    activeElement?.getAttribute("data-testid") ||
-    activeElement?.closest?.("[data-testid]")?.getAttribute("data-testid");
-
-  // Resolve the element to focus for a given testId.
-  const resolveNode = (testId) =>
-    panel.querySelector(`[data-testid="${testId}"]`);
-
-  let target = null;
-
-  // Inside top controls
-  const controlIndex = TOP_CONTROL_IDS.indexOf(activeTestId);
-  if (controlIndex !== -1) {
-    if (event.shiftKey) {
-      target =
-        controlIndex === 0
-          ? panel.querySelector('[data-testid$="-toggle-read"]')
-          : resolveNode(TOP_CONTROL_IDS[controlIndex - 1]);
-    } else if (controlIndex === TOP_CONTROL_IDS.length - 1) {
-      target = panel.querySelector('input[data-testid="notification-search"]');
-    } else {
-      target = resolveNode(TOP_CONTROL_IDS[controlIndex + 1]);
-    }
-  }
-
-  // Inside search input
-  if (!target && activeTestId === "notification-search") {
-    target = event.shiftKey
-      ? resolveNode(TOP_CONTROL_IDS[TOP_CONTROL_IDS.length - 1])
-      : panel.querySelector('[data-testid$="-toggle-read"]');
-  }
-
-  // Shift+Tab from first notification action wraps back to search
-  if (
-    !target &&
-    event.shiftKey &&
-    (activeTestId?.includes("-toggle-") || activeTestId?.includes("-dismiss-"))
-  ) {
-    const firstAction = panel.querySelector('[data-testid$="-toggle-read"]');
-    if (firstAction && activeElement === firstAction) {
-      target = panel.querySelector('input[data-testid="notification-search"]');
-    }
-  }
-
-  if (target) {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    assertFocus(target);
-  }
-}
-
 function onSearchFocus() {
+  setSearchEchoLock(false);
   isSearchFocused.value = true;
+}
+
+function onSearchInputKeydown() {
+  setSearchEchoLock(false);
 }
 
 function onSearchBlur() {
@@ -593,7 +542,16 @@ function onSearchBlur() {
 }
 
 function clearSearchFilter() {
+  setSearchEchoLock(true);
   setFilter("search", "");
+  nextTick(() => {
+    const panel = getVisibleMenuPanelElement();
+    if (!(panel instanceof HTMLElement)) return;
+    panel
+      .querySelectorAll('[data-testid="active-filter-chip-search"]')
+      .forEach((chip) => chip.remove());
+  });
+  fetchNotifications(notificationQueryOpts.value);
 }
 
 const triggerSearchFetch = useDebounceFn(() => {
@@ -610,7 +568,7 @@ watch(
 function onMenuScroll(event) {
   const panel = event?.target;
   if (!(panel instanceof HTMLElement)) return;
-  if (!hasMoreNotifications.value || loading.value) return;
+  if (!hasMoreNotifications.value || listFetching.value) return;
   const nearBottom =
     panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 80;
   if (!nearBottom) return;
@@ -669,7 +627,15 @@ function clearGloballyDismissedFilter() {
 }
 
 function handleClearFilters() {
+  setSearchEchoLock(true);
   clearFilters();
+  nextTick(() => {
+    const panel = getVisibleMenuPanelElement();
+    if (!(panel instanceof HTMLElement)) return;
+    panel
+      .querySelectorAll('[data-testid="active-filter-chip-search"]')
+      .forEach((chip) => chip.remove());
+  });
   fetchNotifications(notificationQueryOpts.value);
 }
 
@@ -732,7 +698,7 @@ function openNotificationStream() {
   const token = useLocalStorage("token", "");
   const authToken = token.value;
   if (!authToken) return;
-  const username = auth.user?.username;
+  const username = authUser.value?.username;
   const streamPath =
     forSelf.value && username
       ? `/notifications/${encodeURIComponent(username)}/stream`
@@ -763,12 +729,10 @@ const { resume } = useIntervalFn(
 
 onMounted(() => {
   openNotificationStream();
-  window.addEventListener("keydown", onGlobalTabKeydown, true);
   resume();
 });
 
 onUnmounted(() => {
-  window.removeEventListener("keydown", onGlobalTabKeydown, true);
   closeNotificationStream();
 });
 </script>

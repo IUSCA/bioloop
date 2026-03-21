@@ -6,7 +6,8 @@ services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
+      - 24080:80
+      - 24443:443
     env_file:
       - ui/.env.default
     # environment:
@@ -54,10 +55,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3030/health"]
       interval: 10s
-      interval: 10s
       timeout: 10s
-      retries: 18
-      start_period: 180s
       retries: 18
       start_period: 180s
     depends_on:
@@ -73,7 +71,7 @@ services:
     expose:
       - 5432
     ports:
-      - 127.0.0.1:5433:5432
+      - 127.0.0.1:25433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -91,7 +89,6 @@ services:
     environment:
       - APP_ENV=docker
     volumes:
-      - ./workers/:/opt/sca/app
       - ./workers/:/opt/sca/app
       - landing_volume:/opt/sca/data
     command: ["bin/init_dirs.sh"]
@@ -184,7 +181,7 @@ services:
     expose:
       - 5672
     ports:
-      - 127.0.0.1:15672:15672
+      - 127.0.0.1:25673:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -197,7 +194,7 @@ services:
     expose:
       - 27017
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:27037:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
@@ -217,7 +214,6 @@ services:
     volumes:
       - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
       - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
-      - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
       - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
     working_dir: /app
     entrypoint: ["/opt/bin/entrypoint.sh"]
@@ -225,10 +221,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 5s
-      interval: 5s
       timeout: 10s
-      retries: 10
-      start_period: 15s
       retries: 10
       start_period: 15s
     depends_on:
@@ -240,14 +233,12 @@ services:
     image: node:19
     restart: unless-stopped
     ports:
-      - "3060:3060"
+      - "26060:3060"
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
-      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
       - ./secure_download/:/opt/sca/app
-      - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
       - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
@@ -255,10 +246,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
       interval: 5s
-      interval: 5s
       timeout: 10s
-      retries: 10
-      start_period: 15s
       retries: 10
       start_period: 15s
 
@@ -278,10 +266,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
       interval: 5s
-      interval: 5s
       timeout: 10s
-      retries: 10
-      start_period: 10s
       retries: 10
       start_period: 10s
     depends_on:
@@ -302,10 +287,7 @@ services:
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "appuser"]
       interval: 5s
-      interval: 5s
       timeout: 10s
-      retries: 10
-      start_period: 5s
       retries: 10
       start_period: 5s
 
@@ -318,7 +300,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:25173:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh
@@ -330,7 +312,7 @@ services:
   jupyter_ijs:
     image: darkbluestudios/jupyter-ijavascript-utils:latest
     ports:
-      - "8888:8888"
+      - "28888:8888"
     volumes:
       - ./api/notebooks:/home/jovyan/work/notebooks
       - ./api/node_modules:/home/jovyan/work/node_modules
@@ -371,7 +353,7 @@ services:
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
     ports:
-      - "3000:3000"
+      - "23000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -422,14 +404,6 @@ volumes:
   landing_volume:
     external: false
   docs_modules:
-    external: false
-  rhythm_keys:
-    external: false
-  api_node_modules:
-    external: false
-  ui_node_modules:
-    external: false
-  secure_download_node_modules:
     external: false
   rhythm_keys:
     external: false

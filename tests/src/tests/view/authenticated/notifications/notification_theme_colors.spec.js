@@ -122,7 +122,7 @@ test.describe.serial('Notifications theme colors', () => {
     await expect(label).toBeVisible();
 
     const row = label.locator('xpath=ancestor::div[contains(@class, "notification-anchor")]');
-    await expect(row).toContainText('Direct');
+    await expect(row).not.toContainText('Direct');
 
     await expectElementColor({
       page,

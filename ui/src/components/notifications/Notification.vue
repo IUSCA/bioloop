@@ -1,24 +1,26 @@
 <template>
   <div class="notification-anchor">
-    <div class="flex gap-2 mb-2 flex-wrap">
-      <va-chip size="small" :color="deliveryChipColor">
-        {{
-          notification.delivery.type === "ROLE_BROADCAST"
-            ? "Role Broadcast"
-            : "Direct"
-        }}
-      </va-chip>
-      <va-chip
-        size="small"
-        outline
-        v-if="
-          notification.delivery.type === 'ROLE_BROADCAST' &&
-          notification.delivery.role_name
-        "
-        :color="deliveryChipColor"
-      >
-        {{ notification.delivery.role_name }}
-      </va-chip>
+    <div
+      v-if="showChipsRow"
+      class="flex gap-2 mb-2 flex-wrap"
+    >
+      <template v-if="isRoleBroadcast && roleOutlineNames.length > 0">
+        <va-chip
+          size="small"
+          :color="theme.delivery.roleBroadcast.color"
+        >
+          Role Broadcast
+        </va-chip>
+        <va-chip
+          v-for="name in roleOutlineNames"
+          :key="name"
+          size="small"
+          outline
+          :color="theme.delivery.roleBroadcast.color"
+        >
+          {{ name }}
+        </va-chip>
+      </template>
       <va-chip
         size="small"
         :color="theme.filters.globallyDismissed.color"
@@ -49,7 +51,11 @@
         :disabled="disabled"
         color="primary"
         preset="primary"
+        tabindex="0"
+        :data-testid="`notification-${notification.id}-link-${link.id}`"
         @click.prevent="handleLinkClick(link)"
+        @keydown.enter.prevent="handleLinkClick(link)"
+        @keydown.space.prevent="handleLinkClick(link)"
       >
         <Icon :icon="theme.actions.link.icon" class="mr-1" />
         {{ link.label }}
@@ -69,8 +75,11 @@
         class="notification-state-action-button"
         :color="theme.actions.read.color"
         :data-testid="`notification-${notification.id}-toggle-read`"
+        tabindex="0"
         :disabled="disabled"
         @click="$emit('toggle-read', notification)"
+        @keydown.enter.prevent="$emit('toggle-read', notification)"
+        @keydown.space.prevent="$emit('toggle-read', notification)"
       >
         <Icon
           :icon="
@@ -89,8 +98,11 @@
         class="notification-state-action-button"
         :color="theme.actions.bookmark.color"
         :data-testid="`notification-${notification.id}-toggle-bookmark`"
+        tabindex="0"
         :disabled="disabled"
         @click="$emit('toggle-bookmarked', notification)"
+        @keydown.enter.prevent="$emit('toggle-bookmarked', notification)"
+        @keydown.space.prevent="$emit('toggle-bookmarked', notification)"
       >
         <Icon
           :icon="
@@ -109,8 +121,11 @@
         class="notification-state-action-button"
         :color="theme.actions.archive.color"
         :data-testid="`notification-${notification.id}-toggle-archive`"
+        tabindex="0"
         :disabled="disabled"
         @click="$emit('toggle-archived', notification)"
+        @keydown.enter.prevent="$emit('toggle-archived', notification)"
+        @keydown.space.prevent="$emit('toggle-archived', notification)"
       >
         <Icon
           :icon="
@@ -129,12 +144,15 @@
         class="notification-state-action-button"
         :color="theme.actions.globalDismiss.color"
         :data-testid="`notification-${notification.id}-global-dismiss`"
+        tabindex="0"
         v-if="
           notification.can_global_dismiss &&
           !notification.global_dismissal?.is_globally_dismissed
         "
         :disabled="disabled"
         @click="$emit('toggle-global-dismiss', notification)"
+        @keydown.enter.prevent="$emit('toggle-global-dismiss', notification)"
+        @keydown.space.prevent="$emit('toggle-global-dismiss', notification)"
       >
         <Icon :icon="theme.actions.globalDismiss.icon" class="mr-1" />
         Dismiss globally
@@ -167,8 +185,12 @@
 
 <script setup>
 import constants from "@/constants";
+import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
+import { useAuthStore } from "@/stores/auth";
+import { storeToRefs } from "pinia";
 
 const { notificationTheme: theme } = constants;
+const { canOperate } = storeToRefs(useAuthStore());
 
 const props = defineProps({
   notification: {
@@ -188,11 +210,35 @@ defineEmits([
 ]);
 const showUntrustedLinkModal = ref(false);
 const selectedUntrustedLink = ref(null);
-const deliveryChipColor = computed(() =>
-  props.notification.delivery.type === "ROLE_BROADCAST"
-    ? theme.delivery.roleBroadcast.color
-    : theme.delivery.direct.color,
+
+const isRoleBroadcast = computed(
+  () => props.notification.delivery.type === "ROLE_BROADCAST",
 );
+
+const canSeeBroadcastTargets = computed(() =>
+  viewerHasPrivilegedNotificationAccess(canOperate.value),
+);
+
+const roleOutlineNames = computed(() => {
+  if (!isRoleBroadcast.value || !canSeeBroadcastTargets.value) {
+    return [];
+  }
+  const { broadcast_role_names: multi, role_name: single } = props.notification.delivery;
+  if (Array.isArray(multi) && multi.length > 0) {
+    return multi;
+  }
+  if (single) {
+    return [single];
+  }
+  return [];
+});
+
+const showChipsRow = computed(
+  () =>
+    (isRoleBroadcast.value && roleOutlineNames.value.length > 0)
+    || Boolean(props.notification.global_dismissal?.is_globally_dismissed),
+);
+
 const actionButtonsCount = computed(() =>
   props.notification.can_global_dismiss &&
   !props.notification.global_dismissal?.is_globally_dismissed

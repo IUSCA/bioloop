@@ -8,6 +8,15 @@ function hasRole(user, roleName) {
 }
 
 /**
+ * Admin or operator: privileged notification viewer (parity with UI auth `canOperate`).
+ * @param {{ roles?: string[] }|null|undefined} user
+ * @returns {boolean}
+ */
+function isPrivilegedNotificationViewer(user) {
+  return hasRole(user, 'admin') || hasRole(user, 'operator');
+}
+
+/**
  * Sanitizes and normalizes a raw link object from notification metadata.
  * Blocks dangerous URI schemes (javascript:, data:, etc.).
  * Relative paths are always trusted; external http(s) links inherit
@@ -54,9 +63,43 @@ function toTrustedLink(link, idx) {
  * @param {{ row: Object, user: Object }} opts
  * @returns {Object} Client-ready notification object
  */
-function resolveNotificationForUser({ row, user }) {
+/**
+ * Collects distinct role names used in ROLE_BROADCAST recipient rows per notification.
+ */
+async function fetchBroadcastRoleNamesByNotificationId(notificationIds) {
+  const unique = [...new Set(notificationIds)].filter(Boolean);
+  if (unique.length === 0) {
+    return new Map();
+  }
+  const rows = await prisma.notification_recipient.findMany({
+    where: {
+      notification_id: { in: unique },
+      delivery_type: 'ROLE_BROADCAST',
+    },
+    select: {
+      notification_id: true,
+      delivery_role: { select: { name: true } },
+    },
+  });
+  const map = new Map();
+  rows.forEach((r) => {
+    const nm = r.delivery_role?.name;
+    if (!nm) return;
+    if (!map.has(r.notification_id)) {
+      map.set(r.notification_id, new Set());
+    }
+    map.get(r.notification_id).add(nm);
+  });
+  const out = new Map();
+  map.forEach((set, id) => {
+    out.set(id, [...set].sort((a, b) => a.localeCompare(b)));
+  });
+  return out;
+}
+
+function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
   const userRoles = user?.roles || [];
-  const canSeeResolverIdentity = hasRole(user, 'admin') || hasRole(user, 'operator');
+  const privileged = isPrivilegedNotificationViewer(user);
   const typeResolved = resolveNotificationTemplate({
     type: row.notification.type,
     label: row.notification.label,
@@ -92,6 +135,19 @@ function resolveNotificationForUser({ row, user }) {
 
   const canGloballyDismiss = hasRole(user, 'admin') || hasRole(user, 'operator');
 
+  const delivery = {
+    type: row.delivery_type,
+    role_name: row.delivery_role?.name || null,
+  };
+  if (
+    row.delivery_type === 'ROLE_BROADCAST'
+    && privileged
+    && Array.isArray(broadcastRoleNames)
+    && broadcastRoleNames.length > 0
+  ) {
+    delivery.broadcast_role_names = broadcastRoleNames;
+  }
+
   return {
     id: row.notification.id,
     type: row.notification.type,
@@ -103,16 +159,13 @@ function resolveNotificationForUser({ row, user }) {
       is_archived: row.is_archived,
       is_bookmarked: row.is_bookmarked,
     },
-    delivery: {
-      type: row.delivery_type,
-      role_name: row.delivery_role?.name || null,
-    },
+    delivery,
     global_dismissal: {
       is_globally_dismissed: row.notification.is_resolved,
       dismissed_at: row.notification.resolved_at,
-      dismissed_by: canSeeResolverIdentity ? row.notification.resolved_by || null : null,
+      dismissed_by: privileged ? row.notification.resolved_by || null : null,
     },
-    can_global_dismiss: canGloballyDismiss,
+    can_global_dismiss: privileged,
     allowed_links: dedupedLinks,
     created_at: row.notification.created_at,
     updated_at: row.notification.updated_at,
@@ -227,9 +280,19 @@ async function fetchCurrentUserNotifications({ req }) {
     }),
   ]);
 
+  const broadcastIds = [
+    ...new Set(
+      notificationRows
+        .filter((r) => r.delivery_type === 'ROLE_BROADCAST')
+        .map((r) => r.notification.id),
+    ),
+  ];
+  const broadcastRoleNamesByNotifId = await fetchBroadcastRoleNamesByNotificationId(broadcastIds);
+
   const items = notificationRows.map((row) => resolveNotificationForUser({
     row,
     user: req.user,
+    broadcastRoleNames: broadcastRoleNamesByNotifId.get(row.notification.id) || null,
   }));
 
   return {
@@ -243,5 +306,6 @@ async function fetchCurrentUserNotifications({ req }) {
 
 module.exports = {
   hasRole,
+  isPrivilegedNotificationViewer,
   fetchCurrentUserNotifications,
 };

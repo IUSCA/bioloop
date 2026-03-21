@@ -115,6 +115,7 @@ module.exports = {
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
           '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
           '/view/authenticated/notifications/notification_responsive_layout.spec.js',
         ],
       },
@@ -126,6 +127,7 @@ module.exports = {
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
           '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
           '/view/authenticated/notifications/notification_responsive_layout.spec.js',
         ],
       },
@@ -133,7 +135,10 @@ module.exports = {
         name: 'user_notifications',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
-        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+        ],
       },
       /** User-management tests */
       {
