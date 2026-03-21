@@ -10,7 +10,7 @@ const accessRequestHydrator = new PrismaHydrator({
 
 // assumes recordCache has resource_id
 // eslint-disable-next-line no-unused-vars
-accessRequestHydrator.registerVirtualAttribute('resource', async ({ id, hydrator }) => {
+accessRequestHydrator.registerVirtualAttribute('resource2', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
   const resource = await dbClient.resource.findFirstOrThrow({
     where: {

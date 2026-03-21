@@ -65,7 +65,7 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
  * @param {string} data.resource_id - UUID of the resource
  * @param {string} data.subject_id - UUID of the subject (user or group) for whom access is being requested
  * @param {string} [data.purpose] - Justification for the request
- * @param {Array<{access_type_id?: number, preset_id?: number, requested_until?: Date}>} data.items - Access types or presets being requested, must be unique within the request. Each item must have exactly one of access_type_id or preset_id.
+ * @param {Array<{access_type_id?: number, preset_id?: number, requested_expiry?: Expiry}>} data.items - Access types or presets being requested, must be unique within the request. Each item must have exactly one of access_type_id or preset_id.
  * @param {string[]} [data.previous_grant_ids] - For renewals, reference to expired grants
  * @param {string} requester_id - UUID of the user creating the request
  * @returns {Promise<Object>} Created access request
@@ -94,7 +94,7 @@ async function createAccessRequest(data, requester_id) {
           access_request_id: accessRequest.id,
           access_type_id: item.access_type_id ?? Prisma.skip,
           preset_id: item.preset_id ?? Prisma.skip,
-          requested_until: item.requested_until ?? Prisma.skip,
+          requested_until: item.requested_expiry?.toValue(), // convert Expiry instance to value for DB
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
       });
@@ -135,7 +135,7 @@ async function createAccessRequest(data, requester_id) {
  * @param {string} actor_id - UUID of the user updating the request
  * @param {Object} data
  * @param {string} [data.purpose] - Updated justification
- * @param {Array<{access_type_id?: number, preset_id?: number, requested_until?: Date}>} [data.items] - Updated items (replaces existing). Each item must have exactly one of access_type_id or preset_id.
+ * @param {Array<{access_type_id?: number, preset_id?: number, requested_expiry?: Expiry}>} [data.items] - Updated items (replaces existing). Each item must have exactly one of access_type_id or preset_id.
  * @returns {Promise<Object>} Updated access request
  */
 async function updateAccessRequest(request_id, actor_id, data) {
@@ -179,7 +179,7 @@ async function updateAccessRequest(request_id, actor_id, data) {
           access_request_id: request_id,
           access_type_id: item.access_type_id ?? Prisma.skip,
           preset_id: item.preset_id ?? Prisma.skip,
-          requested_until: item.requested_until ?? Prisma.skip,
+          requested_until: item.requested_expiry.toValue(), // convert Expiry instance to value for DB
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
       });

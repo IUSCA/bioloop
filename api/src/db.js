@@ -27,8 +27,34 @@ BigInt.prototype.toJSON = function () {
 };
 
 const { PrismaClient } = require('@prisma/client');
+const Expiry = require('./utils/expiry');
 
 const prisma = new PrismaClient({
   // log: ['query', 'info', 'warn', 'error'],
+}).$extends({
+  result: {
+    access_request_item: {
+      requested_expiry: {
+        needs: { requested_until: true },
+        compute(item) {
+          return Expiry.fromValue(item.requested_until);
+        },
+      },
+      approved_expiry: {
+        needs: { approved_until: true },
+        compute(item) {
+          return Expiry.fromValue(item.approved_until);
+        },
+      },
+    },
+    grant: {
+      expiry: {
+        needs: { valid_until: true },
+        compute(grant) {
+          return Expiry.fromValue(grant.valid_until);
+        },
+      },
+    },
+  },
 });
 module.exports = prisma;

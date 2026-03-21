@@ -25,9 +25,3 @@ Prefer simple, modular solutions with clear boundaries. Before implementing:
 
 For deep design analysis, invoke `/design-thoughtfully`.
 
-## API Service Tests (`api/src/services/` & `api/tests/services/`)
-
-Consult [API Service Tests Skill](../skills/api-service-tests/SKILL.md) when:
-- Writing or extending tests for any `api/src/services/*.js` file
-- Choosing between lifecycle, invariants, or concurrency test files
-- Setting up fixtures, cleanup, or concurrency patterns with Jest + real Prisma (no mocks)

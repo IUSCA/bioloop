@@ -8,15 +8,7 @@ const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
-const { isISO8601 } = require('validator');
-
-const validateUntilDate = (value) => {
-  if (value === null) return true;
-  if (typeof value !== 'string') return false;
-  return isISO8601(value, { strict: true });
-};
-
-const sanitizeUntilDate = (value) => (value === null ? null : new Date(value));
+const Expiry = require('@/utils/expiry');
 
 const router = express.Router();
 
@@ -66,7 +58,7 @@ router.post(
     body('items').isArray({ min: 1 }),
     body('items.*.access_type_id').optional().isInt(),
     body('items.*.preset_id').optional().isInt(),
-    body('items.*.requested_until').optional().isISO8601().toDate(),
+    body('items.*.requested_expiry').customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
     // Custom validator: each item must have exactly one of access_type_id or preset_id
     body('items.*').custom((item) => {
       const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
@@ -199,10 +191,8 @@ router.put(
     body('items').optional().isArray({ min: 1 }),
     body('items.*.access_type_id').optional().isInt(),
     body('items.*.preset_id').optional().isInt(),
-    body('items.*.requested_until')
-      .custom(validateUntilDate)
-      .withMessage('requested_until must be null or ISO8601 date')
-      .customSanitizer(sanitizeUntilDate),
+    body('items.*.requested_expiry')
+      .customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
     // Custom validator: each item must have exactly one of access_type_id or preset_id
     body('items.*').custom((item) => {
       const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
@@ -269,10 +259,8 @@ router.post(
     body('item_decisions').isArray({ min: 1 }),
     body('item_decisions.*.id').isUUID(),
     body('item_decisions.*.decision').isIn(['APPROVED', 'REJECTED']),
-    body('item_decisions.*.approved_until')
-      .custom(validateUntilDate)
-      .withMessage('approved_until must be null or ISO8601 date')
-      .customSanitizer(sanitizeUntilDate),
+    body('item_decisions.*.approved_expiry')
+      .customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
     body('decision_reason').isString().notEmpty(),
   ]),
   authorize('access_request', 'review'),

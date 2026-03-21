@@ -1,6 +1,5 @@
 const express = require('express');
 const { param, query, body } = require('express-validator');
-const createError = require('http-errors');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -8,6 +7,8 @@ const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
 const { isPlatformAdmin } = require('@/services/auth');
+const Expiry = require('@/utils/expiry');
+const prisma = require('@/db');
 
 const router = express.Router();
 
@@ -17,6 +18,9 @@ const router = express.Router();
 router.get(
   '/access-types',
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List all access types'
+
     const accessTypes = await grantService.listAccessTypes();
     res.json(accessTypes);
   }),
@@ -26,23 +30,35 @@ router.get(
 router.get(
   '/presets',
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List all grant presets'
+
     const presets = await grantService.listPresets();
     res.json(presets);
   }),
 );
 
-// Create a grant
+// Create grants
 router.post(
   '/',
   validate([
-    body('subject_type').isIn(['USER', 'GROUP']),
     body('subject_id').isUUID(),
     body('resource_type').isIn(['DATASET', 'COLLECTION']),
     body('resource_id').isUUID(),
-    body('access_type_id').isInt(),
     body('justification').optional().isString(),
-    body('valid_from').optional().isISO8601(),
-    body('valid_to').optional().isISO8601(),
+    body(('source_preset_id')).optional().isInt(), // if created via a grant preset, link back to the preset item that led to this grant
+    body('items').isArray({ min: 1 }),
+    body('items.*.access_type_id').optional().isInt(),
+    body('items.*.preset_id').optional().isInt(),
+    body('items.*.approved_expiry').customSanitizer((val) => Expiry.fromJSON(val)),
+    body('items.*').custom((item) => {
+      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+        throw new Error('Item must have exactly one of access_type_id or preset_id');
+      }
+      return true;
+    }),
   ]),
   authorize('grant', 'create', {
     resourceIdFn: () => null, // no specific resource to check for create
@@ -52,21 +68,90 @@ router.post(
     }), // we need the resource attributes to evaluate the policy
   }),
   asyncHandler(async (req, res) => {
-    // validate valid_from < valid_to if both provided
-    const { valid_from, valid_to } = req.body;
-    if (valid_from && valid_to && new Date(valid_from) >= new Date(valid_to)) {
-      throw createError(400, 'valid_from must be before valid_to');
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Create new grants for a subject on a resource'
+
+    // Validate access_type_id items are unique within the request
+    const accessTypeIds = req.body.items
+      .filter((item) => item.access_type_id !== undefined)
+      .map((item) => item.access_type_id);
+    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+    }
+
+    // Validate preset_id items are unique within the request
+    const presetIds = req.body.items
+      .filter((item) => item.preset_id !== undefined)
+      .map((item) => item.preset_id);
+    if (new Set(presetIds).size !== presetIds.length) {
+      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
     }
 
     const data = pickNonNil([
-      'subject_type', 'subject_id',
-      'resource_type', 'resource_id',
-      'access_type_id',
-      'valid_from', 'valid_to',
-      'justification'])(req.body);
-    const granted_by = req.user.subject_id;
-    const grant = await grantService.createGrant(data, granted_by);
-    res.status(201).json(req.permission.filter(grant));
+      'subject_id',
+      'resource_id',
+      'justification', 'source_preset_id'])(req.body);
+    data.granted_by = req.user.subject_id;
+    await grantService.issueGrants(prisma, data, req.body.items);
+    res.status(201);
+  }),
+);
+
+// compute effective grants without creating (dry run) - useful for frontend to preview the effect of a grant creation request, including via presets which may have complex rules and multiple resulting grants
+router.post(
+  '/compute-effective-grants',
+  validate([
+    body('subject_id').isUUID(),
+    body('resource_type').isIn(['DATASET', 'COLLECTION']),
+    body('resource_id').isUUID(),
+    body('items').isArray({ min: 1 }),
+    body('items.*.access_type_id').optional().isInt(),
+    body('items.*.preset_id').optional().isInt(),
+    body('items.*.approved_expiry').customSanitizer((val) => Expiry.fromJSON(val)),
+    body('items.*').custom((item) => {
+      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+        throw new Error('Item must have exactly one of access_type_id or preset_id');
+      }
+      return true;
+    }),
+  ]),
+  authorize('grant', 'create', {
+    resourceIdFn: () => null, // no specific resource to check for create
+    preFetchedResourceFn: (req) => ({
+      resource_id: req.body.resource_id,
+      resource_type: req.body.resource_type,
+    }), // we need the resource attributes to evaluate the policy
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Compute effective grants without creating (dry run)'
+
+    // Validate access_type_id items are unique within the request
+    const accessTypeIds = req.body.items
+      .filter((item) => item.access_type_id !== undefined)
+      .map((item) => item.access_type_id);
+    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
+    }
+
+    // Validate preset_id items are unique within the request
+    const presetIds = req.body.items
+      .filter((item) => item.preset_id !== undefined)
+      .map((item) => item.preset_id);
+    if (new Set(presetIds).size !== presetIds.length) {
+      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
+    }
+
+    const data = pickNonNil([
+      'subject_id',
+      'resource_id'])(req.body);
+    data.granted_by = req.user.subject_id;
+
+    // [{type: 'new' | 'existing', 'supersede', access_type_id, expiry, existing_grant}]
+    const effectiveGrants = await grantService.buildEffectiveGrants(prisma, data, req.body.items);
+    res.json(effectiveGrants);
   }),
 );
 
@@ -78,6 +163,9 @@ router.get(
   ]),
   authorize('grant', 'read'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Get grant by ID'
+
     const grant = await grantService.getGrantById(req.params.id);
     res.status(200).json(req.permission.filter(grant));
   }),
@@ -92,6 +180,9 @@ router.post(
   ]),
   authorize('grant', 'revoke'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Revoke a grant'
+
     const grantId = req.params.id;
     const { reason } = req.body;
 
@@ -115,6 +206,9 @@ router.get(
     }),
   }),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List grants for a subject (grouped by resource)'
+
     const { subject_id } = req.params;
 
     // [{resource, grants: []}, ...]
@@ -146,6 +240,9 @@ router.get(
     }),
   }),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List grants for a resource (grouped by subject)'
+
     const { resource_id } = req.params;
 
     // [{subject, grants: []}, ...]
@@ -170,6 +267,9 @@ router.get(
   ]),
   authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List grants that are expiring soon (grouped by resource and source)'
+
     const {
       within_days,
     } = req.query;
@@ -205,6 +305,9 @@ router.get(
   ]),
   authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List my grants'
+
     const { is_active, resource_id, expiring_within_days } = req.query;
     const rows = await grantService.listMyGrants({
       user_id: req.user.subject_id,

@@ -22,7 +22,7 @@ const isAdminOfResourceGroup = new AccessRequestPolicy({
   name: 'isAdminOfResourceGroup',
   requires: {
     user: ['group_memberships'],
-    resource: ['resource'],
+    resource: ['resource2'],
   },
   evaluate: (user, request) => {
     const adminOfGroupIds = user.group_memberships
@@ -30,8 +30,8 @@ const isAdminOfResourceGroup = new AccessRequestPolicy({
       .map((membership) => membership.group_id);
 
     // one of the resources (dataset or collection) will be null
-    const resourceOwningGroupId = request.resource.dataset?.owner_group_id
-      || request.resource.collection?.owner_group_id;
+    const resourceOwningGroupId = request.resource2.dataset?.owner_group_id
+      || request.resource2.collection?.owner_group_id;
 
     return adminOfGroupIds.includes(resourceOwningGroupId);
   },
@@ -41,14 +41,14 @@ const hasOversightOfResourceGroup = new AccessRequestPolicy({
   name: 'hasOversightOfResourceGroup',
   requires: {
     user: ['oversight_group_ids'],
-    resource: ['resource'],
+    resource: ['resource2'],
   },
   evaluate: (user, request) => {
     const oversightGroupIds = user.oversight_group_ids || [];
 
     // one of the resources (dataset or collection) will be null
-    const resourceOwningGroupId = request.resource.dataset?.owner_group_id
-      || request.resource.collection?.owner_group_id;
+    const resourceOwningGroupId = request.resource2.dataset?.owner_group_id
+      || request.resource2.collection?.owner_group_id;
 
     return oversightGroupIds.includes(resourceOwningGroupId);
   },

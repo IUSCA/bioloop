@@ -640,7 +640,7 @@ model grant {
 
   // Temporal bounds
   valid_from   DateTime                @default(now()) @db.Timestamp(6)
-  valid_until  DateTime?               @db.Timestamp(6)
+  valid_until  DateTime?               @db.Timestamp(6) // null means "no expiration"
   valid_period Unsupported("tsrange")? @default(dbgenerated("tsrange(valid_from, valid_until, '[)'::text)"))
   // valid_period is a generated column defined in the migration SQL to leverage PostgreSQL's range types for efficient overlap checks
   // https://github.com/prisma/prisma/discussions/24880#discussioncomment-15783547
@@ -679,15 +679,19 @@ model grant {
   source_access_request_id String?
   source_access_request    access_request? @relation(fields: [source_access_request_id], references: [id], onDelete: Restrict)
 
+  // if created via a grant preset (admin, grant creation type - Manual), link back to the preset item that led to this grant
+  source_preset_id Int?
+  source_preset    grant_preset? @relation(fields: [source_preset_id], references: [id], onDelete: Restrict)
+
   // valid_period generated column and grant_no_overlap exclusion constraint are defined in the migration SQL
   // For the same (subject_id, resource_id, access_type_id) tuple,
   // there must never exist two non-revoked grants whose validity intervals overlap.
 
+  revocation_type GRANT_REVOCATION_TYPE?
+
   @@index([subject_id])
   @@index([resource_id])
   @@index([valid_from, valid_until])
-
-  revocation_type GRANT_REVOCATION_TYPE?
 }
 
 enum GRANT_CREATION_TYPE {
@@ -725,6 +729,7 @@ model grant_preset {
 
   access_type_items    grant_preset_item[]
   access_request_items access_request_item[]
+  grants               grant[]
 }
 
 model grant_preset_item {
