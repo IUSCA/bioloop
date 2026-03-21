@@ -551,6 +551,55 @@ async function listGrantsForSubject({
 }
 
 /**
+ * List grants for a subject grouped by resource_id (no sort; offset/limit on groups)
+ * @param {Object} params
+ * @param {string} params.subject_id
+ */
+async function listGrantsForSubjectGrouped({
+  subject_id,
+}) {
+  const sql = Prisma.sql`
+    SELECT
+      g.resource_id,
+      json_agg(json_build_object(
+        'id', g.id,
+        'access_type_id', g.access_type_id,
+        'access_type_name', gat.name,
+        'valid_from', g.valid_from,
+        'valid_until', g.valid_until,
+        'revoked_at', g.revoked_at
+      )) AS grants
+    FROM valid_grants g
+    JOIN grant_access_type gat ON g.access_type_id = gat.id
+    WHERE g.subject_id = ${subject_id}
+    GROUP BY g.resource_id
+    ORDER BY MAX(g.created_at) ASC -- sort groups by most recent grant creation time
+  `;
+
+  const rows = await prisma.$queryRaw(sql);
+
+  // hydrate resource details for each grant group
+  const resourceIds = rows.map((r) => r.resource_id);
+  const resources = await prisma.resource.findMany({
+    where: { id: { in: resourceIds } },
+    include: {
+      dataset: true,
+      collection: true,
+    },
+  });
+  const resourcesById = new Map(resources.map((r) => [r.id, r]));
+
+  const grantsGrouped = rows.map((row) => {
+    const resource = resourcesById.get(row.resource_id);
+    return {
+      resource,
+      grants: row.grants,
+    };
+  });
+  return grantsGrouped;
+}
+
+/**
  * List grants for a resource (dataset or collection) with optional filtering by active status and pagination/sorting
  * @param {Object} params
  * @param {string} params.resource_id - UUID of the dataset or collection
@@ -596,6 +645,55 @@ async function listGrantsForResource({
   };
 }
 
+/**
+ * List grants for a resource grouped by subject_id (no sort; offset/limit on groups)
+ * @param {Object} params
+ * @param {string} params.resource_id
+ */
+async function listGrantsForResourceGrouped({
+  resource_id,
+}) {
+  const sql = Prisma.sql`
+    SELECT
+      g.subject_id,
+      json_agg(json_build_object(
+        'id', g.id,
+        'access_type_id', g.access_type_id,
+        'access_type_name', gat.name,
+        'valid_from', g.valid_from,
+        'valid_until', g.valid_until,
+        'revoked_at', g.revoked_at
+      )) AS grants
+    FROM valid_grants g
+    JOIN grant_access_type gat ON g.access_type_id = gat.id
+    WHERE g.resource_id = ${resource_id}
+    GROUP BY g.subject_id
+    ORDER BY MAX(g.created_at) ASC -- sort groups by most recent grant creation time
+  `;
+
+  const rows = await prisma.$queryRaw(sql);
+
+  // hydrate subject details for each grant group
+  const subjectIds = rows.map((r) => r.subject_id);
+  const subjects = await prisma.subject.findMany({
+    where: { id: { in: subjectIds } },
+    include: {
+      user: true,
+      group: true,
+    },
+  });
+  const subjectsById = new Map(subjects.map((s) => [s.id, s]));
+
+  const grantsGrouped = rows.map((row) => {
+    const subject = subjectsById.get(row.subject_id);
+    return {
+      subject,
+      grants: row.grants,
+    };
+  });
+  return grantsGrouped;
+}
+
 async function listAccessTypes() {
   return prisma.grant_access_type.findMany({
     orderBy: {
@@ -622,57 +720,75 @@ async function listPresets() {
   });
 }
 
+async function _hydrateSubjectsAndResources(data) {
+  const subjectIds = [...new Set(data.map((row) => row.subject_id))];
+  const resourceIds = [...new Set(data.map((row) => row.resource_id))];
+  const [subjects, resources] = await Promise.all([
+    prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
+      select: {
+        id: true, type: true, user: true, group: true,
+      },
+    }),
+    prisma.resource.findMany({
+      where: { id: { in: resourceIds } },
+      select: {
+        id: true, type: true, dataset: true, collection: true,
+      },
+    }),
+  ]);
+  const subjectsById = new Map(subjects.map((s) => [s.id, s]));
+  const resourcesById = new Map(resources.map((r) => [r.id, r]));
+
+  const grantsGrouped = data.map((row) => ({
+    subject: subjectsById.get(row.subject_id),
+    resource: resourcesById.get(row.resource_id),
+    grants: row.grants,
+  }));
+  return grantsGrouped;
+}
+
 /**
  * List all grants that are expiring within a certain number of days
  * @param {Object} params
  * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
- * @param {number} params.offset - Pagination offset
- * @param {number} params.limit - Pagination limit
- * @param {string} params.sort_by - Field to sort by (e.g. 'valid_until')
- * @param {'asc'|'desc'} params.sort_order - Sort order
  * @returns {Promise<Object>} Paginated list of grants expiring within the specified time frame
  */
 async function listExpiringGrants({
   within_days,
-  offset,
-  limit,
-  sort_by,
-  sort_order,
 }) {
+  // filters valid grants that are expiring soon
+  // groups by subject_id and resource_id, aggregates access types into an array,
+  // and sorts by soonest expiring grant in the group
   const sql = Prisma.sql`
-    SELECT g.id
+    SELECT
+      g.subject_id,
+      g.resource_id,
+      json_agg(
+        json_build_object(
+          'id', g.id,
+          'access_type_id', g.access_type_id,
+          'access_type_name', at.name,
+          'valid_from', g.valid_from,
+          'valid_until', g.valid_until
+        )
+        ORDER BY g.valid_until ASC
+      ) AS grants
     FROM valid_grants g
+    JOIN grant_access_type at
+      ON at.id = g.access_type_id
     WHERE g.valid_until IS NOT NULL
-      AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
-    ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
-    OFFSET ${offset}
-    LIMIT ${limit}
+      AND g.valid_until <= NOW() + (INTERVAL '1 day' * ${within_days})
+    GROUP BY g.subject_id, g.resource_id
+    ORDER BY MIN(g.valid_until) ASC
   `;
 
-  // For total count, we can run a separate query without OFFSET and LIMIT
-  const countSql = Prisma.sql`
-    SELECT COUNT(*)
-    FROM valid_grants g
-    WHERE g.valid_until IS NOT NULL
-      AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
-  `;
-  const [data, countResult] = await Promise.all([prisma.$queryRaw(sql), prisma.$queryRaw(countSql)]);
-  const total = Number(countResult[0].count);
+  const data = await prisma.$queryRaw(sql);
 
-  const grantIds = data.map((row) => row.id);
-  const grants = await prisma.grant.findMany({
-    where: { id: { in: grantIds } },
-    include: GRANT_INCLUDES,
-  });
+  // hydrate subject and resource details for each grant group
+  const grantsGrouped = await _hydrateSubjectsAndResources(data);
 
-  return {
-    metadata: {
-      total,
-      offset,
-      limit,
-    },
-    data: grants,
-  };
+  return grantsGrouped;
 }
 
 /**
@@ -680,23 +796,13 @@ async function listExpiringGrants({
  * @param {Object} params
  * @param {string} params.user_id - UUID of the user
  * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
- * @param {number} params.offset - Pagination offset
- * @param {number} params.limit - Pagination limit
- * @param {string} params.sort_by - Field to sort by (e.g. 'valid_until')
- * @param {'asc'|'desc'} params.sort_order - Sort order
  * @returns {Promise<Object>} Paginated list of grants expiring within the specified time frame
  */
 async function listExpiringGrantsForAdmin({
   user_id,
   within_days,
-  offset,
-  limit,
-  sort_by,
-  sort_order,
 }) {
-  const sql = ({ for_count = false } = {}) => {
-    const sort_sql = Prisma.sql`OFFSET ${offset} LIMIT ${limit}`;
-    return Prisma.sql`
+  const sql = Prisma.sql`
       WITH admin_groups AS (
         SELECT gu.group_id
         FROM group_user gu
@@ -714,36 +820,67 @@ async function listExpiringGrantsForAdmin({
         FROM collection c
         JOIN admin_groups ag ON c.owner_group_id = ag.group_id
       )
-      SELECT ${for_count ? Prisma.sql`COUNT(*)` : Prisma.sql`g.id`}
+      SELECT 
+        g.subject_id,
+        g.resource_id,
+        json_agg(
+          json_build_object(
+            'id', g.id,
+            'access_type_id', g.access_type_id,
+            'access_type_name', at.name,
+            'valid_from', g.valid_from,
+            'valid_until', g.valid_until
+          )
+          ORDER BY g.valid_until ASC
+        ) AS grants
       FROM valid_grants g
       JOIN owned_resources r ON g.resource_id = r.resource_id
+      JOIN grant_access_type at ON at.id = g.access_type_id
       WHERE g.valid_until IS NOT NULL
-        AND g.valid_until <= NOW() + INTERVAL '${within_days} days'
-      ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
-      ${for_count ? Prisma.empty : sort_sql}
+        AND g.valid_until <= NOW() + INTERVAL '1 day' * ${within_days}
+      GROUP BY g.subject_id, g.resource_id
+      ORDER BY MIN(g.valid_until) ASC
     `;
+
+  const data = await prisma.$queryRaw(sql);
+
+  // hydrate subject and resource details for each grant group
+  const grantsGrouped = await _hydrateSubjectsAndResources(data);
+
+  return grantsGrouped;
+}
+
+async function listMyGrants({
+  user_id, is_active, resource_id, expiring_within_days,
+}) {
+  const where = {
+    subject_id: user_id,
   };
+  Object.assign(where, getPrismaGrantValidityFilter(is_active));
+  if (resource_id) {
+    where.resource_id = resource_id;
+  }
+  if (expiring_within_days != null) {
+    where.valid_until = {
+      lte: new Date(Date.now() + expiring_within_days * 24 * 60 * 60 * 1000),
+    };
+  }
 
-  const [data, countResult] = await Promise.all([
-    prisma.$queryRaw(sql()),
-    prisma.$queryRaw(sql({ for_count: true })),
-  ]);
-  const total = Number(countResult[0].count);
-
-  const grantIds = data.map((row) => row.id);
-  const grants = await prisma.grant.findMany({
-    where: { id: { in: grantIds } },
-    include: GRANT_INCLUDES,
-  });
-
-  return {
-    metadata: {
-      total,
-      offset,
-      limit,
+  return prisma.grant.findMany({
+    where,
+    include: {
+      resource: {
+        include: {
+          dataset: true,
+          collection: true,
+        },
+      },
+      access_type: true,
     },
-    data: grants,
-  };
+    orderBy: {
+      created_at: 'desc',
+    },
+  });
 }
 
 module.exports = {
@@ -768,9 +905,12 @@ module.exports = {
   getGrantById,
   listGrantsForSubject,
   listGrantsForResource,
+  listGrantsForSubjectGrouped,
+  listGrantsForResourceGrouped,
   listAccessTypes,
   listPresets,
   listExpiringGrants,
   listExpiringGrantsForAdmin,
   getPrismaGrantValidityFilter,
+  listMyGrants,
 };

@@ -100,17 +100,12 @@ router.post(
   }),
 );
 
-// List grants for a subject
+// List grants for a subject - admins
 router.get(
   '/subject/:subject_type/:subject_id',
   validate([
     param('subject_type').isIn(['USER', 'GROUP']),
     param('subject_id').isUUID(),
-    query('active').optional().isBoolean().toBoolean(),
-    query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
-    query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
-    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_subject', {
     resourceIdFn: () => null, // no specific resource to check for listing grants of a subject
@@ -121,37 +116,27 @@ router.get(
   }),
   asyncHandler(async (req, res) => {
     const { subject_id } = req.params;
-    const {
-      active, offset, limit, sort_by, sort_order,
-    } = req.query;
 
-    const grants = await grantService.listGrantsForSubject({
+    // [{resource, grants: []}, ...]
+    const grouped = await grantService.listGrantsForSubjectGrouped({
       subject_id,
-      active,
-      offset,
-      limit,
-      sort_by,
-      sort_order,
     });
-    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
-    res.json({
-      metadata: grants.metadata,
-      data: filteredGrants,
-    });
+
+    const filteredData = grouped.map(({ resource, grants }) => ({
+      resource,
+      grants: grants.map((g) => req.permission.filter(g)),
+    }));
+
+    res.json(filteredData);
   }),
 );
 
-// List grants for a resource
+// List grants for a resource - admins
 router.get(
   '/resource/:resource_type/:resource_id',
   validate([
     param('resource_type').isIn(['DATASET', 'COLLECTION']),
     param('resource_id').isUUID(),
-    query('active').optional().isBoolean().toBoolean(),
-    query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
-    query('sort_by').default('created_at').isIn(['created_at', 'valid_from', 'valid_to']),
-    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list_for_resource', {
     resourceIdFn: (req) => req.params.resource_id,
@@ -162,23 +147,18 @@ router.get(
   }),
   asyncHandler(async (req, res) => {
     const { resource_id } = req.params;
-    const {
-      active, offset, limit, sort_by, sort_order,
-    } = req.query;
 
-    const grants = await grantService.listGrantsForResource({
+    // [{subject, grants: []}, ...]
+    const grouped = await grantService.listGrantsForResourceGrouped({
       resource_id,
-      active,
-      offset,
-      limit,
-      sort_by,
-      sort_order,
     });
-    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
-    res.json({
-      metadata: grants.metadata,
-      data: filteredGrants,
-    });
+
+    const filteredData = grouped.map(({ subject, grants }) => ({
+      subject,
+      grants: grants.map((g) => req.permission.filter(g)),
+    }));
+
+    res.json(filteredData);
   }),
 );
 
@@ -187,50 +167,58 @@ router.get(
   '/expiring-soon',
   validate([
     query('within_days').default(30).isInt({ min: 1 }).toInt(),
-    query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
-    query('sort_by').default('valid_to').isIn(['created_at', 'valid_from', 'valid_to']),
-    query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
     const {
-      within_days, offset, limit, sort_by, sort_order,
+      within_days,
     } = req.query;
 
-    let grants;
+    let grantsGrouped;
     if (isPlatformAdmin(req)) {
       // if platform admin, list all expiring grants
-      grants = await grantService.listExpiringGrants({
+      grantsGrouped = await grantService.listExpiringGrants({
         within_days,
-        offset,
-        limit,
-        sort_by,
-        sort_order,
       });
     } else {
-      grants = await grantService.listExpiringGrantsForAdmin({
+      grantsGrouped = await grantService.listExpiringGrantsForAdmin({
         within_days,
-        offset,
-        limit,
-        sort_by,
-        sort_order,
         user_id: req.user.subject_id, // scope by caller's authority
       });
     }
-    const filteredGrants = grants.data.map((g) => req.permission.filter(g));
-    res.json({
-      metadata: grants.metadata,
-      data: filteredGrants,
-    });
+    const filteredGrants = grantsGrouped.map(({ resource, source, grants }) => ({
+      resource,
+      source,
+      grants: grants.map((g) => req.permission.filter(g)),
+    }));
+    res.json(filteredGrants);
   }),
 );
 
-// router.post('/search', asyncHandler(async (req, res) => {
-//   // #swagger.tags = ['Grants']
-//   // #swagger.summary = 'Search grants with complex filters (admin-only)'
+// list my grants - grouped by resource - optionally filter by active/inactive, resource id
+router.get(
+  '/mine',
+  validate([
+    query('is_active').optional().isBoolean().toBoolean(),
+    query('resource_id').optional().isUUID(),
+    query('expiring_within_days').optional().isInt({ min: 1 }).toInt(),
+  ]),
+  authorize('grant', 'list'),
+  asyncHandler(async (req, res) => {
+    const { is_active, resource_id, expiring_within_days } = req.query;
+    const rows = await grantService.listMyGrants({
+      user_id: req.user.subject_id,
+      is_active,
+      resource_id,
+      expiring_within_days,
+    });
 
-//   if (isPlatformAdmin(req)) {} else {}
-// }));
+    const filteredData = rows.map((g) => req.permission.filter(g));
+
+    res.json(filteredData);
+  }),
+);
+
+// list my expiring grants
 
 module.exports = router;
