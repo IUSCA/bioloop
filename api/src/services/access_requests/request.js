@@ -4,7 +4,8 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit/events');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
+const { TARGET_TYPE } = require('@/authorization/builtin/audit');
 const { resolveEntityName, resolveResources, resolveSubjects } = require('@/authorization/builtin/audit/helpers');
 const { _getRequestById } = require('./fetch');
 
@@ -110,14 +111,14 @@ async function createAccessRequest(data, requester_id) {
         actor_id: requester_id,
         actor_name: requesterName,
         subject_id: data.subject_id,
-        subject_name: subjectMap[data.subject_id]?.name,
-        subject_type: subjectMap[data.subject_id]?.type,
+        subject_name: subjectMap[data.subject_id]?.name ?? Prisma.skip,
+        subject_type: subjectMap[data.subject_id]?.type ?? Prisma.skip,
         target_type: TARGET_TYPE.ACCESS_REQUEST,
         target_id: accessRequest.id,
         metadata: {
           resource_id: data.resource_id,
-          resource_type: resourceMap[data.resource_id]?.type,
-          resource_name: resourceMap[data.resource_id]?.name,
+          resource_type: resourceMap[data.resource_id]?.type || null,
+          resource_name: resourceMap[data.resource_id]?.name || null,
           status: ACCESS_REQUEST_STATUS.DRAFT,
         },
       },
@@ -294,7 +295,7 @@ async function submitRequest(request_id, actor_id) {
     throw createError.BadRequest('Cannot submit request without any request items');
   }
 
-  // 1. Reject if another in-flight request covers any of the same access types
+  // Reject if another in-flight request covers any of the same request items
   await _assertNoInFlightRequests(request);
 
   return prisma.$transaction(async (tx) => {

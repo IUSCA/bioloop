@@ -8,6 +8,15 @@ const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
+const { isISO8601 } = require('validator');
+
+const validateUntilDate = (value) => {
+  if (value === null) return true;
+  if (typeof value !== 'string') return false;
+  return isISO8601(value, { strict: true });
+};
+
+const sanitizeUntilDate = (value) => (value === null ? null : new Date(value));
 
 const router = express.Router();
 
@@ -52,7 +61,7 @@ router.post(
   validate([
     body('type').isIn(['NEW']), // 'RENEWAL' is not implemented yet
     body('resource_id').isUUID(),
-    body('subject_id').isUUID().notEmpty(), // Who/what this request is for
+    body('subject_id').isUUID(), // Who/what this request is for
     body('purpose').isString().notEmpty(),
     body('items').isArray({ min: 1 }),
     body('items.*.access_type_id').optional().isInt(),
@@ -92,6 +101,10 @@ router.post(
       return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
     }
 
+    // validated:
+    // - user has permission to create request
+    // - at least 1 request item and all items are well-formed
+    // - request items are unique
     const record = await accessRequestsService.createAccessRequest(data, req.user.subject_id);
     res.status(201).json(req.permission.filter(record));
   }),
@@ -186,7 +199,10 @@ router.put(
     body('items').optional().isArray({ min: 1 }),
     body('items.*.access_type_id').optional().isInt(),
     body('items.*.preset_id').optional().isInt(),
-    body('items.*.requested_until').optional().isISO8601().toDate(),
+    body('items.*.requested_until')
+      .custom(validateUntilDate)
+      .withMessage('requested_until must be null or ISO8601 date')
+      .customSanitizer(sanitizeUntilDate),
     // Custom validator: each item must have exactly one of access_type_id or preset_id
     body('items.*').custom((item) => {
       const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
@@ -221,6 +237,9 @@ router.put(
       }
     }
 
+    // validated:
+    // - user has permission to update request
+    // - if purpose or items are provided, they are well-formed and items are unique
     const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.subject_id);
     res.json(req.permission.filter(request));
   }),
@@ -250,7 +269,10 @@ router.post(
     body('item_decisions').isArray({ min: 1 }),
     body('item_decisions.*.id').isUUID(),
     body('item_decisions.*.decision').isIn(['APPROVED', 'REJECTED']),
-    body('item_decisions.*.approved_until').optional().isISO8601().toDate(),
+    body('item_decisions.*.approved_until')
+      .custom(validateUntilDate)
+      .withMessage('approved_until must be null or ISO8601 date')
+      .customSanitizer(sanitizeUntilDate),
     body('decision_reason').isString().notEmpty(),
   ]),
   authorize('access_request', 'review'),

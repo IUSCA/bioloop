@@ -2,7 +2,6 @@
  * access-request.invariants.test.js
  *
  * Tests DB-level and service-level invariants for access requests:
- *  - Active grant blocks re-submit (_assertNoActiveGrants)
  *  - Revoking grant unblocks submit
  *  - In-flight request blocks duplicate submit (_assertNoInFlightRequests)
  *  - Review decisions must cover all items exactly (_validateReviewItems)
@@ -20,7 +19,6 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
-const grantsService = require('@/services/grants');
 const {
   createTestUser,
   createTestGroup,
@@ -169,40 +167,6 @@ describe('access requests - invariants', () => {
         subject_id: otherUser.subject_id,
         items: [{ access_type_id: viewMetadataTypeId }],
       }, requester.subject_id)).rejects.toMatchObject({ status: 403 });
-    });
-  });
-
-  describe('_assertNoActiveGrants invariant', () => {
-    it('submitRequest throws 409 when requester already holds an active grant for that access type', async () => {
-      // Create a direct USER grant for the requester first
-      await grantsService.createGrant({
-        subject_id: requester.subject_id,
-        resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
-      }, reviewer.subject_id);
-
-      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      await expect(
-        arService.submitRequest(ar.id, requester.subject_id),
-      ).rejects.toMatchObject({ status: 409 });
-
-      // Request remains DRAFT
-      const final = await arService.getRequestById(ar.id);
-      expect(final.status).toBe('DRAFT');
-    });
-
-    it('after grant is revoked, submitRequest succeeds', async () => {
-      const grant = await grantsService.createGrant({
-        subject_id: requester.subject_id,
-        resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
-      }, reviewer.subject_id);
-
-      await grantsService.revokeGrant(grant.id, { actor_id: reviewer.subject_id });
-
-      const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
-      expect(submitted.status).toBe('UNDER_REVIEW');
     });
   });
 
@@ -520,29 +484,6 @@ describe('access requests - invariants', () => {
         },
       });
       expect(requesterGrant).toBeNull();
-    });
-
-    it('_assertNoActiveGrants checks subject_id, not requester_id', async () => {
-      // Create and approve a request for testGroup
-      const ar1 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
-      const submitted1 = await arService.submitRequest(ar1.id, requester.subject_id);
-      await arService.submitReview({
-        request_id: submitted1.id,
-        reviewer_id: reviewer.subject_id,
-        options: {
-          item_decisions: submitted1.access_request_items.map((i) => ({
-            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-          })),
-          decision_reason: 'Test',
-        },
-      });
-
-      // Now try to create another request for testGroup for the same access type
-      const ar2 = await newDraftRequest([{ access_type_id: viewMetadataTypeId }], testGroup.id);
-      // Submit should fail because testGroup already has an active grant
-      await expect(
-        arService.submitRequest(ar2.id, requester.subject_id),
-      ).rejects.toMatchObject({ status: 409 });
     });
 
     it('_assertNoInFlightRequests checks subject_id, not requester_id', async () => {

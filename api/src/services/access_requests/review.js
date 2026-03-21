@@ -24,7 +24,7 @@ function determineFinalStatus(approvedCount, rejectedCount) {
     eventType = AUTH_EVENT_TYPE.REQUEST_REJECTED;
   } else if (approvedCount > 0 && rejectedCount > 0) {
     finalStatus = ACCESS_REQUEST_STATUS.PARTIALLY_APPROVED;
-    eventType = AUTH_EVENT_TYPE.REQUEST_APPROVED;
+    eventType = AUTH_EVENT_TYPE.REQUEST_PARTIALLY_APPROVED;
   } else {
     // No decisions made (shouldn't happen with validation above)
     finalStatus = ACCESS_REQUEST_STATUS.REJECTED;
@@ -85,10 +85,13 @@ async function fetchExistingGrants(tx, { subject_id, resource_id, accessTypeIds 
 }
 
 function updateRequestItem(tx, reviewItem) {
+  const approved_until = reviewItem.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED
+    ? reviewItem.approved_until
+    : null;
   return tx.access_request_item.update({
     where: { id: reviewItem.id },
     data: {
-      approved_until: reviewItem.approved_until ?? Prisma.skip,
+      approved_until,
       decision: reviewItem.decision,
     },
   });
@@ -167,13 +170,13 @@ class Review {
           valid_from: valid_from ?? Prisma.skip,
           valid_until: valid_until ?? Prisma.skip,
           granted_by: this.reviewerId,
-          creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST_APPROVAL,
+          creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST,
           issuing_authority_id: this.resourceOwnerGroupId,
           source_access_request_id: this.requestId,
         },
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientUnknownRequestError && e.message.includes('grant_no_overlap')) {
+      if (e.message.includes('grant_no_overlap')) {
         throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
       }
       throw e;
@@ -197,7 +200,8 @@ class Review {
       data: {
         event_type: AUTH_EVENT_TYPE.GRANT_CREATION_SKIPPED,
         actor_id: this.reviewerId,
-        subject_id: existingGrant.id,
+        subject_id: this.request.subject_id,
+        subject_type: this.request.subject.type,
         target_type: audit.TARGET_TYPE.ACCESS_REQUEST,
         target_id: this.requestId,
         metadata: {
@@ -230,7 +234,7 @@ class Review {
           subject_id: this.request.subject_id,
           resource_id: this.request.resource_id,
           access_type_id: existingGrant.access_type_id,
-          creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST_APPROVAL,
+          creation_type: GRANT_CREATION_TYPE.ACCESS_REQUEST,
           valid_from: valid_from ?? Prisma.skip,
           valid_until: valid_until ?? Prisma.skip,
           granted_by: this.reviewerId,
@@ -239,7 +243,7 @@ class Review {
         },
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientUnknownRequestError && e.message.includes('grant_no_overlap')) {
+      if (e.message.includes('grant_no_overlap')) {
         throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
       }
       throw e;
@@ -315,7 +319,7 @@ class Review {
         actor_name: this.reviewerName,
         subject_id: this.request.subject_id,
         subject_name: this.subjectName,
-        subject_type: audit.SUBJECT_TYPE.USER,
+        subject_type: this.request.subject.type,
         target_type: audit.TARGET_TYPE.ACCESS_REQUEST,
         target_id: this.requestId,
         metadata: {
@@ -330,10 +334,14 @@ class Review {
 
   async submit() {
     this.request = await _getRequestById(prisma, this.requestId);
+    if (!this.request) {
+      throw createError.NotFound('Access request not found');
+    }
+
     this.reviewerName = await resolveEntityName(prisma, 'user', this.reviewerId);
     this.subjectName = this.request.subject.user?.name || this.request.subject.group?.name || 'Unknown Subject';
-    this.resourceOwnerGroupId = this.request.resource.dataset?.owner_group_id
-    || this.request.resource.collection?.owner_group_id;
+    this.resourceOwnerGroupId = this.request.resource?.dataset?.owner_group_id
+      || this.request.resource?.collection?.owner_group_id;
 
     validateReviewItems(this.request.access_request_items, this.itemDecisions);
 
@@ -394,7 +402,7 @@ class Review {
       }
 
       // Create a single audit record for the overall review action
-      this._createRequestAuditRecord(tx, {
+      await this._createRequestAuditRecord(tx, {
         finalStatus, eventType, approvedCount, rejectedCount,
       });
 

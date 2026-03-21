@@ -4,7 +4,7 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit/events');
+const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const { _getRequestById } = require('./fetch');
 
