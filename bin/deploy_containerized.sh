@@ -8,10 +8,16 @@
 # volumes, credentials).  Pass --fresh to wipe all Docker-managed state first
 # and start from a clean environment, equivalent to running docker-reset.sh
 # followed by docker compose up.
+# 
+# Before startup (always, even without --fresh), this script checks whether
+# the default host ports used by docker-compose.yml are available. If any are
+# busy, it finds free host ports (without killing existing processes), rewrites
+# the relevant compose/app/test config values, and then starts services.
 #
 # SAFETY:
 #   - Requires Docker to be running (aborts otherwise).
 #   - Verifies this is a Docker-mode Bioloop project before proceeding.
+#   - Never kills processes to free ports.
 #
 # USAGE:
 #   bin/deploy_containerized.sh           # start services, preserve existing state
@@ -20,18 +26,9 @@
 
 set -euo pipefail
 
-# ── helpers ───────────────────────────────────────────────────────────────────
-
-RED='\033[0;31m'
-YEL='\033[1;33m'
-GRN='\033[0;32m'
-DIM='\033[2m'
-NC='\033[0m'
-
-info()    { echo -e "${DIM}[info]${NC}  $*"; }
-warn()    { echo -e "${YEL}[warn]${NC}  $*"; }
-success() { echo -e "${GRN}[ok]${NC}    $*"; }
-abort()   { echo -e "${RED}[abort]${NC} $*"; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/containerized_common.sh"
+source "${SCRIPT_DIR}/lib/containerized_ports.sh"
 
 # ── args ──────────────────────────────────────────────────────────────────────
 
@@ -40,38 +37,51 @@ FRESH=false
 
 # ── guards ────────────────────────────────────────────────────────────────────
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+init_repo_context "${BASH_SOURCE[0]}"
 cd "${REPO_ROOT}"
 
-if [[ ! -f "docker-compose.yml" ]]; then
-  abort "docker-compose.yml not found at ${REPO_ROOT}. Run this script from the repo root."
-fi
+COMPOSE_FILE="${REPO_ROOT}/docker-compose.yml"
+ensure_compose_file_exists "${COMPOSE_FILE}"
 
 # Read the compose project name dynamically so this script stays in sync with
 # docker-compose.yml without requiring manual updates.
-COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "docker-compose.yml")
+COMPOSE_PROJECT="$(read_compose_project_from_file "${COMPOSE_FILE}")"
 if [[ -z "${COMPOSE_PROJECT}" ]]; then
   abort "docker-compose.yml does not declare a 'name:' field. Wrong repo or wrong branch?"
 fi
 
 # Confirm this is a containerized project before doing anything.
-if ! grep -Eq 'APP_ENV=(docker|ci)' "docker-compose.yml"; then
-  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose.yml. This does not appear to be a containerized environment."
-fi
+ensure_compose_has_container_app_env "${COMPOSE_FILE}"
+ensure_docker_running
 
-if ! docker info > /dev/null 2>&1; then
-  abort "Docker is not running or not accessible. Start Docker Desktop and try again."
-fi
+# ── port availability + rewrites (always) ────────────────────────────────────
+#
+# We proactively ensure host-published ports are free before startup.
+# If a default host port is occupied, we select the next free host port and
+# rewrite compose + dependent app/test config so the stack remains usable.
+# This runs whether or not --fresh is passed.
+assign_ports_for_stack "main"
+apply_stack_port_rewrites \
+  "main" \
+  "${COMPOSE_FILE}" \
+  "${REPO_ROOT}" \
+  "${UI_PORT}" \
+  "${POSTGRES_PORT}" \
+  "${RABBITMQ_MGMT_PORT}" \
+  "${MONGO_PORT}" \
+  "${DOCS_PORT}" \
+  "${JUPYTER_PORT}" \
+  "${GRAFANA_PORT}" \
+  "${SECURE_DOWNLOAD_PORT}"
 
 # ── optional reset ────────────────────────────────────────────────────────────
 
 if $FRESH; then
   info "--fresh: resetting Docker environment before startup..."
   echo ""
-  bash "${SCRIPT_DIR}/reset_docker.sh" --reset-all
+  bash "${SCRIPT_DIR}/reset_containerized.sh" --reset-all
   echo ""
-  # Ensure the seed marker is gone even if reset_docker.sh exited early
+  # Ensure the seed marker is gone even if reset_containerized.sh exited early
   # (e.g. interactive mode with DB step skipped, or a partial failure).
   # The API entrypoint gates on this file — without removing it, the DB
   # would not be re-seeded on the next startup despite a fresh DB.
@@ -92,3 +102,6 @@ echo ""
 info "On a first startup (or after --fresh), allow 1-2 minutes for key and"
 info "credential generation, npm installs, and database migrations to complete."
 echo ""
+
+print_ui_url_banner "${UI_PORT}"
+print_port_changes_banner "${PORT_CHANGES[@]}"

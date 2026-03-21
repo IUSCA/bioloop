@@ -18,6 +18,7 @@ Tests are written using Playwright.
 Playwright config is in `tests/playwright.config.js`.
 
 ### Docs
+- [Test inventory (what each spec tests)](./test_inventory.md)
 - [Authentication](./authentication.md)
 - [Test Execution](./execution.md)
 - [Server Side State](./server_side_state.md)

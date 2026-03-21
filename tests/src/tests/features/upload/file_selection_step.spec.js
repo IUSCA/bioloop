@@ -1,5 +1,5 @@
-import { selectFiles, trackSelectedFilesMetadata } from '../../../../actions/datasetUpload';
-import { expect, test } from '../../../../fixtures';
+import { selectFiles, trackSelectedFilesMetadata } from '../../../actions/datasetUpload';
+import { expect, test } from '../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 

@@ -110,13 +110,15 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
       testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
     }));
   });
-  if (isRoleSelected('operator') && featureEnabledRoles.uploads.includes('operator')) {
+  ['admin', 'operator'].filter(
+    (role) => isRoleSelected(role) && featureEnabledRoles.uploads.includes(role),
+  ).forEach((role) => {
     projects.push(makeRoleProject({
-      name: 'operator_upload_project_association_non_user_roles',
-      role: 'operator',
-      testMatch: '/view/authenticated/upload/project_association/non_user_roles/*.spec.js',
+      name: `${role}_upload_project_association_non_user_roles`,
+      role,
+      testMatch: '/features/upload/project_association/non_user_roles/*.spec.js',
     }));
-  }
+  });
   if (isRoleSelected('user')) {
     projects.push(makeRoleProject({
       name: 'user_sidebar',
@@ -156,10 +158,11 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
     projects.push(makeRoleProject({
       name: 'admin_upload',
       role: 'admin',
-      testMatch: '/view/authenticated/upload/**/*.spec.js',
+      testMatch: '/features/upload/**/*.spec.js',
       testIgnore: [
-        '/view/authenticated/upload/project_association/user_role/association.spec.js',
-        '/view/authenticated/upload/project_dataset_access.spec.js',
+        '/features/upload/project_association/user_role/association.spec.js',
+        '/features/upload/project_dataset_access.spec.js',
+        '/features/upload/project_association/non_user_roles/*.spec.js',
       ],
     }));
   }
@@ -167,7 +170,7 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
     projects.push(makeRoleProject({
       name: 'user_upload_project_association',
       role: 'user',
-      testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      testMatch: '/features/upload/project_association/user_role/association.spec.js',
     }));
   }
 
@@ -176,7 +179,7 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
     projects.push(makeRoleProject({
       name: `${role}_upload_project_dataset_access`,
       role,
-      testMatch: '/view/authenticated/upload/project_dataset_access.spec.js',
+      testMatch: '/features/upload/project_dataset_access.spec.js',
     }));
   });
 

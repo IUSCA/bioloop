@@ -4,6 +4,11 @@
 #
 # Starts all Docker Compose services for the E2E stack.
 # Uses docker-compose-e2e.yml and the project name declared in that file.
+
+# Before startup (always, even without --fresh), this script checks host ports
+# used by docker-compose-e2e.yml. If defaults are busy, it finds free ports
+# without killing existing processes, rewrites compose + test/UI config values,
+# and then starts the stack.
 #
 # USAGE:
 #   bin/deploy_containerized_e2e.sh           # start services, preserve state
@@ -12,46 +17,50 @@
 
 set -euo pipefail
 
-RED='\033[0;31m'
-YEL='\033[1;33m'
-GRN='\033[0;32m'
-DIM='\033[2m'
-NC='\033[0m'
-
-info()    { echo -e "${DIM}[info]${NC}  $*"; }
-warn()    { echo -e "${YEL}[warn]${NC}  $*"; }
-success() { echo -e "${GRN}[ok]${NC}    $*"; }
-abort()   { echo -e "${RED}[abort]${NC} $*"; exit 1; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/containerized_common.sh"
+source "${SCRIPT_DIR}/lib/containerized_ports.sh"
 
 FRESH=false
 [[ "${1:-}" == "--fresh" || "${1:-}" == "-f" ]] && FRESH=true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+init_repo_context "${BASH_SOURCE[0]}"
 COMPOSE_FILE="${REPO_ROOT}/docker-compose-e2e.yml"
 cd "${REPO_ROOT}"
 
-if [[ ! -f "${COMPOSE_FILE}" ]]; then
-  abort "docker-compose-e2e.yml not found at ${REPO_ROOT}."
-fi
+ensure_compose_file_exists "${COMPOSE_FILE}"
 
-COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "${COMPOSE_FILE}")
+COMPOSE_PROJECT="$(read_compose_project_from_file "${COMPOSE_FILE}")"
 if [[ -z "${COMPOSE_PROJECT}" ]]; then
   abort "docker-compose-e2e.yml does not declare a 'name:' field."
 fi
 
-if ! grep -Eq 'APP_ENV=(docker|ci)' "${COMPOSE_FILE}"; then
-  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose-e2e.yml."
-fi
+ensure_compose_has_container_app_env "${COMPOSE_FILE}"
+ensure_docker_running
 
-if ! docker info > /dev/null 2>&1; then
-  abort "Docker is not running or not accessible. Start Docker Desktop and try again."
-fi
+# ── port availability + rewrites (always) ────────────────────────────────────
+#
+# We proactively ensure host-published ports are free before startup.
+# If a default host port is occupied, we select the next free host port and
+# rewrite compose + dependent app/test config so the stack remains usable.
+# This runs whether or not --fresh is passed.
+assign_ports_for_stack "e2e"
+apply_stack_port_rewrites \
+  "e2e" \
+  "${COMPOSE_FILE}" \
+  "${REPO_ROOT}" \
+  "${UI_PORT}" \
+  "${POSTGRES_PORT}" \
+  "${RABBITMQ_MGMT_PORT}" \
+  "${MONGO_PORT}" \
+  "${DOCS_PORT}" \
+  "${JUPYTER_PORT}" \
+  "${GRAFANA_PORT}"
 
 if $FRESH; then
   info "--fresh: resetting E2E Docker environment before startup..."
   echo ""
-  bash "${SCRIPT_DIR}/reset_docker_e2e.sh" --reset-all
+  bash "${SCRIPT_DIR}/reset_containerized_e2e.sh" --reset-all
   echo ""
   rm -f "${REPO_ROOT}/api/.db_seeded"
 fi
@@ -66,3 +75,6 @@ info "Check status: docker compose -p ${COMPOSE_PROJECT} -f docker-compose-e2e.y
 info "Follow logs:  docker compose -p ${COMPOSE_PROJECT} -f docker-compose-e2e.yml logs -f"
 info "Run tests:    bin/run_containerized_e2e.sh [-- <playwright args>]"
 echo ""
+
+print_ui_url_banner "${UI_PORT}"
+print_port_changes_banner "${PORT_CHANGES[@]}"

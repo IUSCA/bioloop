@@ -1,12 +1,12 @@
-import { selectDropdownOption } from '../../../../../../actions';
+import { selectDropdownOption } from '../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
-} from '../../../../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../../../../actions/stepper';
-import { generateUniqueDatasetName } from '../../../../../../api/dataset';
-import { createTestUser } from '../../../../../../api/user';
-import { expect, test } from '../../../../../../fixtures';
-import { getTokenByRole } from '../../../../../../fixtures/auth';
+} from '../../../../../actions/datasetUpload';
+import { navigateToNextStep } from '../../../../../actions/stepper';
+import { generateUniqueDatasetName } from '../../../../../api/dataset';
+import { createTestUser } from '../../../../../api/user';
+import { expect, test } from '../../../../../fixtures';
+import { getTokenByRole } from '../../../../../fixtures/auth';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 

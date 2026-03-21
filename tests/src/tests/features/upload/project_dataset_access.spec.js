@@ -1,11 +1,11 @@
-import { getAutoCompleteResults } from '../../../../actions';
-import { selectFiles } from '../../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../../actions/stepper';
-import { createDataset } from '../../../../api/dataset';
-import { createProject, editProjectDatasets, editProjectUsers } from '../../../../api/project';
-import { createTestUser } from '../../../../api/user';
-import { expect, test } from '../../../../fixtures';
-import { getTokenByRole } from '../../../../fixtures/auth';
+import { getAutoCompleteResults } from '../../../actions';
+import { selectFiles } from '../../../actions/datasetUpload';
+import { navigateToNextStep } from '../../../actions/stepper';
+import { createDataset } from '../../../api/dataset';
+import { createProject, editProjectDatasets, editProjectUsers } from '../../../api/project';
+import { createTestUser } from '../../../api/user';
+import { expect, test } from '../../../fixtures';
+import { getTokenByRole } from '../../../fixtures/auth';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -16,16 +16,9 @@ test.describe.serial('Dataset Upload Process', () => {
   let role;
   let roleUser;
 
-  // Projects that will be created, to be used as options of field "Assign
-  // Project".
   const projects = [];
-  // Project that will be associated with the `user` role User
   let projectAssociatedWithUserRole;
-  // Datasets that will be associated with the Project that will be associated
-  // with the `user` role User.
   const datasetsAssociatedWithUserProject = [];
-  // Datasets that will not be associated with the Project that will be
-  // associated with the `user` role User.
   const datasetsNotAssociatedWithUserProject = [];
 
   const resolveE2eRole = (testInfo) => {
@@ -42,8 +35,6 @@ test.describe.serial('Dataset Upload Process', () => {
 
     roleUser = await createTestUser({ role: selectedRole, token: adminToken });
 
-    // Create a few Projects. Test will use these Projects as options of field
-    // "Assign Project".
     const numProjectsToCreate = 2;
     for (let i = 0; i < numProjectsToCreate; i += 1) {
       // eslint-disable-next-line no-await-in-loop
@@ -52,12 +43,8 @@ test.describe.serial('Dataset Upload Process', () => {
       }));
     }
 
-    // Choose any Project to be associated with `user` role User.
     [projectAssociatedWithUserRole] = projects;
 
-    // Create a few Datasets to associate with the Project which is being
-    // associated with the `user` role User. Test will use these Datasets as
-    // options of field "Source Raw Data".
     const numDatasetsToAssociate = 3;
     for (let i = 0; i < numDatasetsToAssociate; i += 1) {
       // eslint-disable-next-line no-await-in-loop
@@ -69,8 +56,6 @@ test.describe.serial('Dataset Upload Process', () => {
       });
       datasetsAssociatedWithUserProject.push(dataset);
     }
-    // Associate the created Datasets with the Project exposed to `user` role
-    // User.
     await editProjectDatasets({
       token: adminToken,
       id: projectAssociatedWithUserRole.id,
@@ -78,7 +63,6 @@ test.describe.serial('Dataset Upload Process', () => {
         add_dataset_ids: datasetsAssociatedWithUserProject.map((dataset) => dataset.id),
       },
     });
-    // Associate the `user` role User with the Project
     await editProjectUsers({
       token: adminToken,
       id: projectAssociatedWithUserRole.id,
@@ -87,8 +71,6 @@ test.describe.serial('Dataset Upload Process', () => {
       },
     });
 
-    // Create a few more Datasets, which will not be associated with the Project
-    // that will be associated with the `user` role User.
     datasetsNotAssociatedWithUserProject.push(await createDataset({
       token: adminToken,
       data: {
@@ -102,7 +84,6 @@ test.describe.serial('Dataset Upload Process', () => {
       role = resolveE2eRole(testInfo);
       test.skip(!role, `Unable to resolve e2e role for project ${testInfo.project.name}`);
 
-      // Setup the test conditions for this role.
       await setup({ selectedRole: role });
 
       testPage = await browser.newPage();
@@ -114,44 +95,68 @@ test.describe.serial('Dataset Upload Process', () => {
       await navigateToNextStep({ page: testPage, nextButtonTestId: 'upload-next-button' });
     });
 
-    test('should enforce role-based Source Raw Data options', async () => {
-      const sourceRawDataOptions = await getAutoCompleteResults({
-        page: testPage,
-        testId: 'upload-metadata-dataset-autocomplete',
+    test.describe('User role (scoped project + datasets)', () => {
+      test.beforeAll(() => {
+        test.skip(role !== 'user', 'These projects run only under user_upload_project_dataset_access');
       });
 
-      datasetsAssociatedWithUserProject.forEach((dataset) => {
-        expect(sourceRawDataOptions).toContain(dataset.name);
-      });
+      test('Source Raw Data autocomplete lists only datasets on the assigned project', async () => {
+        const sourceRawDataOptions = await getAutoCompleteResults({
+          page: testPage,
+          testId: 'upload-metadata-dataset-autocomplete',
+        });
 
-      if (role === 'user') {
+        datasetsAssociatedWithUserProject.forEach((dataset) => {
+          expect(sourceRawDataOptions).toContain(dataset.name);
+        });
         expect(sourceRawDataOptions).toHaveLength(datasetsAssociatedWithUserProject.length);
         datasetsNotAssociatedWithUserProject.forEach((dataset) => {
           expect(sourceRawDataOptions).not.toContain(dataset.name);
         });
-      } else {
+      });
+
+      test('Project autocomplete offers only the assigned project', async () => {
+        const projectOptions = await getAutoCompleteResults({
+          page: testPage,
+          testId: 'upload-metadata-project-autocomplete',
+        });
+
+        expect(projectOptions).toHaveLength(1);
+        expect(projectOptions[0]).toBe(projectAssociatedWithUserRole.name);
+      });
+    });
+
+    test.describe('Admin or operator role (broader catalog)', () => {
+      test.beforeAll(() => {
+        test.skip(role === 'user', 'User role expectations are in the sibling describe block');
+      });
+
+      test('Source Raw Data autocomplete includes datasets outside the test project', async () => {
+        const sourceRawDataOptions = await getAutoCompleteResults({
+          page: testPage,
+          testId: 'upload-metadata-dataset-autocomplete',
+        });
+
+        datasetsAssociatedWithUserProject.forEach((dataset) => {
+          expect(sourceRawDataOptions).toContain(dataset.name);
+        });
         expect(sourceRawDataOptions.length).toBeGreaterThanOrEqual(
           datasetsAssociatedWithUserProject.length,
         );
         datasetsNotAssociatedWithUserProject.forEach((dataset) => {
           expect(sourceRawDataOptions).toContain(dataset.name);
         });
-      }
-    });
-
-    test('should enforce role-based Project options', async () => {
-      const projectOptions = await getAutoCompleteResults({
-        page: testPage,
-        testId: 'upload-metadata-project-autocomplete',
       });
 
-      if (role === 'user') {
-        expect(projectOptions).toHaveLength(1);
-        expect(projectOptions[0]).toBe(projectAssociatedWithUserRole.name);
-      } else {
+      test('Project autocomplete lists multiple projects including the test project', async () => {
+        const projectOptions = await getAutoCompleteResults({
+          page: testPage,
+          testId: 'upload-metadata-project-autocomplete',
+        });
+
         expect(projectOptions.length).toBeGreaterThanOrEqual(projects.length);
         expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
-      }
+      });
     });
 
     test.afterAll(async () => {

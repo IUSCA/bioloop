@@ -9,14 +9,14 @@ import {
   selectAutocompleteResult,
   selectDropdownOption,
   setCheckboxState,
-} from '../../../../actions';
+} from '../../../actions';
 import {
   selectFiles,
-} from '../../../../actions/datasetUpload';
+} from '../../../actions/datasetUpload';
 import {
   navigateToNextStep,
-} from '../../../../actions/stepper';
-import { expect, test } from '../../../../fixtures';
+} from '../../../actions/stepper';
+import { expect, test } from '../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 

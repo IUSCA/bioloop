@@ -1,11 +1,10 @@
-import { selectAutocompleteResult, selectDropdownOption } from '../../../../../../actions';
+import { selectAutocompleteResult, selectDropdownOption } from '../../../../../actions';
 import {
   selectFiles, trackSelectedFilesMetadata,
-} from '../../../../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../../../../actions/stepper';
-import { generateUniqueDatasetName, getDatasets } from '../../../../../../api/dataset';
-import { expect, test } from '../../../../../../fixtures';
-import { getTokenByRole } from '../../../../../../fixtures/auth';
+} from '../../../../../actions/datasetUpload';
+import { navigateToNextStep } from '../../../../../actions/stepper';
+import { generateUniqueDatasetName } from '../../../../../api/dataset';
+import { expect, test } from '../../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -56,8 +55,13 @@ test.describe.serial('Dataset Upload Process', () => {
         verify: true,
       });
 
-      // Uncheck "Assign Project" to skip Project association
-      await page.getByTestId('upload-metadata-assign-project-checkbox').click();
+      // Select Project
+      await selectAutocompleteResult({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+        resultIndex: 0,
+        verify: true,
+      });
 
       // Select Source Instrument
       await selectDropdownOption({
@@ -77,36 +81,51 @@ test.describe.serial('Dataset Upload Process', () => {
         token,
         type: selectedDatasetType,
       });
+
+      // console.log('using dataset name', uploadedDatasetName);
       await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
 
       // Click the "Upload" button
       await page.getByTestId('upload-next-button').click();
     });
 
-    test('should not associate the uploaded Dataset with any Project', async () => {
+    test('should associate the uploaded Dataset with the selected Project', async () => {
       // Verify that the uploaded Dataset is associated with the selected
-      // any Project
+      // Project
+      // - Visit the Project page
+      const projectLink = page.getByTestId('upload-details-project-link');
+      await expect(projectLink).toBeVisible();
+      await expect(projectLink).not.toHaveText('');
 
-      // Get token for admin role which will be used to call the datasets API
-      const adminToken = await getTokenByRole({ role: 'admin' });
+      const projectHref = await projectLink.getAttribute('href');
+      expect(projectHref).toBeTruthy();
 
-      const response = await getDatasets({
-        token: adminToken,
-        params: {
-          name: uploadedDatasetName,
-          type: selectedDatasetType.split(' ').join('_').toUpperCase(),
-          include_projects: true,
-        },
+      // Navigate to the selected Project's page
+      // - Create a new Page  instance for the Project view, since the Project
+      // view opens in a new tab
+      const [projectPage] = await Promise.all([
+        page.context().waitForEvent('page'),
+        projectLink.click(),
+      ]);
+
+      // Wait for the Project page to load
+      await projectPage.waitForLoadState('domcontentloaded');
+      await projectPage.waitForURL((url) => {
+        try {
+          return new URL(url).pathname === projectHref;
+        } catch (error) {
+          return false;
+        }
       });
-      const body = await response.json();
-      if (!body || !body.datasets || body.datasets.length === 0) {
-        throw new Error(`No datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()} `);
-      }
-      if (body.datasets.length > 1) {
-        throw new Error(`Multiple datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()}`);
-      }
-      const matching_dataset = body.datasets[0];
-      expect(matching_dataset.projects).toHaveLength(0);
+
+      // Verify that the uploaded Dataset is listed in the Project's datasets
+      // table
+      const projectDatasetsTable = projectPage.getByTestId('project-datasets-table');
+      await expect(projectDatasetsTable).toBeVisible();
+      const datasetRow = projectDatasetsTable.locator('tbody tr').filter({ hasText: uploadedDatasetName });
+      await expect(datasetRow.first()).toBeVisible();
+
+      await projectPage.close();
     });
   });
 });

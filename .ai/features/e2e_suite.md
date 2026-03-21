@@ -64,7 +64,7 @@ Not exhaustive: `import`, `uploads`, `notifications` use `enabledForRoles`; `ale
 | Area | Spec files (`tests/src/tests/`) | Notes |
 |------|----------------------------------|-------|
 | Import | `view/authenticated/import/**` | Stable reference implementation; **excluded** from new scenario doc |
-| Upload | `view/authenticated/upload/**` | **excluded** |
+| Upload | `features/upload/**` | **excluded** from scenario doc (specs live under `tests/src/tests/features/upload/`) |
 | Notifications | `view/authenticated/notifications/**` | **excluded** |
 | Sidebar | `sidebar/user_role_sidebar_view.spec.js`, `sidebar/non_user_role_sidebar_view.spec.js` | Minimal visibility only |
 | User management | `userManagement/user_management.spec.js` | Create-user modal serial tests |
@@ -382,6 +382,19 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 
 **Future options** if we outgrow env mirroring: upgrade Playwright to a version that supports **async config**; or extract shared pure resolution into a small package with `getEnv(key)` injected from Vite vs Node; or a build step that writes a JSON artifact both sides read.
 
+### Upload e2e layout & project ownership
+
+- **Spec root:** `tests/src/tests/features/upload/` (feature-first; route under test is still `/datasetUpload/...`).
+- **`admin_upload`** runs the bulk of upload specs but **ignores**:
+  - `project_association/user_role/association.spec.js` (user-only project),
+  - `project_dataset_access.spec.js` (per-role projects),
+  - `project_association/non_user_roles/*.spec.js` (owned below).
+- **`{admin,operator}_upload_project_association_non_user_roles`** — one Playwright project per role that has uploads; **same spec files**, different `storageState`. Avoids running those specs twice under `admin_upload` and again under a single operator project.
+- **`user_upload_project_association`** — user-ticket login flow.
+- **`{role}_upload_project_dataset_access`** — role matrix for autocomplete scoping; spec uses nested `describe` blocks (user vs admin/operator expectations).
+
+**CI / pipeline:** align `VITE_FEATURE_ROLE_OVERRIDES` (and related `VITE_*` on ui + e2e) with `E2E_TARGET_ROLES` so `buildFeatureEnabledRolesFromEnv()` and the UI bundle agree; slice runs with `playwright test --project=...` or path `features/upload/...` as needed.
+
 ---
 
 ## 5. API assertions policy (TODO)
@@ -429,3 +442,4 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 | 2026-03-20 | **F10:** UI feature flags consolidated in `ui/src/services/features.js`; `config.enabledFeatures` spec is boolean or `{ defaultRoles }` only; `isFeatureEnabled` removed from `utils.js`. |
 | 2026-03-20 | Playwright: deduplicated role-scoped projects via loops (`${role}_project`, `${role}_notifications`, `${role}_user_management`, `${role}_sidebar_non_user`); `makeRoleProject` sets `metadata.e2eRole`; renamed `project`→`admin_project`, `upload`→`admin_upload`, user association project→`user_upload_project_association` with normal login deps; `project_dataset_access` resolves role from metadata. |
 | 2026-03-20 | Storage paths moved to `tests/playwright.paths.js`; feature-role lists for Playwright from **`buildFeatureEnabledRolesFromEnv()`** (`tests/src/utils/feature.js`, same `VITE_*` env as UI). §4 “Feature roles in Playwright” explains why config does not HTTP-fetch the running UI; **F11** = reconcile tests vs merge order before landing branch. |
+| 2026-03-21 | Upload e2e moved to **`tests/src/tests/features/upload/`**; `admin_upload` no longer includes `non_user_roles` (owned by `{admin,operator}_upload_project_association_non_user_roles`); `project_dataset_access.spec.js` split into nested describes (user vs admin/operator). §4 “Upload e2e layout & project ownership” documents pipeline alignment. |

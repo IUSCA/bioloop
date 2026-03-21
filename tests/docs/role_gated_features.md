@@ -1,6 +1,6 @@
 ## Role-Gated Features
 
-For the broader plan (multi-role specs, config sync automation, and backlog), see **`.ai/features/e2e_suite.md`** §4.
+For the broader plan (multi-role specs, config sync automation, and backlog), see **`.ai/features/e2e_suite.md`** §4 (including **Upload e2e layout & project ownership**). Upload specs: **`tests/src/tests/features/upload/`**; Playwright `testMatch` uses prefix **`/features/upload/`** (see `playwright.config.js`).
 
 Some features are only available to a subset of roles (e.g. a feature enabled for admin and operator but not for user). Testing this correctly requires keeping runtime UI feature flags and Playwright role routing in sync.
 

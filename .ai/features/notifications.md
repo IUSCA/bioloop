@@ -43,7 +43,7 @@
 - Test: Added/expanded notification UI-DOM-focused Playwright specs for admin/operator/user (`tests/src/tests/view/authenticated/notifications/*`) covering read/unread transitions, bookmark/archive controls, mark-all-read, global-dismiss visibility/flow, and per-role visibility constraints.
 - Test: Added reusable generic action helper `clearInputByTestId` for clearable text inputs in `tests/src/actions/index.js`.
 - Validation: Running targeted notification projects through the E2E compose stack currently exposes a reproducible failure where clearing search via input clear control does not always remove the `Search: ...` chip state in admin notifications flow; this remains a tracked UI behavior gap.
-- Test: Added E2E-specific lifecycle scripts `bin/deploy_containerized_e2e.sh` and `bin/reset_docker_e2e.sh`, both bound to `docker-compose-e2e.yml` and its declared project name for isolated test-stack management.
+- Test: Added E2E-specific lifecycle scripts `bin/deploy_containerized_e2e.sh` and `bin/reset_containerized_e2e.sh`, both bound to `docker-compose-e2e.yml` and its declared project name for isolated test-stack management.
 - Validation: Notification Playwright projects pass in E2E compose stack (`admin_notifications`, `operator_notifications`, `user_notifications`) with all scenarios active (no `fixme`/skip retained in notification specs).
 - Test: Added additional non-duplicate notification E2E coverage in existing role specs:
   - user-owned state transitions (`read`, `bookmark`, `archive`) in user flow
