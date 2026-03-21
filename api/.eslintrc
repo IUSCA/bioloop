@@ -1,4 +1,18 @@
-{
+{  
+  "plugins": ["eslint-plugin-local-rules"],
+  "settings": {
+    "import/resolver": {
+      "node": {
+        "extensions": [".js", ".json"]
+      },
+      "module-alias": {
+        "alias": {
+          "@": "./src"
+        },
+        "extensions": [".js", ".json"]
+      }
+    }
+  },
   "rules": {
     "no-underscore-dangle": 0,
     "no-unused-vars": ["error", { "argsIgnorePattern": "next" }],
@@ -11,22 +25,35 @@
       "warn",
       {
         "mode": "overflow-only",
-        "maxLength": 80,
+        "maxLength": 120,
         "logicalWrap": true,
         "ignoreUrls": true,
         "ignoreCommentsWithCode": true,
         "tabSize": 2
       }
     ],
-    "max-len": ["error", { "ignoreComments": true, "code": 120 }]
+    "comment-length/limit-single-line-comments": [
+      "warn",
+      {
+        "mode": "overflow-only",
+        "maxLength": 120,
+        "logicalWrap": true,
+        "ignoreUrls": true,
+        "ignoreCommentsWithCode": true,
+        "tabSize": 2
+      }
+    ],
+    "max-len": ["error", { "ignoreComments": true, "code": 120 }],
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
+    "local-rules/no-original-prisma-inside-tx": "error"
   },
   "env": {
     "node": true,
-    "mocha": true,
-    "es2020": true  // <- activate “es2020” globals
+    "es2020": true,  // <- activate “es2020” globals
+    "jest": true
   },
   "parserOptions": {
-    "ecmaVersion": 13
+    "ecmaVersion": "latest"
   },
   "extends": [
     "airbnb-base",

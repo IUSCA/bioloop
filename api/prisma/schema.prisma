@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["strictUndefinedChecks"]
 }
 
 datasource db {
@@ -8,34 +9,35 @@ datasource db {
 }
 
 model dataset {
-  id                 Int                       @id @default(autoincrement())
-  name               String
-  type               String
-  num_directories    Int?
-  num_files          Int?
-  du_size            BigInt?
-  size               BigInt?
-  bundle_size        BigInt?
-  description        String?
-  created_at         DateTime                  @default(now()) @db.Timestamp(6)
-  updated_at         DateTime                  @default(now()) @updatedAt @db.Timestamp(6)
-  origin_path        String?
-  archive_path       String?
-  staged_path        String?
-  is_deleted         Boolean                   @default(false)
-  is_staged          Boolean                   @default(false)
-  metadata           Json?
-  workflows          workflow[]
-  files              dataset_file[]
-  audit_logs         dataset_audit[]
-  states             dataset_state[]
-  derived_datasets   dataset_hierarchy[]       @relation("source_datasets")
-  source_datasets    dataset_hierarchy[]       @relation("derived_datasets")
-  projects           project_dataset[]
-  accesses           data_access_log[]
-  stage_requests     stage_request_log[]
-  bundle             bundle?
-  dataset_upload_log dataset_upload_log?
+  id                Int                 @id @default(autoincrement())
+  name              String
+  type              String
+  num_directories   Int?
+  num_files         Int?
+  du_size           BigInt?
+  size              BigInt?
+  bundle_size       BigInt?
+  description       String?
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at        DateTime            @default(now()) @updatedAt @db.Timestamp(6)
+  origin_path       String?
+  archive_path      String?
+  staged_path       String?
+  is_deleted        Boolean             @default(false)
+  is_staged         Boolean             @default(false)
+  metadata          Json?
+  workflows         workflow[]
+  files             dataset_file[]
+  audit_logs        dataset_audit[]
+  states            dataset_state[]
+  derived_datasets  dataset_hierarchy[] @relation("source_datasets")
+  source_datasets   dataset_hierarchy[] @relation("derived_datasets")
+  projects          project_dataset[]
+  accesses          data_access_log[]
+  stage_requests    stage_request_log[]
+  bundle            bundle?
+  src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
+  src_instrument_id Int?
   action_items       dataset_action_item[]
   is_duplicate       Boolean                   @default(false)
   duplicated_from    dataset_duplication?      @relation("duplicated_from")
@@ -96,48 +98,41 @@ model dataset_file_hierarchy {
   @@index([child_id])
 }
 
-model upload_log {
-  id             Int                 @id @default(autoincrement())
-  status         upload_status
-  files          file_upload_log[]
-  initiated_at   DateTime            @default(now()) @db.Timestamp(6)
-  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamp(6)
-  user_id        Int
-  user           user                @relation(fields: [user_id], references: [id])
-  dataset_upload dataset_upload_log?
-}
-
 model dataset_upload_log {
-  id            Int        @id @default(autoincrement())
-  dataset_id    Int        @unique
-  dataset       dataset    @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  upload_log_id Int
-  upload_log    upload_log @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
-
-  @@unique([upload_log_id])
+  id           Int               @id @default(autoincrement())
+  status       upload_status
+  files        file_upload_log[]
+  updated_at   DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  audit_log    dataset_audit     @relation(fields: [audit_log_id], references: [id], onDelete: Cascade)
+  audit_log_id Int               @unique
 }
 
 model file_upload_log {
-  id            Int           @id @default(autoincrement())
-  name          String
-  md5           String
-  num_chunks    Int
-  status        upload_status
-  path          String?
-  upload_log    upload_log?   @relation(fields: [upload_log_id], references: [id], onDelete: Cascade)
-  upload_log_id Int?
+  id                    Int                 @id @default(autoincrement())
+  name                  String
+  md5                   String
+  num_chunks            Int
+  status                upload_status
+  path                  String?
+  dataset_upload_log    dataset_upload_log? @relation(fields: [dataset_upload_log_id], references: [id], onDelete: Cascade)
+  dataset_upload_log_id Int?
 }
 
 model dataset_audit {
-  id         Int      @id @default(autoincrement())
-  action     String
-  timestamp  DateTime @default(now())
-  old_data   Json?
-  new_data   Json?
-  user_id    Int?
-  user       user?    @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  dataset_id Int?
-  dataset    dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  id            Int                    @id @default(autoincrement())
+  action        String
+  create_method DATASET_CREATE_METHOD?
+  updated_at    DateTime               @default(now()) @updatedAt @db.Timestamp(6)
+  timestamp     DateTime               @default(now())
+  old_data      Json?
+  new_data      Json?
+  user_id       Int?
+  user          user?                  @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  dataset_id    Int?
+  dataset       dataset?               @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  upload        dataset_upload_log?
+
+  @@unique([dataset_id, create_method])
 }
 
 model dataset_state {
@@ -210,8 +205,8 @@ model data_access_log {
   dataset_file dataset_file? @relation(fields: [file_id], references: [id])
   dataset_id   Int?
   dataset      dataset?      @relation(fields: [dataset_id], references: [id])
-  user_id      Int
-  user         user          @relation(fields: [user_id], references: [id])
+  user_id      Int?
+  user         user?         @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model stage_request_log {
@@ -219,8 +214,8 @@ model stage_request_log {
   timestamp  DateTime @default(now()) @db.Timestamp(6)
   dataset_id Int?
   dataset    dataset? @relation(fields: [dataset_id], references: [id])
-  user_id    Int
-  user       user     @relation(fields: [user_id], references: [id])
+  user_id    Int?
+  user       user?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
 }
 
 model user {
@@ -233,6 +228,7 @@ model user {
   created_at                 DateTime            @default(now()) @db.Timestamp(6)
   updated_at                 DateTime            @default(now()) @updatedAt @db.Timestamp(6)
   is_deleted                 Boolean             @default(false)
+  metadata                   Json?
   user_role                  user_role[]
   settings                   user_settings?
   contacts                   contact[]
@@ -248,8 +244,10 @@ model user {
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
   acknowledged_notifications notification[]
-  uploads                    upload_log[]
   user_notifications         user_notification[]
+  owned_projects             project[]
+  // created_datasets           dataset_create_log[]
+  alerts_created             alert[]
 }
 
 model user_password {
@@ -371,6 +369,8 @@ model project {
   metadata        Json?
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   updated_at      DateTime          @default(now()) @updatedAt @db.Timestamp(6)
+  owner_id        Int?
+  owner           user?             @relation(fields: [owner_id], references: [id], onDelete: SetNull)
   users           project_user[]
   datasets        project_dataset[]
   contacts        project_contact[]
@@ -439,8 +439,39 @@ model about {
   id                 Int      @id @default(autoincrement())
   html               String
   created_at         DateTime @default(now()) @db.Timestamp(6)
-  last_updated_by    user     @relation(fields: [last_updated_by_id], references: [id])
-  last_updated_by_id Int
+  last_updated_by    user?    @relation(fields: [last_updated_by_id], references: [id], onDelete: SetNull)
+  last_updated_by_id Int?
+}
+
+model nonce {
+  id         String    @id @default(uuid())
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  purpose    String?
+  expires_at DateTime?
+}
+
+model instrument {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  host             String    @unique
+  description      String?
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  sourced_datasets dataset[]
+}
+
+model alert {
+  id            Int        @id @default(autoincrement())
+  created_at    DateTime   @default(now()) @db.Timestamp(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+  created_by_id Int?
+  created_by    user?      @relation(fields: [created_by_id], references: [id], onDelete: SetNull)
+  label         String?
+  message       String?
+  type          ALERT_TYPE
+  start_time    DateTime?  @db.Timestamp(6)
+  end_time      DateTime?  @db.Timestamp(6)
+  is_hidden     Boolean?   @default(false)
 }
 
 enum access_type {
@@ -489,4 +520,17 @@ enum DATASET_INGESTION_CHECK_TYPE {
   CHECKSUMS_MATCH
   FILES_MISSING_FROM_DUPLICATE
   FILES_MISSING_FROM_ORIGINAL
+}
+
+enum DATASET_CREATE_METHOD {
+  UPLOAD
+  IMPORT
+  SCAN
+  ON_DEMAND
+}
+
+enum ALERT_TYPE {
+  INFO
+  WARNING
+  ERROR
 }

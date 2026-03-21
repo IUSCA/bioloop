@@ -12,7 +12,5 @@
   },
   "scope_prefix": "download_file:",
   "upload_scope": "upload_file",
-  "upload_path": {
-    "data_products": "/path/to/uploaded/data_products"
-  }
+  "download_path": "/opt/sca/data/downloads"
 }

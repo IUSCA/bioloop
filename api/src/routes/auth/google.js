@@ -4,12 +4,13 @@ const config = require('config');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 
-const { validate } = require('../../middleware/validators');
-const asyncHandler = require('../../middleware/asyncHandler');
-
-const userService = require('../../services/user');
-const authService = require('../../services/auth');
-const utils = require('../../utils');
+const createError = require('http-errors');
+const { validate } = require('@/middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { loginHandler } = require('@/middleware/auth');
+const logger = require('@/services/logger');
+const authService = require('@/services/auth');
+const utils = require('@/utils');
 
 const router = express.Router();
 
@@ -41,10 +42,6 @@ router.get(
   }),
 );
 
-// possible response codes:
-// 200 - return JWT
-// 204 - user authenticated but not a portal user
-// 500 - error
 router.post(
   '/verify',
   validate([
@@ -67,24 +64,30 @@ router.post(
     // decoded id_token looks like this:
     // {
     //   "iss": "accounts.google.com",
-    //   "sub": "100338926102874330519",
-    //   "email": "ddeepak6992@gmail.com",
+    //   "sub": "1132891511",
+    //   "email": "user@gmail.com",
     //   "email_verified": true,
-    //   "at_hash": "soIBpOyDtjm3yw9633IB_A",
+    //   "at_hash": "<hash>",
     //   "iat": 1698353577,
     //   "exp": 1698357177
     // }
     const id_data = utils.decodeJWT(_res.data.id_token);
     const { email } = id_data;
 
-    const user = await userService.findActiveUserBy('email', email);
-    if (user) {
-      const resObj = await authService.onLogin({ user, method: 'Google' });
-      return res.json(resObj);
+    if (!email) {
+      logger.error('Failed to get email from Google token');
+      return next(createError.InternalServerError());
     }
-    // User was authenticated with google but they are not a portal user
-    // Send an empty success message
-    return res.status(204).send();
+    const user = await authService.getLoginUser('email', email);
+    req.auth = {
+      user,
+      method: 'google',
+      identity: {
+        email,
+      },
+    };
+    next();
   }),
+  loginHandler,
 );
 module.exports = router;

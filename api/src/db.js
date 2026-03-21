@@ -1,4 +1,4 @@
-require('dotenv-safe').config();
+require('dotenv-safe').config({ example: '.env.default' });
 // const process = require('process');
 // const config = require('config');
 
@@ -18,8 +18,15 @@ require('dotenv-safe').config();
 // // console.log(dbUrl);
 // process.env.DATABASE_URL = dbUrl;
 
-// Postgres columns can be of BigInt type for which serialization is not defined
+// Override BigInt serialization for JSON.stringify
+// Postgres columns can be of BigInt type, which JSON.stringify does not handle by default.
+// This ensures BigInt values are converted to strings during serialization.
 // eslint-disable-next-line no-extend-native, func-names
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
+
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+module.exports = prisma;

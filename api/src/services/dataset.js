@@ -1,20 +1,67 @@
 const assert = require('assert');
 const path = require('node:path');
+const { Prisma } = require('@prisma/client');
 
-const { PrismaClient } = require('@prisma/client');
 const config = require('config');
 // const _ = require('lodash/fp');
+const createError = require('http-errors');
 
+const _ = require('lodash/fp');
+const prisma = require('@/db');
 const wfService = require('./workflow');
 const userService = require('./user');
-const { log_axios_error } = require('../utils');
 const FileGraph = require('./fileGraph');
+const workflowService = require('./workflow');
+const projectService = require('./project');
+const featureService = require('./features');
+const logger = require('./logger');
+
+const { log_axios_error } = require('../utils');
 const {
   DONE_STATUSES, INCLUDE_STATES, INCLUDE_WORKFLOWS, INCLUDE_AUDIT_LOGS, INCLUDE_FILES, INCLUDE_DUPLICATIONS,
 } = require('../constants');
+const CONSTANTS = require('../constants');
+const asyncHandler = require('../middleware/asyncHandler');
+const { getPermission, accessControl } = require('../middleware/auth');
 
-const prisma = new PrismaClient();
+/**
+ * Normalizes the name of a dataset to be compatible with the system.
+ * @param name - The provided dataset name.
+ * @returns {string} The normalized dataset name.
+ */
+function normalize_name(name) {
+  // replace all character other than a-z, 0-9, _ and - with -
+  // replace consecutive hyphens with one -
 
+  return (name || '')
+    .replaceAll(/[\W]/g, '-')
+    .replaceAll(/-+/g, '-');
+}
+
+/**
+ * Generates the absolute path where a dataset will be uploaded to.
+ *
+ * @function getUploadedDatasetPath
+ * @param {Object} params - The parameters object.
+ * @param {number|null} [params.datasetId=null] - The ID of the dataset to be uploaded.
+ * @param {string|null} [params.datasetType=null] - The type of the dataset to be uploaded.
+ * @returns {string} The absolute path where the uploaded dataset should be stored.
+ */
+const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
+  config.upload.path,
+  datasetType.toLowerCase(),
+  `${datasetId}`,
+  'processed',
+);
+
+/**
+ * Retrieves and prepares the workflow body for a given workflow name.
+ *
+ * @function get_wf_body
+ * @param {string} wf_name - The name of the workflow for which the workflow body is to be constructed.
+ * @throws {AssertionError} Throws an error if the workflow is not registered in the configuration.
+ * @returns {Object} The constructed workflow body for the requested workflow.
+ */
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
 
@@ -30,6 +77,25 @@ function get_wf_body(wf_name) {
   return wf_body;
 }
 
+/**
+ * Creates a new workflow for a dataset.
+ *
+ * @async
+ * @function create_workflow
+ * @param {Object} dataset - The dataset object for which the workflow is being created.
+ * @param {string} wf_name - The name of the workflow to be created.
+ * @param {number} initiator_id - The ID of the user initiating the workflow.
+ * @throws {AssertionError} Throws an error if a workflow with the same name is already running or pending for the dataset.
+ * @returns {Promise<Object>} The created workflow object.
+ *
+ * @description
+ * This function performs the following steps:
+ * 1. Retrieves the workflow body for the provided workflow name.
+ * 2. Checks if there's already an active workflow with the same name for the given dataset.
+ * 3. If no active workflow exists, it creates a new workflow using the workflow service.
+ * 4. Associates the newly created workflow with the dataset in the database.
+ * 5. Returns the created workflow object.
+ */
 async function create_workflow(dataset, wf_name, initiator_id) {
   const wf_body = get_wf_body(wf_name);
 
@@ -59,6 +125,19 @@ async function create_workflow(dataset, wf_name, initiator_id) {
   return wf;
 }
 
+/**
+ * Soft-deletes a dataset or initiates a delete-archive workflow.
+ *
+ * @async
+ * @function soft_delete
+ * @param {Object} dataset - The dataset object to be deleted.
+ * @param {number} user_id - The ID of the user initiating the delete action.
+ * @returns {Promise<void>}
+ * @description
+ * If the dataset has an archive_path, it starts a delete-archive workflow.
+ * If the dataset is not archived, it marks the dataset as deleted in the database.
+ * In both cases, it creates an audit log entry for the delete action.
+ */
 async function soft_delete(dataset, user_id) {
   if (dataset.archive_path) {
     // if archived, starts a delete archive workflow which will
@@ -90,6 +169,25 @@ async function soft_delete(dataset, user_id) {
   });
 }
 
+/**
+ * Retrieves a dataset with specified details and related information.
+ *
+ * @async
+ * @function get_dataset
+ * @param {Object} params - The parameters object.
+ * @param {number} params.id - The ID of the dataset to retrieve.
+ * @param {boolean} [params.files=false] - Whether to include information about files associated with this dataset.
+ * @param {boolean} [params.workflows=false] - Whether to include information about workflows associated with this dataset.
+ * @param {boolean} [params.last_task_run=false] - Whether to include the last task run information for workflows associated with this dataset.
+ * @param {boolean} [params.prev_task_runs=false] - Whether to include previous task runs information for workflows associated with this dataset.
+ * @param {boolean} [params.only_active=false] - Whether to include only active workflows associated with this dataset.
+ * @param {boolean} [params.bundle=false] - Whether to include bundle information for this dataset.
+ * @param {boolean} [params.includeProjects=false] - Whether to include projects associated with this dataset.
+ * @param {boolean} [params.initiator=false] - Whether to include the initiators of the workflows associated with this dataset.
+ * @param {boolean} [params.include_source_instrument=false] - Whether to include source instrument where this dataset was collected from.
+ * @returns {Promise<Object>} The dataset object with requested details and related information.
+ * @throws {Error} If the dataset is not found or if there's an error retrieving workflow information.
+ */
 async function get_dataset({
   id = null,
   files = false,
@@ -104,6 +202,7 @@ async function get_dataset({
   initiator = false,
   include_upload_log = false,
   include_ingestion_checks = false,
+  include_source_instrument = false,
 }) {
   const fileSelect = files ? INCLUDE_FILES : { files: false };
   const workflow_include = initiator ? {
@@ -126,24 +225,20 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
-      dataset_upload_log: include_upload_log ? {
-        include: {
-          upload_log: {
-            select: {
-              id: true,
-              files: true,
-              status: true,
-            },
+      ...(include_source_instrument ? {
+        src_instrument: {
+          select: {
+            name: true,
           },
         },
-      } : false,
-      ...(include_duplications && INCLUDE_DUPLICATIONS),
+      } : false),
+      ...(include_duplications ? INCLUDE_DUPLICATIONS : {}),
       action_items: include_action_items ? {
         where: {
           active: true,
         },
-      } : undefined,
-      ...(include_ingestion_checks && {
+      } : {},
+      ...(include_ingestion_checks ? {
         ingestion_checks: {
           include: {
             file_checks: {
@@ -153,7 +248,7 @@ async function get_dataset({
             },
           },
         },
-      }),
+      } : {}),
     },
   });
   const dataset_workflows = dataset.workflows;
@@ -181,7 +276,9 @@ async function get_dataset({
   }
   dataset?.audit_logs?.forEach((log) => {
     // eslint-disable-next-line no-param-reassign
-    if (log.user) { log.user = log.user ? userService.transformUser(log.user) : null; }
+    if (log.user) {
+      log.user = log.user ? userService.transformUser(log.user) : null;
+    }
   });
 
   return dataset;
@@ -260,6 +357,13 @@ async function get_dataset({
 //   return _.concat(files)(directories);
 // }
 
+/**
+ * Creates a file tree structure from a list of files.
+ *
+ * @function create_filetree
+ * @param {Array} files - An array of file objects.
+ * @returns {Object} A tree structure representing the file hierarchy.
+ */
 function create_filetree(files) {
   const root = {
     metadata: {},
@@ -267,8 +371,8 @@ function create_filetree(files) {
   };
 
   files.forEach((file) => {
-    const { path: relpath, ...rest } = file;
-    const pathObject = path.parse(relpath);
+    const { path: relPath, ...rest } = file;
+    const pathObject = path.parse(relPath);
     const parent_dir = pathObject.dir
       .split(path.sep)
       .reduce((parent, dir_name) => {
@@ -276,7 +380,7 @@ function create_filetree(files) {
           metadata: {},
           children: {},
         };
-        // eslint-disable-next-line no-param-reassign
+          // eslint-disable-next-line no-param-reassign
         parent.children[dir_name] = curr;
         return curr;
       }, root);
@@ -288,15 +392,25 @@ function create_filetree(files) {
   return root;
 }
 
+/**
+ * Checks if a user has an association with a dataset.
+ *
+ * @async
+ * @function has_dataset_assoc
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {number} params.user_id - The ID of the user.
+ * @returns {Promise<boolean>} True if the user is associated with the dataset, false otherwise.
+ */
 async function has_dataset_assoc({
-  dataset_id, username,
+  dataset_id, user_id,
 }) {
   const projects = await prisma.project.findMany({
     where: {
       users: {
         some: {
           user: {
-            username,
+            id: user_id,
           },
         },
       },
@@ -311,6 +425,108 @@ async function has_dataset_assoc({
   });
 
   return projects.length > 0;
+}
+
+/**
+ * Gets the user who created the given dataset.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ *
+ * @returns {Promise<Object>} A promise that resolves to the user object of the user who created the dataset.
+ *
+ * @throws {Error} If an audit log for the dataset's creation is not found.
+ * @throws {Error} If the user who created the dataset cannot be determined.
+ */
+async function get_dataset_creator({ dataset_id }) {
+  const dataset_creation_log = await prisma.dataset_audit.findFirst({
+    where: {
+      dataset_id,
+      create_method: {
+        in: [
+          CONSTANTS.DATASET_CREATE_METHODS.UPLOAD,
+          CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
+          CONSTANTS.DATASET_CREATE_METHODS.SCAN,
+        ],
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+    },
+  });
+  if (!dataset_creation_log) {
+    throw new Error(`Expected to find an audit log for the creation of dataset ${dataset_id}, but found none.`);
+  }
+  if (!dataset_creation_log.user) {
+    throw new Error(`Could not find user who created dataset ${dataset_id}.`);
+  }
+
+  return dataset_creation_log.user;
+}
+
+/**
+ * Determine if the user has access to initiate the given workflow for the given dataset.
+ *
+ * The access rules are as follows:
+ * 1. Users with `admin` or `operator` roles are always allowed to initiate any workflows.
+ * 2. Users with 'user' role:
+ *     - For `integrated`, `process_dataset_upload`, or `cancel_dataset_upload` workflows:
+ *       - They are allowed to proceed only if they created the dataset.
+ *     - For other allowed workflows (like `stage`):
+ *       - They are allowed to proceed if they are assigned to a project associated with the dataset.
+ *
+ * If the user doesn't have the necessary permissions, a Forbidden error is thrown.
+ * If the dataset creation audit log can't be found, an InternalServerError is thrown.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {string} params.workflow - The workflow name which is to be initiated.
+ * @param {number} params.dataset_id - The ID of the dataset on which the workflow is to be run.
+ * @param {number} params.user_id - The ID of the user who is requesting for the given workflow to be run on the given dataset.
+ *
+ * @returns {Promise<boolean>}
+ */
+async function has_workflow_access({ workflow, dataset_id, user_id }) {
+  const user = await prisma.user.findUnique({
+    where: { id: user_id },
+    include: {
+      user_role: {
+        select: {
+          roles: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  const user_roles = user.user_role.map((ur) => ur.roles.name);
+
+  if (user_roles.some((role) => ['operator', 'admin'].includes(role))) {
+    return true;
+  }
+
+  let user_has_workflow_access = false;
+
+  if ([CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
+    CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
+    CONSTANTS.WORKFLOWS.INTEGRATED]
+    .includes(workflow)) {
+    const dataset_creator = await get_dataset_creator({ dataset_id });
+    user_has_workflow_access = dataset_creator.id === user_id;
+  } else {
+    user_has_workflow_access = await has_dataset_assoc({
+      dataset_id,
+      user_id,
+    });
+  }
+
+  return user_has_workflow_access;
 }
 
 // async function search_files({ dataset_id, query }) {
@@ -343,6 +559,16 @@ async function has_dataset_assoc({
 //   };
 // }
 
+/**
+ * Lists files in a dataset directory.
+ *
+ * @async
+ * @function files_ls
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {string} [params.base=''] - The base path to list files from.
+ * @returns {Promise<Array>} An array of file objects.
+ */
 async function files_ls({ dataset_id, base = '' }) {
   let base_path = '';
   if (base === '' || base === '/') base_path = '';
@@ -365,10 +591,28 @@ async function files_ls({ dataset_id, base = '' }) {
   return results.children.map((row) => row.child);
 }
 
+/**
+ * Searches for files in a dataset based on various criteria.
+ *
+ * @async
+ * @function search_files
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {string} [params.name=''] - The name to search for.
+ * @param {string} [params.base=''] - The base path to search from.
+ * @param {number} params.skip - The number of items to skip.
+ * @param {number} params.take - The number of items to take.
+ * @param {string} [params.extension] - The file extension to filter by.
+ * @param {string} [params.filetype] - The file type to filter by.
+ * @param {number} [params.min_file_size] - The minimum file size to filter by.
+ * @param {number} [params.max_file_size] - The maximum file size to filter by.
+ * @returns {Promise<Array>} An array of matching file objects.
+ */
 async function search_files({
   dataset_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
+  sort_order = null, sort_by = null,
 }) {
   // TODO: filter by extension, size, filetype, status
 
@@ -423,6 +667,16 @@ async function search_files({
     };
   }
 
+  let orderBy = {};
+  if (sort_order && sort_by) {
+    orderBy = {
+      [sort_by]: {
+        sort: sort_order,
+        nulls: 'last',
+      },
+    };
+  }
+
   return prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -433,9 +687,19 @@ async function search_files({
     },
     skip,
     take,
+    orderBy,
   });
 }
 
+/**
+ * Adds files to a dataset.
+ *
+ * @async
+ * @function add_files
+ * @param {Object} params - The parameters object.
+ * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {Array} params.data - An array of file objects to add.
+ */
 async function add_files({ dataset_id, data }) {
   const files = data.map((f) => ({
     dataset_id,
@@ -443,10 +707,10 @@ async function add_files({ dataset_id, data }) {
     ...f,
   }));
 
-  // create a file tree using graph datastructure
+  // create a file tree using graph data structure
   const graph = new FileGraph(files.map((f) => f.path));
 
-  // query non leaf nodes (directories) from the graph datastrucure
+  // query non leaf nodes (directories) from the graph data structure
   const directories = graph.non_leaf_nodes().map((p) => ({
     dataset_id,
     name: path.parse(p).base,
@@ -460,7 +724,7 @@ async function add_files({ dataset_id, data }) {
     skipDuplicates: true,
   });
 
-  // retrive all files and directories for this dataset to get their ids
+  // retrieve all files and directories for this dataset to get their ids
   const fileObjs = await prisma.dataset_file.findMany({
     where: {
       dataset_id,
@@ -477,7 +741,7 @@ async function add_files({ dataset_id, data }) {
     return acc;
   }, {});
 
-  // query edges / parent-child relationships from the graph datastructure
+  // query edges / parent-child relationships from the graph data structure
   const edges = graph.edges().map(([src, dst]) => ({
     parent_id: path_to_ids[src],
     child_id: path_to_ids[dst],
@@ -506,14 +770,607 @@ async function get_workflows({ dataset_id, statuses = [] }) {
   return retrieved_workflows;
 }
 
+async function _handle_project_association({
+  tx, dataset_id, project_id, requester_id,
+}) {
+  const requester = await tx.user.findUniqueOrThrow({ where: { id: requester_id } });
+  const requester_roles = await userService.getUserRoles({ user_id: requester_id });
+
+  if (project_id) {
+    let is_permitted_to_assign_dataset_to_project = false;
+    // Associate the Dataset with the Project.
+    // Check if the user is authorized to associate Datasets to the requested Project. User is authorized if:
+    //  - EITHER, they have the `admin` or `operator` role
+    //  - OR, they are associated with the Project, and are the owner of the Project
+    if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
+      is_permitted_to_assign_dataset_to_project = true;
+    } else {
+      const associating_project_owner = await projectService.get_project_owner({ project_id });
+      const requester_project_association_permission = getPermission({
+        resource: 'project_datasets',
+        action: 'create',
+        requester_roles,
+        checkOwnership: true,
+        requester: requester.username,
+        resourceOwner: associating_project_owner.username,
+      });
+      is_permitted_to_assign_dataset_to_project = requester_project_association_permission.granted;
+      is_permitted_to_assign_dataset_to_project = is_permitted_to_assign_dataset_to_project
+       && await projectService.has_project_assoc({
+         project_id,
+         user_id: requester_id,
+       });
+    }
+    if (!is_permitted_to_assign_dataset_to_project) {
+      throw new Error(`You are not permitted to assign Datasets to Project ${project_id}.`);
+    }
+    await tx.project_dataset.create({
+      data: {
+        project_id,
+        dataset_id,
+        assignor_id: requester_id,
+      },
+    });
+
+    return;
+  }
+
+  // Check if the requester has any Projects assigned to them. If not, a new Project will be created.
+  const requester_projects = await tx.project_user.findMany({
+    where: {
+      user_id: requester_id,
+    },
+  });
+
+  const will_create_project = requester_projects.length === 0;
+  if (will_create_project) {
+    if (!featureService.isFeatureEnabled({ key: 'auto_create_project_on_dataset_creation' })) {
+      return;
+    }
+
+    // (When creating a Dataset) new Projects are only created for `user` role
+    if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
+      return;
+    }
+
+    // Check if the requester has permission to create a new Project
+    const requester_project_creation_permission = getPermission({
+      resource: 'projects',
+      action: 'create',
+      requester_roles,
+    });
+    if (!requester_project_creation_permission.granted) {
+      throw new Error('You are not permitted to create a new Project.');
+    }
+
+    const associating_dataset = await tx.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
+    await projectService.create_project({
+      tx,
+      data: {
+        description: `Project created for Dataset ${associating_dataset.name}`,
+        dataset_ids: [associating_dataset.id],
+        user_ids: [requester_id],
+        owner_id: requester_id,
+        assignor_id: requester_id,
+      },
+    });
+  }
+}
+
+/**
+ * Creates a new dataset if one with the same name and type does not already exist.
+ *
+ * Note: prisma.dataset.upsert is not used here because it cannot indicate whether the dataset was newly created.
+ *
+ * Using prisma.dataset.create alone would create the dataset if it doesn't exist, but would throw an error if it does.
+ * This approach would also increment the sequence ID even if the dataset is not created,
+ * leading to large gaps in the sequence when this function is called multiple times for existing datasets.
+ *
+ * The expected behavior is maintained even under concurrent transactions (default isolation level is read committed):
+ * txA: findFirst -> no dataset
+ * txB: findFirst -> no dataset
+ * txA: create -> dataset created
+ * txB: create -> unique constraint violation
+ *
+ * @param {Object} tx - Database client.
+ * @param {Object} data - The data object containing details of the dataset to be created.
+ * @return {Promise<Object|undefined>} Returns the created dataset object if successfully created, otherwise returns undefined if a dataset with the same name and type already exists.
+ */
+async function create({
+  tx, data, requester_id = null, project_id = null,
+} = {}) {
+  // find if a dataset with the same name and type already exists
+  const existingDataset = await tx.dataset.findFirst({
+    where: {
+      name: data.name,
+      type: data.type,
+      is_deleted: false,
+    },
+    select: {
+      id: true,
+    },
+  });
+  if (existingDataset) {
+    console.log('dataset already exists', existingDataset.name, 'existingDataset_id', existingDataset.id);
+    return;
+  }
+
+  // Dataset being created may be assigned to a new Project, or an existing Project.
+
+  // if Dataset doesn't exist, create it
+  let created_dataset;
+  try {
+    created_dataset = await tx.dataset.create({
+      data,
+    });
+
+    await _handle_project_association({
+      tx,
+      dataset_id: created_dataset.id,
+      project_id,
+      requester_id,
+    });
+  } catch (e) {
+    console.error('Error creating dataset:', e);
+    throw e;
+  }
+  return created_dataset;
+}
+
+/**
+ * Retrieves active workflows for a given dataset.
+ *
+ * @async
+ * @function get_dataset_active_workflows
+ * @param {Object} params - The parameters object.
+ * @param {Object} params.dataset - The dataset object for which workflows are to be retrieved.
+ * @returns {Promise<Array>} A promise that resolves to an array of active workflow objects.
+ *
+ * @example
+ * const dataset = { workflows: [{ id: 'wf1' }, { id: 'wf2' }] };
+ * const activeWorkflows = await get_dataset_active_workflows({ dataset });
+ */
+const get_dataset_active_workflows = async ({ dataset } = {}) => {
+  const datasetWorkflowIds = dataset.workflows.map((wf) => wf.id);
+  const workflowQueryResponse = await workflowService.getAll({
+    workflow_ids: datasetWorkflowIds,
+    app_id: config.get('app_id'),
+    status: 'ACTIVE',
+  });
+  return workflowQueryResponse.data.results;
+};
+
+/**
+ * Gets the bundle name for a staged dataset.
+ *
+ * @function get_bundle_name
+ * @param {Object} dataset - The dataset which has been or will be staged.
+ * @returns {string} The name of the bundle which contains the staged dataset.
+ */
+const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+
+/**
+ * Middleware to check if a user has access to a dataset.
+ *
+ * @function dataset_access_check
+ * @async
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function.
+ * @throws {Error} Throws a Forbidden error if the user doesn't have access.
+ * @description
+ * This middleware function checks if the user has permission to access a dataset.
+ * It first checks if the user has general 'read' permission for datasets based on their roles.
+ * If not, it then checks if the user is associated with the dataset through a project.
+ * If neither condition is met, it throws a Forbidden error.
+ * The function assumes that req.params.id contains the dataset id and req.user contains user information.
+ */
+const dataset_access_check = asyncHandler(async (req, res, next) => {
+  // assumes req.params.id is the dataset id user is requesting access check
+  const permission = getPermission({
+    resource: 'datasets',
+    action: 'read',
+    requester_roles: req?.user?.roles,
+  });
+
+  if (!permission.granted) {
+    const user_dataset_assoc = await has_dataset_assoc({
+      user_id: req.user.id,
+      dataset_id: req.params.id,
+    });
+    if (!user_dataset_assoc) {
+      return next(createError.Forbidden());
+    }
+  }
+
+  next();
+});
+
+/**
+ * Middleware to check if a user has access to initiate a workflow on a dataset.
+ *
+ * @description
+ * This middleware checks if the user has the necessary permissions to initiate a workflow on a dataset.
+ * There are three conditions to check:
+ * - The first check determines if the user has the necessary permissions to
+ * create a workflow.
+ * - The second check determines if the requested workflow is in the list of workflows that the user's role is allowed
+ * to initiate.
+ *    - Role `admin` and `operator` are allowed to initiate any workflow.
+ *    - Role `user` is allowed to initiate workflows `integrated`, `stage`, `process_dataset_upload`,
+ *    and `cancel_dataset_upload`
+ * - The third check determines if the user has the necessary permissions to initiate the requested
+ * workflow on the requested dataset.
+ *    - Role `admin` and `operator` are allowed to initiate any workflow on any dataset.
+ *    - Role `user`:
+ *      - is allowed to initiate workflows `integrated`, `process_dataset_upload` and `cancel_dataset_upload` if they
+ *      created the dataset.
+ *      - is allowed to initiate workflow `stage` if they are associated to the dataset via a project that they are a
+ *      part of.
+ */
+const workflow_access_check = [
+  // determine if the user has the necessary permissions to create a workflow
+  accessControl('workflow')('create'),
+  // determine if the requested workflow is in the list of workflows that the user's role is allowed to initiate
+  (req, res, next) => {
+    // allowed_wfs is an object with keys as workflow names and values as true
+    // filter only works on objects not arrays, so we use an object with true
+    // value
+    const allowed_wfs = req.permission.filter({ [req.params.wf]: true });
+    if (allowed_wfs[req.params.wf]) {
+      return next();
+    }
+    // console.error(`Workflow ${req.params.wf} is not in the list of workflows allowed for this user.`);
+    next(createError.Forbidden());
+  },
+  // determine if the user has the necessary permissions to initiate the requested workflow on the requested dataset
+  asyncHandler(async (req, res, next) => {
+    const requested_dataset_id = parseInt(req.params.id, 10);
+
+    // At this point, it has been determined that the requester is allowed to create workflows.
+    // The next step is to check if the user has access to create the requested workflow on
+    // the requested dataset.
+    let user_has_workflow_access = false;
+    try {
+      user_has_workflow_access = await has_workflow_access({
+        workflow: req.params.wf,
+        dataset_id: requested_dataset_id,
+        user_id: req.user.id,
+      });
+    } catch (e) {
+      logger.error('Error checking if user has workflow access:', e);
+      return next(createError.InternalServerError());
+    }
+
+    return user_has_workflow_access ? next() : next(createError.Forbidden());
+  }),
+];
+
+/**
+ * Builds a query object for fetching datasets based on various criteria.
+ *
+ * @function buildDatasetsFetchQuery
+ * @param {Object} params - The parameters for building the query.
+ * @param {boolean} [params.deleted] - Whether to include deleted datasets.
+ * @param {boolean} [params.archived] - Whether to include archived datasets.
+ * @param {boolean} [params.staged] - Whether to include staged datasets.
+ * @param {string} [params.type] - The type of datasets to fetch.
+ * @param {string} [params.name] - The name (or part of the name) of datasets to fetch.
+ * @param {number} [params.days_since_last_staged] - Number of days since the dataset was last staged.
+ * @param {boolean} [params.has_workflows] - Whether to include datasets with workflows.
+ * @param {boolean} [params.has_derived_data] - Whether to include datasets with derived data.
+ * @param {boolean} [params.has_source_data] - Whether to include datasets with source data.
+ * @param {string} [params.created_at_start] - Start date for dataset creation time range.
+ * @param {string} [params.created_at_end] - End date for dataset creation time range.
+ * @param {string} [params.updated_at_start] - Start date for dataset update time range.
+ * @param {string} [params.updated_at_end] - End date for dataset update time range.
+ * @param {boolean} [params.match_name_exact] - Whether to match the dataset name exactly.
+ * @param {number} [params.id] - The ID of the requested dataset
+ * @param {string} [params.username] - The username to filter datasets by user's projects.
+ * @returns {Object} A query object for use with Prisma ORM.
+ */
+const buildDatasetsFetchQuery = ({
+  deleted,
+  archived,
+  staged,
+  type,
+  name,
+  days_since_last_staged,
+  has_workflows,
+  has_derived_data,
+  has_source_data,
+  created_at_start,
+  created_at_end,
+  updated_at_start,
+  updated_at_end,
+  match_name_exact,
+  id,
+  username,
+}) => {
+  const query_obj = _.omitBy(_.isUndefined)({
+    is_deleted: deleted,
+    is_staged: staged,
+    type,
+    name: name ? {
+      ...(match_name_exact ? { equals: name } : { contains: name }),
+      mode: 'insensitive', // case-insensitive search
+    } : undefined,
+  });
+
+  // has_workflows=true: datasets with one or more workflows associated
+  // has_workflows=false: datasets with no workflows associated
+  // has_workflows=undefined/null: no query based on workflow association
+  if (!_.isNil(has_workflows)) {
+    query_obj.workflows = { [has_workflows ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_derived_data)) {
+    query_obj.derived_datasets = { [has_derived_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(has_source_data)) {
+    query_obj.source_datasets = { [has_source_data ? 'some' : 'none']: {} };
+  }
+
+  if (!_.isNil(archived)) {
+    query_obj.archive_path = archived ? { not: null } : null;
+  }
+
+  // staged datasets where there is no STAGED state in last x days
+  if (_.isNumber(days_since_last_staged)) {
+    const xDaysAgo = new Date();
+    xDaysAgo.setDate(xDaysAgo.getDate() - days_since_last_staged);
+
+    query_obj.is_staged = true;
+    query_obj.NOT = {
+      states: {
+        some: {
+          state: 'STAGED',
+          timestamp: {
+            gte: xDaysAgo,
+          },
+        },
+      },
+    };
+  }
+
+  // created_at filter
+  if (created_at_start && created_at_end) {
+    query_obj.created_at = {
+      gte: new Date(created_at_start),
+      lte: new Date(created_at_end),
+    };
+  }
+
+  // updated_at filter
+  if (updated_at_start && updated_at_end) {
+    query_obj.updated_at = {
+      gte: new Date(updated_at_start),
+      lte: new Date(updated_at_end),
+    };
+  }
+
+  // id filter
+  if (id) {
+    // if id is an array, use 'in' operator
+    if (Array.isArray(id)) {
+      query_obj.id = { in: id };
+    } else {
+      query_obj.id = id;
+    }
+  }
+
+  // Filter by projects assigned to this user if username is provided
+  if (username) {
+    query_obj.projects = {
+      some: {
+        project: {
+          users: {
+            some: {
+              user: {
+                username,
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  return query_obj;
+};
+
+/**
+ * Generates a Prisma query object for creating a new dataset.
+ *
+ * @function buildDatasetCreateQuery
+ * @param {Object} data - The data for creating the dataset.
+ * @param {string} data.name - The name of the dataset.
+ * @param {string} data.type - The type of the dataset.
+ * @param {BigInt} [data.du_size] - The disk usage size of the dataset.
+ * @param {string} [data.description] - The description of the dataset.
+ * @param {BigInt} [data.size] - The size of the dataset.
+ * @param {string} data.origin_path - The origin path of the dataset.
+ * @param {BigInt} [data.bundle_size] - The size of the dataset bundle.
+ * @param {string} [data.workflow_id] - The ID of the associated workflow.
+ * @param {string} data.user_id - The ID of the user creating the dataset.
+ * @param {string} [data.src_instrument_id] - The ID of the source instrument.
+ * @param {string} [data.src_dataset_id] - The ID of the source dataset.
+ * @param {string} [data.state='REGISTERED'] - The initial state of the dataset.
+ * @param {string} [data.create_method=CONSTANTS.DATASET_CREATE_METHODS.SCAN] - The method used to create the dataset.
+ * @param {Object} [data.metadata] - Additional metadata for the dataset.
+ * @returns {Object} An object containing the query for creating a new dataset in the database.
+ *
+ * @description
+ * This function prepares a query object for creating a new dataset in the database.
+ * It normalizes the dataset name, sets up associations with workflows and projects,
+ * connects to source instruments and datasets, sets the initial state,
+ * and creates an audit log entry for the dataset creation.
+ */
+const buildDatasetCreateQuery = (data) => {
+  /* eslint-disable no-unused-vars */
+  const {
+    name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
+    user_id, src_instrument_id, src_dataset_id, state, create_method,
+  } = data;
+  /* eslint-disable no-unused-vars */
+
+  // gather non-null data to create a new dataset
+  const create_query = _.flow([
+    _.pick(['name', 'type', 'origin_path', 'du_size', 'size', 'bundle_size', 'metadata', 'description']),
+    _.omitBy(_.isNil),
+  ])(data);
+
+  create_query.name = normalize_name(create_query.name); // normalize name
+
+  // create workflow association
+  if (workflow_id) {
+    create_query.workflows = {
+      create: [
+        {
+          id: workflow_id,
+        },
+      ],
+    };
+  }
+
+  if (src_instrument_id) {
+    create_query.src_instrument = {
+      connect: {
+        id: src_instrument_id,
+      },
+    };
+  }
+
+  if (src_dataset_id) {
+    create_query.source_datasets = {
+      create: [{
+        source_id: src_dataset_id,
+      }],
+    };
+  }
+
+  // add a state
+  create_query.states = {
+    create: [
+      {
+        state: state || 'REGISTERED',
+      },
+    ],
+  };
+
+  create_query.audit_logs = {
+    create: [
+      {
+        action: 'create',
+        create_method: create_method || CONSTANTS.DATASET_CREATE_METHODS.SCAN,
+        user_id: user_id ?? Prisma.skip,
+      },
+    ],
+  };
+
+  return create_query;
+};
+
+/**
+ * Initiates a workflow which either processes or cancels a dataset upload.
+ *
+ * @async
+ * @function initiateUploadWorkflow
+ * @param {Object} options - The options object.
+ * @param {Object} options.dataset - The dataset to initiate the workflow on.
+ * @param {string} options.requestedWorkflow - The name of the workflow to initiate.
+ * @param {Object} options.user - The user initiating the workflow.
+ * @returns {Promise<Object>} An object containing the initiated workflow and any error messages.
+ * @property {Object|null} workflowInitiated - The initiated workflow object, or null if not initiated.
+ * @property {string|null} workflowInitiationError - Error message if workflow initiation failed, or null if successful.
+ *
+ * @description
+ * This function attempts to initiate either the 'process_dataset_upload' or the 'cancel_dataset_upload' workflow
+ * on a given dataset.
+ *
+ * `process_dataset_upload` -> This workflow initiates the processing of a dataset upload,
+ * which registers the dataset in the system. This workflow is triggered after the entirety of the dataset's contents
+ * have been uploaded.
+ *
+ * `cancel_dataset_upload`  -> This workflow cancels an incomplete dataset upload.
+ *  A dataset upload is considered incomplete if one of the following conditions is met:
+ * - All files have not been uploaded
+ * - All files have been uploaded but the `process_dataset_upload` has not been initiated.
+ *
+ * It is possible that the API may receive requests to initiate both of these workflows on the same dataset in
+ * proximity, thus triggering both of these workflows in parallel, which would result in a conflict.
+ * To avoid this:
+ * - Workflow `process_dataset_upload` should not be initiated if workflow `cancel_dataset_upload` is
+ * already in progress.
+ * - Workflow `cancel_dataset_upload` should not be initiated if workflow `process_dataset_upload` is already
+ * in progress.
+ *
+ * This function checks for a potential conflicting workflow that may already be in progress before initiating
+ * the requested workflow. If a conflicting workflow is found, the function will not initiate the requested workflow
+ * and will return an error message instead.
+ */
+const initiateUploadWorkflow = async ({ dataset = null, requestedWorkflow = null, user = null } = {}) => {
+  // return {
+  //   workflowInitiated: true,
+  //   workflowInitiationError: null,
+  // };
+
+  logger.info(`Received request to initiate workflow ${requestedWorkflow} on dataset ${dataset.id}`);
+
+  const uploadedDataset = dataset;
+  uploadedDataset.workflows = await get_dataset_active_workflows({ dataset });
+
+  let requestedWorkflowInitiated;
+  let workflowInitiationError;
+
+  const conflictingUploadWorkflow = requestedWorkflow === CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD
+    ? CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD
+    : CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD;
+  logger.info(`Workflow ${requestedWorkflow} will not be started if conflicting workflow `
+      + `${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
+  logger.info(`Checking if conflicting workflow ${conflictingUploadWorkflow} is running on dataset ${dataset.id}`);
+  const foundConflictingUploadWorkflow = uploadedDataset.workflows.find(
+    (wf) => wf.name === conflictingUploadWorkflow,
+  );
+  if (!foundConflictingUploadWorkflow) {
+    logger.info(`Conflicting workflow ${conflictingUploadWorkflow} is not running on dataset ${dataset.id}`);
+    logger.info(`Starting workflow ${requestedWorkflow} on dataset ${dataset.id}`);
+    requestedWorkflowInitiated = await create_workflow(
+      uploadedDataset,
+      requestedWorkflow,
+      user.id,
+    );
+  } else {
+    workflowInitiationError = `The workflow ${requestedWorkflow} cannot be started on dataset ${dataset.id} `
+        + `because conflicting workflow ${foundConflictingUploadWorkflow.id}) is `
+        + 'already in progress.';
+    logger.error(workflowInitiationError);
+  }
+
+  return { workflowInitiated: requestedWorkflowInitiated, workflowInitiationError };
+};
+
 module.exports = {
   soft_delete,
   get_dataset,
   create_workflow,
   get_workflows,
   create_filetree,
-  has_dataset_assoc,
   files_ls,
   search_files,
   add_files,
+  create,
+  get_bundle_name,
+  get_dataset_active_workflows,
+  get_dataset_creator,
+  has_dataset_assoc,
+  has_workflow_access,
+  dataset_access_check,
+  workflow_access_check,
+  getUploadedDatasetPath,
+  buildDatasetCreateQuery,
+  buildDatasetsFetchQuery,
+  normalize_name,
+  initiateUploadWorkflow,
 };

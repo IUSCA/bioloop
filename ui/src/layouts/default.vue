@@ -4,6 +4,10 @@
     @toggle-sidebar-visibility="toggleSidebarVisibility"
   >
   </Header>
+
+  <!-- Show any active alerts in the system  -->
+  <Alerts v-if="auth.isFeatureEnabled('alerts')" />
+
   <div class="flex flex-row h-screen">
     <nav
       aria-label="menu nav"
@@ -22,12 +26,16 @@
 </template>
 
 <script setup>
+import { useAlertStore } from "@/stores/alert";
+import { useAuthStore } from "@/stores/auth";
 import { useUIStore } from "@/stores/ui";
 import { ref, watch } from "vue";
 import { useBreakpoint } from "vuestic-ui";
 
+const auth = useAuthStore();
 const breakpoint = useBreakpoint();
 const ui = useUIStore();
+const alertStore = useAlertStore();
 
 let isSidebarCollapsed = ref(false);
 
@@ -62,4 +70,12 @@ watch(
 const toggleSidebarVisibility = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
+
+onMounted(() => {
+  alertStore.startPolling();
+});
+
+onUnmounted(() => {
+  alertStore.stopPolling();
+});
 </script>

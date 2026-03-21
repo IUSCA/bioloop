@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
+from typing import Any
 from urllib.parse import urljoin
-import json
 
 import requests
-from glom import glom, assign as glom_assign
+from glom import assign as glom_assign
+from glom import glom
 from requests.adapters import HTTPAdapter, Retry
 
 import workers.utils as utils
@@ -140,7 +141,8 @@ def get_all_datasets(
         bundle=False,
         is_duplicate=False,
         include_duplications=False,
-        match_name_exact=False):
+        match_name_exact=False,
+        include_audit_logs=False):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -152,6 +154,7 @@ def get_all_datasets(
             'bundle': bundle,
             'include_duplications': include_duplications,
             'match_name_exact': match_name_exact,
+            'include_audit_logs': include_audit_logs,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -162,7 +165,7 @@ def get_all_datasets(
 def get_dataset(dataset_id: str,
                 files: bool = False,
                 bundle: bool = False,
-                include_upload_log: bool = False,
+                include_audit_logs: bool = False,
                 workflows: bool = False,
                 include_duplications: bool = False,
                 include_action_items: bool = False):
@@ -171,19 +174,98 @@ def get_dataset(dataset_id: str,
             'files': files,
             'bundle': bundle,
             'workflows': workflows,
-            'include_upload_log': include_upload_log,
+            'include_audit_logs': include_audit_logs,
             'include_duplications': include_duplications,
             'include_action_items': include_action_items,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
-
         r.raise_for_status()
-        return dataset_getter(r.json())
+        dataset = dataset_getter(r.json())
+
+        if include_audit_logs:
+            # Flatten create_method from the creation audit entry onto the dataset
+            # so callers can access dataset['create_method'] directly.
+            create_entry = next(
+                (log for log in (dataset.get('audit_logs') or []) if log.get('action') == 'create'),
+                None,
+            )
+            if create_entry:
+                dataset['create_method'] = create_entry.get('create_method')
+
+        return dataset
+
+
+def get_workflows_for_dataset(
+    dataset_id: int,
+    last_task_runs: bool = False,
+    prev_task_runs: bool = False,
+) -> dict[str, Any]:
+    """
+    Fetch all workflows linked to a dataset via GET /workflows?dataset_id=<id>.
+
+    Returns { metadata: { total: N, ... }, results: [...] }.
+
+    When total == 0 the API returns immediately from Postgres without calling
+    the Rhythm API.  When total > 0 each result is hydrated with live workflow
+    details from Rhythm; if Rhythm is unreachable the API returns a 5xx and
+    raise_for_status() will raise, failing loudly rather than returning stale data.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            'workflows',
+            params={
+                'dataset_id': dataset_id,
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+def get_workflow(
+    workflow_id: str,
+    last_task_runs: bool = True,
+    prev_task_runs: bool = True,
+) -> dict[str, Any]:
+    """
+    Fetch a single workflow by ID via GET /workflows/<workflow_id>.
+
+    Returns the workflow document hydrated with live task-run details from
+    Rhythm, including per-step status and run history.  Raises HTTPError if
+    Rhythm is unreachable.
+    """
+    with APIServerSession() as s:
+        r = s.get(
+            f'workflows/{workflow_id}',
+            params={
+                'last_task_runs': last_task_runs,
+                'prev_task_runs': prev_task_runs,
+            },
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+class DatasetAlreadyExistsError(Exception):
+    pass
 
 
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
+        if r.status_code == 409:
+            raise DatasetAlreadyExistsError()
+        r.raise_for_status()
+        return r.json()
+
+
+def bulk_create_datasets(datasets):
+    with APIServerSession() as s:
+        # not using dataset_setter because each dataset only has name, type, and origin_path
+        r = s.post('datasets/bulk', json={
+            "datasets": datasets
+        })
         r.raise_for_status()
         return r.json()
 
@@ -203,19 +285,18 @@ def update_dataset(dataset_id, update_data):
         return r.json()
 
 
-def delete_dataset(dataset_id: str):
-    with APIServerSession() as s:
-        r = s.delete(f'datasets/{dataset_id}')
-        r.raise_for_status()
-        return r.json()
-
-
 def get_dataset_files(dataset_id: str, filters: dict = None):
     with APIServerSession() as s:
         r = s.get(f'datasets/{dataset_id}/files/search', params=filters)
         r.raise_for_status()
         files = r.json()
         return [entity_getter(file, ['created_at'], ['size']) for file in files]
+
+
+def delete_dataset(dataset_id: int):
+    with APIServerSession() as s:
+        r = s.delete(f'datasets/{dataset_id}')
+        r.raise_for_status()
 
 
 def add_files_to_dataset(dataset_id, files: list[dict]):
@@ -291,22 +372,16 @@ def get_all_workflows():
         return r.json()
 
 
-def get_dataset_upload_logs():
+def get_dataset_uploads():
     with APIServerSession() as s:
-        r = s.get(f'datasetUploads')
+        r = s.get(f'datasets/uploads')
         r.raise_for_status()
         return r.json()
 
 
-def update_dataset_upload_log(uploaded_dataset_id: int, log_data: dict):
+def update_dataset_upload(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
-        r = s.patch(f'datasetUploads/{uploaded_dataset_id}', json=log_data)
-        r.raise_for_status()
-
-
-def delete_dataset_upload_log(uploaded_dataset_id: int):
-    with APIServerSession() as s:
-        r = s.delete(f'datasetUploads/{uploaded_dataset_id}')
+        r = s.patch(f'datasets/uploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
 
 
@@ -314,6 +389,33 @@ def create_notification(payload: dict):
     with APIServerSession() as s:
         r = s.post('notifications', json=payload)
         r.raise_for_status()
+
+
+
+def get_all_projects():
+    with APIServerSession() as s:
+        r = s.get('projects/all')
+        r.raise_for_status()
+        projects = r.json()['projects']
+        return projects
+
+
+def get_project(project_id: str,
+                include_datasets: bool = False):
+    with APIServerSession() as s:
+        r = s.get(f'projects/{project_id}',
+                  params={
+                      'include_datasets': include_datasets,
+                  })
+        r.raise_for_status()
+        return r.json()
+
+
+def initiate_workflow(dataset_id: int, workflow_name: str):
+    with APIServerSession() as s:
+        r = s.post(f'datasets/{dataset_id}/workflow/{workflow_name}')
+        r.raise_for_status()
+        return r.json()
 
 
 if __name__ == '__main__':

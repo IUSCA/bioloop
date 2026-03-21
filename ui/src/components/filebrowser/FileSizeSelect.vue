@@ -39,7 +39,7 @@ const fileSizeOptions = [
   "MB",
   "GB",
   "TB",
-  "PB",
+  // "PB",
   // "EB",
   // "ZB",
   // "YB",
@@ -49,6 +49,7 @@ const size = ref(null);
 const units = ref(fileSizeOptions[0]);
 
 function encodeBytes(bytes) {
+  // console.log("encodeBytes", bytes);
   // 1024 -> (1, "KB")
   if (bytes === 0) {
     size.value = 0;
@@ -61,22 +62,27 @@ function encodeBytes(bytes) {
   }
 }
 
-watch(
-  () => props.modelValue,
-  () => {
-    if (props.modelValue === null || props.modelValue === undefined)
-      encodeBytes(0);
-    else if (!isFinite(props.modelValue))
-      encodeBytes(Math.pow(k, fileSizeOptions.length - 1));
-    else encodeBytes(props.modelValue);
-  },
-  { immediate: true },
-);
+onMounted(() => {
+  // console.log("FileSizeSelect mounted", props.modelValue);
+  if (props.modelValue === null || props.modelValue === undefined)
+    encodeBytes(0);
+  else if (!isFinite(props.modelValue))
+    // if modelValue is infinity, set size to 1023 and units to the largest unit
+    encodeBytes(1023 * Math.pow(k, fileSizeOptions.length - 1));
+  else encodeBytes(props.modelValue);
+});
 
 watch([size, units], () => {
   if (size.value) {
     const sizeNumeric = parseInt(size.value);
     const unitPower = fileSizeOptions.indexOf(units.value);
+
+    // size >= 1023 and unit is the largest unit, return Infinity
+    if (sizeNumeric >= 1023 && unitPower === fileSizeOptions.length - 1) {
+      emit("update:modelValue", Infinity);
+      return;
+    }
+
     emit("update:modelValue", sizeNumeric * Math.pow(k, unitPower));
   } else {
     emit("update:modelValue", 0);

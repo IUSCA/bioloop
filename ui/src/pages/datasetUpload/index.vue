@@ -1,91 +1,144 @@
 <template>
-  <div class="flex mb-3 gap-3">
-    <!-- search bar -->
-    <div class="flex-1">
-      <va-input
-        v-model="filterInput"
-        class="w-full"
-        placeholder="Type / to search Dataset Uploads"
-        outline
-        clearable
-        input-class="search-input"
-      >
-        <template #prependInner>
-          <Icon icon="material-symbols:search" class="text-xl" />
-        </template>
-      </va-input>
+  <va-alert
+    data-testid="upload-feature-disabled-alert"
+    color="warning"
+    icon="warning"
+    v-if="!auth.isFeatureEnabled('uploads')"
+  >
+    This feature is currently disabled
+  </va-alert>
+
+  <div v-else>
+    <div class="flex mb-3 gap-3">
+      <!-- search bar -->
+      <div class="flex-1">
+        <va-input
+          data-testid="dataset-upload-search-input"
+          v-model="filterInput"
+          class="w-full"
+          placeholder="Type / to search Dataset Uploads"
+          outline
+          clearable
+          input-class="search-input"
+        >
+          <template #prependInner>
+            <Icon
+              data-testid="search-icon"
+              icon="material-symbols:search"
+              class="text-xl"
+            />
+          </template>
+        </va-input>
+      </div>
+
+      <!-- create button -->
+      <div class="flex-none">
+        <va-button
+          data-testid="upload-dataset-button"
+          icon="add"
+          class="px-1"
+          color="success"
+          @click="router.push('/datasetUpload/new')"
+        >
+          Upload Dataset
+        </va-button>
+      </div>
     </div>
 
-    <!-- create button -->
-    <div class="flex-none">
-      <va-button
-        icon="add"
-        class="px-1"
-        color="success"
-        @click="router.push('/datasetUpload/new')"
-      >
-        Upload Data Product
-      </va-button>
-    </div>
+    <!-- table -->
+    <va-data-table
+      data-testid="uploaded-datasets-table"
+      :items="pastUploads"
+      :columns="columns"
+    >
+      <template #cell(status)="{ value }">
+        <va-chip
+          data-testid="status-chip"
+          size="small"
+          :color="getStatusChipColor(value)"
+        >
+          <!-- convert to lowercase, split on `_`, capitalize all but first letter of each word, separate words with space -->
+          {{ snakeCaseToTitleCase(value) }}
+        </va-chip>
+      </template>
+
+      <template #cell(uploaded_dataset)="{ rowData }">
+        <div v-if="!auth.canOperate" data-testid="uploaded-dataset-name">
+          {{ rowData.uploaded_dataset.name }}
+        </div>
+        <router-link
+          v-else
+          :to="`/datasets/${rowData.uploaded_dataset.id}`"
+          class="va-link"
+          data-testid="uploaded-dataset-link"
+        >
+          {{ rowData.uploaded_dataset.name }}
+        </router-link>
+      </template>
+
+      <template #cell(uploaded_dataset_type)="{ value }">
+        <va-chip
+          data-testid="upload-details-dataset-type-chip"
+          size="small"
+          outline
+          >{{ snakeCaseToTitleCase(value) }}</va-chip
+        >
+      </template>
+
+      <template #cell(source_dataset)="{ rowData }">
+        <div v-if="rowData.source_dataset">
+          <div data-testid="source-dataset" v-if="!auth.canOperate">
+            {{ rowData.source_dataset.name }}
+          </div>
+          <router-link
+            v-else
+            :to="`/datasets/${rowData.source_dataset.id}`"
+            class="va-link"
+            data-testid="source-dataset-link"
+          >
+            {{ rowData.source_dataset.name }}
+          </router-link>
+        </div>
+      </template>
+
+      <template #cell(user)="{ rowData }">
+        <span data-testid="uploaded-by">
+          {{ rowData.user.name }} ({{ rowData.user.username }})
+        </span>
+      </template>
+
+      <template #cell(initiated_at)="{ value }">
+        <span data-testid="uploaded-on" class="text-sm lg:text-base">
+          {{ datetime.date(value) }}
+        </span>
+      </template>
+    </va-data-table>
+
+    <Pagination
+      data-testid="pagination-component"
+      v-model:page="currentPageIndex"
+      v-model:page_size="pageSize"
+      :total_results="total_results"
+      :curr_items="pastUploads.length"
+      :page_size_options="PAGE_SIZE_OPTIONS"
+    />
   </div>
-
-  <!-- table -->
-  <va-data-table :items="uploads" :columns="columns">
-    <template #cell(status)="{ value }">
-      <va-chip size="small" :color="getStatusChipColor(value)">
-        {{ value }}
-      </va-chip>
-    </template>
-
-    <template #cell(uploaded_dataset)="{ rowData }">
-      <router-link
-        :to="`/datasets/${rowData.uploaded_dataset.id}`"
-        class="va-link"
-        >{{ rowData.uploaded_dataset.name }}</router-link
-      >
-    </template>
-
-    <template #cell(source_dataset)="{ rowData }">
-      <router-link
-        v-if="rowData.source_dataset"
-        :to="`/datasets/${rowData.source_dataset.id}`"
-        class="va-link"
-      >
-        {{ rowData.source_dataset.name }}
-      </router-link>
-    </template>
-
-    <template #cell(user)="{ rowData }">
-      <span>{{ rowData.user.name }} ({{ rowData.user.username }})</span>
-    </template>
-
-    <template #cell(initiated_at)="{ value }">
-      <span class="text-sm lg:text-base">
-        {{ datetime.date(value) }}
-      </span>
-    </template>
-  </va-data-table>
-
-  <Pagination
-    v-model:page="currentPageIndex"
-    v-model:page_size="pageSize"
-    :total_results="total_results"
-    :curr_items="uploads.length"
-    :page_size_options="PAGE_SIZE_OPTIONS"
-  />
 </template>
 
 <script setup>
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
-import config from "@/config";
-import datasetUploadService from "@/services/upload/dataset";
+import * as datetime from "@/services/datetime";
+import toast from "@/services/toast";
+import datasetService from "@/services/dataset";
+import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import _ from "lodash";
-import toast from "@/services/toast";
-import * as datetime from "@/services/datetime";
+import constants from "@/constants";
+import { snakeCaseToTitleCase } from "@/services/utils";
 
 const nav = useNavStore();
 const router = useRouter();
+const auth = useAuthStore();
 
 nav.setNavItems([{ label: "Dataset Uploads" }]);
 
@@ -95,25 +148,9 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 const filterInput = ref("");
 const pastUploads = ref([]);
-const uploads = computed(() => {
-  return pastUploads.value.map((upload) => {
-    const uploaded_dataset = upload.dataset;
-    const source_dataset =
-      uploaded_dataset.source_datasets.length > 0
-        ? uploaded_dataset.source_datasets[0].source_dataset
-        : null;
-    return {
-      ...upload,
-      status: upload.upload_log?.status,
-      user: upload.upload_log?.user,
-      source_dataset,
-      uploaded_dataset,
-    };
-  });
-});
 
 const currentPageIndex = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const total_results = ref(0);
 // used for OFFSET clause in the SQL used to retrieve the next paginated batch
 // of results
@@ -133,6 +170,8 @@ const filter_query = computed(() => {
   return {
     ...uploads_batching_query.value,
     ...(!!search_query.value && { ...search_query.value }),
+    username: auth.user?.username,
+    forSelf: !auth.canOperate,
   };
 });
 
@@ -140,8 +179,8 @@ const columns = [
   { key: "status", width: "5%" },
   {
     key: "uploaded_dataset",
-    label: "Uploaded Data Product",
-    width: "30%",
+    label: "Uploaded Dataset",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -150,9 +189,16 @@ const columns = [
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
+    key: "uploaded_dataset_type",
+    label: "Dataset Type",
+    width: "20%",
+    thAlign: "center",
+    tdAlign: "center",
+  },
+  {
     key: "source_dataset",
-    label: "Source Dataset",
-    width: "30%",
+    label: "Source Raw Data",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -163,7 +209,7 @@ const columns = [
   {
     key: "user",
     label: "Uploaded By",
-    width: "25%",
+    width: "20%",
     thAlign: "center",
     tdAlign: "center",
     tdStyle:
@@ -183,23 +229,21 @@ const columns = [
 ];
 
 const getStatusChipColor = (value) => {
-  console.log("received value for Upload Status", value);
-
   let color;
   switch (value) {
-    case config.upload.status.UPLOADING:
-    case config.upload.status.UPLOADED:
-    case config.upload.status.PROCESSING:
+    case constants.UPLOAD_STATUSES.UPLOADING:
+    case constants.UPLOAD_STATUSES.UPLOADED:
+    case constants.UPLOAD_STATUSES.PROCESSING:
       color = "primary";
       break;
-    case config.upload.status.UPLOAD_FAILED:
+    case constants.UPLOAD_STATUSES.UPLOAD_FAILED:
+    case constants.UPLOAD_STATUSES.CHECKSUM_COMPUTATION_FAILED:
       color = "warning";
       break;
-    case config.upload.status.COMPLETE:
+    case constants.UPLOAD_STATUSES.COMPLETE:
       color = "success";
       break;
-    case config.upload.status.PROCESSING_FAILED:
-    case config.upload.status.FAILED:
+    case constants.UPLOAD_STATUSES.PROCESSING_FAILED:
       color = "danger";
       break;
     default:
@@ -209,13 +253,21 @@ const getStatusChipColor = (value) => {
 };
 
 const getUploadLogs = async () => {
-  return datasetUploadService
+  return datasetService
     .getDatasetUploadLogs(filter_query.value)
     .then((res) => {
       pastUploads.value = res.data.uploads.map((e) => {
+        let uploaded_dataset = e.audit_log.dataset;
         return {
           ...e,
-          initiated_at: e.upload_log.initiated_at,
+          initiated_at: e.audit_log.timestamp,
+          user: e.audit_log.user,
+          uploaded_dataset,
+          source_dataset:
+            uploaded_dataset.source_datasets.length > 0
+              ? uploaded_dataset.source_datasets[0].source_dataset
+              : null,
+          uploaded_dataset_type: uploaded_dataset.type,
         };
       });
       total_results.value = res.data.metadata.count;
@@ -245,5 +297,4 @@ watch(filter_query, (newQuery, oldQuery) => {
 <route lang="yaml">
 meta:
   title: Dataset Uploads
-  requiresRoles: ["operator", "admin"]
 </route>

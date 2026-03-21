@@ -3,12 +3,17 @@ import api from "./api";
 const DONE_STATUSES = ["REVOKED", "FAILURE", "SUCCESS"];
 
 class WorkflowService {
+  getWorkflowNames() {
+    return api.get("/workflows/names");
+  }
+
   getAll({
     last_task_run = false,
     prev_task_runs = false,
     workflow_id = null,
     dataset_id = null,
     dataset_name = null,
+    workflow_name = null,
     status = null,
     skip = 0,
     limit = 10,
@@ -24,6 +29,7 @@ class WorkflowService {
         limit,
         dataset_id,
         dataset_name,
+        workflow_name,
         initiator,
       },
       paramsSerializer: {

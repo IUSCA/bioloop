@@ -1,21 +1,21 @@
 const express = require('express');
 const { query, body } = require('express-validator');
 const createError = require('http-errors');
-const { PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
-// const logger = require('../services/logger');
-const userService = require('../services/user');
-const { validate } = require('../middleware/validators');
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
+// const logger = require('@/services/logger');
+const prisma = require('@/db');
+const userService = require('@/services/user');
+const { validate } = require('@/middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
 
-const prisma = new PrismaClient();
 const isPermittedTo = accessControl('user');
 const router = express.Router();
 
 router.get(
   '/:username',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const user = await userService.findActiveUserBy('username', req.params.username);
@@ -29,8 +29,8 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('search').default(''),
-    query('skip').isInt({ min: 0 }).optional(),
-    query('take').isInt({ min: 1 }).optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
+    query('take').isInt({ min: 1 }).toInt().optional(),
     query('sortBy').default('username')
       .isIn(['name', 'username', 'email', 'created_at', 'last_login', 'login_method', 'is_deleted']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
@@ -38,15 +38,15 @@ router.get(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
     const {
-      search, sortBy, sort_order, skip, take,
+      search, sortBy, sort_order,
     } = req.query;
 
     const { users, count } = await userService.findAll({
       search,
       sortBy,
       sort_order,
-      skip: parseInt(skip, 10),
-      take: parseInt(take, 10),
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.take,
     });
     return res.json({
       metadata: { count },
@@ -69,21 +69,24 @@ router.post(
     // if the roles is unset, set the roles as ['user']
     // clears the roles attribute when requester has no admin role
     const user_data = req.permission.filter(req.body);
+
     user_data.roles = user_data.roles || ['user'];
 
     const user = await userService.createUser(user_data);
+
     res.json(user);
   }),
 );
 
 router.patch(
   '/:username',
-  isPermittedTo('update', { checkOwnerShip: true }),
+  isPermittedTo('update', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
 
-    // isPermittedTo('update') - stops requesters with just a user role from running this code
-    // clears the roles attribute when requester has no admin role
+    // isPermittedTo('update') - stops requesters with just a user role from
+    // running this code clears the roles attribute when requester has no admin
+    // role
     const updates = req.permission.filter(req.body);
 
     // operators can edit themselves - all attributes except roles
@@ -113,7 +116,7 @@ router.patch(
     }
 
     if (!can_update) {
-      return next(createError.Forbidden('Insufficient privilages to update user'));
+      return next(createError.Forbidden('Insufficient privileges to update user'));
     }
 
     const updatedUser = await userService.updateUser(req.params.username, updates);
@@ -123,11 +126,28 @@ router.patch(
 
 router.delete(
   '/:username',
-  isPermittedTo('delete', { checkOwnerShip: true }),
+  isPermittedTo('delete', { checkOwnership: true }),
+  validate([
+    query('hard_delete').isBoolean().toBoolean().default(false),
+  ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Users']
-    const deletedUser = await userService.softDeleteUser(req.params.username);
-    res.json(deletedUser);
+    const { username } = req.params;
+    const hardDelete = req.query.hard_delete; // Already validated and transformed to a boolean
+
+    let result;
+    if (hardDelete) {
+      // Perform hard delete
+      result = await userService.hardDeleteUser(username);
+      res.status(200).json({
+        message: 'User and associated data deleted/disassociated successfully.',
+        data: result, // Return relevant details
+      });
+    } else {
+      // Perform soft delete
+      result = await userService.softDeleteUser(username);
+      res.status(200).json(result); // Return transformed user object
+    }
   }),
 );
 

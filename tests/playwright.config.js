@@ -16,15 +16,16 @@ const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.jso
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
+
 module.exports = {
   ...defineConfig({
-    testDir: './tests',
+    testDir: './src/tests',
     /* Run tests in files in parallel */
     fullyParallel: true,
     /**
-   * Fail the build on CI if you accidentally left test.only in the source
-   * code.
-   */
+    * Fail the build on CI if you accidentally left test.only in the source
+    * code.
+    */
     forbidOnly: !!process.env.CI,
     /* Retry on CI only */
     retries: process.env.CI ? 2 : 0,
@@ -35,7 +36,8 @@ module.exports = {
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-      baseURL: 'https://localhost',
+      // baseURL: 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
@@ -44,34 +46,53 @@ module.exports = {
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
     },
+    /* Ignore tests */
+    testIgnore: ['**/view/authenticated/project/*.spec.js'],
 
-    /* Configure projects for major browsers */
+    /* Configure Projects (groups of tests) */
+
+    /** Login-setup projects */
+    /** Project to login as admin */
     projects: [
-      //   todo - organize tests by role type
       {
         name: 'admin_login',
-        testMatch: path.join(__dirname, '/tests/setup/admin_login.setup.js'),
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/admin_login.setup.js',
+        ),
       },
+      /** Project to login as operator */
       {
         name: 'operator_login',
-        testMatch: path.join(__dirname, '/tests/setup/operator_login.setup.js'),
+        testMatch: path.join(
+          __dirname,
+          '/tests/setup/operator_login.setup.js',
+        ),
       },
+      /** Project to login as user */
       {
         name: 'user_login',
-        testMatch: path.join(__dirname, '/tests/setup/user_login.setup.js'),
+        testMatch: path.join(
+          __dirname,
+          '/src/tests/setup/user_login.setup.js',
+        ),
       },
+
+      /** Tests than run in unauthenticated mode */
       {
         name: 'unauthenticated',
         use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/project.spec.js',
+        testMatch: '/view/unauthenticated/test.spec.js',
       },
+
+      /** Tests than run in authenticated mode */
+      /** Sidebar tests */
       {
         name: 'admin_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
       },
-
       {
         name: 'operator_sidebar',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
@@ -84,6 +105,7 @@ module.exports = {
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/sidebar/user_role_sidebar_view.spec.js',
       },
+      /** Notifications tests */
       {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
@@ -102,6 +124,7 @@ module.exports = {
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
       },
+      /** User-management tests */
       {
         name: 'admin_user_management',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
@@ -114,12 +137,27 @@ module.exports = {
         dependencies: ['operator_login'],
         testMatch: '/view/authenticated/userManagement/*.spec.js',
       },
+      /** Project tests */
       {
         name: 'project',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/project/*.spec.js',
       },
+      /** Upload tests */
+      {
+        name: 'upload',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/upload/**/*.spec.js',
+        testIgnore: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      },
+      {
+        name: 'upload--project_association--user_role--association',
+        use: { ...devices['Desktop Chrome'] },
+        testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      },
+
       // { name: 'firefox', use: {
       // ...devices['Desktop Firefox'] }, },
       //
@@ -159,4 +197,5 @@ module.exports = {
   USER_STORAGE_STATE,
   OPERATOR_STORAGE_STATE,
   ADMIN_STORAGE_STATE,
+  // attachmentsDir: path.join(__dirname, 'tests', 'attachments'),
 };

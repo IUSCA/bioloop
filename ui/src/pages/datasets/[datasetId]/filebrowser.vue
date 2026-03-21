@@ -1,7 +1,7 @@
 <template>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="config.enabledFeatures.downloads && dataset.is_staged"
+    :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
 
@@ -9,6 +9,7 @@
 import config from "@/config";
 import DatasetService from "@/services/dataset";
 import toast from "@/services/toast";
+import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { useUIStore } from "@/stores/ui";
 import { storeToRefs } from "pinia";
@@ -17,6 +18,7 @@ const nav = useNavStore();
 const { sidebarDatasetType } = storeToRefs(nav);
 
 const ui = useUIStore();
+const auth = useAuthStore();
 
 const props = defineProps({ datasetId: String });
 
@@ -44,11 +46,12 @@ DatasetService.getById({ id: props.datasetId, workflows: false })
   .catch((err) => {
     console.error(err);
     if (err?.response?.status == 404) toast.error("Could not find the dataset");
-    else toast.error("Could not fetch datatset");
+    else toast.error("Could not fetch dataset");
   });
 </script>
 
 <route lang="yaml">
 meta:
   title: File Browser
+  requiresRoles: ["operator", "admin"]
 </route>

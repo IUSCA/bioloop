@@ -7,7 +7,8 @@ const auth = useAuthStore();
 class projectService {
   getAll({ forSelf, take, skip, search = "", sortBy, sort_order } = {}) {
     const username = auth.user.username;
-    const params = { take, skip, search, sortBy, sort_order };
+    const params = { take, skip, sortBy, sort_order };
+    params.search = search ? search : undefined;
     return (
       forSelf
         ? api.get(`/projects/${username}/all`, { params })

@@ -9,6 +9,7 @@ const path = require('node:path');
 const createError = require('http-errors');
 
 const config = require('config');
+// eslint-disable-next-line lodash-fp/use-fp
 const _ = require('lodash');
 const asyncHandler = require('../middleware/asyncHandler');
 const { accessControl } = require('../middleware/auth');
@@ -24,16 +25,6 @@ function getBaseDirKey(req) {
 function getBaseDir(req) {
   const base_dir_key = getBaseDirKey(req);
   return config.filesystem.base_dir[base_dir_key];
-}
-
-function verifyFileSystemSearchEnabled(req, res, next) {
-  const isFileSystemSearchEnabledForUser = config.enabled_features.fs.enabled_for_roles.some(
-    (role) => req.user.roles.includes(role),
-  );
-  if (!isFileSystemSearchEnabledForUser) {
-    return next(createError.Forbidden('File system search is not enabled for this user'));
-  }
-  next();
 }
 
 function validatePath(req, res, next) {
@@ -70,18 +61,17 @@ const get_mounted_search_dir = (req) => {
   const path_prefix = `${base_dir}/`;
 
   const query_path = req.query.path.slice(req.query.path.indexOf(path_prefix)
-    + path_prefix.length);
+      + path_prefix.length);
   const mount_dir = get_mount_dir(req);
   return path.join(mount_dir, query_path);
 };
 
 router.get(
   '/',
-  verifyFileSystemSearchEnabled,
   validatePath,
   isPermittedTo('read'),
-  query('dirs_only').optional().default(false),
-  query('search_space').optional().escape().notEmpty(),
+  query('dirs_only').default(false),
+  query('search_space').optional().trim().isLength({ min: 1 }),
   asyncHandler(async (req, res, next) => {
     const { dirs_only, path: query_path } = req.query;
 

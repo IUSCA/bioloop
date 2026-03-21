@@ -1,7 +1,7 @@
 <template>
   <FileBrowser
     :dataset-id="props.datasetId"
-    :show-download="config.enabledFeatures.downloads && dataset.is_staged"
+    :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
 
@@ -56,7 +56,7 @@ Promise.all([
   .catch((err) => {
     console.error(err);
     if (err?.response?.status == 404) toast.error("Could not find the dataset");
-    else toast.error("Could not fetch datatset");
+    else toast.error("Could not fetch dataset");
   });
 </script>
 

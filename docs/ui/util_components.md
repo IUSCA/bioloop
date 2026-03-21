@@ -101,6 +101,126 @@ const onSelect = (selectedUser) => {
 
 ```
 
+### Pagination
+
+```html
+<template>
+  <AutoComplete
+    v-model:search-text="searchTerm"
+    :async="true"
+    :paginated="true"
+    :paginated-total-results-count="totalResultsCount"
+    :data="searchResults"
+    :display-by="'name'"
+    @clear="onClear"
+    @open-="onOpen"
+    @load-more="loadNextPage"
+    placeholder="Search Datasets by name"
+    @select="onSelect"
+    :disabled="props.disabled"
+    :label="'Paginated AutoComplete Demo'"
+  />
+</template>
+
+<script setup>
+const props = defineProps({
+  selected: {
+    type: [String, Object],
+  },
+  displayBy: {
+    type: [Function, String],
+    default: () => 'name' || 'name',
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  label: {
+    type: String,
+  },
+})
+
+const emit = defineEmits([
+  // 'clear', 'open', 'close',
+  'update:selected',
+])
+
+const PAGE_SIZE = 10
+const loading = ref(false)
+const searchResults = ref([])
+const totalResultsCount = ref(0)
+const page = ref(1)
+const skip = computed(() => {
+  return PAGE_SIZE * (page.value - 1)
+})
+
+const searchTerm = ref('')
+
+const loadResults = async ({ appendToCurrentResult = true } = {}) => {
+  if (!searchTerm.value) return []
+
+  loading.value = true
+
+  try {
+    // Simulate API call delay
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Mock API response
+    const mockApiResponse = {
+      results: Array.from({ length: PAGE_SIZE }, (_, i) => ({
+        name: `Result ${skip.value + i + 1} for "${searchTerm.value}"`,
+      })),
+      totalCount: 100, // Assuming there are always 100 total results for any search
+    }
+
+    searchResults.value = appendToCurrentResult
+      ? [...searchResults.value, ...mockApiResponse.results]
+      : mockApiResponse.results
+    totalResultsCount.value = mockApiResponse.totalCount
+  } catch (error) {
+    console.error('Error fetching results:', error)
+    searchResults.value = []
+    totalResultsCount.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+const displayedResult = (item) => {
+  return typeof props.displayBy === 'function' ? props.displayBy(item) : item[props.displayBy]
+}
+
+const onSelect = (item) => {
+  searchTerm.value = displayedResult(item)
+  emit('update:selected', item)
+}
+
+const loadNextPage = async () => {
+  page.value += 1 // increase page value for offset recalculation
+  return await loadResults()
+}
+
+const onOpen = () => {
+  searchTerm.value = props.selected ? displayedResult(props.selected) : ''
+}
+
+const onClear = () => {
+  searchTerm.value = ''
+}
+
+watch(searchTerm, () => {
+  page.value = 1 // reset page value when search term changes
+  loadResults({ appendToCurrentResult: false })
+})
+
+onMounted(() => {
+  loadResults()
+})
+</script>
+
+<style scoped></style>
+```
+
 ### Props
 
 - search-text: String - Can optionally be provided to show the selected value within `AutoComplete`. By default, selected values are not shown.
@@ -108,9 +228,11 @@ const onSelect = (selectedUser) => {
 - data: Array of Objects - data to search and display
 - filter-by: String - property of data object to use with case-insensitive search
 - display-by: String - property of data object to use to show search results
-- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on enetered
+- filter-fn: Function (text: String) => (item: Object) => Bool: When provided used to filter the data based on entered
   text value
 - async: Boolean - Can be used in combination with `search-text` to enable asynchronous search for results. Defaults to `false`.
+- paginated: Boolean - Enables fetching results in pages
+- paginated-total-result-count - Count of total results which can be paginated through
 - disabled: Boolean - Can be used to show the underlying `va-input` element in a disabled state. Defaults to `false`.
 - error: String - Error message to show beneath the underlying `va-input` element.
 - label: String - Label for `AutoComplete`
@@ -470,7 +592,7 @@ markup per cell.
 For showing a field's value inside customized markup
 - set `{ slotted: true }` in the field's config that is being provided via the `searchResultColumns` or `selectedResultColumns` props
 - embed the cell's value inside `<template #templateName>` (
-example - `<template #address>`).
+  example - `<template #address>`).
   - The name of a column's template is the same as the `key` of the column's config that was provided via the `searchResultColumns` or `selectedResultColumns` props.
 
 The value of the column inside the `<template>` can be accessed via `slotProps["value"]`, which is an object that contains the formatted as well as the raw value for the slotted field.
@@ -641,8 +763,8 @@ const selectedColumnsConfig = [searchColumnsConfig[0]];
 ### Notes
 
 1. Some props that can be either a string or a function. In such cases, if the prop is a function, it will be called with
-the target argument, and return the result. If it is a string, the value of the property matching the path specified by
-the string is looked up in the target argument, and returned.
+   the target argument, and return the result. If it is a string, the value of the property matching the path specified by
+   the string is looked up in the target argument, and returned.
 
 ### Props
 
@@ -660,7 +782,7 @@ the string is looked up in the target argument, and returned.
   value a certain way. Moreover, `{ slotted: true }` can be added to the column's config to embed the column's value in
   custom markup. See the `Formatting and Slots` section above for details.
 - `selectedResultColumns`: Array - The display config for the `<va-data-table>` of selected results. Extends
-  the `columns` prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config 
+  the `columns` prop provided to `<va-data-table>`. A `formatFn` function can be provided in a column's config
   to format the column's value a certain way. Moreover, `{ slotted: true }` can be added to the column's config
   to embed the column's value in custom markup. See the `Formatting and Slots` section above for details.
 - `searchResultCount`: Number - Total number results retrieved from the current search (not to be confused with the
@@ -690,6 +812,57 @@ Events
 - `reset` - emitted when the search controls are reset
 - `update:searchTerm` - emitted when the `searchTerm` v-model is to be updated
 - `scroll-end` - emitted when user scrolls to the end of the current batch of results
+
+## OutlinedAlert
+
+A customizable alert component.
+
+### Primary Features:
+- Can be outlined (bordered)
+  - Vuestic's `va-alert` component, when used with the `outline` prop, changes the background color inside the alert. If this is not desirable, this component can serve as an alternative.
+- Can include an icon preceding the alert text
+- Can be customized in terms of size, text-color, border, padding-direction, padding-amount, the icon displayed and the icon's size.
+
+### Basic Usage
+
+```html
+<template>
+  <OutlinedAlert
+    icon="info"
+    color="primary"
+    border="left"
+  >
+    This is an alert message.
+  </OutlinedAlert>
+  
+  <OutlinedAlert 
+    icon="warning" 
+    color="danger" 
+    border="all" 
+    padding-direction="left" 
+    padding-amount="lg" 
+    size="large"
+  >
+    Warning: This is a more customized alert message.
+  </OutlinedAlert>
+</template>
+```
+
+### Props
+- size: String - Overall size of the alert. Options: "small", "medium", "large". Default: "medium"
+- icon: String - The icon to be displayed. Default: "info"
+- iconSize: String - Size of the icon. Options: "small", "medium", "large". Default: "medium"
+- border: String - Border style. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- color: String - Color of the alert. Default: "primary"
+- paddingDirection: String - Direction of padding. Options: "left", "right", "top", "bottom", "all", "none". Default: "all"
+- paddingAmount: String | Number - Amount of padding. Options: "none", "xs", "sm", "md", "lg", "xl", "2xl", "default", or a number (px) or string (custom value). Default: "default"
+
+### Slots
+- default: The content of the alert
+
+### Styling
+- Uses Tailwind classes
+
 
 ## Maybe
 
@@ -743,11 +916,11 @@ Shows a chip with icon, text, color depending on status. Useful to on/off status
 - status: Boolean (0-off, 1-on)
 - icons - Array of 2 elements (off icon, on icon)
 - labels - Array of 2 element (off label, on label)
-  - default: `['disbaled', 'enabled']`
+  - default: `['disabled', 'enabled']`
 
 ## EnvAlert
 
-Shows an `<va-alert/>` which displays the mode that the app is running in (`test`, `CI`, etc.). 
+Shows an `<va-alert/>` which displays the mode that the app is running in (`test`, `CI`, etc.).
 
 The environments that this alert should be enabled for can be set in `./ui/config.js`, under property `alertForEnvironments`.
 
@@ -795,3 +968,94 @@ useQueryPersistence({
 
 It will update the URL query parameters by watching the refObject and it will update the refObject when URL query
 parameters change.
+
+## StartEndDateTimeInputs
+
+A component for selecting start and end date/time pairs with built-in validation.
+
+### Primary Features:
+- Separate date and time inputs for better UX
+- Automatic validation to ensure start date/time is before end date/time
+- Prevents selection of past dates
+- Handles timezone conversion and date/time combination internally
+- Supports disabled state for read-only scenarios
+- Optional validation that can be turned off
+
+### Basic Usage
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="alertData.start_time"
+    v-model:endTime="alertData.end_time"
+  />
+</template>
+
+<script setup>
+const alertData = ref({
+  start_time: null,
+  end_time: null
+});
+</script>
+```
+
+### With Validation Disabled
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="eventStart"
+    v-model:endTime="eventEnd"
+    :validate-dates="false"
+  />
+</template>
+
+<script setup>
+const eventStart = ref(new Date());
+const eventEnd = ref(new Date(Date.now() + 24 * 60 * 60 * 1000)); // Tomorrow
+</script>
+```
+
+### Read-Only Mode
+
+```html
+<template>
+  <StartEndDateTimeInputs
+    v-model:startTime="existingEvent.start_time"
+    v-model:endTime="existingEvent.end_time"
+    :disabled="true"
+  />
+</template>
+
+<script setup>
+const existingEvent = ref({
+  start_time: new Date('2024-01-15T10:00:00'),
+  end_time: new Date('2024-01-15T12:00:00')
+});
+</script>
+```
+
+### Props
+- validateDates: Boolean - Whether to enable date/time validation. Default: true
+- disabled: Boolean - Whether the inputs should be disabled (read-only). Default: false
+
+### Models
+- startTime: Date - The combined start date and time as a Date object
+- endTime: Date - The combined end date and time as a Date object
+
+### Validation Rules
+When `validateDates` is true:
+- Start date cannot be in the past (compared to today's date)
+- Start date/time must be before end date/time
+- Validation messages are displayed inline with the respective fields
+
+### Internal Behavior
+- Automatically splits incoming Date objects into separate date and time components
+- Combines user-selected date and time back into Date objects
+- Handles timezone conversions appropriately
+- Prevents circular update loops between parent and internal state
+
+### Styling
+- Uses Vuestic UI components (`va-date-input`, `va-time-input`)
+- Responsive layout with flex gap spacing
+- Integrates with Vuestic's validation system

@@ -48,12 +48,12 @@ const validateSort = (value) => {
 
 const sanitizeSort = (value) => parseSortString(value);
 
-const addSortSantizer = (validationChain) => validationChain
+const addSortSanitizer = (validationChain) => validationChain
   .custom(validateSort)
   .bail()
   .customSanitizer(sanitizeSort);
 
 module.exports = {
   validate,
-  addSortSantizer,
+  addSortSanitizer,
 };

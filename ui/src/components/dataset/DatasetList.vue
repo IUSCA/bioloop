@@ -208,11 +208,11 @@
 
 <script setup>
 import useQueryPersistence from "@/composables/useQueryPersistence";
-import config from "@/config";
 import DatasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 import { useDatasetStore } from "@/stores/dataset";
 import { storeToRefs } from "pinia";
 
@@ -225,6 +225,8 @@ const props = defineProps({
 
 const store = useDatasetStore();
 const { filters, query, params, activeFilters } = storeToRefs(store);
+
+const auth = useAuthStore();
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -302,7 +304,7 @@ const columns = [
     label: "Derived",
     width: "80px",
   },
-  ...(config.enabledFeatures.genomeBrowser
+  ...(auth.isFeatureEnabled("genomeBrowser")
     ? [
         {
           key: "num_genome_files",

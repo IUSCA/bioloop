@@ -69,7 +69,14 @@ def generate_metadata(celery_task, source: Path):
 def inspect_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
 
+    if dataset.get('is_deleted'):
+        raise exc.InspectionFailed(f'Dataset {dataset_id} is already deleted; nothing to inspect.')
+
     source = Path(dataset['origin_path']).resolve()
+
+    if not source.exists():
+        raise exc.InspectionFailed(f'origin_path does not exist: {source}')
+
     du_size = cmd.total_size(source)
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
 
@@ -83,7 +90,9 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
         }
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
-    api.add_files_to_dataset(dataset_id=dataset_id, files=metadata)
-    api.add_state_to_dataset(dataset_id=dataset_id, state='INSPECTED')
+    # split metadata into batches and add to dataset
+    # this is to avoid large payloads to the API
+    for batch in utils.batched(metadata, n=config['inspect']['file_metadata_batch_size']):
+        api.add_files_to_dataset(dataset_id=dataset_id, files=batch)
 
     return dataset_id,

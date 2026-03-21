@@ -36,6 +36,28 @@
       "scope": "openid+email",
       "client_id": "",
       "client_secret": ""
+    },
+    "microsoft": {
+      "enabled": true,
+      "authorization_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+      "token_endpoint": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+      "scope": "https://graph.microsoft.com/User.Read",
+      "client_id": "",
+      "client_secret": ""
+    },
+    "auto_sign_up": {
+      "enabled": false,
+      "default_role": "user"
+    },
+    "signup": {
+      "default_role": "user",
+      "dev_default_role": "admin",
+      "jwt": {
+        "scope": "signup",
+        "ttl_milliseconds": 600000
+      },
+      "auto_generate_username_if_not_unique": true,
+      "max_username_suffix": 999
     }
   },
   "oauth": {
@@ -50,19 +72,7 @@
     }
   },
   "upload": {
-    "path": "",
-    "types": {
-      "DATASET": "DATASET"
-    },
-    "status": {
-      "UPLOADING": "UPLOADING",
-      "UPLOAD_FAILED": "UPLOAD_FAILED",
-      "UPLOADED": "UPLOADED",
-      "PROCESSING": "PROCESSING",
-      "PROCESSING_FAILED": "PROCESSING_FAILED",
-      "COMPLETE": "COMPLETE",
-      "FAILED": "FAILED"
-    }
+    "path": ""
   },
   "download_server": {
     "base_url": ""
@@ -185,6 +195,9 @@
     "RAW_DATA",
     "DATA_PRODUCT"
   ],
+  "system_user": {
+    "username": "svc_tasks"
+  },
   "e2e": {
     "users": {
       "admin": {
@@ -202,24 +215,30 @@
   "filesystem": {
     "search_spaces": "",
     "base_dir": {
-      "slateScratch": "",
-      "slateProject": ""
+      "slateScratch": ""
     },
     "mount_dir": {
-      "slateScratch": "",
-      "slateProject": ""
+      "slateScratch": ""
     }
   },
-  "restricted_ingestion_dirs": {
-    "slateScratch": "",
-    "slateProject": ""
+  "restricted_import_dirs": {
+    "slateScratch": ""
   },
   "enabled_features": {
-    "fs": {
-      "enabled_for_roles": ["admin"]
-    },
-    "downloads": true
+    "import": true,
+    "upload": true,
+    "fs": true,
+    "downloads": true,
+    "signup": true,
+    "auto_create_project_on_dataset_creation": true
   },
+  "institution_types": [
+    "Commercial",
+    "External Academic",
+    "Internal Academic",
+    "Non-profit",
+    "Other"
+  ],
   "WORKFLOW_STATUS": {
     "PENDING": "PENDING",
     "STARTED": "STARTED",

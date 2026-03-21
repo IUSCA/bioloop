@@ -1,6 +1,6 @@
 <template>
   <va-modal
-    class="createproject"
+    class="create-project"
     v-model="visible"
     title="Create a New Project"
     fixed-layout
@@ -27,8 +27,8 @@
 </template>
 
 <script setup>
-import { useProjectFormStore } from "@/stores/projects/projectForm";
 import projectService from "@/services/projects";
+import { useProjectFormStore } from "@/stores/projects/projectForm";
 
 const emit = defineEmits(["update"]);
 
@@ -78,7 +78,7 @@ function handleCreate() {
 </script>
 
 <style lang="scss">
-.createproject {
-  // --va-modal-width: calc(30vw);
-}
+// .create-project {
+// --va-modal-width: calc(30vw);
+// }
 </style>

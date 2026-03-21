@@ -18,6 +18,9 @@
               config.contact.app_admin
             }}</a>
           </span>
+          <div>
+            <va-button to="/auth">Go Back</va-button>
+          </div>
         </div>
         <div
           class="text-lg text-gray-700 flex flex-col items-center gap-5 text-center"
@@ -56,15 +59,21 @@ import { useColors } from "vuestic-ui";
 const { colors } = useColors();
 
 import config from "@/config";
+import constants from "@/constants";
 
 const route = useRoute();
 const router = useRouter();
 const redirectPath = ref(useLocalStorage("auth.redirect", ""));
 const storedState = ref(useLocalStorage("auth.state", ""));
+const codeVerifier = ref(useLocalStorage("auth.code_verifier", ""));
 const notAuthorized = ref(false);
 const authFailure = ref(false);
 const validation_loading = ref(false);
 
+// verify - function takes in parameters from query string
+// calls verify API
+// and returns a promise which yields the status of the verification
+// possible status values are defined in constants.auth.verify.response.status
 const props = defineProps(["getUrl", "verify", "paramNames"]);
 
 const params = props.paramNames.reduce((acc, curr) => {
@@ -78,22 +87,28 @@ if (paramsExist) {
   // console.log({ params, storedState: storedState.value });
 
   // csrf protection
-  // bypass csrf protection check when params does not include the state parameter - this auth has no state
-  // read stored state from local storage and reset it
+  // bypass csrf protection check when params does not include the state
+  // parameter - this auth has no state read stored state from local storage and
+  // reset it
   const _storedState = storedState.value;
   storedState.value = null;
   if (params.state === _storedState || !params.state) {
     validation_loading.value = true;
     props
-      .verify(params)
-      .then((user) => {
-        if (user) {
+      .verify({
+        code_verifier: codeVerifier.value,
+        ...params,
+      })
+      .then((status) => {
+        if (status === constants.auth.verify.response.status.SUCCESS) {
           // read redirectPath value from local storage and reset it
           const _redirectPath = redirectPath.value;
           redirectPath.value = "";
-          router.push({
-            path: _redirectPath || "/",
-          });
+          router.push(_redirectPath || "/");
+        } else if (
+          status === constants.auth.verify.response.status.SIGNUP_REQUIRED
+        ) {
+          router.push("/auth/signup");
         } else {
           // User was authenticated with CAS but they are not a portal user
           console.log(
@@ -123,6 +138,7 @@ if (paramsExist) {
     .then((res) => {
       const url = res.data?.url;
       storedState.value = res.data?.state;
+      codeVerifier.value = res.data?.code_verifier;
       // console.log({ url, storedState: storedState.value });
       if (url) {
         window.location.replace(url);

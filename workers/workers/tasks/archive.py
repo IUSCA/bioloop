@@ -1,4 +1,7 @@
+import json
+import shutil
 from pathlib import Path
+
 from celery import Celery
 from celery.utils.log import get_task_logger
 from sca_rhythm import WorkflowTask
@@ -9,6 +12,7 @@ import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
 from workers.config import config
+from workers.dataset import get_archive_bundle_name
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -43,8 +47,7 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
-    # Tar the dataset directory and compute checksum
-    bundle = Path(f'{config["paths"][dataset["type"]]["bundle"]["generate"]}/{dataset["name"]}.tar')
+    bundle = Path(config["paths"][dataset["type"]]["bundle"]["generate"]) / get_archive_bundle_name(dataset)
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
@@ -59,27 +62,26 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         'md5': bundle_checksum,
     }
 
-    sda_dir = wf_utils.get_archive_dir(dataset['type'])
-    sda_bundle_path = f'{sda_dir}/{bundle.name}'
+    dataset_type_archive_dir = wf_utils.get_archive_dir(dataset['type'])
+    dataset_bundle_path = f'{dataset_type_archive_dir}/{bundle.name}'
 
-    wf_utils.upload_file_to_sda(local_file_path=bundle,
-                                sda_file_path=sda_bundle_path,
-                                celery_task=celery_task)
+    wf_utils.archive(local_file_path=bundle,
+                      archive_path=dataset_bundle_path,
+                      celery_task=celery_task)
 
     if delete_local_file:
         # file successfully uploaded to SDA, delete the local copy
         print("deleting local bundle")
         bundle.unlink()
 
-    return sda_bundle_path, bundle_attrs
+    return dataset_bundle_path, bundle_attrs
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-
-    sda_bundle_path, bundle_attrs = archive(celery_task, dataset)
+    archived_bundle_path, bundle_attrs = archive(celery_task, dataset)
     update_data = {
-        'archive_path': sda_bundle_path,
+        'archive_path': archived_bundle_path,
         'bundle': bundle_attrs
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

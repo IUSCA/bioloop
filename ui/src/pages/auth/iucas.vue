@@ -1,7 +1,7 @@
 <template>
   <AuthStatus
     :get-url="authService.getCasUrl"
-    :verify="auth.casLogin"
+    :verify="auth.withHandledVerifyResponse(authService.casVerify)"
     :param-names="['ticket']"
   />
 </template>

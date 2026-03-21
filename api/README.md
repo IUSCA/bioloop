@@ -9,7 +9,7 @@ cp .env.example .env
 and populate the config values to all the keys.
 
 ### Running using docker
-In the developement environment with docker this is the content of `.env` file
+In the development environment with docker this is the content of `.env` file
 
 ```bash
 NODE_ENV=docker
@@ -20,13 +20,15 @@ From the project root run: `docker compose up postgres api -d` to start both the
 
 ### Running on host machine
 
-Start a postgres db server on localhost and create a database `app` and user `appuser` (password: `example`) with write premissions to public schema. In this local environment, the content of `.env` file is:
+Start a postgres db server on localhost and create a database `app` and user `appuser` (password: `example`) with write permissions to public schema. In this local environment, the content of `.env` file is:
 
 ```bash
 NODE_ENV=default
 DATABASE_PASSWORD='example'
 DATABASE_URL="postgresql://appuser:example@localhost:5432/app?schema=public"
 ```
+
+If the API runs on the host but the database is the Postgres container, use port **5433** (see `docker-compose.yml`).
 
 Run `pnpm install` and `pnpm start` to start the API server.
 
@@ -49,10 +51,10 @@ Run `pnpm install` and `pnpm start` to start the API server.
 - [Auto generated swagger documentation](#auto-generated-swagger-documentation)
 - Prisma + Postgres ORM
 
-Developer Exprience
+Developer Experience
 - Auto reload:  `nodemon index.js`
 - [Linting](#linting)
-    - auto highligt linting errors
+    - auto highlight linting errors
     - format on save
 - Consistent Coding styles with editorconfig
 
@@ -67,11 +69,11 @@ Assumptions:
 1. Express creates a [`request`](https://expressjs.com/en/4x/api.html#req) object that represents the HTTP request and has properties for the request query string, parameters, body, HTTP headers, and so on.
 2. [app.js](src/app.js) - The body, query parameters, and cookies are parsed and converted to objects and `req` object is updated.
 3. [app.js](src/app.js) - CORS?
-4. [Index Router](src/routers/index.js) - Intial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
+4. [Index Router](src/routers/index.js) - Initial [routing](https://expressjs.com/en/guide/routing.html) is performed to select a sub-router to send the request to. 
 5. [Authentication](#authentication) - Validate JWT and attach user profile to `req.user` or send 401 error response<sup>*</sup>. 
-6. [AceessControl](#authorization-role-based-access-control) - Determine whether the requester has enough permissions to perform the desired operation on a particular resource and attach the permission object to `req.permission` or send 403 error response.
+6. [AccessControl](#authorization-role-based-access-control) - Determine whether the requester has enough permissions to perform the desired operation on a particular resource and attach the permission object to `req.permission` or send 403 error response.
 7. [Request Validation](#request-validation) - Validate if the request query, params, or the body is in expected format or send 400 error.
-8. [Async Handler](#asynchronous-error-handler) - Envolpe the business logic route middleware to catch async error and propagate them to global error handler.
+8. [Async Handler](#asynchronous-error-handler) - Envelope the business logic route middleware to catch async error and propagate them to global error handler.
 9. **Route Handler - Business Logic** - create and send the response.
 10. [Compression](https://expressjs.com/en/resources/middleware/compression.html) - Apply gZip compression to the response body.
 11. Express server sets some default headers and sends the [response](https://expressjs.com/en/4x/api.html#res) to the client.
@@ -94,7 +96,7 @@ files in `src/`
 - `routes/index.js` - main router
 - `routes/*.js` - modular routes
 - `middleware/*.js` - express middleware functions
-- `services/*.js` - common code specific to this project seperated by usage in router
+- `services/*.js` - common code specific to this project separated by usage in router
 - `services/logger.js` - winston logger
 - `config/*.json` - hierarchical configuration
 - `prisma/schema.prisma` - Data definitions
@@ -111,7 +113,7 @@ Source: [Express Error Handling](https://expressjs.com/en/guide/error-handling.h
 ### Asynchronous Error Handler
 `asyncMiddleware` in [middleware/error.js](src/middleware/asyncHandler.js)
 
-Usage: Wrap the route handler middleware with `asyncHandler` to produce a middleware funtion that can catch the asynchronous error and pass on to the default error handler.
+Usage: Wrap the route handler middleware with `asyncHandler` to produce a middleware function that can catch the asynchronous error and pass on to the default error handler.
 
 
 ```javascript
@@ -147,7 +149,7 @@ router.get('/user', async (req, res, next) => {
 - `errorHandler` in [middleware/error.js](src/middleware/error.js)
 - Logs error to console
 - send actual message to client only if `err.expose` is true otherwise send a generic Internal server error.  For http errors such as (`throw createError(400, 'foo bar')`), the client receives `{"message":"foo bar"}` with status code to 400.
-- For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in thier response object.
+- For non http errors such as  `throw new Error('business logic error')`, only the `err.message` is set others are not. For such error, this handler will send a generic message. Client's will not see `business logic error` in their response object.
 - Does not log to console stack trace for 4xx errors
 
 ### 404 handler
@@ -170,9 +172,9 @@ this will automatically set correct error message based on the constructor.
 
 
 ### Prisma Not Found Error Handler
-Prisma returns opaque error objects from the underlying query engine when DB queries fail. One such common error that must be handled everytime a DB query is made is the **Not Found** error. 
+Prisma returns opaque error objects from the underlying query engine when DB queries fail. One such common error that must be handled every time a DB query is made is the **Not Found** error. 
 
-HTTP semantics require that if a resource cannot be found either while retrieving, updating or deleting the response should be sent 404 status code. In order to achieve this, the errors from the prisma code have to be caught and analysed for the **Not Found** errors. 
+HTTP semantics require that if a resource cannot be found either while retrieving, updating or deleting the response should be sent 404 status code. In order to achieve this, the errors from the prisma code have to be caught and analyzed for the **Not Found** errors. 
 
 A typical example of handling a not found error and returning 404 response:
 
@@ -230,7 +232,7 @@ Configurations are stored in [configuration files](https://github.com/node-confi
 
 config files: `default.json`, `production.json`, `custom-environment-variables.json` in `./config/` directory.
 
-precdence of config: command line > environment > {NODE_ENV}.json > default.json
+precedence of config: command line > environment > {NODE_ENV}.json > default.json
 
 The properties to read and override from environment is defined in `custom-environment-variables.json`
 
@@ -242,7 +244,7 @@ require('dotenv-safe').config();
 
 ## Authentication
 
-The API uses IU CAS authnetication model. 
+The API uses IU CAS authentication model. 
 
 <img src="docs/assets/api_auth.png" >
 
@@ -262,7 +264,7 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
 
 ## Request Validation
 
-Uses [express-validator](https://express-validator.github.io/docs/) to validate if the request query, params, or the body is of the expected format and has acceptable values. This module helps to write declarative code that reduces repeatitive Spaghetti safety checking code inside the route handler. The route can now confidently presume that all of the required properties/keys of `req.params`, `req.query`, or `req.body` exist and have appropriate values and optional keys set to default values.
+Uses [express-validator](https://express-validator.github.io/docs/) to validate if the request query, params, or the body is of the expected format and has acceptable values. This module helps to write declarative code that reduces repetitive Spaghetti safety checking code inside the route handler. The route can now confidently presume that all of the required properties/keys of `req.params`, `req.query`, or `req.body` exist and have appropriate values and optional keys set to default values.
 
 
 Using the [`validate`](src/middleware/validators.js) higher order function, the error checking code is factored out from the route specific middleware functions.
@@ -309,28 +311,29 @@ app.post(
 
 ## Authorization: Role Based Access Control
 
-[accesscontrol](https://www.npmjs.com/package/accesscontrol) library is used to provide role based authorization to routes (resources).
+[accesscontrols](https://www.npmjs.com/package/accesscontrol) library is used to provide role based authorization to routes (resources).
 
 Roles in this application:
 - user
 - operator
 - admin
-- superadmin
 
 Each role defines CRUD permissions on resources with two scopes: "own" and "any". These are configured in [services/accesscontrols.js](src/services/accesscontrols.js).
 
 The goal of the [accessControl](src/middleware/auth.js) middleware is to determine from an incoming request whether the requester has enough permissions to perform the desired operation on a particular resource.
 
-`req.permission.filter`: Uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
+- <u>Note</u>: `req.permission.filter` uses [Notation](https://www.npmjs.com/package/notation) to filter attributes.
 
 ### A simple use case: 
 
-**Objective**: Users with `user` role are only permitted to read and update thier own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+**Objective**:
+- Users with `user` role are only permitted to read and update their own profile. Whereas, users with `admin` role can create new users, read & update any user's profile, and delete any user.
+- Users with `user` role are only permitted to read datasets that they created. Whereas, users with `admin` role can access, read, update and delete any datasets.
 
 **Role design**:
 - roles: `admin`, `user`
 - actions: CRUD
-- resource: `user`
+- resources: `user`, `dataset`
 
 ```javascript
 {
@@ -341,11 +344,20 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    dataset: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    }
   },
   user: {
     user: {
       'read:own': ['*'],
       'update:own': ['*'],
+    },
+    dataset: {
+      'read:own': ['*'],
     },
   },
 }
@@ -353,13 +365,25 @@ The goal of the [accessControl](src/middleware/auth.js) middleware is to determi
 
 **Permission check**:
 
-Code to check if the requester to is authorized to `GET /users/dduck`. This route is protected by `authenticate` middleware which attaches the requester profile to `req.user` if the token is valid.
+Before evaluating if the requester will be granted access to the requested resource, the resource owner needs to be determined. This can be done through one of two ways:
+- If a username is included as part of the request, the resource owner is assumed to be this user.
+- If a username is not included as part of request, a callback can be provided to retrieve the resource owner through custom logic.
+
+Once the resource owner has been determined, we check if the requester has the necessary permissions to access the requested resource.
+- If the requester and the resource owner are the same, the `readOwn` permission is examined against the requester's roles.
+- If the requester and the resource owner are not the same, the `readAny` permission is examined against the requester's roles.
+
+**Examples**:
+
+<u>Note</u>: The routes in the examples shown below are protected by the `authenticate` middleware, which attaches the requester profile to `req.user` if the token is valid.
+
+- <u>Example 1</u>: Code to check if the requester is authorized to `GET /users/dduck`: <!-- cspell:ignore dduck -->
 
 ```javascript
 const { authenticate } = require('../middleware/auth');
 const ac = require('../services/accesscontrols');
 
-router.get('/:username',
+router.get('/users/:username',
   authenticate,
   asyncHandler(async (req, res, next) => {
     
@@ -383,32 +407,105 @@ router.get('/:username',
 );
 ```
 
-readOwn permission is verified against user roles if the requester and resource owner are the same, otherwise readAny permission is examined. If the requester has only `user` role and is requesting the profile of other users, the request will be denied.
+- Results:
+  - If the requester has only `user` role and is requesting the profile of other users, this request will be denied.
+  - If the requester has role `admin` and is requesting the profile of other users, this request will succeed.
+
+---
+
+- <u>Example 2</u>: Code to check if the requester is authorized to `GET /datasets/testDataset`:
+
+```javascript
+const { authenticate, accessControl } = require('../middleware/auth');
+const ac = require('../services/accesscontrols');
+const datasetService = require('../services/dataset');
+
+const fetchDatasetCreator = async (datasetName) => {
+  const datasetCreator = await datasetService.getDatasetCreator(datasetName);
+  return datasetCreator.username;
+}
+
+router.get('/datasets/:datasetName',
+  authenticate,
+  asyncHandler(async (req, res, next) => {
+
+    const roles = req.user.roles;
+    const resourceOwner = await fetchDatasetCreator(req.params.datasetName);
+    const requester = req.user?.username;
+
+    const permission = (requester === resourceOwner)
+        ? ac.can(roles).readOwn('dataset')
+        : ac.can(roles).readAny('dataset');
+    
+    if (!permission.granted) {
+      return next(createError(403)); // Forbidden
+    }
+    else {
+      const dataset = await datasetService.findDatasetBy('datasetName', req.params.datasetName);
+      if (dataset) { return res.json(dataset); }
+      return next(createError.NotFound());
+    }
+  }),
+);
+```
+
+- Results:
+  - If the requester has only `user` role and is requesting a dataset that was not created by them, this request will be denied. If the requested dataset was created by them, this request will succeed.
+  - If the requester has role `admin` and is requesting a dataset that was not created by them, this request will succeed.
+
 
 ### AccessControl Middleware Usage
 
 [accessControl](src/middleware/auth.js) middleware is a generic function to handle authorization for any action or resource with optional ownership checking.
 
-The above code can be written consicely with the help of accessControl middleware.
+The above code examples can be written concisely with the help of accessControl middleware.
 
-`routes/*.js`
+- <u>Example 1</u>: Simplified code to check if the requester is authorized to `GET /users/dduck`:
+
 ```javascript
 // import middleware
 const { authenticate, accessControl } = require('../middleware/auth');
 
-// configre the middleware to authorize requests to user resource
-// resource ownership is checked by default
-// throws 403 if not authorized
-const isPermittedTo = accessControl('user');
+// - configure the middleware to authorize requests to user resource
+// - resource ownership is checked by default
+// - throws 403 if not authorized
 
-//
 router.get(
-  '/:username',
+  '/users/:username',
   authenticate,
-  isPermittedTo('read', { checkOwnerShip: true }),
+  accessControl('user', 'read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     const user = await userService.findActiveUserBy('username', req.params.username);
     if (user) { return res.json(user); }
+    return next(createError.NotFound());
+  }),
+);
+```
+---
+- <u>Example 2</u>: Simplified code to check if the requester is authorized to `GET /datasets/testDataset`:
+
+```javascript
+// import middleware
+const { authenticate, accessControl } = require('../middleware/auth');
+const datasetService = require('../services/dataset');
+
+const fetchDatasetCreator = async (datasetName) => {
+  const datasetCreator = await datasetService.getDatasetCreator(datasetName);
+  return datasetCreator.username;
+}
+
+// - configure the middleware to authorize requests to user resource
+// - resource ownership is checked by default
+// - provide a callback function that allows for the owner of the resource to be determined
+// - throws 403 if not authorized
+
+router.get(
+  '/datasets/:datasetName',
+  authenticate,
+  accessControl('dataset', 'read', { checkOwnership: true }, fetchDatasetCreator),
+  asyncHandler(async (req, res, next) => {
+    const dataset = await datasetService.findDatasetBy('datasetName', req.params.datasetName);
+    if (dataset) { return res.json(dataset); }
     return next(createError.NotFound());
   }),
 );

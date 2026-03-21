@@ -1,15 +1,5 @@
 {
   "cSpell.words": [
-    "celeryconfig",
-    "iconify",
-    "jsonify",
-    "pinia",
-    "traceback",
-    "unplugin",
-    "vite",
-    "vitejs",
-    "vitest",
-    "vueuse"
   ],
   "i18n-ally.sourceLanguage": "en",
   "i18n-ally.keystyle": "nested",
@@ -27,6 +17,7 @@
     "*.css": "postcss"
   },
   "editor.formatOnSave": false,
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,
@@ -35,5 +26,11 @@
   },
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
-  "editor.insertSpaces": true
+  "editor.insertSpaces": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  }
 }

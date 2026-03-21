@@ -26,6 +26,12 @@
           </td>
         </tr>
         <tr>
+          <td>Source Instrument</td>
+          <td>
+            {{ props.dataset.src_instrument?.name }}
+          </td>
+        </tr>
+        <tr>
           <td>Source Path</td>
           <td>
             <span>{{ props.dataset.origin_path }}</span>
@@ -43,7 +49,7 @@
           <td>Files</td>
           <td>{{ props.dataset.num_files }}</td>
         </tr>
-        <tr v-if="config.enabledFeatures.genomeBrowser">
+        <tr v-if="auth.isFeatureEnabled('genomeBrowser')">
           <td>Genome Files</td>
           <td>{{ props.dataset.metadata?.num_genome_files }}</td>
         </tr>
@@ -51,6 +57,12 @@
           <td>Directories</td>
           <td>{{ props.dataset.num_directories }}</td>
         </tr>
+        <!--        <tr>-->
+        <!--          <td>Created By</td>-->
+        <!--          <td>-->
+        <!--            {{ datasetCreatorDisplayed }}-->
+        <!--          </td>-->
+        <!--        </tr>-->
         <tr>
           <td>Description</td>
           <td>
@@ -65,11 +77,24 @@
 </template>
 
 <script setup>
-import { formatBytes } from "@/services/utils";
 import * as datetime from "@/services/datetime";
-import config from "@/config";
+import { formatBytes } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({ dataset: Object });
+
+const auth = useAuthStore();
+
+// const datasetCreateLog = computed(() => {
+//   return (props.dataset?.audit_logs || []).find((e) => !!e.create_method);
+// });
+
+// const datasetCreatorDisplayed = computed(() => {
+//   const datasetCreator = datasetCreateLog.value?.user;
+//   return datasetCreator
+//     ? `${datasetCreator.username} (${datasetCreator.name})`
+//     : null;
+// });
 </script>
 
 <style lang="scss" scoped>

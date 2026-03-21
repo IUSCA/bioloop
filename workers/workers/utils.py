@@ -1,15 +1,16 @@
-from __future__ import annotations  # type unions by | are only available in versions > 3.10
+from __future__ import \
+    annotations  # type unions by | are only available in versions > 3.10
 
 import hashlib
 import json
 import os
 from collections.abc import Iterable
 from contextlib import contextmanager
-from datetime import datetime, timezone, date, time
-from time import time as seconds_since_epoch
+from datetime import date, datetime, time, timezone
 from enum import Enum, unique
-from itertools import islice, chain
+from itertools import chain, islice
 from pathlib import Path
+from time import time as seconds_since_epoch
 
 
 def str_func_call(func, args, kwargs):
@@ -175,3 +176,27 @@ def dir_last_modified_time(dir_path: Path) -> float:
         (max(p.lstat().st_mtime, p.lstat().st_ctime) for p in paths if p.exists()),
         default=seconds_since_epoch()
     )
+
+
+def encode_value(value):
+    """
+    Encode values to be PostgreSQL-compatible.
+    Useful for preparing CSV data for PostgreSQL COPY command.
+    This function handles None, booleans, and lists specifically.
+    - None is converted to 'NULL'
+    - booleans are converted to lowercase strings 'true' or 'false'
+    - lists are converted to PostgreSQL array format
+    - other types are returned as-is
+    """
+    if value is None:
+        # Convert None to 'NULL'
+        return 'NULL'
+    elif isinstance(value, bool):
+        # Convert booleans to lowercase strings 'true' or 'false'
+        return 'true' if value else 'false'
+    elif isinstance(value, list):
+        # Convert lists to PostgreSQL array format
+        return '{' + ','.join(map(str, value)) + '}'
+    else:
+        # Return value as-is for other types
+        return value

@@ -1,6 +1,6 @@
 #!/bin/bash
-set -e
-set -o pipefail
+set -e # Exit on error
+set -o pipefail # Exit if any command in a pipeline fails
 
 { 
   echo "Finding the UID and GID of the provided user '"$APP_USER"' and group '"$APP_GROUP"'."
@@ -9,7 +9,7 @@ set -o pipefail
 
 } || {
 
-  echo "Failed to find the provided user and group; defaulting to the user and group of the current directory's onwer."
+  echo "Defaulting to the user and group of the current directory's owner because the provided user or group was not found."
   APP_UID=$(ls -ldn `pwd` | awk '{print $3}') &&
   APP_GID=$(ls -ldn `pwd` | awk '{print $4}')
 }
@@ -49,6 +49,15 @@ else
   echo "APP_GID=$APP_GID" >> .env
 fi
 
+# Check if GRAFANA_ADMIN_PASSWORD exists in the .env file
+if grep -q "GRAFANA_ADMIN_PASSWORD" .env; then
+  echo "GRAFANA_ADMIN_PASSWORD already exists in .env file."
+else
+  # If it doesn't exist, add it with a random password
+  GRAFANA_ADMIN_PASSWORD=$(openssl rand -hex 16)
+  echo "GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD" >> .env
+fi
+
 # build API
 sudo docker compose -f "docker-compose-prod.yml" build api
 
@@ -57,3 +66,7 @@ sudo docker compose -f "docker-compose-prod.yml" up -d postgres
 
 # recreates and starts api and ui
 sudo docker compose -f "docker-compose-prod.yml" up -d --force-recreate ui api
+
+# start grafana if it is not running
+# this will also start prometheus and postgres-exporter if they are not running
+sudo docker compose -f "docker-compose-prod.yml" up -d grafana

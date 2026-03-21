@@ -1,76 +1,20 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
 const _ = require('lodash/fp');
-const {
-  query, body, param,
-} = require('express-validator');
+const { query, body, param } = require('express-validator');
 const createError = require('http-errors');
+const { Prisma } = require('@prisma/client');
 
-const asyncHandler = require('../middleware/asyncHandler');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
-const projectService = require('../services/project');
-const wfService = require('../services/workflow');
-const { setDifference, log_axios_error } = require('../utils');
-const CONSTANTS = require('../constants');
+const asyncHandler = require('@/middleware/asyncHandler');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const projectService = require('@/services/project');
+const wfService = require('@/services/workflow');
+const { setDifference, log_axios_error } = require('@/utils');
+const CONSTANTS = require('@/constants');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
-const prisma = new PrismaClient();
-
-const build_include_object = ({
-  include_users = true,
-  include_datasets = true,
-  include_contacts = true,
-} = {}) => _.omitBy(_.isUndefined)({
-  users: include_users ? {
-    select: {
-      user: true,
-      assigned_at: true,
-      assignor: {
-        select: {
-          id: true,
-          username: true,
-          name: true,
-        },
-      },
-    },
-  } : undefined,
-  datasets: include_datasets ? {
-    select: {
-      dataset: {
-        include: {
-          workflows: {
-            select: {
-              id: true,
-            },
-          },
-        },
-      },
-      assigned_at: true,
-      assignor: {
-        select: {
-          id: true,
-          username: true,
-          name: true,
-        },
-      },
-    },
-  } : undefined,
-  contacts: include_contacts ? {
-    select: {
-      contact: true,
-      assigned_at: true,
-      assignor: {
-        select: {
-          id: true,
-          username: true,
-          name: true,
-        },
-      },
-    },
-  } : undefined,
-});
 
 // router.get(
 //   '/:username/:id/slug',
@@ -89,7 +33,7 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
@@ -149,7 +93,7 @@ router.get(
         take: req.query.take,
         orderBy: sort_obj,
         where: filters,
-        include: build_include_object(),
+        include: projectService.build_include_object(),
       }),
       prisma.project.count({
         where: filters,
@@ -167,7 +111,7 @@ router.get(
   '/:id',
   isPermittedTo('read'),
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
@@ -187,7 +131,7 @@ router.get(
           },
         ],
       },
-      include: build_include_object({ include_datasets }),
+      include: projectService.build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
@@ -220,13 +164,12 @@ router.get(
 
 router.get(
   '/:username/:id/datasets',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   validate([
-    param('username').notEmpty().escape(),
+    param('username').trim().notEmpty(),
     query('staged').toBoolean().optional(),
     query('take').isInt().toInt().optional(),
-    query('skip').isInt().toInt().optional(),
-    query('name').notEmpty().escape().optional(),
+    query('skip').isInt({ min: 0 }).toInt().optional(),
     query('sortBy').isObject().optional(),
     query('include_duplicates').toBoolean().optional(),
     query('include_deleted').toBoolean().optional(),
@@ -237,20 +180,24 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all datasets associated with a project, with
     // optional params for filtering;
-    /*
-    * #swagger.description = user role:
-    * can only see datasets if they have access to the project.
-      operator, admin: can see any project's datasets
-    */
+    /* eslint-disable */
+      // #swagger.description = user role:
+      // can only see datasets if they have access to the
+      // project. operator, admin:
+      // can see any project's datasets
+      /* eslint-enable                                                                */
 
     const hasProjectAssociation = await projectService.has_project_assoc({
-      projectId: req.params.id,
-      userId: req.user.id,
+      project_id: req.params.id,
+      user_id: req.user.id,
     });
 
+    // has assoc, has only user role              -> allowed
+    // has assoc, has operator / admin role       -> allowed
+    // no assoc,  has only user role              -> not allowed
+    // no assoc,  has operator / admin role       -> allowed
     if (
-      req.user.roles.includes('user')
-      && !hasProjectAssociation
+      !(req.user.roles.includes('operator') || req.user.roles.includes('admin')) && !hasProjectAssociation
     ) {
       return next(createError(403)); // Forbidden
     }
@@ -276,17 +223,17 @@ router.get(
         contains: req.query.name,
         mode: 'insensitive', // case-insensitive search
       } : undefined,
-      is_staged: req.query.staged,
-      is_duplicate: req.query.include_duplicates || false,
-      is_deleted: req.query.include_deleted || false,
+      is_staged: req.query.staged ?? Prisma.skip,
+      is_duplicate: req.query.include_duplicates ?? Prisma.skip,
+      is_deleted: req.query.include_deleted ?? Prisma.skip,
     });
 
     const filterQuery = { where: query_obj };
     const datasetRetrievalQuery = {
-      skip: req.query.skip,
-      take: req.query.take,
+      skip: req.query.skip ?? Prisma.skip,
+      take: req.query.take ?? Prisma.skip,
       ...filterQuery,
-      orderBy: buildOrderByObject(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
+      orderBy: projectService.build_order_by_object(Object.keys(sortBy)[0], Object.values(sortBy)[0]),
       include: {
         ...CONSTANTS.INCLUDE_WORKFLOWS,
         ...(req.query.include_dataset_states && CONSTANTS.INCLUDE_STATES),
@@ -337,28 +284,12 @@ router.get(
   }),
 );
 
-const buildOrderByObject = (field, sortOrder, nullsLast = true) => {
-  const nullable_order_by_fields = ['du_size', 'size'];
-
-  if (!field || !sortOrder) {
-    return {};
-  }
-  if (nullable_order_by_fields.includes(field)) {
-    return {
-      [field]: { sort: sortOrder, nulls: nullsLast ? 'last' : 'first' },
-    };
-  }
-  return {
-    [field]: sortOrder,
-  };
-};
-
 router.get(
   '/:username/all',
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   validate([
-    query('take').default(25).isInt().toInt(),
-    query('skip').default(0).isInt().toInt(),
+    query('take').default(25).isInt({ min: 1 }).toInt(),
+    query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
@@ -367,9 +298,11 @@ router.get(
     // #swagger.tags = ['Projects']
     // #swagger.summary = get all projects associated with a username with
     // pagination.
-    /* #swagger.description = user role: can only see their projects.
-      operator, admin: can see anyone's projects
-    */
+    /* eslint-disable */
+      // #swagger.description = user role:
+      // can only see their projects. operator, admin:
+      // can see anyone's projects
+      /* eslint-enable */
     const { search, sort_order, sort_by } = req.query;
     const { username } = req.params;
 
@@ -442,7 +375,7 @@ router.get(
         skip: req.query.skip,
         take: req.query.take,
         orderBy: sort_obj,
-        include: build_include_object(),
+        include: projectService.build_include_object(),
       }),
       prisma.project.count({
         where: filters, // Apply the search filters to the count as well
@@ -459,15 +392,17 @@ router.get(
 router.get(
   '/:username/:id',
   validate([
-    query('include_datasets').toBoolean().optional().default(true),
+    query('include_datasets').default(true).toBoolean(),
   ]),
-  isPermittedTo('read', { checkOwnerShip: true }),
+  isPermittedTo('read', { checkOwnership: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = get a specific project associated with a username
-    /* #swagger.description = user role: can only see their project.
-      operator, admin: can see anyone's project
-    */
+    /* eslint-disable */
+      // #swagger.description = user role:
+      // can only see their project. operator, admin:
+      // can see anyone's project
+      /* eslint-enable */
     const { include_datasets } = req.query;
 
     const project = await prisma.project.findFirstOrThrow({
@@ -488,7 +423,7 @@ router.get(
           },
         },
       },
-      include: build_include_object({ include_datasets }),
+      include: projectService.build_include_object({ include_datasets }),
     });
 
     // include workflow objects with dataset
@@ -519,65 +454,53 @@ router.get(
   }),
 );
 
+/**
+ * Create a new project.
+ *
+ * @route POST /projects
+ * @param {Object} req.body - The project data.
+ * @param {boolean} [req.body.browser_enabled] - Whether the project is browser enabled.
+ * @param {string} [req.body.name] - The name of the project.
+ * @param {string} [req.body.description] - The description of the project.
+ * @param {string} [req.body.funding] - The funding information for the project.
+ * @param {Object} [req.body.metadata] - Additional metadata for the project.
+ * @param {number[]} [req.body.user_ids] - Array of user IDs to associate with the project.
+ * @param {number[]} [req.body.dataset_ids] - Array of dataset IDs to associate with the project.
+ * @param {Object} req.user - The authenticated user making the request.
+ * @param {string} req.user.id - The ID of the authenticated user.
+ * @returns {Promise<Object>} The created project object.
+ * @throws {Error} If project creation fails.
+ */
 router.post(
   '/',
   isPermittedTo('create'),
   validate([
     body('browser_enabled').optional().toBoolean(),
+    body('name').optional().isString(),
+    body('description').optional().isString(),
+    body('funding').optional().isString(),
+    body('metadata').optional().isObject(),
+    body('user_ids').optional().isArray().withMessage('user_ids must be an array')
+      .custom((value) => value.every((id) => typeof id === 'number' && Number.isInteger(id)))
+      .withMessage('user_ids must be an array of integers'),
+    body('dataset_ids').optional().isArray().withMessage('dataset_ids must be an array')
+      .custom((value) => value.every((id) => typeof id === 'number' && Number.isInteger(id)))
+      .withMessage('dataset_ids must be an array of integers'),
   ]),
   asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Projects']
-    // #swagger.summary = create a project
-    /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
-    const { user_ids, dataset_ids, ...projectData } = req.body;
-    const data = _.flow([
-      _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
-      _.omitBy(_.isNil),
-    ])(projectData);
-    data.slug = await projectService.generate_slug({ name: data.name });
+    /* eslint-disable */
+      // #swagger.tags = ['Projects']
+      // #swagger.summary = create a project
+      // #swagger.description = admin, operator and user roles are allowed to create
+      // projects
+      /* eslint-enable */
 
-    if ((user_ids || []).length > 0) {
-      data.users = {
-        create: user_ids.map((id) => ({
-          user_id: id,
-          assignor_id: req.user.id,
-        })),
-      };
-    }
-
-    if ((dataset_ids || []).length > 0) {
-      data.datasets = {
-        create: dataset_ids.map((id) => ({
-          dataset_id: id,
-          assignor_id: req.user.id,
-        })),
-      };
-    }
-
-    const created_project = await prisma.$transaction(async (tx) => {
-      const duplicate_datasets = await tx.dataset.findMany({
-        where: {
-          id: {
-            in: dataset_ids,
-          },
-          is_duplicate: true,
-        },
-      });
-
-      const error_str = `Request contains the following duplicate datasets which cannot be assigned to project: ${
-        duplicate_datasets.map((ds) => ds.id).join(', ')}`;
-      if (duplicate_datasets.length > 0) {
-        throw new Error(error_str);
-      }
-
-      const project_being_created = await tx.project.create({
-        data,
-        include: build_include_object(),
-      });
-      return project_being_created;
+    const project = await projectService.create_project({
+      data: {
+        ...req.body,
+        assignor_id: req.user.id,
+      },
+      include: projectService.build_include_object(),
     });
 
     res.json(created_project);
@@ -600,11 +523,11 @@ router.post(
     */
 
     // get source project
-    const source_porject = await prisma.project.findFirstOrThrow({
+    const source_project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.src,
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     // get target projects
@@ -614,7 +537,7 @@ router.post(
           in: req.body.target_project_ids,
         },
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     // assemble all unique dataset_ids associated with the target projects
@@ -623,7 +546,7 @@ router.post(
     ));
 
     // find dataset ids which are not already associated with the source project
-    const source_dataset_ids = source_porject.datasets.map((obj) => obj.dataset.id);
+    const source_dataset_ids = source_project.datasets.map((obj) => obj.dataset.id);
 
     const dataset_ids_to_add = [
       ...setDifference(target_dataset_ids, new Set(source_dataset_ids)),
@@ -667,17 +590,17 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate users to a project
-    /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are allowed
+      // and user role is forbidden
+      /* eslint-enable */
 
     // get project or send 404 if not found
     const project = await prisma.project.findFirstOrThrow({
       where: {
         id: req.params.id,
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     const cur_user_ids = project.users.map((obj) => obj.user.id);
@@ -720,10 +643,10 @@ router.put(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate contacts / external users to a project
-    /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are allowed
+      // and user role is forbidden
+      /* eslint-enable                                                          */
 
     // get project or send 404 if not found
     await prisma.project.findFirstOrThrow({
@@ -774,10 +697,10 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = associate datasets users to a project
-    /*
-     * #swagger.description = admin and operator roles are allowed and user
-     * role is forbidden
-     */
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are
+      // allowed and user role is forbidden
+      /* eslint-enable                                                             */
 
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
@@ -834,7 +757,6 @@ router.patch(
 
 router.patch(
   '/:id',
-  isPermittedTo('update'),
   validate([
     body('name').optional().isLength({ min: 5 }),
     body('browser_enabled').optional().toBoolean(),
@@ -842,10 +764,10 @@ router.patch(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = update a project
-    /*
-     * #swagger.description = admin and operator roles are allowed and user
-     * role is forbidden
-     */
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are
+      // allowed and user role is forbidden
+      /* eslint-enable                                                               */
 
     const data = _.flow([
       _.pick(['name', 'description', 'browser_enabled', 'funding', 'metadata']),
@@ -857,7 +779,7 @@ router.patch(
       where: {
         id: req.params.id,
       },
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
 
     data.metadata = _.merge(projectToUpdate?.metadata)(data.metadata); // deep merge
@@ -875,7 +797,7 @@ router.patch(
         id: req.params.id,
       },
       data,
-      include: build_include_object(),
+      include: projectService.build_include_object(),
     });
     res.json(updatedProject);
   }),
@@ -887,10 +809,10 @@ router.delete(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Projects']
     // #swagger.summary = delete a project and all its associations
-    /*
-    * #swagger.description = admin and operator roles are allowed and user role
-    * is forbidden
-    */
+    /* eslint-disable */
+      // #swagger.description = admin and operator roles are
+      // allowed and user role is forbidden
+      /* eslint-enable */
 
     const deleted_project = await prisma.project.delete({
       where: {

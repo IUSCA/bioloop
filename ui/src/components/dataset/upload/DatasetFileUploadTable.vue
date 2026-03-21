@@ -6,16 +6,25 @@
     :items="props.files"
     :columns="columns"
     virtual-scroller
+    data-testid="file-upload-table"
   >
     <template #cell(name)="{ rowData }">
-      <div class="flex items-center gap-1 text-left">
+      <div
+        class="flex items-center gap-1 text-left"
+        data-testid="file-name-cell"
+      >
         <Icon
           v-if="rowData.type === 'directory'"
           icon="mdi-folder"
           class="text-xl flex-none text-gray-700"
+          data-testid="file-type-folder-icon"
         />
-        <FileTypeIcon v-else :filename="rowData.name" />
-        <span> {{ rowData.name }} </span>
+        <FileTypeIcon
+          v-else
+          :filename="rowData.name"
+          data-testid="file-type-icon"
+        />
+        <span data-testid="file-name"> {{ rowData.name }} </span>
       </div>
     </template>
 
@@ -23,74 +32,64 @@
       <va-progress-circle
         :model-value="value ? parseInt(value, 10) : 0"
         size="small"
+        data-testid="file-progress"
       >
         {{ value && value + "%" }}
       </va-progress-circle>
     </template>
 
     <template #cell(uploadStatus)="{ value }">
-      <span class="flex justify-center">
+      <span class="flex justify-center" data-testid="file-upload-status">
         <va-popover
-          v-if="value === config.upload.status.UPLOADED"
+          v-if="value === constants.UPLOAD_STATUSES.UPLOADED"
           message="Succeeded"
+          data-testid="status-uploaded"
         >
-          <va-icon name="check_circle_outline" color="success" />
+          <va-icon
+            name="check_circle_outline"
+            color="success"
+            data-testid="status-icon-uploaded"
+          />
         </va-popover>
         <va-popover
-          v-if="value === config.upload.status.UPLOADING"
+          v-if="value === constants.UPLOAD_STATUSES.UPLOADING"
           message="Uploading"
+          data-testid="status-uploading"
         >
-          <va-icon name="pending" color="info" />
+          <va-icon
+            name="pending"
+            color="info"
+            data-testid="status-icon-uploading"
+          />
         </va-popover>
         <va-popover
-          v-if="value === config.upload.status.UPLOAD_FAILED"
+          v-if="value === constants.UPLOAD_STATUSES.UPLOAD_FAILED"
           message="Failed"
+          data-testid="status-failed"
         >
-          <va-icon name="error_outline" color="danger" />
+          <va-icon
+            name="error_outline"
+            color="danger"
+            data-testid="status-icon-failed"
+          />
         </va-popover>
       </span>
-    </template>
-
-    <template #cell(actions)="{ rowIndex }">
-      <div class="flex gap-1">
-        <va-button
-          preset="plain"
-          icon="delete"
-          color="danger"
-          @click="removeFile(rowIndex)"
-          :disabled="props.submitAttempted"
-        />
-      </div>
     </template>
   </va-data-table>
 </template>
 
 <script setup>
 import config from "@/config";
+import constants from "@/constants";
 
 const props = defineProps({
   files: {
     type: Array,
     default: () => [],
   },
-  sourceRawData: {
-    type: Object,
-  },
-  submitAttempted: {
-    type: Boolean,
-    required: true,
-  },
-  selectingFiles: {
-    type: Boolean,
-    required: true,
-  },
-  selectingDirectory: {
-    type: Boolean,
-    required: true,
-  },
 });
 
-const emit = defineEmits(["files-added", "directory-added", "file-removed"]);
+const emit = defineEmits(["file-removed"]);
 
 const noFilesSelected = computed(() => {
   return props.files.length === 0;
@@ -138,17 +137,7 @@ const columns = [
     thStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
-  {
-    key: "actions",
-    width: "15%",
-    thStyle:
-      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-  },
 ];
-
-const removeFile = (index) => {
-  emit("file-removed", index);
-};
 </script>
 
 <style scoped>

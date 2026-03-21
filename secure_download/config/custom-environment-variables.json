@@ -1,8 +1,11 @@
 {
+  "mode": "NODE_ENV",
   "auth": {
     "jwks_uri": "JWKS_URI"
   },
-  "upload_path": {
-    "data_products": "UPLOAD_PATH_DATA_PRODUCTS"
-  }
+  "express": {
+    "port": "EXPRESS_PORT",
+    "host": "EXPRESS_HOST"
+  },
+  "download_path": "DOWNLOAD_PATH"
 }

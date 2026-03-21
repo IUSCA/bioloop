@@ -102,7 +102,7 @@
           </span>
         </div>
         <!-- show failure modes -->
-        <div class="flex gap-1">
+        <div class="">
           <va-tabs
             v-model="query_params.failure_mode"
             :vertical="!breakpoint_sm"
@@ -329,7 +329,7 @@ const { pause, resume } = useIntervalFn(
 );
 
 // stop interval fn if auto refresh is off (0 seconds)
-// restat interval fn if auto refresh is positive
+// restart interval fn if auto refresh is positive
 watch(
   () => query_params.value.auto_refresh,
   () => {

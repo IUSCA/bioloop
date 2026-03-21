@@ -1,6 +1,6 @@
 const exports = {
   mode: "development",
-  // vite server redirects traffic on starting with apiBaseURL
+  // vite server redirects traffic on URLs starting with apiBaseURL
   // to http://${config.apiHost}:${config.apiPort} in dev environment
   apiBasePath: "/api",
   uploadApiBasePath:
@@ -10,9 +10,11 @@ const exports = {
     import.meta.env.VITE_GOOGLE_RETURN || "https://localhost/auth/google",
   cilogonReturn:
     import.meta.env.VITE_CILOGON_RETURN || "https://localhost/auth/cil",
+  microsoftReturn:
+    import.meta.env.VITE_MICROSOFT_RETURN || "https://localhost/auth/microsoft",
   refreshTokenTMinusSeconds: {
     appToken: 300,
-    uploadToken: 5,
+    uploadToken: 20,
   },
   analyticsId: "G-FOO",
   appTitle: "BIOLOOP",
@@ -55,6 +57,7 @@ const exports = {
   auth_enabled: {
     google: true,
     cilogon: true,
+    microsoft: true,
   },
   dashboard: {
     active_tasks: {
@@ -89,13 +92,24 @@ const exports = {
     notifications: {
       enabledForRoles: ["admin", "operator"],
     },
-    ingestion: {
+    import: {
       enabledForRoles: ["admin"],
     },
     downloads: true,
+    signup: false,
+    uploads: {
+      enabledForRoles: ["admin"],
+    },
+    auto_create_project_on_dataset_creation: {
+      enabledForRoles: ["user"],
+    },
+    alerts: true,
   },
   notifications: {
     pollingInterval: 5000, // milliseconds
+  },
+  alerts: {
+    maxDisplayCount: 1, // Maximum number of alerts to display at once
   },
   filesystem_search_spaces: [
     {
@@ -109,44 +123,17 @@ const exports = {
         label: "Slate-Scratch",
       },
     },
-    {
-      slateProject: {
-        base_path:
-          import.meta.env.VITE_PROJECT_BASE_DIR || "/bioloop/project/space",
-        mount_path:
-          import.meta.env.VITE_PROJECT_MOUNT_DIR ||
-          "bioloop/user/project/mount/dir",
-        key: "slateProject",
-        label: "Slate-Project",
-      },
-    },
   ],
-  restricted_ingestion_dirs: {
+  restricted_import_dirs: {
     slateScratch: {
       paths:
-        import.meta.env.VITE_SCRATCH_INGESTION_RESTRICTED_DIRS ||
+        import.meta.env.VITE_SCRATCH_IMPORT_RESTRICTED_DIRS ||
         "/scratch/space/restricted",
       key: "scratch",
-    },
-    slateProject: {
-      paths:
-        import.meta.env.VITE_PROJECT_INGESTION_RESTRICTED_DIRS ||
-        "/project/space/restricted",
-      key: "project",
     },
   },
   upload: {
     scope_prefix: "upload_file:",
-    types: { DATASET: "DATASET" },
-    status: {
-      UPLOADING: "UPLOADING",
-      UPLOAD_FAILED: "UPLOAD_FAILED",
-      UPLOADED: "UPLOADED",
-      PROCESSING: "PROCESSING",
-      PROCESSING_FAILED: "PROCESSING_FAILED",
-      COMPLETE: "COMPLETE",
-      FAILED: "FAILED",
-    },
   },
 };
 

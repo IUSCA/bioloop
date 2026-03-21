@@ -1,18 +1,28 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 const config = require('config');
 const { query, param, checkSchema } = require('express-validator');
 const _ = require('lodash/fp');
 
-const asyncHandler = require('../middleware/asyncHandler');
-const wf_service = require('../services/workflow');
-const { accessControl } = require('../middleware/auth');
-const { validate } = require('../middleware/validators');
+const asyncHandler = require('@/middleware/asyncHandler');
+const wf_service = require('@/services/workflow');
+const { accessControl } = require('@/middleware/auth');
+const { validate } = require('@/middleware/validators');
+const prisma = require('@/db');
 
 const isPermittedTo = accessControl('workflow');
-
 const router = express.Router();
-const prisma = new PrismaClient();
+
+router.get(
+  '/names',
+  isPermittedTo('read'),
+  asyncHandler(
+    async (req, res, next) => {
+      const workflows_names = Object.keys(config.workflow_registry);
+      res.json(workflows_names);
+    },
+  ),
+);
 
 router.get(
   '/',
@@ -21,12 +31,15 @@ router.get(
     query('dataset_id').isInt().toInt().optional(),
     query('dataset_name').isString().optional().notEmpty(),
     query('workflow_id').isString().optional().notEmpty(),
+    query('workflow_name').isString().optional().notEmpty(),
   ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
 
-      const { dataset_id, dataset_name, workflow_id } = req.query;
+      const {
+        dataset_id, dataset_name, workflow_id, workflow_name,
+      } = req.query;
       let workflow_ids = null;
 
       // if workflow_id is provided, then ignore dataset_id and dataset_name
@@ -77,6 +90,7 @@ router.get(
         skip: req.query.skip,
         limit: req.query.limit,
         workflow_ids,
+        workflow_name,
       });
 
       // for each workflow, get initiator details from the app db
@@ -168,7 +182,7 @@ router.post(
           pid,
           task_id,
           step,
-          tags,
+          tags: tags ?? Prisma.skip,
           hostname,
           workflow_id,
           ...(start_time ? { start_time } : {}),
@@ -182,11 +196,11 @@ router.post(
 // make sure that the request body is array of objects which at least will have
 // a "message" key
 const append_log_schema = {
-  '0.message': {
+  '*.message': {
     in: ['body'],
     notEmpty: true,
   },
-  '0.level': {
+  '*.level': {
     in: ['body'],
     default: 'stdout',
   },
@@ -226,7 +240,9 @@ router.post(
 router.get(
   '/processes',
   isPermittedTo('read'),
-  validate([query('pid').isInt().toInt().optional()]),
+  validate([
+    query('pid').isInt().toInt().optional(),
+  ]),
   asyncHandler(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
@@ -320,7 +336,7 @@ router.delete(
 
       const result = await prisma.worker_process.deleteMany({
         where: {
-          workflow_id: req.params.worker_process_id,
+          workflow_id: req.params.workflow_id,
         },
       });
       res.json(result);
