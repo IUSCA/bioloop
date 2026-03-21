@@ -8,8 +8,6 @@ import { createTestUser } from '../../../../../../api/user';
 import { expect, test } from '../../../../../../fixtures';
 import { getTokenByRole } from '../../../../../../fixtures/auth';
 
-const config = require('config');
-
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 test.use({ attachments });
@@ -36,7 +34,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
       // Login as the test user
       page = await browser.newPage();
-      await page.goto(`${config.baseURL}/auth/iucas?ticket=${testUser.username}`);
+      await page.goto(`/auth/iucas?ticket=${testUser.username}`);
 
       // Visit the dataset uploads page
       await page.goto('/datasetUpload/new');

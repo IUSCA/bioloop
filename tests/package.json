@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint . --ext .js --fix --ignore-path .gitignore",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:authenticated": "E2E_SKIP_UNAUTHENTICATED=1 playwright test",
+    "test:role:admin": "E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=admin playwright test",
+    "test:role:operator": "E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=operator playwright test",
+    "test:role:user": "E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=user playwright test"
   },
   "keywords": [],
   "author": "",

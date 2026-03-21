@@ -126,9 +126,9 @@ test.describe.serial('Dataset Import — Select Directory step', () => {
       : firstButtonText;
     const searchTerm = dirName.slice(0, Math.max(5, Math.ceil(dirName.length / 2)));
 
-    // Type the search term into the file input.  The watch in ImportStepper sets
-    // searchingFiles = true immediately, then fires the API call after a 1 s
-    // debounce.  We wait for the results list to reappear after loading.
+    // Type the search term into the file input.  The watch in ImportStepper
+    // sets searchingFiles = true immediately, then fires the API call after a 1
+    // s debounce.  We wait for the results list to reappear after loading.
     const fileInput = page.locator(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
     await fileInput.fill(searchTerm);
 
@@ -138,8 +138,9 @@ test.describe.serial('Dataset Import — Select Directory step', () => {
       { timeout: 15000 },
     );
 
-    // Every visible result must contain the search term (the full path displayed
-    // by the autocomplete always includes the relative portion that was typed).
+    // Every visible result must contain the search term (the full path
+    // displayed by the autocomplete always includes the relative portion that
+    // was typed).
     const filteredItems = await page
       .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
       .all();
@@ -211,7 +212,8 @@ test.describe.serial('Dataset Import — Select Directory step', () => {
   });
 
   test('should clear the error when a directory is selected', async () => {
-    // The error is showing from the previous test; select a directory to clear it
+    // The error is showing from the previous test; select a directory to clear
+    // it
     await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
 
     await page.waitForSelector(

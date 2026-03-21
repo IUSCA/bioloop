@@ -125,9 +125,9 @@ export async function selectAutocompleteResult({
     throw new Error('Must not provide both resultIndex and resultText');
   }
 
-  // Determine the index to use: explicit resultIndex takes priority, default to 0
-  // when neither is provided (text-based search uses resultText instead)
-  let _resultIndex = resultIndex != null ? resultIndex : (resultText == null ? 0 : null);
+  // Determine the index to use: explicit resultIndex takes priority, default
+  // to 0 when neither is provided (text-based search uses resultText instead)
+  const _resultIndex = resultIndex != null ? resultIndex : (resultText == null ? 0 : null);
 
   const searchInput = page.getByTestId(testId);
   await expect(searchInput).toBeVisible();

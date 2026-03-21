@@ -100,7 +100,8 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-project-autocomplete',
       });
 
-      // Assign Source Instrument checkbox is checked by default (if instruments available)
+      // Assign Source Instrument checkbox is checked by default (if
+      // instruments available)
       const sourceInstrumentSelect = page.getByTestId('import-metadata-source-instrument-select');
       await expect(sourceInstrumentSelect).toBeVisible();
     });

@@ -1,7 +1,7 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-e2e-suite-e2e
 services:
   ui:
     image: node:21
@@ -9,6 +9,9 @@ services:
       - 127.0.0.1:443:443
     env_file:
       - ui/.env.default
+    environment:
+      - VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1
+      - VITE_FEATURE_ROLE_OVERRIDES=${VITE_FEATURE_ROLE_OVERRIDES:-{}}
     # environment:
       # If this stack's UI port is remapped to something other than :443,
       # override these so CAS/OAuth callbacks and upload API calls land on the
@@ -370,6 +373,9 @@ services:
     build: tests
     env_file:
       - tests/.env.default
+    environment:
+      - VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1
+      - VITE_FEATURE_ROLE_OVERRIDES=${VITE_FEATURE_ROLE_OVERRIDES:-{}}
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules

@@ -1,28 +1,19 @@
 /**
  * FEATURE_ROLE_SYNC_NOTE
  *
- * Describes the three-way sync requirement for any feature whose access is
- * restricted to a subset of roles.  Exported as a string so it can be used
- * as a skip/fail message in spec files, making the requirement visible in
- * test reports whenever a misconfiguration is detected.
+ * Describes role-gated feature sync expectations for CI/e2e.
+ * Kept as a shared message for test failures that indicate matrix/config drift.
  */
 export const FEATURE_ROLE_SYNC_NOTE = `
 Role-gated feature misconfiguration detected.
 
-When a feature is enabled only for certain roles, three things must stay in sync:
+When a feature is enabled only for certain roles, two things must stay in sync:
 
-  1. Runtime UI feature config  —  the source of truth for whether the feature
-     renders for a given role.  Each feature has an enabledForRoles list that
-     the application reads at startup.
+  1. Runtime UI feature config  —  source of truth for whether the feature
+     renders for a given role. For e2e/ci, this should come from env overrides
+     in ui config (VITE_*_ENABLED_FOR_ROLES).
 
-  2. Test environment feature config (this project's config package)  —  must
-     mirror the runtime UI config exactly.  Spec files read this config to
-     decide whether to run or skip tests (e.g. skipping the access-control
-     assertion when a feature is enabled for all roles, or skipping functional
-     tests when a feature is disabled).  If the two diverge, tests silently
-     skip when they should run, or fail when they should be skipped.
-
-  3. Playwright project definitions  —  each role needs its own project entry
+  2. Playwright project definitions  —  each role needs its own project entry
      that routes it to either:
        a) the full functional test suite  (roles WITH access)
           — the access-control spec must be excluded from this project, because
@@ -32,9 +23,8 @@ When a feature is enabled only for certain roles, three things must stay in sync
      The two cases are mutually exclusive: a project must never run both.
 
 To add a role to a feature's access list:
-  — Add the role to both the runtime UI config and the test config (items 1 & 2).
-  — Switch the role's Playwright project to the full functional glob and
-    exclude the access-control spec (item 3).
+  — Add the role to the runtime UI env override list.
+  — Ensure Playwright project routing sends that role to functional specs.
 
 To remove a role's access, reverse the steps above.
 `.trim();

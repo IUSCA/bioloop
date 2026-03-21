@@ -85,7 +85,7 @@ module.exports = {
     
     // Test projects (depend on setup)
     {
-      name: 'admin_sidebar',
+      name: 'admin_sidebar_non_user',
       use: { storageState: ADMIN_STORAGE_STATE },
       dependencies: ['admin_login'],
       testMatch: '/view/authenticated/sidebar/*.spec.js',
@@ -167,7 +167,7 @@ Tests bypass real CAS authentication using **mock tickets** when `NODE_ENV=ci`.
 **Test projects with authentication:**
 ```javascript
 {
-  name: 'admin_sidebar',
+  name: 'admin_sidebar_non_user',
   use: { 
     ...devices['Desktop Chrome'], 
     storageState: ADMIN_STORAGE_STATE  // ← Reuse saved auth state
@@ -667,13 +667,13 @@ tests/view/authenticated/sidebar/
 ```javascript
 // playwright.config.js
 {
-  name: 'admin_sidebar',
+  name: 'admin_sidebar_non_user',
   use: { storageState: ADMIN_STORAGE_STATE },
   dependencies: ['admin_login'],
   testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
 },
 {
-  name: 'operator_sidebar',
+  name: 'operator_sidebar_non_user',
   use: { storageState: OPERATOR_STORAGE_STATE },
   dependencies: ['operator_login'],
   testMatch: '/view/authenticated/sidebar/non_user_role_sidebar_view.spec.js',
@@ -751,7 +751,7 @@ npm test
 npx playwright test tests/view/authenticated/sidebar/user_role_sidebar_view.spec.js
 
 # Run specific project
-npx playwright test --project=admin_sidebar
+npx playwright test --project=admin_sidebar_non_user
 
 # Run in headed mode
 npx playwright test --headed
@@ -995,11 +995,16 @@ npx playwright show-trace tests/test-results/<test-name>/trace.zip
 
 ## Related Documentation
 
+- **E2E feature memory (route map, scenario backlog, TODOs):** `.ai/features/e2e_suite.md`
 - **Platform README:** `tests/README.md` - Comprehensive setup guide
 - **API Conventions:** `.ai/bioloop/api_conventions.md` - Understanding API endpoints
 - **UI Conventions:** `.ai/bioloop/ui_conventions.md` - UI component patterns
 - **Playwright Docs:** https://playwright.dev/docs/intro
 
+### API assertions in e2e (ongoing)
+
+Prefer **UI-visible outcomes** for assertions. Use API helpers primarily for **arrange** (seed/cleanup). Review and trim specs that duplicate REST contract checks; track progress in `.ai/features/e2e_suite.md` (API assertions policy).
+
 ---
 
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-03-20

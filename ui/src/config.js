@@ -1,3 +1,5 @@
+import { resolveEnabledFeatures } from "@/services/features";
+
 const exports = {
   mode: "development",
   // vite server redirects traffic on URLs starting with apiBaseURL
@@ -74,24 +76,16 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
-  enabledFeatures: {
+  enabledFeatures: resolveEnabledFeatures({
     genomeBrowser: true,
-    notifications: {
-      enabledForRoles: [],
-    },
-    import: {
-      enabledForRoles: ["admin"],
-    },
+    notifications: { defaultRoles: [] },
+    import: { defaultRoles: ["admin"] },
     downloads: true,
     signup: false,
-    uploads: {
-      enabledForRoles: ["admin"],
-    },
-    auto_create_project_on_dataset_creation: {
-      enabledForRoles: ["user"],
-    },
+    uploads: { defaultRoles: ["admin"] },
+    auto_create_project_on_dataset_creation: { defaultRoles: ["user"] },
     alerts: true,
-  },
+  }),
   notifications: {
     pollingInterval: 5000, // milliseconds
   },

@@ -1,6 +1,5 @@
 const _ = require('lodash');
 const { test, expect } = require('@playwright/test');
-const config = require('config');
 
 const { createNotification, deleteNotifications } = require('../../../../api/notification');
 
@@ -56,8 +55,6 @@ test.beforeEach(async ({ page }) => {
 
 test.describe.serial('Notifications', () => {
   test('No notifications exist', async ({ page }) => {
-    test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
-
     await expect(notificationBadgeLocator(page)).toBeEmpty();
 
     // Assert that no notifications are active
@@ -71,8 +68,6 @@ test.describe.serial('Notifications', () => {
   });
 
   test('Notification created', async ({ page }) => {
-    test.skip(config.enabledFeatures.notifications.enabledForRoles.length === 0, 'Notifications feature is not enabled');
-
     let createdNotifications;
 
     await test.step('Create notifications', async () => {

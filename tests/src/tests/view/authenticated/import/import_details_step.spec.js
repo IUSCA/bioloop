@@ -98,13 +98,12 @@ test.describe.serial('Dataset Import — Import Details step', () => {
 
   test.describe('Import Details step fields', () => {
     test('should show the Import Details card', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       // Two .va-card elements contain a .va-card-title with "Import Details":
-      // the outer page card (subtree match) and the ImportInfo card (direct child).
-      // .nth(1) targets the ImportInfo card specifically.
+      // the outer page card (subtree match) and the ImportInfo card (direct
+      // child). .nth(1) targets the ImportInfo card specifically.
       const card = page.locator('.va-card').filter({
         has: page.locator('.va-card-title', { hasText: 'Import Details' }),
       }).nth(1);
@@ -112,8 +111,7 @@ test.describe.serial('Dataset Import — Import Details step', () => {
     });
 
     test('should show the dataset name input as visible and empty', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       const nameInput = page.getByTestId(DATASET_NAME_INPUT_TEST_ID);
@@ -122,16 +120,14 @@ test.describe.serial('Dataset Import — Import Details step', () => {
     });
 
     test('should keep Next disabled while dataset name is empty', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
     });
 
     test('should show a validation error when dataset name is too short', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       const nameInput = page.getByTestId(DATASET_NAME_INPUT_TEST_ID);
@@ -151,8 +147,7 @@ test.describe.serial('Dataset Import — Import Details step', () => {
     });
 
     test('should show a validation error when dataset name contains spaces', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       const nameInput = page.getByTestId(DATASET_NAME_INPUT_TEST_ID);
@@ -166,8 +161,7 @@ test.describe.serial('Dataset Import — Import Details step', () => {
     });
 
     test('should enable Next after a valid dataset name is entered', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       const nameInput = page.getByTestId(DATASET_NAME_INPUT_TEST_ID);
@@ -183,8 +177,7 @@ test.describe.serial('Dataset Import — Import Details step', () => {
     });
 
     test('should allow navigating back to General Info using Previous', async () => {
-      const onStep2 =
-        (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
+      const onStep2 = (await page.locator('.va-card-title').filter({ hasText: 'Import Details' }).count()) > 0;
       test.skip(!onStep2, 'Could not reach Import step');
 
       await page.getByTestId(PREVIOUS_BUTTON_TEST_ID).click();

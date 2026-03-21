@@ -23,28 +23,31 @@ test.describe.serial('Dataset Import — Next/Previous buttons', () => {
 
   test.describe('should enable Next after an import source and directory are selected', () => {
     test.beforeAll(async () => {
-      // Wait for import sources to load, then verify the dropdown has a selection
+      // Wait for import sources to load, then verify the dropdown has a
+      // selection
       await page.waitForSelector('[data-testid="import-source-select"] .va-select-content__option');
     });
 
     test('should keep Next disabled when import source is selected but no directory chosen', async () => {
-      // The import source is auto-selected on mount; Next should still be disabled
-      // because no directory has been selected yet
+      // The import source is auto-selected on mount; Next should still be
+      // disabled because no directory has been selected yet
       await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
     });
 
     test.describe('should enable Next once a directory is selected', () => {
       test.beforeAll(async () => {
         // Attempt to open the file typeahead and select a directory.
-        // This test is skipped if no directories are available in the test environment.
-        await page.click(`input[data-testid="import-file-autocomplete"]`);
+        // This test is skipped if no directories are available in the test
+        // environment.
+        await page.click('input[data-testid="import-file-autocomplete"]');
 
         // Wait for either loading to start or results to appear
         await page.waitForSelector(
           '[data-testid="import-file-autocomplete--search-results-ul"], [data-testid="import-file-autocomplete--search-results-ul__loading"]',
         );
 
-        // Wait for the loading indicator to clear and the actual results to appear
+        // Wait for the loading indicator to clear and the actual results to
+        // appear
         await page.waitForSelector('[data-testid="import-file-autocomplete--search-results-ul"]', { timeout: 15000 });
       });
 

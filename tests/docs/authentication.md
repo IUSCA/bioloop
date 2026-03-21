@@ -49,6 +49,28 @@ A project can be made dependent on a login-setup project to ensure that the test
 
 Projects that are not dependent on a login-setup project will be executed in an unauthenticated state.
 
+### Role-scoped execution for CI matrix jobs
+
+`tests/playwright.config.js` supports role-scoped project selection via env vars:
+
+- `E2E_TARGET_ROLES=admin,operator,user` (default: all roles)
+- `E2E_SKIP_UNAUTHENTICATED=1` to exclude unauthenticated projects
+- `VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1` to activate role override behavior
+- `VITE_FEATURE_ROLE_OVERRIDES` to define role-gated feature policy used by both UI and Playwright routing
+
+Typical CI matrix pattern (one job per role):
+
+```bash
+E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=admin npx playwright test
+E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=operator npx playwright test
+E2E_SKIP_UNAUTHENTICATED=1 E2E_TARGET_ROLES=user npx playwright test
+
+VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1 \
+VITE_FEATURE_ROLE_OVERRIDES='{"import":["admin","operator"],"uploads":["admin","operator","user"],"notifications":[]}' \
+E2E_SKIP_UNAUTHENTICATED=1 \
+npx playwright test
+```
+
 ### Examples
 
 The following example shows a login-setup project that logs in as an admin:

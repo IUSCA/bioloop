@@ -1,4 +1,3 @@
-import config from "@/config";
 import axios from "axios";
 import dayjs from "dayjs";
 import DOMPurify from "dompurify";
@@ -255,65 +254,6 @@ function groupByAndAggregate(
   return ret;
 }
 
-/**
- * Returns whether the given feature is enabled for any of the given roles or
- * not.
- *
- * @param featureKey the key of the feature. Defined in `config.js`, under `enabled_features`
- * @param hasRole function that returns true if the user has the given role.
- // * @param roles the roles of the user whose access to this feature is to be determined.
- */
-function isFeatureEnabled({ featureKey, hasRole = () => false } = {}) {
-  if (!featureKey) {
-    return true;
-  }
-
-  // Check if `enabledFeatures` is defined
-  if (!config.enabledFeatures) {
-    // console.log("enabledFeatures is not defined in the config. Feature will
-    // be enabled by default");
-    return true;
-  }
-
-  const featureEnabled = config.enabledFeatures[featureKey];
-
-  // Check if feature is defined
-  if (featureEnabled == null) {
-    // console.log(
-    // `${featureKey} feature is not defined in the config. Feature will be
-    // enabled by default`, );
-    return true;
-  }
-
-  // Check if feature is a boolean
-  if (typeof featureEnabled === "boolean") {
-    return featureEnabled;
-  }
-
-  // Check if feature is an object
-  if (typeof featureEnabled !== "object") {
-    // console.error(`Invalid config for ${featureKey} feature`);
-    return false;
-  }
-
-  // Check if `enabledForRoles` is an array
-  if (!Array.isArray(featureEnabled.enabledForRoles)) {
-    // console.error(
-    // `Invalid config for ${featureKey} feature: enabledForRoles is not an
-    // array`, );
-    return false;
-  }
-
-  // Check if enabledForRoles is empty
-  if (featureEnabled.enabledForRoles.length === 0) {
-    // console.warn(`No roles specified for enabling ${featureKey} feature`);
-    return false;
-  }
-
-  // Check if user has one of the allowed roles
-  return featureEnabled.enabledForRoles.some((role) => hasRole(role));
-}
-
 function isHTTPError(code) {
   return (error) => axios.isAxiosError(error) && error.response.status === code;
 }
@@ -451,7 +391,6 @@ export {
   initials,
   is403,
   is404,
-  isFeatureEnabled,
   isHTTPError,
   isLiveToken,
   lxor,
