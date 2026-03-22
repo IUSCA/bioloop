@@ -1,3 +1,4 @@
+import fs from "fs";
 import { fileURLToPath, URL } from "node:url";
 
 import vue from "@vitejs/plugin-vue";
@@ -85,13 +86,13 @@ export default defineConfig(({ command, mode }) => {
       host: true,
       port: 443,
 
-      // // https://vitejs.dev/config/#server-https
-      // https: {
-      //   key: fs.readFileSync("./.cert/key.pem"),
-      //   cert: fs.readFileSync("./.cert/cert.pem"),
-      // },
+      // https://vitejs.dev/config/#server-https
+      https: {
+        key: fs.readFileSync("./.cert/key.pem"),
+        cert: fs.readFileSync("./.cert/cert.pem"),
+      },
       // just `true` yields errors with Firefox as of 2022.12
-      https: false,
+      // https: true,
 
       // https://vitejs.dev/config/#server-proxy
       // useful when running vite on localhost
