@@ -212,7 +212,14 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await menu.getByTestId('filter-archived').click();
     await menu.getByTestId('filter-bookmarked').click();
     await menu.getByTestId('filter-globally-dismissed').click();
-    await searchInput(page).fill(label.slice(0, 12));
+    const input = searchInput(page);
+    await expect(input).toBeEnabled();
+    const query = label.slice(0, 12);
+    await input.click();
+    await input.fill('');
+    await input.pressSequentially(query);
+    await expect(input).toHaveValue(query, { timeout: 10000 });
+    await page.waitForTimeout(350);
 
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
     await expect(menu.getByTestId('active-filter-chip-archived')).toHaveCount(1);
@@ -1089,7 +1096,10 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const modalBody = page.locator('.va-modal .va-modal__message');
     await expect(modalBody).toContainText(/untrusted link/i);
 
-    await page.locator('.va-modal').getByText('Cancel').click();
+    const cancelButton = page.locator('.va-modal').getByRole('button', { name: 'Cancel' }).first();
+    await expect(cancelButton).toBeVisible();
+    await cancelButton.focus();
+    await page.keyboard.press('Enter');
     await expect(modalTitle).not.toBeVisible({ timeout: 3000 });
   });
 

@@ -26,7 +26,6 @@ export const useNotificationStore = defineStore("notification", () => {
   const unreadCount = ref(0);
   const totalMatchedCount = ref(0);
   const hasMoreNotifications = ref(false);
-  const searchEchoLock = ref(false);
   const filters = ref({
     read: false,
     archived: false,
@@ -79,25 +78,11 @@ export const useNotificationStore = defineStore("notification", () => {
 
   /** Immutably replaces a single filter key to trigger Vue reactivity cleanly. */
   function setFilter(key, value) {
-    if (key === "search") {
-      const normalized = value == null ? "" : String(value);
-      if (searchEchoLock.value && normalized.trim() !== "") {
-        return;
-      }
-      filters.value = {
-        ...filters.value,
-        [key]: normalized,
-      };
-      return;
-    }
+    const normalized = key === "search" ? (value == null ? "" : String(value)) : value;
     filters.value = {
       ...filters.value,
-      [key]: value,
+      [key]: normalized,
     };
-  }
-
-  function setSearchEchoLock(locked) {
-    searchEchoLock.value = Boolean(locked);
   }
 
   function clearFilters() {
@@ -303,7 +288,6 @@ export const useNotificationStore = defineStore("notification", () => {
     totalMatchedCount,
     hasMoreNotifications,
     filters,
-    searchEchoLock,
     addNotification,
     removeNotification,
     fetchNotifications,
@@ -314,7 +298,6 @@ export const useNotificationStore = defineStore("notification", () => {
     markAllRead,
     dismissNotificationGlobally,
     setFilter,
-    setSearchEchoLock,
     clearFilters,
     listFetching,
     mutationPending,

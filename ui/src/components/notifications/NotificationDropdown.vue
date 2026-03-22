@@ -1,29 +1,36 @@
 <template>
-  <va-menu placement="left-bottom" :close-on-content-click="false">
-    <template #anchor>
-        <va-badge
-          :offset="[-3, 10]"
-          :text="`${badgeCount > 0 ? badgeCount : ''}`"
-          overlap
-          data-testid="notification-count"
-        >
-          <va-button
-            ref="notificationOpenButtonRef"
-            data-testid="notification-open-button"
-            class="notification-open-button"
-            plain
-            @click="onNotificationOpenActivate"
-            @keydown.enter="onNotificationOpenActivate"
-            @keydown.space="onNotificationOpenActivate"
-          >
-            <Icon icon="mdi-bell-outline" height="36px" width="36px" />
-          </va-button>
-        </va-badge>
-    </template>
+  <div
+    ref="dropdownRootRef"
+    class="notification-dropdown-root relative"
+  >
+    <va-badge
+      :offset="[-3, 10]"
+      :text="`${badgeCount > 0 ? badgeCount : ''}`"
+      overlap
+      data-testid="notification-count"
+    >
+      <va-button
+        ref="notificationOpenButtonRef"
+        data-testid="notification-open-button"
+        class="notification-open-button"
+        plain
+        :aria-expanded="isMenuOpen ? 'true' : 'false'"
+        aria-haspopup="dialog"
+        @click="toggleNotificationMenu"
+        @keydown.enter.prevent.stop="openNotificationMenuFromKeyboard"
+        @keydown.space.prevent.stop="openNotificationMenuFromKeyboard"
+      >
+        <Icon icon="mdi-bell-outline" height="36px" width="36px" />
+      </va-button>
+    </va-badge>
 
     <div
-      class="notification-menu-panel flex flex-col max-h-96"
+      v-if="isMenuOpen"
+      ref="menuPanelRef"
+      class="notification-menu-panel notification-menu-panel--anchored flex flex-col max-h-96"
       data-testid="notification-menu-items"
+      tabindex="-1"
+      @keydown.esc.prevent.stop="closeNotificationMenu"
     >
       <div
         class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
@@ -187,20 +194,17 @@
             >
               Showing {{ displayedNotifications.length }}
             </div>
-            <va-popover v-if="hasActiveFilters" message="Clear filters">
-              <va-button
-                preset="secondary"
-                size="small"
-                data-testid="clear-notification-filters"
-                aria-label="Clear filters"
-                :disabled="mutationPending"
-                @click="handleClearFilters"
-                @keydown.enter.prevent="handleClearFilters"
-                @keydown.space.prevent="handleClearFilters"
-              >
-                <Icon icon="mdi:filter-remove-outline" />
-              </va-button>
-            </va-popover>
+            <button
+              v-if="hasActiveFilters"
+              type="button"
+              class="notification-clear-filters-button"
+              data-testid="clear-notification-filters"
+              aria-label="Clear filters"
+              :disabled="mutationPending"
+              @click="handleClearFilters"
+            >
+              <Icon icon="mdi:filter-remove-outline" />
+            </button>
           </div>
           <div
             v-if="hasActiveFilterChips"
@@ -315,6 +319,7 @@
               clearable
               :disabled="mutationPending"
               @keydown.stop="onSearchInputKeydown"
+              @keydown.shift.tab.prevent.stop="onSearchShiftTab"
               @click.capture="onSearchInputClick"
               @clear="clearSearchFilter"
               @focus="onSearchFocus"
@@ -362,16 +367,12 @@
         </va-inner-loading>
       </div>
     </div>
-  </va-menu>
+  </div>
 </template>
 
 <script setup>
 import config from "@/config";
 import constants from "@/constants";
-import {
-  getVisibleNotificationMenuPanel,
-  removeVisibleSearchFilterChips,
-} from "@/services/notifications/filterChipDom";
 import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
@@ -398,7 +399,6 @@ const {
   mutationPending,
   totalMatchedCount,
   hasMoreNotifications,
-  searchEchoLock,
 } = storeToRefs(notificationStore);
 const {
   refreshNotifications,
@@ -408,7 +408,6 @@ const {
   markAllRead,
   dismissNotificationGlobally,
   setFilter,
-  setSearchEchoLock,
   clearFilters,
 } = notificationStore;
 const searchInput = computed({
@@ -421,13 +420,16 @@ const searchInput = computed({
   },
 });
 const activeSearchFilter = computed(() => {
-  if (searchEchoLock.value) return "";
   return (filters.value.search || "").trim();
 });
 const isSearchFocused = ref(false);
 const hasPendingSseRefresh = ref(false);
 const isSseConnected = ref(false);
 const notificationStream = ref(null);
+const isMenuOpen = ref(false);
+const dropdownRootRef = ref(null);
+const menuPanelRef = ref(null);
+const suppressAnchorClickUntilMs = ref(0);
 const firstTopControlRef = ref(null);
 const notificationOpenButtonRef = ref(null);
 const displayedNotifications = computed(() => notifications.value);
@@ -492,13 +494,25 @@ function focusFirstMenuControlSoon() {
   const maxAttempts = 400;
   const tryFocus = () => {
     attempts += 1;
-    const panel = getVisibleNotificationMenuPanel();
+    const panel =
+      menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
+    if (panel && panel.offsetParent !== null && !panel.contains(document.activeElement)) {
+      panel.focus();
+    }
     const anchor =
       panel?.querySelector('[data-testid="filter-unread"]')
+      || panel?.querySelector('[data-testid="filter-read"]')
+      || panel?.querySelector('[data-testid="filter-archived"]')
+      || panel?.querySelector('[data-testid="filter-bookmarked"]')
+      || panel?.querySelector('[data-testid="filter-globally-dismissed"]')
+      || panel?.querySelector('[data-testid="clear-notification-filters"]')
+      || panel?.querySelector('[data-testid="notification-search"]')
       || (firstTopControlRef.value?.$el instanceof HTMLElement
         ? firstTopControlRef.value.$el
         : null);
-    const node = focusableControl(anchor);
+    const node = focusableControl(anchor) || panel?.querySelector(
+      'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+    );
     if (node && node.offsetParent !== null) {
       node.focus();
       if (document.activeElement !== node && attempts < maxAttempts) {
@@ -514,18 +528,66 @@ function focusFirstMenuControlSoon() {
   setTimeout(tryFocus, 0);
 }
 
-function onNotificationOpenActivate() {
-  setSearchEchoLock(false);
+function toggleNotificationMenu() {
+  if (Date.now() < suppressAnchorClickUntilMs.value) {
+    return;
+  }
+  isMenuOpen.value = !isMenuOpen.value;
+  if (isMenuOpen.value) {
+    focusFirstMenuControlSoon();
+    return;
+  }
+}
+
+function openNotificationMenuFromKeyboard() {
+  suppressAnchorClickUntilMs.value = Date.now() + 250;
+  isMenuOpen.value = true;
   focusFirstMenuControlSoon();
 }
 
+function closeNotificationMenu() {
+  if (!isMenuOpen.value) return;
+  isMenuOpen.value = false;
+  const button = focusableControl(notificationOpenButtonRef.value?.$el)
+    || (notificationOpenButtonRef.value?.$el instanceof HTMLElement
+      ? notificationOpenButtonRef.value.$el
+      : null);
+  if (button instanceof HTMLElement) {
+    button.focus();
+  }
+}
+
 function onSearchFocus() {
-  setSearchEchoLock(false);
   isSearchFocused.value = true;
 }
 
 function onSearchInputKeydown() {
-  setSearchEchoLock(false);
+}
+
+function onSearchShiftTab() {
+  const panel =
+    menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
+  if (!panel) return;
+  const chipClears = Array.from(
+    panel.querySelectorAll('[data-testid^="active-filter-chip-"][data-testid$="-clear"]'),
+  ).filter(
+    (node) =>
+      node instanceof HTMLElement
+      && node.offsetParent !== null
+      && !node.hasAttribute("disabled"),
+  );
+  if (chipClears.length > 0) {
+    chipClears[chipClears.length - 1].focus();
+    return;
+  }
+  const clearAll = panel.querySelector('[data-testid="clear-notification-filters"]');
+  if (
+    clearAll instanceof HTMLElement
+    && clearAll.offsetParent !== null
+    && !clearAll.hasAttribute("disabled")
+  ) {
+    clearAll.focus();
+  }
 }
 
 function onSearchBlur() {
@@ -537,11 +599,7 @@ function onSearchBlur() {
 }
 
 function clearSearchFilter() {
-  setSearchEchoLock(true);
   setFilter("search", "");
-  nextTick(() => {
-    removeVisibleSearchFilterChips();
-  });
   fetchNotifications(notificationQueryOpts.value);
 }
 
@@ -618,11 +676,7 @@ function clearGloballyDismissedFilter() {
 }
 
 function handleClearFilters() {
-  setSearchEchoLock(true);
   clearFilters();
-  nextTick(() => {
-    removeVisibleSearchFilterChips();
-  });
   fetchNotifications(notificationQueryOpts.value);
 }
 
@@ -715,6 +769,13 @@ const { resume } = useIntervalFn(
 );
 
 onMounted(() => {
+  onClickOutside(dropdownRootRef, () => {
+    closeNotificationMenu();
+  });
+  useEventListener(document, "keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeNotificationMenu();
+  });
   openNotificationStream();
   resume();
 });
@@ -727,6 +788,10 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .notification-open-button {
   color: var(--va-text-primary) !important;
+}
+
+.notification-dropdown-root {
+  display: inline-flex;
 }
 
 .notification-top-controls {
@@ -745,6 +810,22 @@ onUnmounted(() => {
   width: 100%;
 }
 
+.notification-clear-filters-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--va-background-border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--va-secondary);
+  padding: 0.25rem 0.375rem;
+}
+
+.notification-clear-filters-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .notification-top-control-button :deep(.va-button__content) {
   justify-content: center;
 }
@@ -754,6 +835,13 @@ onUnmounted(() => {
   width: min(22rem, calc(100vw - 1rem));
   min-width: min(22rem, calc(100vw - 1rem));
   max-width: min(22rem, calc(100vw - 1rem));
+}
+
+.notification-menu-panel--anchored {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: var(--va-z-index-teleport-overlay, 9);
 }
 
 @media (min-width: 640px) {
