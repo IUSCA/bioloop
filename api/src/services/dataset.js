@@ -197,7 +197,6 @@ async function get_dataset({
   only_active = false,
   bundle = false,
   include_duplications = false,
-  include_action_items = false,
   includeProjects = false,
   initiator = false,
   include_upload_log = false,
@@ -233,11 +232,6 @@ async function get_dataset({
         },
       } : false),
       ...(include_duplications ? INCLUDE_DUPLICATIONS : {}),
-      action_items: include_action_items ? {
-        where: {
-          active: true,
-        },
-      } : {},
       ...(include_ingestion_checks ? {
         ingestion_checks: {
           include: {

@@ -44,6 +44,7 @@
     <template #cell(name)="{ rowData }">
       <router-link
         :to="`/projects/${props.project.slug}/datasets/${rowData.id}`"
+        :data-testid="`project-dataset-link-${rowData.id}`"
         class="va-link"
         v-if="auth.canOperate"
       >
@@ -294,7 +295,7 @@ const fetch_project_datasets = () => {
         include_deleted: false,
         ...datasets_retrieval_query.value,
         include_dataset_states: true,
-        include_dataset_duplications: true,
+        include_dataset_duplications: auth.isFeatureEnabled('duplicate_detection'),
       },
     })
     .then((res) => {
@@ -315,7 +316,7 @@ const refresh_downloaded_dataset = () => {
   DatasetService.getById({
     id: datasetToDownload.value.id,
     include_states: true,
-    include_duplications: true,
+    include_duplications: auth.isFeatureEnabled('duplicate_detection'),
   }).then((res) => {
     datasetToDownload.value = res.data;
   });

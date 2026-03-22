@@ -10,15 +10,19 @@ function isFeatureEnabled({ key }) {
     return true;
   }
 
-  const featureEnabled = features[key];
-  if (featureEnabled == null) {
+  const featureConfig = features[key];
+  if (featureConfig == null) {
     // feature's enabled status is not present in the config - assume enabled for backward compatibility
     return true;
-  } if (typeof featureEnabled === 'boolean') {
-    // feature is either enabled or disabled
-    return featureEnabled;
   }
-  // invalid config found for feature's enabled status
+  if (typeof featureConfig === 'boolean') {
+    return featureConfig;
+  }
+  // Object-style feature config: { enabled: true/false, ...options }
+  if (typeof featureConfig === 'object' && typeof featureConfig.enabled === 'boolean') {
+    return featureConfig.enabled;
+  }
+  // Unrecognized config shape — treat as disabled
   return false;
 }
 

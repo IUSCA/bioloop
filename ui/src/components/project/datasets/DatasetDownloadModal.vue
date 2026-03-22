@@ -7,7 +7,10 @@
   >
     <!-- The current dataset is an active dataset which has incoming duplicates,
      or one that is currently being overwritten by a duplicate. -->
-    <IncomingDuplicatesAlert :dataset="props.dataset" />
+    <IncomingDuplicatesAlert
+      v-if="auth.isFeatureEnabled('duplicate_detection')"
+      :dataset="props.dataset"
+    />
 
     <div class="">
       <!-- sm:w-full -->
@@ -139,6 +142,9 @@
 <script setup>
 import config from "@/config";
 import datasetService from "@/services/dataset";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";

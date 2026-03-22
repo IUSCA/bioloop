@@ -12,6 +12,7 @@ const wfService = require('@/services/workflow');
 const { setDifference, log_axios_error } = require('@/utils');
 const CONSTANTS = require('@/constants');
 const prisma = require('@/db');
+const featureService = require('@/services/features');
 
 const isPermittedTo = accessControl('projects');
 const router = express.Router();
@@ -503,7 +504,7 @@ router.post(
       include: projectService.build_include_object(),
     });
 
-    res.json(created_project);
+    res.json(project);
   }),
 );
 
@@ -723,20 +724,22 @@ router.patch(
         },
       });
 
-      const duplicate_datasets_being_assigned = await tx.dataset.findMany({
-        where: {
-          id: {
-            in: add_dataset_ids,
+      if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
+        const duplicate_datasets_being_assigned = await tx.dataset.findMany({
+          where: {
+            id: {
+              in: add_dataset_ids,
+            },
+            is_duplicate: true,
           },
-          is_duplicate: true,
-        },
-      });
+        });
 
-      const duplicate_datasets_count = duplicate_datasets_being_assigned.length;
-      if (duplicate_datasets_count > 0) {
-        const error_str = `The following duplicate datasets cannot be assigned to project: ${
-          duplicate_datasets_being_assigned.map((ds) => (ds.id)).join(', ')}`;
-        throw new Error(error_str);
+        const duplicate_datasets_count = duplicate_datasets_being_assigned.length;
+        if (duplicate_datasets_count > 0) {
+          const error_str = `The following duplicate datasets cannot be assigned to project: ${
+            duplicate_datasets_being_assigned.map((ds) => (ds.id)).join(', ')}`;
+          throw new Error(error_str);
+        }
       }
 
       // create new associations

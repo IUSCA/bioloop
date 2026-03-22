@@ -84,15 +84,21 @@ export default defineConfig(({ command, mode }) => {
     },
     server: {
       host: true,
-      port: 443,
+      // When VITE_USE_HTTPS is explicitly "false" the dev server runs on plain
+      // HTTP (port 80).  This is used in the containerized dev environment where
+      // installing a trusted TLS certificate into the system trust store is not
+      // possible without elevated privileges.  All other environments (CI,
+      // production) continue to use HTTPS on port 443.
+      port: process.env.VITE_USE_HTTPS === "false" ? 80 : 443,
 
       // https://vitejs.dev/config/#server-https
-      https: {
-        key: fs.readFileSync("./.cert/key.pem"),
-        cert: fs.readFileSync("./.cert/cert.pem"),
-      },
-      // just `true` yields errors with Firefox as of 2022.12
-      // https: true,
+      https:
+        process.env.VITE_USE_HTTPS === "false"
+          ? false
+          : {
+              key: fs.readFileSync("./.cert/key.pem"),
+              cert: fs.readFileSync("./.cert/cert.pem"),
+            },
 
       // https://vitejs.dev/config/#server-proxy
       // useful when running vite on localhost

@@ -90,7 +90,7 @@ const exports = {
   enabledFeatures: {
     genomeBrowser: true,
     notifications: {
-      enabledForRoles: ["admin", "operator"],
+      enabledForRoles: [],
     },
     import: {
       enabledForRoles: ["admin"],
@@ -104,6 +104,9 @@ const exports = {
       enabledForRoles: ["user"],
     },
     alerts: true,
+    duplicate_detection: {
+      enabledForRoles: ["admin", "operator"],
+    },
   },
   notifications: {
     pollingInterval: 5000, // milliseconds

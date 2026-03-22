@@ -22,6 +22,12 @@ const grantsObject = {
       'update:any': ['*'],
       'delete:any': ['*'],
     },
+    datasets_duplication: {
+      'create:any': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
+      'delete:any': ['*'],
+    },
     dataset_name: {
       'read:any': ['*'],
     },
@@ -151,6 +157,10 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    datasets_duplication: {
+      'read:any': ['*'],
+      'update:any': ['*'],
     },
     dataset_name: {
       'read:any': ['*'],

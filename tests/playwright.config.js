@@ -66,7 +66,7 @@ module.exports = {
         name: 'operator_login',
         testMatch: path.join(
           __dirname,
-          '/tests/setup/operator_login.setup.js',
+          '/src/tests/setup/operator_login.setup.js',
         ),
       },
       /** Project to login as user */
@@ -156,6 +156,30 @@ module.exports = {
         name: 'upload--project_association--user_role--association',
         use: { ...devices['Desktop Chrome'] },
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      },
+
+      /** Duplication tests */
+      {
+        name: 'operator_duplication',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/duplication/**/*.spec.js',
+        testIgnore: [
+          '/view/authenticated/duplication/access_control_user_role.spec.js',
+          '/view/authenticated/duplication/report_page_states_admin.spec.js',
+        ],
+      },
+      {
+        name: 'admin_duplication',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/duplication/report_page_states_admin.spec.js',
+      },
+      {
+        name: 'user_duplication',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/duplication/access_control_user_role.spec.js',
       },
 
       // { name: 'firefox', use: {

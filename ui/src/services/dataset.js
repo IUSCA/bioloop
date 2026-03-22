@@ -112,11 +112,27 @@ class DatasetService {
   }
 
   accept_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/accept`);
+    return api.post(`/datasets/duplication/${duplicate_dataset_id}/accept`);
   }
 
   reject_duplicate_dataset({ duplicate_dataset_id }) {
-    return api.post(`/datasets/duplicates/${duplicate_dataset_id}/reject`);
+    return api.post(`/datasets/duplication/${duplicate_dataset_id}/reject`);
+  }
+
+  /**
+   * Fetches a duplicate dataset with its full duplication report:
+   * the dataset_duplication record (Jaccard score, file counts, original dataset),
+   * the dataset's state history, and all ingestion check records with their
+   * file-level details.
+   */
+  getDuplicationReport({ dataset_id }) {
+    return this.getById({
+      id: dataset_id,
+      include_duplications: true,
+      include_states: true,
+      include_ingestion_checks: true,
+      workflows: false,
+    });
   }
 
   getStats({ type }) {

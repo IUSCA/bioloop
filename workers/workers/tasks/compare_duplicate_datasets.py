@@ -1,171 +1,272 @@
-from __future__ import annotations  # type unions by | are only available in versions >= 3
+"""
+Standalone Celery task that performs file-level comparison between a detected
+duplicate dataset and its original.
 
-import json
+The task is fired by inspect_dataset with a pre-assigned task ID which is
+stored in dataset_duplication.comparison_process_id so UI can correlate logs.
 
-from celery import Celery
-from celery.utils.log import get_task_logger
+Comparison categories (mirroring DATASET_INGESTION_CHECK_TYPE enum):
+  EXACT_CONTENT_MATCHES      - same content hash (MD5), regardless of path
+  SAME_PATH_SAME_CONTENT     - same path and same MD5
+  SAME_PATH_DIFFERENT_CONTENT- same path but different MD5
+  SAME_CONTENT_DIFFERENT_PATH- same MD5 but different path/name
+  ONLY_IN_INCOMING           - unmatched files only in incoming
+  ONLY_IN_ORIGINAL           - unmatched files only in original
+
+Jaccard score = |exact_content_matches| / (|incoming| + |original| - |exact_content_matches|)
+where |exact_content_matches| is path-agnostic and computed from MD5 overlap.
+
+All results are persisted in a single API call (PUT /datasets/:id/duplication/comparison)
+which writes to dataset_ingestion_check + dataset_ingestion_file_check inside a
+single database transaction.
+"""
+from __future__ import annotations
+
+import logging
+import os
+import socket
+from collections import defaultdict
 
 import workers.api as api
-import workers.config.celeryconfig as celeryconfig
-from workers.exceptions import ProcessingFailed, InspectionFailed
 from workers.config import config
 
-app = Celery("tasks")
-app.config_from_object(celeryconfig)
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
+
+# Progress milestones reported to the API during the comparison phases.
+_PROGRESS_START = 0.05
+_PROGRESS_FILES_FETCHED = 0.40
+_PROGRESS_COMPUTED = 0.80
+_PROGRESS_SAVING = 0.95
 
 
-def compare_datasets(celery_task, duplicate_dataset_id, **kwargs):
-    logger.info(f"Processing duplicate dataset {duplicate_dataset_id}")
-    duplicate_dataset: dict = api.get_dataset(dataset_id=duplicate_dataset_id,
-                                              include_duplications=True,
-                                              include_action_items=True)
+def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id: int, **kwargs):
+    """
+    Entry point called from declarations.py.
 
-    if not duplicate_dataset['is_duplicate']:
-        raise InspectionFailed(f"Dataset {duplicate_dataset['id']} is not a duplicate")
+    celery_task is the bound Celery task instance (self) for the standalone task.
+    """
+    task_id = celery_task.request.id
+    logger.info(f'compare_duplicate_datasets[{task_id}]: starting comparison '
+                f'duplicate={duplicate_dataset_id} original={original_dataset_id}')
 
-    original_dataset_id = duplicate_dataset['duplicated_from']['original_dataset_id']
-    original_dataset: dict = api.get_dataset(dataset_id=original_dataset_id)
-
-    logger.info(f"Dataset is duplicate of dataset {original_dataset['name']} (id: {original_dataset_id})")
-
-    duplicate_files: list[dict] = api.get_dataset_files(
-        dataset_id=duplicate_dataset['id'],
-        filters={
-            "filetype": "file"
-        })
-    original_files: list[dict] = api.get_dataset_files(
-        dataset_id=original_dataset['id'],
-        filters={
-            "filetype": "file"
-        })
-
-    comparison_checks_report = None
+    # Register this run in worker_process/log tables for UI traceability
     try:
-        comparison_checks_report = compare_dataset_files(original_files, duplicate_files)
-    except Exception:
-        raise ProcessingFailed("Failed to compare dataset files")
+        process = api.register_process({
+            'pid': os.getpid(),
+            'task_id': task_id,
+            'step': 'compare_duplicate_datasets',
+            'workflow_id': task_id,
+            'tags': {
+                'duplicate_dataset_id': duplicate_dataset_id,
+                'original_dataset_id': original_dataset_id,
+            },
+            'hostname': socket.gethostname(),
+        })
+        process_id = process['id']
+    except Exception as e:
+        logger.warning(f'compare_duplicate_datasets[{task_id}]: failed to register process: {e}')
+        process_id = None
 
-    # In case datasets are same, instead of rejecting the incoming (duplicate) dataset at this point,
-    # create an action item for operators to review later. This way, operators will always have a chance
-    # to review the incoming dataset before it is rejected.
-    duplication_action_item: dict = [item for item in duplicate_dataset['action_items']
-                                     if item['type'] == config['ACTION_ITEM_TYPES']['DUPLICATE_DATASET_INGESTION']][0]
+    def log(level: str, message: str) -> None:
+        logger.info(message) if level == 'INFO' else logger.error(message)
+        if process_id:
+            try:
+                api.post_worker_logs(process_id, [{'level': level, 'message': message}])
+            except Exception:
+                pass
 
-    action_item_data: dict = {
-       "ingestion_checks": comparison_checks_report,
-       "next_state": config['DATASET_STATES']['DUPLICATE_READY'],
+    def report_progress(fraction: float) -> None:
+        """Silently update comparison_fraction_done; never raises on failure."""
+        try:
+            api.update_comparison_progress(duplicate_dataset_id, fraction)
+        except Exception as exc:
+            logger.debug(f'compare_duplicate_datasets[{task_id}]: progress update skipped: {exc}')
+
+    report_progress(_PROGRESS_START)
+    log('INFO', f'Fetching file lists for datasets {duplicate_dataset_id} and {original_dataset_id}')
+
+    incoming_files: list[dict] = api.get_dataset_files(
+        dataset_id=duplicate_dataset_id,
+        filters={'filetype': 'file'},
+    )
+    original_files: list[dict] = api.get_dataset_files(
+        dataset_id=original_dataset_id,
+        filters={'filetype': 'file'},
+    )
+
+    log('INFO', f'Incoming files: {len(incoming_files)}, Original files: {len(original_files)}')
+    report_progress(_PROGRESS_FILES_FETCHED)
+
+    # Index by path for deterministic same-path classification.
+    incoming_by_path: dict[str, dict] = {f['path']: f for f in incoming_files}
+    original_by_path: dict[str, dict] = {f['path']: f for f in original_files}
+    incoming_paths = set(incoming_by_path)
+    original_paths = set(original_by_path)
+
+    common_paths = incoming_paths & original_paths
+    incoming_only_paths = incoming_paths - original_paths
+    original_only_paths = original_paths - incoming_paths
+
+    log('INFO', f'Common paths: {len(common_paths)}, '
+                f'path-only incoming: {len(incoming_only_paths)}, '
+                f'path-only original: {len(original_only_paths)}')
+
+    # Disjoint detail buckets:
+    # 1) same path + same content
+    # 2) same path + different content
+    # 3) among path-only files, same content + different path
+    # 4) remaining unmatched are only-in-incoming/original
+    same_path_same_content_pairs: list[tuple[dict, dict]] = []
+    same_path_different_content_pairs: list[tuple[dict, dict]] = []
+
+    for path in sorted(common_paths):
+        inc_file = incoming_by_path[path]
+        orig_file = original_by_path[path]
+        if inc_file.get('md5') and inc_file['md5'] == orig_file.get('md5'):
+            same_path_same_content_pairs.append((inc_file, orig_file))
+        else:
+            same_path_different_content_pairs.append((inc_file, orig_file))
+
+    # Path-only files are candidates for "same content, different path" matching.
+    incoming_only_files = [incoming_by_path[p] for p in sorted(incoming_only_paths)]
+    original_only_files = [original_by_path[p] for p in sorted(original_only_paths)]
+
+    incoming_only_by_md5: dict[str, list[dict]] = defaultdict(list)
+    original_only_by_md5: dict[str, list[dict]] = defaultdict(list)
+    for f in incoming_only_files:
+        if f.get('md5'):
+            incoming_only_by_md5[f['md5']].append(f)
+    for f in original_only_files:
+        if f.get('md5'):
+            original_only_by_md5[f['md5']].append(f)
+
+    same_content_different_path_pairs: list[tuple[dict, dict]] = []
+    consumed_incoming_ids: set[int] = set()
+    consumed_original_ids: set[int] = set()
+    for md5 in sorted(set(incoming_only_by_md5) & set(original_only_by_md5)):
+        inc_list = sorted(incoming_only_by_md5[md5], key=lambda x: x['path'])
+        orig_list = sorted(original_only_by_md5[md5], key=lambda x: x['path'])
+        pair_count = min(len(inc_list), len(orig_list))
+        for i in range(pair_count):
+            inc_file = inc_list[i]
+            orig_file = orig_list[i]
+            same_content_different_path_pairs.append((inc_file, orig_file))
+            consumed_incoming_ids.add(inc_file['id'])
+            consumed_original_ids.add(orig_file['id'])
+
+    unmatched_only_in_incoming = [
+        f for f in incoming_only_files if f['id'] not in consumed_incoming_ids
+    ]
+    unmatched_only_in_original = [
+        f for f in original_only_files if f['id'] not in consumed_original_ids
+    ]
+
+    # Hash-only exact matches are path-agnostic and are used for Jaccard.
+    # This summary intentionally overlaps with the stricter subsets:
+    # SAME_PATH_SAME_CONTENT + SAME_CONTENT_DIFFERENT_PATH.
+    exact_content_matches_incoming = [
+        inc for inc, _orig in same_path_same_content_pairs
+    ] + [
+        inc for inc, _orig in same_content_different_path_pairs
+    ]
+
+    total_incoming = len(incoming_files)
+    total_original = len(original_files)
+    total_exact_content_matches = len(exact_content_matches_incoming)
+    union = total_incoming + total_original - total_exact_content_matches
+    jaccard_score = total_exact_content_matches / union if union > 0 else 0.0
+
+    log('INFO',
+        f'Exact content matches: {total_exact_content_matches}, '
+        f'same-path/same-content: {len(same_path_same_content_pairs)}, '
+        f'same-path/different-content: {len(same_path_different_content_pairs)}, '
+        f'same-content/different-path: {len(same_content_different_path_pairs)}, '
+        f'only-in-incoming: {len(unmatched_only_in_incoming)}, '
+        f'only-in-original: {len(unmatched_only_in_original)}, '
+        f'Jaccard: {jaccard_score:.4f} '
+        f'= {total_exact_content_matches} / ({total_incoming} + {total_original} - {total_exact_content_matches})')
+    report_progress(_PROGRESS_COMPUTED)
+
+    # Build ingestion_checks payload
+    ingestion_checks = [
+        {
+            'type': 'EXACT_CONTENT_MATCHES',
+            'label': 'Files with matching content (same MD5), regardless of path',
+            'passed': True,
+            'file_checks': [
+                {'file_id': f['id'], 'source_dataset_id': duplicate_dataset_id}
+                for f in exact_content_matches_incoming
+            ],
+        },
+        {
+            'type': 'SAME_PATH_SAME_CONTENT',
+            'label': 'Files with the same path and same content',
+            'passed': True,
+            'file_checks': [
+                {'file_id': inc['id'], 'source_dataset_id': duplicate_dataset_id}
+                for inc, _orig in same_path_same_content_pairs
+            ],
+        },
+        {
+            'type': 'SAME_PATH_DIFFERENT_CONTENT',
+            'label': 'Files with the same path but different content',
+            'passed': len(same_path_different_content_pairs) == 0,
+            'file_checks': (
+                [{'file_id': inc['id'], 'source_dataset_id': duplicate_dataset_id}
+                 for inc, _orig in same_path_different_content_pairs]
+                + [{'file_id': orig['id'], 'source_dataset_id': original_dataset_id}
+                   for _inc, orig in same_path_different_content_pairs]
+            ),
+        },
+        {
+            'type': 'SAME_CONTENT_DIFFERENT_PATH',
+            'label': 'Files with matching content but different path/name',
+            'passed': len(same_content_different_path_pairs) == 0,
+            'file_checks': (
+                [{'file_id': inc['id'], 'source_dataset_id': duplicate_dataset_id}
+                 for inc, _orig in same_content_different_path_pairs]
+                + [{'file_id': orig['id'], 'source_dataset_id': original_dataset_id}
+                   for _inc, orig in same_content_different_path_pairs]
+            ),
+        },
+        {
+            'type': 'ONLY_IN_INCOMING',
+            'label': 'Files only in the incoming duplicate dataset',
+            'passed': len(unmatched_only_in_incoming) == 0,
+            'file_checks': [
+                {'file_id': f['id'], 'source_dataset_id': duplicate_dataset_id}
+                for f in unmatched_only_in_incoming
+            ],
+        },
+        {
+            'type': 'ONLY_IN_ORIGINAL',
+            'label': 'Files only in the original dataset',
+            'passed': len(unmatched_only_in_original) == 0,
+            'file_checks': [
+                {'file_id': f['id'], 'source_dataset_id': original_dataset_id}
+                for f in unmatched_only_in_original
+            ],
+        },
+    ]
+
+    comparison_result = {
+        'jaccard_score': jaccard_score,
+        'total_incoming_files': total_incoming,
+        'total_original_files': total_original,
+        'total_common_files': total_exact_content_matches,
+        'ingestion_checks': ingestion_checks,
     }
 
-    api.update_dataset_action_item(dataset_id=duplicate_dataset['id'],
-                                   action_item_id=duplication_action_item['id'],
-                                   data=action_item_data)
+    report_progress(_PROGRESS_SAVING)
+    log('INFO', 'Saving comparison results via API (single transaction).')
+    api.save_comparison_result(
+        dataset_id=duplicate_dataset_id,
+        comparison_result=comparison_result,
+    )
 
-    logger.info(f"Processed dataset {duplicate_dataset_id}")
-    return duplicate_dataset_id,
+    log('INFO',
+        f'Comparison complete. Dataset {duplicate_dataset_id} is '
+        f'{"a strong duplicate" if jaccard_score >= config["enabled_features"]["duplicate_detection"]["jaccard_threshold"] else "similar but below threshold"} '
+        f'of dataset {original_dataset_id} (Jaccard {jaccard_score:.4f}).')
 
-
-# Given two lists of dataset files, determines if the two sets of files are duplicates. The following checks are used
-# to determine whether files are same:
-#    1. Verifying if the number of files in both datasets is the same
-#    2. Comparing checksums of files in both datasets
-#    3. Verifying if any files from the original dataset are missing from the incoming duplicate.
-#    4. Verifying if any files from the incoming duplicate dataset are missing from the original.
-#
-# Returns a dict, which contains the results for each of the 4 checks performed.
-#
-# Example of comparison report:
-# [
-#   {
-#     type: 'FILE_COUNT',
-#     label: 'Number of Files match',
-#     passed: len(original_dataset_files) == len(duplicate_dataset_files),
-#   },
-#   {
-#     type: 'CHECKSUMS_MATCH',
-#     label: 'Checksums Validated',
-#     passed: False,
-#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
-#   }, {
-#     type: 'FILES_MISSING_FROM_DUPLICATE',
-#     label: 'Original dataset\'s files missing from incoming duplicate',
-#     passed: False,
-#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
-#   }, {
-#     type: 'FILES_MISSING_FROM_ORIGINAL',
-#     label: 'Incoming duplicate dataset\'s files missing from original',
-#     passed: False,
-#     files: [{id: 1, name: 'file_1', path: '/path/to/file_1', ...}, ...]
-#   }
-# ]
-def compare_dataset_files(original_dataset_files: list, duplicate_dataset_files: list) -> list[dict]:
-    comparison_checks: list[dict] = []
-
-    files_only_in_original_dataset: list[dict] = get_missing_files(files_1=original_dataset_files, files_2=duplicate_dataset_files)
-    files_only_in_duplicate_dataset: list[dict] = get_missing_files(files_1=duplicate_dataset_files, files_2=original_dataset_files)
-
-    original_files_paths: set[str] = set(map(lambda f: f['path'], original_dataset_files))
-    duplicate_files_paths: set[str] = set(map(lambda f: f['path'], duplicate_dataset_files))
-    original_files_map: dict = {f['path']: f for f in original_dataset_files}
-    duplicate_files_map: dict = {f['path']: f for f in duplicate_dataset_files}
-
-    common_files_paths: set[str] = original_files_paths.intersection(duplicate_files_paths)
-
-    logger.info(f"len(common_files_paths): {len(common_files_paths)}")
-
-    conflicting_checksum_files: list[dict] = []
-    for file_path in common_files_paths:
-        original_file = original_files_map.get(file_path)
-        duplicate_file = duplicate_files_map.get(file_path)
-        original_file_checksum = original_file['md5']
-        duplicate_file_checksum = duplicate_file['md5']
-        if original_file_checksum != duplicate_file_checksum:
-            logger.info(f"Checksum validation failed for file {file_path} (original: {original_file['id']}, duplicate: {duplicate_file['id']})")
-            conflicting_checksum_files.append(original_file)
-            conflicting_checksum_files.append(duplicate_file)
-
-    # if there are no common files between the two datasets, we consider that checksum validation failed
-    passed_checksum_validation: bool = len(common_files_paths) > 0 and len(conflicting_checksum_files) == 0
-    logger.info(f"Checksum validation passed: {passed_checksum_validation}")
-    
-    comparison_checks.append({
-        'type': 'FILE_COUNT',
-        'label': 'Number of Files match',
-        'passed': len(original_dataset_files) == len(duplicate_dataset_files),
-    })
-
-    comparison_checks.append({
-        'type': 'CHECKSUMS_MATCH',
-        'label': 'Checksums Validated',
-        'passed': passed_checksum_validation,
-        'files': [{'id': f['id']} for f in conflicting_checksum_files]
-    })
-
-    logger.info(f"Files only in original dataset: {len(files_only_in_original_dataset)}")
-    comparison_checks.append({
-        'type': 'FILES_MISSING_FROM_DUPLICATE',
-        'label': 'Original dataset\'s files missing from incoming duplicate',
-        'passed': len(files_only_in_original_dataset) == 0,
-        'files': [{'id': f['id']} for f in files_only_in_original_dataset]
-    })
-    
-    logger.info(f"Files only in duplicate dataset: {len(files_only_in_duplicate_dataset)}")
-    comparison_checks.append({
-        'type': 'FILES_MISSING_FROM_ORIGINAL',
-        'label': 'Incoming duplicate dataset\'s files missing from original',
-        'passed': len(files_only_in_duplicate_dataset) == 0,
-        'files': [{'id': f['id']} for f in files_only_in_duplicate_dataset]
-    })
-
-    return comparison_checks
-
-
-# For two given lists of dataset files (files_1 and files_2), returns a list of files
-# that are present in files_1 but not present in files_2.
-def get_missing_files(files_1: list[dict], files_2: list[dict]) -> list[dict]:
-    missing_files = []
-    files_map_2 = {f['path']: f for f in files_2}
-    for file in files_1:
-        if file['path'] not in files_map_2.keys():
-            missing_files.append(file)
-    return missing_files
+    return duplicate_dataset_id, original_dataset_id

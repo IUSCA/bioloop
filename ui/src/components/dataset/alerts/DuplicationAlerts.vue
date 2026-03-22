@@ -4,6 +4,7 @@
     <va-alert
       v-if="isActiveDuplicatePendingAction && isAuthorized"
       color="warning"
+      data-testid="duplication-alert-pending"
     >
       <div class="flex items-center">
         <div class="flex-auto">
@@ -17,16 +18,10 @@
           </div>
         </div>
 
-        <!-- Allow authorized users to see any active action items for this duplication -->
+        <!-- Allow authorized users to navigate to the duplication report -->
         <va-button
-          v-if="props.dataset?.action_items?.length > 0"
-          @click="
-            () => {
-              router.push(
-                `/datasets/${props.dataset.id}/actionItems/${props.dataset.action_items[0].id}`,
-              );
-            }
-          "
+          data-testid="duplication-alert-accept-reject-btn"
+          @click="router.push(`/datasets/${props.dataset.id}/duplication`)"
         >
           Accept/Reject duplicate
         </va-button>
@@ -36,16 +31,26 @@
     <!-- The current dataset is an active dataset which has incoming duplicates -->
     <DuplicatedByAlerts :dataset="props.dataset" />
 
-    <!-- The current dataset has been overwritten by another dataset -->
-    <va-alert v-if="isInactiveOverwrittenDataset" color="danger">
+    <!-- The current dataset has been overwritten by another dataset.
+         Only shown to operators/admins — reveals duplication context. -->
+    <va-alert
+      v-if="isInactiveOverwrittenDataset && isAuthorized"
+      color="danger"
+      data-testid="duplication-alert-overwritten"
+    >
       This dataset has been overwritten by duplicate
       <a :href="`/datasets/${_overwrittenByDataset?.id}`">
         {{ _overwrittenByDataset?.name }}
       </a>
     </va-alert>
 
-    <!-- The current dataset is a rejected duplicate of another -->
-    <va-alert v-else-if="isInactiveRejectedDuplicate" color="danger">
+    <!-- The current dataset is a rejected duplicate of another.
+         Only shown to operators/admins — reveals duplication context. -->
+    <va-alert
+      v-else-if="isInactiveRejectedDuplicate && isAuthorized"
+      color="danger"
+      data-testid="duplication-alert-rejected-duplicate"
+    >
       This dataset is a rejected duplicate of
       <a
         :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
@@ -54,8 +59,13 @@
       </a>
     </va-alert>
 
-    <!-- The current dataset has been (soft-) deleted -->
-    <va-alert v-if="isInactiveDataset" color="danger">
+    <!-- The current dataset has been (soft-) deleted.
+         Shown to all roles — no duplication context exposed. -->
+    <va-alert
+      v-if="isInactiveDataset"
+      color="danger"
+      data-testid="duplication-alert-deleted"
+    >
       This dataset has been deleted
     </va-alert>
   </div>

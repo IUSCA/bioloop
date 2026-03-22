@@ -3,6 +3,26 @@ const { randomUUID } = require('crypto');
 const { get, post } = require('./index');
 const { extractTokenPayload } = require('../utils');
 
+/**
+ * Creates a source → derived relationship between two datasets.
+ * Calls POST /datasets/associations.
+ *
+ * @param {Object} params
+ * @param {number} params.sourceId   - ID of the source (upstream) dataset
+ * @param {number} params.derivedId  - ID of the derived (downstream) dataset
+ */
+const createDatasetAssociation = async ({
+  requestContext,
+  token,
+  sourceId,
+  derivedId,
+}) => post({
+  requestContext,
+  url: '/datasets/associations',
+  token,
+  data: [{ source_id: sourceId, derived_id: derivedId }],
+});
+
 const createDataset = async ({
   requestContext, token, data = {},
 } = {}) => {
@@ -91,6 +111,7 @@ const generateUniqueDatasetName = async ({
 
 module.exports = {
   createDataset,
+  createDatasetAssociation,
   datasetExists,
   generateUniqueDatasetName,
   getDatasets,

@@ -35,17 +35,20 @@ def download_illumina_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='compare_duplicate_datasets',
+@app.task(bind=True, name='compare_duplicate_datasets',
           autoretry_for=(exc.RetryableException,),
           max_retries=3,
-          default_retry_delay=5)
-def compare_duplicate_datasets(celery_task, duplicate_dataset_id, **kwargs):
+          default_retry_delay=30)
+def compare_duplicate_datasets(self, duplicate_dataset_id, original_dataset_id, **kwargs):
+    """
+    Standalone (non-workflow) Celery task that computes file-level comparison
+    between a detected duplicate and its original.  Fired from inspect_dataset
+    with a pre-assigned task ID stored in dataset_duplication.comparison_process_id.
+    """
     from workers.tasks.compare_duplicate_datasets import compare_datasets as task_body
     try:
-        return task_body(celery_task, duplicate_dataset_id, **kwargs)
-    except exc.InspectionFailed:
-        raise
-    except exc.ProcessingFailed:
+        return task_body(self, duplicate_dataset_id, original_dataset_id, **kwargs)
+    except (exc.InspectionFailed, exc.ProcessingFailed):
         raise
     except Exception as e:
         raise exc.RetryableException(e)
@@ -73,6 +76,10 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
     from workers.tasks.inspect import inspect_dataset as task_body
     try:
         return task_body(celery_task, dataset_id, **kwargs)
+    except exc.DuplicateDetected:
+        # DuplicateDetected is an expected terminal condition — do not retry.
+        # The integrated workflow will terminate at this step.
+        raise
     except exc.InspectionFailed:
         raise
     except Exception as e:

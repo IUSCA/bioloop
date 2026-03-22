@@ -167,8 +167,7 @@ def get_dataset(dataset_id: str,
                 bundle: bool = False,
                 include_audit_logs: bool = False,
                 workflows: bool = False,
-                include_duplications: bool = False,
-                include_action_items: bool = False):
+                include_duplications: bool = False):
     with APIServerSession() as s:
         payload = {
             'files': files,
@@ -176,7 +175,6 @@ def get_dataset(dataset_id: str,
             'workflows': workflows,
             'include_audit_logs': include_audit_logs,
             'include_duplications': include_duplications,
-            'include_action_items': include_action_items,
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()
@@ -251,6 +249,14 @@ class DatasetAlreadyExistsError(Exception):
     pass
 
 
+def dataset_name_exists(name: str, dataset_type: str) -> bool:
+    """Return True if a non-deleted dataset with NAME and DATASET_TYPE already exists."""
+    with APIServerSession() as s:
+        r = s.get(f'datasets/{dataset_type}/{name}/exists')
+        r.raise_for_status()
+        return r.json().get('exists', False)
+
+
 def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
@@ -270,10 +276,69 @@ def bulk_create_datasets(datasets):
         return r.json()
 
 
-def create_duplicate_dataset(dataset_id: int,
-                             data: dict = None):
+def get_duplication_candidate(dataset_id: int) -> dict:
+    """
+    Returns the best duplicate candidate for a given dataset_id, determined by
+    Jaccard similarity of MD5 checksums over INSPECTED, non-deleted datasets of
+    the same type created before the incoming dataset.
+
+    Response: { candidate: { dataset, jaccard_score, common_files,
+                              incoming_total_files, original_total_files } | None }
+    """
     with APIServerSession() as s:
-        r = s.post(f'datasets/{dataset_id}/duplicate' , json=data)
+        r = s.get(f'datasets/duplication/{dataset_id}/candidate')
+        r.raise_for_status()
+        return r.json()
+
+
+def register_duplicate(dataset_id: int, original_dataset_id: int,
+                       comparison_process_id: str | None = None,
+                       comparison_status: str = 'PENDING') -> dict:
+    """
+    Marks dataset_id as a duplicate of original_dataset_id, creates the
+    dataset_duplication record, and transitions the dataset to
+    DUPLICATE_REGISTERED — all in a single API transaction.
+    """
+    with APIServerSession() as s:
+        payload = {
+            'original_dataset_id': original_dataset_id,
+            'comparison_process_id': comparison_process_id,
+            'comparison_status': comparison_status,
+        }
+        r = s.post(f'datasets/duplication/{dataset_id}', json=payload)
+        r.raise_for_status()
+        return r.json()
+
+
+def save_comparison_result(dataset_id: int, comparison_result: dict) -> None:
+    """
+    Persists the comparison results produced by compare_duplicate_datasets.
+    Advances the duplicate dataset to DUPLICATE_READY in a single transaction.
+    """
+    with APIServerSession() as s:
+        r = s.put(f'datasets/duplication/{dataset_id}/comparison', json=comparison_result)
+        r.raise_for_status()
+
+
+def update_comparison_progress(dataset_id: int, fraction_done: float) -> None:
+    """
+    Reports incremental progress of the compare_duplicate_datasets task.
+
+    FRACTION_DONE must be in [0.0, 1.0].  Call this at meaningful checkpoints
+    during comparison so the UI can display a progress indicator.
+    """
+    with APIServerSession() as s:
+        r = s.patch(
+            f'datasets/duplication/{dataset_id}/comparison/progress',
+            json={'fraction_done': fraction_done},
+        )
+        r.raise_for_status()
+
+
+def get_duplication_config() -> dict:
+    """Returns the server-side duplication feature flags and thresholds."""
+    with APIServerSession() as s:
+        r = s.get('datasets/duplication/config')
         r.raise_for_status()
         return r.json()
 

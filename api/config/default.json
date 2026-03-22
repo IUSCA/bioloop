@@ -188,9 +188,6 @@
       "OVERWRITTEN": "OVERWRITTEN",
       "DELETED": "DELETED"
   },
-  "ACTION_ITEM_TYPES": {
-    "DUPLICATE_DATASET_INGESTION": "DUPLICATE_DATASET_INGESTION"
-  },
   "dataset_types": [
     "RAW_DATA",
     "DATA_PRODUCT"
@@ -230,7 +227,12 @@
     "fs": true,
     "downloads": true,
     "signup": true,
-    "auto_create_project_on_dataset_creation": true
+    "auto_create_project_on_dataset_creation": true,
+    "duplicate_detection": {
+      "enabled": true,
+      "jaccard_threshold": 0.85,
+      "concurrent_inspection_wait_timeout_seconds": 7200
+    }
   },
   "institution_types": [
     "Commercial",

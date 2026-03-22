@@ -26,6 +26,9 @@ if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
 
+if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
+  router.use('/datasets/duplication', require('./datasets/duplication') /* #swagger.security = [{"BearerAuth": []}] */);
+}
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);

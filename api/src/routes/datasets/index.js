@@ -257,6 +257,9 @@ router.get(
     query('include_projects').optional().toBoolean(),
     query('initiator').optional().toBoolean(),
     query('include_source_instrument').toBoolean().optional(),
+    query('include_duplications').toBoolean().optional(),
+    query('include_states').toBoolean().optional(),
+    query('include_ingestion_checks').toBoolean().optional(),
   ]),
   datasetService.dataset_access_check,
   asyncHandler(async (req, res, next) => {
@@ -275,6 +278,9 @@ router.get(
       includeProjects: req.query.include_projects || false,
       initiator: req.query.initiator || false,
       include_source_instrument: req.query.include_source_instrument || false,
+      include_duplications: req.query.include_duplications || false,
+      states: req.query.include_states || false,
+      include_ingestion_checks: req.query.include_ingestion_checks || false,
     });
 
     res.json(dataset);
@@ -362,8 +368,33 @@ router.post(
       }
     }
 
+    // When duplicate_detection is enabled and a non-deleted INSPECTED dataset
+    // with the same name/type already exists, rename the incoming dataset with
+    // a _DUPLICATE_ suffix so both can coexist.  The inspect task will later
+    // compare checksums and determine whether it is truly a duplicate.
+    let effective_name = name;
+    const dup_detection_enabled = config.enabled_features?.duplicate_detection?.enabled;
+    if (dup_detection_enabled) {
+      const existing = await prisma.dataset.findFirst({
+        where: {
+          name,
+          type,
+          is_deleted: false,
+          states: { some: { state: CONSTANTS.DATASET_STATES.INSPECTED } },
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        const suffix = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15);
+        effective_name = `${name}_DUPLICATE_${suffix}`;
+        logger.info(
+          `Renaming incoming dataset "${name}" to "${effective_name}" because an INSPECTED dataset with the same name/type exists.`,
+        );
+      }
+    }
+
     const createQuery = datasetService.buildDatasetCreateQuery({
-      name,
+      name: effective_name,
       type,
       du_size,
       origin_path: decoded_origin_path,

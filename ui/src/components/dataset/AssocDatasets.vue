@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-2">
     <!-- derived dataset -->
-    <div v-if="props.derived_datasets_meta?.length || 0 > 0">
+    <div v-if="props.derived_datasets_meta?.length || 0 > 0" data-testid="derived-datasets-card">
       <va-card>
         <va-card-title>
           <span class="text-xl">Derived Datasets</span>
@@ -15,7 +15,7 @@
     </div>
 
     <!-- source datasets -->
-    <div v-if="props.source_datasets_meta?.length || 0 > 0">
+    <div v-if="props.source_datasets_meta?.length || 0 > 0" data-testid="source-datasets-card">
       <va-card>
         <va-card-title>
           <span class="text-xl">Source Datasets</span>

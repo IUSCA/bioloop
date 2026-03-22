@@ -83,7 +83,9 @@ const find_or_create_test_user = async ({ identifier }) => {
   const is_test_user = ['admin', 'operator', 'user'].includes(identifier);
 
   const test_user_config = is_test_user ? config.e2e.users[identifier] : null;
-  const test_user_username = test_user_config ? test_user_config.username : identifier;
+  // Use the configured username when set; fall back to the role identifier itself
+  // so that CI deployments without an admins.json still get a usable test user.
+  const test_user_username = test_user_config?.username || identifier;
 
   let test_user = await prisma.user.findUnique({
     where: {

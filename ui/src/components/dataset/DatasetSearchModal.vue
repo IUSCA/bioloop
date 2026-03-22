@@ -57,8 +57,9 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <!-- duplicate filter -->
+          <!-- duplicate filter — only shown when duplicate detection is enabled -->
           <va-select
+            v-if="auth.isFeatureEnabled('duplicate_detection')"
             v-model="form.is_duplicate"
             :options="[
               { name: 'All', id: null },
@@ -174,7 +175,10 @@
 
 <script setup>
 import { useDatasetStore } from "@/stores/dataset";
+import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
+
+const auth = useAuthStore();
 // const emit = defineEmits(["update"]);
 
 // parent component can invoke these methods through the template ref

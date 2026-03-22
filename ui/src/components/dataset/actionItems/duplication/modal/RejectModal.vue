@@ -5,16 +5,15 @@
     @before-close="clearModalInput"
     hide-default-actions
   >
-    <duplication-modal-header :dataset="associatedDataset" />
+    <duplication-modal-header :dataset="props.dataset" />
 
     <va-divider class="my-4" />
 
     <ul class="va-unordered va-text-secondary mt-3">
       <li>
-        This will delete the current contents of
-        <span class="path bg-slate-200 dark:bg-slate-800">
-          {{ associatedDataset.origin_path }} </span
-        >.
+        The incoming duplicate dataset
+        <b>{{ props.dataset?.name }}</b>
+        will be soft-deleted and permanently excluded from the system.
       </li>
       <li>
         This operation is
@@ -24,17 +23,19 @@
 
     <va-divider class="my-4" />
 
-    <div class="flex flex-col">
-      <p>To confirm, type "{{ associatedDataset.name }}" in the box below</p>
+    <div class="flex flex-col" data-testid="reject-duplicate-modal">
+      <p>To confirm, type "<b>{{ props.dataset?.name }}</b>" in the box below</p>
       <va-input
+        data-testid="reject-name-input"
         v-model="modalInput"
         class="my-2 w-full"
         :disabled="props.areControlsDisabled"
       />
       <va-button
+        data-testid="reject-confirm-btn"
         color="danger"
         :disabled="
-          modalInput !== associatedDataset.name || props.areControlsDisabled
+          modalInput !== props.dataset?.name || props.areControlsDisabled
         "
         @click="
           () => {
@@ -53,25 +54,15 @@
 import DuplicationModalHeader from "@/components/dataset/actionItems/duplication/modal/ModalHeader.vue";
 
 const props = defineProps({
-  showModal: {
-    type: Boolean,
-    required: true,
-  },
-  actionItem: {
-    type: Object,
-    required: true,
-  },
-  areControlsDisabled: {
-    type: Boolean,
-    required: true,
-  },
+  showModal: { type: Boolean, required: true },
+  dataset: { type: Object, default: null },
+  duplication: { type: Object, default: null },
+  areControlsDisabled: { type: Boolean, required: true },
 });
 
 const emit = defineEmits(["confirm", "update:showModal"]);
 
 const modalInput = ref("");
-
-const associatedDataset = computed(() => props.actionItem?.dataset);
 
 const showModal = computed({
   get() {
@@ -86,5 +77,3 @@ const clearModalInput = () => {
   modalInput.value = "";
 };
 </script>
-
-<style scoped></style>

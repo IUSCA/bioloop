@@ -10,6 +10,7 @@
         color="warning"
         :key="index"
         :class="index < duplicateDatasets.length ? 'mb-2' : ''"
+        :data-testid="`duplicated-by-alert-${duplicateDataset.id}`"
       >
         <div class="flex items-center">
           <div class="flex-auto">
@@ -19,16 +20,10 @@
             </a>
           </div>
 
-          <!-- Allow authorized users to see visit the action item for this duplication -->
+          <!-- Allow authorized users to navigate to the duplication report -->
           <va-button
-            v-if="duplicateDataset.action_items.length > 0"
-            @click="
-              () => {
-                router.push(
-                  `/datasets/${duplicateDataset.id}/actionItems/${duplicateDataset.action_items[0].id}`,
-                );
-              }
-            "
+            :data-testid="`duplicated-by-accept-reject-btn-${duplicateDataset.id}`"
+            @click="router.push(`/datasets/${duplicateDataset.id}/duplication`)"
           >
             Accept/Reject duplicate
           </va-button>
@@ -67,6 +62,8 @@ const gatherDatasetDuplicates = (dataset) =>
       (duplicationRecord) => !duplicationRecord.duplicate_dataset.is_deleted,
     )
     .map((duplicationRecord) => duplicationRecord.duplicate_dataset)
-    // sort duplicates by version - most recent version first
-    .sort((duplicate1, duplicate2) => duplicate2.version - duplicate1.version);
+    // sort by creation time — most recently registered duplicate first
+    .sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 </script>

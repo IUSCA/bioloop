@@ -83,4 +83,8 @@ create_dir "/opt/sca/data/uploads"                # Temporary upload directory
 
 create_dir "/opt/sca/data/scratch"                # Temporary files and working directories
 
+# Duplicate-detection testing directory — operators drop synthetic datasets here
+# to verify the end-to-end duplicate detection pipeline.  Observed by watch.py.
+create_dir "/opt/sca/data/duplicates_testing"
+
 echo "Directory structure initialization completed!"

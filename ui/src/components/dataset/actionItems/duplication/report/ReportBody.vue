@@ -1,147 +1,217 @@
 <template>
-  <va-inner-loading :loading="loading">
-    <va-card>
-      <va-card-title class="mt-1">
-        <span class="text-lg">Duplication Analysis Report</span>
-      </va-card-title>
+  <va-card data-testid="report-body">
+    <va-card-title>
+      <span class="text-lg">File-Level Comparison Report</span>
+    </va-card-title>
 
-      <va-card-content>
-        <!-- Table for various checks performed as part of ingesting a dataset -->
-        <va-data-table :columns="columns" :items="props.ingestionChecks">
-          <template #cell(check)="{ rowData }">
-            {{ rowData.label }}
-          </template>
+    <va-card-content>
+      <div v-if="!props.ingestionChecks?.length" class="text-gray-400 py-4">
+        No comparison data available.
+      </div>
 
-          <!-- The current check's passed / failed status -->
-          <template #cell(passed)="{ value }">
-            <div>
-              <i-mdi-check-circle-outline
-                v-if="value === 'true'"
-                class="text-green-700"
-              />
-              <i-mdi-close-circle-outline
-                v-if="value === 'false'"
-                class="text-red-700"
-              />
-            </div>
-          </template>
-
-          <!-- Expand current check's row -->
-          <template #cell(actions)="{ row, isExpanded }">
-            <va-button
-              @click="row.toggleRowDetails()"
-              :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
-              preset="plain"
+      <div v-else class="flex flex-col gap-3">
+        <!-- One card per check type.
+             EXACT_CONTENT_MATCHES is summary-only (used by Jaccard). -->
+        <va-collapse
+          v-for="check in orderedChecks"
+          :key="check.type"
+          :header="checkHeader(check)"
+          :disabled="!isCollapsible(check)"
+          :data-testid="`check-section-${check.type}`"
+        >
+          <template #header="{ value, attrs, keyboardFocusClassList }">
+            <div
+              v-bind="attrs"
+              class="flex items-center justify-between w-full px-4 py-3 rounded"
+              :class="[
+                isCollapsible(check)
+                  ? 'cursor-pointer hover:bg-[var(--va-background-secondary)]'
+                  : 'cursor-default',
+                keyboardFocusClassList,
+              ]"
             >
-              {{ isExpanded ? "Hide" : "More info" }}
-            </va-button>
-          </template>
-
-          <!-- Expanded details for current check -->
-          <template #expandableRow="{ rowData }">
-            <div>
-              <va-inner-loading :loading="loading">
-                <checksums-diff-report
-                  v-if="rowData.type === 'CHECKSUMS_MATCH'"
-                  :passed="rowData.passed"
-                  :conflicting-files="
-                    rowData.file_checks.map((check) => check.file)
-                  "
-                  :original-dataset-files="originalDatasetFiles"
-                  :duplicate-dataset-files="duplicateDatasetFiles"
+              <div class="flex items-center gap-3">
+                <!-- Alert-style indicator: checkmark when no differences are found
+                     in this category, warning triangle when differences are present.
+                     These convey "category has / has no entries" not "test passed / failed". -->
+                <i-mdi-check-circle-outline
+                  v-if="check.passed"
+                  class="text-xl text-[var(--va-success)]"
+                  :data-testid="`check-icon-passed-${check.type}`"
                 />
-              </va-inner-loading>
-
-              <missing-files-diff
-                v-if="
-                  rowData.type === 'FILES_MISSING_FROM_ORIGINAL' ||
-                  rowData.type === 'FILES_MISSING_FROM_DUPLICATE'
-                "
-                :missing-files="rowData.file_checks.map((check) => check.file)"
-                :check-type="rowData.type"
-              >
-              </missing-files-diff>
-
-              <va-inner-loading :loading="loading">
-                <number-of-files-diff
-                  v-if="rowData.type === 'FILE_COUNT'"
-                  :num-files-duplicate-dataset="originalDatasetFiles?.length"
-                  :num-files-original-dataset="duplicateDatasetFiles?.length"
+                <i-mdi-alert-outline
+                  v-else
+                  class="text-xl text-[var(--va-warning)]"
+                  :data-testid="`check-icon-failed-${check.type}`"
                 />
-              </va-inner-loading>
+
+                <!-- Label and count badge -->
+                <span class="font-medium">{{ checkTitle(check.type) }}</span>
+                <va-badge
+                  v-if="check.file_checks?.length"
+                  :text="String(check.file_checks.length)"
+                  :color="badgeColor(check.type)"
+                  :data-testid="`check-badge-${check.type}`"
+                />
+              </div>
+              <div class="flex items-center gap-2 text-sm text-[var(--va-text-secondary)]">
+                <span>{{ check.label }}</span>
+                <!-- Chevron only on expandable difference sections -->
+                <i-mdi-chevron-down
+                  v-if="isCollapsible(check)"
+                  :class="{ 'rotate-180': value }"
+                  class="transition-transform"
+                />
+              </div>
             </div>
           </template>
-        </va-data-table>
-      </va-card-content>
-    </va-card>
-  </va-inner-loading>
+
+          <!-- File list for this check.
+               virtual-scroller is intentionally omitted: the collapse height
+               animates from 0 on open, which causes the virtual scroller to
+               calculate zero visible rows and render nothing.  For the file
+               counts typical in duplicate detection (<1 000 files) standard
+               rendering inside a scrollable max-height container is sufficient. -->
+          <div class="px-4 pb-4">
+            <div class="rounded border border-[var(--va-background-border)] overflow-hidden">
+              <va-data-table
+                :items="fileRows(check)"
+                :columns="columnsForType(check.type)"
+                :max-height="320"
+                class="text-xs"
+              >
+                <template #cell(path)="{ value }">
+                  <span class="font-mono break-all">{{ value }}</span>
+                </template>
+                <template #cell(md5_incoming)="{ value }">
+                  <span class="font-mono text-xs">{{ value || "—" }}</span>
+                </template>
+                <template #cell(md5_original)="{ value }">
+                  <span class="font-mono text-xs">{{ value || "—" }}</span>
+                </template>
+                <template #cell(source)="{ value }">
+                  <va-badge
+                    :text="value"
+                    :color="value === 'incoming' ? 'primary' : 'secondary'"
+                  />
+                </template>
+              </va-data-table>
+            </div>
+          </div>
+        </va-collapse>
+      </div>
+    </va-card-content>
+  </va-card>
 </template>
 
 <script setup>
-import NumberOfFilesDiff from "@/components/dataset/actionItems/duplication/report/diff/NumberOfFilesDiff.vue";
-import datasetService from "@/services/dataset";
-import toast from "@/services/toast";
-
 const props = defineProps({
-  ingestionChecks: {
-    type: Array,
-    required: true,
-  },
-  originalDataset: {
-    type: Object,
-    required: true,
-  },
-  duplicateDataset: {
-    type: Object,
-    required: true,
-  },
+  ingestionChecks: { type: Array, default: () => [] },
+  duplication: { type: Object, default: null },
+  originalDataset: { type: Object, default: null },
+  duplicateDataset: { type: Object, default: null },
 });
 
-console.log("ReportBody props.ingestionChecks");
-console.log(props.ingestionChecks);
+// Display order for check types
+const TYPE_ORDER = [
+  "EXACT_CONTENT_MATCHES",
+  "SAME_PATH_SAME_CONTENT",
+  "SAME_PATH_DIFFERENT_CONTENT",
+  "SAME_CONTENT_DIFFERENT_PATH",
+  "ONLY_IN_INCOMING",
+  "ONLY_IN_ORIGINAL",
+];
 
-const loading = ref(false);
-const originalDatasetFiles = ref([]);
-const duplicateDatasetFiles = ref([]);
+const orderedChecks = computed(() => {
+  return [...(props.ingestionChecks || [])].sort((a, b) => {
+    return TYPE_ORDER.indexOf(a.type) - TYPE_ORDER.indexOf(b.type);
+  });
+});
 
-const columns = ref([
-  {
-    key: "check",
-    label: "Check",
-  },
-  {
-    key: "passed",
-    label: "Status",
-    thAlign: "left",
-    tdAlign: "right",
-  },
-  { key: "actions", thAlign: "right", tdAlign: "right" },
-]);
+// EXACT_CONTENT_MATCHES is informational (the hash-only baseline used in the
+// Jaccard formula) and is rendered as a non-expandable summary row.
+const SUMMARY_ONLY_TYPES = new Set(["EXACT_CONTENT_MATCHES"]);
 
-onMounted(() => {
-  loading.value = true;
-  if (props.originalDataset && props.duplicateDataset) {
-    Promise.all([
-      datasetService.filter_files({
-        id: props.originalDataset.id,
-        file_type: "file",
-      }),
-      datasetService.filter_files({
-        id: props.duplicateDataset.id,
-        file_type: "file",
-      }),
-    ])
-      .then(([res1, res2]) => {
-        originalDatasetFiles.value = res1.data;
-        duplicateDatasetFiles.value = res2.data;
-      })
-      .catch((err) => {
-        toast.error("Failed to fetch resources");
-        console.error(err);
-      })
-      .finally(() => {
-        loading.value = false;
-      });
+function isCollapsible(check) {
+  return !SUMMARY_ONLY_TYPES.has(check.type) && !!check.file_checks?.length;
+}
+
+const CHECK_TITLES = {
+  EXACT_CONTENT_MATCHES: "Exact content matches",
+  SAME_PATH_SAME_CONTENT: "Same path + same content",
+  SAME_PATH_DIFFERENT_CONTENT: "Same path + different content",
+  SAME_CONTENT_DIFFERENT_PATH: "Same content + different path/name",
+  ONLY_IN_INCOMING: "Only in incoming dataset",
+  ONLY_IN_ORIGINAL: "Only in original dataset",
+};
+
+function checkTitle(type) {
+  return CHECK_TITLES[type] || type;
+}
+
+function checkHeader(check) {
+  return checkTitle(check.type);
+}
+
+function badgeColor(type) {
+  if (type === "EXACT_CONTENT_MATCHES" || type === "SAME_PATH_SAME_CONTENT") return "success";
+  if (type === "SAME_PATH_DIFFERENT_CONTENT" || type === "SAME_CONTENT_DIFFERENT_PATH") return "warning";
+  return "info";
+}
+
+// Build flat file rows for the data table from file_checks
+function fileRows(check) {
+  if (!check.file_checks?.length) return [];
+
+  if (check.type === "SAME_PATH_DIFFERENT_CONTENT") {
+    // Group by path: each path has one incoming and one original entry
+    const byPath = {};
+    for (const fc of check.file_checks) {
+      const path = fc.file?.path ?? "—";
+      if (!byPath[path]) byPath[path] = { path };
+      if (fc.source_dataset_id === props.duplicateDataset?.id) {
+        byPath[path].md5_incoming = fc.file?.md5 ?? "—";
+      } else {
+        byPath[path].md5_original = fc.file?.md5 ?? "—";
+      }
+    }
+    return Object.values(byPath);
   }
-});
+
+  return check.file_checks.map((fc) => ({
+    path: fc.file?.path ?? "—",
+    source:
+      fc.source_dataset_id === props.duplicateDataset?.id
+        ? "incoming"
+        : "original",
+    md5: fc.file?.md5 ?? "—",
+  }));
+}
+
+function columnsForType(type) {
+  if (type === "SAME_PATH_DIFFERENT_CONTENT") {
+    return [
+      { key: "path", label: "File path", sortable: true },
+      { key: "md5_incoming", label: "MD5 (incoming)" },
+      { key: "md5_original", label: "MD5 (original)" },
+    ];
+  }
+  if (type === "EXACT_CONTENT_MATCHES" || type === "SAME_PATH_SAME_CONTENT") {
+    return [
+      { key: "path", label: "File path", sortable: true },
+      { key: "md5", label: "MD5 checksum" },
+    ];
+  }
+  if (type === "SAME_CONTENT_DIFFERENT_PATH") {
+    return [
+      { key: "path", label: "File path", sortable: true },
+      { key: "source", label: "Source" },
+      { key: "md5", label: "MD5 checksum" },
+    ];
+  }
+  return [
+    { key: "path", label: "File path", sortable: true },
+    { key: "source", label: "Source" },
+  ];
+}
 </script>

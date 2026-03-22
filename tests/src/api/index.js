@@ -8,7 +8,9 @@ const normalizeUrl = (url) => (url.startsWith('/') ? url : `/${url}`);
 const absoluteUrl = (url) => `${config.apiBaseURL}${normalizeUrl(url)}`;
 
 const getRequestContext = async (requestContext) => requestContext || request.newContext({
-  baseURL: config.apiBaseURL,
+  // ignoreHTTPSErrors is required when the Vite dev server uses a self-signed TLS cert
+  // (the default for the Docker dev/e2e environment).
+  ignoreHTTPSErrors: true,
 });
 
 const get = async ({

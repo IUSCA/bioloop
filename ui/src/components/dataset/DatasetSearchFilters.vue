@@ -25,12 +25,12 @@
       Deleted
     </va-chip>
 
-    <!-- duplicate filter -->
+    <!-- duplicate filter — only shown when duplicate detection is enabled -->
     <va-chip
       class="flex-none"
       closeable
       outline
-      v-if="filterStatus.is_duplicate"
+      v-if="auth.isFeatureEnabled('duplicate_detection') && filterStatus.is_duplicate"
       @click="emit('open')"
       @update:model-value="reset('is_duplicate')"
     >
@@ -134,9 +134,11 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 import { useDatasetStore } from "@/stores/dataset";
+import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
 
 const store = useDatasetStore();
+const auth = useAuthStore();
 const { filters, filterStatus, activeFilters } = storeToRefs(store);
 // const props = defineProps({})
 

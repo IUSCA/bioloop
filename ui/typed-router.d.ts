@@ -34,6 +34,8 @@ declare module 'vue-router/auto-routes' {
     '/dashboard': RouteRecordInfo<'/dashboard', '/dashboard', Record<never, never>, Record<never, never>>,
     '/dataproducts/': RouteRecordInfo<'/dataproducts/', '/dataproducts', Record<never, never>, Record<never, never>>,
     '/datasets/[datasetId]/': RouteRecordInfo<'/datasets/[datasetId]/', '/datasets/:datasetId', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,
+    '/datasets/[datasetId]/actionItems/[actionItemId]': RouteRecordInfo<'/datasets/[datasetId]/actionItems/[actionItemId]', '/datasets/:datasetId/actionItems/:actionItemId', { datasetId: ParamValue<true>, actionItemId: ParamValue<true> }, { datasetId: ParamValue<false>, actionItemId: ParamValue<false> }>,
+    '/datasets/[datasetId]/duplication': RouteRecordInfo<'/datasets/[datasetId]/duplication', '/datasets/:datasetId/duplication', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,
     '/datasets/[datasetId]/filebrowser': RouteRecordInfo<'/datasets/[datasetId]/filebrowser', '/datasets/:datasetId/filebrowser', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,
     '/datasets/import': RouteRecordInfo<'/datasets/import', '/datasets/import', Record<never, never>, Record<never, never>>,
     '/datasetUpload/': RouteRecordInfo<'/datasetUpload/', '/datasetUpload', Record<never, never>, Record<never, never>>,

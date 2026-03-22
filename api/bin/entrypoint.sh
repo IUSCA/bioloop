@@ -87,14 +87,17 @@ npx prisma migrate deploy
 echo "prisma migrate deploy done."
 
 # Seed the database with initial data (roles, lookup tables, default users, etc.).
-# The .db_seeded marker lives in the bind-mounted api/ directory and is removed by
+# The seed marker lives in the bind-mounted api/ directory and is removed by
 # bin/reset_docker.sh alongside the database data, keeping seed state and DB in sync.
-if [ -f ".db_seeded" ]; then
-  echo "DB already seeded (.db_seeded marker present). Skipping seed."
+# DB_SEED_MARKER_FILE can be overridden (e.g. to .db_seeded_e2e) so that an e2e
+# stack using its own isolated database gets seeded independently of the dev stack.
+_SEED_MARKER="${DB_SEED_MARKER_FILE:-.db_seeded}"
+if [ -f "$_SEED_MARKER" ]; then
+  echo "DB already seeded ($_SEED_MARKER marker present). Skipping seed."
 else
   echo "Running prisma db seed..."
   npx prisma db seed
-  touch .db_seeded
+  touch "$_SEED_MARKER"
   echo "prisma db seed done."
 fi
 

@@ -1,21 +1,13 @@
 const INCLUDE_DUPLICATIONS = {
   duplicated_from: {
     include: {
-      duplicate_dataset: {
-        include: {
-          action_items: true,
-        },
-      },
+      duplicate_dataset: true,
       original_dataset: true,
     },
   },
   duplicated_by: {
     include: {
-      duplicate_dataset: {
-        include: {
-          action_items: true,
-        },
-      },
+      duplicate_dataset: true,
       original_dataset: true,
     },
   },
@@ -174,6 +166,28 @@ const DATASET_STATES = {
   FETCHED: 'FETCHED',
   STAGED: 'STAGED',
   DELETED: 'DELETED',
+  INSPECTED: 'INSPECTED',
+  DUPLICATE_REGISTERED: 'DUPLICATE_REGISTERED',
+  DUPLICATE_READY: 'DUPLICATE_READY',
+  DUPLICATE_REJECTED: 'DUPLICATE_REJECTED',
+  OVERWRITTEN: 'OVERWRITTEN',
+};
+
+const COMPARISON_STATUSES = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  NOT_DUPLICATE: 'NOT_DUPLICATE',
+  FAILED: 'FAILED',
+};
+
+const INGESTION_CHECK_TYPES = {
+  EXACT_CONTENT_MATCHES: 'EXACT_CONTENT_MATCHES',
+  SAME_PATH_SAME_CONTENT: 'SAME_PATH_SAME_CONTENT',
+  SAME_PATH_DIFFERENT_CONTENT: 'SAME_PATH_DIFFERENT_CONTENT',
+  SAME_CONTENT_DIFFERENT_PATH: 'SAME_CONTENT_DIFFERENT_PATH',
+  ONLY_IN_INCOMING: 'ONLY_IN_INCOMING',
+  ONLY_IN_ORIGINAL: 'ONLY_IN_ORIGINAL',
 };
 
 const auth = {
@@ -215,5 +229,7 @@ module.exports = {
   ALERT_TYPES,
   ALERT_STATUSES,
   DATASET_STATES,
+  COMPARISON_STATUSES,
+  INGESTION_CHECK_TYPES,
   INCLUDE_PROJECTS,
 };

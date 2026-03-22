@@ -6,9 +6,14 @@
       v-model:sort-by="sort_by"
       v-model:sorting-order="sort_order"
       disable-client-side-sorting
+      data-testid="assoc-dataset-list"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/datasets/${rowData.id}`" class="va-link">
+        <router-link
+          :to="`/datasets/${rowData.id}`"
+          :data-testid="`assoc-dataset-link-${rowData.id}`"
+          class="va-link"
+        >
           {{ rowData.name }}
         </router-link>
       </template>

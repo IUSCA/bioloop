@@ -2,7 +2,10 @@
   <div class="flex justify-center">
     <div class="w-full flex-none">
       <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
-      <DuplicationAlerts v-if="dataset" :dataset="dataset" />
+      <DuplicationAlerts
+        v-if="dataset && auth.isFeatureEnabled('duplicate_detection')"
+        :dataset="dataset"
+      />
 
       <va-inner-loading :loading="data_loading">
         <!-- BreadCrumbs Navigation / Search Filters -->
@@ -43,7 +46,10 @@
 import datasetService from "@/services/dataset";
 import { filterByValues } from "@/services/utils";
 import { useFileBrowserStore } from "@/stores/fileBrowser";
+import { useAuthStore } from "@/stores/auth";
 import { storeToRefs } from "pinia";
+
+const auth = useAuthStore();
 
 const store = useFileBrowserStore();
 const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
@@ -68,14 +74,11 @@ const fetch_files = () => {
 function get_file_list(path) {
   data_loading.value = true;
   Promise.all([
-    // If a dataset has been duplicated after a user initiates downloading that
-    // dataset's file, the user needs to know. Hence, we re-retrieve the dataset
-    // with its duplication details every time a file is downloaded. If the
-    // dataset has been duplicated, the user sees an alert after the file
-    // download begins.
+    // Re-fetches the dataset (including duplication state when enabled) so that
+    // any duplication alert is current at the time of file access.
     datasetService.getById({
       id: props.datasetId,
-      include_duplications: true,
+      include_duplications: auth.isFeatureEnabled('duplicate_detection'),
       include_states: true,
       include_action_items: true,
     }),

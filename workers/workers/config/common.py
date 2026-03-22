@@ -68,6 +68,7 @@ config = {
         'RAW_DATA': {
             'source_dir': '/path/to/source/raw_data',
             'rejects': ['.snapshots'],
+            'duplicates_testing_dir': '/path/to/duplicates_testing',
         },
         'DATA_PRODUCT': {
             'source_dir': '/path/to/source/data_products',
@@ -129,22 +130,6 @@ config = {
                 {
                     'name': 'purge resources',
                     'task': 'purge_duplicate_dataset_resources'
-                },
-            ]
-        },
-        'handle_duplicate_dataset': {
-            'steps': [
-                {
-                    'name': 'await stability',
-                    'task': 'await_stability'
-                },
-                {
-                    'name': 'inspect',
-                    'task': 'inspect_dataset'
-                },
-                {
-                    'name': 'compare duplicate datasets',
-                    'task': 'compare_duplicate_datasets'
                 },
             ]
         },
@@ -227,11 +212,12 @@ config = {
         'OVERWRITTEN': 'OVERWRITTEN',
         'DELETED': 'DELETED',
     },
-    'ACTION_ITEM_TYPES': {
-        'DUPLICATE_DATASET_INGESTION': 'DUPLICATE_DATASET_INGESTION',
-    },
-    'dry_run_features': {
-        'dataset_duplication': True
+    'enabled_features': {
+        'duplicate_detection': {
+            'enabled': True,
+            'jaccard_threshold': 0.85,
+            'concurrent_inspection_wait_timeout_seconds': 7200,
+        },
     },
     'inspect': {
         'file_metadata_batch_size': 25000

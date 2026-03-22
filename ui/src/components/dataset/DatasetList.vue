@@ -10,6 +10,7 @@
           :placeholder="`Search ${props.label.toLowerCase()}`"
           outline
           clearable
+          data-testid="dataset-list-search"
           @update:model-value="handleMainFilter"
         >
           <template #prependInner>
@@ -41,11 +42,14 @@
       v-model:sorting-order="query.sort_order"
       disable-client-side-sorting
       :loading="data_loading"
+      data-testid="dataset-list-table"
     >
       <template #cell(name)="{ rowData }">
-        <router-link :to="`/datasets/${rowData.id}`" class="va-link">{{
-          rowData.name
-        }}</router-link>
+        <router-link
+          :to="`/datasets/${rowData.id}`"
+          :data-testid="`dataset-list-link-${rowData.id}`"
+          class="va-link"
+        >{{ rowData.name }}</router-link>
       </template>
 
       <template #cell(created_at)="{ value }">

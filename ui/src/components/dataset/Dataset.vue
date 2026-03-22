@@ -1,7 +1,11 @@
 <template>
   <va-inner-loading :loading="loading">
     <!-- Alerts to be shown if this dataset has been duplicated or is a duplicate -->
-    <DuplicationAlerts :dataset="dataset" class="mb-2" />
+    <DuplicationAlerts
+      v-if="auth.isFeatureEnabled('duplicate_detection')"
+      :dataset="dataset"
+      class="mb-2"
+    />
 
     <!-- Content -->
     <div class="flex flex-col gap-3">
@@ -14,11 +18,16 @@
               <!-- <span class="text-xl">Info</span> -->
               <div class="flex flex-nowrap items-center w-full">
                 <span class="flex-auto text-lg"> Info </span>
-                <AddEditButton
-                  class="flex-none"
-                  edit
-                  @click="openModalToEditDataset"
-                />
+                <span
+                  v-if="!dataset.is_deleted"
+                  data-testid="dataset-edit-btn"
+                >
+                  <AddEditButton
+                    class="flex-none"
+                    edit
+                    @click="openModalToEditDataset"
+                  />
+                </span>
               </div>
             </va-card-title>
             <va-card-content>
@@ -26,7 +35,8 @@
               <div class="flex justify-end mt-3 pr-3 gap-3">
                 <!-- file browser -->
                 <va-button
-                  :disabled="!dataset.num_files"
+                  data-testid="browse-files-btn"
+                  :disabled="!dataset.num_files || !!dataset.is_deleted"
                   preset="primary"
                   @click="navigateToFileBrowser"
                   class="flex-none"
@@ -383,9 +393,8 @@ function fetch_dataset(show_loading = false) {
     id: props.datasetId,
     bundle: true,
     initiator: true,
-    include_duplications: true,
+    include_duplications: auth.isFeatureEnabled('duplicate_detection'),
     include_states: true,
-    include_action_items: true,
     include_source_instrument: true,
   })
     .then((res) => {
