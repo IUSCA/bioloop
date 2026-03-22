@@ -190,6 +190,7 @@ model user {
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
   owned_import_sources       import_source[]
+  revoked_workflows          workflow[]          @relation("revoked_workflows")
 }
 
 model user_password {
@@ -284,6 +285,8 @@ model workflow {
   dataset      dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
   initiator_id Int?
   initiator    user?    @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
+  revoked_by_id Int?
+  revoked_by    user?    @relation("revoked_workflows", fields: [revoked_by_id], references: [id], onDelete: SetNull)
 }
 
 model metric {

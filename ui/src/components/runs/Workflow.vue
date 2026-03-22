@@ -81,6 +81,19 @@
       </div>
 
       <va-divider />
+      
+      <!-- Workflow Info -->
+      <div v-if="workflow.status === 'REVOKED' && workflow.revoked_by" class="flex justify-end mb-2 px-4 text-sm va-text-secondary">
+          <va-popover
+            :message="`Email: ${workflow.revoked_by.email}`"
+            placement="top"
+            :hover-over-timeout="500"
+          >
+            <span>
+              Revoked by: {{ workflow.revoked_by.name }} ({{ workflow.revoked_by.username }})
+            </span>
+          </va-popover>
+      </div>
 
       <!-- Actions -->
       <div class="flex justify-end">

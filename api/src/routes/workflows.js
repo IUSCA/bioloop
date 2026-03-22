@@ -104,11 +104,15 @@ router.get(
         },
         include: {
           initiator: true,
+          revoked_by: true,
         },
       });
 
-      const id_initiator_map = rows.reduce((acc, wf) => {
-        acc[wf.id] = wf.initiator;
+      const id_user_map = rows.reduce((acc, wf) => {
+        acc[wf.id] = {
+          initiator: wf.initiator,
+          revoked_by: wf.revoked_by,
+        };
         return acc;
       }, {});
 
@@ -122,7 +126,8 @@ router.get(
           return {
             ...wf,
             dataset_id: app_workflow?.dataset_id,
-            initiator: id_initiator_map[wf.id],
+            initiator: id_user_map[wf.id]?.initiator,
+            revoked_by: id_user_map[wf.id]?.revoked_by,
           };
         }),
       });
@@ -355,7 +360,16 @@ router.get(
         req.query.last_task_runs,
         req.query.prev_task_runs,
       );
-      res.json(api_res.data);
+
+      const app_wf = await prisma.workflow.findUnique({
+        where: { id: req.params.id },
+        include: { revoked_by: true },
+      });
+
+      res.json({
+        ...api_res.data,
+        revoked_by: app_wf?.revoked_by,
+      });
     },
   ),
 );
@@ -367,6 +381,13 @@ router.post(
     async (req, res, next) => {
       // #swagger.tags = ['Workflow']
       const api_res = await wf_service.pause(req.params.id);
+
+      await prisma.workflow.upsert({
+        where: { id: req.params.id },
+        update: { revoked_by_id: req.user.id },
+        create: { id: req.params.id, revoked_by_id: req.user.id },
+      });
+
       res.json(api_res.data);
     },
   ),
