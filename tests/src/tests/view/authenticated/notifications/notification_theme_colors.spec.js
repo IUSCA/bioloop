@@ -52,12 +52,10 @@ test.describe.serial('Notifications theme colors', () => {
 
   test('top controls and active chips keep mapped theme colors', async ({ page }) => {
     await page.getByTestId('filter-read').click();
-    await page.getByTestId('filter-archived').click();
     await page.getByTestId('filter-bookmarked').click();
     await page.getByTestId('filter-globally-dismissed').click();
 
     await expect(page.getByTestId('active-filter-chip-read')).toBeVisible();
-    await expect(page.getByTestId('active-filter-chip-archived')).toBeVisible();
     await expect(page.getByTestId('active-filter-chip-bookmarked')).toBeVisible();
     await expect(page.getByTestId('active-filter-chip-globally-dismissed')).toBeVisible();
 
@@ -65,11 +63,6 @@ test.describe.serial('Notifications theme colors', () => {
       page,
       locator: page.getByTestId('filter-read'),
       cssVarName: '--va-info',
-    });
-    await expectElementColor({
-      page,
-      locator: page.getByTestId('filter-archived'),
-      cssVarName: '--va-warning',
     });
     await expectElementColor({
       page,
@@ -89,11 +82,6 @@ test.describe.serial('Notifications theme colors', () => {
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId('active-filter-chip-archived'),
-      cssVarName: '--va-warning',
-    });
-    await expectElementColor({
-      page,
       locator: page.getByTestId('active-filter-chip-bookmarked'),
       cssVarName: '--va-success',
     });
@@ -102,6 +90,39 @@ test.describe.serial('Notifications theme colors', () => {
       locator: page.getByTestId('active-filter-chip-globally-dismissed'),
       cssVarName: '--va-danger',
     });
+  });
+
+  test('notification panel and backdrop are opaque in both light and dark modes', async ({ page }) => {
+    const assertPanelMasking = async () => {
+      await openNotificationsMenu(page);
+      const opacity = await page.evaluate(() => {
+        const parseAlpha = (color) => {
+          if (!color || color === 'transparent') return 0;
+          const rgba = color.match(/^rgba?\(([^)]+)\)$/i);
+          if (!rgba) return 1;
+          const parts = rgba[1].split(',').map((x) => x.trim());
+          return parts.length >= 4 ? Number(parts[3]) : 1;
+        };
+        const panel = document.querySelector('[data-testid="notification-menu-items"]');
+        const backdrop = document.querySelector('[data-testid="notification-menu-backdrop"]');
+        if (!(panel instanceof HTMLElement) || !(backdrop instanceof HTMLElement)) {
+          return { panelAlpha: 0, backdropAlpha: 0 };
+        }
+        return {
+          panelAlpha: parseAlpha(window.getComputedStyle(panel).backgroundColor),
+          backdropAlpha: parseAlpha(window.getComputedStyle(backdrop).backgroundColor),
+        };
+      });
+      expect(opacity.panelAlpha).toBeGreaterThan(0.95);
+      expect(opacity.backdropAlpha).toBeGreaterThan(0.1);
+    };
+
+    await assertPanelMasking();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('notification-menu-items')).toHaveCount(0);
+    await page.getByTestId('theme-toggle').click();
+    await page.waitForTimeout(120);
+    await assertPanelMasking();
   });
 
   test('notification action controls keep mapped theme colors', async ({ page }) => {
@@ -133,11 +154,6 @@ test.describe.serial('Notifications theme colors', () => {
       page,
       locator: page.getByTestId(`notification-${created.id}-toggle-bookmark`),
       cssVarName: '--va-success',
-    });
-    await expectElementColor({
-      page,
-      locator: page.getByTestId(`notification-${created.id}-toggle-archive`),
-      cssVarName: '--va-warning',
     });
     await expectElementColor({
       page,

@@ -20,8 +20,8 @@ test.describe.serial('Notifications responsive layout', () => {
   test('menu width stays deterministic and top controls follow breakpoint columns', async ({ page }) => {
     const cases = [
       { width: 700, expectedColumns: 3, expectedMenuWidth: 448 },
-      { width: 900, expectedColumns: 6, expectedMenuWidth: 512 },
-      { width: 1100, expectedColumns: 6, expectedMenuWidth: 576 },
+      { width: 900, expectedColumns: 5, expectedMenuWidth: 512 },
+      { width: 1100, expectedColumns: 5, expectedMenuWidth: 576 },
     ];
 
     for (const c of cases) {
@@ -83,9 +83,8 @@ test.describe.serial('Notifications responsive layout', () => {
       const metrics = await page.evaluate((id) => {
         const read = document.querySelector(`[data-testid="notification-${id}-toggle-read"]`);
         const bookmark = document.querySelector(`[data-testid="notification-${id}-toggle-bookmark"]`);
-        const archive = document.querySelector(`[data-testid="notification-${id}-toggle-archive"]`);
         const globalDismiss = document.querySelector(`[data-testid="notification-${id}-global-dismiss"]`);
-        const buttons = [read, bookmark, archive, globalDismiss].filter(Boolean);
+        const buttons = [read, bookmark, globalDismiss].filter(Boolean);
         const rects = buttons.map((b) => b.getBoundingClientRect());
         return {
           count: buttons.length,
@@ -94,9 +93,9 @@ test.describe.serial('Notifications responsive layout', () => {
         };
       }, created.id);
 
-      // Admin/operator view should expose 4 actions in one row.
+      // Admin/operator view should expose 3 actions in one row.
       // eslint-disable-next-line no-await-in-loop
-      expect(metrics.count).toBe(4);
+      expect(metrics.count).toBe(3);
       // eslint-disable-next-line no-await-in-loop
       expect(Math.max(...metrics.widths) - Math.min(...metrics.widths)).toBeLessThanOrEqual(2);
       // Same-row check: all buttons share effectively the same y-position.

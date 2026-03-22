@@ -172,11 +172,6 @@ const exports = {
         iconOn: "mdi:email-open",
         iconOff: "mdi:email-open-outline",
       },
-      archived: {
-        color: "warning",
-        iconOn: "mdi:archive",
-        iconOff: "mdi:archive-outline",
-      },
       bookmarked: {
         color: "success",
         iconOn: "mdi:bookmark",
@@ -194,7 +189,6 @@ const exports = {
     actions: {
       read: { color: "info", icon: "mdi:email-open-outline" },
       bookmark: { color: "success", icon: "mdi:bookmark-outline" },
-      archive: { color: "warning", icon: "mdi:archive-outline" },
       globalDismiss: { color: "danger", icon: "mdi:eye-off-outline" },
       link: { color: "primary", icon: "mdi:open-in-new" },
     },

@@ -156,7 +156,6 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
     metadata,
     state: {
       is_read: row.is_read,
-      is_archived: row.is_archived,
       is_bookmarked: row.is_bookmarked,
     },
     delivery,
@@ -177,13 +176,12 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
  * Undefined filter values are omitted so only explicitly set filters apply.
  * Search matches against notification label or text (case-insensitive).
  *
- * @param {{ userId: number, read?: boolean, archived?: boolean, bookmarked?: boolean, globallyDismissed?: boolean, search?: string }} opts
+ * @param {{ userId: number, read?: boolean, bookmarked?: boolean, globallyDismissed?: boolean, search?: string }} opts
  * @returns {Object} Prisma where clause for notification_recipient.findMany
  */
 function buildNotificationWhere({
   userId,
   read,
-  archived,
   bookmarked,
   globallyDismissed,
   search,
@@ -208,7 +206,6 @@ function buildNotificationWhere({
   return _.omitBy(_.isUndefined)({
     user_id: userId,
     is_read: read,
-    is_archived: archived,
     is_bookmarked: bookmarked,
     notification: notificationWhere,
   });
@@ -220,7 +217,7 @@ function buildNotificationWhere({
  *
  * Query params consumed from req.query:
  *   limit (1-100, default 20), offset (>=0, default 0),
- *   read, archived, bookmarked, globally_dismissed, search
+ *   read, bookmarked, globally_dismissed, search
  *
  * @param {{ req: import('express').Request }} opts
  * @returns {Promise<{ items: Object[], total: number, offset: number, limit: number, has_more: boolean }>}
@@ -232,7 +229,6 @@ async function fetchCurrentUserNotifications({ req }) {
   const where = buildNotificationWhere({
     userId: req.user.id,
     read: req.query.read,
-    archived: req.query.archived,
     bookmarked: req.query.bookmarked,
     globallyDismissed,
     search: req.query.search,

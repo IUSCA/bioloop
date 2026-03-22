@@ -119,29 +119,6 @@
         preset="secondary"
         block
         class="notification-state-action-button"
-        :color="theme.actions.archive.color"
-        :data-testid="`notification-${notification.id}-toggle-archive`"
-        tabindex="0"
-        :disabled="disabled"
-        @click="$emit('toggle-archived', notification)"
-        @keydown.enter.prevent="$emit('toggle-archived', notification)"
-        @keydown.space.prevent="$emit('toggle-archived', notification)"
-      >
-        <Icon
-          :icon="
-            notification.state.is_archived
-              ? 'mdi:archive-arrow-up-outline'
-              : theme.actions.archive.icon
-          "
-          class="mr-1"
-        />
-        {{ notification.state.is_archived ? "Unarchive" : "Archive" }}
-      </va-button>
-      <va-button
-        size="small"
-        preset="secondary"
-        block
-        class="notification-state-action-button"
         :color="theme.actions.globalDismiss.color"
         :data-testid="`notification-${notification.id}-global-dismiss`"
         tabindex="0"
@@ -204,7 +181,6 @@ const props = defineProps({
 });
 defineEmits([
   "toggle-read",
-  "toggle-archived",
   "toggle-bookmarked",
   "toggle-global-dismiss",
 ]);
@@ -242,8 +218,8 @@ const showChipsRow = computed(
 const actionButtonsCount = computed(() =>
   props.notification.can_global_dismiss &&
   !props.notification.global_dismissal?.is_globally_dismissed
-    ? 4
-    : 3,
+    ? 3
+    : 2,
 );
 
 function openLink(link) {
@@ -287,5 +263,9 @@ function confirmUntrustedNavigation() {
 
 .notification-state-action-button {
   width: 100%;
+}
+
+.notification-state-action-button:deep(.va-button--disabled) {
+  opacity: 0.92;
 }
 </style>

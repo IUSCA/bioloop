@@ -28,7 +28,6 @@ export const useNotificationStore = defineStore("notification", () => {
   const hasMoreNotifications = ref(false);
   const filters = ref({
     read: false,
-    archived: false,
     bookmarked: null,
     globallyDismissed: false,
     search: "",
@@ -88,7 +87,6 @@ export const useNotificationStore = defineStore("notification", () => {
   function clearFilters() {
     filters.value = {
       read: false,
-      archived: false,
       bookmarked: null,
       globallyDismissed: false,
       search: "",
@@ -110,7 +108,6 @@ export const useNotificationStore = defineStore("notification", () => {
         forSelf,
         username,
         read: false,
-        archived: false,
         bookmarked: null,
         globally_dismissed: false,
         search: null,
@@ -156,7 +153,6 @@ export const useNotificationStore = defineStore("notification", () => {
         forSelf,
         username,
         read: filters.value.read,
-        archived: filters.value.archived,
         bookmarked: filters.value.bookmarked,
         globally_dismissed: filters.value.globallyDismissed,
         search: filters.value.search || null,

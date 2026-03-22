@@ -47,7 +47,7 @@ test.describe('Notifications', () => {
     await expect(menu).toContainText(/No pending notifications|No globally dismissed notifications/);
   });
 
-  test('user can update own read/bookmark/archive states', async ({ page }) => {
+  test('user can update own read and bookmark states', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('notification-open-button')).toBeVisible();
@@ -69,14 +69,6 @@ test.describe('Notifications', () => {
     await expect(page.getByTestId(labelById)).toBeVisible();
     await page.locator('[data-testid="active-filter-chip-bookmarked-clear"]:visible').click();
 
-    await page.getByTestId(`notification-${created.id}-toggle-archive`).click();
-    await expect(page.getByTestId(labelById)).toHaveCount(0);
-    await page.getByTestId('filter-archived').click();
-    await expect(page.getByTestId(labelById)).toBeVisible();
-
-    await page.getByTestId(`notification-${created.id}-toggle-archive`).click();
-    await page.locator('[data-testid="active-filter-chip-archived-clear"]:visible').click();
-    await expect(page.getByTestId(labelById)).toBeVisible();
     await page.getByTestId(`notification-${created.id}-toggle-read`).click();
     await expect(page.getByTestId(labelById)).toHaveCount(0);
     await page.getByTestId('filter-read').click();

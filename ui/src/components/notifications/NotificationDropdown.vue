@@ -26,6 +26,12 @@
 
     <div
       v-if="isMenuOpen"
+      class="notification-menu-backdrop"
+      data-testid="notification-menu-backdrop"
+      @click="closeNotificationMenu"
+    />
+    <div
+      v-if="isMenuOpen"
       ref="menuPanelRef"
       class="notification-menu-panel notification-menu-panel--anchored flex flex-col max-h-96"
       data-testid="notification-menu-items"
@@ -36,7 +42,7 @@
         class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
       >
           <div class="notification-top-controls">
-            <va-popover message="Unread filter">
+            <va-popover message="Filter Unread">
               <va-button
                 ref="firstTopControlRef"
                 preset="secondary"
@@ -50,7 +56,8 @@
                 "
                 data-testid="filter-unread"
                 aria-label="Unread filter"
-                :disabled="mutationPending"
+                title="Filter Unread"
+                :disabled="controlsDisabled"
                 @click="toggleUnreadFilter"
                 @keydown.enter.prevent="toggleUnreadFilter"
                 @keydown.space.prevent="toggleUnreadFilter"
@@ -64,7 +71,7 @@
                 />
               </va-button>
             </va-popover>
-            <va-popover message="Read filter">
+            <va-popover message="Filter Read">
               <va-button
                 preset="secondary"
                 size="small"
@@ -75,7 +82,8 @@
                 "
                 data-testid="filter-read"
                 aria-label="Read filter"
-                :disabled="mutationPending"
+                title="Filter Read"
+                :disabled="controlsDisabled"
                 @click="toggleReadFilter"
                 @keydown.enter.prevent="toggleReadFilter"
                 @keydown.space.prevent="toggleReadFilter"
@@ -89,34 +97,7 @@
                 />
               </va-button>
             </va-popover>
-            <va-popover message="Archived filter">
-              <va-button
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                :color="
-                  isArchivedFilterActive
-                    ? theme.filters.archived.color
-                    : 'secondary'
-                "
-                data-testid="filter-archived"
-                aria-label="Archived filter"
-                :disabled="mutationPending"
-                @click="toggleArchivedFilter"
-                @keydown.enter.prevent="toggleArchivedFilter"
-                @keydown.space.prevent="toggleArchivedFilter"
-              >
-                <Icon
-                  :icon="
-                    isArchivedFilterActive
-                      ? theme.filters.archived.iconOn
-                      : theme.filters.archived.iconOff
-                  "
-                />
-              </va-button>
-            </va-popover>
-            <va-popover message="Bookmark filter">
+            <va-popover message="Filter Bookmarked">
               <va-button
                 preset="secondary"
                 size="small"
@@ -129,7 +110,8 @@
                 "
                 data-testid="filter-bookmarked"
                 aria-label="Bookmark filter"
-                :disabled="mutationPending"
+                title="Filter Bookmarked"
+                :disabled="controlsDisabled"
                 @click="toggleBookmarkedFilter"
                 @keydown.enter.prevent="toggleBookmarkedFilter"
                 @keydown.space.prevent="toggleBookmarkedFilter"
@@ -143,7 +125,7 @@
                 />
               </va-button>
             </va-popover>
-            <va-popover message="Globally dismissed filter">
+            <va-popover message="Filter Globally Dismissed">
               <va-button
                 preset="secondary"
                 size="small"
@@ -156,7 +138,8 @@
                 "
                 data-testid="filter-globally-dismissed"
                 aria-label="Globally dismissed filter"
-                :disabled="mutationPending"
+                title="Filter Globally Dismissed"
+                :disabled="controlsDisabled"
                 @click="toggleGloballyDismissedFilter"
                 @keydown.enter.prevent="toggleGloballyDismissedFilter"
                 @keydown.space.prevent="toggleGloballyDismissedFilter"
@@ -178,7 +161,8 @@
                 class="notification-top-control-button"
                 data-testid="mark-all-read"
                 aria-label="Mark all as read"
-                :disabled="mutationPending"
+                title="Mark all as read"
+                :disabled="controlsDisabled"
                 @click="onMarkAllRead"
                 @keydown.enter.prevent="onMarkAllRead"
                 @keydown.space.prevent="onMarkAllRead"
@@ -200,7 +184,7 @@
               class="notification-clear-filters-button"
               data-testid="clear-notification-filters"
               aria-label="Clear filters"
-              :disabled="mutationPending"
+              :disabled="controlsDisabled"
               @click="handleClearFilters"
             >
               <Icon icon="mdi:filter-remove-outline" />
@@ -222,30 +206,10 @@
                 aria-label="Clear Read filter"
                 data-testid="active-filter-chip-read-clear"
                 tabindex="0"
-                :disabled="mutationPending"
+                :disabled="controlsDisabled"
                 @click.prevent.stop="clearReadFilter"
                 @keydown.enter.prevent.stop="clearReadFilter"
                 @keydown.space.prevent.stop="clearReadFilter"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div
-              v-if="isArchivedFilterActive"
-              class="notification-filter-chip notification-filter-chip--warning"
-              data-testid="active-filter-chip-archived"
-            >
-              Archived
-              <button
-                type="button"
-                class="notification-filter-chip__clear"
-                aria-label="Clear Archived filter"
-                data-testid="active-filter-chip-archived-clear"
-                tabindex="0"
-                :disabled="mutationPending"
-                @click.prevent.stop="clearArchivedFilter"
-                @keydown.enter.prevent.stop="clearArchivedFilter"
-                @keydown.space.prevent.stop="clearArchivedFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
@@ -262,7 +226,7 @@
                 aria-label="Clear Bookmarked filter"
                 data-testid="active-filter-chip-bookmarked-clear"
                 tabindex="0"
-                :disabled="mutationPending"
+                :disabled="controlsDisabled"
                 @click.prevent.stop="clearBookmarkedFilter"
                 @keydown.enter.prevent.stop="clearBookmarkedFilter"
                 @keydown.space.prevent.stop="clearBookmarkedFilter"
@@ -282,7 +246,7 @@
                 aria-label="Clear Globally Dismissed filter"
                 data-testid="active-filter-chip-globally-dismissed-clear"
                 tabindex="0"
-                :disabled="mutationPending"
+                :disabled="controlsDisabled"
                 @click.prevent.stop="clearGloballyDismissedFilter"
                 @keydown.enter.prevent.stop="clearGloballyDismissedFilter"
                 @keydown.space.prevent.stop="clearGloballyDismissedFilter"
@@ -302,7 +266,7 @@
                 aria-label="Clear Search filter"
                 data-testid="active-filter-chip-search-clear"
                 tabindex="0"
-                :disabled="mutationPending"
+                :disabled="controlsDisabled"
                 @click.prevent.stop="clearSearchFilter"
                 @keydown.enter.prevent.stop="clearSearchFilter"
                 @keydown.space.prevent.stop="clearSearchFilter"
@@ -317,7 +281,7 @@
               class="notification-search-input"
               placeholder="Search notifications"
               clearable
-              :disabled="mutationPending"
+              :disabled="controlsDisabled"
               @keydown.stop="onSearchInputKeydown"
               @keydown.shift.tab.prevent.stop="onSearchShiftTab"
               @click.capture="onSearchInputClick"
@@ -355,9 +319,8 @@
             >
               <notification
                 :notification="notification"
-                :disabled="mutationPending"
+                :disabled="controlsDisabled"
                 @toggle-read="onToggleRead"
-                @toggle-archived="onToggleArchived"
                 @toggle-bookmarked="onToggleBookmarked"
                 @toggle-global-dismiss="onGlobalDismiss"
               ></notification>
@@ -435,18 +398,19 @@ const notificationOpenButtonRef = ref(null);
 const displayedNotifications = computed(() => notifications.value);
 const isUnreadFilterActive = computed(() => filters.value.read === false);
 const isReadFilterActive = computed(() => filters.value.read === true);
-const isArchivedFilterActive = computed(() => filters.value.archived === true);
 const isBookmarkedFilterActive = computed(
   () => filters.value.bookmarked === true,
 );
 const isGloballyDismissedFilterActive = computed(
   () => filters.value.globallyDismissed === true,
 );
+const controlsDisabled = computed(
+  () => listFetching.value || mutationPending.value,
+);
 
 const hasActiveFilters = computed(() => {
   return (
     isReadFilterActive.value ||
-    isArchivedFilterActive.value ||
     isBookmarkedFilterActive.value ||
     isGloballyDismissedFilterActive.value ||
     Boolean(activeSearchFilter.value)
@@ -461,7 +425,6 @@ const badgeCount = computed(() => {
 const hasActiveFilterChips = computed(() => {
   return (
     isReadFilterActive.value ||
-    isArchivedFilterActive.value ||
     isBookmarkedFilterActive.value ||
     isGloballyDismissedFilterActive.value ||
     Boolean(activeSearchFilter.value)
@@ -502,7 +465,6 @@ function focusFirstMenuControlSoon() {
     const anchor =
       panel?.querySelector('[data-testid="filter-unread"]')
       || panel?.querySelector('[data-testid="filter-read"]')
-      || panel?.querySelector('[data-testid="filter-archived"]')
       || panel?.querySelector('[data-testid="filter-bookmarked"]')
       || panel?.querySelector('[data-testid="filter-globally-dismissed"]')
       || panel?.querySelector('[data-testid="clear-notification-filters"]')
@@ -644,16 +606,6 @@ function clearReadFilter() {
   fetchNotifications(notificationQueryOpts.value);
 }
 
-function toggleArchivedFilter() {
-  setFilter("archived", !filters.value.archived);
-  fetchNotifications(notificationQueryOpts.value);
-}
-
-function clearArchivedFilter() {
-  setFilter("archived", false);
-  fetchNotifications(notificationQueryOpts.value);
-}
-
 function toggleBookmarkedFilter() {
   const nextValue = filters.value.bookmarked === true ? null : true;
   setFilter("bookmarked", nextValue);
@@ -685,16 +637,6 @@ function onToggleRead(notification) {
     notification.id,
     {
       is_read: !notification.state.is_read,
-    },
-    notificationQueryOpts.value,
-  );
-}
-
-function onToggleArchived(notification) {
-  updateNotificationState(
-    notification.id,
-    {
-      is_archived: !notification.state.is_archived,
     },
     notificationQueryOpts.value,
   );
@@ -796,7 +738,7 @@ onUnmounted(() => {
 
 .notification-top-controls {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.5rem;
   width: 100%;
   padding-bottom: 0.125rem;
@@ -822,8 +764,14 @@ onUnmounted(() => {
 }
 
 .notification-clear-filters-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  opacity: 0.9;
+  cursor: default;
+}
+
+.notification-clear-filters-button:focus,
+.notification-clear-filters-button:focus-visible {
+  outline: 2px solid var(--va-primary);
+  outline-offset: 2px;
 }
 
 .notification-top-control-button :deep(.va-button__content) {
@@ -832,9 +780,17 @@ onUnmounted(() => {
 
 /* Keep menu width deterministic per app breakpoint thresholds from ui/vuestic.config.js */
 .notification-menu-panel {
+  background: var(--va-background-element);
   width: min(22rem, calc(100vw - 1rem));
   min-width: min(22rem, calc(100vw - 1rem));
   max-width: min(22rem, calc(100vw - 1rem));
+}
+
+.notification-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--va-z-index-teleport-overlay, 9) - 1);
+  background: color-mix(in srgb, var(--va-background-primary) 64%, transparent);
 }
 
 .notification-menu-panel--anchored {
@@ -895,10 +851,21 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+.notification-filter-chip__clear:focus,
 .notification-filter-chip__clear:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
   border-radius: 9999px;
+}
+
+.notification-filter-chip__clear:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.notification-top-control-button:deep(.va-button--disabled),
+.notification-search-input:deep(.va-input-wrapper--disabled) {
+  opacity: 0.92;
 }
 
 .notification-filter-chip--primary {

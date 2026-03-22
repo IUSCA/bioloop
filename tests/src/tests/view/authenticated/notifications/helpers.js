@@ -18,7 +18,6 @@ const { post } = require('../../../../api');
 const labelById = (id) => `notification-${id}-label`;
 const toggleReadById = (id) => `notification-${id}-toggle-read`;
 const toggleBookmarkById = (id) => `notification-${id}-toggle-bookmark`;
-const toggleArchiveById = (id) => `notification-${id}-toggle-archive`;
 const globalDismissById = (id) => `notification-${id}-global-dismiss`;
 const countContains = (count) => new RegExp(`\\b${count}\\b`);
 const currentRole = (projectName) => (projectName.includes('operator') ? 'operator' : 'admin');
@@ -222,15 +221,29 @@ const createDirectNotificationForUser = async ({ page, label, text, metadata = {
 };
 
 const expectHeaderControlsDisabled = async (page) => {
+  await expect(page.getByTestId('filter-unread')).toBeDisabled();
   await expect(page.getByTestId('filter-read')).toBeDisabled();
   await expect(page.getByTestId('filter-bookmarked')).toBeDisabled();
+  await expect(page.getByTestId('filter-globally-dismissed')).toBeDisabled();
+  await expect(page.getByTestId('mark-all-read')).toBeDisabled();
   await expect(searchInput(page)).toBeDisabled();
+  const clearFilters = page.getByTestId('clear-notification-filters');
+  if (await clearFilters.count()) {
+    await expect(clearFilters).toBeDisabled();
+  }
 };
 
 const expectHeaderControlsEnabled = async (page) => {
+  await expect(page.getByTestId('filter-unread')).toBeEnabled();
   await expect(page.getByTestId('filter-read')).toBeEnabled();
   await expect(page.getByTestId('filter-bookmarked')).toBeEnabled();
+  await expect(page.getByTestId('filter-globally-dismissed')).toBeEnabled();
+  await expect(page.getByTestId('mark-all-read')).toBeEnabled();
   await expect(searchInput(page)).toBeEnabled();
+  const clearFilters = page.getByTestId('clear-notification-filters');
+  if (await clearFilters.count()) {
+    await expect(clearFilters).toBeEnabled();
+  }
 };
 
 /**
@@ -396,7 +409,6 @@ module.exports = {
   expectSearchFilterChipHidden,
   refreshNotificationView,
   searchInput,
-  toggleArchiveById,
   toggleBookmarkById,
   toggleReadById,
 };

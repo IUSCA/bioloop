@@ -8,7 +8,7 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['notifications']
   // #swagger.summary = Update current user's per-notification state
 
-  const hasStateUpdate = ['is_read', 'is_archived', 'is_bookmarked'].some((key) => req.body[key] !== undefined);
+  const hasStateUpdate = ['is_read', 'is_bookmarked'].some((key) => req.body[key] !== undefined);
   if (!hasStateUpdate) {
     return next(createError.BadRequest('At least one state field must be provided'));
   }
@@ -18,11 +18,6 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
   else if (req.body.is_read) readAt = new Date();
   else readAt = null;
 
-  let archivedAt;
-  if (req.body.is_archived === undefined) archivedAt = undefined;
-  else if (req.body.is_archived) archivedAt = new Date();
-  else archivedAt = null;
-
   let bookmarkedAt;
   if (req.body.is_bookmarked === undefined) bookmarkedAt = undefined;
   else if (req.body.is_bookmarked) bookmarkedAt = new Date();
@@ -31,8 +26,6 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
   const data = _.omitBy(_.isUndefined)({
     is_read: req.body.is_read,
     read_at: readAt,
-    is_archived: req.body.is_archived,
-    archived_at: archivedAt,
     is_bookmarked: req.body.is_bookmarked,
     bookmarked_at: bookmarkedAt,
   });
@@ -86,7 +79,6 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
     user_id: req.user.id,
     state: {
       is_read: updated.is_read,
-      is_archived: updated.is_archived,
       is_bookmarked: updated.is_bookmarked,
     },
   });

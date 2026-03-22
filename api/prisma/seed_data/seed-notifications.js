@@ -3,7 +3,7 @@
  * seed-notifications.js
  *
  * Creates a representative set of test notifications for manual UI testing.
- * Covers all notification types, filter states (read/unread/archived/bookmarked),
+ * Covers all notification types and filter states (read/unread/bookmarked),
  * metadata features (links, role_overrides, role_addons), and one-off events.
  *
  * USAGE
@@ -42,12 +42,11 @@
  *
  *   Filter            Expected visible notifications
  *   ─────────────── ─────────────────────────────────────────────────────
- *   Default (none)  7 unread non-archived items
+ *   Default (none)  7 unread active items
  *   Unread          info.welcome, warning.quota, error.workflow,
  *                   success.upload, info.docs, workflow.nightly, info.new_user
  *   Read            dataset.approved, system.token
  *   Bookmarked      info.docs (unread), dataset.approved (read)
- *   Archived        system.maintenance
  *   Search "quota"  warning.quota
  *   Search "pipeline"  error.workflow, workflow.nightly
  *   Search "dataset"   warning.quota, success.upload, dataset.approved
@@ -102,7 +101,7 @@ if (userIdx !== -1 && args[userIdx + 1]) {
 //                minus the `recipients` field (added at runtime)
 //   targeting  — { type: 'direct' } | { type: 'role', roleName: '...' }
 //   state      — optional: initial recipient state for the target user
-//                { is_read, is_archived, is_bookmarked }
+//                { is_read, is_bookmarked }
 
 const STABLE_DEFINITIONS = [
 
@@ -196,7 +195,7 @@ const STABLE_DEFINITIONS = [
     state: { is_bookmarked: true, bookmarked_at: new Date() },
   },
 
-  // ── Archived; role broadcast to all admins ─────────────────────────────────
+  // ── Read; role broadcast to all admins ─────────────────────────────────────
   {
     seed_key: 'system.maintenance',
     data: {
@@ -206,7 +205,7 @@ const STABLE_DEFINITIONS = [
       metadata: { _seed_key: 'system.maintenance' },
     },
     targeting: { type: 'role', roleName: 'admin' },
-    state: { is_archived: true, archived_at: new Date() },
+    state: { is_read: true, read_at: new Date() },
   },
 
   // ── Read + bookmarked; 2 trusted internal links ────────────────────────────

@@ -14,7 +14,6 @@ class NotificationService {
    * @param {boolean} [opts.forSelf=false] - Use ownership-scoped endpoint
    * @param {string|null} [opts.username] - Required when forSelf is true
    * @param {boolean|null} [opts.read] - Filter by read state
-   * @param {boolean|null} [opts.archived] - Filter by archived state
    * @param {boolean|null} [opts.bookmarked] - Filter by bookmarked state
    * @param {boolean|null} [opts.globally_dismissed] - Filter by global dismissal
    * @param {string|null} [opts.search] - Free-text search across label/text
@@ -26,7 +25,6 @@ class NotificationService {
     forSelf = false,
     username = null,
     read = null,
-    archived = null,
     bookmarked = null,
     globally_dismissed = null,
     search = null,
@@ -37,7 +35,6 @@ class NotificationService {
     return api.get(path, {
       params: {
         read,
-        archived,
         bookmarked,
         globally_dismissed,
         search,
@@ -48,7 +45,7 @@ class NotificationService {
   }
 
   /**
-   * Updates per-user state (is_read, is_archived, is_bookmarked) for a notification.
+   * Updates per-user state (is_read, is_bookmarked) for a notification.
    * Returns 409 if the notification has been globally dismissed.
    * @param {number} id - Notification ID
    * @param {Object} data - State fields to update

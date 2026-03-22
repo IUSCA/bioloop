@@ -2,7 +2,6 @@ const express = require('express');
 const {
   query, body, param,
 } = require('express-validator');
-const _ = require('lodash/fp');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
@@ -46,7 +45,6 @@ router.get(
   validate([
     param('username').trim().notEmpty(),
     query('read').optional().isBoolean().toBoolean(),
-    query('archived').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
     query('globally_dismissed').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
@@ -66,7 +64,6 @@ router.get(
   isPermittedTo('read'),
   validate([
     query('read').optional().isBoolean().toBoolean(),
-    query('archived').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
     query('globally_dismissed').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
@@ -315,7 +312,6 @@ router.patch(
     param('username').trim().notEmpty(),
     param('id').isInt().toInt(),
     body('is_read').optional().isBoolean().toBoolean(),
-    body('is_archived').optional().isBoolean().toBoolean(),
     body('is_bookmarked').optional().isBoolean().toBoolean(),
   ]),
   updateNotificationStateHandler,
@@ -327,7 +323,6 @@ router.patch(
   validate([
     param('id').isInt().toInt(),
     body('is_read').optional().isBoolean().toBoolean(),
-    body('is_archived').optional().isBoolean().toBoolean(),
     body('is_bookmarked').optional().isBoolean().toBoolean(),
   ]),
   updateNotificationStateHandler,
@@ -403,58 +398,6 @@ router.patch(
       dismissed_at: updated.resolved_at,
       dismissed_by: updated.resolved_by,
     });
-  }),
-);
-
-router.delete(
-  '/',
-  isPermittedTo('delete'),
-  validate([
-    query('read').optional().isBoolean().toBoolean(),
-    query('archived').optional().isBoolean().toBoolean(),
-    query('bookmarked').optional().isBoolean().toBoolean(),
-    query('search').optional().trim().isLength({ min: 1 }),
-  ]),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Archive matching notifications for current user
-    const where = _.omitBy(_.isUndefined)({
-      user_id: req.user.id,
-      is_read: req.query.read,
-      is_archived: req.query.archived,
-      is_bookmarked: req.query.bookmarked,
-      notification: req.query.search ? {
-        OR: [
-          {
-            label: {
-              contains: req.query.search,
-              mode: 'insensitive',
-            },
-          },
-          {
-            text: {
-              contains: req.query.search,
-              mode: 'insensitive',
-            },
-          },
-        ],
-      } : undefined,
-    });
-
-    const updatedCount = await prisma.notification_recipient.updateMany({
-      where,
-      data: {
-        is_archived: true,
-        archived_at: new Date(),
-      },
-    });
-
-    publishNotificationInvalidation({
-      userIds: [req.user.id],
-      reason: 'bulk_archived',
-    });
-
-    res.json(updatedCount);
   }),
 );
 

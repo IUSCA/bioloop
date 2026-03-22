@@ -42,7 +42,6 @@ Notifications are split between:
 
 Per-recipient fields:
 - `is_read`
-- `is_archived`
 - `is_bookmarked`
 
 Global lifecycle fields:
@@ -59,7 +58,7 @@ Delivery metadata:
 
 ### Menu Structure
 
-- Top control row includes unread/read/archived/bookmarked/globally-dismissed toggles and mark-all-read.
+- Top control row includes unread/read/bookmarked/globally-dismissed toggles and mark-all-read.
 - Search input combines with active filters.
 - Active filters render as chips with explicit clear controls.
 - Row-level actions are available per notification card.
@@ -85,7 +84,7 @@ Delivery metadata:
 ### Listing and Pagination
 
 Supported query inputs:
-- filters: `read`, `archived`, `bookmarked`, `globally_dismissed`
+- filters: `read`, `bookmarked`, `globally_dismissed`
 - `search`
 - pagination: `limit`, `offset`
 
