@@ -80,6 +80,8 @@ services:
     environment:
       - WORKER_TYPE=celery_worker
       - APP_ENV=docker
+      - CELERY_AUTOSCALE_MAX=16
+      - CELERY_AUTOSCALE_MIN=4
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
       - db/queue/.env.default # For RabbitMQ connection settings

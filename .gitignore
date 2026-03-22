@@ -79,3 +79,4 @@ signet/signet
 
 .cursorrules
 .ai/
+workers/nohup.out

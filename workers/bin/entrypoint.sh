@@ -27,6 +27,9 @@ echo ".env loaded. Starting worker..."
 
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
+  CELERY_AUTOSCALE_MAX="${CELERY_AUTOSCALE_MAX:-16}"
+  CELERY_AUTOSCALE_MIN="${CELERY_AUTOSCALE_MIN:-4}"
+  echo "Celery autoscale configured to ${CELERY_AUTOSCALE_MAX},${CELERY_AUTOSCALE_MIN}"
   # Remove any stale PID file from a previous run.  Docker containers may be
   # restarted without a clean shutdown, leaving the file on the bind-mounted
   # volume.  Celery refuses to start if the PID file already exists.
@@ -37,7 +40,7 @@ if [ $WORKER_TYPE == "celery_worker" ]; then
     -O fair \
     --pidfile celery_worker.pid \
     --hostname 'bioloop-celery-w1@%h' \
-    --autoscale 8,3 \
+    --autoscale "${CELERY_AUTOSCALE_MAX},${CELERY_AUTOSCALE_MIN}" \
     --queues 'bioloop-dev.sca.iu.edu.q'
 elif [ $WORKER_TYPE == "watch" ]; then
   echo "Starting Watch Worker"
