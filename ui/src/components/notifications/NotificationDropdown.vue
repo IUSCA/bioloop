@@ -125,30 +125,33 @@
                 />
               </va-button>
             </va-popover>
-            <va-popover message="Filter Globally Dismissed">
+            <va-popover
+              v-if="showWithdrawnFilter"
+              message="Filter withdrawn notifications"
+            >
               <va-button
                 preset="secondary"
                 size="small"
                 block
                 class="notification-top-control-button"
                 :color="
-                  isGloballyDismissedFilterActive
-                    ? theme.filters.globallyDismissed.color
+                  isWithdrawnFilterActive
+                    ? theme.filters.withdrawn.color
                     : 'secondary'
                 "
-                data-testid="filter-globally-dismissed"
-                aria-label="Globally dismissed filter"
-                title="Filter Globally Dismissed"
+                data-testid="filter-withdrawn"
+                aria-label="Withdrawn filter"
+                title="Filter withdrawn notifications"
                 :disabled="controlsDisabled"
-                @click="toggleGloballyDismissedFilter"
-                @keydown.enter.prevent="toggleGloballyDismissedFilter"
-                @keydown.space.prevent="toggleGloballyDismissedFilter"
+                @click="toggleWithdrawnFilter"
+                @keydown.enter.prevent="toggleWithdrawnFilter"
+                @keydown.space.prevent="toggleWithdrawnFilter"
               >
                 <Icon
                   :icon="
-                    isGloballyDismissedFilterActive
-                      ? theme.filters.globallyDismissed.iconOn
-                      : theme.filters.globallyDismissed.iconOff
+                    isWithdrawnFilterActive
+                      ? theme.filters.withdrawn.iconOn
+                      : theme.filters.withdrawn.iconOff
                   "
                 />
               </va-button>
@@ -178,17 +181,22 @@
             >
               Showing {{ displayedNotifications.length }}
             </div>
-            <button
+            <va-popover
               v-if="hasActiveFilters"
-              type="button"
-              class="notification-clear-filters-button"
-              data-testid="clear-notification-filters"
-              aria-label="Clear filters"
-              :disabled="controlsDisabled"
-              @click="handleClearFilters"
+              message="Clear all filters"
             >
-              <Icon icon="mdi:filter-remove-outline" />
-            </button>
+              <button
+                type="button"
+                class="notification-clear-filters-button"
+                data-testid="clear-notification-filters"
+                aria-label="Clear filters"
+                title="Clear all filters"
+                :disabled="controlsDisabled"
+                @click="handleClearFilters"
+              >
+                <Icon icon="mdi:filter-remove-outline" />
+              </button>
+            </va-popover>
           </div>
           <div
             v-if="hasActiveFilterChips"
@@ -235,21 +243,21 @@
               </button>
             </div>
             <div
-              v-if="isGloballyDismissedFilterActive"
+              v-if="showWithdrawnFilter && isWithdrawnFilterActive"
               class="notification-filter-chip notification-filter-chip--danger"
-              data-testid="active-filter-chip-globally-dismissed"
+              data-testid="active-filter-chip-withdrawn"
             >
-              Globally Dismissed
+              Withdrawn
               <button
                 type="button"
                 class="notification-filter-chip__clear"
-                aria-label="Clear Globally Dismissed filter"
-                data-testid="active-filter-chip-globally-dismissed-clear"
+                aria-label="Clear Withdrawn filter"
+                data-testid="active-filter-chip-withdrawn-clear"
                 tabindex="0"
                 :disabled="controlsDisabled"
-                @click.prevent.stop="clearGloballyDismissedFilter"
-                @keydown.enter.prevent.stop="clearGloballyDismissedFilter"
-                @keydown.space.prevent.stop="clearGloballyDismissedFilter"
+                @click.prevent.stop="clearWithdrawnFilter"
+                @keydown.enter.prevent.stop="clearWithdrawnFilter"
+                @keydown.space.prevent.stop="clearWithdrawnFilter"
               >
                 <Icon icon="mdi:close" />
               </button>
@@ -305,8 +313,8 @@
               data-testid="notification-empty-state"
             >
               {{
-                filters.globallyDismissed
-                  ? "No globally dismissed notifications"
+                filters.withdrawn && showWithdrawnFilter
+                  ? "No withdrawn notifications"
                   : "No pending notifications"
               }}
             </div>
@@ -322,7 +330,7 @@
                 :disabled="controlsDisabled"
                 @toggle-read="onToggleRead"
                 @toggle-bookmarked="onToggleBookmarked"
-                @toggle-global-dismiss="onGlobalDismiss"
+                @toggle-withdraw="onWithdraw"
               ></notification>
               <va-divider class="mt-2" />
             </div>
@@ -349,6 +357,9 @@ const { canOperate, user: authUser } = storeToRefs(auth);
 const forSelf = computed(
   () => !viewerHasPrivilegedNotificationAccess(canOperate.value),
 );
+const showWithdrawnFilter = computed(() =>
+  viewerHasPrivilegedNotificationAccess(canOperate.value),
+);
 const notificationQueryOpts = computed(() => ({
   forSelf: forSelf.value,
   username: authUser.value?.username || null,
@@ -369,7 +380,7 @@ const {
   fetchMoreNotifications,
   updateNotificationState,
   markAllRead,
-  dismissNotificationGlobally,
+  withdrawNotification,
   setFilter,
   clearFilters,
 } = notificationStore;
@@ -401,8 +412,8 @@ const isReadFilterActive = computed(() => filters.value.read === true);
 const isBookmarkedFilterActive = computed(
   () => filters.value.bookmarked === true,
 );
-const isGloballyDismissedFilterActive = computed(
-  () => filters.value.globallyDismissed === true,
+const isWithdrawnFilterActive = computed(
+  () => filters.value.withdrawn === true,
 );
 const controlsDisabled = computed(
   () => listFetching.value || mutationPending.value,
@@ -412,7 +423,7 @@ const hasActiveFilters = computed(() => {
   return (
     isReadFilterActive.value ||
     isBookmarkedFilterActive.value ||
-    isGloballyDismissedFilterActive.value ||
+    (showWithdrawnFilter.value && isWithdrawnFilterActive.value) ||
     Boolean(activeSearchFilter.value)
   );
 });
@@ -426,7 +437,7 @@ const hasActiveFilterChips = computed(() => {
   return (
     isReadFilterActive.value ||
     isBookmarkedFilterActive.value ||
-    isGloballyDismissedFilterActive.value ||
+    (showWithdrawnFilter.value && isWithdrawnFilterActive.value) ||
     Boolean(activeSearchFilter.value)
   );
 });
@@ -466,7 +477,7 @@ function focusFirstMenuControlSoon() {
       panel?.querySelector('[data-testid="filter-unread"]')
       || panel?.querySelector('[data-testid="filter-read"]')
       || panel?.querySelector('[data-testid="filter-bookmarked"]')
-      || panel?.querySelector('[data-testid="filter-globally-dismissed"]')
+      || panel?.querySelector('[data-testid="filter-withdrawn"]')
       || panel?.querySelector('[data-testid="clear-notification-filters"]')
       || panel?.querySelector('[data-testid="notification-search"]')
       || (firstTopControlRef.value?.$el instanceof HTMLElement
@@ -617,13 +628,13 @@ function clearBookmarkedFilter() {
   fetchNotifications(notificationQueryOpts.value);
 }
 
-function toggleGloballyDismissedFilter() {
-  setFilter("globallyDismissed", !filters.value.globallyDismissed);
+function toggleWithdrawnFilter() {
+  setFilter("withdrawn", !filters.value.withdrawn);
   fetchNotifications(notificationQueryOpts.value);
 }
 
-function clearGloballyDismissedFilter() {
-  setFilter("globallyDismissed", false);
+function clearWithdrawnFilter() {
+  setFilter("withdrawn", false);
   fetchNotifications(notificationQueryOpts.value);
 }
 
@@ -652,8 +663,8 @@ function onToggleBookmarked(notification) {
   );
 }
 
-function onGlobalDismiss(notification) {
-  dismissNotificationGlobally(notification.id, notificationQueryOpts.value);
+function onWithdraw(notification) {
+  withdrawNotification(notification.id, notificationQueryOpts.value);
 }
 
 function onMarkAllRead() {
@@ -789,7 +800,7 @@ onUnmounted(() => {
 .notification-menu-backdrop {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--va-z-index-teleport-overlay, 9) - 1);
+  z-index: 4999;
   background: color-mix(in srgb, var(--va-background-primary) 64%, transparent);
 }
 
@@ -797,7 +808,7 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
-  z-index: var(--va-z-index-teleport-overlay, 9);
+  z-index: 5000;
 }
 
 @media (min-width: 640px) {

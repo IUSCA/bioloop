@@ -1,5 +1,5 @@
 <template>
-  <va-navbar class="navbar-container flex-row shadow-lg">
+  <va-navbar class="navbar-container navbar-container--dropdown-host flex-row shadow-lg">
     <template #left>
       <va-button
         class="fixed top-0 left-0 rounded-none font-normal skip-to-content"
@@ -79,6 +79,15 @@ const props = defineProps({
 .navbar-container {
   --va-navbar-padding-y: 0.6rem;
   --va-navbar-mobile-height: 4rem;
+}
+
+.navbar-container--dropdown-host {
+  overflow: visible;
+}
+
+.navbar-container--dropdown-host :deep(.va-navbar__inner),
+.navbar-container--dropdown-host :deep(.va-navbar__content) {
+  overflow: visible;
 }
 
 .navbar-container .va-navbar__left {

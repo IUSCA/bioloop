@@ -51,8 +51,8 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
   }
   if (recipient.notification.is_resolved) {
     return res.status(409).json({
-      code: 'NOTIFICATION_GLOBALLY_DISMISSED',
-      message: 'Notification is globally dismissed and no longer actionable.',
+      code: 'NOTIFICATION_WITHDRAWN',
+      message: 'Notification is withdrawn and no longer actionable.',
     });
   }
 

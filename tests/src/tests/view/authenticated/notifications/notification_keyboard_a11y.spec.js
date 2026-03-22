@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 const config = require('config');
 const {
   createDirectNotification,
+  ensureNotificationsMenuOpen,
   ensureNotificationOpenButtonVisible,
   fetchCurrentUser,
   labelById,
@@ -192,7 +193,7 @@ test.describe('Notification keyboard accessibility', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
-    const menu = visibleNotificationMenu(page);
+    const menu = await ensureNotificationsMenuOpen(page);
     const readBtn = menu.getByTestId('filter-read');
     await readBtn.focus();
     await page.keyboard.press('Enter');
@@ -245,7 +246,7 @@ test.describe('Notification keyboard accessibility', () => {
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
   });
 
-  test('Enter and Space toggle bookmarked and globally-dismissed filter chips', async ({
+  test('Enter and Space toggle bookmarked and withdrawn filter chips', async ({
     page,
   }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -254,7 +255,7 @@ test.describe('Notification keyboard accessibility', () => {
     const menu = visibleNotificationMenu(page);
     const cases = [
       ['filter-bookmarked', 'active-filter-chip-bookmarked'],
-      ['filter-globally-dismissed', 'active-filter-chip-globally-dismissed'],
+      ['filter-withdrawn', 'active-filter-chip-withdrawn'],
     ];
     for (const [filterTestId, chipTestId] of cases) {
       const btn = menu.getByTestId(filterTestId);
@@ -342,10 +343,10 @@ test.describe('Notification keyboard accessibility', () => {
     const menu = visibleNotificationMenu(page);
     await menu.getByTestId('filter-read').click();
     await menu.getByTestId('filter-bookmarked').click();
-    await menu.getByTestId('filter-globally-dismissed').click();
+    await menu.getByTestId('filter-withdrawn').click();
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
     const chipClearIds = [
-      'active-filter-chip-globally-dismissed-clear',
+      'active-filter-chip-withdrawn-clear',
       'active-filter-chip-bookmarked-clear',
       'active-filter-chip-read-clear',
     ];
@@ -401,7 +402,7 @@ test.describe('Notification keyboard accessibility', () => {
     });
   });
 
-  test('Enter on bookmark and global-dismiss applies per-notification actions', async ({
+  test('Enter on bookmark and withdraw applies per-notification actions', async ({
     page,
   }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -428,7 +429,7 @@ test.describe('Notification keyboard accessibility', () => {
     await openNotificationsMenu(page);
     const menu = visibleNotificationMenu(page);
 
-    const dismissBtn = menu.getByTestId(`notification-${dismissed.id}-global-dismiss`);
+    const dismissBtn = menu.getByTestId(`notification-${dismissed.id}-withdraw`);
     await dismissBtn.scrollIntoViewIfNeeded();
     await dismissBtn.focus();
     await page.keyboard.press('Enter');

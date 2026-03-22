@@ -12,13 +12,13 @@ const http = require('node:http');
 const https = require('node:https');
 const { expect } = require('@playwright/test');
 const config = require('config');
-const { post } = require('../../../../api');
+const { get, patch, post } = require('../../../../api');
 
 /** @returns {string} data-testid for a notification's label element */
 const labelById = (id) => `notification-${id}-label`;
 const toggleReadById = (id) => `notification-${id}-toggle-read`;
 const toggleBookmarkById = (id) => `notification-${id}-toggle-bookmark`;
-const globalDismissById = (id) => `notification-${id}-global-dismiss`;
+const withdrawById = (id) => `notification-${id}-withdraw`;
 const countContains = (count) => new RegExp(`\\b${count}\\b`);
 const currentRole = (projectName) => (projectName.includes('operator') ? 'operator' : 'admin');
 
@@ -60,19 +60,48 @@ const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1],
 const getToken = async (page) => page.evaluate(() => localStorage.getItem('token'));
 
 /**
- * Opens the notification dropdown menu, retrying up to 3 times to handle
- * Vuestic's menu open animation. Returns the menu locator.
+ * Returns the visible menu panel, opening the dropdown first if it was closed
+ * (for example after a list refresh).
  */
+const ensureNotificationsMenuOpen = async (page) => {
+  const menu = visibleNotificationMenu(page);
+  if (await menu.isVisible()) return menu;
+  await openNotificationsMenu(page);
+  return visibleNotificationMenu(page);
+};
+
 const openNotificationsMenu = async (page) => {
   const menu = visibleNotificationMenu(page);
-  for (let i = 0; i < 3; i += 1) {
-    if (await menu.isVisible()) return menu;
-    await page.getByTestId('notification-open-button').click();
-    // Vuestic menu can animate open.
+  if (await menu.isVisible()) return menu;
+  const buttons = page.getByTestId('notification-open-button');
+  await expect(buttons.first()).toBeAttached({ timeout: 15000 });
+  const count = await buttons.count();
+  for (let i = 0; i < count; i += 1) {
+    const candidate = buttons.nth(i);
+    // Vuestic can leave non-interactive duplicates in the DOM; only the visible
+    // bell should receive the open action.
     // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(250);
+    if (await candidate.isVisible()) {
+      // eslint-disable-next-line no-await-in-loop
+      await candidate.evaluate((el) => {
+        if (el instanceof HTMLElement) el.click();
+      });
+      await expect(menu).toBeVisible({ timeout: 15000 });
+      return menu;
+    }
   }
-  await expect(menu).toBeVisible();
+  await page.evaluate(() => {
+    const nodes = Array.from(
+      document.querySelectorAll('[data-testid="notification-open-button"]'),
+    );
+    const pick =
+      nodes.find((n) => n instanceof HTMLElement && n.offsetParent !== null)
+      || nodes.find((n) => n instanceof HTMLElement);
+    if (pick instanceof HTMLElement) {
+      pick.click();
+    }
+  });
+  await expect(menu).toBeVisible({ timeout: 15000 });
   return menu;
 };
 
@@ -91,9 +120,10 @@ const ensureNotificationOpenButtonVisible = async (page) => {
 };
 
 const refreshNotificationView = async (page) => {
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.reload({ waitUntil: 'load' });
   await ensureNotificationOpenButtonVisible(page);
   await openNotificationsMenu(page);
+  await expect(visibleNotificationMenu(page)).toBeVisible({ timeout: 15000 });
 };
 
 const fetchCurrentUser = async ({ page, role = null }) => {
@@ -124,6 +154,131 @@ const fetchUserByTicket = async ({ page, ticket }) => {
     id: Number(profile.id),
     username: profile.username,
   };
+};
+
+/**
+ * Viewer profile for cross-user notification API checks (admin/operator use
+ * general routes; user uses ownership-scoped routes).
+ */
+const loadStandardViewerProfiles = async (page) => {
+  const admin = await fetchUserByTicket({ page, ticket: 'admin' });
+  const operator = await fetchUserByTicket({ page, ticket: 'operator' });
+  const user = await fetchUserByTicket({ page, ticket: 'user' });
+  return {
+    admin: {
+      key: 'admin',
+      token: admin.token,
+      username: admin.username,
+      userId: admin.id,
+      privileged: true,
+    },
+    operator: {
+      key: 'operator',
+      token: operator.token,
+      username: operator.username,
+      userId: operator.id,
+      privileged: true,
+    },
+    user: {
+      key: 'user',
+      token: user.token,
+      username: user.username,
+      userId: user.id,
+      privileged: false,
+    },
+  };
+};
+
+const findNotificationInListPayload = (body, notificationId) => {
+  const items = Array.isArray(body) ? body : body?.items;
+  if (!Array.isArray(items)) return undefined;
+  return items.find((n) => Number(n.id) === Number(notificationId));
+};
+
+const fetchDefaultUnreadNotifications = async ({
+  page,
+  token,
+  privileged,
+  username,
+}) => {
+  const params = {
+    read: false,
+    withdrawn: false,
+    limit: 100,
+    offset: 0,
+  };
+  if (privileged) {
+    return get({
+      requestContext: page.request,
+      token,
+      url: '/notifications',
+      params,
+    });
+  }
+  return get({
+    requestContext: page.request,
+    token,
+    url: `/notifications/${encodeURIComponent(username)}/all`,
+    params,
+  });
+};
+
+const patchNotificationReadState = async ({
+  page,
+  token,
+  privileged,
+  username,
+  notificationId,
+  isRead,
+}) => {
+  const url = privileged
+    ? `/notifications/${notificationId}/state`
+    : `/notifications/${encodeURIComponent(username)}/${notificationId}/state`;
+  return patch({
+    requestContext: page.request,
+    token,
+    url,
+    data: { is_read: isRead },
+  });
+};
+
+const patchNotificationBookmarkState = async ({
+  page,
+  token,
+  privileged,
+  username,
+  notificationId,
+  isBookmarked,
+}) => {
+  const url = privileged
+    ? `/notifications/${notificationId}/state`
+    : `/notifications/${encodeURIComponent(username)}/${notificationId}/state`;
+  return patch({
+    requestContext: page.request,
+    token,
+    url,
+    data: { is_bookmarked: isBookmarked },
+  });
+};
+
+const patchNotificationWithdraw = async ({ page, token, notificationId }) =>
+  patch({
+    requestContext: page.request,
+    token,
+    url: `/notifications/${notificationId}/withdraw`,
+    data: {},
+  });
+
+const patchMarkAllRead = async ({ page, token, privileged, username }) => {
+  const url = privileged
+    ? '/notifications/mark-all-read'
+    : `/notifications/${encodeURIComponent(username)}/mark-all-read`;
+  return patch({
+    requestContext: page.request,
+    token,
+    url,
+    data: {},
+  });
 };
 
 const getAdminToken = async (page) => getTokenByTicket({ page, ticket: 'admin' });
@@ -224,7 +379,10 @@ const expectHeaderControlsDisabled = async (page) => {
   await expect(page.getByTestId('filter-unread')).toBeDisabled();
   await expect(page.getByTestId('filter-read')).toBeDisabled();
   await expect(page.getByTestId('filter-bookmarked')).toBeDisabled();
-  await expect(page.getByTestId('filter-globally-dismissed')).toBeDisabled();
+  const withdrawnFilter = page.getByTestId('filter-withdrawn');
+  if (await withdrawnFilter.count()) {
+    await expect(withdrawnFilter).toBeDisabled();
+  }
   await expect(page.getByTestId('mark-all-read')).toBeDisabled();
   await expect(searchInput(page)).toBeDisabled();
   const clearFilters = page.getByTestId('clear-notification-filters');
@@ -237,7 +395,10 @@ const expectHeaderControlsEnabled = async (page) => {
   await expect(page.getByTestId('filter-unread')).toBeEnabled();
   await expect(page.getByTestId('filter-read')).toBeEnabled();
   await expect(page.getByTestId('filter-bookmarked')).toBeEnabled();
-  await expect(page.getByTestId('filter-globally-dismissed')).toBeEnabled();
+  const withdrawnFilter = page.getByTestId('filter-withdrawn');
+  if (await withdrawnFilter.count()) {
+    await expect(withdrawnFilter).toBeEnabled();
+  }
   await expect(page.getByTestId('mark-all-read')).toBeEnabled();
   await expect(searchInput(page)).toBeEnabled();
   const clearFilters = page.getByTestId('clear-notification-filters');
@@ -382,6 +543,7 @@ const attachUiErrorTracker = (page) => {
 };
 
 module.exports = {
+  ensureNotificationsMenuOpen,
   attachUiErrorTracker,
   countContains,
   createDirectNotification,
@@ -392,18 +554,25 @@ module.exports = {
   expectHeaderControlsDisabled,
   expectHeaderControlsEnabled,
   fetchCurrentUser,
+  fetchDefaultUnreadNotifications,
   fetchUserByTicket,
+  findNotificationInListPayload,
   getAdminToken,
   getToken,
   getTokenByTicket,
-  globalDismissById,
+  withdrawById,
   labelById,
+  loadStandardViewerProfiles,
   loginAsTicket,
   notificationOpenButtonCount,
   notificationVisibleCount,
   openDirectSseWatcher,
   openNotificationsMenu,
   parseTokenProfile,
+  patchWithdraw: patchNotificationWithdraw,
+  patchMarkAllRead,
+  patchNotificationBookmarkState,
+  patchNotificationReadState,
   visibleNotificationMenu,
   locatorContainsActiveElement,
   expectSearchFilterChipHidden,

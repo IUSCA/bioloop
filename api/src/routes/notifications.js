@@ -46,7 +46,7 @@ router.get(
     param('username').trim().notEmpty(),
     query('read').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
-    query('globally_dismissed').optional().isBoolean().toBoolean(),
+    query('withdrawn').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
@@ -65,7 +65,7 @@ router.get(
   validate([
     query('read').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
-    query('globally_dismissed').optional().isBoolean().toBoolean(),
+    query('withdrawn').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
@@ -217,8 +217,8 @@ router.post(
 
     if (result.conflict) {
       return res.status(409).json({
-        code: 'NOTIFICATION_GLOBALLY_DISMISSED',
-        message: 'Notification is globally dismissed and cannot accept new recipients.',
+        code: 'NOTIFICATION_WITHDRAWN',
+        message: 'Notification is withdrawn and cannot accept new recipients.',
       });
     }
 
@@ -329,14 +329,14 @@ router.patch(
 );
 
 router.patch(
-  '/:id/global-dismiss',
+  '/:id/withdraw',
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Globally dismiss a notification
+    // #swagger.summary = Withdraw a notification for all recipients
     const notification = await prisma.notification.findUnique({
       where: {
         id: req.params.id,
@@ -351,16 +351,18 @@ router.patch(
     }
 
     if (!isPrivilegedNotificationViewer(req.user)) {
-      return next(createError.Forbidden('Only admin or operator can globally dismiss'));
+      return next(createError.Forbidden('Only admin or operator can withdraw notifications'));
     }
 
     if (notification.is_resolved) {
       return res.json({
         id: notification.id,
-        is_globally_dismissed: true,
+        is_withdrawn: true,
       });
     }
 
+    // Withdrawal updates only `notification` lifecycle fields. Per-recipient
+    // `is_read` / `is_bookmarked` rows are not modified.
     const updated = await prisma.notification.update({
       where: {
         id: req.params.id,
@@ -389,14 +391,14 @@ router.patch(
     });
     publishNotificationInvalidation({
       userIds: recipientRows.map((row) => row.user_id),
-      reason: 'global_dismissed',
+      reason: 'withdrawn',
       notificationId: req.params.id,
     });
     return res.json({
       id: updated.id,
-      is_globally_dismissed: updated.is_resolved,
-      dismissed_at: updated.resolved_at,
-      dismissed_by: updated.resolved_by,
+      is_withdrawn: updated.is_resolved,
+      withdrawn_at: updated.resolved_at,
+      withdrawn_by: updated.resolved_by,
     });
   }),
 );

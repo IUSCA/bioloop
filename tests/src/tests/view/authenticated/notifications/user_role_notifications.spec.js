@@ -1,19 +1,26 @@
 const { test, expect } = require('@playwright/test');
 const config = require('config');
 const { randomUUID } = require('node:crypto');
+const { get } = require('../../../../api');
 const {
+  createDirectNotification,
   createDirectNotificationForUser,
   createRoleBroadcastNotification,
+  fetchUserByTicket,
+  findNotificationInListPayload,
   getAdminToken,
   openDirectSseWatcher,
   openNotificationsMenu,
   parseTokenProfile,
+  patchWithdraw,
+  patchNotificationBookmarkState,
+  visibleNotificationMenu,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.includes('user');
 
 test.describe('Notifications', () => {
-  test('user can access notifications but cannot globally dismiss', async ({ page }) => {
+  test('user can access notifications but cannot withdraw or filter withdrawn', async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -30,6 +37,8 @@ test.describe('Notifications', () => {
     }
     await expect(menu).toBeVisible();
 
+    await expect(visibleNotificationMenu(page).getByTestId('filter-withdrawn')).toHaveCount(0);
+
     const anchors = menu.locator('.notification-anchor');
     const notificationCount = await anchors.count();
 
@@ -39,12 +48,12 @@ test.describe('Notifications', () => {
     if (notificationCount > 0) {
       const firstNotification = anchors.first();
       await expect(firstNotification).not.toContainText('Direct');
-      await expect(firstNotification.getByRole('button', { name: 'Dismiss globally' })).toHaveCount(0);
+      await expect(firstNotification.getByRole('button', { name: 'Withdraw' })).toHaveCount(0);
       await expect(page.getByTestId('header-username')).toContainText(userProfile.username);
       return;
     }
 
-    await expect(menu).toContainText(/No pending notifications|No globally dismissed notifications/);
+    await expect(menu).toContainText('No pending notifications');
   });
 
   test('user can update own read and bookmark states', async ({ page }) => {
@@ -152,5 +161,54 @@ test.describe('Notifications', () => {
 
     const streamStatusRes = await page.request.get(streamUrl);
     expect(streamStatusRes.status()).toBe(403);
+  });
+
+  test('user listing API omits withdrawn notifications even with bookmark filter', async ({ page }) => {
+    test.skip(!featureEnabled, 'Notifications feature is not enabled for user role');
+
+    const user = await fetchUserByTicket({ page, ticket: 'user' });
+    const admin = await fetchUserByTicket({ page, ticket: 'admin' });
+    const suffix = randomUUID().slice(0, 8);
+    const label = `E2E-user-withdrawn-bookmark-api-${suffix}`;
+
+    const created = await createDirectNotification({
+      page,
+      token: admin.token,
+      userId: user.id,
+      label,
+      text: `body-${suffix}`,
+    });
+
+    const bookmarkRes = await patchNotificationBookmarkState({
+      page,
+      token: user.token,
+      privileged: false,
+      username: user.username,
+      notificationId: created.id,
+      isBookmarked: true,
+    });
+    expect(bookmarkRes.status()).toBe(200);
+
+    const dismissRes = await patchWithdraw({
+      page,
+      token: admin.token,
+      notificationId: created.id,
+    });
+    expect(dismissRes.status()).toBe(200);
+
+    const listRes = await get({
+      requestContext: page.request,
+      token: user.token,
+      url: `/notifications/${encodeURIComponent(user.username)}/all`,
+      params: {
+        bookmarked: true,
+        limit: 50,
+        offset: 0,
+        withdrawn: true,
+      },
+    });
+    expect(listRes.status()).toBe(200);
+    const body = await listRes.json();
+    expect(findNotificationInListPayload(body, created.id)).toBeUndefined();
   });
 });

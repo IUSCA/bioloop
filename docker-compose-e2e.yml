@@ -373,6 +373,11 @@ services:
       - e2e-runner
     env_file:
       - tests/.env.default
+    environment:
+      # Use compose service DNS (not host localhost). `network_mode: host` is
+      # unsupported on Docker Desktop; without these, the runner cannot reach UI/API.
+      - TEST_BASE_URL=https://ui
+      - TEST_API_BASE_URL=http://api:3030
     volumes:
       - ./tests/:/opt/sca/app
       - test_modules:/opt/sca/app/node_modules
@@ -390,7 +395,6 @@ services:
         condition: service_healthy
       init_test_data:
         condition: service_completed_successfully
-    network_mode: "host"
 
 volumes:
   grafana_data:

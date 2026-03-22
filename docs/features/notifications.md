@@ -15,7 +15,7 @@ Primary goals:
 
 Included:
 - notification menu UX (filters, chips, search, row actions)
-- listing/state/global-dismiss APIs
+- listing/state/withdraw APIs
 - role and ownership authorization behavior
 - SSE invalidation plus polling fallback
 - E2E coverage for behavior, accessibility, and role differences
@@ -27,9 +27,9 @@ Out of scope:
 
 ## Roles and Access
 
-- `admin` and `operator` can use general notification routes and global dismissal.
+- `admin` and `operator` can use general notification routes and **withdraw** notifications (shared lifecycle).
 - `user` uses ownership-scoped routes (`/:username/...`) with `checkOwnership: true`.
-- `user` cannot globally dismiss notifications.
+- `user` cannot withdraw notifications and **never** receives withdrawn (`is_resolved`) rows in list APIs, regardless of `read` / `bookmarked` / `withdrawn` query params.
 - Resolver identity visibility:
   - visible to `admin` and `operator`
   - hidden for `user`
@@ -39,6 +39,8 @@ Out of scope:
 Notifications are split between:
 - `notification` (global event and global lifecycle)
 - `notification_recipient` (per-user delivery and per-user state)
+
+Read and bookmark state are **per recipient row** (`notification_recipient.is_read` / `is_bookmarked`). One user marking a notification read or bookmarked does not change another user's row. **Withdrawal** (UI: *Withdrawn*) sets `notification.is_resolved` and removes the item from default views for every recipient. It does **not** mutate per-recipient `is_read` / `is_bookmarked`.
 
 Per-recipient fields:
 - `is_read`
@@ -58,7 +60,7 @@ Delivery metadata:
 
 ### Menu Structure
 
-- Top control row includes unread/read/bookmarked/globally-dismissed toggles and mark-all-read.
+- Top control row includes unread/read/bookmarked toggles, optional **Withdrawn** filter (admin/operator only), and mark-all-read.
 - Search input combines with active filters.
 - Active filters render as chips with explicit clear controls.
 - Row-level actions are available per notification card.
@@ -84,7 +86,7 @@ Delivery metadata:
 ### Listing and Pagination
 
 Supported query inputs:
-- filters: `read`, `bookmarked`, `globally_dismissed`
+- filters: `read`, `bookmarked`, `withdrawn` (withdrawn-only list; **ignored for `user` role — always treated as false**)
 - `search`
 - pagination: `limit`, `offset`
 
@@ -97,46 +99,61 @@ Response contract:
 
 Pagination semantics apply to all combinations of filters and search.
 
+### List item shape (summary)
+
+Each item includes:
+- `state`: `is_read`, `is_bookmarked`
+- `withdrawal`: `is_withdrawn`, `withdrawn_at`, `withdrawn_by` (resolver user object for privileged viewers only; omitted or null for `user` role where applicable)
+- `can_withdraw`: `true` for `admin` / `operator` when the viewer may withdraw; always `false` for `user`
+
 ### State Updates and Conflict Semantics
 
-When a notification is globally dismissed:
-- per-user state updates return `409` with code `NOTIFICATION_GLOBALLY_DISMISSED`
-- recipient assignment operations return `409` with code `NOTIFICATION_GLOBALLY_DISMISSED`
+When a notification is withdrawn:
+- per-user state updates return `409` with code `NOTIFICATION_WITHDRAWN`
+- recipient assignment operations return `409` with the same code
 
 UI conflict handling:
 - show a clear conflict toast
 - refresh relevant list state
 
-Recommended error shape:
+Recommended error shape (exact `message` may vary by endpoint, for example per-user state updates vs. recipient assignment):
 
 ```json
 {
-  "code": "NOTIFICATION_GLOBALLY_DISMISSED",
-  "message": "Notification is globally dismissed and no longer actionable."
+  "code": "NOTIFICATION_WITHDRAWN",
+  "message": "Notification is withdrawn and no longer actionable."
 }
 ```
 
-### Global Dismissal Rules
+### Withdrawal Rules
 
-- allowed: `admin`, `operator`
-- denied: `user` (`403`)
-- `resolved_by_id` and `resolved_at` are persisted for auditability
+- Allowed: `admin`, `operator` (direct- and role-targeted notifications).
+- Denied: `user` (`403`).
+- `resolved_by_id` and `resolved_at` are persisted; privileged viewers see a secondary line **`(Withdrawn by username)`** on the card when the API returns `withdrawal.withdrawn_by`.
 
-## Global Resolve Edge Cases
+### Withdrawn visibility (summary)
 
-1. User toggles read/unread while an admin globally dismisses:
+| Role | Default / unread / read / bookmarked / search | Withdrawn filter (`withdrawn=true`) |
+|------|-----------------------------------------------|---------------------------------------------|
+| `admin`, `operator` | Excludes withdrawn | Includes withdrawn; composes with other filters |
+| `user` | Excludes withdrawn always | N/A (UI hides control; API ignores `withdrawn=true`) |
+
+## Withdrawal Edge Cases
+
+1. User toggles read/unread while an admin withdraws:
    - stale per-user action returns `409`
    - UI shows conflict feedback and refreshes
-2. Recipient assignment attempted after global dismissal:
+2. Recipient assignment attempted after withdrawal:
    - operation returns `409`
    - UI surfaces conflict and refreshes list/form state
-3. Role drift after dismissal:
+3. Role drift after withdrawal:
    - audit fields preserve resolver identity and timestamp
 4. Filter semantics:
-   - default unread view excludes globally dismissed notifications
-   - globally dismissed filter explicitly includes resolved notifications
+   - default unread view excludes withdrawn notifications
+   - admin/operator: `withdrawn=true` includes withdrawn rows and combines with read/bookmarked/search
+   - user: withdrawn rows are never listed
 5. Badge semantics:
-   - unread count excludes globally dismissed notifications
+   - unread count excludes withdrawn notifications
    - filtered/search views use `total` for matched-count badge behavior
 6. Authorization boundaries:
    - server authorization is authoritative even when UI hides controls
@@ -195,6 +212,9 @@ Routes and components keep orchestration concerns, while feature behavior belong
 - race-condition conflict handling via user-visible feedback
 - trusted/untrusted link behavior
 - responsive layout and theme color behavior
+- cross-user isolation for read/bookmark (API matrix + UI smoke per role); withdrawal affects all recipients; mark-all-read scoped to the acting user only
+- user role: no Withdrawn filter control; API omits withdrawn rows under all filter combinations
+- admin/operator: Withdrawn filter + bookmark filter combination
 
 ### Stability Principles
 

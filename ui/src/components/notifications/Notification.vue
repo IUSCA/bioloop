@@ -23,10 +23,10 @@
       </template>
       <va-chip
         size="small"
-        :color="theme.filters.globallyDismissed.color"
-        v-if="notification.global_dismissal?.is_globally_dismissed"
+        :color="theme.filters.withdrawn.color"
+        v-if="notification.withdrawal?.is_withdrawn"
       >
-        Globally Dismissed
+        Withdrawn
       </va-chip>
     </div>
     <h6
@@ -119,30 +119,31 @@
         preset="secondary"
         block
         class="notification-state-action-button"
-        :color="theme.actions.globalDismiss.color"
-        :data-testid="`notification-${notification.id}-global-dismiss`"
+        :color="theme.actions.withdraw.color"
+        :data-testid="`notification-${notification.id}-withdraw`"
         tabindex="0"
         v-if="
-          notification.can_global_dismiss &&
-          !notification.global_dismissal?.is_globally_dismissed
+          notification.can_withdraw &&
+          !notification.withdrawal?.is_withdrawn
         "
         :disabled="disabled"
-        @click="$emit('toggle-global-dismiss', notification)"
-        @keydown.enter.prevent="$emit('toggle-global-dismiss', notification)"
-        @keydown.space.prevent="$emit('toggle-global-dismiss', notification)"
+        @click="$emit('toggle-withdraw', notification)"
+        @keydown.enter.prevent="$emit('toggle-withdraw', notification)"
+        @keydown.space.prevent="$emit('toggle-withdraw', notification)"
       >
-        <Icon :icon="theme.actions.globalDismiss.icon" class="mr-1" />
-        Dismiss globally
+        <Icon :icon="theme.actions.withdraw.icon" class="mr-1" />
+        Withdraw
       </va-button>
     </div>
     <p
-      class="mt-2 text-sm"
+      class="mt-2 text-xs text-secondary"
+      :data-testid="`notification-${notification.id}-withdrawn-by`"
       v-if="
-        notification.global_dismissal?.is_globally_dismissed &&
-        notification.global_dismissal?.dismissed_by
+        notification.withdrawal?.is_withdrawn &&
+        notification.withdrawal?.withdrawn_by
       "
     >
-      Dismissed by {{ notification.global_dismissal.dismissed_by.username }}
+      (Withdrawn by {{ notification.withdrawal.withdrawn_by.username }})
     </p>
   </div>
 
@@ -182,7 +183,7 @@ const props = defineProps({
 defineEmits([
   "toggle-read",
   "toggle-bookmarked",
-  "toggle-global-dismiss",
+  "toggle-withdraw",
 ]);
 const showUntrustedLinkModal = ref(false);
 const selectedUntrustedLink = ref(null);
@@ -212,12 +213,12 @@ const roleOutlineNames = computed(() => {
 const showChipsRow = computed(
   () =>
     (isRoleBroadcast.value && roleOutlineNames.value.length > 0)
-    || Boolean(props.notification.global_dismissal?.is_globally_dismissed),
+    || Boolean(props.notification.withdrawal?.is_withdrawn),
 );
 
 const actionButtonsCount = computed(() =>
-  props.notification.can_global_dismiss &&
-  !props.notification.global_dismissal?.is_globally_dismissed
+  props.notification.can_withdraw &&
+  !props.notification.withdrawal?.is_withdrawn
     ? 3
     : 2,
 );

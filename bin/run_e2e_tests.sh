@@ -47,7 +47,7 @@ else
 fi
 
 info "Running e2e tests in ephemeral runner container"
-docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" run --rm --entrypoint "" \
+COMPOSE_PROFILES="${COMPOSE_PROFILES:-e2e-runner}" docker compose -f "${COMPOSE_FILE}" -p "${PROJECT_NAME}" run --rm --entrypoint "" \
   e2e /opt/sca/app/node_modules/.bin/playwright "${TEST_ARGS[@]}"
 
 success "E2E run finished; test-runner container removed."

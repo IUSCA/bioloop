@@ -113,6 +113,7 @@ module.exports = {
         dependencies: ['admin_login'],
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
           '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
           '/view/authenticated/notifications/notification_search_focus.spec.js',
@@ -125,6 +126,7 @@ module.exports = {
         dependencies: ['admin_notifications', 'operator_login'],
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
           '/view/authenticated/notifications/notification_theme_colors.spec.js',
           '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
           '/view/authenticated/notifications/notification_search_focus.spec.js',
@@ -137,6 +139,7 @@ module.exports = {
         dependencies: ['user_login'],
         testMatch: [
           '/view/authenticated/notifications/user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
           '/view/authenticated/notifications/notification_search_focus.spec.js',
         ],
       },

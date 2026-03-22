@@ -3,8 +3,10 @@ const { test, expect } = require('@playwright/test');
 const config = require('config');
 const {
   createDirectNotification,
+  ensureNotificationsMenuOpen,
   fetchCurrentUser,
   openNotificationsMenu,
+  visibleNotificationMenu,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
@@ -51,43 +53,44 @@ test.describe.serial('Notifications theme colors', () => {
   });
 
   test('top controls and active chips keep mapped theme colors', async ({ page }) => {
-    await page.getByTestId('filter-read').click();
-    await page.getByTestId('filter-bookmarked').click();
-    await page.getByTestId('filter-globally-dismissed').click();
+    const menu = await ensureNotificationsMenuOpen(page);
+    await menu.getByTestId('filter-read').click();
+    await menu.getByTestId('filter-bookmarked').click();
+    await menu.getByTestId('filter-withdrawn').click();
 
-    await expect(page.getByTestId('active-filter-chip-read')).toBeVisible();
-    await expect(page.getByTestId('active-filter-chip-bookmarked')).toBeVisible();
-    await expect(page.getByTestId('active-filter-chip-globally-dismissed')).toBeVisible();
+    await expect(menu.getByTestId('active-filter-chip-read')).toBeVisible();
+    await expect(menu.getByTestId('active-filter-chip-bookmarked')).toBeVisible();
+    await expect(menu.getByTestId('active-filter-chip-withdrawn')).toBeVisible();
 
     await expectElementColor({
       page,
-      locator: page.getByTestId('filter-read'),
+      locator: menu.getByTestId('filter-read'),
       cssVarName: '--va-info',
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId('filter-bookmarked'),
+      locator: menu.getByTestId('filter-bookmarked'),
       cssVarName: '--va-success',
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId('filter-globally-dismissed'),
+      locator: menu.getByTestId('filter-withdrawn'),
       cssVarName: '--va-danger',
     });
 
     await expectElementColor({
       page,
-      locator: page.getByTestId('active-filter-chip-read'),
+      locator: menu.getByTestId('active-filter-chip-read'),
       cssVarName: '--va-info',
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId('active-filter-chip-bookmarked'),
+      locator: menu.getByTestId('active-filter-chip-bookmarked'),
       cssVarName: '--va-success',
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId('active-filter-chip-globally-dismissed'),
+      locator: menu.getByTestId('active-filter-chip-withdrawn'),
       cssVarName: '--va-danger',
     });
   });
@@ -157,7 +160,7 @@ test.describe.serial('Notifications theme colors', () => {
     });
     await expectElementColor({
       page,
-      locator: page.getByTestId(`notification-${created.id}-global-dismiss`),
+      locator: page.getByTestId(`notification-${created.id}-withdraw`),
       cssVarName: '--va-danger',
     });
   });

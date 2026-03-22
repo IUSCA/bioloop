@@ -20,7 +20,7 @@ export const useNotificationStore = defineStore("notification", () => {
   let fetchRequestSeq = 0;
   /** True while the paginated notification list is being fetched (GET). */
   const listFetching = ref(false);
-  /** True while a mutating request runs (state PATCH, mark-all, global dismiss). */
+  /** True while a mutating request runs (state PATCH, mark-all, withdraw). */
   const mutationPending = ref(false);
   const appNotifications = ref([]);
   const unreadCount = ref(0);
@@ -29,7 +29,7 @@ export const useNotificationStore = defineStore("notification", () => {
   const filters = ref({
     read: false,
     bookmarked: null,
-    globallyDismissed: false,
+    withdrawn: false,
     search: "",
   });
   const notifications = computed(() => appNotifications.value);
@@ -88,7 +88,28 @@ export const useNotificationStore = defineStore("notification", () => {
     filters.value = {
       read: false,
       bookmarked: null,
-      globallyDismissed: false,
+      withdrawn: false,
+      search: "",
+    };
+  }
+
+  /**
+   * Clears client-side notification session state when the authenticated user
+   * changes so list, badge, and filters cannot leak across accounts in the
+   * same browser tab.
+   */
+  function resetSession() {
+    fetchRequestSeq += 1;
+    listFetching.value = false;
+    mutationPending.value = false;
+    appNotifications.value = [];
+    unreadCount.value = 0;
+    totalMatchedCount.value = 0;
+    hasMoreNotifications.value = false;
+    filters.value = {
+      read: false,
+      bookmarked: null,
+      withdrawn: false,
       search: "",
     };
   }
@@ -109,7 +130,7 @@ export const useNotificationStore = defineStore("notification", () => {
         username,
         read: false,
         bookmarked: null,
-        globally_dismissed: false,
+        withdrawn: false,
         search: null,
         limit: 1,
         offset: 0,
@@ -154,7 +175,7 @@ export const useNotificationStore = defineStore("notification", () => {
         username,
         read: filters.value.read,
         bookmarked: filters.value.bookmarked,
-        globally_dismissed: filters.value.globallyDismissed,
+        withdrawn: filters.value.withdrawn,
         search: filters.value.search || null,
         limit: pageSize,
         offset,
@@ -214,7 +235,7 @@ export const useNotificationStore = defineStore("notification", () => {
       .catch((error) => {
         if (error?.response?.status === 409) {
           toast.error(
-            "Notification was globally dismissed and is no longer actionable.",
+            "Notification was withdrawn and is no longer actionable.",
           );
           return refreshNotifications({ forSelf, username });
         }
@@ -249,7 +270,7 @@ export const useNotificationStore = defineStore("notification", () => {
       });
   }
 
-  function dismissNotificationGlobally(
+  function withdrawNotification(
     id,
     { forSelf = false, username = null } = {},
   ) {
@@ -258,20 +279,20 @@ export const useNotificationStore = defineStore("notification", () => {
     }
     mutationPending.value = true;
     return notificationService
-      .dismissNotificationGlobally(id)
+      .withdrawNotification(id)
       .then(() => refreshNotifications({ forSelf, username }))
       .catch((error) => {
         if (error?.response?.status === 409) {
-          toast.error("Notification is already globally dismissed.");
+          toast.error("Notification is already withdrawn.");
           return refreshNotifications({ forSelf, username });
         }
         if (error?.response?.status === 403) {
           toast.error(
-            "You are not allowed to globally dismiss this notification.",
+            "You are not allowed to withdraw this notification.",
           );
           return;
         }
-        toast.error("Could not globally dismiss notification.");
+        toast.error("Could not withdraw notification.");
       })
       .finally(() => {
         mutationPending.value = false;
@@ -292,9 +313,10 @@ export const useNotificationStore = defineStore("notification", () => {
     refreshNotifications,
     updateNotificationState,
     markAllRead,
-    dismissNotificationGlobally,
+    withdrawNotification,
     setFilter,
     clearFilters,
+    resetSession,
     listFetching,
     mutationPending,
   };

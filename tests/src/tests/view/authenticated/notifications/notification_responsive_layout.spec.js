@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 const config = require('config');
 const {
   createDirectNotification,
+  ensureNotificationsMenuOpen,
   ensureNotificationOpenButtonVisible,
   fetchCurrentUser,
   openNotificationsMenu,
@@ -28,7 +29,7 @@ test.describe.serial('Notifications responsive layout', () => {
       await page.setViewportSize({ width: c.width, height: 900 });
       await page.reload({ waitUntil: 'domcontentloaded' });
       await ensureNotificationOpenButtonVisible(page);
-      await openNotificationsMenu(page);
+      await ensureNotificationsMenuOpen(page);
 
       // eslint-disable-next-line no-await-in-loop
       const layout = await page.evaluate(() => {
@@ -83,8 +84,8 @@ test.describe.serial('Notifications responsive layout', () => {
       const metrics = await page.evaluate((id) => {
         const read = document.querySelector(`[data-testid="notification-${id}-toggle-read"]`);
         const bookmark = document.querySelector(`[data-testid="notification-${id}-toggle-bookmark"]`);
-        const globalDismiss = document.querySelector(`[data-testid="notification-${id}-global-dismiss"]`);
-        const buttons = [read, bookmark, globalDismiss].filter(Boolean);
+        const withdrawBtn = document.querySelector(`[data-testid="notification-${id}-withdraw"]`);
+        const buttons = [read, bookmark, withdrawBtn].filter(Boolean);
         const rects = buttons.map((b) => b.getBoundingClientRect());
         return {
           count: buttons.length,

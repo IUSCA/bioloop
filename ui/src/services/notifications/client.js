@@ -15,7 +15,7 @@ class NotificationService {
    * @param {string|null} [opts.username] - Required when forSelf is true
    * @param {boolean|null} [opts.read] - Filter by read state
    * @param {boolean|null} [opts.bookmarked] - Filter by bookmarked state
-   * @param {boolean|null} [opts.globally_dismissed] - Filter by global dismissal
+   * @param {boolean|null} [opts.withdrawn] - When true, list withdrawn rows only (privileged only; ignored for `user`)
    * @param {string|null} [opts.search] - Free-text search across label/text
    * @param {number|null} [opts.limit] - Page size (1-100)
    * @param {number|null} [opts.offset] - Pagination offset
@@ -26,7 +26,7 @@ class NotificationService {
     username = null,
     read = null,
     bookmarked = null,
-    globally_dismissed = null,
+    withdrawn = null,
     search = null,
     limit = null,
     offset = null,
@@ -36,7 +36,7 @@ class NotificationService {
       params: {
         read,
         bookmarked,
-        globally_dismissed,
+        withdrawn,
         search,
         limit,
         offset,
@@ -46,7 +46,7 @@ class NotificationService {
 
   /**
    * Updates per-user state (is_read, is_bookmarked) for a notification.
-   * Returns 409 if the notification has been globally dismissed.
+   * Returns 409 if the notification has been withdrawn.
    * @param {number} id - Notification ID
    * @param {Object} data - State fields to update
    * @param {Object} [opts]
@@ -62,7 +62,7 @@ class NotificationService {
   }
 
   /**
-   * Marks all of the current user's unread, non-dismissed notifications as read.
+   * Marks all of the current user's unread, non-withdrawn notifications as read.
    * @param {Object} [opts]
    * @param {boolean} [opts.forSelf=false]
    * @param {string|null} [opts.username]
@@ -76,13 +76,13 @@ class NotificationService {
   }
 
   /**
-   * Globally dismisses a notification (admin/operator only).
-   * Dismissed notifications become non-actionable for all recipients.
+   * Withdraws a notification for all recipients (admin/operator only).
+   * Withdrawn notifications become non-actionable for all recipients.
    * @param {number} id - Notification ID
    * @returns {Promise<import('axios').AxiosResponse>}
    */
-  dismissNotificationGlobally(id) {
-    return api.patch(`/notifications/${id}/global-dismiss`);
+  withdrawNotification(id) {
+    return api.patch(`/notifications/${id}/withdraw`);
   }
 }
 

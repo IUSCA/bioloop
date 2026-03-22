@@ -332,15 +332,15 @@ async function main() {
     await page.waitForTimeout(200);
     await shotCropped(page, '07-admin-menu-scrolled-mid-role-broadcasts');
 
-    const dismissBtns = page.locator('[data-testid$="-global-dismiss"]');
+    const dismissBtns = page.locator('[data-testid$="-withdraw"]');
     const n = await dismissBtns.count();
     for (let i = 0; i < Math.min(3, n); i += 1) {
       await dismissBtns.nth(i).click();
       await page.waitForTimeout(450);
     }
-    await page.getByTestId('filter-globally-dismissed').click();
+    await page.getByTestId('filter-withdrawn').click();
     await page.waitForTimeout(500);
-    await shotCropped(page, '08-admin-globally-dismissed-filter-active');
+    await shotCropped(page, '08-admin-withdrawn-filter-active');
 
     await page.close();
   }
@@ -455,15 +455,15 @@ async function main() {
     await openMenu(page);
     await clearFilters(page);
 
-    await recordGif(page, 'gif-admin-global-dismiss-and-filter', async (cap) => {
+    await recordGif(page, 'gif-admin-withdraw-and-filter', async (cap) => {
       await cap();
-      const btn = page.locator('[data-testid$="-global-dismiss"]').first();
+      const btn = page.locator('[data-testid$="-withdraw"]').first();
       if (await btn.isVisible().catch(() => false)) {
         await btn.click();
         await page.waitForTimeout(500);
         await cap();
       }
-      await page.getByTestId('filter-globally-dismissed').click();
+      await page.getByTestId('filter-withdrawn').click();
       await page.waitForTimeout(450);
       await cap();
       await clearFilters(page);

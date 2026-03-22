@@ -133,8 +133,6 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
     .filter(Boolean)
     .filter((link, idx, arr) => arr.findIndex((x) => x.href === link.href && x.label === link.label) === idx);
 
-  const canGloballyDismiss = hasRole(user, 'admin') || hasRole(user, 'operator');
-
   const delivery = {
     type: row.delivery_type,
     role_name: row.delivery_role?.name || null,
@@ -159,12 +157,12 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
       is_bookmarked: row.is_bookmarked,
     },
     delivery,
-    global_dismissal: {
-      is_globally_dismissed: row.notification.is_resolved,
-      dismissed_at: row.notification.resolved_at,
-      dismissed_by: privileged ? row.notification.resolved_by || null : null,
+    withdrawal: {
+      is_withdrawn: row.notification.is_resolved,
+      withdrawn_at: row.notification.resolved_at,
+      withdrawn_by: privileged ? row.notification.resolved_by || null : null,
     },
-    can_global_dismiss: privileged,
+    can_withdraw: privileged,
     allowed_links: dedupedLinks,
     created_at: row.notification.created_at,
     updated_at: row.notification.updated_at,
@@ -176,18 +174,18 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
  * Undefined filter values are omitted so only explicitly set filters apply.
  * Search matches against notification label or text (case-insensitive).
  *
- * @param {{ userId: number, read?: boolean, bookmarked?: boolean, globallyDismissed?: boolean, search?: string }} opts
+ * @param {{ userId: number, read?: boolean, bookmarked?: boolean, withdrawnOnly?: boolean, search?: string }} opts
  * @returns {Object} Prisma where clause for notification_recipient.findMany
  */
 function buildNotificationWhere({
   userId,
   read,
   bookmarked,
-  globallyDismissed,
+  withdrawnOnly,
   search,
 }) {
   const notificationWhere = _.omitBy(_.isUndefined)({
-    is_resolved: globallyDismissed,
+    is_resolved: withdrawnOnly,
     OR: search ? [
       {
         label: {
@@ -217,7 +215,11 @@ function buildNotificationWhere({
  *
  * Query params consumed from req.query:
  *   limit (1-100, default 20), offset (>=0, default 0),
- *   read, bookmarked, globally_dismissed, search
+ *   read, bookmarked, withdrawn, search
+ *
+ * Non-privileged users (`user` role listing) never receive withdrawn (`is_resolved`)
+ * notifications: `withdrawn=true` is ignored so read/bookmarked filters cannot
+ * surface them.
  *
  * @param {{ req: import('express').Request }} opts
  * @returns {Promise<{ items: Object[], total: number, offset: number, limit: number, has_more: boolean }>}
@@ -225,12 +227,14 @@ function buildNotificationWhere({
 async function fetchCurrentUserNotifications({ req }) {
   const limit = Math.min(Math.max(Number(req.query.limit ?? 20), 1), 100);
   const offset = Math.max(Number(req.query.offset ?? 0), 0);
-  const globallyDismissed = req.query.globally_dismissed ?? false;
+  const privileged = isPrivilegedNotificationViewer(req.user);
+  const rawWithdrawnOnly = req.query.withdrawn ?? false;
+  const withdrawnOnly = privileged && Boolean(rawWithdrawnOnly);
   const where = buildNotificationWhere({
     userId: req.user.id,
     read: req.query.read,
     bookmarked: req.query.bookmarked,
-    globallyDismissed,
+    withdrawnOnly,
     search: req.query.search,
   });
 

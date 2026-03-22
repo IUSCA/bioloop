@@ -1,8 +1,8 @@
 const { test, expect } = require('@playwright/test');
 const config = require('config');
 const {
+  ensureNotificationsMenuOpen,
   ensureNotificationOpenButtonVisible,
-  openNotificationsMenu,
   searchInput,
 } = require('./helpers');
 
@@ -14,14 +14,17 @@ test.describe('Notification search input', () => {
   test('search field keeps focus while typing multiple characters', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
-    await openNotificationsMenu(page);
-    await page.waitForTimeout(400);
+    await ensureNotificationsMenuOpen(page);
+    // Menu open moves focus to the first filter; wait for that scheduling to finish
+    // before asserting search field focus.
+    await page.waitForTimeout(1200);
 
     const input = searchInput(page);
-    await input.click();
-    await expect(input).toBeFocused();
-    await input.pressSequentially('quota', { delay: 40 });
-    await expect(input).toBeFocused();
-    await expect(input).toHaveValue('quota');
+    const native = input.locator('input, textarea').first();
+    await native.click({ force: true });
+    await expect(native).toBeFocused();
+    await native.pressSequentially('quota', { delay: 40 });
+    await expect(native).toBeFocused();
+    await expect(native).toHaveValue('quota');
   });
 });
