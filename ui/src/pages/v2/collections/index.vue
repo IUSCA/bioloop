@@ -202,6 +202,10 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+  <CollectionCreateModal
+    ref="collectionCreateModal"
+    @update="fetchCollections"
+  />
 </template>
 
 <script setup>
@@ -328,14 +332,14 @@ function resetFilters() {
   activeStatus.value = "all";
 }
 
-function navigateToCreateCollection() {
-  // TODO: Route to create collection page or open modal
-  // For now, this placeholder can be connected to your navigation/modal logic
-}
-
 onMounted(() => {
   fetchCollections();
 });
+
+const collectionCreateModal = ref(null);
+function navigateToCreateCollection() {
+  collectionCreateModal.value?.show();
+}
 </script>
 
 <route lang="yaml">

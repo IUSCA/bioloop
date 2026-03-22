@@ -15,16 +15,16 @@ export default {
   },
 
   /** Create a new collection. Requires `owner_group_id`. */
-  create({ name, description, owner_group_id, metadata } = {}) {
+  create({ name, description, owner_group_id, metadata, dataset_ids } = {}) {
     return api.post("/collections/", {
       name,
       description,
       owner_group_id,
       metadata,
+      dataset_ids,
     });
   },
 
-  /**
   /**
    * Update collection metadata.
    * `version` must be included in data for optimistic concurrency control.

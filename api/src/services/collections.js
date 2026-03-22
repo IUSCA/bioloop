@@ -37,6 +37,7 @@ function make_slug_unique_fn(tx) {
  * @param {string} data.owner_group_id - Owning group
  * @param {string} [data.description]
  * @param {Object} [data.metadata]
+ * @param {string[]} [data.dataset_ids] - Optional array of dataset IDs to add to the collection upon creation. All datasets must exist, not be archived, and have the same owner group as the collection.
  * @param {string} actor_id - UUID of the user creating the collection (must have appropriate permissions)
  * @returns {Promise<Object>} Created collection
  */
@@ -53,16 +54,25 @@ async function createCollection(data, { actor_id }) {
     // resource row must be created first — collection.id is a direct FK to resource.id
     await tx.resource.create({ data: { id, type: 'COLLECTION' } });
 
-    // create collection without any datasets
+    // create collection
+    const createData = {
+      id,
+      name: data.name,
+      slug,
+      description: data.description ?? Prisma.skip,
+      metadata: data.metadata ?? Prisma.skip,
+      owner_group_id: data.owner_group_id,
+    };
+    if (data.dataset_ids && data.dataset_ids.length > 0) {
+      createData.datasets = {
+        create: data.dataset_ids?.map((dataset_id) => ({
+          dataset_id,
+          added_by: actor_id,
+        })) ?? [],
+      };
+    }
     const _collection = await tx.collection.create({
-      data: {
-        id,
-        name: data.name,
-        slug,
-        description: data.description ?? Prisma.skip,
-        metadata: data.metadata ?? Prisma.skip,
-        owner_group_id: data.owner_group_id,
-      },
+      data: createData,
       include: PRISMA_COLLECTION_INCLUDES,
     });
 

@@ -160,7 +160,7 @@
               </label>
 
               <div v-if="!formData.selectedParentGroup">
-                <GroupSearchSelect
+                <AdminGroupSearchSelect
                   :disabled="false"
                   @select="(group) => (formData.selectedParentGroup = group)"
                 />
@@ -179,65 +179,39 @@
               <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
                 Parent Group
               </div>
-              <!-- <div
-                class="rounded-lg border border-solid border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-900/20 p-4"
-              >
-                <div class="font-medium text-gray-900 dark:text-gray-100">
-                  {{ props.parentGroup.name }}
-                </div>
-              </div> -->
               <GroupChip :group="props.parentGroup" />
             </div>
 
             <!-- Warnings/Callouts when parent is fixed (subgroup mode) -->
             <div v-if="props.isSubgroup" class="space-y-3 mt-4">
               <!-- Membership Propagation Warning -->
-              <div
-                class="rounded-lg px-4 py-3 flex gap-3 bg-amber-50 dark:bg-amber-900/20 border border-solid border-amber-200 dark:border-amber-800"
+              <ModernAlert
+                icon="mdi-information"
+                color="amber"
+                title="Membership propagation"
               >
-                <i-mdi-alert
-                  class="text-amber-600 dark:text-amber-500 flex-shrink-0 mt-1"
-                />
-                <div class="text-sm">
-                  <div class="font-medium text-amber-900 dark:text-amber-100">
-                    Membership propagation
-                  </div>
-                  <div class="text-xs text-amber-800 dark:text-amber-200 mt-1">
-                    <div>
-                      Members of this subgroup are automatically implicit
-                      members of
-                      <span class="font-semibold">
-                        {{ props.parentGroup.name }}
-                      </span>
-                      and all ancestor groups. Any grants assigned to parent
-                      groups automatically apply to this subgroup. This is
-                      structural and cannot be restricted.
-                    </div>
-                  </div>
-                </div>
-              </div>
+                Members of this subgroup are automatically implicit members of
+                <span class="font-semibold">
+                  {{ props.parentGroup.name }}
+                </span>
+                and all ancestor groups. Any grants assigned to parent groups
+                automatically apply to this subgroup. This is structural and
+                cannot be restricted.
+              </ModernAlert>
 
               <!-- Oversight Chain Info -->
-              <div
-                class="rounded-lg px-4 py-3 flex gap-3 bg-blue-50 dark:bg-blue-900/20 border border-solid border-blue-200 dark:border-blue-800"
+              <ModernAlert
+                icon="mdi-information"
+                color="blue"
+                title="Oversight visibility"
               >
-                <i-mdi-information
-                  class="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1"
-                />
-                <div class="text-sm">
-                  <div class="font-medium text-blue-900 dark:text-blue-100">
-                    Oversight chain
-                  </div>
-                  <div class="text-xs text-blue-800 dark:text-blue-200 mt-1">
-                    Admins of
-                    <span class="font-semibold">{{
-                      props.parentGroup.name
-                    }}</span>
-                    and parent groups above will have oversight visibility over
-                    this subgroup.
-                  </div>
-                </div>
-              </div>
+                Admins of
+                <span class="font-semibold">
+                  {{ props.parentGroup.name }}
+                </span>
+                and parent groups above will have oversight visibility over this
+                subgroup.
+              </ModernAlert>
             </div>
           </div>
         </ModernCard>

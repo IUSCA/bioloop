@@ -180,6 +180,12 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+  <CollectionCreateModal
+    v-if="props.canCreate"
+    :group="props.group"
+    @update="handleNewCollection"
+    ref="collectionCreateModal"
+  />
 </template>
 
 <script setup>
@@ -188,11 +194,11 @@ import CollectionService from "@/services/v2/collections";
 import { VaCardContent } from "vuestic-ui/web-components";
 
 const props = defineProps({
-  groupId: { type: String, required: true },
+  group: { type: Object, required: true },
   canCreate: { type: Boolean, default: false },
 });
 
-// const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed"]);
 
 const collections = ref([]);
 const error = ref(null);
@@ -246,7 +252,7 @@ async function fetchCollections() {
   loading.value = true;
   try {
     const { data } = await CollectionService.search({
-      owner_group_id: props.groupId,
+      owner_group_id: props.group.id,
       is_archived:
         activeStatus.value === "active"
           ? false
@@ -272,23 +278,23 @@ async function fetchCollections() {
   }
 }
 
-// function handleNewCollection() {
-//   emit("count-changed");
-// }
+function handleNewCollection() {
+  emit("count-changed");
+}
 
 function resetFilters() {
   searchTerm.value = "";
   setStatus("all");
 }
 
-function navigateToCreateCollection() {
-  // TODO: Route to create collection page or open modal
-  // For now, this placeholder can be connected to your navigation/modal logic
-}
-
 onMounted(() => {
   fetchCollections();
 });
+
+const collectionCreateModal = ref(null);
+function navigateToCreateCollection() {
+  collectionCreateModal.value?.show();
+}
 </script>
 
 <style scoped>

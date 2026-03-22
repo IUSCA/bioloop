@@ -8,7 +8,7 @@
       <Icon
         :icon="props.icon"
         v-if="props.icon"
-        class="text-gray-600 dark:text-gray-400 text-sm"
+        class="text-gray-600 dark:text-gray-400"
       />
       <h3
         class="text-sm font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100"

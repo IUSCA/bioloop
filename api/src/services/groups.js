@@ -864,8 +864,7 @@ async function demoteAdminToMember(group_id, {
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {boolean} direct_membership_only - If true, only return groups where the user is a direct member (not through nested group membership)
- * @param {boolean} oversight_only - If true, only return groups where the user has an admin role for oversight purposes
+ * @param {string} scope - Scope of the search ('all', 'direct', 'oversight', 'admin')
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchGroupsForUser({
@@ -877,9 +876,7 @@ async function searchGroupsForUser({
   limit,
   offset,
   is_archived = null,
-  direct_membership_only = false,
-  oversight_only = false,
-  admin_only = false,
+  scope = 'all',
 }) {
   let searchClause = Prisma.empty;
   if (search_term) {
@@ -900,27 +897,18 @@ async function searchGroupsForUser({
   }
 
   let membershipClause = Prisma.empty;
-  if (direct_membership_only || admin_only) {
-    // direct_membership_only or admin_only takes precedence, ignore oversight_only
-    if (admin_only) {
-      const admin_sql = Prisma.raw(GROUP_MEMBER_ROLE.ADMIN);
-      membershipClause = Prisma.sql`
-        gu.role = '${admin_sql}' AND gu.user_id = ${user_id}
+  if (scope === 'admin') {
+    membershipClause = Prisma.sql`
+        gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-    } else {
-      membershipClause = Prisma.sql`
-        gu.role IS NOT NULL AND gu.user_id = ${user_id}
+  } else if (scope === 'direct') {
+    membershipClause = Prisma.sql`
+        gu.role IS NOT NULL
       `;
-    }
-  } else if (oversight_only) {
+  } else if (scope === 'oversight') {
     // only show groups user administers
     membershipClause = Prisma.sql`
       og.id IS NOT NULL
-    `;
-  } else {
-    // default: show all groups and oversight groups
-    membershipClause = Prisma.sql`
-      (ag.id IS NOT NULL OR og.id IS NOT NULL)
     `;
   }
 
@@ -1006,8 +994,7 @@ async function searchGroupsForUser({
  * @param {number} limit - Number of results to return
  * @param {number} offset - Pagination offset
  * @param {boolean|null} is_archived - Optional filter to include only archived (true), only non-archived (false), or all (null) groups
- * @param {boolean} direct_membership_only - If true, only return groups where the user is a direct member (not through nested group membership)
- * @param {boolean} oversight_only - If true, only return groups where the user has an admin role for oversight purposes
+ * @param {string} scope - direct | oversight | admin | all
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of matching groups
  */
 async function searchAllGroups({
@@ -1019,9 +1006,7 @@ async function searchAllGroups({
   limit,
   offset,
   is_archived = null,
-  direct_membership_only = false,
-  oversight_only = false,
-  admin_only = false,
+  scope = 'all',
 }) {
   let searchClause = Prisma.empty;
   if (search_term) {
@@ -1042,19 +1027,15 @@ async function searchAllGroups({
   }
 
   let membershipClause = Prisma.empty;
-  if (direct_membership_only || admin_only) {
-    // direct_membership_only or admin_only takes precedence, ignore oversight_only
-    if (admin_only) {
-      const admin_sql = Prisma.raw(GROUP_MEMBER_ROLE.ADMIN);
-      membershipClause = Prisma.sql`
-        gu.role = '${admin_sql}'
+  if (scope === 'admin') {
+    membershipClause = Prisma.sql`
+        gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       `;
-    } else {
-      membershipClause = Prisma.sql`
+  } else if (scope === 'direct') {
+    membershipClause = Prisma.sql`
         gu.role IS NOT NULL
       `;
-    }
-  } else if (oversight_only) {
+  } else if (scope === 'oversight') {
     // only show groups user administers
     membershipClause = Prisma.sql`
       og.id IS NOT NULL

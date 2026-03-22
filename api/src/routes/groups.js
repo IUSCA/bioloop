@@ -67,27 +67,15 @@ router.post(
       delete params.search_term;
     }
 
-    let direct_membership_only; let oversight_only; let
-      admin_only;
-    if (params.scope !== 'all') {
-      if (params.scope === 'admin') {
-        admin_only = true;
-      } else if (params.scope === 'direct') {
-        direct_membership_only = true;
-      } else if (params.scope === 'oversight') {
-        oversight_only = true;
-      }
-    }
-
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
     if (isPlatformAdmin(req)) {
       promise = groupService.searchAllGroups({
-        ...params, user_id: req.user.subject_id, direct_membership_only, oversight_only, admin_only,
+        ...params, user_id: req.user.subject_id,
       });
     } else {
       promise = groupService.searchGroupsForUser({
-        ...params, user_id: req.user.subject_id, direct_membership_only, oversight_only, admin_only,
+        ...params, user_id: req.user.subject_id,
       });
     }
     const { metadata, data } = await promise;
@@ -98,7 +86,7 @@ router.post(
 
 // For platform admin use - get groups that do not have an active admin (e.g. for cleanup purposes)
 router.get(
-  '/without_active_admin',
+  '/without-active-admin',
   authorize('group', 'list_invalid'),
   asyncHandler(async (req, res) => {
   // #swagger.tags = ['Groups']

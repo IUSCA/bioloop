@@ -5,7 +5,7 @@
     </div>
 
     <div class="flex flex-col items-center gap-1 max-w-sm">
-      <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+      <p class="text-lg font-semibold text-gray-800 dark:text-gray-200">
         {{ props.title }}
       </p>
       <p

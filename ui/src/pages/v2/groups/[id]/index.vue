@@ -133,7 +133,7 @@
 
         <GroupCollectionsTab
           v-else-if="activeTab === 'collections'"
-          :group-id="props.id"
+          :group="group"
           :can-create="can('add_collection') && !group.is_archived"
           @count-changed="handleCollectionsUpdate"
         />

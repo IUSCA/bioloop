@@ -8,9 +8,9 @@ const _ = require('lodash/fp');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const collectionService = require('@/services/collections');
-// const prisma = require('@/db');
+const prisma = require('@/db');
 const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
-const { pickNonNil } = require('@/utils');
+const { pickNonNil, setsEqual } = require('@/utils');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 
@@ -94,12 +94,35 @@ router.post(
     body('description').optional().isString(),
     body('owner_group_id').isUUID(),
     body('metadata').optional().isObject(),
+    body('dataset_ids').optional().isArray({ min: 1 }),
+    body('dataset_ids.*').isUUID(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Create a new collection'
 
-    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata'])(req.body);
+    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata', 'dataset_ids'])(req.body);
+
+    // validate that if dataset_ids are provided, they all belong to the same owner group as the collection and are not archived
+    if (data.dataset_ids) {
+      const validDatasets = await prisma.dataset.findMany({
+        where: {
+          resource_id: { in: data.dataset_ids },
+          owner_group_id: data.owner_group_id,
+          is_deleted: false,
+        },
+        select: { resource_id: true },
+      });
+      if (!setsEqual(new Set(validDatasets.map((d) => d.resource_id)), new Set(data.dataset_ids))) {
+        return next(createError(
+          400,
+          'All datasets must exist, not be archived, and belong to the specified owner group',
+        ));
+      }
+      // deduplicate dataset IDs
+      data.dataset_ids = [...new Set(data.dataset_ids)];
+    }
+
     const newCollection = await collectionService.createCollection(data, { actor_id: req.user.subject_id });
     res.status(201).json(req.permission.filter(newCollection));
   }),

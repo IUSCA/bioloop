@@ -1,7 +1,7 @@
 <template>
   <AutoCompleteSearch
     :autocomplete-fn="searchGroups"
-    placeholder="Search groups..."
+    placeholder="Search groups you administer..."
     @select="onSelectGroup"
   >
     <template #result-item="{ item }">
@@ -14,7 +14,7 @@
             </div> -->
         </div>
         <div class="text-xs text-gray-500 dark:text-gray-400">
-          {{ item.member_count || 0 }} members
+          {{ item._count?.members || 0 }} members
         </div>
       </div>
     </template>
@@ -34,6 +34,7 @@ async function searchGroups(searchQuery) {
       search_term: searchQuery,
       limit: 5,
       is_archived: false,
+      scope: "admin",
     });
     return response.data?.data || [];
   } catch (error) {

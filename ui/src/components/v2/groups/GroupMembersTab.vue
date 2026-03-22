@@ -115,16 +115,22 @@
                 <template #cell(actions)="{ rowData }">
                   <div v-if="rowData.effective_role !== 'TRANSITIVE_MEMBER'">
                     <VaButtonDropdown preset="primary" class="" size="small">
-                      <div class="flex flex-col items-center gap-2">
+                      <div class="flex flex-col items-start gap-2">
                         <VaButton
                           v-if="props.canEditRole"
                           @click="handleEditRole(rowData)"
                           size="small"
-                          preset="secondary"
+                          :color="roleActionColor(rowData.effective_role)"
+                          class="w-full"
+                          preset="primary"
                         >
                           <div class="flex items-center gap-1">
-                            <i-mdi-pencil class="text-sm" />
-                            Edit Role
+                            <i-mdi-arrow-up-bold
+                              class="text-sm"
+                              v-if="!isAdminRole(rowData.effective_role)"
+                            />
+                            <i-mdi-arrow-down-bold class="text-sm" v-else />
+                            {{ roleActionLabel(rowData.effective_role) }}
                           </div>
                         </VaButton>
 
@@ -134,6 +140,7 @@
                           size="small"
                           preset="secondary"
                           color="danger"
+                          class="w-full"
                         >
                           <div class="flex items-center gap-1">
                             <i-mdi-close class="text-sm" />
@@ -288,6 +295,14 @@ const scopeFilters = computed(() => {
     },
   ];
 });
+
+const isAdminRole = (role) =>
+  typeof role === "string" && role.toUpperCase() === "ADMIN";
+
+const roleActionLabel = (role) =>
+  isAdminRole(role) ? "Demote to Member" : "Promote to Admin";
+
+const roleActionColor = (role) => (isAdminRole(role) ? "danger" : "success");
 
 const columns = computed(() => {
   const baseColumns = [
