@@ -1,7 +1,7 @@
 const express = require('express');
 const { param, query, body } = require('express-validator');
 const _ = require('lodash/fp');
-const { RESOURCE_TYPE } = require('@prisma/client');
+const { RESOURCE_TYPE, ACCESS_REQUEST_ITEM_DECISION } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -91,6 +91,13 @@ router.post(
       .map((item) => item.preset_id);
     if (new Set(presetIds).size !== presetIds.length) {
       return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
+    }
+
+    // validate requested expiry is in the future
+    for (const item of data.items) {
+      if (item.requested_expiry.hasExpired()) {
+        return res.status(400).json({ message: 'requested_expiry must be in the future' });
+      }
     }
 
     // validated:
@@ -227,6 +234,15 @@ router.put(
       }
     }
 
+    // validate requested expiry is in the future
+    if (data.items) {
+      for (const item of data.items) {
+        if (item.requested_expiry.hasExpired()) {
+          return res.status(400).json({ message: 'requested_expiry must be in the future' });
+        }
+      }
+    }
+
     // validated:
     // - user has permission to update request
     // - if purpose or items are provided, they are well-formed and items are unique
@@ -258,9 +274,10 @@ router.post(
     param('id').isUUID(),
     body('item_decisions').isArray({ min: 1 }),
     body('item_decisions.*.id').isUUID(),
-    body('item_decisions.*.decision').isIn(['APPROVED', 'REJECTED']),
-    body('item_decisions.*.approved_expiry')
-      .customSanitizer((value) => Expiry.fromJSON(value)), // convert to Expiry instance; throws if invalid
+    body('item_decisions.*.decision').isIn([
+      ACCESS_REQUEST_ITEM_DECISION.APPROVED,
+      ACCESS_REQUEST_ITEM_DECISION.REJECTED,
+    ]),
     body('decision_reason').isString().notEmpty(),
   ]),
   authorize('access_request', 'review'),
@@ -269,6 +286,28 @@ router.post(
     // #swagger.summary = 'Submit review for an access request'
 
     const options = _.pick(['item_decisions', 'decision_reason'], req.body);
+
+    // validate item_decisions have unique ids
+    const itemDecisionIds = options.item_decisions.map((d) => d.id);
+    if (new Set(itemDecisionIds).size !== itemDecisionIds.length) {
+      return res.status(400).json({ message: 'item_decisions must have unique ids' });
+    }
+
+    // convert approved_expiry to Expiry instances for approved items; also validates approved_expiry format
+    options.item_decisions = options.item_decisions.map((d) => {
+      if (d.decision === 'APPROVED') {
+        return { ...d, approved_expiry: Expiry.fromJSON(d.approved_expiry) };
+      }
+      return d;
+    });
+
+    // validate approved expiry for approved items is in the future
+    for (const itemDecision of options.item_decisions) {
+      if (itemDecision.decision === 'APPROVED' && itemDecision.approved_expiry.hasExpired()) {
+        return res.status(400).json({ message: 'approved_expiry must be in the future for approved items' });
+      }
+    }
+
     const reviewResult = await accessRequestsService.submitReview({
       request_id: req.params.id,
       reviewer_id: req.user.subject_id,

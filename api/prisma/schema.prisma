@@ -706,9 +706,10 @@ enum GRANT_REVOCATION_TYPE {
 }
 
 model grant_access_type {
-  id          Int     @id @default(autoincrement())
-  name        String
-  description String?
+  id               Int     @id @default(autoincrement())
+  name             String
+  description      String?
+  long_description String?
 
   grants               grant[]
   access_request_items access_request_item[]
@@ -721,11 +722,11 @@ model grant_access_type {
 // Defined by platform admins; referenced by group admins and requesters.
 
 model grant_preset {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique // "Standard Researcher Access"
-  slug        String  @unique // "standard_researcher"
-  description String?
-  is_active   Boolean @default(true) // soft-disable; never delete
+  id               Int     @id @default(autoincrement())
+  name             String  @unique // "Standard Researcher Access"
+  description      String?
+  long_description String?
+  is_active        Boolean @default(true) // soft-disable; never delete
 
   access_type_items    grant_preset_item[]
   access_request_items access_request_item[]

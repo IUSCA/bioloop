@@ -47,6 +47,16 @@ class Expiry {
     return this.type === 'never';
   }
 
+  isDate() {
+    return this.type === 'date';
+  }
+
+  hasExpired() {
+    if (this.isNever()) return false;
+    const now = new Date();
+    return this.value <= now;
+  }
+
   toTimestamp() {
     return this.isNever() ? Infinity : this.value.getTime();
   }

@@ -214,22 +214,6 @@ function generateGroupAccessSeedData({
     created_at: new Date(),
   });
 
-  // Define a deterministic preset for tests + UI seed coverage
-  const grantPresets = [
-    {
-      id: 1,
-      name: 'Standard Reader Access',
-      slug: 'standard_reader_access',
-      description: 'Base dataset read access preset',
-      is_active: true,
-    },
-  ];
-
-  const grantPresetItems = [
-    { preset_id: 1, access_type_id: 1 }, // DATASET:VIEW_METADATA
-    { preset_id: 1, access_type_id: 4 }, // DATASET:READ_DATA
-  ];
-
   // Build access requests aligned with grant types
   const requestSeeds = [];
   const requester = groupUsers[0]?.user_id || systemAdminSubjectId;
@@ -286,10 +270,6 @@ function generateGroupAccessSeedData({
   requestSeeds.push(makeReq('WITHDRAWN', datasetsSorted[0]?.resource_id, otherRequester));
   requestSeeds.push(makeReq('EXPIRED', datasetsSorted[0]?.resource_id, requester));
 
-  // Add a preset-based request for coverage of preset expansion and access_request items with preset_id
-  const presetRequest = makeReq('UNDER_REVIEW', datasetsSorted[0]?.resource_id, requester);
-  requestSeeds.push(presetRequest);
-
   const requestItems = [];
   requestSeeds.forEach((req) => {
     const createItem = (access_type_id, decision) => ({
@@ -302,17 +282,6 @@ function generateGroupAccessSeedData({
     if (req.status === 'DRAFT') {
       requestItems.push(createItem(1, 'PENDING'));
       requestItems.push(createItem(4, 'PENDING'));
-      return;
-    }
-
-    if (req.id === presetRequest.id) {
-      // this request is built from a grant preset
-      requestItems.push({
-        id: generate(),
-        access_request_id: req.id,
-        preset_id: 1,
-        decision: 'PENDING',
-      });
       return;
     }
 
@@ -341,8 +310,6 @@ function generateGroupAccessSeedData({
 
   return {
     grants,
-    grantPresets,
-    grantPresetItems,
     accessRequests: requestSeeds,
     accessRequestItems: requestItems,
   };

@@ -179,51 +179,95 @@ const ALERT_TYPES = {
 
 const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 
+// need to specify ids to have deterministic seeding
 const GRANT_ACCESS_TYPES = [
   {
     id: 1,
     name: 'DATASET:VIEW_METADATA',
-    description: 'View dataset or collection metadata',
+    description: 'See dataset exists',
+    long_description: 'See dataset exists and view non-sensitive metadata such as description, size, file count',
   },
   {
     id: 2,
     name: 'DATASET:VIEW_SENSITIVE_METADATA',
-    description: 'View sensitive dataset metadata',
+    description: 'Paths, infrastructure and lifecycle data',
+    long_description: 'View sensitive metadata such as file paths, infrastructure details, and lifecycle data',
   },
   {
     id: 3,
     name: 'DATASET:REQUEST_ACCESS',
-    description: 'Request access to a dataset',
+    description: 'Able to request other access types',
+    long_description: 'Able to request other access types, which may include '
+    + 'viewing sensitive metadata, listing files, downloading, remote access, or compute access',
   },
   {
     id: 4,
-    name: 'DATASET:READ_DATA',
-    description: 'Read and access dataset data files',
+    name: 'DATASET:LIST_FILES',
+    description: 'Browse file tree',
+    long_description: 'Browse file tree and see file names, size.',
   },
   {
     id: 5,
     name: 'DATASET:DOWNLOAD',
-    description: 'Download dataset data',
+    description: 'Local copy',
+    long_description: 'Download individual files or entire bundle for local use',
   },
   {
     id: 6,
     name: 'DATASET:COMPUTE',
-    description: 'Run compute jobs against dataset data',
+    description: 'Run compute jobs',
+    long_description: 'Run compute jobs on dataset in place, without downloading',
   },
   {
     id: 7,
     name: 'COLLECTION:VIEW_METADATA',
-    description: 'View dataset or collection metadata',
+    description: 'See collection exists',
+    long_description: 'See collection exists and view non-sensitive metadata such as description, dataset count',
   },
   {
     id: 8,
     name: 'COLLECTION:REQUEST_ACCESS',
-    description: 'Request access to a collection',
+    description: 'Able to request other access types',
+    long_description: 'Able to request other access types, which may include listing datasets in collection',
   },
   {
     id: 9,
-    name: 'COLLECTION:READ_DATA',
-    description: 'List datasets in collection and read dataset metadata',
+    name: 'COLLECTION:LIST_DATASETS',
+    description: 'Browse datasets in collection',
+    long_description: 'Browse datasets in collection and see dataset names, types, and size',
+  },
+  {
+    id: 10,
+    name: 'DATASET:REMOTE_ACCESS',
+    description: 'Path to storage',
+    long_description: 'Access dataset in place via provided path, without downloading',
+  },
+  {
+    id: 11,
+    name: 'DATASET:LIST_DERIVED_DATASETS',
+    description: 'View derived datasets',
+    long_description: 'View derived datasets and their metadata that reference this dataset as a source',
+  },
+];
+
+const GRANT_PRESETS = [
+  {
+    id: 1,
+    name: 'Discoverable',
+    description: 'Allows users to view collection and dataset metadata and request further access',
+    access_type_ids: [1, 3, 7, 8, 9],
+  },
+  {
+    id: 2,
+    name: 'Standard Research Use',
+    description: 'Allows users to view and download datasets',
+    access_type_ids: [1, 4, 5, 7, 9],
+  },
+  {
+    id: 3,
+    name: 'Restricted Research Use',
+    description: 'Allows users to run compute jobs, except download',
+    access_type_ids: [1, 4, 6, 7, 9],
   },
 ];
 
@@ -244,4 +288,5 @@ module.exports = {
   INCLUDE_PROJECTS,
   EVERYONE_GROUP_ID,
   GRANT_ACCESS_TYPES,
+  GRANT_PRESETS,
 };

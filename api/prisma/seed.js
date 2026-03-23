@@ -19,7 +19,7 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
-const { GRANT_ACCESS_TYPES } = require('../src/constants');
+const { GRANT_ACCESS_TYPES, GRANT_PRESETS } = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
 
 const prisma = new PrismaClient();
@@ -367,6 +367,36 @@ async function main() {
     })),
   );
 
+  // upsert grant presets
+  await Promise.all(
+    // eslint-disable-next-line no-unused-vars
+    GRANT_PRESETS.map(({ access_type_ids, ...gp }) => prisma.grant_preset.upsert({
+      where: { id: gp.id },
+      update: {},
+      create: gp,
+    })),
+  );
+
+  // upsert grant preset items
+  for (const preset of GRANT_PRESETS) {
+    const { access_type_ids, id: preset_id } = preset;
+    for (const access_type_id of access_type_ids) {
+      await prisma.grant_preset_item.upsert({
+        where: {
+          preset_id_access_type_id: {
+            preset_id,
+            access_type_id,
+          },
+        },
+        update: {},
+        create: {
+          preset_id,
+          access_type_id,
+        },
+      });
+    }
+  }
+
   // create instruments
   // delete pre-existing records
   await prisma.instrument.deleteMany();
@@ -524,23 +554,6 @@ async function main() {
     data: accessSeedData.grants,
     skipDuplicates: true,
   });
-
-  if (accessSeedData.grantPresets?.length) {
-    await Promise.all(
-      accessSeedData.grantPresets.map((p) => prisma.grant_preset.upsert({
-        where: { id: p.id },
-        update: {},
-        create: p,
-      })),
-    );
-  }
-
-  if (accessSeedData.grantPresetItems?.length) {
-    await prisma.grant_preset_item.createMany({
-      data: accessSeedData.grantPresetItems,
-      skipDuplicates: true,
-    });
-  }
 
   await Promise.all(
     accessSeedData.accessRequests.map((r) => prisma.access_request.upsert({

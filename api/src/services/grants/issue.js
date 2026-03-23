@@ -6,6 +6,7 @@ const createError = require('http-errors');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const Expiry = require('@/utils/expiry');
 const audit = require('@/authorization/builtin/audit');
+const prisma = require('@/db');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const { getResourceOwnerGroupId } = require('./helpers');
 
@@ -87,6 +88,36 @@ async function _createGrant(tx, data, auditData = {}) {
 }
 
 /**
+ * Create a single grant (backwards compatibility wrapper for legacy createGrant API)
+ * @param {Object} data - grant fields (subject_id, resource_id, access_type_id, valid_from?, valid_until?, etc.)
+ * @param {string} granted_by - user ID performing grant creation
+ */
+async function createGrant(data, granted_by) {
+  if (!data || typeof data !== 'object') {
+    throw new Error('grant data must be provided');
+  }
+  if (!granted_by) {
+    throw new Error('granted_by is required');
+  }
+
+  let { expiry } = data;
+
+  if (!(data.expiry instanceof Expiry)) {
+    expiry = (data.valid_until === undefined || data.valid_until === null
+      ? Expiry.never()
+      : Expiry.at(data.valid_until));
+  }
+
+  const grantData = {
+    ...data,
+    granted_by,
+    expiry,
+  };
+
+  return prisma.$transaction((tx) => _createGrant(tx, grantData));
+}
+
+/**
  * Check whether a non-revoked grant already exists that would overlap with the requested validity window.
  * Uses half-open interval semantics [valid_from, valid_until) matching the DB exclusion constraint.
  * Kept as an explicit pre-flight helper for callers that want early ORM-level feedback before hitting the DB.
@@ -147,7 +178,7 @@ function validateItems(items) {
 // Build a map of preset_id -> [access_type_id, ...] for quick lookup when processing approved items
 async function buildPresetIdToAccessTypeIdsMap(tx, presetIds) {
   const presets = await tx.grant_preset.findMany({
-    where: { id: { in: presetIds } },
+    where: { id: { in: presetIds }, is_active: true },
     include: { access_type_items: true },
   });
   return new Map(presets.map((p) => [p.id, p.access_type_items.map((i) => i.access_type_id)]));
@@ -343,7 +374,7 @@ class GrantIssueService {
    */
   async issue(tx, items) {
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);
-    this._hydrateMetadata(tx);
+    await this._hydrateMetadata(tx);
 
     const now = new Date(); // use the same timestamp for all grants created in this batch for consistency
 
@@ -438,6 +469,7 @@ function buildEffectiveGrants(tx, params, items) {
 }
 
 module.exports = {
+  createGrant,
   issueGrants,
   buildEffectiveGrants,
   GrantIssueService, // exported for testing purposes

@@ -87,6 +87,27 @@ router.post(
       return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
     }
 
+    // validate preset_id exists and is active
+    if (presetIds.length > 0) {
+      const existingPresets = await prisma.grant_preset.findMany({
+        where: { id: { in: presetIds }, is_active: true },
+        select: { id: true },
+      });
+      const existingPresetIds = new Set(existingPresets.map((p) => p.id));
+      for (const presetId of presetIds) {
+        if (!existingPresetIds.has(presetId)) {
+          return res.status(400).json({ message: `preset_id ${presetId} does not exist or is not active` });
+        }
+      }
+    }
+
+    // validate approved_expiry is in the future
+    for (const item of req.body.items) {
+      if (item.approved_expiry.hasExpired()) {
+        return res.status(400).json({ message: 'approved_expiry must be in the future' });
+      }
+    }
+
     const data = pickNonNil([
       'subject_id',
       'resource_id',
@@ -142,6 +163,13 @@ router.post(
       .map((item) => item.preset_id);
     if (new Set(presetIds).size !== presetIds.length) {
       return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
+    }
+
+    // validate approved_expiry is in the future
+    for (const item of req.body.items) {
+      if (item.approved_expiry.hasExpired()) {
+        return res.status(400).json({ message: 'approved_expiry must be in the future' });
+      }
     }
 
     const data = pickNonNil([
