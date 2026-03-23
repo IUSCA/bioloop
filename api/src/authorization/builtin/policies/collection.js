@@ -83,7 +83,7 @@ collectionPolicies
       isPlatformAdmin,
       isCollectionAdmin,
       hasCollectionOversight,
-      userHasGrant('COLLECTION:READ_DATA')]),
+      userHasGrant('COLLECTION:LIST_CONTENTS')]),
 
     edit_metadata: Policy.or([isPlatformAdmin, isCollectionAdmin]),
     add_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
@@ -104,7 +104,7 @@ collectionPolicies
     {
       policy: Policy.or([
         userHasGrant('COLLECTION:VIEW_METADATA'),
-        userHasGrant('COLLECTION:READ_DATA')]),
+        userHasGrant('COLLECTION:LIST_CONTENTS')]),
       role: CallerRole.GRANT_HOLDER,
     },
   ])

@@ -228,7 +228,7 @@
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
-import { useModal, VaCardContent } from "vuestic-ui";
+import { useModal } from "vuestic-ui";
 
 const { confirm } = useModal();
 

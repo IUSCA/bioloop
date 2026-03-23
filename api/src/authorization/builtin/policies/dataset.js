@@ -164,7 +164,7 @@ datasetPolicies
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
-      userHasGrant('DATASET:READ_DATA'),
+      userHasGrant('DATASET:LIST_FILES'),
     ]),
 
     // ------------------------------------------------------------------
@@ -176,7 +176,7 @@ datasetPolicies
     read_data: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,
-      userHasGrant('DATASET:READ_DATA'),
+      userHasGrant('DATASET:LIST_FILES'),
     ]),
 
     download: Policy.or([
@@ -335,9 +335,8 @@ datasetPolicies
     {
       policy: Policy.or([
         userHasGrant('DATASET:VIEW_METADATA'),
-        userHasGrant('DATASET:READ_DATA'),
+        userHasGrant('DATASET:LIST_FILES'),
         userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
-        userHasGrant('DATASET:READ_DATA'),
         userHasGrant('DATASET:DOWNLOAD'),
         userHasGrant('DATASET:COMPUTE'),
       ]),

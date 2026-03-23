@@ -27,7 +27,7 @@
 
             <VaButton
               size="small"
-              @click="navigateToCreateDataset"
+              @click="openAddDatasetModal"
               v-if="props.canCreate"
             >
               <div class="flex items-center justify-between gap-2 mx-1">
@@ -56,8 +56,6 @@
                 :items="datasets"
                 :columns="columns"
                 class="datasets-table"
-                hoverable
-                striped
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
                 disable-client-side-sorting
@@ -119,6 +117,26 @@
                     {{ rowData.is_deleted ? "Archived" : "Active" }}
                   </ModernChip>
                 </template>
+
+                <template #cell(actions)="{ rowData }">
+                  <VaButtonDropdown preset="primary" class="" size="small">
+                    <div class="flex flex-col items-start gap-2">
+                      <VaButton
+                        v-if="props.canRemove"
+                        @click="openRemoveDatasetModal(rowData)"
+                        size="small"
+                        preset="secondary"
+                        color="danger"
+                        class="w-full"
+                      >
+                        <div class="flex items-center gap-1">
+                          <i-mdi-close class="text-sm" />
+                          Remove
+                        </div>
+                      </VaButton>
+                    </div>
+                  </VaButtonDropdown>
+                </template>
               </VaDataTable>
 
               <Pagination
@@ -175,7 +193,7 @@
               </div>
 
               <!-- Call to action -->
-              <VaButton v-if="props.canCreate" @click="navigateToCreateDataset">
+              <VaButton v-if="props.canCreate" @click="openAddDatasetModal">
                 <div class="flex items-center gap-3 px-2">
                   <i-mdi-plus class="text-lg" />
                   <span class="font-medium">Add Dataset</span>
@@ -187,6 +205,17 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+  <CollectionAddDatasetModal
+    ref="addDatasetModal"
+    :collection-id="props.collection.id"
+    :owner-group-id="props.collection.owner_group_id"
+    @update="handleDatasetUpdated"
+  />
+  <CollectionRemoveDatasetModal
+    ref="removeDatasetModal"
+    :collection="props.collection"
+    @update="handleDatasetUpdated"
+  />
 </template>
 
 <script setup>
@@ -194,11 +223,11 @@ import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/v2/datasets";
 import { getIcon } from "@/services/v2/icons";
-import { VaCardContent } from "vuestic-ui/web-components";
 
 const props = defineProps({
-  collectionId: { type: String, required: true },
+  collection: { type: Object, required: true },
   canCreate: { type: Boolean, required: true },
+  canRemove: { type: Boolean, required: true },
 });
 
 const emit = defineEmits(["count-changed"]);
@@ -225,15 +254,26 @@ const statusFilters = [
   { label: "Archived", value: "archived" },
 ];
 
-const columns = [
-  { key: "name", label: "Name", sortable: true },
-  { key: "type", label: "Type", width: "120px" },
-  { key: "description", label: "Description" },
-  { key: "size", label: "Size", width: "100px", sortable: true },
-  { key: "created_at", label: "Created On", width: "120px", sortable: true },
-  { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },
-  { key: "status", label: "Status", width: "100px" },
-];
+const columns = computed(() => {
+  const _columns = [
+    { key: "name", label: "Name", sortable: true },
+    { key: "type", label: "Type", width: "120px" },
+    { key: "description", label: "Description" },
+    { key: "size", label: "Size", width: "100px", sortable: true },
+    { key: "created_at", label: "Created On", width: "120px", sortable: true },
+    {
+      key: "updated_at",
+      label: "Last Updated",
+      width: "120px",
+      sortable: true,
+    },
+    { key: "status", label: "Status", width: "100px" },
+  ];
+  if (props.canRemove) {
+    _columns.push({ key: "actions", label: "", width: "40px" });
+  }
+  return _columns;
+});
 
 function setStatus(value) {
   activeStatus.value = value;
@@ -256,41 +296,24 @@ async function fetchDatasets() {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       name: searchTerm.value || undefined,
-      collection_id: props.collectionId,
+      collection_id: props.collection.id,
       sort_by: sortBy.value === "size" ? "_count.datasets" : sortBy.value,
       sort_order: sortOrder.value,
     });
 
+    console.log("Fetched datasets:", data.data);
     error.value = null;
     datasets.value = data.data;
-
-    // Filter by status if needed (client-side for now)
-    if (activeStatus.value !== "all") {
-      datasets.value = datasets.value.filter((d) => {
-        if (activeStatus.value === "active") {
-          return !d.is_deleted;
-        } else if (activeStatus.value === "archived") {
-          return d.is_deleted;
-        }
-        return true;
-      });
-    }
-
     total.value = data.metadata?.total ?? data.data.length;
-    emit("count-changed", total.value);
   } catch (err) {
-    error.value = err;
+    error.value =
+      err?.response?.data?.message ??
+      "An error occurred while fetching datasets.";
     datasets.value = [];
     total.value = 0;
-    emit("count-changed", 0);
   } finally {
     loading.value = false;
   }
-}
-
-function navigateToCreateDataset() {
-  // TODO: Route to create dataset page or open modal
-  // For now, this placeholder can be connected to your navigation/modal logic
 }
 
 function resetFilters() {
@@ -298,9 +321,26 @@ function resetFilters() {
   setStatus("all");
 }
 
+function handleDatasetUpdated() {
+  fetchDatasets();
+  emit("count-changed");
+}
+
+const removeDatasetModal = ref(null);
+function openRemoveDatasetModal(dataset) {
+  removeDatasetModal.value.show(dataset);
+}
+
 onMounted(() => {
   fetchDatasets();
 });
+
+const addDatasetModal = ref(null);
+function openAddDatasetModal() {
+  if (addDatasetModal.value) {
+    addDatasetModal.value.show();
+  }
+}
 </script>
 
 <style scoped>
@@ -309,5 +349,8 @@ onMounted(() => {
 }
 .card.header {
   --va-card-padding: 0.8rem;
+}
+:deep(.va-dropdown__content) {
+  --va-dropdown-content-padding: 0px;
 }
 </style>

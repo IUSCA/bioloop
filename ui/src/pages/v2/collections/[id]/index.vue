@@ -119,7 +119,7 @@
 
         <CollectionDatasetsTab
           v-else-if="activeTab === 'datasets'"
-          :collection-id="props.id"
+          :collection="collection"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
           @count-changed="fetchDatasetCount"

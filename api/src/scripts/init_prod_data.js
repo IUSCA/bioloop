@@ -5,7 +5,7 @@ require('module-alias/register');
 const path = require('path');
 const { PrismaClient, SUBJECT_TYPE } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
-const { GRANT_ACCESS_TYPES } = require('../constants');
+const { GRANT_ACCESS_TYPES, GRANT_PRESETS } = require('../constants');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
@@ -116,7 +116,38 @@ async function main() {
     });
   }
 
+  // upsert grant presets
+  await Promise.all(
+    // eslint-disable-next-line no-unused-vars
+    GRANT_PRESETS.map(({ access_type_ids, ...gp }) => prisma.grant_preset.upsert({
+      where: { id: gp.id },
+      update: {},
+      create: gp,
+    })),
+  );
+
+  // upsert grant preset items
+  for (const preset of GRANT_PRESETS) {
+    const { access_type_ids, id: preset_id } = preset;
+    for (const access_type_id of access_type_ids) {
+      await prisma.grant_preset_item.upsert({
+        where: {
+          preset_id_access_type_id: {
+            preset_id,
+            access_type_id,
+          },
+        },
+        update: {},
+        create: {
+          preset_id,
+          access_type_id,
+        },
+      });
+    }
+  }
+
   console.log(`created ${GRANT_ACCESS_TYPES.length} grant access types`);
+  console.log(`created ${GRANT_PRESETS.length} grant presets`);
 
   const tables = ['user', 'role', 'grant_access_type'];
   for (const table of tables) {

@@ -115,7 +115,7 @@ function generateGroupAccessSeedData({
         description: 'Dataset grant to user in same group (active)',
         resource_id: datasetSame?.resource_id,
         subject_id: sameGroupUser,
-        access_type_id: 4, // DATASET:READ_DATA
+        access_type_id: 4, // DATASET:LIST_FILES
         valid_from: new Date(),
         created_at: new Date(),
       },
@@ -132,7 +132,7 @@ function generateGroupAccessSeedData({
         description: 'Collection grant to user in same group (revoked)',
         resource_id: collectionSame?.id,
         subject_id: sameGroupUser,
-        access_type_id: 9, // COLLECTION:READ_DATA
+        access_type_id: 9, // COLLECTION:LIST_CONTENTS
         valid_from: dayjs().subtract(10, 'day').toDate(),
         revoked_at: new Date(),
         revoked_by: grantor,

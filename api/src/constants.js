@@ -232,7 +232,7 @@ const GRANT_ACCESS_TYPES = [
   },
   {
     id: 9,
-    name: 'COLLECTION:LIST_DATASETS',
+    name: 'COLLECTION:LIST_CONTENTS',
     description: 'Browse datasets in collection',
     long_description: 'Browse datasets in collection and see dataset names, types, and size',
   },
