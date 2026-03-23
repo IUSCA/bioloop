@@ -77,7 +77,8 @@ export const useNotificationStore = defineStore("notification", () => {
 
   /** Immutably replaces a single filter key to trigger Vue reactivity cleanly. */
   function setFilter(key, value) {
-    const normalized = key === "search" ? (value == null ? "" : String(value)) : value;
+    const normalized =
+      key === "search" ? (value == null ? "" : String(value)) : value;
     filters.value = {
       ...filters.value,
       [key]: normalized,
@@ -203,7 +204,8 @@ export const useNotificationStore = defineStore("notification", () => {
 
   /** Loads the next page of notifications (infinite scroll trigger). No-ops if already loading or exhausted. */
   function fetchMoreNotifications({ forSelf = false, username = null } = {}) {
-    if (listFetching.value || !hasMoreNotifications.value) return Promise.resolve();
+    if (listFetching.value || !hasMoreNotifications.value)
+      return Promise.resolve();
     return fetchNotifications({
       forSelf,
       username,
@@ -270,10 +272,7 @@ export const useNotificationStore = defineStore("notification", () => {
       });
   }
 
-  function withdrawNotification(
-    id,
-    { forSelf = false, username = null } = {},
-  ) {
+  function withdrawNotification(id, { forSelf = false, username = null } = {}) {
     if (forSelf && !username) {
       return Promise.resolve();
     }
@@ -287,9 +286,7 @@ export const useNotificationStore = defineStore("notification", () => {
           return refreshNotifications({ forSelf, username });
         }
         if (error?.response?.status === 403) {
-          toast.error(
-            "You are not allowed to withdraw this notification.",
-          );
+          toast.error("You are not allowed to withdraw this notification.");
           return;
         }
         toast.error("Could not withdraw notification.");

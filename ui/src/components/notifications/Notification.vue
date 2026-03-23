@@ -1,14 +1,8 @@
 <template>
   <div class="notification-anchor">
-    <div
-      v-if="showChipsRow"
-      class="flex gap-2 mb-2 flex-wrap"
-    >
+    <div v-if="showChipsRow" class="flex gap-2 mb-2 flex-wrap">
       <template v-if="isRoleBroadcast && roleOutlineNames.length > 0">
-        <va-chip
-          size="small"
-          :color="theme.delivery.roleBroadcast.color"
-        >
+        <va-chip size="small" :color="theme.delivery.roleBroadcast.color">
           Role Broadcast
         </va-chip>
         <va-chip
@@ -123,8 +117,7 @@
         :data-testid="`notification-${notification.id}-withdraw`"
         tabindex="0"
         v-if="
-          notification.can_withdraw &&
-          !notification.withdrawal?.is_withdrawn
+          notification.can_withdraw && !notification.withdrawal?.is_withdrawn
         "
         :disabled="disabled"
         @click="$emit('toggle-withdraw', notification)"
@@ -180,11 +173,7 @@ const props = defineProps({
     default: false,
   },
 });
-defineEmits([
-  "toggle-read",
-  "toggle-bookmarked",
-  "toggle-withdraw",
-]);
+defineEmits(["toggle-read", "toggle-bookmarked", "toggle-withdraw"]);
 const showUntrustedLinkModal = ref(false);
 const selectedUntrustedLink = ref(null);
 
@@ -200,7 +189,8 @@ const roleOutlineNames = computed(() => {
   if (!isRoleBroadcast.value || !canSeeBroadcastTargets.value) {
     return [];
   }
-  const { broadcast_role_names: multi, role_name: single } = props.notification.delivery;
+  const { broadcast_role_names: multi, role_name: single } =
+    props.notification.delivery;
   if (Array.isArray(multi) && multi.length > 0) {
     return multi;
   }
@@ -212,8 +202,8 @@ const roleOutlineNames = computed(() => {
 
 const showChipsRow = computed(
   () =>
-    (isRoleBroadcast.value && roleOutlineNames.value.length > 0)
-    || Boolean(props.notification.withdrawal?.is_withdrawn),
+    (isRoleBroadcast.value && roleOutlineNames.value.length > 0) ||
+    Boolean(props.notification.withdrawal?.is_withdrawn),
 );
 
 const actionButtonsCount = computed(() =>

@@ -6,6 +6,8 @@
 *nginx.key
 
 .idea
+.DS_Store
+**/.DS_Store
 
 ui/node_modules
 ui/dist
@@ -77,11 +79,6 @@ rhythm/rhythm_api
 
 signet/signet
 
-# # AI-agent dirs
-# .cursorrules
-# .cursor/
-# .ai/
-# # Notification-specific ignores
-# tests/tools/notifications/
-# # e2e-test-specific ignores
-# bin/*e2e*.sh
+.cursorrules
+.cursor/
+.ai/

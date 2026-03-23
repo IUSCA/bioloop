@@ -1,17 +1,19 @@
 /**
+ * cspell:ignore magick
+ *
  * Logs in via CI mock CAS (ticket=role), opens the notifications dropdown,
  * and saves PNGs cropped to the notification bell + panel, plus the user
  * avatar/username column (excluding CI badge and theme toggle between them).
  *
  * Also writes short GIFs for interactions that are easier to see in motion.
  *
- * Usage (from repo root, e2e stack up on 24443):
+ * Usage (from repo root, e2e stack up on 443):
  *   node tests/tools/capture-notification-menu-screens.cjs
  *
  * Requires ImageMagick (`magick`) on PATH for compositing and GIF output.
  *
  * Env:
- *   CAPTURE_BASE_URL  default https://localhost:24443
+ *   CAPTURE_BASE_URL  default https://localhost
  */
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -19,7 +21,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 
-const BASE = process.env.CAPTURE_BASE_URL || 'https://localhost:24443';
+const BASE = process.env.CAPTURE_BASE_URL || 'https://localhost';
 const OUT = path.join(__dirname, '..', 'screenshots', 'notification-menu-manual');
 const CLIP_PAD_PX = 10;
 
@@ -332,10 +334,10 @@ async function main() {
     await page.waitForTimeout(200);
     await shotCropped(page, '07-admin-menu-scrolled-mid-role-broadcasts');
 
-    const dismissBtns = page.locator('[data-testid$="-withdraw"]');
-    const n = await dismissBtns.count();
+    const dismissButtons = page.locator('[data-testid$="-withdraw"]');
+    const n = await dismissButtons.count();
     for (let i = 0; i < Math.min(3, n); i += 1) {
-      await dismissBtns.nth(i).click();
+      await dismissButtons.nth(i).click();
       await page.waitForTimeout(450);
     }
     await page.getByTestId('filter-withdrawn').click();

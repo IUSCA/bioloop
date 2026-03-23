@@ -1,8 +1,5 @@
 <template>
-  <div
-    ref="dropdownRootRef"
-    class="notification-dropdown-root relative"
-  >
+  <div ref="dropdownRootRef" class="notification-dropdown-root relative">
     <va-badge
       :offset="[-3, 10]"
       :text="`${badgeCount > 0 ? badgeCount : ''}`"
@@ -24,281 +21,280 @@
       </va-button>
     </va-badge>
 
-    <div
+    <button
       v-if="isMenuOpen"
       class="notification-menu-backdrop"
       data-testid="notification-menu-backdrop"
+      type="button"
+      aria-label="Close notifications menu"
       @click="closeNotificationMenu"
+      @keydown.enter.prevent.stop="closeNotificationMenu"
+      @keydown.space.prevent.stop="closeNotificationMenu"
     />
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
     <div
       v-if="isMenuOpen"
       ref="menuPanelRef"
       class="notification-menu-panel notification-menu-panel--anchored flex flex-col max-h-96"
       data-testid="notification-menu-items"
+      role="dialog"
+      aria-label="Notifications menu"
       tabindex="-1"
       @keydown.esc.prevent.stop="closeNotificationMenu"
     >
       <div
         class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
       >
-          <div class="notification-top-controls">
-            <va-popover message="Filter Unread">
-              <va-button
-                ref="firstTopControlRef"
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                :color="
+        <div class="notification-top-controls">
+          <va-popover message="Filter Unread">
+            <va-button
+              ref="firstTopControlRef"
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isUnreadFilterActive ? theme.filters.unread.color : 'secondary'
+              "
+              data-testid="filter-unread"
+              aria-label="Unread filter"
+              title="Filter Unread"
+              :disabled="controlsDisabled"
+              @click="toggleUnreadFilter"
+              @keydown.enter.prevent="toggleUnreadFilter"
+              @keydown.space.prevent="toggleUnreadFilter"
+            >
+              <Icon
+                :icon="
                   isUnreadFilterActive
-                    ? theme.filters.unread.color
-                    : 'secondary'
+                    ? theme.filters.unread.iconOn
+                    : theme.filters.unread.iconOff
                 "
-                data-testid="filter-unread"
-                aria-label="Unread filter"
-                title="Filter Unread"
-                :disabled="controlsDisabled"
-                @click="toggleUnreadFilter"
-                @keydown.enter.prevent="toggleUnreadFilter"
-                @keydown.space.prevent="toggleUnreadFilter"
-              >
-                <Icon
-                  :icon="
-                    isUnreadFilterActive
-                      ? theme.filters.unread.iconOn
-                      : theme.filters.unread.iconOff
-                  "
-                />
-              </va-button>
-            </va-popover>
-            <va-popover message="Filter Read">
-              <va-button
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                :color="
-                  isReadFilterActive ? theme.filters.read.color : 'secondary'
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isReadFilterActive ? theme.filters.read.color : 'secondary'
+              "
+              data-testid="filter-read"
+              aria-label="Read filter"
+              title="Filter Read"
+              :disabled="controlsDisabled"
+              @click="toggleReadFilter"
+              @keydown.enter.prevent="toggleReadFilter"
+              @keydown.space.prevent="toggleReadFilter"
+            >
+              <Icon
+                :icon="
+                  isReadFilterActive
+                    ? theme.filters.read.iconOn
+                    : theme.filters.read.iconOff
                 "
-                data-testid="filter-read"
-                aria-label="Read filter"
-                title="Filter Read"
-                :disabled="controlsDisabled"
-                @click="toggleReadFilter"
-                @keydown.enter.prevent="toggleReadFilter"
-                @keydown.space.prevent="toggleReadFilter"
-              >
-                <Icon
-                  :icon="
-                    isReadFilterActive
-                      ? theme.filters.read.iconOn
-                      : theme.filters.read.iconOff
-                  "
-                />
-              </va-button>
-            </va-popover>
-            <va-popover message="Filter Bookmarked">
-              <va-button
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                :color="
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Bookmarked">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isBookmarkedFilterActive
+                  ? theme.filters.bookmarked.color
+                  : 'secondary'
+              "
+              data-testid="filter-bookmarked"
+              aria-label="Bookmark filter"
+              title="Filter Bookmarked"
+              :disabled="controlsDisabled"
+              @click="toggleBookmarkedFilter"
+              @keydown.enter.prevent="toggleBookmarkedFilter"
+              @keydown.space.prevent="toggleBookmarkedFilter"
+            >
+              <Icon
+                :icon="
                   isBookmarkedFilterActive
-                    ? theme.filters.bookmarked.color
-                    : 'secondary'
+                    ? theme.filters.bookmarked.iconOn
+                    : theme.filters.bookmarked.iconOff
                 "
-                data-testid="filter-bookmarked"
-                aria-label="Bookmark filter"
-                title="Filter Bookmarked"
-                :disabled="controlsDisabled"
-                @click="toggleBookmarkedFilter"
-                @keydown.enter.prevent="toggleBookmarkedFilter"
-                @keydown.space.prevent="toggleBookmarkedFilter"
-              >
-                <Icon
-                  :icon="
-                    isBookmarkedFilterActive
-                      ? theme.filters.bookmarked.iconOn
-                      : theme.filters.bookmarked.iconOff
-                  "
-                />
-              </va-button>
-            </va-popover>
-            <va-popover
-              v-if="showWithdrawnFilter"
-              message="Filter withdrawn notifications"
+              />
+            </va-button>
+          </va-popover>
+          <va-popover
+            v-if="showWithdrawnFilter"
+            message="Filter withdrawn notifications"
+          >
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isWithdrawnFilterActive
+                  ? theme.filters.withdrawn.color
+                  : 'secondary'
+              "
+              data-testid="filter-withdrawn"
+              aria-label="Withdrawn filter"
+              title="Filter withdrawn notifications"
+              :disabled="controlsDisabled"
+              @click="toggleWithdrawnFilter"
+              @keydown.enter.prevent="toggleWithdrawnFilter"
+              @keydown.space.prevent="toggleWithdrawnFilter"
             >
-              <va-button
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                :color="
+              <Icon
+                :icon="
                   isWithdrawnFilterActive
-                    ? theme.filters.withdrawn.color
-                    : 'secondary'
+                    ? theme.filters.withdrawn.iconOn
+                    : theme.filters.withdrawn.iconOff
                 "
-                data-testid="filter-withdrawn"
-                aria-label="Withdrawn filter"
-                title="Filter withdrawn notifications"
-                :disabled="controlsDisabled"
-                @click="toggleWithdrawnFilter"
-                @keydown.enter.prevent="toggleWithdrawnFilter"
-                @keydown.space.prevent="toggleWithdrawnFilter"
-              >
-                <Icon
-                  :icon="
-                    isWithdrawnFilterActive
-                      ? theme.filters.withdrawn.iconOn
-                      : theme.filters.withdrawn.iconOff
-                  "
-                />
-              </va-button>
-            </va-popover>
-            <va-popover message="Mark all as read">
-              <va-button
-                preset="secondary"
-                size="small"
-                block
-                class="notification-top-control-button"
-                data-testid="mark-all-read"
-                aria-label="Mark all as read"
-                title="Mark all as read"
-                :disabled="controlsDisabled"
-                @click="onMarkAllRead"
-                @keydown.enter.prevent="onMarkAllRead"
-                @keydown.space.prevent="onMarkAllRead"
-              >
-                <Icon :icon="theme.actions.read.icon" />
-              </va-button>
-            </va-popover>
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Mark all as read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              data-testid="mark-all-read"
+              aria-label="Mark all as read"
+              title="Mark all as read"
+              :disabled="controlsDisabled"
+              @click="onMarkAllRead"
+              @keydown.enter.prevent="onMarkAllRead"
+              @keydown.space.prevent="onMarkAllRead"
+            >
+              <Icon :icon="theme.actions.read.icon" />
+            </va-button>
+          </va-popover>
+        </div>
+        <div class="flex items-center justify-between mt-2">
+          <div
+            class="text-xs text-secondary"
+            data-testid="notification-visible-count"
+          >
+            Showing {{ displayedNotifications.length }}
           </div>
-          <div class="flex items-center justify-between mt-2">
-            <div
-              class="text-xs text-secondary"
-              data-testid="notification-visible-count"
+          <va-popover v-if="hasActiveFilters" message="Clear all filters">
+            <button
+              type="button"
+              class="notification-clear-filters-button"
+              data-testid="clear-notification-filters"
+              aria-label="Clear filters"
+              title="Clear all filters"
+              :disabled="controlsDisabled"
+              @click="handleClearFilters"
             >
-              Showing {{ displayedNotifications.length }}
-            </div>
-            <va-popover
-              v-if="hasActiveFilters"
-              message="Clear all filters"
+              <Icon icon="mdi:filter-remove-outline" />
+            </button>
+          </va-popover>
+        </div>
+        <div v-if="hasActiveFilterChips" class="flex gap-2 mt-2 flex-wrap">
+          <div
+            v-if="isReadFilterActive"
+            class="notification-filter-chip notification-filter-chip--info"
+            data-testid="active-filter-chip-read"
+          >
+            Read
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Read filter"
+              data-testid="active-filter-chip-read-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearReadFilter"
+              @keydown.enter.prevent.stop="clearReadFilter"
+              @keydown.space.prevent.stop="clearReadFilter"
             >
-              <button
-                type="button"
-                class="notification-clear-filters-button"
-                data-testid="clear-notification-filters"
-                aria-label="Clear filters"
-                title="Clear all filters"
-                :disabled="controlsDisabled"
-                @click="handleClearFilters"
-              >
-                <Icon icon="mdi:filter-remove-outline" />
-              </button>
-            </va-popover>
+              <Icon icon="mdi:close" />
+            </button>
           </div>
           <div
-            v-if="hasActiveFilterChips"
-            class="flex gap-2 mt-2 flex-wrap"
+            v-if="isBookmarkedFilterActive"
+            class="notification-filter-chip notification-filter-chip--success"
+            data-testid="active-filter-chip-bookmarked"
           >
-            <div
-              v-if="isReadFilterActive"
-              class="notification-filter-chip notification-filter-chip--info"
-              data-testid="active-filter-chip-read"
-            >
-              Read
-              <button
-                type="button"
-                class="notification-filter-chip__clear"
-                aria-label="Clear Read filter"
-                data-testid="active-filter-chip-read-clear"
-                tabindex="0"
-                :disabled="controlsDisabled"
-                @click.prevent.stop="clearReadFilter"
-                @keydown.enter.prevent.stop="clearReadFilter"
-                @keydown.space.prevent.stop="clearReadFilter"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div
-              v-if="isBookmarkedFilterActive"
-              class="notification-filter-chip notification-filter-chip--success"
-              data-testid="active-filter-chip-bookmarked"
-            >
-              Bookmarked
-              <button
-                type="button"
-                class="notification-filter-chip__clear"
-                aria-label="Clear Bookmarked filter"
-                data-testid="active-filter-chip-bookmarked-clear"
-                tabindex="0"
-                :disabled="controlsDisabled"
-                @click.prevent.stop="clearBookmarkedFilter"
-                @keydown.enter.prevent.stop="clearBookmarkedFilter"
-                @keydown.space.prevent.stop="clearBookmarkedFilter"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div
-              v-if="showWithdrawnFilter && isWithdrawnFilterActive"
-              class="notification-filter-chip notification-filter-chip--danger"
-              data-testid="active-filter-chip-withdrawn"
-            >
-              Withdrawn
-              <button
-                type="button"
-                class="notification-filter-chip__clear"
-                aria-label="Clear Withdrawn filter"
-                data-testid="active-filter-chip-withdrawn-clear"
-                tabindex="0"
-                :disabled="controlsDisabled"
-                @click.prevent.stop="clearWithdrawnFilter"
-                @keydown.enter.prevent.stop="clearWithdrawnFilter"
-                @keydown.space.prevent.stop="clearWithdrawnFilter"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div
-              v-if="activeSearchFilter"
-              class="notification-filter-chip notification-filter-chip--secondary"
-              data-testid="active-filter-chip-search"
-            >
-              Search: {{ activeSearchFilter }}
-              <button
-                type="button"
-                class="notification-filter-chip__clear"
-                aria-label="Clear Search filter"
-                data-testid="active-filter-chip-search-clear"
-                tabindex="0"
-                :disabled="controlsDisabled"
-                @click.prevent.stop="clearSearchFilter"
-                @keydown.enter.prevent.stop="clearSearchFilter"
-                @keydown.space.prevent.stop="clearSearchFilter"
-              >
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-          </div>
-          <div class="mt-2">
-            <va-input
-              v-model="searchInput"
-              class="notification-search-input"
-              placeholder="Search notifications"
-              clearable
+            Bookmarked
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Bookmarked filter"
+              data-testid="active-filter-chip-bookmarked-clear"
+              tabindex="0"
               :disabled="controlsDisabled"
-              @keydown.stop="onSearchInputKeydown"
-              @keydown.shift.tab.prevent.stop="onSearchShiftTab"
-              @click.capture="onSearchInputClick"
-              @clear="clearSearchFilter"
-              @focus="onSearchFocus"
-              @blur="onSearchBlur"
-              data-testid="notification-search"
-            />
+              @click.prevent.stop="clearBookmarkedFilter"
+              @keydown.enter.prevent.stop="clearBookmarkedFilter"
+              @keydown.space.prevent.stop="clearBookmarkedFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
           </div>
+          <div
+            v-if="showWithdrawnFilter && isWithdrawnFilterActive"
+            class="notification-filter-chip notification-filter-chip--danger"
+            data-testid="active-filter-chip-withdrawn"
+          >
+            Withdrawn
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Withdrawn filter"
+              data-testid="active-filter-chip-withdrawn-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearWithdrawnFilter"
+              @keydown.enter.prevent.stop="clearWithdrawnFilter"
+              @keydown.space.prevent.stop="clearWithdrawnFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+          <div
+            v-if="activeSearchFilter"
+            class="notification-filter-chip notification-filter-chip--secondary"
+            data-testid="active-filter-chip-search"
+          >
+            Search: {{ activeSearchFilter }}
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Search filter"
+              data-testid="active-filter-chip-search-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearSearchFilter"
+              @keydown.enter.prevent.stop="clearSearchFilter"
+              @keydown.space.prevent.stop="clearSearchFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </div>
+        <div class="mt-2">
+          <va-input
+            v-model="searchInput"
+            class="notification-search-input"
+            placeholder="Search notifications"
+            clearable
+            :disabled="controlsDisabled"
+            @keydown.stop="onSearchInputKeydown"
+            @keydown.shift.tab.prevent.stop="onSearchShiftTab"
+            @click.capture="onSearchInputClick"
+            @clear="clearSearchFilter"
+            @focus="onSearchFocus"
+            @blur="onSearchBlur"
+            data-testid="notification-search"
+          />
+        </div>
       </div>
 
       <div
@@ -453,13 +449,13 @@ function focusableControl(el) {
   if (!(el instanceof HTMLElement)) return null;
   if (
     el.matches(
-      'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+      "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
     )
   ) {
     return el;
   }
   return el.querySelector(
-    'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+    "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
   );
 }
 
@@ -470,22 +466,28 @@ function focusFirstMenuControlSoon() {
     attempts += 1;
     const panel =
       menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
-    if (panel && panel.offsetParent !== null && !panel.contains(document.activeElement)) {
+    if (
+      panel &&
+      panel.offsetParent !== null &&
+      !panel.contains(document.activeElement)
+    ) {
       panel.focus();
     }
     const anchor =
-      panel?.querySelector('[data-testid="filter-unread"]')
-      || panel?.querySelector('[data-testid="filter-read"]')
-      || panel?.querySelector('[data-testid="filter-bookmarked"]')
-      || panel?.querySelector('[data-testid="filter-withdrawn"]')
-      || panel?.querySelector('[data-testid="clear-notification-filters"]')
-      || panel?.querySelector('[data-testid="notification-search"]')
-      || (firstTopControlRef.value?.$el instanceof HTMLElement
+      panel?.querySelector('[data-testid="filter-unread"]') ||
+      panel?.querySelector('[data-testid="filter-read"]') ||
+      panel?.querySelector('[data-testid="filter-bookmarked"]') ||
+      panel?.querySelector('[data-testid="filter-withdrawn"]') ||
+      panel?.querySelector('[data-testid="clear-notification-filters"]') ||
+      panel?.querySelector('[data-testid="notification-search"]') ||
+      (firstTopControlRef.value?.$el instanceof HTMLElement
         ? firstTopControlRef.value.$el
         : null);
-    const node = focusableControl(anchor) || panel?.querySelector(
-      'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
-    );
+    const node =
+      focusableControl(anchor) ||
+      panel?.querySelector(
+        "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+      );
     if (node && node.offsetParent !== null) {
       node.focus();
       if (document.activeElement !== node && attempts < maxAttempts) {
@@ -519,8 +521,9 @@ function openNotificationMenuFromKeyboard() {
 function closeNotificationMenu() {
   if (!isMenuOpen.value) return;
   isMenuOpen.value = false;
-  const button = focusableControl(notificationOpenButtonRef.value?.$el)
-    || (notificationOpenButtonRef.value?.$el instanceof HTMLElement
+  const button =
+    focusableControl(notificationOpenButtonRef.value?.$el) ||
+    (notificationOpenButtonRef.value?.$el instanceof HTMLElement
       ? notificationOpenButtonRef.value.$el
       : null);
   if (button instanceof HTMLElement) {
@@ -532,30 +535,33 @@ function onSearchFocus() {
   isSearchFocused.value = true;
 }
 
-function onSearchInputKeydown() {
-}
+function onSearchInputKeydown() {}
 
 function onSearchShiftTab() {
   const panel =
     menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
   if (!panel) return;
   const chipClears = Array.from(
-    panel.querySelectorAll('[data-testid^="active-filter-chip-"][data-testid$="-clear"]'),
+    panel.querySelectorAll(
+      '[data-testid^="active-filter-chip-"][data-testid$="-clear"]',
+    ),
   ).filter(
     (node) =>
-      node instanceof HTMLElement
-      && node.offsetParent !== null
-      && !node.hasAttribute("disabled"),
+      node instanceof HTMLElement &&
+      node.offsetParent !== null &&
+      !node.hasAttribute("disabled"),
   );
   if (chipClears.length > 0) {
     chipClears[chipClears.length - 1].focus();
     return;
   }
-  const clearAll = panel.querySelector('[data-testid="clear-notification-filters"]');
+  const clearAll = panel.querySelector(
+    '[data-testid="clear-notification-filters"]',
+  );
   if (
-    clearAll instanceof HTMLElement
-    && clearAll.offsetParent !== null
-    && !clearAll.hasAttribute("disabled")
+    clearAll instanceof HTMLElement &&
+    clearAll.offsetParent !== null &&
+    !clearAll.hasAttribute("disabled")
   ) {
     clearAll.focus();
   }

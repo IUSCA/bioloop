@@ -2,9 +2,11 @@ function getVisibleNotificationMenuPanel() {
   const panels = Array.from(
     document.querySelectorAll('[data-testid="notification-menu-items"]'),
   );
-  return panels.find(
-    (panel) => panel instanceof HTMLElement && panel.offsetParent !== null,
-  ) || null;
+  return (
+    panels.find(
+      (panel) => panel instanceof HTMLElement && panel.offsetParent !== null,
+    ) || null
+  );
 }
 
 function removeVisibleSearchFilterChips() {
@@ -15,7 +17,4 @@ function removeVisibleSearchFilterChips() {
     .forEach((chip) => chip.remove());
 }
 
-export {
-  getVisibleNotificationMenuPanel,
-  removeVisibleSearchFilterChips,
-};
+export { getVisibleNotificationMenuPanel, removeVisibleSearchFilterChips };
