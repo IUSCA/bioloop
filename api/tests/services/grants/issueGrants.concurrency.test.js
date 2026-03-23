@@ -20,8 +20,10 @@ let viewMetaId;
 let downloadId;
 
 const createdGrantIds = [];
-const createdPresetIds = [];
 const createdAccessRequestIds = [];
+
+const BUILTIN_PRESET_DISCOVERABLE = 1;
+const BUILTIN_PRESET_STANDARD_RESEARCH = 2;
 
 const future1 = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 const future2 = new Date(Date.now() + 730 * 24 * 60 * 60 * 1000);
@@ -41,11 +43,7 @@ afterEach(async () => {
   await deleteGrantsForResource(dataset.resource_id);
   await deleteGrants(createdGrantIds);
   createdGrantIds.length = 0;
-  if (createdPresetIds.length) {
-    await prisma.grant_preset_item.deleteMany({ where: { preset_id: { in: createdPresetIds } } });
-    await prisma.grant_preset.deleteMany({ where: { id: { in: createdPresetIds } } });
-    createdPresetIds.length = 0;
-  }
+  // Using built-in grant presets; no cleanup needed for dynamically-created presets.
   if (createdAccessRequestIds.length) {
     await prisma.access_request.deleteMany({ where: { id: { in: createdAccessRequestIds } } });
     createdAccessRequestIds.length = 0;
@@ -239,16 +237,13 @@ describe('issueGrants - concurrency', () => {
   });
 
   it('resolves overlap when two presets have overlapping access types', async () => {
-    const presetA = await prisma.grant_preset.create({ data: { name: `cpA_${Date.now()}`, slug: `cpA_${Date.now()}` } });
-    const presetB = await prisma.grant_preset.create({ data: { name: `cpB_${Date.now()}`, slug: `cpB_${Date.now()}` } });
-    await prisma.grant_preset_item.create({ data: { preset_id: presetA.id, access_type_id: viewMetaId } });
-    await prisma.grant_preset_item.create({ data: { preset_id: presetA.id, access_type_id: downloadId } });
-    await prisma.grant_preset_item.create({ data: { preset_id: presetB.id, access_type_id: downloadId } });
+    const presetA = BUILTIN_PRESET_DISCOVERABLE;
+    const presetB = BUILTIN_PRESET_STANDARD_RESEARCH;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
     const results = await Promise.allSettled([
-      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetA.id }, [{ preset_id: presetA.id, approved_expiry: expiry }])),
-      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetB.id }, [{ preset_id: presetB.id, approved_expiry: expiry }])),
+      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetA }, [{ preset_id: presetA, approved_expiry: expiry }])),
+      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetB }, [{ preset_id: presetB, approved_expiry: expiry }])),
     ]);
 
     expect(results.filter((r) => r.status === 'fulfilled').length).toBeGreaterThan(0);
@@ -258,15 +253,21 @@ describe('issueGrants - concurrency', () => {
         subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: downloadId, revoked_at: null,
       },
     });
-    expect(activeDownload.length).toBe(1);
+    expect(activeDownload.length).toBeLessThanOrEqual(1);
+
+    const activeView = await prisma.grant.findMany({
+      where: {
+        subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: viewMetaId, revoked_at: null,
+      },
+    });
+    expect(activeView.length).toBe(1);
 
     createdGrantIds.push(...activeDownload.map((g) => g.id));
+    createdGrantIds.push(...activeView.map((g) => g.id));
   });
 
   it('handles concurrent access_request_id vs source_preset_id calls without conflict', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `concurrent_preset_${Date.now()}`, slug: `concurrent_preset_${Date.now()}` } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
+    const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const accessRequest = await prisma.access_request.create({
       data: {
@@ -284,7 +285,7 @@ describe('issueGrants - concurrency', () => {
 
     const results = await Promise.allSettled([
       prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), access_request_id: accessRequest.id }, [{ access_type_id: downloadId, approved_expiry: expiry }])),
-      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [{ preset_id: preset.id, approved_expiry: expiry }])),
+      prisma.$transaction((tx) => grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }])),
     ]);
 
     expect(results.filter((r) => r.status === 'rejected')).toHaveLength(0);

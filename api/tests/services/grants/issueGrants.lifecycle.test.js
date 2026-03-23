@@ -20,12 +20,14 @@ let dataset;
 let viewMetaId;
 let downloadId;
 let createdGrantIds = [];
-let createdPresetIds = [];
 let createdAccessRequestIds = [];
 
 const future1 = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 const future2 = new Date(Date.now() + 730 * 24 * 60 * 60 * 1000);
 const future3 = new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000);
+
+const BUILTIN_PRESET_DISCOVERABLE = 1;
+const BUILTIN_PRESET_STANDARD_RESEARCH = 2;
 
 beforeAll(async () => {
   actor = await createTestUser('_ig_actor');
@@ -41,11 +43,7 @@ afterEach(async () => {
   await deleteGrantsForResource(dataset.resource_id);
   await deleteGrants(createdGrantIds);
   createdGrantIds = [];
-  if (createdPresetIds.length) {
-    await prisma.grant_preset_item.deleteMany({ where: { preset_id: { in: createdPresetIds } } });
-    await prisma.grant_preset.deleteMany({ where: { id: { in: createdPresetIds } } });
-    createdPresetIds = [];
-  }
+  // Using built-in grant presets; no cleanup needed for dynamically-created presets.
   if (createdAccessRequestIds.length) {
     await prisma.access_request.deleteMany({ where: { id: { in: createdAccessRequestIds } } });
     createdAccessRequestIds = [];
@@ -117,14 +115,10 @@ describe('issueGrants - lifecycle', () => {
   });
 
   it('expands a preset grant and creates grants for each access type', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `test_preset_${Date.now()}`, slug: `test_preset_${Date.now()}`, description: 'test preset' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: downloadId } });
-
+    const presetId = BUILTIN_PRESET_STANDARD_RESEARCH;
     const x_expiry = Expiry.at(new Date(Date.now() + 86400000));
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [{ preset_id: preset.id, approved_expiry: x_expiry }]);
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: x_expiry }]);
     });
 
     const g1 = await fetchActiveGrant(viewMetaId);
@@ -133,8 +127,8 @@ describe('issueGrants - lifecycle', () => {
     expect(g2).toBeDefined();
     expect(new Date(g1.valid_until).toISOString()).toBe(x_expiry.toValue().toISOString());
     expect(new Date(g2.valid_until).toISOString()).toBe(x_expiry.toValue().toISOString());
-    expect(g1.source_preset_id).toBe(preset.id);
-    expect(g2.source_preset_id).toBe(preset.id);
+    expect(g1.source_preset_id).toBe(presetId);
+    expect(g2.source_preset_id).toBe(presetId);
   });
 
   it('creates two different access_type grants in one call', async () => {
@@ -260,49 +254,42 @@ describe('issueGrants - lifecycle', () => {
   });
 
   it('supports preset with single access type', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `single_preset_${Date.now()}`, slug: `single_preset_${Date.now()}`, description: 'single access' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
+    const presetId = BUILTIN_PRESET_DISCOVERABLE; // has DATASET:VIEW_METADATA and other non-download types
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [{ preset_id: preset.id, approved_expiry: expiry }]);
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }]);
     });
 
     const g = await fetchActiveGrant(viewMetaId);
-    expect(g.source_preset_id).toBe(preset.id);
+    expect(g.source_preset_id).toBe(presetId);
   });
 
   it('supports preset with multiple access types', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `multi_preset_${Date.now()}`, slug: `multi_preset_${Date.now()}`, description: 'multi' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: downloadId } });
+    const presetId = BUILTIN_PRESET_STANDARD_RESEARCH;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [{ preset_id: preset.id, approved_expiry: expiry }]);
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }]);
     });
 
     const g1 = await fetchActiveGrant(viewMetaId);
     const g2 = await fetchActiveGrant(downloadId);
     expect(g1).toBeDefined();
     expect(g2).toBeDefined();
-    expect(g1.source_preset_id).toBe(preset.id);
-    expect(g2.source_preset_id).toBe(preset.id);
+    expect(g1.source_preset_id).toBe(presetId);
+    expect(g2.source_preset_id).toBe(presetId);
   });
 
   it('merges expiries from same preset item and uses latest', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `merge_preset_${Date.now()}`, slug: `merge_preset_${Date.now()}`, description: 'merge' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
+    const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry1 = Expiry.at(new Date(Date.now() + 100000));
     const expiry2 = Expiry.at(new Date(Date.now() + 200000));
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [
-        { preset_id: preset.id, approved_expiry: expiry1 },
-        { preset_id: preset.id, approved_expiry: expiry2 },
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [
+        { preset_id: presetId, approved_expiry: expiry1 },
+        { preset_id: presetId, approved_expiry: expiry2 },
       ]);
     });
 
@@ -311,14 +298,12 @@ describe('issueGrants - lifecycle', () => {
   });
 
   it('supports mixed preset + direct access type no overlap', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `mix_preset_${Date.now()}`, slug: `mix_preset_${Date.now()}`, description: 'mix' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
+    const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [
-        { preset_id: preset.id, approved_expiry: expiry },
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [
+        { preset_id: presetId, approved_expiry: expiry },
         { access_type_id: downloadId, approved_expiry: expiry },
       ]);
     });
@@ -330,16 +315,14 @@ describe('issueGrants - lifecycle', () => {
   });
 
   it('merges overlapping preset+direct expiry for same access type', async () => {
-    const preset = await prisma.grant_preset.create({ data: { name: `overlap_preset_${Date.now()}`, slug: `overlap_preset_${Date.now()}`, description: 'overlap' } });
-    createdPresetIds.push(preset.id);
-    await prisma.grant_preset_item.create({ data: { preset_id: preset.id, access_type_id: viewMetaId } });
+    const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry1 = Expiry.at(new Date(Date.now() + 100000));
     const expiry2 = Expiry.at(new Date(Date.now() + 200000));
 
     await prisma.$transaction(async (tx) => {
-      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: preset.id }, [
-        { preset_id: preset.id, approved_expiry: expiry1 },
+      await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [
+        { preset_id: presetId, approved_expiry: expiry1 },
         { access_type_id: viewMetaId, approved_expiry: expiry2 },
       ]);
     });
