@@ -1,4 +1,4 @@
-# Notifications Design
+# Notifications
 
 ## Purpose
 
@@ -19,11 +19,6 @@ Included:
 - role and ownership authorization behavior
 - SSE invalidation plus polling fallback
 - E2E coverage for behavior, accessibility, and role differences
-
-Out of scope:
-- replacing polling fallback with SSE-only behavior
-- multi-instance SSE fanout infrastructure (for example Redis pub/sub)
-- unrelated UI redesign outside notifications
 
 ## Roles and Access
 
