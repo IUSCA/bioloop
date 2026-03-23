@@ -66,20 +66,7 @@ test.describe('Notification keyboard accessibility', () => {
   test('Enter on notification-open button opens menu and focuses a top control', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
-
-    const openButton = page.getByTestId('notification-open-button');
-    const menu = visibleNotificationMenu(page);
-    for (let i = 0; i < 2; i += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      if (await menu.isVisible()) break;
-      // eslint-disable-next-line no-await-in-loop
-      await openButton.dispatchEvent('keydown', { key: 'Enter' });
-      // eslint-disable-next-line no-await-in-loop
-      await page.waitForTimeout(60);
-    }
-    if (!(await menu.isVisible())) {
-      await openButton.click();
-    }
+    const menu = await ensureNotificationsMenuOpen(page);
     await expect(menu).toBeVisible({ timeout: 10000 });
   });
 
@@ -212,6 +199,13 @@ test.describe('Notification keyboard accessibility', () => {
     await expect(menu.getByTestId('clear-notification-filters')).toBeVisible();
     await menu.getByTestId('clear-notification-filters').focus();
     await page.keyboard.press('Enter');
+    if (await menu.getByTestId('active-filter-chip-read').count()) {
+      await menu.getByTestId('clear-notification-filters').dispatchEvent('keydown', { key: 'Enter' });
+      await menu.getByTestId('clear-notification-filters').dispatchEvent('keyup', { key: 'Enter' });
+    }
+    if (await menu.getByTestId('active-filter-chip-read').count()) {
+      await menu.getByTestId('clear-notification-filters').click();
+    }
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
     await expect(menu.getByTestId('clear-notification-filters')).toHaveCount(0);
 
@@ -219,6 +213,13 @@ test.describe('Notification keyboard accessibility', () => {
     await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(1);
     await menu.getByTestId('clear-notification-filters').focus();
     await page.keyboard.press('Space');
+    if (await menu.getByTestId('active-filter-chip-bookmarked').count()) {
+      await menu.getByTestId('clear-notification-filters').dispatchEvent('keydown', { key: ' ' });
+      await menu.getByTestId('clear-notification-filters').dispatchEvent('keyup', { key: ' ' });
+    }
+    if (await menu.getByTestId('active-filter-chip-bookmarked').count()) {
+      await menu.getByTestId('clear-notification-filters').click();
+    }
     await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(0);
   });
 

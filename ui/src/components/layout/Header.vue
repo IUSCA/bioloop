@@ -85,8 +85,9 @@ const props = defineProps({
   overflow: visible;
 }
 
-.navbar-container--dropdown-host :deep(.va-navbar__inner),
-.navbar-container--dropdown-host :deep(.va-navbar__content) {
+.navbar-container--dropdown-host .va-navbar__inner,
+.navbar-container--dropdown-host .va-navbar__content,
+.navbar-container--dropdown-host .va-navbar-item {
   overflow: visible;
 }
 

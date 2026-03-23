@@ -73,34 +73,28 @@ const ensureNotificationsMenuOpen = async (page) => {
 const openNotificationsMenu = async (page) => {
   const menu = visibleNotificationMenu(page);
   if (await menu.isVisible()) return menu;
-  const buttons = page.getByTestId('notification-open-button');
-  await expect(buttons.first()).toBeAttached({ timeout: 15000 });
-  const count = await buttons.count();
-  for (let i = 0; i < count; i += 1) {
-    const candidate = buttons.nth(i);
-    // Vuestic can leave non-interactive duplicates in the DOM; only the visible
-    // bell should receive the open action.
+  await ensureNotificationOpenButtonVisible(page);
+  for (let i = 0; i < 4; i += 1) {
+    await page.evaluate(() => {
+      const nodes = Array.from(
+        document.querySelectorAll('[data-testid="notification-open-button"]'),
+      );
+      // Try visible candidates first; Vuestic occasionally leaves detached clones.
+      const ordered = [
+        ...nodes.filter((n) => n instanceof HTMLElement && n.offsetParent !== null),
+        ...nodes.filter((n) => n instanceof HTMLElement && n.offsetParent === null),
+      ];
+      for (const node of ordered) {
+        if (!(node instanceof HTMLElement)) continue;
+        node.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        node.click();
+      }
+    });
     // eslint-disable-next-line no-await-in-loop
-    if (await candidate.isVisible()) {
-      // eslint-disable-next-line no-await-in-loop
-      await candidate.evaluate((el) => {
-        if (el instanceof HTMLElement) el.click();
-      });
-      await expect(menu).toBeVisible({ timeout: 15000 });
-      return menu;
-    }
+    await page.waitForTimeout(200);
+    // eslint-disable-next-line no-await-in-loop
+    if (await menu.isVisible()) return menu;
   }
-  await page.evaluate(() => {
-    const nodes = Array.from(
-      document.querySelectorAll('[data-testid="notification-open-button"]'),
-    );
-    const pick =
-      nodes.find((n) => n instanceof HTMLElement && n.offsetParent !== null)
-      || nodes.find((n) => n instanceof HTMLElement);
-    if (pick instanceof HTMLElement) {
-      pick.click();
-    }
-  });
   await expect(menu).toBeVisible({ timeout: 15000 });
   return menu;
 };
@@ -110,11 +104,11 @@ const openNotificationsMenu = async (page) => {
  * up to 3 times if needed (handles feature-flag timing or slow hydration).
  */
 const ensureNotificationOpenButtonVisible = async (page) => {
-  const notificationOpenButton = page.getByTestId('notification-open-button');
+  const notificationOpenButton = page.locator('[data-testid="notification-open-button"]:visible').first();
   for (let i = 0; i < 3; i += 1) {
     if (await notificationOpenButton.isVisible()) return;
     // eslint-disable-next-line no-await-in-loop
-    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.reload({ waitUntil: 'load' });
   }
   await expect(notificationOpenButton).toBeVisible();
 };

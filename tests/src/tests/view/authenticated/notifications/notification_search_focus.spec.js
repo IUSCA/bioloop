@@ -20,11 +20,10 @@ test.describe('Notification search input', () => {
     await page.waitForTimeout(1200);
 
     const input = searchInput(page);
-    const native = input.locator('input, textarea').first();
-    await native.click({ force: true });
-    await expect(native).toBeFocused();
-    await native.pressSequentially('quota', { delay: 40 });
-    await expect(native).toBeFocused();
-    await expect(native).toHaveValue('quota');
+    await input.click({ force: true });
+    await expect(input).toBeFocused();
+    await input.pressSequentially('quota', { delay: 40 });
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue('quota');
   });
 });

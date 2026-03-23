@@ -348,6 +348,7 @@ test.describe('Notification cross-user state (UI)', () => {
     await ensureNotificationsMenuOpen(page);
     const lbl = page.locator(`[data-testid="${labelById(created.id)}"]:visible`).first();
     await expect(lbl).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
+    await expect(page.locator(`[data-testid="${toggleReadById(created.id)}"]:visible`).first())
+      .toContainText('Mark read');
   });
 });

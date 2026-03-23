@@ -505,11 +505,9 @@ function toggleNotificationMenu() {
   if (Date.now() < suppressAnchorClickUntilMs.value) {
     return;
   }
-  isMenuOpen.value = !isMenuOpen.value;
-  if (isMenuOpen.value) {
-    focusFirstMenuControlSoon();
-    return;
-  }
+  if (isMenuOpen.value) return;
+  isMenuOpen.value = true;
+  focusFirstMenuControlSoon();
 }
 
 function openNotificationMenuFromKeyboard() {
