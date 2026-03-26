@@ -1,0 +1,73 @@
+digraph bioloop_architecture {
+    rankdir=LR;
+    node [shape=box, style=filled, fontname="Helvetica"];
+    compound=true;
+
+    subgraph cluster_user {
+        label="User";
+        style=filled; fillcolor="#f5f5f5";
+        user [label="Researcher /\nOperator", shape=ellipse, fillcolor="#e0e0e0"];
+    }
+
+    subgraph cluster_frontend {
+        label="Frontend";
+        style=filled; fillcolor="#dce8f8";
+        ui [label="UI\n(Vue 3 / Vite)\n:443", fillcolor="#b3d4f5"];
+    }
+
+    subgraph cluster_core {
+        label="Core Services";
+        style=filled; fillcolor="#fff3cd";
+        api [label="API\n(Node.js / Express)\n:3030", fillcolor="#ffe082"];
+        secure_dl [label="Secure Download\n(Node.js)\n:3060", fillcolor="#ffe082"];
+    }
+
+    subgraph cluster_auth {
+        label="Auth (Signet)";
+        style=filled; fillcolor="#fde8e8";
+        signet [label="Signet\n(OAuth 2.0)\n:5050", fillcolor="#f5b8b8"];
+        signet_db [label="PostgreSQL\n(Signet)", fillcolor="#f5b8b8"];
+    }
+
+    subgraph cluster_workflow {
+        label="Workflow Engine (Rhythm)";
+        style=filled; fillcolor="#e8f5e8";
+        rhythm [label="Rhythm API\n(FastAPI)\n:5001", fillcolor="#a5d6a7"];
+        queue [label="RabbitMQ", fillcolor="#a5d6a7"];
+        mongo [label="MongoDB\n(Task State)", fillcolor="#a5d6a7"];
+    }
+
+    subgraph cluster_workers {
+        label="Workers (Python / Celery)";
+        style=filled; fillcolor="#f0e8ff";
+        celery [label="celery_worker\n(Task Executor)", fillcolor="#ce93d8"];
+        watch  [label="watch\n(File Monitor)", fillcolor="#ce93d8"];
+    }
+
+    subgraph cluster_storage {
+        label="Storage";
+        style=filled; fillcolor="#fff8e1";
+        postgres [label="PostgreSQL\n(App Data)", fillcolor="#ffe57f"];
+        landing  [label="Shared File Volume\n(/opt/sca/data)", shape=cylinder, fillcolor="#ffe57f"];
+    }
+
+    user      -> ui         [label="HTTPS"];
+    ui        -> api        [label="proxy /api"];
+    ui        -> secure_dl  [label="proxy /secure_download"];
+
+    api       -> postgres;
+    api       -> signet     [label="JWKS / token exchange"];
+    signet    -> signet_db;
+    api       -> rhythm     [label="workflow dispatch"];
+
+    rhythm    -> queue;
+    rhythm    -> mongo;
+    queue     -> celery     [label="tasks"];
+    celery    -> mongo      [label="results"];
+    celery    -> landing;
+
+    watch     -> landing    [label="monitor"];
+    watch     -> api        [label="trigger ingest"];
+
+    secure_dl -> landing    [label="read"];
+}
