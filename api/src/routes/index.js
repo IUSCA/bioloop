@@ -42,7 +42,7 @@ if (featureService.isFeatureEnabled({ key: 'notifications' })) {
   router.use('/notifications', notificationsRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
 router.use('/instruments', require('./instruments') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/uploads', require('./datasets/uploads') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {

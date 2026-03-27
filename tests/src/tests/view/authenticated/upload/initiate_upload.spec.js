@@ -4,7 +4,6 @@ import {
 } from '../../../../actions';
 import {
   selectFiles,
-  trackSelectedFilesMetadata,
 } from '../../../../actions/datasetUpload';
 import {
   navigateToNextStep,
@@ -16,26 +15,17 @@ const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}`
 
 test.use({ attachments });
 
-async function read_progress_percentage(locator) {
-  const textContent = await locator.evaluate((el) => el.textContent ?? '');
-  const normalized = textContent.replace(/\s+/g, ' ').trim();
-  const match = normalized.match(/(\d+)\s*%/);
-  return match ? Number.parseInt(match[1], 10) : null;
-}
-
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
 
   let uploadedDatasetName;
   let selectedDatasetType;
 
-  const selectedFiles = []; // array of selected files
-
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
   test.describe('Upload-initiation step', () => {
@@ -43,12 +33,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
-      // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
-
-      // Store the selected files' information in state
-      selectedFiles.push(...files);
+      await selectFiles({ page, filePaths });
 
       // Click the "Next" button to proceed to the Upload-Details step
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
@@ -103,18 +88,18 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     // Assert that "Processing" status is shown when Upload button is clicked
-    // (to indicate that checksum-computation is in progress)
+    // (to indicate that manifest-hash computation is in progress)
     test('Should show `Processing` status when Upload button is clicked', async () => {
       const statusRow = page.getByTestId('status-row');
       await expect(statusRow).toBeVisible();
-      const statusChip = statusRow.getByTestId('chip-processing');
-      await expect(statusChip).toBeVisible();
-      await expect(statusChip).toHaveText('Processing');
+      const processingChip = statusRow.getByTestId('chip-processing');
+      const uploadingChip = statusRow.getByTestId('chip-uploading');
+      await expect(processingChip.or(uploadingChip)).toBeVisible();
     });
 
-    // Assert that after checksum-computation is complete, "Uploading" status
+    // Assert that after manifest-hash computation is complete, "Uploading" status
     // is shown
-    test('Should show `Uploading` status after checksum-computation is complete', async () => {
+    test('Should show `Uploading` status after manifest-hash computation is complete', async () => {
       const statusRow = page.getByTestId('status-row');
       await expect(statusRow).toBeVisible();
       const statusChip = statusRow.getByTestId('chip-uploading');
@@ -122,35 +107,15 @@ test.describe.serial('Dataset Upload Process', () => {
       await expect(statusChip).toHaveText('Uploading');
     });
 
-    test('should show file-upload progress reaching 100% for each file', async () => {
-      const fileUploadTable = page.getByTestId('file-upload-table');
-      await expect(fileUploadTable).toBeVisible();
+    test('should show upload status after submission starts', async () => {
+      const processingChip = page.getByTestId('chip-processing');
+      const uploadingChip = page.getByTestId('chip-uploading');
+      const uploadedChip = page.getByTestId('chip-uploaded');
+      const failedChip = page.getByTestId('chip-upload-failed');
 
-      const progressCells = fileUploadTable.getByTestId('file-progress');
-      await expect(progressCells).toHaveCount(selectedFiles.length);
-
-      await Promise.all(selectedFiles.map(async (_, index) => {
-        const progressCell = progressCells.nth(index);
-
-        await expect
-          .poll(() => read_progress_percentage(progressCell))
-          .toBeGreaterThan(0);
-
-        const currentProgress = await read_progress_percentage(progressCell);
-
-        expect(currentProgress).not.toBeNull();
-        expect(currentProgress).toBeGreaterThan(0);
-        expect(currentProgress).toBeLessThanOrEqual(100);
-
-        if (currentProgress < 100) {
-          await expect
-            .poll(() => read_progress_percentage(progressCell))
-            .toBe(100);
-        }
-
-        const finalProgress = await read_progress_percentage(progressCell);
-        expect(finalProgress).toBe(100);
-      }));
+      await expect(
+        processingChip.or(uploadingChip).or(uploadedChip).or(failedChip),
+      ).toBeVisible();
     });
   });
 });

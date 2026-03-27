@@ -57,7 +57,6 @@
             </va-chip>
           </td>
         </tr>
-
         <tr data-testid="source-raw-data-row">
           <td>Source Raw Data</td>
           <td class="metadata">
@@ -70,7 +69,6 @@
             </router-link>
           </td>
         </tr>
-
         <tr data-testid="project-row">
           <td>Project</td>
           <td class="metadata">

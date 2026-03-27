@@ -18,18 +18,6 @@ E2E_OPERATOR=e2eOperator
 E2E_ADMIN=e2eAdmin
 ```
 
-### Run tests via Docker Compose
-The test suite can be run via Docker Compose, using `./docker-compose-e2e.yml`.
-
-- `./docker-compose-e2e.yml` builds an image from `./tests/Dockerfile`, which is used to start the `e2e` container.
-- The `e2e` container has a `depends_on` condition which ensures that the test suite isn't kicked off until the `api` container's health check returns `200 OK`.
-
-```
-# in bioloop root dir
-docker-compose -f "docker-compose-e2e.yml" build
-docker-compose -f "docker-compose-e2e.yml" up -d
-```
-
 ### Viewing artifacts
 - The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.
 - Artifacts are generated in the following locations:

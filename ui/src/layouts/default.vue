@@ -72,7 +72,9 @@ const toggleSidebarVisibility = () => {
 };
 
 onMounted(() => {
-  alertStore.startPolling();
+  if (auth.isFeatureEnabled("alerts")) {
+    alertStore.startPolling();
+  }
 });
 
 onUnmounted(() => {

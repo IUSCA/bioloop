@@ -1,10 +1,9 @@
 import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
-import uploadTokenService from "@/services/upload/token";
 import * as utils from "@/services/utils";
-import { jwtDecode } from "jwt-decode";
 import { useNotificationStore } from "@/stores/notification";
+import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
 
@@ -12,7 +11,6 @@ export const useAuthStore = defineStore("auth", () => {
   const env = ref("");
   const user = ref(useLocalStorage("user", {}));
   const token = ref(useLocalStorage("token", ""));
-  const uploadToken = ref(useLocalStorage("uploadToken", ""));
   const loggedIn = ref(false);
   const signupToken = ref(useLocalStorage("signup_token", ""));
   const signupEmail = ref("");
@@ -43,7 +41,6 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
-    uploadToken.value = "";
     useNotificationStore().resetSession();
   }
 
@@ -184,42 +181,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   const getTheme = () => user.value.theme;
 
-  const refreshUploadToken = async ({ fileName, refreshToken = false }) => {
-    const payload = uploadToken.value ? jwtDecode(uploadToken.value) : null;
-    const expiresAt = payload ? new Date(payload.exp * 1000) : null;
-    const now = new Date();
-
-    let willRefreshUploadToken = refreshToken;
-    // If client has not explicitly requested for the token to be refreshed,
-    // check if the token is about to expire. If so, refresh the token.
-    if (!willRefreshUploadToken) {
-      if (now < expiresAt) {
-        const uploadTokenExpiresInSeconds = (expiresAt - now) / 1000;
-        willRefreshUploadToken =
-          uploadTokenExpiresInSeconds <
-          config.refreshTokenTMinusSeconds.uploadToken;
-      } else {
-        willRefreshUploadToken = true;
-      }
-    }
-    return new Promise((resolve, reject) => {
-      if (willRefreshUploadToken) {
-        uploadTokenService
-          .getUploadToken({ data: { file_name: fileName } })
-          .then((res) => {
-            uploadToken.value = res.data.accessToken;
-            resolve();
-          })
-          .catch((err) => {
-            console.error(err);
-            reject(err);
-          });
-      } else {
-        resolve();
-      }
-    });
-  };
-
   const isFeatureEnabled = (featureKey) => {
     return utils.isFeatureEnabled({ featureKey, hasRole });
   };
@@ -238,7 +199,6 @@ export const useAuthStore = defineStore("auth", () => {
     getTheme,
     env,
     setEnv,
-    refreshUploadToken,
     isFeatureEnabled,
     withHandledVerifyResponse,
     signupEmail,

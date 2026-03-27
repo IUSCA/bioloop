@@ -27,6 +27,8 @@ echo ".env loaded. Starting worker..."
 
 if [ $WORKER_TYPE == "celery_worker" ]; then
   echo "Starting Celery Worker"
+  
+  # Start the Celery worker
   # Remove any stale PID file from a previous run.  Docker containers may be
   # restarted without a clean shutdown, leaving the file on the bind-mounted
   # volume.  Celery refuses to start if the PID file already exists.
@@ -39,6 +41,12 @@ if [ $WORKER_TYPE == "celery_worker" ]; then
     --hostname 'bioloop-celery-w1@%h' \
     --autoscale 8,3 \
     --queues 'bioloop-dev.sca.iu.edu.q'
+
+    # Start the upload polling job in the background (runs every 30 seconds)
+  echo "Starting upload polling job in background..."
+  bash "$(dirname "$0")/start_uploads_poller.sh" &
+  POLLING_PID=$!
+  echo "Upload polling job started with PID: $POLLING_PID"
 elif [ $WORKER_TYPE == "watch" ]; then
   echo "Starting Watch Worker"
   python -m workers.scripts.watch
@@ -51,12 +59,6 @@ elif [ $WORKER_TYPE == "purge_staged_datasets" ]; then
 elif [ $WORKER_TYPE == "purge_stale_workflows" ]; then
   echo "Starting Purge Stale Workflows Worker"
   python -m workers.scripts.purge_stale_workflows
-elif [ $WORKER_TYPE == "manage_pending_dataset_uploads" ]; then
-  echo "Starting Manage Pending Dataset Uploads Worker"
-  python -m workers.scripts.manage_pending_dataset_uploads
-elif [ $WORKER_TYPE == "process_upload_dataset" ]; then
-  echo "Starting Process Upload Dataset Worker"
-  python -m workers.scripts.process_upload_dataset
 else
   echo "ERROR: Invalid WORKER_TYPE='${WORKER_TYPE}'"
   exit 1

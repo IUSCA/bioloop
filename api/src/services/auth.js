@@ -84,7 +84,6 @@ const find_or_create_test_user = async ({ identifier }) => {
 
   const test_user_config = is_test_user ? config.e2e.users[identifier] : null;
   const test_user_username = test_user_config ? test_user_config.username : identifier;
-
   // Resolve the expected role up-front so we can enforce it whether the user
   // already exists or is being created for the first time.
   const requested_role = is_test_user
@@ -107,6 +106,34 @@ const find_or_create_test_user = async ({ identifier }) => {
         },
       },
     });
+  } else if (is_test_user) {
+    const existing_roles = await prisma.user_role.findMany({
+      where: {
+        user_id: test_user.id,
+      },
+      select: {
+        role_id: true,
+      },
+    });
+    const has_requested_role = existing_roles.some(
+      (role) => role.role_id === requested_role.id,
+    );
+
+    // Keep CI ticket behavior deterministic by ensuring each role ticket maps
+    // to a user whose effective role matches that ticket.
+    if (!has_requested_role || existing_roles.length !== 1) {
+      await prisma.user_role.deleteMany({
+        where: {
+          user_id: test_user.id,
+        },
+      });
+      await prisma.user_role.create({
+        data: {
+          user_id: test_user.id,
+          role_id: requested_role.id,
+        },
+      });
+    }
   } else if (requested_role) {
     // The user exists but may have been given different roles by a previous
     // test run.  Reset to the single expected role so tests always start from
@@ -119,16 +146,6 @@ const find_or_create_test_user = async ({ identifier }) => {
 
   return test_user;
 };
-
-function get_upload_token(file_path) {
-  // [^\w.-]+ matches one or more characters that are not word
-  // characters (letters, digits, or underscore), dots, or hyphens
-  const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
-  const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
-  return oAuth2SecureTransferClient.clientCredentials({
-    scope: [scope],
-  });
-}
 
 // Function to load and convert the public key to JWKS
 function getJWKS() {
@@ -246,7 +263,6 @@ module.exports = {
   get_user_profile,
   get_download_token,
   find_or_create_test_user,
-  get_upload_token,
   getJWKS,
   issueGrafanaToken,
   getLoginUser,
