@@ -1,20 +1,7 @@
 <template>
+  <!-- PROCESSING: pre-upload API call in progress — blue to match the upload section -->
   <div
-    v-if="props.submissionStatus === constants.UPLOAD_STATUSES.UPLOADING"
-    class="flex items-center space-x-2"
-    data-testid="status-uploading"
-  >
-    <Icon
-      v-if="props.showIcon"
-      icon="mdi:arrow-up-bold"
-      class="animate-bounce va-text-primary text-2xl"
-      data-testid="icon-uploading"
-    />
-    <va-chip size="small" data-testid="chip-uploading">Uploading</va-chip>
-  </div>
-
-  <div
-    v-else-if="props.submissionStatus === constants.UPLOAD_STATUSES.PROCESSING"
+    v-if="props.submissionStatus === constants.UPLOAD_STATUSES.PROCESSING"
     class="flex items-center space-x-2"
     data-testid="status-processing"
   >
@@ -26,9 +13,12 @@
       color="primary"
       data-testid="icon-processing"
     />
-    <va-chip size="small" data-testid="chip-processing">Processing</va-chip>
+    <va-chip size="small" color="primary" data-testid="chip-processing"
+      >Processing</va-chip
+    >
   </div>
 
+  <!-- COMPUTING_CHECKSUMS: amber / fingerprint -->
   <div
     v-else-if="
       props.submissionStatus === constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS
@@ -36,17 +26,40 @@
     class="flex items-center space-x-2"
     data-testid="status-computing-checksums"
   >
-    <i-mdi-progress-helper
+    <Icon
       v-if="props.showIcon"
-      style="color: var(--va-primary)"
-      class="animate-spin text-2xl"
+      icon="mdi:fingerprint"
+      class="animate-pulse text-2xl"
+      style="color: var(--va-warning)"
       data-testid="icon-computing-checksums"
     />
-    <va-chip size="small" data-testid="chip-computing-checksums">
-      Computing Checksums
+    <va-chip
+      size="small"
+      color="warning"
+      data-testid="chip-computing-checksums"
+    >
+      Computing Manifest-Hash
     </va-chip>
   </div>
 
+  <!-- UPLOADING: blue / cloud-upload — mirrors the upload progress bar -->
+  <div
+    v-else-if="props.submissionStatus === constants.UPLOAD_STATUSES.UPLOADING"
+    class="flex items-center space-x-2"
+    data-testid="status-uploading"
+  >
+    <Icon
+      v-if="props.showIcon"
+      icon="mdi:cloud-upload-outline"
+      class="text-2xl va-text-primary"
+      data-testid="icon-uploading"
+    />
+    <va-chip size="small" color="primary" data-testid="chip-uploading"
+      >Uploading</va-chip
+    >
+  </div>
+
+  <!-- CHECKSUM_COMPUTATION_FAILED: manifest-hash computation failed -->
   <div
     v-else-if="
       props.submissionStatus ===
@@ -55,9 +68,10 @@
     class="flex items-center space-x-2"
     data-testid="status-checksum-computation-failed"
   >
-    <i-mdi-alert-circle-outline
-      class="text-2xl"
+    <Icon
       v-if="props.showIcon"
+      icon="mdi:alert-circle-outline"
+      class="text-2xl"
       style="color: var(--va-warning)"
       data-testid="icon-checksum-computation-failed"
     />
@@ -66,10 +80,11 @@
       color="warning"
       data-testid="chip-checksum-computation-failed"
     >
-      Checksum Computation Failed
+      Manifest-Hash Failed
     </va-chip>
   </div>
 
+  <!-- UPLOAD_FAILED -->
   <div
     v-else-if="
       props.submissionStatus === constants.UPLOAD_STATUSES.UPLOAD_FAILED
@@ -77,9 +92,10 @@
     class="flex items-center space-x-2"
     data-testid="status-upload-failed"
   >
-    <i-mdi-alert-circle-outline
-      class="text-2xl"
+    <Icon
       v-if="props.showIcon"
+      icon="mdi:alert-circle-outline"
+      class="text-2xl"
       style="color: var(--va-danger)"
       data-testid="icon-upload-failed"
     />
@@ -88,14 +104,16 @@
     </va-chip>
   </div>
 
+  <!-- UPLOADED -->
   <div
     v-else-if="props.submissionStatus === constants.UPLOAD_STATUSES.UPLOADED"
     class="flex items-center space-x-2"
     data-testid="status-uploaded"
   >
-    <i-mdi-check-circle
-      class="text-2xl"
+    <Icon
       v-if="props.showIcon"
+      icon="mdi:check-circle"
+      class="text-2xl"
       style="color: var(--va-success)"
       data-testid="icon-uploaded"
     />
@@ -107,6 +125,7 @@
 
 <script setup>
 import constants from "@/constants";
+import { Icon } from "@iconify/vue";
 
 const props = defineProps({
   submissionStatus: {
@@ -119,9 +138,3 @@ const props = defineProps({
   },
 });
 </script>
-
-<style scoped>
-.animate-spin {
-  animation: spin 2s linear infinite;
-}
-</style>

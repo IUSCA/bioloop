@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant UI as UI (Stepper)
+    participant API as API Routes
+    participant TUS as TUS Middleware/Server
+    participant FS as Filesystem
+    participant DB as PostgreSQL
+    participant CRON as manage_upload_workflows
+    participant CELERY as verify_upload_integrity
+    participant WF as Integrated Workflow
+
+    UI->>API: POST /datasets/uploads
+    API->>DB: create dataset + upload_log(UPLOADING)
+    API-->>UI: dataset_id + upload_log
+
+    loop each file
+      UI->>TUS: POST/PATCH /api/uploads/files
+      TUS->>DB: validate dataset_id + auth + status
+      TUS->>FS: write chunks, then move file to origin_path
+      TUS-->>UI: resumable progress
+    end
+
+    UI->>API: POST /datasets/uploads/:id/complete
+    API->>DB: set UPLOADED + process_id + metadata
+    API-->>UI: success
+
+    CRON->>DB: read UPLOADED
+    CRON->>DB: set VERIFYING + task metadata
+    CRON->>CELERY: enqueue verification
+    CELERY->>FS: verify manifest-hash or size-manifest/existence
+    CELERY->>DB: set VERIFIED or VERIFICATION_FAILED
+
+    CRON->>WF: start workflow (when VERIFIED)
+    CRON->>DB: set COMPLETE (or PROCESSING_FAILED / PERMANENTLY_FAILED)

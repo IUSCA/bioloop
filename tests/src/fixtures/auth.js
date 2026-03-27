@@ -6,9 +6,9 @@ import config from 'config';
  */
 async function getTokenByRole({ role }) {
   const apiContext = await baseRequest.newContext({
-    baseURL: config.apiBaseURL,
+    ignoreHTTPSErrors: true,
   });
-  const res = await apiContext.post('/auth/cas/verify', {
+  const res = await apiContext.post(`${config.apiBaseURL}/auth/cas/verify`, {
     data: { ticket: role },
   });
   const body = await res.json();

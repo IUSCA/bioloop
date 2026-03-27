@@ -24,22 +24,66 @@ services:
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
-      # Import-Sources:
+      # ----------------------------------------------------------------------------
+      # This section describes the volumes needed to make certain features work in
+      #  Production.
+      # 
+      # **********************************************************************
+      # 
+      # 1. Uploads:
+      # - The following instructions are for making the Upload feature work in Production.
+      #  This is not needed if the Upload feature is not enabled.
+      # 
+      # - Mount the landing-directory for uploads (i.e. the directory where uploaded
+      #   files will be written to) into the API container.
+      # - This directory will be used:
+      #     A.) By the API, to upload files to.
+      #     B.) By the workers, to read the uploaded files for further processing.
+      # - This directory is expected to be available on the host(s) that run the API
+      #   and the celery_worker services (natively or via a mounted volume).
+      # 
+      # ** Format: **
+      #   - /host/path/to/uploads/destination:/opt/sca/data/uploads:ro
+      # ** Example: **
+      #   - /data/bioloop/uploads:/opt/sca/uploads:ro
+      # 
+      # **********************************************************************
+      # 
+      # 2. Import-Sources:
       # - The following instructions are for making the Import feature work in Production.
       #  This is not needed if the Import feature is not enabled.
       # 
       # - Mount each Import-Source directory into the API container, so
-      #   the API can read the files in the Import-Source.
-      # - Add one volume per Import-Source, using the canonical-path as the
-      #   source and the mount-point as the target.
-      #   - /canonical/path:/mount/point:ro
-      # Examples:
-      #   - /data/bioloop/genomics:/opt/sca/imports/genomics:ro
-      #   - /data/bioloop/proteomics:/opt/sca/imports/proteomics:ro
-      # Note: The canonical-path and mount-point will also need to be populated in the
-      #  database. See api/src/scripts/init_prod_import_sources.js for more details.
+      #   that the API can read the files in the Import-Source.
+      #   - An "Import-Source" is a directory whose files can be registered
+      #     as Datasets using the web-interface.
+      # - This directory is expected to be available on the host(s) that run the API
+      #   and the celery_worker services (natively or via a mounted volume).
+      # 
+      # - For mounting an Import-Source into the API container, use the path
+      #   to the Import-Source on the host filesystem as the source, and the mount-point
+      #   as the target.
+      #   - The mount-point is the directory where the Import-Source will be mounted
+      #     in the API container.
+      # 
+      # ** Format: **
+      #   - /host/path/to/import/source:/opt/sca/data/imports/import-source-name:ro
+      # ** Examples: **
+      #   - /data/bioloop/genomics:/opt/sca/data/imports/genomics:ro
+      #   - /data/bioloop/proteomics:/opt/sca/data/imports/proteomics:ro
+      # ** Note: **
+      #   - The path to the Import-Source will also need to be populated in the
+      #     database. See api/src/scripts/init_prod_import_sources.js for more details.
+      # 
+      # **********************************************************************
+      # 
+      # ----------------------------------------------------------------------------
     expose:
       - 3030
+    entrypoint:
+      - sh
+      - -c
+      - npm ci && npx prisma generate && exec node_modules/.bin/nodemon --ignore 'tests/**/*.js' src/index.js
     # entrypoint: [ "tail", "-f", "/dev/null" ]
     depends_on:
       - postgres

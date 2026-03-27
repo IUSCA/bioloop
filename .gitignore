@@ -77,5 +77,6 @@ rhythm/rhythm_api
 
 signet/signet
 
-.cursorrules
 .ai/
+.cursor/
+.cursorrules
