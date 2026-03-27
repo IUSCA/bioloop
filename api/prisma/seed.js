@@ -7,6 +7,7 @@ const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 const config = require('config');
 
+const { update } = require('lodash');
 const { normalize_name } = require('../src/services/project');
 const data = require('./seed_data/data');
 const { random_files } = require('./seed_data/random_paths');
@@ -305,6 +306,72 @@ async function main() {
       host: `instrument ${i + 1}.iu.edu`,
     })),
   });
+  // await prisma.user.createMany({
+  //   data: [{
+  //     username: 'e2eAdmin',
+  //     email: 'e2eAdmin@iu.edu',
+  //     cas_id: 'e2eAdmin',
+  //     name: 'e2eAdmin',
+  //     user_role: {
+  //       create: [{ role_id: 1 }],
+  //     },
+  //   },
+  //   {
+  //     username: 'e2eOperator',
+  //     email: 'e2eOperator@iu.edu',
+  //     cas_id: 'e2eOperator',
+  //     name: 'e2eOperator',
+  //     user_role: {
+  //       create: [{ role_id: 2 }],
+  //     },
+  //   },
+  //   {
+  //     username: 'e2eUser',
+  //     email: 'e2eUser@iu.edu',
+  //     cas_id: 'e2eUser',
+  //     name: 'e2eUser',
+  //     user_role: {
+  //       create: [{ role_id: 3 }],
+  //     },
+  //   }],
+  // });
+
+  const users = [
+    {
+      username: 'e2eAdmin',
+      email: 'e2eAdmin@iu.edu',
+      cas_id: 'e2eAdmin',
+      name: 'e2eAdmin',
+      user_role: {
+        create: [{ role_id: 1 }],
+      },
+    },
+    {
+      username: 'e2eOperator',
+      email: 'e2eOperator@iu.edu',
+      cas_id: 'e2eOperator',
+      name: 'e2eOperator',
+      user_role: {
+        create: [{ role_id: 2 }],
+      },
+    },
+    {
+      username: 'e2eUser',
+      email: 'e2eUser@iu.edu',
+      cas_id: 'e2eUser',
+      name: 'e2eUser',
+      user_role: {
+        create: [{ role_id: 3 }],
+      },
+    },
+  // ... other users
+  ];
+
+  await Promise.all(
+    users.map((userData) => prisma.user.create({
+      data: userData,
+    })),
+  );
 }
 
 main()

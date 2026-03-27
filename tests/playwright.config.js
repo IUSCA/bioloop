@@ -66,7 +66,7 @@ module.exports = {
         name: 'operator_login',
         testMatch: path.join(
           __dirname,
-          '/tests/setup/operator_login.setup.js',
+          '/src/tests/setup/operator_login.setup.js',
         ),
       },
       /** Project to login as user */

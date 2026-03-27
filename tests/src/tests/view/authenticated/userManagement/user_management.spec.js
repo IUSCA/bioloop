@@ -37,9 +37,8 @@ test.describe.serial('User management', () => {
     // following tests will run with the modal open
     await page.getByTestId('create-user-button').click();
     await expect(page.getByTestId(TEST_ID_MODAL)).toBeVisible();
-  });
 
-  test('Create User modal opened', async ({ page }) => {
+    // Create locators fresh for each test's page instance
     userNameInputLocator = page.locator(elementTestIdSelector({
       elementType: 'input',
       testId: TEST_ID_NAME,
@@ -60,7 +59,9 @@ test.describe.serial('User management', () => {
       elementType: 'textarea',
       testId: TEST_ID_NOTES,
     }));
+  });
 
+  test('Create User modal opened', async ({ page }) => {
     await expect(page.getByTestId(TEST_ID_NAME)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_EMAIL)).toHaveText('');
     await expect(page.getByTestId(TEST_ID_USERNAME)).toHaveText('');

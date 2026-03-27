@@ -32,5 +32,11 @@
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "playwright.env": {
+    "NODE_CONFIG_DIR": "./tests/config",
+    "E2E_USERS_ADMIN_USERNAME": "e2eAdmin",
+    "E2E_USERS_OPERATOR_USERNAME": "e2eOperator",
+    "E2E_USERS_USER_USERNAME": "e2eUser"
   }
 }

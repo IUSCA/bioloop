@@ -2,13 +2,13 @@
   "e2e": {
     "users": {
       "admin": {
-        "username": "E2E_ADMIN"
+        "username": "E2E_USERS_ADMIN_USERNAME"
       },
       "operator": {
-        "username": "E2E_OPERATOR"
+        "username": "E2E_USERS_OPERATOR_USERNAME"
       },
       "user": {
-        "username": "E2E_USER"
+        "username": "E2E_USERS_USER_USERNAME"
       }
     }
   }
