@@ -133,6 +133,10 @@ const grantsObject = {
     alerts: {
       'read:any': ['*'],
     },
+    notifications: {
+      'read:own': ['*'],
+      'update:own': ['*'],
+    },
   },
 
   // operator role permissions
@@ -189,6 +193,7 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
+      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],

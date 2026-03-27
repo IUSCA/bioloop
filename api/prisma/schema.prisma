@@ -175,8 +175,8 @@ model user {
   project_datasets_assigned  project_dataset[]
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
-  acknowledged_notifications notification[]
-  user_notifications         user_notification[]
+  created_notifications      notification[]      @relation("created_notifications")
+  notification_recipients    notification_recipient[]
   owned_projects             project[]
   // created_datasets           dataset_create_log[]
   alerts_created             alert[]
@@ -208,35 +208,38 @@ model user_settings {
 }
 
 model notification {
-  id                 Int                 @id @default(autoincrement())
-  created_at         DateTime            @default(now()) @db.Timestamp(6)
-  label              String
-  text               String?
-  status             NOTIFICATION_STATUS @default(CREATED)
-  acknowledged_by_id Int?
-  acknowledged_by    user?               @relation(fields: [acknowledged_by_id], references: [id], onDelete: Cascade)
-  role_notifications role_notification[]
-  user_notifications user_notification[]
+  id            Int                      @id @default(autoincrement())
+  created_at    DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at    DateTime                 @default(now()) @updatedAt @db.Timestamp(6)
+  created_by_id Int?
+  created_by    user?                    @relation("created_notifications", fields: [created_by_id], references: [id], onDelete: SetNull)
+  type          String?
+  label         String
+  text          String?
+  metadata      Json?
+  recipients    notification_recipient[]
 }
 
-model role_notification {
-  id              Int          @id @default(autoincrement())
-  role_id         Int
-  role            role         @relation(fields: [role_id], references: [id])
+model notification_recipient {
+  id              Int                        @id @default(autoincrement())
   notification_id Int
-  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-
-  @@unique([notification_id, role_id])
-}
-
-model user_notification {
-  id              Int          @id @default(autoincrement())
+  notification    notification               @relation(fields: [notification_id], references: [id], onDelete: Cascade)
   user_id         Int
-  user            user         @relation(fields: [user_id], references: [id])
-  notification_id Int
-  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  user            user                       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  delivery_type   NOTIFICATION_DELIVERY_TYPE
+  delivery_role_id Int?
+  delivery_role   role?                      @relation(fields: [delivery_role_id], references: [id], onDelete: SetNull)
+  is_read         Boolean                    @default(false)
+  is_archived     Boolean                    @default(false)
+  is_bookmarked   Boolean                    @default(false)
+  read_at         DateTime?                  @db.Timestamp(6)
+  archived_at     DateTime?                  @db.Timestamp(6)
+  bookmarked_at   DateTime?                  @db.Timestamp(6)
+  created_at      DateTime                   @default(now()) @db.Timestamp(6)
+  updated_at      DateTime                   @default(now()) @updatedAt @db.Timestamp(6)
 
   @@unique([notification_id, user_id])
+  @@index([user_id, is_archived, is_read, is_bookmarked])
 }
 
 model contact {
@@ -256,7 +259,7 @@ model role {
   name               String              @db.VarChar(50)
   description        String              @default("") @db.VarChar(255)
   user_role          user_role[]
-  role_notifications role_notification[]
+  delivered_notifications notification_recipient[]
 }
 
 model user_role {
@@ -426,10 +429,9 @@ enum access_type {
   SLATE_SCRATCH
 }
 
-enum NOTIFICATION_STATUS {
-  CREATED
-  ACKNOWLEDGED
-  RESOLVED
+enum NOTIFICATION_DELIVERY_TYPE {
+  ROLE_BROADCAST
+  DIRECT
 }
 
 enum upload_status {

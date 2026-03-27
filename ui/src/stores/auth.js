@@ -2,6 +2,7 @@ import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
 import * as utils from "@/services/utils";
+import { useNotificationStore } from "@/stores/notification";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -32,6 +33,7 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = data.profile;
     token.value = data.token;
     loggedIn.value = true;
+    useNotificationStore().resetSession();
     refreshTokenBeforeExpiry();
   }
 
@@ -39,6 +41,7 @@ export const useAuthStore = defineStore("auth", () => {
     loggedIn.value = false;
     user.value = {};
     token.value = "";
+    useNotificationStore().resetSession();
   }
 
   /**

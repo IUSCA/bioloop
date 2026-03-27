@@ -157,7 +157,19 @@
     "longreprtext",
     "nodeid",
     "virtualenvs",
-    "virtiofs"
+    "virtiofs",
+    "fanout",
+    "oneoff",
+    "ccbrandt",
+    "behaviour",
+    "dedup",
+    "notif",
+    "rolename",
+    "roleid",
+    "desynchronization",
+    "vbscript",
+    "domcontentloaded",
+    "unbookmark"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

@@ -1,54 +1,581 @@
 <template>
-  <va-inner-loading>
-    <va-menu placement="left-bottom">
-      <template #anchor>
-        <va-badge
-          :offset="[-3, 10]"
-          :text="`${notifications.length > 0 ? notifications.length : ''}`"
-          overlap
-          data-testid="notification-count"
-        >
-          <va-button
-            data-testid="notification-icon"
-            class="notification-bell"
-            plain
+  <div ref="dropdownRootRef" class="notification-dropdown-root relative">
+    <va-badge
+      :offset="[-3, 10]"
+      :text="`${badgeCount > 0 ? badgeCount : ''}`"
+      overlap
+      data-testid="notification-count"
+    >
+      <va-button
+        ref="notificationOpenButtonRef"
+        data-testid="notification-open-button"
+        class="notification-open-button"
+        plain
+        :aria-expanded="isMenuOpen ? 'true' : 'false'"
+        aria-haspopup="dialog"
+        @click="toggleNotificationMenu"
+        @keydown.enter.prevent.stop="openNotificationMenuFromKeyboard"
+        @keydown.space.prevent.stop="openNotificationMenuFromKeyboard"
+      >
+        <Icon icon="mdi-bell-outline" height="36px" width="36px" />
+      </va-button>
+    </va-badge>
+
+    <button
+      v-if="isMenuOpen"
+      class="notification-menu-backdrop"
+      data-testid="notification-menu-backdrop"
+      type="button"
+      aria-label="Close notifications menu"
+      @click="closeNotificationMenu"
+      @keydown.enter.prevent.stop="closeNotificationMenu"
+      @keydown.space.prevent.stop="closeNotificationMenu"
+    />
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="isMenuOpen"
+      ref="menuPanelRef"
+      class="notification-menu-panel notification-menu-panel--anchored flex flex-col max-h-96"
+      data-testid="notification-menu-items"
+      role="dialog"
+      aria-label="Notifications menu"
+      :aria-busy="notificationMenuBusy ? 'true' : 'false'"
+      tabindex="-1"
+      @keydown.esc.prevent.stop="closeNotificationMenu"
+    >
+      <div
+        class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
+      >
+        <div class="notification-top-controls">
+          <va-popover message="Filter Unread">
+            <va-button
+              ref="firstTopControlRef"
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isUnreadFilterActive ? theme.filters.unread.color : 'secondary'
+              "
+              data-testid="filter-unread"
+              data-notification-menu-initial-focus="true"
+              aria-label="Unread filter"
+              title="Filter Unread"
+              :disabled="controlsDisabled"
+              @click="toggleUnreadFilter"
+              @keydown.enter.prevent="toggleUnreadFilter"
+              @keydown.space.prevent="toggleUnreadFilter"
+            >
+              <Icon
+                :icon="
+                  isUnreadFilterActive
+                    ? theme.filters.unread.iconOn
+                    : theme.filters.unread.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isReadFilterActive ? theme.filters.read.color : 'secondary'
+              "
+              data-testid="filter-read"
+              aria-label="Read filter"
+              title="Filter Read"
+              :disabled="controlsDisabled"
+              @click="toggleReadFilter"
+              @keydown.enter.prevent="toggleReadFilter"
+              @keydown.space.prevent="toggleReadFilter"
+            >
+              <Icon
+                :icon="
+                  isReadFilterActive
+                    ? theme.filters.read.iconOn
+                    : theme.filters.read.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Bookmarked">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isBookmarkedFilterActive
+                  ? theme.filters.bookmarked.color
+                  : 'secondary'
+              "
+              data-testid="filter-bookmarked"
+              aria-label="Bookmark filter"
+              title="Filter Bookmarked"
+              :disabled="controlsDisabled"
+              @click="toggleBookmarkedFilter"
+              @keydown.enter.prevent="toggleBookmarkedFilter"
+              @keydown.space.prevent="toggleBookmarkedFilter"
+            >
+              <Icon
+                :icon="
+                  isBookmarkedFilterActive
+                    ? theme.filters.bookmarked.iconOn
+                    : theme.filters.bookmarked.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Mark all as read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              data-testid="mark-all-read"
+              aria-label="Mark all as read"
+              title="Mark all as read"
+              :disabled="controlsDisabled"
+              @click="onMarkAllRead"
+              @keydown.enter.prevent="onMarkAllRead"
+              @keydown.space.prevent="onMarkAllRead"
+            >
+              <Icon :icon="theme.actions.read.icon" />
+            </va-button>
+          </va-popover>
+        </div>
+        <div class="flex items-center justify-between mt-2">
+          <div
+            class="text-xs text-secondary"
+            data-testid="notification-visible-count"
           >
-            <Icon icon="mdi-bell-outline" height="36px" width="36px" />
-          </va-button>
-        </va-badge>
-      </template>
-
-      <div class="max-w-md max-h-96" data-testid="notification-menu-items">
-        <va-menu-item v-if="notifications.length === 0">
-          No pending notifications
-        </va-menu-item>
-
-        <va-menu-item
-          v-else
-          v-for="(notification, index) in notifications"
-          :key="index"
-        >
-          <notification :notification="notification"></notification>
-          <va-divider />
-        </va-menu-item>
+            Showing {{ displayedNotifications.length }}
+          </div>
+          <va-popover v-if="hasActiveFilters" message="Clear all filters">
+            <button
+              type="button"
+              class="notification-clear-filters-button"
+              data-testid="clear-notification-filters"
+              aria-label="Clear filters"
+              title="Clear all filters"
+              :disabled="controlsDisabled"
+              @click="handleClearFilters"
+            >
+              <Icon icon="mdi:filter-remove-outline" />
+            </button>
+          </va-popover>
+        </div>
+        <div v-if="hasActiveFilterChips" class="flex gap-2 mt-2 flex-wrap">
+          <div
+            v-if="isReadFilterActive"
+            class="notification-filter-chip notification-filter-chip--info"
+            data-testid="active-filter-chip-read"
+          >
+            Read
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Read filter"
+              data-testid="active-filter-chip-read-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearReadFilter"
+              @keydown.enter.prevent.stop="clearReadFilter"
+              @keydown.space.prevent.stop="clearReadFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+          <div
+            v-if="isBookmarkedFilterActive"
+            class="notification-filter-chip notification-filter-chip--success"
+            data-testid="active-filter-chip-bookmarked"
+          >
+            Bookmarked
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Bookmarked filter"
+              data-testid="active-filter-chip-bookmarked-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearBookmarkedFilter"
+              @keydown.enter.prevent.stop="clearBookmarkedFilter"
+              @keydown.space.prevent.stop="clearBookmarkedFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </div>
+        <div class="mt-2">
+          <va-input
+            v-model="searchInput"
+            class="notification-search-input"
+            placeholder="Search notifications"
+            clearable
+            :disabled="controlsDisabled"
+            @keydown.stop="onSearchInputKeydown"
+            @keydown.shift.tab.prevent.stop="onSearchShiftTab"
+            @click.capture="onSearchInputClick"
+            @clear="clearSearchFilter"
+            @focus="onSearchFocus"
+            @blur="onSearchBlur"
+            data-testid="notification-search"
+          />
+        </div>
       </div>
-    </va-menu>
-  </va-inner-loading>
+
+      <div
+        class="notification-menu-list flex-1 min-h-0 overflow-y-auto relative"
+        data-testid="notification-menu-scroll"
+        @scroll.passive="onMenuScroll"
+      >
+        <va-inner-loading :loading="listFetching || mutationPending">
+          <template v-if="displayedNotifications.length === 0">
+            <div
+              class="px-3 py-3 text-sm text-secondary"
+              data-testid="notification-empty-state"
+            >
+              No pending notifications
+            </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="notification in displayedNotifications"
+              :key="notification.id"
+              class="px-3 py-2"
+            >
+              <notification
+                :notification="notification"
+                :disabled="controlsDisabled"
+                @toggle-read="onToggleRead"
+                @toggle-bookmarked="onToggleBookmarked"
+              ></notification>
+              <va-divider class="mt-2" />
+            </div>
+          </template>
+        </va-inner-loading>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
+import config from "@/config";
+import constants from "@/constants";
+import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
+import { nextTick } from "vue";
+import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
-import config from "@/config";
+
+const { notificationTheme: theme } = constants;
 
 const notificationStore = useNotificationStore();
+const auth = useAuthStore();
+const { canOperate, user: authUser } = storeToRefs(auth);
+const forSelf = computed(
+  () => !viewerHasPrivilegedNotificationAccess(canOperate.value),
+);
+const notificationQueryOpts = computed(() => ({
+  forSelf: forSelf.value,
+  username: authUser.value?.username || null,
+}));
 
-const { notifications } = storeToRefs(notificationStore);
-const { fetchActiveNotifications } = notificationStore;
+const {
+  notifications,
+  filters,
+  unreadCount,
+  listFetching,
+  mutationPending,
+  totalMatchedCount,
+  hasMoreNotifications,
+} = storeToRefs(notificationStore);
+const {
+  refreshNotifications,
+  fetchNotifications,
+  fetchMoreNotifications,
+  updateNotificationState,
+  markAllRead,
+  setFilter,
+  clearFilters,
+} = notificationStore;
+const searchInput = computed({
+  get() {
+    return filters.value.search || "";
+  },
+  set(val) {
+    const next = val == null ? "" : String(val);
+    setFilter("search", next);
+  },
+});
+const isSearchFocused = ref(false);
+const isMenuOpen = ref(false);
+const dropdownRootRef = ref(null);
+const menuPanelRef = ref(null);
+const suppressAnchorClickUntilMs = ref(0);
+const firstTopControlRef = ref(null);
+const notificationOpenButtonRef = ref(null);
+const displayedNotifications = computed(() => notifications.value);
+const isUnreadFilterActive = computed(() => filters.value.read === false);
+const isReadFilterActive = computed(() => filters.value.read === true);
+const isBookmarkedFilterActive = computed(
+  () => filters.value.bookmarked === true,
+);
+const controlsDisabled = computed(
+  () => listFetching.value || mutationPending.value,
+);
 
-// retrieve notifications every 5 seconds
+const hasActiveFilters = computed(() => {
+  return (
+    isReadFilterActive.value ||
+    isBookmarkedFilterActive.value ||
+    Boolean((filters.value.search || "").trim())
+  );
+});
+const badgeCount = computed(() => {
+  if (hasActiveFilters.value) {
+    return totalMatchedCount.value;
+  }
+  return unreadCount.value;
+});
+const hasActiveFilterChips = computed(() => {
+  return isReadFilterActive.value || isBookmarkedFilterActive.value;
+});
+function onSearchInputClick(event) {
+  const target = event?.target;
+  if (!target || typeof target.closest !== "function") return;
+  if (target.closest('[aria-label="reset"]')) {
+    clearSearchFilter();
+  }
+}
+
+function focusableControl(el) {
+  if (!(el instanceof HTMLElement)) return null;
+  if (
+    el.matches(
+      "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+    )
+  ) {
+    return el;
+  }
+  return el.querySelector(
+    "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+  );
+}
+
+/**
+ * Move focus into the dialog after Vue commits the open state and the browser
+ * paints. Uses nextTick + double rAF (layout/paint after DOM update) instead of
+ * timed retries so behavior stays deterministic.
+ */
+function focusFirstMenuControlSoon() {
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const panel =
+            menuPanelRef.value instanceof HTMLElement
+              ? menuPanelRef.value
+              : null;
+          if (!(panel && panel.offsetParent !== null)) return;
+          if (!panel.contains(document.activeElement)) {
+            panel.focus();
+          }
+          const anchor =
+            panel.querySelector("[data-notification-menu-initial-focus]") ||
+            panel.querySelector('[data-testid="filter-unread"]') ||
+            panel.querySelector('[data-testid="filter-read"]') ||
+            panel.querySelector('[data-testid="filter-bookmarked"]') ||
+            panel.querySelector('[data-testid="clear-notification-filters"]') ||
+            panel.querySelector('[data-testid="notification-search"]') ||
+            (firstTopControlRef.value?.$el instanceof HTMLElement
+              ? firstTopControlRef.value.$el
+              : null);
+          const node =
+            focusableControl(anchor) ||
+            panel.querySelector(
+              "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+            );
+          if (node instanceof HTMLElement && node.offsetParent !== null) {
+            node.focus();
+          }
+        });
+      });
+    });
+  });
+}
+
+function toggleNotificationMenu() {
+  if (Date.now() < suppressAnchorClickUntilMs.value) {
+    return;
+  }
+  if (isMenuOpen.value) return;
+  isMenuOpen.value = true;
+  focusFirstMenuControlSoon();
+}
+
+function openNotificationMenuFromKeyboard() {
+  suppressAnchorClickUntilMs.value = Date.now() + 250;
+  isMenuOpen.value = true;
+  focusFirstMenuControlSoon();
+}
+
+function closeNotificationMenu() {
+  if (!isMenuOpen.value) return;
+  isMenuOpen.value = false;
+  const button =
+    focusableControl(notificationOpenButtonRef.value?.$el) ||
+    (notificationOpenButtonRef.value?.$el instanceof HTMLElement
+      ? notificationOpenButtonRef.value.$el
+      : null);
+  if (button instanceof HTMLElement) {
+    button.focus();
+  }
+}
+
+function onSearchFocus() {
+  isSearchFocused.value = true;
+}
+
+function onSearchInputKeydown() {}
+
+function onSearchShiftTab() {
+  const panel =
+    menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
+  if (!panel) return;
+  const chipClears = Array.from(
+    panel.querySelectorAll(
+      '[data-testid^="active-filter-chip-"][data-testid$="-clear"]',
+    ),
+  ).filter(
+    (node) =>
+      node instanceof HTMLElement &&
+      node.offsetParent !== null &&
+      !node.hasAttribute("disabled"),
+  );
+  if (chipClears.length > 0) {
+    chipClears[chipClears.length - 1].focus();
+    return;
+  }
+  const clearAll = panel.querySelector(
+    '[data-testid="clear-notification-filters"]',
+  );
+  if (
+    clearAll instanceof HTMLElement &&
+    clearAll.offsetParent !== null &&
+    !clearAll.hasAttribute("disabled")
+  ) {
+    clearAll.focus();
+  }
+}
+
+function onSearchBlur() {
+  isSearchFocused.value = false;
+}
+
+function clearSearchFilter() {
+  setFilter("search", "");
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+const triggerSearchFetch = useDebounceFn(() => {
+  fetchNotifications(notificationQueryOpts.value);
+}, 250);
+
+watch(
+  () => filters.value.search,
+  () => {
+    triggerSearchFetch();
+  },
+);
+
+/**
+ * List GET or mutating request in flight; omits search debounce so aria-busy does not stick between keystroke and
+ * fetch.
+ */
+const notificationMenuBusy = computed(() =>
+  Boolean(listFetching.value || mutationPending.value),
+);
+
+function onMenuScroll(event) {
+  const panel = event?.target;
+  if (!(panel instanceof HTMLElement)) return;
+  if (!hasMoreNotifications.value || listFetching.value) return;
+  const nearBottom =
+    panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 80;
+  if (!nearBottom) return;
+  fetchMoreNotifications(notificationQueryOpts.value);
+}
+
+function applyReadFilter(value) {
+  setFilter("read", value);
+}
+
+function toggleUnreadFilter() {
+  applyReadFilter(false);
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function toggleReadFilter() {
+  const nextValue = filters.value.read === true ? false : true;
+  applyReadFilter(nextValue);
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function clearReadFilter() {
+  applyReadFilter(false);
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function toggleBookmarkedFilter() {
+  const nextValue = filters.value.bookmarked === true ? null : true;
+  setFilter("bookmarked", nextValue);
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function clearBookmarkedFilter() {
+  setFilter("bookmarked", null);
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function handleClearFilters() {
+  clearFilters();
+  fetchNotifications(notificationQueryOpts.value);
+}
+
+function onToggleRead(notification) {
+  updateNotificationState(
+    notification.id,
+    {
+      is_read: !notification.state.is_read,
+    },
+    notificationQueryOpts.value,
+  );
+}
+
+function onToggleBookmarked(notification) {
+  updateNotificationState(
+    notification.id,
+    {
+      is_bookmarked: !notification.state.is_bookmarked,
+    },
+    notificationQueryOpts.value,
+  );
+}
+
+function onMarkAllRead() {
+  markAllRead(notificationQueryOpts.value);
+}
+
 const { resume } = useIntervalFn(
-  fetchActiveNotifications,
+  () => {
+    if (isSearchFocused.value) return;
+    refreshNotifications(notificationQueryOpts.value);
+  },
   config.notifications.pollingInterval,
   {
     immediateCallback: true,
@@ -56,12 +583,179 @@ const { resume } = useIntervalFn(
 );
 
 onMounted(() => {
+  onClickOutside(dropdownRootRef, () => {
+    closeNotificationMenu();
+  });
+  useEventListener(document, "keydown", (event) => {
+    if (event.key !== "Escape") return;
+    closeNotificationMenu();
+  });
   resume();
 });
 </script>
 
 <style lang="scss" scoped>
-.notification-bell {
+.notification-open-button {
   color: var(--va-text-primary) !important;
+}
+
+.notification-dropdown-root {
+  display: inline-flex;
+}
+
+.notification-top-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+  padding-bottom: 0.125rem;
+}
+
+.notification-top-control-button {
+  width: 100%;
+}
+
+.notification-search-input {
+  width: 100%;
+}
+
+.notification-clear-filters-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--va-background-border);
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--va-secondary);
+  padding: 0.25rem 0.375rem;
+}
+
+.notification-clear-filters-button:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.notification-clear-filters-button:focus,
+.notification-clear-filters-button:focus-visible {
+  outline: 2px solid var(--va-primary);
+  outline-offset: 2px;
+}
+
+.notification-top-control-button :deep(.va-button__content) {
+  justify-content: center;
+}
+
+/* Keep menu width deterministic per app breakpoint thresholds from ui/vuestic.config.js */
+.notification-menu-panel {
+  background: var(--va-background-element);
+  width: min(22rem, calc(100vw - 1rem));
+  min-width: min(22rem, calc(100vw - 1rem));
+  max-width: min(22rem, calc(100vw - 1rem));
+}
+
+.notification-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4999;
+  background: color-mix(in srgb, var(--va-background-primary) 64%, transparent);
+}
+
+.notification-menu-panel--anchored {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 5000;
+}
+
+@media (min-width: 640px) {
+  .notification-menu-panel {
+    width: 28rem;
+    min-width: 28rem;
+    max-width: 28rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .notification-top-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .notification-menu-panel {
+    width: 32rem;
+    min-width: 32rem;
+    max-width: 32rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .notification-menu-panel {
+    width: 36rem;
+    min-width: 36rem;
+    max-width: 36rem;
+  }
+}
+
+.notification-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+}
+
+.notification-filter-chip__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.notification-filter-chip__clear:focus,
+.notification-filter-chip__clear:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+
+.notification-filter-chip__clear:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.notification-top-control-button:deep(.va-button--disabled),
+.notification-search-input:deep(.va-input-wrapper--disabled) {
+  opacity: 0.92;
+}
+
+.notification-filter-chip--primary {
+  color: var(--va-primary);
+}
+
+.notification-filter-chip--info {
+  color: var(--va-info);
+}
+
+.notification-filter-chip--success {
+  color: var(--va-success);
+}
+
+.notification-filter-chip--warning {
+  color: var(--va-warning);
+}
+
+.notification-filter-chip--danger {
+  color: var(--va-danger);
+}
+
+.notification-filter-chip--secondary {
+  color: var(--va-text-secondary);
 }
 </style>
