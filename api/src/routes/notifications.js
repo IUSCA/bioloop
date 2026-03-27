@@ -8,36 +8,12 @@ const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
-const { publishNotificationInvalidation } = require('@/services/notifications/invalidation');
 const { resolveEligibleRecipients } = require('@/services/notifications/recipientService');
-const {
-  fetchCurrentUserNotifications,
-  isPrivilegedNotificationViewer,
-} = require('@/services/notifications/queryService');
-const {
-  requireAdminOrOperatorNotificationStream,
-  sseStreamHandler,
-} = require('@/services/notifications/streamHandlers');
+const { fetchCurrentUserNotifications } = require('@/services/notifications/queryService');
 const { updateNotificationStateHandler } = require('@/services/notifications/stateUpdateHandler');
 
 const isPermittedTo = accessControl('notifications');
 const router = express.Router();
-
-router.get(
-  '/:username/stream',
-  isPermittedTo('read', { checkOwnership: true }),
-  validate([
-    param('username').trim().notEmpty(),
-  ]),
-  sseStreamHandler,
-);
-
-router.get(
-  '/stream',
-  requireAdminOrOperatorNotificationStream,
-  isPermittedTo('read'),
-  sseStreamHandler,
-);
 
 router.get(
   '/:username/all',
@@ -46,7 +22,6 @@ router.get(
     param('username').trim().notEmpty(),
     query('read').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
-    query('withdrawn').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
@@ -65,7 +40,6 @@ router.get(
   validate([
     query('read').optional().isBoolean().toBoolean(),
     query('bookmarked').optional().isBoolean().toBoolean(),
-    query('withdrawn').optional().isBoolean().toBoolean(),
     query('search').optional().trim().isLength({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('offset').optional().isInt({ min: 0 }).toInt(),
@@ -127,15 +101,6 @@ router.post(
       });
     });
 
-    const recipientRows = await prisma.notification_recipient.findMany({
-      where: { notification_id: createdNotification.id },
-      select: { user_id: true },
-    });
-    publishNotificationInvalidation({
-      userIds: recipientRows.map((row) => row.user_id),
-      reason: 'created',
-      notificationId: createdNotification.id,
-    });
     res.json(createdNotification);
   }),
 );
@@ -162,14 +127,9 @@ router.post(
     const result = await prisma.$transaction(async (tx) => {
       const notification = await tx.notification.findUnique({
         where: { id: req.params.id },
-        select: { id: true, is_resolved: true },
+        select: { id: true },
       });
       if (!notification) throw createError.NotFound('Notification not found');
-      if (notification.is_resolved) {
-        return {
-          conflict: true,
-        };
-      }
 
       const candidateRecipients = await resolveEligibleRecipients({
         tx,
@@ -215,25 +175,6 @@ router.post(
       };
     });
 
-    if (result.conflict) {
-      return res.status(409).json({
-        code: 'NOTIFICATION_WITHDRAWN',
-        message: 'Notification is withdrawn and cannot accept new recipients.',
-      });
-    }
-
-    if ((result.created_count || 0) > 0) {
-      const recipientRows = await prisma.notification_recipient.findMany({
-        where: { notification_id: req.params.id },
-        select: { user_id: true },
-      });
-      publishNotificationInvalidation({
-        userIds: recipientRows.map((row) => row.user_id),
-        reason: 'recipients_added',
-        notificationId: req.params.id,
-      });
-    }
-
     return res.json(result);
   }),
 );
@@ -252,19 +193,11 @@ router.patch(
       where: {
         user_id: req.user.id,
         is_read: false,
-        notification: {
-          is_resolved: false,
-        },
       },
       data: {
         is_read: true,
         read_at: now,
       },
-    });
-
-    publishNotificationInvalidation({
-      userIds: [req.user.id],
-      reason: 'mark_all_read',
     });
 
     return res.json({
@@ -284,19 +217,11 @@ router.patch(
       where: {
         user_id: req.user.id,
         is_read: false,
-        notification: {
-          is_resolved: false,
-        },
       },
       data: {
         is_read: true,
         read_at: now,
       },
-    });
-
-    publishNotificationInvalidation({
-      userIds: [req.user.id],
-      reason: 'mark_all_read',
     });
 
     return res.json({
@@ -326,81 +251,6 @@ router.patch(
     body('is_bookmarked').optional().isBoolean().toBoolean(),
   ]),
   updateNotificationStateHandler,
-);
-
-router.patch(
-  '/:id/withdraw',
-  isPermittedTo('update'),
-  validate([
-    param('id').isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Withdraw a notification for all recipients
-    const notification = await prisma.notification.findUnique({
-      where: {
-        id: req.params.id,
-      },
-      select: {
-        id: true,
-        is_resolved: true,
-      },
-    });
-    if (!notification) {
-      return next(createError.NotFound('Notification not found'));
-    }
-
-    if (!isPrivilegedNotificationViewer(req.user)) {
-      return next(createError.Forbidden('Only admin or operator can withdraw notifications'));
-    }
-
-    if (notification.is_resolved) {
-      return res.json({
-        id: notification.id,
-        is_withdrawn: true,
-      });
-    }
-
-    // Withdrawal updates only `notification` lifecycle fields. Per-recipient
-    // `is_read` / `is_bookmarked` rows are not modified.
-    const updated = await prisma.notification.update({
-      where: {
-        id: req.params.id,
-      },
-      data: {
-        is_resolved: true,
-        resolved_at: new Date(),
-        resolved_by_id: req.user.id,
-      },
-      select: {
-        id: true,
-        is_resolved: true,
-        resolved_at: true,
-        resolved_by: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-          },
-        },
-      },
-    });
-    const recipientRows = await prisma.notification_recipient.findMany({
-      where: { notification_id: req.params.id },
-      select: { user_id: true },
-    });
-    publishNotificationInvalidation({
-      userIds: recipientRows.map((row) => row.user_id),
-      reason: 'withdrawn',
-      notificationId: req.params.id,
-    });
-    return res.json({
-      id: updated.id,
-      is_withdrawn: updated.is_resolved,
-      withdrawn_at: updated.resolved_at,
-      withdrawn_by: updated.resolved_by,
-    });
-  }),
 );
 
 module.exports = router;

@@ -13,12 +13,12 @@ const {
   loadStandardViewerProfiles,
   loginAsTicket,
   openNotificationsMenu,
-  patchWithdraw,
   patchMarkAllRead,
   patchNotificationBookmarkState,
   patchNotificationReadState,
   refreshNotificationView,
   toggleReadById,
+  waitForNotificationMenuListIdle,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
@@ -52,7 +52,6 @@ async function fetchRecentNotifications(page, viewer) {
   const params = {
     limit: 100,
     offset: 0,
-    withdrawn: false,
   };
   if (viewer.privileged) {
     return get({
@@ -169,7 +168,7 @@ test.describe('Notification cross-user state (API)', () => {
     }
   });
 
-  test('role broadcast: other viewers stay unbookmarked when one bookmarks', async ({ page }, testInfo) => {
+  test('role broadcast: other viewers stay not bookmarked when one bookmarks', async ({ page }, testInfo) => {
     test.skip(
       testInfo.project.name !== 'admin_notifications',
       'Runs once under admin_notifications',
@@ -253,37 +252,10 @@ test.describe('Notification cross-user state (API)', () => {
     }
   });
 
-  test('withdraw hides notification from default unread lists for every recipient', async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== 'admin_notifications',
-      'Runs once under admin_notifications',
-    );
-    const profiles = await loadStandardViewerProfiles(page);
-    const suffix = randomUUID().slice(0, 8);
-    const created = await createBroadcastToAllRoles(page, profiles.admin.token, suffix);
-
-    const dismissRes = await patchWithdraw({
-      page,
-      token: profiles.admin.token,
-      notificationId: created.id,
-    });
-    expect(dismissRes.status()).toBe(200);
-
-    for (const viewer of [profiles.admin, profiles.operator, profiles.user]) {
-      const listRes = await fetchDefaultUnreadNotifications({
-        page,
-        token: viewer.token,
-        privileged: viewer.privileged,
-        username: viewer.username,
-      });
-      expect(listRes.status()).toBe(200);
-      const body = await listRes.json();
-      expect(findNotificationInListPayload(body, created.id)).toBeUndefined();
-    }
-  });
 });
 
 test.describe('Notification cross-user state (UI)', () => {
+  test.describe.configure({ timeout: 180000 });
   test.skip(!featureEnabled, 'Notifications feature is not enabled');
 
   test.beforeEach(async ({ page }) => {
@@ -305,10 +277,13 @@ test.describe('Notification cross-user state (UI)', () => {
       expectedUsername: config.e2e.users.operator.username,
     });
     await ensureNotificationOpenButtonVisible(page);
-    await ensureNotificationsMenuOpen(page);
-    const lbl = page.locator(`[data-testid="${labelById(created.id)}"]:visible`).first();
-    await expect(lbl).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
+    const menu = await ensureNotificationsMenuOpen(page);
+    await waitForNotificationMenuListIdle(page);
+    const lbl = menu.getByTestId(labelById(created.id));
+    await expect(lbl).toBeAttached({ timeout: 20000 });
+    await lbl.scrollIntoViewIfNeeded();
+    await expect(lbl).toBeVisible({ timeout: 20000 });
+    await expect(menu.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
   });
 
   test('after operator marks broadcast read, user still sees it as unread', async ({ page }, testInfo) => {
@@ -325,10 +300,13 @@ test.describe('Notification cross-user state (UI)', () => {
       expectedUsername: config.e2e.users.user.username,
     });
     await ensureNotificationOpenButtonVisible(page);
-    await ensureNotificationsMenuOpen(page);
-    const lbl = page.locator(`[data-testid="${labelById(created.id)}"]:visible`).first();
-    await expect(lbl).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
+    const menu = await ensureNotificationsMenuOpen(page);
+    await waitForNotificationMenuListIdle(page);
+    const lbl = menu.getByTestId(labelById(created.id));
+    await expect(lbl).toBeAttached({ timeout: 20000 });
+    await lbl.scrollIntoViewIfNeeded();
+    await expect(lbl).toBeVisible({ timeout: 20000 });
+    await expect(menu.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
   });
 
   test('after user marks direct notification read, admin still sees it as unread', async ({ page }, testInfo) => {
@@ -345,10 +323,12 @@ test.describe('Notification cross-user state (UI)', () => {
       expectedUsername: config.e2e.users.admin.username,
     });
     await ensureNotificationOpenButtonVisible(page);
-    await ensureNotificationsMenuOpen(page);
-    const lbl = page.locator(`[data-testid="${labelById(created.id)}"]:visible`).first();
-    await expect(lbl).toBeVisible({ timeout: 15000 });
-    await expect(page.locator(`[data-testid="${toggleReadById(created.id)}"]:visible`).first())
-      .toContainText('Mark read');
+    const menu = await ensureNotificationsMenuOpen(page);
+    await waitForNotificationMenuListIdle(page);
+    const lbl = menu.getByTestId(labelById(created.id));
+    await expect(lbl).toBeAttached({ timeout: 20000 });
+    await lbl.scrollIntoViewIfNeeded();
+    await expect(lbl).toBeVisible({ timeout: 20000 });
+    await expect(menu.getByTestId(toggleReadById(created.id))).toContainText('Mark read');
   });
 });

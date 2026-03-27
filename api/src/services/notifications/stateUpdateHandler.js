@@ -2,7 +2,6 @@ const _ = require('lodash/fp');
 const createError = require('http-errors');
 const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
-const { publishNotificationInvalidation } = require('./invalidation');
 
 const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['notifications']
@@ -37,23 +36,10 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
         user_id: req.user.id,
       },
     },
-    include: {
-      notification: {
-        select: {
-          is_resolved: true,
-        },
-      },
-    },
   });
 
   if (!recipient) {
     return next(createError.NotFound('Notification not found for current user'));
-  }
-  if (recipient.notification.is_resolved) {
-    return res.status(409).json({
-      code: 'NOTIFICATION_WITHDRAWN',
-      message: 'Notification is withdrawn and no longer actionable.',
-    });
   }
 
   const updated = await prisma.notification_recipient.update({
@@ -66,12 +52,6 @@ const updateNotificationStateHandler = asyncHandler(async (req, res, next) => {
     data: {
       ...data,
     },
-  });
-
-  publishNotificationInvalidation({
-    userIds: [req.user.id],
-    reason: 'state_updated',
-    notificationId: req.params.id,
   });
 
   return res.json({

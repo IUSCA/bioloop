@@ -15,13 +15,6 @@
           {{ name }}
         </va-chip>
       </template>
-      <va-chip
-        size="small"
-        :color="theme.filters.withdrawn.color"
-        v-if="notification.withdrawal?.is_withdrawn"
-      >
-        Withdrawn
-      </va-chip>
     </div>
     <h6
       class="va-h6 mb-1"
@@ -58,9 +51,7 @@
 
     <div
       class="notification-state-actions"
-      :style="{
-        gridTemplateColumns: `repeat(${actionButtonsCount}, minmax(0, 1fr))`,
-      }"
+      style="grid-template-columns: repeat(2, minmax(0, 1fr))"
     >
       <va-button
         size="small"
@@ -108,36 +99,7 @@
         />
         {{ notification.state.is_bookmarked ? "Unbookmark" : "Bookmark" }}
       </va-button>
-      <va-button
-        size="small"
-        preset="secondary"
-        block
-        class="notification-state-action-button"
-        :color="theme.actions.withdraw.color"
-        :data-testid="`notification-${notification.id}-withdraw`"
-        tabindex="0"
-        v-if="
-          notification.can_withdraw && !notification.withdrawal?.is_withdrawn
-        "
-        :disabled="disabled"
-        @click="$emit('toggle-withdraw', notification)"
-        @keydown.enter.prevent="$emit('toggle-withdraw', notification)"
-        @keydown.space.prevent="$emit('toggle-withdraw', notification)"
-      >
-        <Icon :icon="theme.actions.withdraw.icon" class="mr-1" />
-        Withdraw
-      </va-button>
     </div>
-    <p
-      class="mt-2 text-xs text-secondary"
-      :data-testid="`notification-${notification.id}-withdrawn-by`"
-      v-if="
-        notification.withdrawal?.is_withdrawn &&
-        notification.withdrawal?.withdrawn_by
-      "
-    >
-      (Withdrawn by {{ notification.withdrawal.withdrawn_by.username }})
-    </p>
   </div>
 
   <va-modal
@@ -173,7 +135,7 @@ const props = defineProps({
     default: false,
   },
 });
-defineEmits(["toggle-read", "toggle-bookmarked", "toggle-withdraw"]);
+defineEmits(["toggle-read", "toggle-bookmarked"]);
 const showUntrustedLinkModal = ref(false);
 const selectedUntrustedLink = ref(null);
 
@@ -201,16 +163,7 @@ const roleOutlineNames = computed(() => {
 });
 
 const showChipsRow = computed(
-  () =>
-    (isRoleBroadcast.value && roleOutlineNames.value.length > 0) ||
-    Boolean(props.notification.withdrawal?.is_withdrawn),
-);
-
-const actionButtonsCount = computed(() =>
-  props.notification.can_withdraw &&
-  !props.notification.withdrawal?.is_withdrawn
-    ? 3
-    : 2,
+  () => isRoleBroadcast.value && roleOutlineNames.value.length > 0,
 );
 
 function openLink(link) {

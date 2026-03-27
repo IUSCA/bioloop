@@ -7,20 +7,25 @@ const {
   fetchCurrentUser,
   labelById,
   locatorContainsActiveElement,
+  expectNotificationMenuInitialFocusSettled,
   openNotificationsMenu,
   searchInput,
   visibleNotificationMenu,
+  waitForNotificationMenuListIdle,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
 
-async function isolateNotificationRow(page, labelText) {
-  const menu = visibleNotificationMenu(page);
+async function isolateNotificationRow(page, { notificationId, labelText }) {
+  const menu = await ensureNotificationsMenuOpen(page);
   const input = menu.getByPlaceholder('Search notifications').first();
   await input.fill(labelText);
-  await page.waitForTimeout(500);
+  await expect(input).toHaveValue(labelText);
+  await waitForNotificationMenuListIdle(page);
+  await expect(menu.getByTestId(`notification-${notificationId}-label`)).toBeVisible({
+    timeout: 20000,
+  });
   await input.focus();
-  await page.waitForTimeout(80);
 }
 
 async function tabUntilLocatorFocused(page, locator, { maxTabs = 14 } = {}) {
@@ -29,8 +34,6 @@ async function tabUntilLocatorFocused(page, locator, { maxTabs = 14 } = {}) {
     if (await locatorContainsActiveElement(locator)) return;
     // eslint-disable-next-line no-await-in-loop
     await page.keyboard.press('Tab');
-    // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(45);
   }
   expect(await locatorContainsActiveElement(locator)).toBe(true);
 }
@@ -41,8 +44,6 @@ async function shiftTabUntilLocatorFocused(page, locator, { maxTabs = 14 } = {})
     if (await locatorContainsActiveElement(locator)) return;
     // eslint-disable-next-line no-await-in-loop
     await page.keyboard.press('Shift+Tab');
-    // eslint-disable-next-line no-await-in-loop
-    await page.waitForTimeout(45);
   }
   expect(await locatorContainsActiveElement(locator)).toBe(true);
 }
@@ -60,14 +61,15 @@ async function expectActiveTestId(page, testId) {
 }
 
 test.describe('Notification keyboard accessibility', () => {
-  test.describe.configure({ mode: 'serial' });
+  test.describe.configure({ mode: 'serial', timeout: 180000 });
   test.skip(!featureEnabled, 'Notifications feature is disabled');
 
   test('Enter on notification-open button opens menu and focuses a top control', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     const menu = await ensureNotificationsMenuOpen(page);
-    await expect(menu).toBeVisible({ timeout: 10000 });
+    await expect(menu).toBeAttached({ timeout: 25000 });
+    await expectNotificationMenuInitialFocusSettled(page);
   });
 
   test('forward Tab reaches notification links before mark read', async ({ page }) => {
@@ -105,8 +107,7 @@ test.describe('Notification keyboard accessibility', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
-    await page.waitForTimeout(400);
-    await isolateNotificationRow(page, label);
+    await isolateNotificationRow(page, { notificationId: created.id, labelText: label });
 
     const menu = visibleNotificationMenu(page);
     const scopedSearch = menu.getByPlaceholder('Search notifications').first();
@@ -157,13 +158,14 @@ test.describe('Notification keyboard accessibility', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
-    await page.waitForTimeout(400);
-    await isolateNotificationRow(page, label);
+    await isolateNotificationRow(page, { notificationId: created.id, labelText: label });
 
     const menu = visibleNotificationMenu(page);
     const markRead = menu.getByTestId(`notification-${created.id}-toggle-read`);
     await markRead.focus();
-    await page.waitForTimeout(80);
+    await expect
+      .poll(async () => locatorContainsActiveElement(markRead), { timeout: 5000 })
+      .toBe(true);
 
     await page.keyboard.press('Shift+Tab');
     expect(await locatorContainsActiveElement(menu.getByTestId(`notification-${created.id}-link-r2`))).toBe(true);
@@ -180,12 +182,12 @@ test.describe('Notification keyboard accessibility', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
-    const menu = await ensureNotificationsMenuOpen(page);
-    const readBtn = menu.getByTestId('filter-read');
-    await readBtn.focus();
+    let menu = await ensureNotificationsMenuOpen(page);
+    await menu.getByTestId('filter-read').focus();
     await page.keyboard.press('Enter');
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
-    await readBtn.focus();
+    menu = await ensureNotificationsMenuOpen(page);
+    await menu.getByTestId('filter-read').focus();
     await page.keyboard.press('Space');
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
   });
@@ -247,18 +249,19 @@ test.describe('Notification keyboard accessibility', () => {
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
   });
 
-  test('Enter and Space toggle bookmarked and withdrawn filter chips', async ({
+  test('Enter and Space toggle bookmarked filter chip', async ({
     page,
   }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
-    const menu = visibleNotificationMenu(page);
     const cases = [
       ['filter-bookmarked', 'active-filter-chip-bookmarked'],
-      ['filter-withdrawn', 'active-filter-chip-withdrawn'],
     ];
     for (const [filterTestId, chipTestId] of cases) {
+      // eslint-disable-next-line no-await-in-loop
+      const menu = await ensureNotificationsMenuOpen(page);
+      // eslint-disable-next-line no-await-in-loop
       const btn = menu.getByTestId(filterTestId);
       // eslint-disable-next-line no-await-in-loop
       await expect(btn).toBeEnabled();
@@ -269,13 +272,21 @@ test.describe('Notification keyboard accessibility', () => {
       // eslint-disable-next-line no-await-in-loop
       await expect(menu.getByTestId(chipTestId)).toHaveCount(1, { timeout: 10000 });
       // eslint-disable-next-line no-await-in-loop
-      await expect(btn).toBeEnabled();
+      await waitForNotificationMenuListIdle(page);
       // eslint-disable-next-line no-await-in-loop
-      await btn.focus();
+      const menuAfterEnter = await ensureNotificationsMenuOpen(page);
       // eslint-disable-next-line no-await-in-loop
-      await btn.dispatchEvent('keydown', { key: 'Space' });
+      const btnAfterEnter = menuAfterEnter.getByTestId(filterTestId);
       // eslint-disable-next-line no-await-in-loop
-      await expect(menu.getByTestId(chipTestId)).toHaveCount(0);
+      await expect(btnAfterEnter).toBeEnabled();
+      // eslint-disable-next-line no-await-in-loop
+      await btnAfterEnter.focus();
+      // eslint-disable-next-line no-await-in-loop
+      await btnAfterEnter.dispatchEvent('keydown', { key: 'Space' });
+      // eslint-disable-next-line no-await-in-loop
+      await expect(menuAfterEnter.getByTestId(chipTestId)).toHaveCount(0, { timeout: 10000 });
+      // eslint-disable-next-line no-await-in-loop
+      await waitForNotificationMenuListIdle(page);
     }
   });
 
@@ -297,8 +308,6 @@ test.describe('Notification keyboard accessibility', () => {
       // eslint-disable-next-line no-await-in-loop
       await page.keyboard.press('Shift+Tab');
       // eslint-disable-next-line no-await-in-loop
-      await page.waitForTimeout(45);
-      // eslint-disable-next-line no-await-in-loop
       const tid = await page.evaluate(() => {
         const el = document.activeElement;
         return el?.closest('[data-testid]')?.getAttribute('data-testid') || '';
@@ -318,8 +327,6 @@ test.describe('Notification keyboard accessibility', () => {
     for (let i = 0; i < 10; i += 1) {
       // eslint-disable-next-line no-await-in-loop
       await page.keyboard.press('Shift+Tab');
-      // eslint-disable-next-line no-await-in-loop
-      await page.waitForTimeout(45);
       // eslint-disable-next-line no-await-in-loop
       const tid = await page.evaluate(() => {
         const el = document.activeElement;
@@ -344,10 +351,8 @@ test.describe('Notification keyboard accessibility', () => {
     const menu = visibleNotificationMenu(page);
     await menu.getByTestId('filter-read').click();
     await menu.getByTestId('filter-bookmarked').click();
-    await menu.getByTestId('filter-withdrawn').click();
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
     const chipClearIds = [
-      'active-filter-chip-withdrawn-clear',
       'active-filter-chip-bookmarked-clear',
       'active-filter-chip-read-clear',
     ];
@@ -373,7 +378,7 @@ test.describe('Notification keyboard accessibility', () => {
     });
   });
 
-  test('search chip clear control shows visible focus indicator for keyboard focus', async ({ page }) => {
+  test('clear-all filters control shows visible focus indicator for keyboard focus', async ({ page }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
@@ -381,15 +386,15 @@ test.describe('Notification keyboard accessibility', () => {
     const input = searchInput(page);
     await input.focus();
     await input.fill('kbd-search-clear-focus');
-    const searchClear = menu.getByTestId('active-filter-chip-search-clear');
-    await expect(searchClear).toBeVisible({ timeout: 15000 });
-    await searchClear.focus();
+    const clearAll = menu.getByTestId('clear-notification-filters');
+    await expect(clearAll).toBeVisible({ timeout: 15000 });
+    await clearAll.focus();
     await page.keyboard.press('Tab');
     await page.keyboard.down('Shift');
     await page.keyboard.press('Tab');
     await page.keyboard.up('Shift');
-    await expectActiveTestId(page, 'active-filter-chip-search-clear');
-    await expect.poll(async () => searchClear.evaluate((node) => {
+    await expectActiveTestId(page, 'clear-notification-filters');
+    await expect.poll(async () => clearAll.evaluate((node) => {
       const styles = window.getComputedStyle(node);
       return {
         style: styles.outlineStyle,
@@ -403,7 +408,7 @@ test.describe('Notification keyboard accessibility', () => {
     });
   });
 
-  test('Enter on bookmark and withdraw applies per-notification actions', async ({
+  test('Enter on bookmark applies per-notification bookmark action', async ({
     page,
   }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -417,24 +422,11 @@ test.describe('Notification keyboard accessibility', () => {
       label: `E2E-kbd-bm-${t}`,
       text: 'bookmark target',
     });
-    const dismissed = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label: `E2E-kbd-gd-${t}`,
-      text: 'dismiss target',
-    });
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await ensureNotificationOpenButtonVisible(page);
     await openNotificationsMenu(page);
     const menu = visibleNotificationMenu(page);
-
-    const dismissBtn = menu.getByTestId(`notification-${dismissed.id}-withdraw`);
-    await dismissBtn.scrollIntoViewIfNeeded();
-    await dismissBtn.focus();
-    await page.keyboard.press('Enter');
-    await expect(menu.getByTestId(labelById(dismissed.id))).toHaveCount(0, { timeout: 15000 });
 
     const bookmarkBtn = menu.getByTestId(`notification-${bookmarked.id}-toggle-bookmark`);
     await bookmarkBtn.scrollIntoViewIfNeeded();

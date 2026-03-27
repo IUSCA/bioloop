@@ -177,11 +177,6 @@ const exports = {
         iconOn: "mdi:bookmark",
         iconOff: "mdi:bookmark-outline",
       },
-      withdrawn: {
-        color: "danger",
-        iconOn: "mdi:eye-off",
-        iconOff: "mdi:eye-off-outline",
-      },
     },
     delivery: {
       roleBroadcast: { color: "primary" },
@@ -189,7 +184,6 @@ const exports = {
     actions: {
       read: { color: "info", icon: "mdi:email-open-outline" },
       bookmark: { color: "success", icon: "mdi:bookmark-outline" },
-      withdraw: { color: "danger", icon: "mdi:eye-off-outline" },
       link: { color: "primary", icon: "mdi:open-in-new" },
     },
   },

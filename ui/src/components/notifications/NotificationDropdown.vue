@@ -39,6 +39,7 @@
       data-testid="notification-menu-items"
       role="dialog"
       aria-label="Notifications menu"
+      :aria-busy="notificationMenuBusy ? 'true' : 'false'"
       tabindex="-1"
       @keydown.esc.prevent.stop="closeNotificationMenu"
     >
@@ -57,6 +58,7 @@
                 isUnreadFilterActive ? theme.filters.unread.color : 'secondary'
               "
               data-testid="filter-unread"
+              data-notification-menu-initial-focus="true"
               aria-label="Unread filter"
               title="Filter Unread"
               :disabled="controlsDisabled"
@@ -123,37 +125,6 @@
                   isBookmarkedFilterActive
                     ? theme.filters.bookmarked.iconOn
                     : theme.filters.bookmarked.iconOff
-                "
-              />
-            </va-button>
-          </va-popover>
-          <va-popover
-            v-if="showWithdrawnFilter"
-            message="Filter withdrawn notifications"
-          >
-            <va-button
-              preset="secondary"
-              size="small"
-              block
-              class="notification-top-control-button"
-              :color="
-                isWithdrawnFilterActive
-                  ? theme.filters.withdrawn.color
-                  : 'secondary'
-              "
-              data-testid="filter-withdrawn"
-              aria-label="Withdrawn filter"
-              title="Filter withdrawn notifications"
-              :disabled="controlsDisabled"
-              @click="toggleWithdrawnFilter"
-              @keydown.enter.prevent="toggleWithdrawnFilter"
-              @keydown.space.prevent="toggleWithdrawnFilter"
-            >
-              <Icon
-                :icon="
-                  isWithdrawnFilterActive
-                    ? theme.filters.withdrawn.iconOn
-                    : theme.filters.withdrawn.iconOff
                 "
               />
             </va-button>
@@ -238,46 +209,6 @@
               <Icon icon="mdi:close" />
             </button>
           </div>
-          <div
-            v-if="showWithdrawnFilter && isWithdrawnFilterActive"
-            class="notification-filter-chip notification-filter-chip--danger"
-            data-testid="active-filter-chip-withdrawn"
-          >
-            Withdrawn
-            <button
-              type="button"
-              class="notification-filter-chip__clear"
-              aria-label="Clear Withdrawn filter"
-              data-testid="active-filter-chip-withdrawn-clear"
-              tabindex="0"
-              :disabled="controlsDisabled"
-              @click.prevent.stop="clearWithdrawnFilter"
-              @keydown.enter.prevent.stop="clearWithdrawnFilter"
-              @keydown.space.prevent.stop="clearWithdrawnFilter"
-            >
-              <Icon icon="mdi:close" />
-            </button>
-          </div>
-          <div
-            v-if="activeSearchFilter"
-            class="notification-filter-chip notification-filter-chip--secondary"
-            data-testid="active-filter-chip-search"
-          >
-            Search: {{ activeSearchFilter }}
-            <button
-              type="button"
-              class="notification-filter-chip__clear"
-              aria-label="Clear Search filter"
-              data-testid="active-filter-chip-search-clear"
-              tabindex="0"
-              :disabled="controlsDisabled"
-              @click.prevent.stop="clearSearchFilter"
-              @keydown.enter.prevent.stop="clearSearchFilter"
-              @keydown.space.prevent.stop="clearSearchFilter"
-            >
-              <Icon icon="mdi:close" />
-            </button>
-          </div>
         </div>
         <div class="mt-2">
           <va-input
@@ -308,11 +239,7 @@
               class="px-3 py-3 text-sm text-secondary"
               data-testid="notification-empty-state"
             >
-              {{
-                filters.withdrawn && showWithdrawnFilter
-                  ? "No withdrawn notifications"
-                  : "No pending notifications"
-              }}
+              No pending notifications
             </div>
           </template>
           <template v-else>
@@ -326,7 +253,6 @@
                 :disabled="controlsDisabled"
                 @toggle-read="onToggleRead"
                 @toggle-bookmarked="onToggleBookmarked"
-                @toggle-withdraw="onWithdraw"
               ></notification>
               <va-divider class="mt-2" />
             </div>
@@ -341,6 +267,7 @@
 import config from "@/config";
 import constants from "@/constants";
 import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
+import { nextTick } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
@@ -352,9 +279,6 @@ const auth = useAuthStore();
 const { canOperate, user: authUser } = storeToRefs(auth);
 const forSelf = computed(
   () => !viewerHasPrivilegedNotificationAccess(canOperate.value),
-);
-const showWithdrawnFilter = computed(() =>
-  viewerHasPrivilegedNotificationAccess(canOperate.value),
 );
 const notificationQueryOpts = computed(() => ({
   forSelf: forSelf.value,
@@ -376,7 +300,6 @@ const {
   fetchMoreNotifications,
   updateNotificationState,
   markAllRead,
-  withdrawNotification,
   setFilter,
   clearFilters,
 } = notificationStore;
@@ -389,13 +312,7 @@ const searchInput = computed({
     setFilter("search", next);
   },
 });
-const activeSearchFilter = computed(() => {
-  return (filters.value.search || "").trim();
-});
 const isSearchFocused = ref(false);
-const hasPendingSseRefresh = ref(false);
-const isSseConnected = ref(false);
-const notificationStream = ref(null);
 const isMenuOpen = ref(false);
 const dropdownRootRef = ref(null);
 const menuPanelRef = ref(null);
@@ -408,9 +325,6 @@ const isReadFilterActive = computed(() => filters.value.read === true);
 const isBookmarkedFilterActive = computed(
   () => filters.value.bookmarked === true,
 );
-const isWithdrawnFilterActive = computed(
-  () => filters.value.withdrawn === true,
-);
 const controlsDisabled = computed(
   () => listFetching.value || mutationPending.value,
 );
@@ -419,8 +333,7 @@ const hasActiveFilters = computed(() => {
   return (
     isReadFilterActive.value ||
     isBookmarkedFilterActive.value ||
-    (showWithdrawnFilter.value && isWithdrawnFilterActive.value) ||
-    Boolean(activeSearchFilter.value)
+    Boolean((filters.value.search || "").trim())
   );
 });
 const badgeCount = computed(() => {
@@ -430,12 +343,7 @@ const badgeCount = computed(() => {
   return unreadCount.value;
 });
 const hasActiveFilterChips = computed(() => {
-  return (
-    isReadFilterActive.value ||
-    isBookmarkedFilterActive.value ||
-    (showWithdrawnFilter.value && isWithdrawnFilterActive.value) ||
-    Boolean(activeSearchFilter.value)
-  );
+  return isReadFilterActive.value || isBookmarkedFilterActive.value;
 });
 function onSearchInputClick(event) {
   const target = event?.target;
@@ -459,48 +367,46 @@ function focusableControl(el) {
   );
 }
 
+/**
+ * Move focus into the dialog after Vue commits the open state and the browser
+ * paints. Uses nextTick + double rAF (layout/paint after DOM update) instead of
+ * timed retries so behavior stays deterministic.
+ */
 function focusFirstMenuControlSoon() {
-  let attempts = 0;
-  const maxAttempts = 400;
-  const tryFocus = () => {
-    attempts += 1;
-    const panel =
-      menuPanelRef.value instanceof HTMLElement ? menuPanelRef.value : null;
-    if (
-      panel &&
-      panel.offsetParent !== null &&
-      !panel.contains(document.activeElement)
-    ) {
-      panel.focus();
-    }
-    const anchor =
-      panel?.querySelector('[data-testid="filter-unread"]') ||
-      panel?.querySelector('[data-testid="filter-read"]') ||
-      panel?.querySelector('[data-testid="filter-bookmarked"]') ||
-      panel?.querySelector('[data-testid="filter-withdrawn"]') ||
-      panel?.querySelector('[data-testid="clear-notification-filters"]') ||
-      panel?.querySelector('[data-testid="notification-search"]') ||
-      (firstTopControlRef.value?.$el instanceof HTMLElement
-        ? firstTopControlRef.value.$el
-        : null);
-    const node =
-      focusableControl(anchor) ||
-      panel?.querySelector(
-        "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
-      );
-    if (node && node.offsetParent !== null) {
-      node.focus();
-      if (document.activeElement !== node && attempts < maxAttempts) {
-        setTimeout(tryFocus, 30);
-        return;
-      }
-      return;
-    }
-    if (attempts < maxAttempts) {
-      setTimeout(tryFocus, 30);
-    }
-  };
-  setTimeout(tryFocus, 0);
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const panel =
+            menuPanelRef.value instanceof HTMLElement
+              ? menuPanelRef.value
+              : null;
+          if (!(panel && panel.offsetParent !== null)) return;
+          if (!panel.contains(document.activeElement)) {
+            panel.focus();
+          }
+          const anchor =
+            panel.querySelector("[data-notification-menu-initial-focus]") ||
+            panel.querySelector('[data-testid="filter-unread"]') ||
+            panel.querySelector('[data-testid="filter-read"]') ||
+            panel.querySelector('[data-testid="filter-bookmarked"]') ||
+            panel.querySelector('[data-testid="clear-notification-filters"]') ||
+            panel.querySelector('[data-testid="notification-search"]') ||
+            (firstTopControlRef.value?.$el instanceof HTMLElement
+              ? firstTopControlRef.value.$el
+              : null);
+          const node =
+            focusableControl(anchor) ||
+            panel.querySelector(
+              "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled])",
+            );
+          if (node instanceof HTMLElement && node.offsetParent !== null) {
+            node.focus();
+          }
+        });
+      });
+    });
+  });
 }
 
 function toggleNotificationMenu() {
@@ -569,10 +475,6 @@ function onSearchShiftTab() {
 
 function onSearchBlur() {
   isSearchFocused.value = false;
-  if (hasPendingSseRefresh.value) {
-    hasPendingSseRefresh.value = false;
-    refreshNotifications(notificationQueryOpts.value);
-  }
 }
 
 function clearSearchFilter() {
@@ -589,6 +491,14 @@ watch(
   () => {
     triggerSearchFetch();
   },
+);
+
+/**
+ * List GET or mutating request in flight; omits search debounce so aria-busy does not stick between keystroke and
+ * fetch.
+ */
+const notificationMenuBusy = computed(() =>
+  Boolean(listFetching.value || mutationPending.value),
 );
 
 function onMenuScroll(event) {
@@ -632,16 +542,6 @@ function clearBookmarkedFilter() {
   fetchNotifications(notificationQueryOpts.value);
 }
 
-function toggleWithdrawnFilter() {
-  setFilter("withdrawn", !filters.value.withdrawn);
-  fetchNotifications(notificationQueryOpts.value);
-}
-
-function clearWithdrawnFilter() {
-  setFilter("withdrawn", false);
-  fetchNotifications(notificationQueryOpts.value);
-}
-
 function handleClearFilters() {
   clearFilters();
   fetchNotifications(notificationQueryOpts.value);
@@ -667,56 +567,13 @@ function onToggleBookmarked(notification) {
   );
 }
 
-function onWithdraw(notification) {
-  withdrawNotification(notification.id, notificationQueryOpts.value);
-}
-
 function onMarkAllRead() {
   markAllRead(notificationQueryOpts.value);
 }
 
-function closeNotificationStream() {
-  if (notificationStream.value) {
-    notificationStream.value.close();
-    notificationStream.value = null;
-  }
-  isSseConnected.value = false;
-}
-
-function onSseInvalidate() {
-  if (isSearchFocused.value) {
-    hasPendingSseRefresh.value = true;
-    return;
-  }
-  refreshNotifications(notificationQueryOpts.value);
-}
-
-function openNotificationStream() {
-  closeNotificationStream();
-  const token = useLocalStorage("token", "");
-  const authToken = token.value;
-  if (!authToken) return;
-  const username = authUser.value?.username;
-  const streamPath =
-    forSelf.value && username
-      ? `/notifications/${encodeURIComponent(username)}/stream`
-      : "/notifications/stream";
-  const streamUrl = `${config.apiBasePath}${streamPath}?token=${encodeURIComponent(authToken)}`;
-  const source = new EventSource(streamUrl);
-  source.addEventListener("ready", () => {
-    isSseConnected.value = true;
-  });
-  source.addEventListener("notification", onSseInvalidate);
-  source.onerror = () => {
-    isSseConnected.value = false;
-  };
-  notificationStream.value = source;
-}
-
-// retrieve notifications every 5 seconds
 const { resume } = useIntervalFn(
   () => {
-    if (isSearchFocused.value || isSseConnected.value) return;
+    if (isSearchFocused.value) return;
     refreshNotifications(notificationQueryOpts.value);
   },
   config.notifications.pollingInterval,
@@ -733,12 +590,7 @@ onMounted(() => {
     if (event.key !== "Escape") return;
     closeNotificationMenu();
   });
-  openNotificationStream();
   resume();
-});
-
-onUnmounted(() => {
-  closeNotificationStream();
 });
 </script>
 
@@ -753,7 +605,7 @@ onUnmounted(() => {
 
 .notification-top-controls {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
   width: 100%;
   padding-bottom: 0.125rem;

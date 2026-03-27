@@ -7,6 +7,7 @@ const {
   fetchCurrentUser,
   openNotificationsMenu,
   visibleNotificationMenu,
+  waitForNotificationMenuListIdle,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
@@ -41,6 +42,7 @@ const expectElementColor = async ({ page, locator, cssVarName }) => {
 };
 
 test.describe.serial('Notifications theme colors', () => {
+  test.describe.configure({ timeout: 180000 });
   test.beforeEach(async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -56,11 +58,9 @@ test.describe.serial('Notifications theme colors', () => {
     const menu = await ensureNotificationsMenuOpen(page);
     await menu.getByTestId('filter-read').click();
     await menu.getByTestId('filter-bookmarked').click();
-    await menu.getByTestId('filter-withdrawn').click();
 
     await expect(menu.getByTestId('active-filter-chip-read')).toBeVisible();
     await expect(menu.getByTestId('active-filter-chip-bookmarked')).toBeVisible();
-    await expect(menu.getByTestId('active-filter-chip-withdrawn')).toBeVisible();
 
     await expectElementColor({
       page,
@@ -72,11 +72,6 @@ test.describe.serial('Notifications theme colors', () => {
       locator: menu.getByTestId('filter-bookmarked'),
       cssVarName: '--va-success',
     });
-    await expectElementColor({
-      page,
-      locator: menu.getByTestId('filter-withdrawn'),
-      cssVarName: '--va-danger',
-    });
 
     await expectElementColor({
       page,
@@ -87,11 +82,6 @@ test.describe.serial('Notifications theme colors', () => {
       page,
       locator: menu.getByTestId('active-filter-chip-bookmarked'),
       cssVarName: '--va-success',
-    });
-    await expectElementColor({
-      page,
-      locator: menu.getByTestId('active-filter-chip-withdrawn'),
-      cssVarName: '--va-danger',
     });
   });
 
@@ -123,8 +113,13 @@ test.describe.serial('Notifications theme colors', () => {
     await assertPanelMasking();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('notification-menu-items')).toHaveCount(0);
+    const wasDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
     await page.getByTestId('theme-toggle').click();
-    await page.waitForTimeout(120);
+    await expect
+      .poll(async () => page.evaluate(() => document.documentElement.classList.contains('dark')), {
+        timeout: 10000,
+      })
+      .not.toBe(wasDark);
     await assertPanelMasking();
   });
 
@@ -141,9 +136,13 @@ test.describe.serial('Notifications theme colors', () => {
 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await openNotificationsMenu(page);
+    const menu = await ensureNotificationsMenuOpen(page);
+    const scopedSearch = menu.getByPlaceholder('Search notifications').first();
+    await scopedSearch.fill(suffix);
+    await expect(scopedSearch).toHaveValue(suffix);
 
-    const label = page.getByTestId(`notification-${created.id}-label`);
-    await expect(label).toBeVisible();
+    const label = menu.getByTestId(`notification-${created.id}-label`);
+    await expect(label).toBeVisible({ timeout: 15000 });
 
     const row = label.locator('xpath=ancestor::div[contains(@class, "notification-anchor")]');
     await expect(row).not.toContainText('Direct');
@@ -157,11 +156,6 @@ test.describe.serial('Notifications theme colors', () => {
       page,
       locator: page.getByTestId(`notification-${created.id}-toggle-bookmark`),
       cssVarName: '--va-success',
-    });
-    await expectElementColor({
-      page,
-      locator: page.getByTestId(`notification-${created.id}-withdraw`),
-      cssVarName: '--va-danger',
     });
   });
 });

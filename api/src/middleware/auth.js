@@ -21,14 +21,7 @@ function authenticate(req, res, next) {
     const [, bearerToken] = authHeader.split(' ');
     token = bearerToken;
   } else {
-    const isNotificationStream = req.method === 'GET'
-      && /\/notifications(?:\/[^/]+)?\/stream$/.test(req.path);
-    const queryToken = typeof req.query?.token === 'string' ? req.query.token.trim() : '';
-    if (isNotificationStream && queryToken) {
-      token = queryToken;
-    } else {
-      return next(createError.Unauthorized('Authentication failed. Token not found.'));
-    }
+    return next(createError.Unauthorized('Authentication failed. Token not found.'));
   }
 
   const auth = authService.checkJWT(token);

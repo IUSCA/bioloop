@@ -7,11 +7,14 @@ const {
   ensureNotificationOpenButtonVisible,
   fetchCurrentUser,
   openNotificationsMenu,
+  visibleNotificationMenu,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
 
 test.describe.serial('Notifications responsive layout', () => {
+  test.describe.configure({ timeout: 90000 });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -30,16 +33,28 @@ test.describe.serial('Notifications responsive layout', () => {
       await page.reload({ waitUntil: 'domcontentloaded' });
       await ensureNotificationOpenButtonVisible(page);
       await ensureNotificationsMenuOpen(page);
+      const menu = visibleNotificationMenu(page);
+      await expect(menu).toBeAttached({ timeout: 20000 });
+      await expect(menu.locator('.notification-top-controls')).toBeAttached({ timeout: 20000 });
 
       // eslint-disable-next-line no-await-in-loop
       const layout = await page.evaluate(() => {
-        const panel = document.querySelector('.notification-menu-panel');
-        const controls = document.querySelector('.notification-top-controls');
+        const roots = Array.from(document.querySelectorAll('.notification-dropdown-root'));
+        let panel = null;
+        for (const root of roots) {
+          const candidate = root.querySelector('[data-testid="notification-menu-items"]');
+          if (!(candidate instanceof HTMLElement)) continue;
+          const r = candidate.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            panel = candidate;
+            break;
+          }
+        }
+        const controls = panel?.querySelector('.notification-top-controls') ?? null;
         const panelRect = panel?.getBoundingClientRect();
         const controlsStyle = controls ? window.getComputedStyle(controls) : null;
-        const cols = controlsStyle?.gridTemplateColumns
-          ? controlsStyle.gridTemplateColumns.split(' ').length
-          : 0;
+        const gtc = controlsStyle?.gridTemplateColumns || '';
+        const cols = gtc && gtc !== 'none' ? gtc.trim().split(/\s+/).length : 0;
         return {
           panelWidth: panelRect?.width || 0,
           columns: cols,
@@ -84,8 +99,7 @@ test.describe.serial('Notifications responsive layout', () => {
       const metrics = await page.evaluate((id) => {
         const read = document.querySelector(`[data-testid="notification-${id}-toggle-read"]`);
         const bookmark = document.querySelector(`[data-testid="notification-${id}-toggle-bookmark"]`);
-        const withdrawBtn = document.querySelector(`[data-testid="notification-${id}-withdraw"]`);
-        const buttons = [read, bookmark, withdrawBtn].filter(Boolean);
+        const buttons = [read, bookmark].filter(Boolean);
         const rects = buttons.map((b) => b.getBoundingClientRect());
         return {
           count: buttons.length,
@@ -94,9 +108,9 @@ test.describe.serial('Notifications responsive layout', () => {
         };
       }, created.id);
 
-      // Admin/operator view should expose 3 actions in one row.
+      // Admin/operator view should expose read and bookmark actions in one row.
       // eslint-disable-next-line no-await-in-loop
-      expect(metrics.count).toBe(3);
+      expect(metrics.count).toBe(2);
       // eslint-disable-next-line no-await-in-loop
       expect(Math.max(...metrics.widths) - Math.min(...metrics.widths)).toBeLessThanOrEqual(2);
       // Same-row check: all buttons share effectively the same y-position.

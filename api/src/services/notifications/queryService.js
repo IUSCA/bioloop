@@ -157,12 +157,6 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
       is_bookmarked: row.is_bookmarked,
     },
     delivery,
-    withdrawal: {
-      is_withdrawn: row.notification.is_resolved,
-      withdrawn_at: row.notification.resolved_at,
-      withdrawn_by: privileged ? row.notification.resolved_by || null : null,
-    },
-    can_withdraw: privileged,
     allowed_links: dedupedLinks,
     created_at: row.notification.created_at,
     updated_at: row.notification.updated_at,
@@ -174,18 +168,16 @@ function resolveNotificationForUser({ row, user, broadcastRoleNames = null }) {
  * Undefined filter values are omitted so only explicitly set filters apply.
  * Search matches against notification label or text (case-insensitive).
  *
- * @param {{ userId: number, read?: boolean, bookmarked?: boolean, withdrawnOnly?: boolean, search?: string }} opts
+ * @param {{ userId: number, read?: boolean, bookmarked?: boolean, search?: string }} opts
  * @returns {Object} Prisma where clause for notification_recipient.findMany
  */
 function buildNotificationWhere({
   userId,
   read,
   bookmarked,
-  withdrawnOnly,
   search,
 }) {
   const notificationWhere = _.omitBy(_.isUndefined)({
-    is_resolved: withdrawnOnly,
     OR: search ? [
       {
         label: {
@@ -215,11 +207,7 @@ function buildNotificationWhere({
  *
  * Query params consumed from req.query:
  *   limit (1-100, default 20), offset (>=0, default 0),
- *   read, bookmarked, withdrawn, search
- *
- * Non-privileged users (`user` role listing) never receive withdrawn (`is_resolved`)
- * notifications: `withdrawn=true` is ignored so read/bookmarked filters cannot
- * surface them.
+ *   read, bookmarked, search
  *
  * @param {{ req: import('express').Request }} opts
  * @returns {Promise<{ items: Object[], total: number, offset: number, limit: number, has_more: boolean }>}
@@ -227,14 +215,10 @@ function buildNotificationWhere({
 async function fetchCurrentUserNotifications({ req }) {
   const limit = Math.min(Math.max(Number(req.query.limit ?? 20), 1), 100);
   const offset = Math.max(Number(req.query.offset ?? 0), 0);
-  const privileged = isPrivilegedNotificationViewer(req.user);
-  const rawWithdrawnOnly = req.query.withdrawn ?? false;
-  const withdrawnOnly = privileged && Boolean(rawWithdrawnOnly);
   const where = buildNotificationWhere({
     userId: req.user.id,
     read: req.query.read,
     bookmarked: req.query.bookmarked,
-    withdrawnOnly,
     search: req.query.search,
   });
 
@@ -253,15 +237,6 @@ async function fetchCurrentUserNotifications({ req }) {
             text: true,
             metadata: true,
             created_by_id: true,
-            is_resolved: true,
-            resolved_at: true,
-            resolved_by: {
-              select: {
-                id: true,
-                username: true,
-                name: true,
-              },
-            },
             created_at: true,
             updated_at: true,
           },

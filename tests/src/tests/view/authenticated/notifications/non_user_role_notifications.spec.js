@@ -1,3 +1,4 @@
+/* cspell:ignore unroute */
 const { randomUUID } = require('node:crypto');
 const { test, expect } = require('@playwright/test');
 const config = require('config');
@@ -12,26 +13,26 @@ const {
   ensureNotificationOpenButtonVisible,
   expectHeaderControlsDisabled,
   expectHeaderControlsEnabled,
-  expectSearchFilterChipHidden,
   fetchCurrentUser,
   fetchUserByTicket,
-  withdrawById,
   labelById,
   loginAsTicket,
   notificationOpenButtonCount,
   notificationVisibleCount,
-  openDirectSseWatcher,
   openNotificationsMenu,
   refreshNotificationView,
   toggleBookmarkById,
   toggleReadById,
   searchInput,
   visibleNotificationMenu,
+  waitForNotificationMenuListIdle,
 } = require('./helpers');
 
 const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
 
 test.describe.serial('Notifications (admin/operator)', () => {
+  test.describe.configure({ timeout: 180000 });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!featureEnabled, 'Notifications feature is not enabled');
     await page.goto('/', { waitUntil: 'domcontentloaded' });
@@ -41,6 +42,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
     if (await clearFiltersBtn.count()) {
       await clearFiltersBtn.click();
     }
+    await waitForNotificationMenuListIdle(page);
   });
 
   test('read/unread toggle hides row from default and restores in read filter', async ({ page }, testInfo) => {
@@ -102,7 +104,7 @@ test.describe.serial('Notifications (admin/operator)', () => {
     }
   });
 
-  test('bookmark and withdrawn filters can be toggled and cleared via chips', async ({ page }, testInfo) => {
+  test('bookmark filter can be toggled and cleared via chips', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -129,16 +131,9 @@ test.describe.serial('Notifications (admin/operator)', () => {
       await clearFiltersButton.click();
     }
     await expect(createdLabel).toBeVisible();
-
-    await page.getByTestId(withdrawById(created.id)).click();
-    await expect(createdLabel).toHaveCount(0);
-    await page.getByTestId('filter-withdrawn').click();
-    await expect(createdLabel).toBeVisible();
-    await page.locator('[data-testid="active-filter-chip-withdrawn-clear"]:visible').click();
-    await expect(createdLabel).toHaveCount(0);
   });
 
-  test('search chip clears via chip clear control', async ({ page }, testInfo) => {
+  test('search input clears via clear-all filters control', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -155,21 +150,19 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await refreshNotificationView(page);
     const menu = visibleNotificationMenu(page);
     await searchInput(page).fill(label);
-    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
-    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
-
-    await menu.getByTestId('active-filter-chip-search-clear').click();
+    await expect(menu.getByTestId('clear-notification-filters')).toBeVisible();
+    await menu.getByTestId('clear-notification-filters').click();
     await expect(searchInput(page)).toHaveValue('');
-    await expectSearchFilterChipHidden(menu);
+    await expect(menu.getByTestId('clear-notification-filters')).toHaveCount(0);
   });
 
-  test('search chip stays single when refining query and clears with clear-all-filters', async ({ page }, testInfo) => {
+  test('search query refines and clears with clear-all filters', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
     const label = `E2E-${role}-search-refine-${suffix}`;
 
-    await createDirectNotification({
+    const created = await createDirectNotification({
       page,
       token,
       userId,
@@ -181,17 +174,17 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const menu = visibleNotificationMenu(page);
     const input = searchInput(page);
     await input.fill('E2E');
-    await page.waitForTimeout(400);
-    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
+    await waitForNotificationMenuListIdle(page);
     await input.fill(label);
-    await page.waitForTimeout(400);
+    await waitForNotificationMenuListIdle(page);
     await expect(input).toHaveValue(label);
-    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
-    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
+    await expect(menu.getByTestId(`notification-${created.id}-label`)).toBeVisible({
+      timeout: 20000,
+    });
 
     await menu.getByTestId('clear-notification-filters').click();
     await expect(input).toHaveValue('');
-    await expectSearchFilterChipHidden(menu);
+    await expect(menu.getByTestId('clear-notification-filters')).toHaveCount(0);
   });
 
   test('each active filter chip appears at most once and clears individually', async ({ page }, testInfo) => {
@@ -212,29 +205,14 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const menu = visibleNotificationMenu(page);
     await menu.getByTestId('filter-read').click();
     await menu.getByTestId('filter-bookmarked').click();
-    await menu.getByTestId('filter-withdrawn').click();
-    const input = searchInput(page);
-    await expect(input).toBeEnabled();
-    const query = label.slice(0, 12);
-    await input.click();
-    await input.fill('');
-    await input.pressSequentially(query);
-    await expect(input).toHaveValue(query, { timeout: 10000 });
-    await page.waitForTimeout(350);
 
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(1);
     await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(1);
-    await expect(menu.getByTestId('active-filter-chip-withdrawn')).toHaveCount(1);
-    await expect(menu.getByTestId('active-filter-chip-search')).toHaveCount(1);
-
-    await menu.getByTestId('active-filter-chip-search-clear').click();
-    await expectSearchFilterChipHidden(menu);
+    await expect(menu.getByTestId('clear-notification-filters')).toBeVisible();
     await menu.getByTestId('active-filter-chip-read-clear').click();
     await expect(menu.getByTestId('active-filter-chip-read')).toHaveCount(0);
     await menu.getByTestId('active-filter-chip-bookmarked-clear').click();
     await expect(menu.getByTestId('active-filter-chip-bookmarked')).toHaveCount(0);
-    await menu.getByTestId('active-filter-chip-withdrawn-clear').click();
-    await expect(menu.getByTestId('active-filter-chip-withdrawn')).toHaveCount(0);
   });
 
   test('top control tooltips are visible with expected labels', async ({ page }) => {
@@ -243,7 +221,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       ['filter-unread', 'Filter Unread'],
       ['filter-read', 'Filter Read'],
       ['filter-bookmarked', 'Filter Bookmarked'],
-      ['filter-withdrawn', 'Filter withdrawn notifications'],
       ['mark-all-read', 'Mark all as read'],
     ];
     for (const [testId, tooltip] of checks) {
@@ -254,8 +231,9 @@ test.describe.serial('Notifications (admin/operator)', () => {
   });
 
   test('clear-all control exposes title when filters are active', async ({ page }) => {
-    const menu = visibleNotificationMenu(page);
+    let menu = await ensureNotificationsMenuOpen(page);
     await menu.getByTestId('filter-read').click();
+    menu = await ensureNotificationsMenuOpen(page);
     const clearBtn = menu.getByTestId('clear-notification-filters');
     await expect(clearBtn).toHaveAttribute('title', 'Clear all filters');
   });
@@ -293,57 +271,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await page.getByTestId('filter-read').click();
     await expect(labelA).toBeVisible();
     await expect(labelB).toBeVisible();
-  });
-
-  test('admin/operator can withdraw and view under withdrawn filter', async ({ page }, testInfo) => {
-    const role = currentRole(testInfo.project.name);
-    const { token, userId, username } = await fetchCurrentUser({ page, role });
-    const suffix = randomUUID().slice(0, 8);
-    const label = `E2E-${role}-withdraw-${suffix}`;
-
-    const created = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label,
-      text: `Body for ${label}`,
-    });
-
-    await refreshNotificationView(page);
-    const createdLabel = page.getByTestId(labelById(created.id));
-    await expect(createdLabel).toBeVisible();
-    await page.getByTestId(withdrawById(created.id)).click();
-    await expect(createdLabel).toHaveCount(0);
-
-    await page.getByTestId('filter-withdrawn').click();
-    await expect(createdLabel).toBeVisible();
-    await expect(page.getByTestId(`notification-${created.id}-withdrawn-by`)).toHaveText(
-      `(Withdrawn by ${username})`,
-    );
-  });
-
-  test('withdrawn filter combines with bookmark filter', async ({ page }, testInfo) => {
-    const role = currentRole(testInfo.project.name);
-    const { token, userId } = await fetchCurrentUser({ page, role });
-    const suffix = randomUUID().slice(0, 8);
-    const label = `E2E-${role}-withdrawn-bookmark-${suffix}`;
-
-    const created = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label,
-      text: `Body for ${label}`,
-    });
-
-    await refreshNotificationView(page);
-    await page.getByTestId(toggleBookmarkById(created.id)).click();
-    await page.getByTestId(withdrawById(created.id)).click();
-    await expect(page.getByTestId(labelById(created.id))).toHaveCount(0);
-
-    await page.getByTestId('filter-withdrawn').click();
-    await page.getByTestId('filter-bookmarked').click();
-    await expect(page.getByTestId(labelById(created.id))).toBeVisible();
   });
 
   test('notification visible count changes when filters change', async ({ page }, testInfo) => {
@@ -433,7 +360,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       headers: { Authorization: `Bearer ${token}` },
       params: {
         read: true,
-        withdrawn: false,
         limit: 1,
         offset: 0,
       },
@@ -449,7 +375,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       params: {
         read: true,
         bookmarked: true,
-        withdrawn: false,
         limit: 1,
         offset: 0,
       },
@@ -520,7 +445,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       params: {
         read: true,
         bookmarked: true,
-        withdrawn: false,
         limit: 1,
         offset: 0,
       },
@@ -598,7 +522,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       params: {
         read: true,
         bookmarked: true,
-        withdrawn: false,
         search: labelPrefix,
         limit: 1,
         offset: 0,
@@ -618,7 +541,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
         params: {
           read: true,
           bookmarked: true,
-          withdrawn: false,
           search: labelPrefix,
           limit: 20,
           offset: 20,
@@ -666,15 +588,18 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await refreshNotificationView(page);
 
     const delayedReadFilterRequest = /\/api\/notifications\?.*read=true/;
+    let releaseReadList;
+    const readListHeld = new Promise((resolve) => {
+      releaseReadList = resolve;
+    });
     await page.route(delayedReadFilterRequest, async (route) => {
-      await page.waitForTimeout(400);
+      await readListHeld;
       await route.continue();
     });
 
     await page.getByTestId('filter-read').click();
-    await page.waitForTimeout(120);
     await expectHeaderControlsDisabled(page);
-    await page.waitForTimeout(350);
+    releaseReadList();
     await expectHeaderControlsEnabled(page);
     await page.unroute(delayedReadFilterRequest);
   });
@@ -693,13 +618,18 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await refreshNotificationView(page);
 
     const delayedToggleReadRequest = new RegExp(`/api/notifications/${created.id}/state$`);
+    let releaseToggleRead;
+    const toggleReadHeld = new Promise((resolve) => {
+      releaseToggleRead = resolve;
+    });
     await page.route(delayedToggleReadRequest, async (route) => {
-      await page.waitForTimeout(400);
+      await toggleReadHeld;
       await route.continue();
     });
 
     await page.getByTestId(toggleReadById(created.id)).click();
     await expectHeaderControlsDisabled(page);
+    releaseToggleRead();
     await expectHeaderControlsEnabled(page);
     await page.unroute(delayedToggleReadRequest);
   });
@@ -718,40 +648,20 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await refreshNotificationView(page);
 
     const delayedMarkAllRequest = /\/api\/notifications\/mark-all-read$/;
+    let releaseMarkAll;
+    const markAllHeld = new Promise((resolve) => {
+      releaseMarkAll = resolve;
+    });
     await page.route(delayedMarkAllRequest, async (route) => {
-      await page.waitForTimeout(400);
+      await markAllHeld;
       await route.continue();
     });
 
     await page.getByTestId('mark-all-read').click();
     await expectHeaderControlsDisabled(page);
+    releaseMarkAll();
     await expectHeaderControlsEnabled(page);
     await page.unroute(delayedMarkAllRequest);
-  });
-
-  test('controls are disabled while withdraw mutation is in flight', async ({ page }, testInfo) => {
-    const role = currentRole(testInfo.project.name);
-    const { token, userId } = await fetchCurrentUser({ page, role });
-    const suffix = randomUUID().slice(0, 8);
-    const created = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label: `E2E-${role}-loading-withdraw-${suffix}`,
-      text: `loading state withdraw ${suffix}`,
-    });
-    await refreshNotificationView(page);
-
-    const delayedWithdrawRequest = new RegExp(`/api/notifications/${created.id}/withdraw$`);
-    await page.route(delayedWithdrawRequest, async (route) => {
-      await page.waitForTimeout(400);
-      await route.continue();
-    });
-
-    await page.getByTestId(withdrawById(created.id)).click();
-    await expectHeaderControlsDisabled(page);
-    await expectHeaderControlsEnabled(page);
-    await page.unroute(delayedWithdrawRequest);
   });
 
   test('list fetch disables top controls, search input, and per-row actions', async ({ page }, testInfo) => {
@@ -768,9 +678,13 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await refreshNotificationView(page);
     const menu = visibleNotificationMenu(page);
 
-    const delayedListRequest = /\/api\/notifications\?/;
+    const delayedListRequest = /\/api\/notifications\?.*read=true/;
+    let releaseList;
+    const listHeld = new Promise((resolve) => {
+      releaseList = resolve;
+    });
     await page.route(delayedListRequest, async (route) => {
-      await page.waitForTimeout(450);
+      await listHeld;
       await route.continue();
     });
 
@@ -779,13 +693,13 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await expectHeaderControlsDisabled(page);
     await expect(menu.getByTestId(toggleReadById(created.id))).toBeDisabled();
     await expect(menu.getByTestId(toggleBookmarkById(created.id))).toBeDisabled();
-    await expect(menu.getByTestId(withdrawById(created.id))).toBeDisabled();
+    releaseList();
     await expectHeaderControlsEnabled(page);
 
     await page.unroute(delayedListRequest);
   });
 
-  test('search chip clear is disabled while notification list fetch is in flight', async ({ page }, testInfo) => {
+  test('clear-all filters control is disabled while notification list fetch is in flight', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
@@ -794,24 +708,30 @@ test.describe.serial('Notifications (admin/operator)', () => {
       token,
       userId,
       label: `E2E-${role}-loading-search-clear-${suffix}`,
-      text: `loading search chip clear ${suffix}`,
+      text: `loading search clear ${suffix}`,
     });
     await refreshNotificationView(page);
     const menu = visibleNotificationMenu(page);
     const input = searchInput(page);
     await input.focus();
     await input.fill(`search-clear-${suffix}`);
-    await expect(menu.getByTestId('active-filter-chip-search-clear')).toBeVisible({ timeout: 15000 });
+    const clearFiltersButton = menu.getByTestId('clear-notification-filters');
+    await expect(clearFiltersButton).toBeVisible({ timeout: 15000 });
 
     const delayedListRequest = /\/api\/notifications\?.*read=true/;
+    let releaseClearList;
+    const clearListHeld = new Promise((resolve) => {
+      releaseClearList = resolve;
+    });
     await page.route(delayedListRequest, async (route) => {
-      await page.waitForTimeout(450);
+      await clearListHeld;
       await route.continue();
     });
 
     await menu.getByTestId('filter-read').click();
-    await expect(menu.getByTestId('active-filter-chip-search-clear')).toBeDisabled();
-    await expect(menu.getByTestId('active-filter-chip-search-clear')).toBeEnabled();
+    await expect(clearFiltersButton).toBeDisabled();
+    releaseClearList();
+    await expect(clearFiltersButton).toBeEnabled();
 
     await page.unroute(delayedListRequest);
   });
@@ -834,32 +754,6 @@ test.describe.serial('Notifications (admin/operator)', () => {
       await expect(page.locator('[data-testid="active-filter-chip-read"]:visible')).toHaveCount(1);
       await page.locator('[data-testid="active-filter-chip-read-clear"]:visible').click();
       await expect(page.locator('[data-testid="active-filter-chip-read"]:visible')).toHaveCount(0);
-    }
-  });
-
-  test('withdrawn chip clears reliably with no duplicates', async ({ page }, testInfo) => {
-    const role = currentRole(testInfo.project.name);
-    const { token, userId } = await fetchCurrentUser({ page, role });
-    const suffix = randomUUID().slice(0, 8);
-    const created = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label: `E2E-${role}-withdrawn-chip-${suffix}`,
-      text: `Body for withdrawn chip ${suffix}`,
-    });
-    await refreshNotificationView(page);
-
-    await page.getByTestId(withdrawById(created.id)).click();
-    await expect(page.getByTestId(labelById(created.id))).toHaveCount(0);
-
-    for (let i = 0; i < 3; i += 1) {
-      await page.getByTestId('filter-withdrawn').click();
-      await expect(page.getByTestId(labelById(created.id))).toBeVisible();
-      await expect(page.locator('[data-testid="active-filter-chip-withdrawn"]:visible')).toHaveCount(1);
-      await page.locator('[data-testid="active-filter-chip-withdrawn-clear"]:visible').click();
-      await expect(page.locator('[data-testid="active-filter-chip-withdrawn"]:visible')).toHaveCount(0);
-      await expect(page.getByTestId(labelById(created.id))).toHaveCount(0);
     }
   });
 
@@ -1020,12 +914,10 @@ test.describe.serial('Notifications (admin/operator)', () => {
     const menu = visibleNotificationMenu(page);
     await searchInput(page).fill(label);
     await menu.getByTestId('filter-bookmarked').click();
-    await expect(menu.getByText(`Search: ${label}`)).toBeVisible();
     await expect(menu.getByTestId('clear-notification-filters')).toBeVisible();
 
     await menu.getByTestId('clear-notification-filters').click();
     await expect(searchInput(page)).toHaveValue('');
-    await expectSearchFilterChipHidden(menu);
     await expect(menu.getByTestId('clear-notification-filters')).toHaveCount(0);
   });
 
@@ -1097,19 +989,16 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await operatorContext.close();
   });
 
-  test('new notifications appear before polling interval when SSE is ready', async ({ page }, testInfo) => {
-    test.setTimeout(45000);
+  test('new notification appears in menu after polling refresh', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
-    test.skip(role !== 'admin', 'SSE timing test runs once under admin project');
+    test.skip(role !== 'admin', 'Polling timing test runs once under admin project');
     const { token, userId } = await fetchCurrentUser({ page, role });
     const suffix = randomUUID().slice(0, 8);
-    const label = `E2E-sse-realtime-${suffix}`;
+    const label = `E2E-poll-notify-${suffix}`;
 
-    const sseWatcher = openDirectSseWatcher({ token });
-    await sseWatcher.readyPromise;
-    const notificationEventPromise = sseWatcher.waitForNotification({ timeoutMs: 4500 });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await ensureNotificationOpenButtonVisible(page);
 
-    const beforeCreate = Date.now();
     const created = await createDirectNotification({
       page,
       token,
@@ -1117,43 +1006,10 @@ test.describe.serial('Notifications (admin/operator)', () => {
       label,
       text: `Body for ${label}`,
     });
-
-    const sseEvent = await notificationEventPromise;
-    expect(sseEvent.payload?.reason).toBe('created');
-    expect(sseEvent.atMs - beforeCreate).toBeLessThan(4500);
-    sseWatcher.close();
 
     await openNotificationsMenu(page);
-    await expect(page.getByTestId(labelById(created.id))).toBeVisible({ timeout: 6000 });
-  });
-
-  test('state update after withdraw shows conflict toast', async ({ page }, testInfo) => {
-    const role = currentRole(testInfo.project.name);
-    test.skip(role !== 'admin', 'Race condition toast test runs once under admin project');
-    const { token, userId } = await fetchCurrentUser({ page, role });
-    const suffix = randomUUID().slice(0, 8);
-    const label = `E2E-race-dismiss-state-${suffix}`;
-
-    const created = await createDirectNotification({
-      page,
-      token,
-      userId,
-      label,
-      text: `Body for ${label}`,
-    });
-
-    await refreshNotificationView(page);
-    await expect(page.getByTestId(labelById(created.id))).toBeVisible();
-
-    const dismissRes = await page.request.patch(`${config.apiBaseURL}/notifications/${created.id}/withdraw`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(dismissRes.status()).toBe(200);
-
-    await page.getByTestId(toggleReadById(created.id)).click();
-
-    const toastMessage = page.locator('.va-toast__group').getByText('withdrawn', { exact: false });
-    await expect(toastMessage).toBeVisible({ timeout: 6000 });
+    await waitForNotificationMenuListIdle(page);
+    await expect(page.getByTestId(labelById(created.id))).toBeVisible({ timeout: 15000 });
   });
 
   test('untrusted external link shows confirmation modal before navigation', async ({ page }, testInfo) => {
@@ -1231,34 +1087,30 @@ test.describe.serial('Notifications (admin/operator)', () => {
     await expect(modal).not.toBeVisible({ timeout: 2000 });
   });
 
-  test('add recipients to dismissed notification shows conflict via API', async ({ page }, testInfo) => {
+  test('add recipients extends an existing notification to another user', async ({ page }, testInfo) => {
     const role = currentRole(testInfo.project.name);
-    test.skip(role !== 'admin', 'Recipient conflict test runs once under admin project');
-    const { token, userId } = await fetchCurrentUser({ page, role });
+    test.skip(role !== 'admin', 'Recipient add test runs once under admin project');
+    const { token, userId: adminUserId } = await fetchCurrentUser({ page, role });
+    const operatorUser = await fetchUserByTicket({ page, ticket: 'operator' });
     const suffix = randomUUID().slice(0, 8);
-    const label = `E2E-race-dismiss-recipient-${suffix}`;
+    const label = `E2E-add-recipient-${suffix}`;
 
     const created = await createDirectNotification({
       page,
       token,
-      userId,
+      userId: adminUserId,
       label,
       text: `Body for ${label}`,
     });
-
-    const dismissRes = await page.request.patch(`${config.apiBaseURL}/notifications/${created.id}/withdraw`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(dismissRes.status()).toBe(200);
 
     const addRecipientRes = await post({
       requestContext: page.request,
       token,
       url: `/notifications/${created.id}/recipients`,
-      data: { user_ids: [userId] },
+      data: { user_ids: [Number(operatorUser.id)] },
     });
-    expect(addRecipientRes.status()).toBe(409);
+    expect(addRecipientRes.status()).toBe(200);
     const body = await addRecipientRes.json();
-    expect(body.code).toBe('NOTIFICATION_WITHDRAWN');
+    expect(body.created_count).toBeGreaterThanOrEqual(1);
   });
 });

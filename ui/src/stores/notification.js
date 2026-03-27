@@ -20,7 +20,7 @@ export const useNotificationStore = defineStore("notification", () => {
   let fetchRequestSeq = 0;
   /** True while the paginated notification list is being fetched (GET). */
   const listFetching = ref(false);
-  /** True while a mutating request runs (state PATCH, mark-all, withdraw). */
+  /** True while a mutating request runs (state PATCH, mark-all). */
   const mutationPending = ref(false);
   const appNotifications = ref([]);
   const unreadCount = ref(0);
@@ -29,7 +29,6 @@ export const useNotificationStore = defineStore("notification", () => {
   const filters = ref({
     read: false,
     bookmarked: null,
-    withdrawn: false,
     search: "",
   });
   const notifications = computed(() => appNotifications.value);
@@ -89,7 +88,6 @@ export const useNotificationStore = defineStore("notification", () => {
     filters.value = {
       read: false,
       bookmarked: null,
-      withdrawn: false,
       search: "",
     };
   }
@@ -110,7 +108,6 @@ export const useNotificationStore = defineStore("notification", () => {
     filters.value = {
       read: false,
       bookmarked: null,
-      withdrawn: false,
       search: "",
     };
   }
@@ -131,7 +128,6 @@ export const useNotificationStore = defineStore("notification", () => {
         username,
         read: false,
         bookmarked: null,
-        withdrawn: false,
         search: null,
         limit: 1,
         offset: 0,
@@ -176,7 +172,6 @@ export const useNotificationStore = defineStore("notification", () => {
         username,
         read: filters.value.read,
         bookmarked: filters.value.bookmarked,
-        withdrawn: filters.value.withdrawn,
         search: filters.value.search || null,
         limit: pageSize,
         offset,
@@ -234,13 +229,7 @@ export const useNotificationStore = defineStore("notification", () => {
     return notificationService
       .updateNotificationState(id, data, { forSelf, username })
       .then(() => refreshNotifications({ forSelf, username }))
-      .catch((error) => {
-        if (error?.response?.status === 409) {
-          toast.error(
-            "Notification was withdrawn and is no longer actionable.",
-          );
-          return refreshNotifications({ forSelf, username });
-        }
+      .catch(() => {
         toast.error("Could not update notification state.");
       })
       .finally(() => {
@@ -272,30 +261,6 @@ export const useNotificationStore = defineStore("notification", () => {
       });
   }
 
-  function withdrawNotification(id, { forSelf = false, username = null } = {}) {
-    if (forSelf && !username) {
-      return Promise.resolve();
-    }
-    mutationPending.value = true;
-    return notificationService
-      .withdrawNotification(id)
-      .then(() => refreshNotifications({ forSelf, username }))
-      .catch((error) => {
-        if (error?.response?.status === 409) {
-          toast.error("Notification is already withdrawn.");
-          return refreshNotifications({ forSelf, username });
-        }
-        if (error?.response?.status === 403) {
-          toast.error("You are not allowed to withdraw this notification.");
-          return;
-        }
-        toast.error("Could not withdraw notification.");
-      })
-      .finally(() => {
-        mutationPending.value = false;
-      });
-  }
-
   return {
     notifications,
     unreadCount,
@@ -310,7 +275,6 @@ export const useNotificationStore = defineStore("notification", () => {
     refreshNotifications,
     updateNotificationState,
     markAllRead,
-    withdrawNotification,
     setFilter,
     clearFilters,
     resetSession,
