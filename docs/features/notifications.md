@@ -48,7 +48,7 @@ Delivery metadata:
 - `ROLE_BROADCAST` for role-based delivery
 - `delivery_role_id` to preserve role-broadcast provenance
 
-There is **no** app-wide “withdrawn” or shared lifecycle flag on the notification row; all recipients continue to see and act on notifications according to their own read/bookmark state and list filters.
+There is no shared read/bookmark state on the `notification` row. User-visible state is recipient-scoped and driven by each user's `notification_recipient` row.
 
 ## UI Behavior
 
@@ -76,6 +76,25 @@ There is **no** app-wide “withdrawn” or shared lifecycle flag on the notific
 - Chip clear controls expose a visible `:focus-visible` ring so keyboard focus is discoverable.
 
 ## API Behavior
+
+### Endpoints
+
+Read/list:
+
+- `GET /api/notifications` for `admin` and `operator`
+- `GET /api/notifications/:username/all` for ownership-scoped `user` access
+
+State updates:
+
+- `PATCH /api/notifications/:id/state` for `admin` and `operator`
+- `PATCH /api/notifications/:username/:id/state` for ownership-scoped `user` access
+- `PATCH /api/notifications/mark-all-read` for `admin` and `operator`
+- `PATCH /api/notifications/:username/mark-all-read` for ownership-scoped `user` access
+
+Creation:
+
+- `POST /api/notifications` creates a notification with recipient resolution from `role_ids` and/or `user_ids`
+- `POST /api/notifications/:id/recipients` extends an existing notification to additional eligible recipients
 
 ### Listing and Pagination
 
@@ -114,9 +133,12 @@ Marks all unread recipient rows for the acting user as read (ownership-scoped or
 
 ## Real-Time Model
 
-- SSE provides invalidation (`ready`, `notification`) for near-real-time refresh.
-- Polling remains enabled as a resilience fallback.
-- Current fanout is process-local; multi-instance consistency requires shared pub/sub.
+- Notifications are refreshed by polling only.
+- Polling interval comes from `ui/src/config.js` (`notifications.pollingInterval`).
+- Each poll refreshes both:
+  - paginated list data (`fetchNotifications`)
+  - unread badge total (`fetchUnreadCount`)
+- Polling is skipped while the search input is focused to avoid interrupting active typing.
 
 ## Recipient Resolution Policy
 
@@ -181,5 +203,5 @@ Routes and components keep orchestration concerns, while feature behavior belong
 
 ## Constraints and Follow-ups
 
-- updates from other tabs or devices appear only after the next poll (or after a navigation that remounts the header)
-- a dedicated push channel (e.g. SSE or WebSocket with shared pub/sub) could be reintroduced if sub-second cross-client sync becomes a requirement
+- updates from other tabs or devices appear after the next poll cycle
+- cross-client update latency is bounded by `notifications.pollingInterval`
