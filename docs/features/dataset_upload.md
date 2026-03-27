@@ -1,4 +1,4 @@
-# Dataset Upload (TUS Rewrite)
+# Dataset Upload
 
 ## Overview
 

@@ -69,6 +69,7 @@ fi
 
 if $notify_workers; then
     echo "Detected changes to workers/pyproject.toml or workers/poetry.lock"
-    echo "→ Run: cd workers && poetry install --no-root"
+    echo "→ If pyproject.toml changed: cd workers && poetry lock [--no-update] && commit poetry.lock"
+    echo "→ Then: cd workers && poetry install --no-root"
     echo
 fi
