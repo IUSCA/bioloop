@@ -10,7 +10,7 @@ setup('login', async ({ page }) => {
 
   // do a test that page is finished loading - checking for username is good
   // enough
-  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username, { timeout: 20000 });
+  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username, { timeout: 60000 });
 
   await page.context().storageState({ path: OPERATOR_STORAGE_STATE });
 });

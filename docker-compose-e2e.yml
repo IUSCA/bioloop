@@ -23,7 +23,7 @@ services:
         # - VITE_UPLOAD_API_BASE_PATH=http://localhost:<secure_download_port>
     volumes:
       - ./ui/:/opt/sca/app
-      - ui_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
+      - ui_node_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
@@ -48,7 +48,7 @@ services:
       # - api/.env? # For keys made after the first run
     volumes:
       - ./api:/opt/sca/app
-      - api_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
+      - api_node_modules:/opt/sca/app/node_modules
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
@@ -235,8 +235,8 @@ services:
   secure_download:
     image: node:19
     restart: unless-stopped
-    expose:
-      - 3060
+    ports:
+      - "3060:3060"
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -371,6 +371,9 @@ services:
 
   e2e:
     build: tests
+    restart: "no"
+    profiles:
+      - e2e-runner
     env_file:
       - tests/.env.default
     environment:
@@ -393,7 +396,6 @@ services:
         condition: service_healthy
       init_test_data:
         condition: service_completed_successfully
-    network_mode: "host"
 
 volumes:
   grafana_data:

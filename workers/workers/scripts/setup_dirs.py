@@ -10,6 +10,8 @@ def main(create=False):
         'paths.scratch',
         'paths.RAW_DATA.stage',
         'paths.DATA_PRODUCT.stage',
+        'paths.RAW_DATA.upload',
+        'paths.DATA_PRODUCT.upload',
         'paths.download_dir',
         'registration.RAW_DATA.source_dir',
         'registration.DATA_PRODUCT.source_dir'

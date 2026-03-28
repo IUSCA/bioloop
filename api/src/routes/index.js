@@ -5,6 +5,7 @@ const featureService = require('../services/features');
 const uploadRouter = require('./datasets/uploads');
 const importRouter = require('./datasets/imports');
 const fsRouter = require('./fs');
+const notificationsRouter = require('./notifications');
 
 const router = express.Router();
 
@@ -36,9 +37,12 @@ router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": [
 router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/statistics', require('./statistics') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/notifications', require('./notifications') /* #swagger.security = [{"BearerAuth": []}] */);
+
+if (featureService.isFeatureEnabled({ key: 'notifications' })) {
+  router.use('/notifications', notificationsRouter /* #swagger.security = [{"BearerAuth": []}] */);
+}
 router.use('/instruments', require('./instruments') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth": []}] */);
+router.use('/uploads', require('./datasets/uploads') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
 
 if (featureService.isFeatureEnabled({ key: 'fs' })) {

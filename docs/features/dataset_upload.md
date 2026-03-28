@@ -1,157 +1,341 @@
 # Dataset Upload
 
-## 1. Introduction
+## Overview
 
-Bioloop allows uploading datasets through the browser, while ensuring strict access control to prevent unauthorized access.
+Uploads use TUS resumable transfer handled directly by the core API.
 
-## 2. Requirements and Limitations
+## Architecture
 
-- Authorized users should be able to upload datasets directly from their web browsers. The uploaded datasets should be protected from unauthorized users.
-- Network timeouts, data corruption and other problems that arise from uploading large datasets must be avoided. To achieve this, our file upload architecture uploads files in chunks of 2 MB.
-  - Uploading files in chunks also gives us a more granular view into the upload state.
+### Components
 
-## 3. Architecture Overview
+- **UI** (`UploadDatasetStepper`) orchestrates metadata collection and TUS transfer.
+- **API** hosts TUS server and upload routes (`/datasets/uploads/*`).
+- **Worker cron** (`manage_upload_workflows.py`) drives status transitions.
+- **Celery task** (`verify_upload_integrity.py`) performs async verification.
+- **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
-To meet the requirements outlined above, a distributed architecture is employed.
+![Upload architecture components](../diagrams/upload/architecture_components.png)
 
-- UI Client: User logs into the Bioloop application through their web browser and navigates to the appropriate page to initiate a dataset upload.
-- API: This node serves the UI as well as workers via HTTP endpoints that are specific to dataset uploads.
-- Database: Any metadata related to an upload is stored in a PostgreSQL database.
-  - The contents of the uploaded files themselves are not persisted to this database.
-- Rhythm API: This node is used to initiate workflows from the UI. These workflows process the uploaded dataset.
-- Workers: Workflow tasks that process the uploaded dataset and register the uploaded dataset in the system.
-- Signet: An OAuth server that supports Client-Credentials flow. This is used to issue secure tokens which are needed for authorizing into the File-Upload API.
-- File-Upload API: A lightweight app hosted on the File-Upload Server, which writes files sent as part of an HTTP request to a filesystem.
-- File-Upload Server (Nginx): A server which receives requests from users to upload files. Files are uploaded to this server.
+### Objectives
 
-## 4. The Upload Process
+- Support large-file and large-directory browser uploads without restarts.
+- Preserve file integrity with optional end-to-end manifest-hash validation.
+- Keep upload registration and post-upload processing idempotent.
+- Make failure states explicit and recoverable.
 
-### 4.1 Database
+## Request Flow
 
-For each upload, information is logged to the following relational tables (PostgreSQL):
-1. `dataset_audit` - used to create an audit log of a dataset being created in the system. Each record in this table is linked to a single `dataset` record.
-2. `dataset_upload_log` - contains metadata specific to a dataset's upload. Each record in this table is linked to multiple `file_upload_log` records.
-3. `file_upload_log` - contains metadata about each file that is uploaded as part of upload.
+### 1) Register Upload Session
 
-![Upload ER Diagram](/api/upload/ER-diagram.png)
+`POST /datasets/uploads`
 
-### 4.2 Steps
+- Creates dataset (`create_method = UPLOAD`).
+- Creates `dataset_upload_log` with status `UPLOADING`.
+- Persists deterministic `origin_path`.
 
-1. Before an upload begins, the following events occur sequentially:
-   - Checksum evaluation - MD5 checksums are evaluated for each file being uploaded, as well as for each chunk that a file being uploaded is split into. 
-   - Any metadata associated with the upload is stored in the database. This includes:
-     - Names, MD5 checksums, and relative paths of the files being uploaded.
-     - User who is uploading the dataset
-     - (Optional) Source Raw Data that the dataset being uploaded is being derived from.
-     - (Optional) Project that the dataset being uploaded is assigned to
-     - (Optional) Source instrument where the dataset being uploaded was collected from.
-   - The UI requests a bearer token which it will use to call the File-Upload API (see [Access Control](#44-access-control))
-2. Upload of files is initiated by the UI once the above steps are successful.
-3. Chunks are uploaded sequentially to the File-Upload API.
-   - For this, the client sends an HTTP request to the File-Upload API in order to upload a file chunk, which then writes the received chunk to the File-Upload Server, after validating its checksum.
-   - If a chunk upload fails, the UI retries the upload up to 5 times before failing.
-   - The bearer token that is being used to call the File-Upload API is refreshed every 20 seconds
-4. If the user chooses to navigate to a different route before all files have been uploaded, they see a browser alert asking to verify their choice.
-   - Upon verification, the upload is cancelled by initiating the `cancel_dataset_upload` workflow.
-5. After all files' chunks are uploaded successfully, the UI makes a request to the Rhythm API to initiate the `process_dataset_upload` workflow, which merges each file's uploaded chunks into the corresponding file.
-   - This worker expects to have access to be the location where the File-Upload API uploads files to.
+### 2) Transfer File Bytes (TUS)
 
-![Upload Steps Flowchart](/api/upload/steps-flowchart.jpeg)
+`POST/PATCH /api/uploads/files`
 
-### 4.3 Directory structure
-The directories on the File-Upload Server that are used for uploads are described below.
+- TUS metadata includes `dataset_id`, `filename`, and directory metadata.
+- In non-production test mode, failure simulation can be injected with:
+  - `X-Simulate-Failure`
+  - `X-Simulate-Failure-Count`
+- `onUploadFinish` moves each file into final `origin_path` immediately.
 
-1. The location where a dataset will be uploaded to is evaluated through the following method:
+### 3) Mark Upload Complete
+
+`POST /datasets/uploads/:id/complete`
+
+- Transitions upload log to `UPLOADED` in an idempotent manner.
+- Records `process_id` and optional metadata (e.g. upload manifest-hash, size manifest).
+- Rejects status regression if upload already advanced beyond upload stage.
+
+### 4) Worker-Orchestrated Post-Upload Pipeline
+
+`manage_upload_workflows.py` runs every minute:
+
+- `UPLOADED` -> enqueue verification task and set `VERIFYING`.
+- `VERIFYING` -> inspect Celery state; apply timeout/failure fallback logic.
+- `VERIFIED` -> start integrated workflow and atomically persist `COMPLETE`.
+- `PROCESSING_FAILED` -> retry integrated workflow up to retry limit.
+- stale `UPLOADING` sessions -> `UPLOAD_FAILED`.
+
+![Upload request flow sequence](../diagrams/upload/request_flow_sequence.png)
+
+![Upload status state machine](../diagrams/upload/upload_status_state_machine.png)
+
+## Data Model
+
+### `dataset`
+
+- `create_method` moved here from `dataset_audit`.
+- `origin_path` set at registration time.
+
+### `dataset_upload_log`
+
+- Direct FK to dataset (`dataset_id`).
+- `status`, `process_id`, `retry_count`, `metadata`, `updated_at`.
+- `metadata` JSONB is merged atomically in SQL to avoid concurrent key loss.
+
+![Upload data model ER diagram](../diagrams/upload/data_model_er.png)
+
+![Upload metadata structure flow](../diagrams/upload/metadata_structure_flow.png)
+
+## Upload Statuses
+
+Persisted statuses:
+
+- `UPLOADING`
+- `UPLOAD_FAILED`
+- `UPLOADED`
+- `VERIFYING`
+- `VERIFIED`
+- `PROCESSING`
+- `PROCESSING_FAILED`
+- `COMPLETE`
+- `PERMANENTLY_FAILED`
+- `VERIFICATION_FAILED`
+
+UI-only transient statuses:
+
+- `PROCESSING` (pre-upload registration/manifest-hash phase label)
+- `COMPUTING_CHECKSUMS`
+- `CHECKSUM_COMPUTATION_FAILED`
+
+## Integrity Verification
+
+### Checksum Path (Primary)
+
+- UI computes BLAKE3 manifest-hash (feature-flag controlled).
+- Worker recomputes the manifest-hash from `origin_path`.
+- Mismatch yields `VERIFICATION_FAILED`.
+
+### Size-Manifest Fallback
+
+- When manifest-hash computation fails or is disabled, the UI sends a `size_manifest`
+  containing per-file paths and byte sizes in the `/complete` payload.
+- Worker validates every expected path exists and its byte-size matches.
+- Catches missing files, extra files, truncated files, and path mismatches.
+
+### File-Existence Fallback (Compatibility)
+
+- If neither manifest-hash metadata nor size manifest is available, worker confirms files
+  exist at `origin_path`.
+
+## Failure Simulation (TUS Resume Testing)
+
+Failure simulation is a **test-only** mechanism to force a mid-upload error and
+validate resumable behavior. It is composed of three cooperating layers:
+the client (UI), the API middleware, and the file-store.
+
+### How it works
+
+#### 1. Client (localStorage flags)
+
+The UI reads two `localStorage` keys before each upload and forwards them as
+HTTP headers on every TUS request:
+
 ```
-const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => {
-  # `dataset_id`: the unique id that is generated for the dataset being uploaded.
-  # `config.upload.path`: the location where all uploaded datasets are stored.
-
-  return path.join(
-    config.upload.path,
-    datasetType.toLowerCase(),
-    `${datasetId}`,
-    'processed',
-  )
-};
+SIMULATE_UPLOAD_FAILURE      ->  X-Simulate-Failure
+SIMULATE_UPLOAD_FAILURE_COUNT ->  X-Simulate-Failure-Count
 ```
-2. The location where any given file that is being uploaded as part of this upload will be uploaded to is evaluated through the methods shown below. Each file is uploaded in chunks.
-    - Individual chunks are named as `[file_md5]-[i]` where `i` serves as the position of this chunk among all sequentially-uploaded chunks of this file.
-      - When merging a file's chunks into the corresponding file, chunks will be processed sequentially based on the index `i`.
+
+Headers are set once when the `tus.Upload(...)` instance is created, so
+changing localStorage mid-upload has no effect on the current upload session.
+
+#### 2. API middleware (`api/src/middleware/tus.js`)
+
+`handleFailureSimulation(req, uploadId)` runs on every TUS request. It is a
+complete no-op when `NODE_ENV === 'production'`, so the simulation surface
+cannot be activated on live infrastructure.
+
+For non-production environments, the middleware:
+
+- Only counts **PATCH** requests that carry a positive `Content-Length` (actual
+  data uploads; HEAD, OPTIONS, and POST creation requests are ignored).
+- Maintains two per-upload-ID maps in `global`:
+  - `global.tusFailureSimulation` — one-shot flag consumed by `TestableFileStore`
+  - `global.tusFailureSimulationCount` — cumulative failure counter
+- Increments the counter and sets the flag on each qualifying PATCH until the
+  count reaches `X-Simulate-Failure-Count` (default `1`).
+- Once the quota is exhausted, the flag is not set and the upload proceeds
+  normally.
+
+#### 3. File-store (`api/src/services/upload/TestableFileStore.js`)
+
+`TestableFileStore` extends the TUS `FileStore`. Its `write(stream, id, offset)`
+checks the global flag; when set:
+
+1. Creates a write-stream to the upload file at the given `offset` (using
+   `flags: 'r+'` on retries so partial data written by earlier attempts is
+   preserved).
+2. Pipes the incoming stream through a `Transform` that counts bytes. After
+   ~1 MB (`FAILURE_THRESHOLD_BYTES`) it passes the final chunk downstream with
+   `callback(null, chunk)` and then calls `setImmediate(() => destroy(err))`
+   so the data reaches disk before the stream is torn down.
+3. The resulting 500-class error propagates to the TUS client, which performs
+   a HEAD to learn the server's `Upload-Offset` and retries from there.
+
+The flag is cleared after each check, so a single write attempt can only
+trigger one simulated failure.
+
+#### 4. TUS client retry behavior
+
+`tus-js-client` is configured with Fibonacci-progression retry delays
+(~16 minutes cumulative):
+
 ```
-# `uploadPath`: the path where this dataset will be uploaded to.
-# `fileUploadLogId`: the unique id which is generated to record this file's upload
-
-const chunkStorage = getFileChunksStorageDir(
-  {
-    uploadPath: req.body.upload_path,
-    fileUploadLogId: req.body.file_upload_log_id,
-  },
-);
-  
-const getFileChunksStorageDir = ({ uploadPath, fileUploadLogId } = {}) => {
-  return path.join(
-    uploadPath,
-    'uploaded_chunks',
-    fileUploadLogId,
-  )
- };
-
-# Name of uploaded chunk file:
-const getFileChunkName = (fileChecksum, index) => {
-  # `index`: The position of this uploaded chunk among all the chunks that a file is split into before being uploaded
-  return `${fileChecksum}-${index}`
-};
+[0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+ 144000, 233000, 377000]
 ```
-3. Once the uploaded dataset's files have been processed (i.e. its chunks have been merged into corresponding files), the recreated dataset is stored at the path shown below.
-    - This location is considered the path where the dataset originated from (i.e. the dataset's `origin_path`).
+
+There is **no hard wall-clock timeout** — the client will retry through the
+entire delay schedule. `onError` fires only after the final delay has elapsed
+without a successful reconnect.
+
+![Failure simulation sequence](../diagrams/upload/failure_simulation_sequence.png)
+
+### How to recreate failures manually
+
+In browser devtools console **before clicking Upload**:
+
+```js
+localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload');
+localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '2'); // fail first 2 PATCH attempts
 ```
-path.join(
-  getUploadedDatasetPath({ datasetId = uploadedDatasetId, datasetType = uploadedDatasetType }),
-  'processed'
-)
+
+Then perform a normal upload. With a failure count within the 14-retry budget,
+the upload will resume from the partial offset and complete successfully.
+
+To observe the resume in the Network tab, look for:
+
+- Multiple PATCH requests to `/api/uploads/files/<id>` — early ones return 500
+- Interleaved HEAD requests returning increasing `Upload-Offset` values
+- A final successful PATCH
+
+### How to stop recreating failures
+
+```js
+localStorage.removeItem('SIMULATE_UPLOAD_FAILURE');
+localStorage.removeItem('SIMULATE_UPLOAD_FAILURE_COUNT');
 ```
-  
-### 4.4 Access Control
 
-1. To verify that a user is authorized to initiate an upload, we perform role-based checking in the core Bioloop API.
-    - This validation cannot be performed in the File-Upload API, since evaluating permissions that are granted to a user for any given entity is done via information stored in the database, which the File-Upload API is not given access to, to keep it decoupled from the database.
-2. After verifying that the user is authorized to upload datasets, the UI issues a request to the core Bioloop API which requests the Signet service for a Bearer token, which is returned to the UI.
-   - The UI then attaches this token to the `Authorization` header of the HTTP request which is sent from the UI to the File-Upload API in order to upload a file.
-   - The scope included in the generated token contains the name of the file prefixed with the string `upload_file`.
-   - If the name of the file being uploaded has spaces in it, these spaces are replaced by hyphens in the granted token's scope.
-   - For example, to upload file `my file.json`, the Bearer token that is used to call the File-Upload API file will be expected to have scope `upload_file:my-file.json`.
-3. Before the File-Upload API accepts a file that needs to be uploaded, it verifies that the scope contained in the Bearer token is the same as the expected scope. If these scopes do not match, the File-Upload API rejects the HTTP request.
+Flags only take effect on **new** `tus.Upload(...)` instances. Clearing them
+before starting the next upload is sufficient.
 
-### 4.5 Status
+### Important caveats (verified against current code)
 
-The status of an upload action goes through the following values:
+- **Production safety:** `handleFailureSimulation` returns immediately when
+  `NODE_ENV === 'production'`. No amount of header or localStorage manipulation
+  can trigger simulation in production.
+- **Only data PATCHes are counted.** The middleware ignores HEAD, OPTIONS, POST,
+  and any PATCH with `Content-Length: 0`.
+- **Per-upload-ID isolation.** Failure tracking is keyed by TUS upload ID. Two
+  concurrent uploads with simulation enabled maintain independent counters.
+- **Flag is consumed once per write.** `_shouldSimulateFailure()` deletes the
+  flag after reading it, so each `write()` call gets at most one simulated
+  failure.
+- **Count defaults to 1** when `X-Simulate-Failure-Count` is omitted.
+- **Partial data persists on disk.** Each simulated failure writes ~1 MB before
+  destroying the stream. On the next retry, `Upload-Offset` will reflect that
+  partial write, and the write-stream opens at the correct offset with
+  `flags: 'r+'`.
+- **No client timeout.** The client will exhaust all 14 retries (~16 minutes total)
+  before calling `onError`. To simulate a true timeout failure, set
+  `SIMULATE_UPLOAD_FAILURE_COUNT` to a value exceeding 14.
+- **Retry button creates a new upload.** If the client does exhaust retries,
+  the UI shows a failure state. Clicking "Retry" creates a **new** TUS upload
+  with a new upload ID, so failure counters reset. Clear localStorage flags
+  before retrying unless you want the new upload to fail as well.
+- **Manifest-hash is cached.** If BLAKE3 manifest-hash computation ran before the first
+  attempt, the cached result is reused on retry — it is not recomputed.
+- **Minimum file size for meaningful testing:** Files under ~1 MB may complete
+  within the first write chunk, before the 1 MB failure threshold is reached,
+  making the simulation ineffective. Use files of 5 MB or larger.
 
-| Status                      | Description                                                                                                                                                           |
-|-----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| COMPUTING_CHECKSUMS         | Checksums are being computed for the file(s) to be uploaded                                                                                                           |
-| CHECKSUM_COMPUTATION_FAILED | Checksums computation failed for the file(s) to be uploaded                                                                                                           |
-| UPLOADING                   | Upload initiated through the browser                                                                                                                                  |
-| UPLOAD_FAILED               | Upload could not be completed (network errors)                                                                                                                        |
-| UPLOADED                    | All files successfully uploaded                                                                                                                                       |
-| PROCESSING                  | Upload currently being processed                                                                                                                                      |
-| PROCESSING_FAILED           | Encountered errors while processing a file in this upload                                                                                                             |
-| COMPLETE                    | All files in the upload processed successfully                                                                                                                        |
+## Failure Handling
 
-- Statuses `COMPUTING_CHECKSUMS` and `COMPUTING_CHECKSUMS` are only shown on the User Interface, and are not persisted to the database.
-- All other statuses are persisted to the database.
+- Upload completion failure writes `UPLOAD_FAILED`.
+- Terminal failures (`UPLOAD_FAILED`, `VERIFICATION_FAILED`, `PERMANENTLY_FAILED`)
+  tombstone the dataset (`name -> name--id`, `is_deleted = true`) to free name.
+- Verification timeout protection marks stuck `VERIFYING` sessions failed.
+- `VERIFIED -> COMPLETE` flow is guarded against duplicate workflow starts.
 
-## 5. Processing
-- Uploaded file chunks are merged into the corresponding file by the `process_dataset_upload` workflow.
-- After an uploaded file has been recreated from its chunks, the MD5 checksum of the recreated file is matched with the expected MD5 checksum of this file, which was persisted to the database before the upload.
-- After all uploaded files have been processed successfully, the resources (uploaded file chunks) associated with them are deleted.
-- At this point, the system initiates the `Integrated` workflow for the uploaded dataset, which registers this dataset in the system.
+## Deployment
 
-## 6. Data Integrity
-The uploaded data goes through two stages of checksum validation:
-1. Validating MD5 checksum of an uploaded file before writing it to the filesystem.
-2. Validating MD5 checksum of the file being uploaded, once it has been recreated from its chunks by the worker.
+### Database Migration
 
-## 7. Retry
-1. Upon encountering retryable exceptions, the `process_dataset_upload` worker retries itself 3 times before failing.
-2. The script `manage_pending_dataset_uploads.py`, which is scheduled to run every 24 hours, looks for uploads that have been in states `PROCESSING_FAILED` or `UPLOADED`, and retries to process the ones which have been failing for less than 72 hours.
+Run inside the app container:
+
+```bash
+npx prisma migrate deploy
+```
+
+The migration (`20260311000000_upload_rewrite`):
+- Moves `create_method` from `dataset_audit` to `dataset`
+- Rebuilds the `upload_status` enum (adds `VERIFYING`, `VERIFIED`,
+  `VERIFICATION_FAILED`, `PERMANENTLY_FAILED`; removes unused `FAILED`)
+- Restructures `dataset_upload_log`: replaces `audit_log_id` indirection
+  with a direct `dataset_id` FK; adds `process_id`, `retry_count`, `metadata`
+
+### Environment Variable — API Host
+
+Set `UPLOAD_HOST_DIR` in the API `.env` before restarting. This is the path where uploaded content will be written to:
+
+```
+UPLOAD_HOST_DIR=/N/scratch/scadev/bioloop/dev/uploads
+```
+
+The compose file mounts this path into the container and injects the variable.
+The directory must exist on the host before `docker compose up`.
+
+### Worker — Dependencies
+
+```bash
+cd /path/to/workers
+poetry install
+# (Optional) Do a test by importing the library
+python -c "import blake3; print('blake3 ok')"
+```
+
+### Worker — Directory Setup
+
+Note: These directories are created automatically, when the `celery_worker` worker is started.
+
+```bash
+python -m workers.scripts.setup_dirs          # dry run
+python -m workers.scripts.setup_dirs --create # create missing dirs
+```
+
+### PM2 — Register `manage_upload_workflows` Cron
+
+```js
+{
+  name: 'manage_upload_workflows',
+  script: 'python',
+  args: '-m workers.scripts.manage_upload_workflows --dry-run=False',
+  cron_restart: '* * * * *',
+  autorestart: false,
+}
+```
+
+### Post-Deploy Smoke Test
+
+1. Log in to the UI and initiate a small test upload.
+2. Confirm the upload log row appears:
+   ```sql
+   SELECT id, dataset_id, status, process_id, retry_count, metadata
+   FROM dataset_upload_log ORDER BY id DESC LIMIT 5;
+   ```
+3. Status should transition:
+   `UPLOADING -> UPLOADED -> VERIFYING -> VERIFIED -> COMPLETE`
+4. Confirm the file lands at `origin_path`.
+5. Confirm the integrated workflow starts (check `/workflows` in the UI).
+
+## Testing
+
+- E2E UI coverage: route + stepper flow, file and directory uploads,
+  simulated mid-upload failure with resume, zero-byte file in directory upload.
+- Worker coverage: manifest-hash success/mismatch, size-manifest fallback,
+  fallback existence verification, `manage_upload_workflows` edge cases.

@@ -47,3 +47,4 @@ fi
 
 echo "=== UI entrypoint complete ==="
 $*
+

@@ -40,15 +40,82 @@ async function selectFiles({
   filePaths,
   fileSelectTestId,
 }) {
-  if (!fileSelectTestId) throw new Error('fileSelectTestId is required');
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser'),
-    page.click(`[data-testid="${fileSelectTestId}"]`),
-  ]);
-  await fileChooser.setFiles(filePaths);
+  await page.locator('[data-testid="upload-container"]').first().waitFor({
+    state: 'visible',
+    timeout: 15000,
+  });
+
+  const candidates = [
+    '[data-testid="upload-container"] input[type="file"]:not([data-testid="folder-upload-input"])',
+    '[data-testid="upload-file-select"] input[type="file"]',
+    'input[type="file"]:not([data-testid="folder-upload-input"])',
+  ];
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const fileInput = page.locator(candidates[index]).first();
+    try {
+      await fileInput.waitFor({ state: 'attached', timeout: 15000 });
+      await fileInput.setInputFiles(filePaths);
+      return;
+    } catch (error) {
+      // Try the next known uploader input shape.
+    }
+  }
+
+  throw new Error(
+    'Unable to locate a file input for upload. Checked known upload selectors.',
+  );
+}
+
+/**
+ * Selects a directory for upload via the hidden folder input.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string[]} params.filePaths - Array of file paths in one directory tree
+ * @returns {Promise<void>}
+ */
+async function selectDirectory({
+  page,
+  filePaths,
+}) {
+  const folderButton = page.getByTestId('select-folder-button');
+  await expect(folderButton).toBeVisible();
+
+  const folderInput = page.locator('[data-testid="folder-upload-input"]').first();
+  await folderInput.waitFor({ state: 'attached', timeout: 10000 });
+  await folderInput.setInputFiles(filePaths);
+}
+
+/**
+ * Enables or clears upload-failure simulation flags in localStorage.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string|null} [params.mode] - Simulation mode, e.g. "mid-upload"
+ * @param {number|null} [params.count] - Number of failures before success
+ * @returns {Promise<void>}
+ */
+async function setUploadFailureSimulation({
+  page,
+  mode = null,
+  count = null,
+}) {
+  await page.evaluate(({ _mode, _count }) => {
+    localStorage.removeItem('SIMULATE_UPLOAD_FAILURE');
+    localStorage.removeItem('SIMULATE_UPLOAD_FAILURE_COUNT');
+
+    if (_mode) {
+      localStorage.setItem('SIMULATE_UPLOAD_FAILURE', _mode);
+    }
+
+    if (_count != null) {
+      localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', String(_count));
+    }
+  }, { _mode: mode, _count: count });
 }
 
 module.exports = {
   trackSelectedFilesMetadata,
   selectFiles,
+  selectDirectory,
+  setUploadFailureSimulation,
 };

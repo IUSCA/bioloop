@@ -11,7 +11,7 @@ services:
       - ui/.env.default
     volumes:
       - ./ui/:/opt/sca/app
-      - ui_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
+      - ui_node_modules:/opt/sca/app/node_modules
     working_dir: /opt/sca/app
     entrypoint: ["bin/entrypoint.sh"]
     command: ["npm", "run", "dev"]
@@ -28,7 +28,7 @@ services:
       # - api/.env? # For keys made after the first run
     volumes:
       - ./api:/opt/sca/app
-      - api_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
+      - api_node_modules:/opt/sca/app/node_modules
       - ./workers/:/opt/sca/app/workers/ # You don't need this in production.  This allows common volume space into the workers folder so we can create api token in .env config on api startup if needed.  You should create this manually in production and not mount workers into api.
       - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
     working_dir: /opt/sca/app
@@ -53,7 +53,6 @@ services:
     expose:
       - 5432
     ports:
-      # Published on host as 5433; use localhost:5433 for host-side DB access (e.g. psql, GUI)
       - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings

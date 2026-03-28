@@ -111,12 +111,10 @@ const grantsObject = {
       'read:own': ['*'],
     },
     workflow: {
-      // user role can only create these four workflows
+      // user role can only create these two workflows
       'create:any': [
         CONSTANTS.WORKFLOWS.INTEGRATED,
         CONSTANTS.WORKFLOWS.STAGE,
-        CONSTANTS.WORKFLOWS.PROCESS_DATASET_UPLOAD,
-        CONSTANTS.WORKFLOWS.CANCEL_DATASET_UPLOAD,
       ],
     },
     instruments: {
@@ -134,6 +132,10 @@ const grantsObject = {
     },
     alerts: {
       'read:any': ['*'],
+    },
+    notifications: {
+      'read:own': ['*'],
+      'update:own': ['*'],
     },
   },
 
@@ -191,6 +193,7 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
+      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
