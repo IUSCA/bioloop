@@ -201,9 +201,6 @@ test.describe.serial('Dataset Import — Select Directory step', () => {
     // Close by clicking outside
     await page.keyboard.press('Escape');
 
-    // Wait a moment for reactive updates
-    await page.waitForTimeout(500);
-
     // The error message should now appear since the step is no longer pristine
     // and no file is selected
     const errorMessage = page.getByTestId('import-source-error');

@@ -1,8 +1,24 @@
 const crypto = require('node:crypto');
 const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
+const config = require('config');
 
 const prisma = require('@/db');
+
+const AUTO_CREATE_PROJECT_DEFAULT_ROLES = ['user'];
+
+function getAutoCreateProjectEnabledRoles() {
+  const roles = config.get('auto_create_project_on_dataset_creation_roles');
+  if (!Array.isArray(roles)) {
+    return AUTO_CREATE_PROJECT_DEFAULT_ROLES;
+  }
+  return roles.filter((role) => typeof role === 'string' && role.trim() !== '');
+}
+
+function roleCanAutoCreateProject({ requester_roles }) {
+  const enabledRoles = getAutoCreateProjectEnabledRoles();
+  return requester_roles.some((role) => enabledRoles.includes(role));
+}
 
 function normalize_name(name) {
   // convert to lowercase
@@ -293,6 +309,8 @@ module.exports = {
   generate_slug,
   has_project_assoc,
   get_project_owner,
+  getAutoCreateProjectEnabledRoles,
+  roleCanAutoCreateProject,
   generate_project_name,
   build_creation_query,
   build_include_object,

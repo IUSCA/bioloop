@@ -139,7 +139,6 @@ test.describe.serial('Dataset Import — Import Details step', () => {
       // non-empty transition which sets pristine = false and shows the error.
       await nameInput.fill('a');
       await nameInput.fill('ab');
-      await page.waitForTimeout(500);
 
       const errorEl = page.locator('.dataset-name-input.va-text-danger');
       await expect(errorEl).toBeVisible();
@@ -153,7 +152,6 @@ test.describe.serial('Dataset Import — Import Details step', () => {
       const nameInput = page.getByTestId(DATASET_NAME_INPUT_TEST_ID);
 
       await nameInput.fill('invalid name');
-      await page.waitForTimeout(500);
 
       const errorEl = page.locator('.dataset-name-input.va-text-danger');
       await expect(errorEl).toBeVisible();

@@ -5,7 +5,6 @@ import {
 import { navigateToNextStep } from '../../../../../actions/stepper';
 import { generateUniqueDatasetName, getDatasets } from '../../../../../api/dataset';
 import { expect, test } from '../../../../../fixtures';
-import { getTokenByRole } from '../../../../../fixtures/auth';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -71,7 +70,7 @@ test.describe.serial('Dataset Upload Process', () => {
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       // Set the name of the dataset being uploaded
-      const token = await page.evaluate(() => localStorage.getItem('token'));
+      const token = await page.evaluate(() => globalThis.localStorage.getItem('token'));
       uploadedDatasetName = await generateUniqueDatasetName({
         requestContext: page.request,
         token,
@@ -87,11 +86,15 @@ test.describe.serial('Dataset Upload Process', () => {
       // Verify that the uploaded Dataset is associated with the selected
       // any Project
 
-      // Get token for admin role which will be used to call the datasets API
-      const adminToken = await getTokenByRole({ role: 'admin' });
+      // Reuse the current authenticated session token; avoid extra auth calls.
+      const currentToken = await page.evaluate(
+        () => globalThis.localStorage.getItem('token'),
+      );
+      expect(currentToken).toBeTruthy();
 
       const response = await getDatasets({
-        token: adminToken,
+        requestContext: page.request,
+        token: currentToken,
         params: {
           name: uploadedDatasetName,
           type: selectedDatasetType.split(' ').join('_').toUpperCase(),

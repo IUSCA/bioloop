@@ -24,9 +24,8 @@ cd tests && npx playwright test --list
 
 | File | Tests | What they do |
 |------|--------|----------------|
-| `view/unauthenticated/navigation_guard_redirect.spec.js` | `deep link redirects to login with redirect_to query` | Visiting a protected URL while logged out sends user through auth with `redirect_to` preserved (via `URL` / `searchParams`). |
+| `view/unauthenticated/navigation_guard_redirect.spec.js` | `all protected views redirect to login with redirect_to query` | Iterates all router-discovered protected views and confirms unauthenticated navigation redirects to `/auth` with `redirect_to` preserved. |
 | | `about page is public` | `/about` loads without login. |
-| `view/unauthenticated/project.spec.js` | `redirects to navigation guard` | Unauthenticated access to `/projects` hits login / guard behavior. |
 
 ---
 
@@ -34,8 +33,8 @@ cd tests && npx playwright test --list
 
 | File | Tests | What they do |
 |------|--------|----------------|
-| `view/authenticated/sidebar/non_user_role_sidebar_view.spec.js` | `sidebar items visible` | After login as **admin/operator**: Projects + **User management** sidebar entries visible (`/`). |
-| `view/authenticated/sidebar/user_role_sidebar_view.spec.js` | `sidebar items visible` | After login as **user**: Projects visible; **User management** hidden. |
+| `view/authenticated/sidebar/non_user_role_sidebar_view.spec.js` | three tests | For **admin/operator**: validates full sidebar visibility matrix, visits each visible sidebar route and checks basic page UI, and verifies direct URL access to role-restricted views shows the authorization alert. |
+| `view/authenticated/sidebar/user_role_sidebar_view.spec.js` | three tests | For **user**: validates full sidebar visibility matrix, visits each visible sidebar route and checks basic page UI, and verifies direct URL access to role-restricted views shows the authorization alert. |
 
 ---
 
@@ -89,6 +88,7 @@ Runs under **`admin_project`** and **`operator_project`** (seeded project id in 
 | `view/authenticated/import/select_directory_step.spec.js` | many tests | Import source dropdown, auto-select, dataset path typeahead, badge, Next disabled until directory, switch source resets search, typeahead lists dirs, filter, Next enabled, validation error on Next without selection, error clears on select. |
 | `view/authenticated/import/next_previous_buttons.spec.js` | nested tests | Prev/Next disabled on load; Next enables after directory; on General Info Prev on / Next off until fields filled. |
 | `view/authenticated/import/general_info_step.spec.js` | setup + field tests | Reach General Info after directory; field defaults; select/clear; disabling raw data / project / instrument when type or checkboxes change. |
+| `view/authenticated/import/auto_create_project_user_role.spec.js` | two user-role tests | **Synthetic users**: (1) user with an available project must select one before Next enables; (2) user without projects triggers auto-create on import and resulting project page lists the imported dataset. |
 | `view/authenticated/import/import_details_step.spec.js` | setup + field tests | Reach Import Details; card visible; dataset name validation (empty, short, spaces); Next enable; Previous back to General Info. |
 | `view/authenticated/import/initiate_import.spec.js` | workflow tests | End-to-end: directory → General Info (optional fields off) → Import Details → Import → success toast, dataset link, navigate to dataset / workflow UI. |
 
@@ -111,6 +111,7 @@ Specs live under **`src/tests/features/upload/`**. **`admin_upload`** runs most 
 | `features/upload/project_association/non_user_roles/association.spec.js` | one main test | Full flow with project selected: upload completes; dataset links to chosen project. |
 | `features/upload/project_association/non_user_roles/no_association.spec.js` | one main test | Upload without assigning project; dataset not tied to a project. |
 | `features/upload/project_association/user_role/association.spec.js` | `should create a new Project` | **Synthetic user** (API): upload without project assignment; UI creates project; new tab project page lists dataset. |
+| `features/upload/project_association/user_role/project_required_when_available.spec.js` | `user with available projects must pick...` | **Synthetic user with assigned project**: Project checkbox becomes enforced and Next stays disabled until a project is selected. |
 | `features/upload/project_dataset_access.spec.js` | **User role** block (2 tests) | Source Raw Data autocomplete **only** datasets on assigned project; Project autocomplete **only** that project. |
 | | **Admin or operator** block (2 tests) | Autocomplete includes datasets **outside** test project; project list includes **multiple** projects. *(Per project, one block is skipped.)* |
 

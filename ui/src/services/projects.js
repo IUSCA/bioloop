@@ -5,10 +5,19 @@ import api from "./api";
 const auth = useAuthStore();
 
 class projectService {
-  getAll({ forSelf, take, skip, search = "", sortBy, sort_order } = {}) {
+  getAll({
+    forSelf,
+    ownedOnly = forSelf,
+    take,
+    skip,
+    search = "",
+    sortBy,
+    sort_order,
+  } = {}) {
     const username = auth.user.username;
     const params = { take, skip, sortBy, sort_order };
     params.search = search ? search : undefined;
+    params.owned_only = forSelf && ownedOnly ? true : undefined;
     return (
       forSelf
         ? api.get(`/projects/${username}/all`, { params })

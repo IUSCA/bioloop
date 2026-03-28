@@ -35,6 +35,10 @@ const router = createRouter({
   routes: generatedRoutes,
 });
 
+if (typeof window !== "undefined" && import.meta.env.MODE !== "production") {
+  window.__BIOLOOP_ROUTER__ = router;
+}
+
 const token = ref(useLocalStorage("token", ""));
 const user = ref(useLocalStorage("user", {}));
 
@@ -58,22 +62,16 @@ function auth_guard(to, _from) {
 
   if (routeRequiresAuth) {
     if (isLoggedIn) {
+      // route requires auth and user is logged in
       if (isRoleRestrictedRoute) {
-        const required_roles = to.meta.requiresRoles;
-        const user_roles = user.value?.roles || [];
-
-        const common_roles = [
-          ...setIntersection(new Set(required_roles), new Set(user_roles)),
-        ];
-        // console.log({
-        //   required_roles,
-        //   user_roles,
-        //   common_roles,
-        // });
-
-        if (common_roles.length == 0) {
-          // does not have at least one required role
-          // stop navigation
+        // route has role restrictions
+        const common_roles = setIntersection(
+          new Set(to.meta.requiresRoles),
+          new Set(user.value.roles),
+        );
+        if (common_roles.size === 0) {
+          // user does not have required role to access route
+          // continue route from where user came from
           return false;
         }
       }

@@ -795,14 +795,23 @@ async function _handle_project_association({
     },
   });
 
+  const requesterHasAdminOrOperatorRole = requester_roles.some((role) => ['admin', 'operator'].includes(role));
+  const requesterIsUserOnlyRole = requester_roles.includes('user') && !requesterHasAdminOrOperatorRole;
+
+  // Product rule: `user` role clients must explicitly specify a Project if
+  // they already have at least one available Project to select from.
+  if (!project_id && requesterIsUserOnlyRole && requester_projects.length > 0) {
+    throw new Error('Users with available Projects must select a Project when creating a Dataset.');
+  }
+
   const will_create_project = requester_projects.length === 0;
   if (will_create_project) {
     if (!featureService.isFeatureEnabled({ key: 'auto_create_project_on_dataset_creation' })) {
       return;
     }
 
-    // (When creating a Dataset) new Projects are only created for `user` role
-    if (requester_roles.some((role) => ['admin', 'operator'].includes(role))) {
+    // Feature is role-configurable on API via `auto_create_project_on_dataset_creation_roles`.
+    if (!projectService.roleCanAutoCreateProject({ requester_roles })) {
       return;
     }
 

@@ -282,6 +282,7 @@ router.get(
     query('take').default(25).isInt({ min: 1 }).toInt(),
     query('skip').default(0).isInt({ min: 0 }).toInt(),
     query('search').default(''), // Adding search query validation
+    query('owned_only').optional().isBoolean().toBoolean(),
     query('sort_order').default('desc').isIn(['asc', 'desc']),
     query('sort_by').default('updated_at').isIn(['name', 'created_at', 'updated_at']),
   ]),
@@ -294,21 +295,32 @@ router.get(
       // can only see their projects. operator, admin:
       // can see anyone's projects
       /* eslint-enable */
-    const { search, sort_order, sort_by } = req.query;
+    const {
+      search, owned_only = false, sort_order, sort_by,
+    } = req.query;
     const { username } = req.params;
+
+    const associationFilter = {
+      users: {
+        some: {
+          user: {
+            username,
+          },
+        },
+      },
+    };
+    const ownershipFilter = owned_only
+      ? {
+        owner: {
+          username,
+        },
+      }
+      : null;
 
     const filters = search
       ? {
         AND: [
-          {
-            users: {
-              some: {
-                user: {
-                  username,
-                },
-              },
-            },
-          },
+          ...[associationFilter, ownershipFilter].filter(Boolean),
           {
             OR: [
               {
@@ -346,13 +358,7 @@ router.get(
         ],
       }
       : {
-        users: {
-          some: {
-            user: {
-              username,
-            },
-          },
-        },
+        AND: [associationFilter, ownershipFilter].filter(Boolean),
       };
 
     const sort_obj = {

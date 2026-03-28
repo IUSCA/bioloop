@@ -835,7 +835,7 @@ const willAssignSourceInstrument = computed({
  * - There are no Project options to choose from
  */
 const isProjectCheckboxDisabled = computed(() => {
-  return noProjectsToAssign.value;
+  return noProjectsToAssign.value || mustAssignProjectForUser.value;
 });
 /**
  * Project search field is enabled if:
@@ -843,6 +843,9 @@ const isProjectCheckboxDisabled = computed(() => {
  * - `Assign Project` checkbox is checked
  */
 const isProjectSearchEnabled = computed(() => {
+  if (mustAssignProjectForUser.value) {
+    return true;
+  }
   return !isProjectCheckboxDisabled.value && willAssignProject.value;
 });
 /**
@@ -851,6 +854,13 @@ const isProjectSearchEnabled = computed(() => {
  * - Used to update the state of the checkbox
  */
 const projectCheckboxInternalState = ref(true);
+/**
+ * `user` role must assign a Project whenever at least one Project is available.
+ * This keeps user-created datasets scoped to a known Project when possible.
+ */
+const mustAssignProjectForUser = computed(() => {
+  return !auth.canOperate && !auth.canAdmin && !noProjectsToAssign.value;
+});
 /**
  * `willAssignProject` determines whether the user wants to assign a Project to the Dataset being imported.
  * - This is a writable Computed property that manages the checked/unchecked state of the 'Assign
@@ -870,10 +880,13 @@ const willAssignProject = computed({
     if (noProjectsToAssign.value) {
       return false;
     }
+    if (mustAssignProjectForUser.value) {
+      return true;
+    }
     return projectCheckboxInternalState.value;
   },
   set: (newValue) => {
-    if (!noProjectsToAssign.value) {
+    if (!noProjectsToAssign.value && !mustAssignProjectForUser.value) {
       projectCheckboxInternalState.value = newValue;
     }
   },

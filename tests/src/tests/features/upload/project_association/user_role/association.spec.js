@@ -3,6 +3,7 @@ import {
   selectFiles, trackSelectedFilesMetadata,
 } from '../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../actions/stepper';
+import { getProjectById } from '../../../../../api/project';
 import { generateUniqueDatasetName } from '../../../../../api/dataset';
 import { createTestUser } from '../../../../../api/user';
 import { expect, test } from '../../../../../fixtures';
@@ -16,6 +17,7 @@ test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
 
   let testUser;
+  let adminToken;
 
   let selectedDatasetType;
   let uploadedDatasetName;
@@ -27,7 +29,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload-initiation step', () => {
     // Fill all form fields
     test.beforeAll(async ({ browser, attachmentManager }) => {
-      const adminToken = await getTokenByRole({ role: 'admin' });
+      adminToken = await getTokenByRole({ role: 'admin' });
       // Create a new User to ensure that the user is not associated with any
       // Projects
       testUser = await createTestUser({ role: 'user', token: adminToken });
@@ -97,6 +99,18 @@ test.describe.serial('Dataset Upload Process', () => {
 
       const projectHref = await projectLink.getAttribute('href');
       expect(projectHref).toBeTruthy();
+      const projectIdOrSlug = projectHref.split('/').filter(Boolean).pop();
+      expect(projectIdOrSlug).toBeTruthy();
+
+      const createdProjectResponse = await getProjectById({
+        requestContext: page.request,
+        token: adminToken,
+        id: projectIdOrSlug,
+        params: { include_datasets: false },
+      });
+      expect(createdProjectResponse.ok()).toBeTruthy();
+      const createdProject = await createdProjectResponse.json();
+      expect(createdProject.owner_id).toBe(testUser.id);
 
       // Navigate to the created Project's page
       // - Create a new Page  instance for the Project view, since the Project

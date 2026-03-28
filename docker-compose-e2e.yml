@@ -6,7 +6,7 @@ services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
+      - 127.0.0.1:1024:443
     env_file:
       - ui/.env.default
     environment:
@@ -74,7 +74,7 @@ services:
       - 5432
     ports:
       # Published on host as 5433; use localhost:5433 for host-side DB access (e.g. psql, GUI)
-      - 127.0.0.1:5433:5432
+      - 127.0.0.1:5434:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -184,7 +184,7 @@ services:
     expose:
       - 5672
     ports:
-      - 127.0.0.1:15672:15672
+      - 127.0.0.1:15673:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -197,7 +197,7 @@ services:
     expose:
       - 27017
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:27018:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:

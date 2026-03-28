@@ -96,10 +96,13 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
   }
 
   if (!skipUnauthenticated) {
-    projects.push({
-      name: 'unauthenticated',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: '/view/unauthenticated/*.spec.js',
+    targetRoles.forEach((role) => {
+      projects.push({
+        name: `${role}_unauthenticated`,
+        use: { ...devices['Desktop Chrome'] },
+        testMatch: '/view/unauthenticated/*.spec.js',
+        metadata: { e2eRole: role },
+      });
     });
   }
 
@@ -160,7 +163,7 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
       role: 'admin',
       testMatch: '/features/upload/**/*.spec.js',
       testIgnore: [
-        '/features/upload/project_association/user_role/association.spec.js',
+        '/features/upload/project_association/user_role/*.spec.js',
         '/features/upload/project_dataset_access.spec.js',
         '/features/upload/project_association/non_user_roles/*.spec.js',
       ],
@@ -170,7 +173,7 @@ function buildProjectList(featureEnabledRoles, targetRoles, skipUnauthenticated)
     projects.push(makeRoleProject({
       name: 'user_upload_project_association',
       role: 'user',
-      testMatch: '/features/upload/project_association/user_role/association.spec.js',
+      testMatch: '/features/upload/project_association/user_role/*.spec.js',
     }));
   }
 
