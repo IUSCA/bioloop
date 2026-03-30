@@ -1,38 +1,42 @@
 digraph bioloop_architecture {
-    rankdir=LR;
-    node [shape=box, style=filled, fontname="Helvetica"];
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=9];
     compound=true;
+    nodesep=0.6;
+    ranksep=0.8;
+    splines=ortho;
 
-    subgraph cluster_user {
-        label="User";
-        style=filled; fillcolor="#f5f5f5";
-        user [label="Researcher /\nOperator", shape=ellipse, fillcolor="#e0e0e0"];
-    }
+    // ── Row 1: User ──
+    user [label="Researcher /\nOperator", shape=ellipse, style=filled, fillcolor="#e0e0e0"];
 
+    // ── Row 2: Frontend ──
     subgraph cluster_frontend {
         label="Frontend";
         style=filled; fillcolor="#dce8f8";
-        ui [label="UI\n(Vue 3 / Vite)\n:443", fillcolor="#b3d4f5"];
+        ui [label="UI\n(Vue 3 / Vite)", fillcolor="#b3d4f5"];
     }
 
+    // ── Row 3: Core Services + Auth side by side ──
     subgraph cluster_core {
         label="Core Services";
         style=filled; fillcolor="#fff3cd";
-        api [label="API\n(Node.js / Express)\n:3030", fillcolor="#ffe082"];
-        secure_dl [label="Secure Download\n(Node.js)\n:3060", fillcolor="#ffe082"];
+        api [label="API\n(Node / Express)", fillcolor="#ffe082"];
+        secure_dl [label="Secure Download\n(Node.js)", fillcolor="#ffe082"];
     }
 
     subgraph cluster_auth {
-        label="Auth (Signet)";
+        label="Auth";
         style=filled; fillcolor="#fde8e8";
-        signet [label="Signet\n(OAuth 2.0)\n:5050", fillcolor="#f5b8b8"];
+        signet [label="Signet\n(OAuth 2.0)", fillcolor="#f5b8b8"];
         signet_db [label="PostgreSQL\n(Signet)", fillcolor="#f5b8b8"];
     }
 
+    // ── Row 4: Rhythm (left) + Workers (right) ──
     subgraph cluster_workflow {
         label="Workflow Engine (Rhythm)";
         style=filled; fillcolor="#e8f5e8";
-        rhythm [label="Rhythm API\n(FastAPI)\n:5001", fillcolor="#a5d6a7"];
+        rhythm [label="Rhythm API\n(FastAPI)", fillcolor="#a5d6a7"];
         queue [label="RabbitMQ", fillcolor="#a5d6a7"];
         mongo [label="MongoDB\n(Task State)", fillcolor="#a5d6a7"];
     }
@@ -44,6 +48,7 @@ digraph bioloop_architecture {
         watch  [label="watch\n(File Monitor)", fillcolor="#ce93d8"];
     }
 
+    // ── Row 5: Storage ──
     subgraph cluster_storage {
         label="Storage";
         style=filled; fillcolor="#fff8e1";
@@ -51,14 +56,23 @@ digraph bioloop_architecture {
         landing  [label="Shared File Volume\n(/opt/sca/data)", shape=cylinder, fillcolor="#ffe57f"];
     }
 
-    user      -> ui         [label="HTTPS"];
-    ui        -> api        [label="proxy /api"];
-    ui        -> secure_dl  [label="proxy /secure_download"];
+    // ── Rank constraints for portrait layout ──
+    { rank=same; user }
+    { rank=same; ui }
+    { rank=same; api; secure_dl; signet }
+    { rank=same; rhythm; queue; celery; watch }
+    { rank=same; postgres; landing; mongo }
 
-    api       -> postgres;
-    api       -> signet     [label="JWKS / token exchange"];
+    // ── Edges ──
+    user      -> ui;
+    ui        -> api;
+    ui        -> secure_dl;
+
+    api       -> signet;
     signet    -> signet_db;
-    api       -> rhythm     [label="workflow dispatch"];
+
+    api       -> rhythm     [label="dispatch"];
+    api       -> postgres;
 
     rhythm    -> queue;
     rhythm    -> mongo;
@@ -66,8 +80,8 @@ digraph bioloop_architecture {
     celery    -> mongo      [label="results"];
     celery    -> landing;
 
-    watch     -> landing    [label="monitor"];
-    watch     -> api        [label="trigger ingest"];
+    watch     -> landing;
+    watch     -> api        [label="trigger\ningest"];
 
-    secure_dl -> landing    [label="read"];
+    secure_dl -> landing;
 }

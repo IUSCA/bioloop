@@ -1,5 +1,5 @@
 digraph dataflow_pipeline {
-    rankdir=LR;
+    rankdir=TB;
     node [shape=box, style=filled, fontname="Helvetica"];
     compound=true;
 
