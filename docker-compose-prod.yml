@@ -22,7 +22,7 @@ services:
         APP_UID: ${APP_UID} # read from .env file
         APP_GID: ${APP_GID} # read from .env file
     environment:
-      - UPLOAD_HOST_DIR=${UPLOAD_HOST_DIR} # host-visible path persisted as dataset.origin_path
+      - UPLOAD_HOST_DIR=${UPLOAD_HOST_DIR}
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
