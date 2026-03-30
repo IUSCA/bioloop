@@ -224,7 +224,7 @@ localStorage.removeItem('SIMULATE_UPLOAD_FAILURE_COUNT');
 Flags only take effect on **new** `tus.Upload(...)` instances. Clearing them
 before starting the next upload is sufficient.
 
-### Important caveats (verified against current code)
+### Important caveats
 
 - **Production safety:** `handleFailureSimulation` returns immediately when
   `NODE_ENV === 'production'`. No amount of header or localStorage manipulation
@@ -262,63 +262,117 @@ before starting the next upload is sufficient.
 - Verification timeout protection marks stuck `VERIFYING` sessions failed.
 - `VERIFIED -> COMPLETE` flow is guarded against duplicate workflow starts.
 
-## Deployment
+---
 
-### Database Migration
+### Deployment Notes
 
-Run inside the app container:
+#### 1. Update properties
 
-```bash
+- Some properties are now outdated and will need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance).
+
+```
+# ui/.env
+
+# Remove this property:
+VITE_UPLOAD_API_BASE_PATH=https://...
+
+# ---
+
+# api/.env
+
+# Remove these properties:
+OAUTH_UPLOAD_CLIENT_ID=xxx
+OAUTH_UPLOAD_CLIENT_SECRET=xxx
+UPLOAD_DIR=/path/to/uploads/directory
+
+# ---
+
+# secure_download/.env
+
+# Remove this property
+# Note: this will need to be done on the host where secure_downloaded is hosted
+UPLOAD_PATH_DATA_PRODUCTS=/opt/sca/data
+
+```
+
+- The following properties will need to be added:
+```
+# workers/workers/config/production.py
+# NOTE: This update will need to be performed on the host where the workers run.
+    ...,
+    'paths': {
+        'RAW_DATA': {
+            'upload': '/N/scratch/scadev/bioloop/dev/uploads/raw_data',
+        },
+        'DATA_PRODUCT': {
+            'upload': '/N/scratch/scadev/bioloop/dev/uploads/data_products',
+        },
+    },
+    ...
+```
+
+
+#### 2. Volume Mounts
+Uploads are written to the host through a volume-mount. This volume will have to be declared within the `api` service of the docker-compose YML file:
+```
+# docker-compose-prod.yml (or appropriate docker-compose file)
+  api:
+    volumes:
+      - /path/to/host/uploads/space:/opt/sca/data/uploads
+```
+
+#### 3. Database Migration
+
+Do a Prisma migration, which will create the necessary database-schema changes.
+```
 npx prisma migrate deploy
 ```
+💡 **Note:** Restart of the API will be needed after Prisma migration.
 
-The migration (`20260311000000_upload_rewrite`):
-- Moves `create_method` from `dataset_audit` to `dataset`
-- Rebuilds the `upload_status` enum (adds `VERIFYING`, `VERIFIED`,
-  `VERIFICATION_FAILED`, `PERMANENTLY_FAILED`; removes unused `FAILED`)
-- Restructures `dataset_upload_log`: replaces `audit_log_id` indirection
-  with a direct `dataset_id` FK; adds `process_id`, `retry_count`, `metadata`
 
-### Environment Variable — API Host
-
-Set `UPLOAD_HOST_DIR` in the API `.env` before restarting. This is the path where uploaded content will be written to:
-
+#### 4. Install worker dependencies
 ```
-UPLOAD_HOST_DIR=/N/scratch/scadev/bioloop/dev/uploads
+cd workers
+poetry install --no-root
 ```
 
-The compose file mounts this path into the container and injects the variable.
-The directory must exist on the host before `docker compose up`.
+#### 5. Create directories needed for Uploads by workers
+- Run `workers/workers/scripts/setup_dirs.py`.
+- Running the script with the `--create` flag will create any directories that do not exist.
+- The 2 property-additions made to `production.py` in Step 1 will need to be done before this step. 
 
-### Worker — Dependencies
-
-```bash
-cd /path/to/workers
-poetry install
-# (Optional) Do a test by importing the library
-python -c "import blake3; print('blake3 ok')"
+#### 6. Start workers
+```
+# bioloop/workers
+poetry shell
+pm2 start ecosystem.config.js
 ```
 
-### Worker — Directory Setup
+#### 7. Nginx configuration changes
 
-Note: These directories are created automatically, when the `celery_worker` worker is started.
+Add a `/api/uploads/` sub-block to the API's Nginx configuration (main `/api/` block)
 
-```bash
-python -m workers.scripts.setup_dirs          # dry run
-python -m workers.scripts.setup_dirs --create # create missing dirs
 ```
+location /api/ {
+    proxy_pass http://172.19.0.2:3030/;
+    proxy_http_version 1.1;
+    proxy_cache_bypass $http_upgrade;
+    proxy_redirect      http://api/ https://$host/api/ ;
 
-### PM2 — Register `manage_upload_workflows` Cron
-
-```js
-{
-  name: 'manage_upload_workflows',
-  script: 'python',
-  args: '-m workers.scripts.manage_upload_workflows --dry-run=False',
-  cron_restart: '* * * * *',
-  autorestart: false,
+    location /api/uploads/ {
+        proxy_pass http://172.19.0.2:3030/uploads/;
+        proxy_request_buffering off;
+        client_body_timeout 300;
+        proxy_read_timeout 300;
+    }
 }
 ```
+
+- `proxy_read_timeout 300` — This is the timeout for reading a response from the API after nginx has already forwarded the request. The default 60s would only be a problem if the API took > 60s to process a chunk and send back a response. For a 50MB chunk write to disk, that's very unlikely to hit 60s, so this also doesn't change much for uploads.
+- `proxy_request_buffering off` - this controls whether nginx buffers the incoming request body before forwarding it to the API. With buffering on (the default), nginx holds the full chunk in memory/disk before the API sees any of it. With it off, nginx streams the bytes directly to the API as they arrive. For upload endpoints specifically, disabling this is the right call.
+- `client_body_timeout 300` — this is the timeout for reading the request body from the client. The default is 60 seconds. For a slow connection uploading a 50MB chunk at ~1MB/s, that would take 50 seconds — borderline. A 300 second timeout here is the safer choice.
+
+💡 **Note:** Restart Nginx after making these changes.
 
 ### Post-Deploy Smoke Test
 
