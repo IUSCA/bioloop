@@ -6,7 +6,7 @@
  * Configuration (api/config/default.json → upload.*)
  * ---------------------------------------------------
  *   upload.path               — filesystem directory where TUS stores in-progress
- *                               uploads.  Overridable via UPLOAD_HOST_DIR env var.
+ *                               uploads.
  *   upload.max_file_size_bytes — hard per-file size cap enforced by TUS before any
  *                               data is written.  Overridable via
  *                               UPLOAD_MAX_FILE_SIZE_BYTES env var.
@@ -84,13 +84,30 @@ function tusError(statusCode, body) {
   return Object.assign(new Error(body), { status_code: statusCode, body });
 }
 
+/**
+ * Convert a host-visible dataset origin path to the equivalent container path
+ * used by this API process for local filesystem writes.
+ */
+function resolveWritableOriginPath(originPath, uploadHostPath, uploadPath) {
+  if (!uploadHostPath) return originPath;
+
+  const rel = path.relative(uploadHostPath, originPath);
+  const isInsideHostBase = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+
+  if (!isInsideHostBase) return originPath;
+  if (!rel) return uploadPath;
+  return path.join(uploadPath, rel);
+}
+
 class UploadService {
   constructor() {
     const uploadPath = config.get('upload.path');
+    const uploadHostPath = config.get('upload.host_path');
     const maxFileSizeBytes = config.get('upload.max_file_size_bytes');
 
     logger.info('Initializing TUS UploadService', {
       uploadPath,
+      uploadHostPath,
       maxFileSizeBytes,
       expiryMs: UPLOAD_EXPIRY_MS,
     });
@@ -224,6 +241,11 @@ class UploadService {
         const tusInfoPath = `${tusFilePath}.json`;
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
+        const writableOriginPath = resolveWritableOriginPath(
+          uploadLog.dataset.origin_path,
+          uploadHostPath,
+          uploadPath,
+        );
 
         moveTusFileToDestination({
           tusFilePath,
@@ -240,6 +262,7 @@ class UploadService {
           dataset_id: datasetId,
           process_id,
           origin_path: uploadLog.dataset.origin_path,
+          writable_origin_path: writableOriginPath,
         });
 
         return res;

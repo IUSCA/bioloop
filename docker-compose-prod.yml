@@ -21,6 +21,8 @@ services:
       args:
         APP_UID: ${APP_UID} # read from .env file
         APP_GID: ${APP_GID} # read from .env file
+    environment:
+      - UPLOAD_HOST_DIR=${UPLOAD_HOST_DIR} # host-visible path persisted as dataset.origin_path
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
@@ -43,10 +45,12 @@ services:
       #   and the celery_worker services (natively or via a mounted volume).
       # 
       # ** Format: **
-      #   - /host/path/to/uploads/destination:/opt/sca/data/uploads:ro
+      #   - /host/path/to/uploads/destination:/opt/sca/data/uploads
       # ** Example: **
-      #   - /data/bioloop/uploads:/opt/sca/uploads:ro
+      #   - /data/bioloop/uploads:/opt/sca/uploads
       # 
+      # ** Bioloop Production: **
+      - ${UPLOAD_HOST_DIR}:/opt/sca/data/uploads
       # **********************************************************************
       # 
       # 2. Import-Sources:
@@ -75,8 +79,10 @@ services:
       #   - The path to the Import-Source will also need to be populated in the
       #     database. See api/src/scripts/init_prod_import_sources.js for more details.
       # 
-      # **********************************************************************
+      # ** Bioloop Production: **
+      - ${IMPORT_SOURCE_DIR}:/opt/sca/data/imports:ro
       # 
+      # **********************************************************************
       # ----------------------------------------------------------------------------
     expose:
       - 3030
