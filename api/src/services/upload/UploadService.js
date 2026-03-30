@@ -249,7 +249,7 @@ class UploadService {
 
         moveTusFileToDestination({
           tusFilePath,
-          dataset: uploadLog.dataset,
+          dataset: { ...uploadLog.dataset, origin_path: writableOriginPath },
           selection_mode,
           directory_name,
           relative_path,
