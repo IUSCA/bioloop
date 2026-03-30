@@ -1,7 +1,7 @@
 /**
  * Tests for the duplication report page when datasets only partially match.
  *
- * Uses a 50% Jaccard match (2 common / 4 denominator) to verify:
+ * Uses a 50% content-similarity score (2 common / 4 denominator) to verify:
  * - The summary header renders the correct score and formula values
  * - Check sections display the custom labels provided by the comparison worker
  * - Check sections with passed=false are still rendered alongside passing ones
@@ -15,7 +15,7 @@ const { test, expect } = require('@playwright/test');
 const { getTokenByRole } = require('../../../../fixtures/auth');
 const { setupDuplicatePairWithPartialMatch } = require('../../../../api/duplication');
 
-test.describe.serial('Duplication report page — partial match (Jaccard 50%)', () => {
+test.describe.serial('Duplication report page — partial match (50% similarity)', () => {
   let pair;
 
   test.beforeAll(async () => {
@@ -29,32 +29,42 @@ test.describe.serial('Duplication report page — partial match (Jaccard 50%)', 
   });
 
   // -------------------------------------------------------------------------
-  // Jaccard score display
+  // Dataset similarity score display
   // -------------------------------------------------------------------------
-  test('Jaccard score shows 50, not 100', async ({ page }) => {
-    await expect(page.getByTestId('jaccard-score')).toBeVisible();
-    await expect(page.getByTestId('jaccard-score')).toContainText('50');
+  test('similarity score shows 50, not 100', async ({ page }) => {
+    await expect(page.getByTestId('content-similarity-score')).toBeVisible();
+    await expect(page.getByTestId('content-similarity-score')).toContainText('50');
   });
 
-  test('Jaccard score does not show 100%', async ({ page }) => {
-    await expect(page.getByTestId('jaccard-score')).not.toContainText('100');
+  test('similarity score does not show 100%', async ({ page }) => {
+    await expect(page.getByTestId('content-similarity-score')).not.toContainText('100');
   });
 
   // -------------------------------------------------------------------------
-  // Jaccard formula breakdown
+  // Similarity formula breakdown
   // -------------------------------------------------------------------------
-  test('Jaccard formula shows 50%', async ({ page }) => {
-    await expect(page.getByTestId('jaccard-formula')).toContainText('50%');
+  test('similarity formula shows 50%', async ({ page }) => {
+    await expect(page.getByTestId('content-similarity-formula')).toContainText('50%');
   });
 
-  test('Jaccard formula shows 2 common files', async ({ page }) => {
+  test('similarity formula shows 2 common files', async ({ page }) => {
     // Formula: "50% = 2 / (3 + 3 − 2) = 2/4"
-    await expect(page.getByTestId('jaccard-formula')).toContainText('2/4');
+    await expect(page.getByTestId('content-similarity-formula')).toContainText('2/4');
   });
 
-  test('Jaccard formula shows the correct denominator', async ({ page }) => {
+  test('similarity formula shows the correct denominator', async ({ page }) => {
     // denominator = incoming + original − common = 3 + 3 − 2 = 4
-    await expect(page.getByTestId('jaccard-formula')).toContainText('2/4');
+    await expect(page.getByTestId('content-similarity-formula')).toContainText('2/4');
+  });
+
+  test('summary metrics show path-preserving and modified-file counts', async ({ page }) => {
+    await expect(page.getByTestId('summary-metric-path-preserving-similarity')).toContainText('67%');
+    await expect(page.getByTestId('summary-metric-exact-content-match-count')).toContainText('2');
+    await expect(page.getByTestId('summary-metric-same-path-modified-count')).toContainText('1');
+    await expect(page.getByTestId('summary-metric-renamed-moved-count')).toContainText('0');
+    await expect(page.getByTestId('summary-metric-incoming-original-counts')).toContainText('3 / 3');
+    await expect(page.getByTestId('summary-metric-file-count-delta')).toContainText('0');
+    await expect(page.getByTestId('summary-metric-only-in-counts')).toContainText('0 / 0');
   });
 
   // -------------------------------------------------------------------------

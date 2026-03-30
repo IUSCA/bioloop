@@ -122,14 +122,14 @@ def wait_for_concurrent_inspections(dataset_id: int, dataset_type: str, created_
 
 def run_duplicate_detection(celery_task, dataset_id: int, dataset: dict) -> None:
     """
-    Runs Jaccard-based duplicate detection after file metadata has been
-    written.  If a duplicate is detected (jaccard >= threshold):
+    Runs content-similarity duplicate detection (Jaccard index on MD5 overlap)
+    after file metadata has been written.  If a duplicate is detected (score >= threshold):
       1. Pre-generates a Celery task ID for the comparison task.
       2. Registers the duplication via the API.
       3. Fires the comparison task with the pre-assigned ID.
       4. Raises DuplicateDetected to abort the integrated workflow.
 
-    If the jaccard score is below the threshold but the dataset was renamed
+    If the similarity score is below the threshold but the dataset was renamed
     with _DUPLICATE_ (indicating a prior name conflict), records the near-miss
     for UI visibility.
     """
@@ -151,19 +151,21 @@ def run_duplicate_detection(celery_task, dataset_id: int, dataset: dict) -> None
         logger.info(f'inspect_dataset[{dataset_id}]: no duplicate candidate found (no common files).')
         return
 
-    jaccard = candidate['jaccard_score']
+    similarity = float(
+        candidate.get('content_similarity_score', candidate.get('jaccard_score', 0)),
+    )
     original_id = candidate['dataset']['id']
     logger.info(
         f'inspect_dataset[{dataset_id}]: best candidate is dataset {original_id} '
-        f'with Jaccard score {jaccard:.4f} (threshold {threshold})'
+        f'with content similarity score {similarity:.4f} (threshold {threshold})'
     )
 
-    if jaccard >= threshold:
+    if similarity >= threshold:
         # Pre-assign the comparison task ID so it can be stored in the duplication record
         comparison_task_id = str(uuid.uuid4())
 
         logger.info(
-            f'inspect_dataset[{dataset_id}]: duplicate detected (jaccard {jaccard:.4f} >= {threshold}). '
+            f'inspect_dataset[{dataset_id}]: duplicate detected (score {similarity:.4f} >= {threshold}). '
             f'Registering duplication and firing comparison task {comparison_task_id}.'
         )
 
@@ -183,7 +185,7 @@ def run_duplicate_detection(celery_task, dataset_id: int, dataset: dict) -> None
 
         raise exc.DuplicateDetected(
             f'Dataset {dataset_id} is a duplicate of dataset {original_id} '
-            f'(Jaccard {jaccard:.4f}). Aborting integrated workflow.'
+            f'(content similarity score {similarity:.4f}). Aborting integrated workflow.'
         )
 
     # Below threshold — dataset is not flagged as a duplicate.
@@ -192,7 +194,7 @@ def run_duplicate_detection(celery_task, dataset_id: int, dataset: dict) -> None
     dataset_name = dataset.get('name', '')
     if '_DUPLICATE_' in dataset_name:
         logger.info(
-            f'inspect_dataset[{dataset_id}]: similarity score {jaccard:.4f} is below '
+            f'inspect_dataset[{dataset_id}]: similarity score {similarity:.4f} is below '
             f'threshold {threshold}. Recording near-miss against dataset {original_id}.'
         )
         api.register_duplicate(

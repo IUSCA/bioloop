@@ -173,18 +173,32 @@ def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id
     total_incoming = len(incoming_files)
     total_original = len(original_files)
     total_exact_content_matches = len(exact_content_matches_incoming)
+    total_same_path_same_content = len(same_path_same_content_pairs)
+    total_same_path_different_content = len(same_path_different_content_pairs)
+    total_same_content_different_path = len(same_content_different_path_pairs)
+    total_only_in_incoming = len(unmatched_only_in_incoming)
+    total_only_in_original = len(unmatched_only_in_original)
+    file_count_delta = total_incoming - total_original
     union = total_incoming + total_original - total_exact_content_matches
-    jaccard_score = total_exact_content_matches / union if union > 0 else 0.0
+    # File-count Jaccard index over exact MD5 matches (path-agnostic).
+    content_similarity_score = total_exact_content_matches / union if union > 0 else 0.0
+    path_union = len(incoming_paths | original_paths)
+    path_preserving_similarity = (
+        total_same_path_same_content / path_union if path_union > 0 else 0.0
+    )
 
     log('INFO',
         f'Exact content matches: {total_exact_content_matches}, '
-        f'same-path/same-content: {len(same_path_same_content_pairs)}, '
-        f'same-path/different-content: {len(same_path_different_content_pairs)}, '
-        f'same-content/different-path: {len(same_content_different_path_pairs)}, '
-        f'only-in-incoming: {len(unmatched_only_in_incoming)}, '
-        f'only-in-original: {len(unmatched_only_in_original)}, '
-        f'Jaccard: {jaccard_score:.4f} '
-        f'= {total_exact_content_matches} / ({total_incoming} + {total_original} - {total_exact_content_matches})')
+        f'same-path/same-content: {total_same_path_same_content}, '
+        f'same-path/different-content: {total_same_path_different_content}, '
+        f'same-content/different-path: {total_same_content_different_path}, '
+        f'only-in-incoming: {total_only_in_incoming}, '
+        f'only-in-original: {total_only_in_original}, '
+        f'file-count-delta: {file_count_delta}, '
+        f'content_similarity_score (Jaccard): {content_similarity_score:.4f} '
+        f'= {total_exact_content_matches} / ({total_incoming} + {total_original} - {total_exact_content_matches}), '
+        f'path-preserving-similarity: {path_preserving_similarity:.4f} '
+        f'= {total_same_path_same_content}/{path_union}')
     report_progress(_PROGRESS_COMPUTED)
 
     # Build ingestion_checks payload
@@ -250,10 +264,19 @@ def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id
     ]
 
     comparison_result = {
-        'jaccard_score': jaccard_score,
+        'content_similarity_score': content_similarity_score,
         'total_incoming_files': total_incoming,
         'total_original_files': total_original,
         'total_common_files': total_exact_content_matches,
+        'exact_content_match_count': total_exact_content_matches,
+        'same_path_same_content_count': total_same_path_same_content,
+        'same_path_different_content_count': total_same_path_different_content,
+        'same_content_different_path_count': total_same_content_different_path,
+        'only_in_incoming_count': total_only_in_incoming,
+        'only_in_original_count': total_only_in_original,
+        'file_count_delta': file_count_delta,
+        'path_union_file_count': path_union,
+        'path_preserving_similarity': path_preserving_similarity,
         'ingestion_checks': ingestion_checks,
     }
 
@@ -266,7 +289,7 @@ def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id
 
     log('INFO',
         f'Comparison complete. Dataset {duplicate_dataset_id} is '
-        f'{"a strong duplicate" if jaccard_score >= config["enabled_features"]["duplicate_detection"]["jaccard_threshold"] else "similar but below threshold"} '
-        f'of dataset {original_dataset_id} (Jaccard {jaccard_score:.4f}).')
+        f'{"a strong duplicate" if content_similarity_score >= config["enabled_features"]["duplicate_detection"]["jaccard_threshold"] else "similar but below threshold"} '
+        f'of dataset {original_dataset_id} (content_similarity_score {content_similarity_score:.4f}).')
 
     return duplicate_dataset_id, original_dataset_id

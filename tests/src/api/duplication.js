@@ -30,7 +30,7 @@ const registerDuplicate = async ({
  * Saves comparison results for a registered duplicate, advancing its state to
  * DUPLICATE_READY.  Mimics the compare_duplicate_datasets Celery task.
  *
- * Defaults to a "perfect match" payload (Jaccard = 1.0, 3 exact-content matches,
+ * Defaults to a "perfect match" payload (content_similarity_score = 1.0, 3 exact-content matches,
  * no modified/extra files) with empty file_checks arrays so no real
  * dataset_file records are required.
  */
@@ -45,10 +45,29 @@ const saveComparisonResult = async ({
     token,
     url: `/datasets/duplication/${datasetId}/comparison`,
     data: {
-      jaccard_score: data.jaccard_score ?? 1.0,
+      content_similarity_score:
+        data.content_similarity_score ?? data.jaccard_score ?? 1.0,
       total_incoming_files: data.total_incoming_files ?? 3,
       total_original_files: data.total_original_files ?? 3,
       total_common_files: data.total_common_files ?? 3,
+      exact_content_match_count: data.exact_content_match_count ?? (data.total_common_files ?? 3),
+      same_path_same_content_count: data.same_path_same_content_count ?? (data.total_common_files ?? 3),
+      same_path_different_content_count: data.same_path_different_content_count ?? 0,
+      same_content_different_path_count: data.same_content_different_path_count ?? 0,
+      only_in_incoming_count: data.only_in_incoming_count ?? 0,
+      only_in_original_count: data.only_in_original_count ?? 0,
+      file_count_delta:
+        data.file_count_delta ?? ((data.total_incoming_files ?? 3) - (data.total_original_files ?? 3)),
+      path_union_file_count:
+        data.path_union_file_count ?? (
+          (data.total_incoming_files ?? 3) + (data.total_original_files ?? 3) - (data.same_path_same_content_count ?? (data.total_common_files ?? 3))
+        ),
+      path_preserving_similarity:
+        data.path_preserving_similarity ?? (
+          ((data.same_path_same_content_count ?? (data.total_common_files ?? 3))
+            / (((data.total_incoming_files ?? 3) + (data.total_original_files ?? 3)
+              - (data.same_path_same_content_count ?? (data.total_common_files ?? 3))) || 1))
+        ),
       ingestion_checks: data.ingestion_checks ?? [
         { type: 'EXACT_CONTENT_MATCHES', label: 'All 3 files have matching content', passed: true, file_checks: [] },
         { type: 'SAME_PATH_SAME_CONTENT', label: 'All 3 files match by path and content', passed: true, file_checks: [] },
@@ -101,10 +120,10 @@ const setupDuplicatePair = async ({ token, requestContext } = {}) => {
 };
 
 /**
- * Creates a partially-matching duplicate pair (Jaccard = 0.5).
+ * Creates a partially-matching duplicate pair (content similarity score = 0.5).
  *
  * Stats: 3 incoming files, 3 original files, 2 common files.
- * Jaccard = 2 / (3 + 3 - 2) = 2/4 = 0.5 → UI shows "50%".
+ * File-count Jaccard index = 2 / (3 + 3 - 2) = 2/4 = 0.5 → UI shows "50%".
  *
  * One check section is marked failed (SAME_PATH_DIFFERENT_CONTENT) so tests can assert
  * both passed and failed check rendering in the same report.
@@ -122,10 +141,19 @@ const setupDuplicatePairWithPartialMatch = async ({ token, requestContext } = {}
     requestContext,
     datasetId: duplicate.id,
     data: {
-      jaccard_score: 0.5,
+      content_similarity_score: 0.5,
       total_incoming_files: 3,
       total_original_files: 3,
       total_common_files: 2,
+      exact_content_match_count: 2,
+      same_path_same_content_count: 2,
+      same_path_different_content_count: 1,
+      same_content_different_path_count: 0,
+      only_in_incoming_count: 0,
+      only_in_original_count: 0,
+      file_count_delta: 0,
+      path_union_file_count: 3,
+      path_preserving_similarity: 2 / 3,
       ingestion_checks: [
         { type: 'EXACT_CONTENT_MATCHES', label: '2 of 3 files have matching content', passed: true, file_checks: [] },
         { type: 'SAME_PATH_SAME_CONTENT', label: '2 files match by path and content', passed: true, file_checks: [] },
@@ -154,10 +182,19 @@ const setupDuplicatePairWithMovedContent = async ({ token, requestContext } = {}
     requestContext,
     datasetId: duplicate.id,
     data: {
-      jaccard_score: 0.66,
+      content_similarity_score: 0.66,
       total_incoming_files: 3,
       total_original_files: 3,
       total_common_files: 2,
+      exact_content_match_count: 2,
+      same_path_same_content_count: 1,
+      same_path_different_content_count: 0,
+      same_content_different_path_count: 1,
+      only_in_incoming_count: 0,
+      only_in_original_count: 0,
+      file_count_delta: 0,
+      path_union_file_count: 5,
+      path_preserving_similarity: 0.2,
       ingestion_checks: [
         { type: 'EXACT_CONTENT_MATCHES', label: '2 files match by content', passed: true, file_checks: [] },
         { type: 'SAME_PATH_SAME_CONTENT', label: '1 file matches by path+content', passed: true, file_checks: [] },

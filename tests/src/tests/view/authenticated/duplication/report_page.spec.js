@@ -2,7 +2,7 @@
  * Tests for the duplication report page (/datasets/:id/duplication).
  *
  * Covers:
- * - Page renders the summary header (Jaccard score, formula, status badge,
+ * - Page renders the summary header (dataset similarity score, formula, status badge,
  *   dataset links)
  * - Page renders the file-level comparison body (one section per check type)
  * - Status alert shown when comparison is still PENDING
@@ -38,17 +38,27 @@ test.describe.serial('Duplication report page — DUPLICATE_READY', () => {
     await expect(page.getByTestId('report-header')).toBeVisible();
   });
 
-  test('Jaccard score is displayed as a percentage', async ({ page }) => {
-    // Default setup uses jaccard_score = 1.0 → 100%
-    await expect(page.getByTestId('jaccard-score')).toBeVisible();
-    await expect(page.getByTestId('jaccard-score')).toContainText('100');
+  test('dataset similarity score is displayed as a percentage', async ({ page }) => {
+    // Default setup uses content_similarity_score = 1.0 → 100%
+    await expect(page.getByTestId('content-similarity-score')).toBeVisible();
+    await expect(page.getByTestId('content-similarity-score')).toContainText('100');
   });
 
-  test('Jaccard formula breakdown is displayed with numeric values', async ({ page }) => {
+  test('similarity formula breakdown is displayed with numeric values', async ({ page }) => {
     // Default: 3 common / (3 incoming + 3 original - 3 common) = 3/3
-    await expect(page.getByTestId('jaccard-formula')).toBeVisible();
-    await expect(page.getByTestId('jaccard-formula')).toContainText('100%');
-    await expect(page.getByTestId('jaccard-formula')).toContainText('3');
+    await expect(page.getByTestId('content-similarity-formula')).toBeVisible();
+    await expect(page.getByTestId('content-similarity-formula')).toContainText('100%');
+    await expect(page.getByTestId('content-similarity-formula')).toContainText('3');
+  });
+
+  test('summary metrics show explicit duplicate-analysis counts', async ({ page }) => {
+    await expect(page.getByTestId('summary-metric-path-preserving-similarity')).toContainText('100%');
+    await expect(page.getByTestId('summary-metric-exact-content-match-count')).toContainText('3');
+    await expect(page.getByTestId('summary-metric-same-path-modified-count')).toContainText('0');
+    await expect(page.getByTestId('summary-metric-renamed-moved-count')).toContainText('0');
+    await expect(page.getByTestId('summary-metric-incoming-original-counts')).toContainText('3 / 3');
+    await expect(page.getByTestId('summary-metric-file-count-delta')).toContainText('0');
+    await expect(page.getByTestId('summary-metric-only-in-counts')).toContainText('0 / 0');
   });
 
   test('comparison status badge shows COMPLETED', async ({ page }) => {

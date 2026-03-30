@@ -71,6 +71,12 @@ test.describe.serial('Duplication report — moved/renamed content bucket (admin
       page.getByTestId('check-icon-failed-SAME_CONTENT_DIFFERENT_PATH'),
     ).toBeVisible();
   });
+
+  test('summary metrics show moved/renamed count for path-different content matches', async ({ page }) => {
+    await page.goto(`/datasets/${pair.duplicate.id}/duplication`);
+    await expect(page.getByTestId('summary-metric-renamed-moved-count')).toContainText('1');
+    await expect(page.getByTestId('summary-metric-same-path-modified-count')).toContainText('0');
+  });
 });
 
 // ---------------------------------------------------------------------------

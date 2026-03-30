@@ -121,7 +121,7 @@ class DatasetService {
 
   /**
    * Fetches a duplicate dataset with its full duplication report:
-   * the dataset_duplication record (Jaccard score, file counts, original dataset),
+   * the dataset_duplication record (content similarity score, file counts, original dataset),
    * the dataset's state history, and all ingestion check records with their
    * file-level details.
    */

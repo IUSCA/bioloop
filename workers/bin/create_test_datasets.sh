@@ -126,7 +126,7 @@ cat <<'SQL'
     SELECT d.id, d.name, d.is_duplicate,
            array_agg(ds.state ORDER BY ds.timestamp DESC) FILTER (WHERE ds.state IS NOT NULL) AS states,
            dd.comparison_status,
-           dd.metadata->>'jaccard_score' AS jaccard_score
+           COALESCE(dd.metadata->>'content_similarity_score', dd.metadata->>'jaccard_score') AS content_similarity_score
     FROM dataset d
     LEFT JOIN dataset_state ds ON ds.dataset_id = d.id
     LEFT JOIN dataset_duplication dd ON dd.duplicate_dataset_id = d.id

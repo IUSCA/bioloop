@@ -188,3 +188,7 @@ IMPORTANT: I am not sure if its architecrually best to store the checks-info nee
 ---
 
 Since there may be a lot of info on the report after these changes, you will need to decide how to best organize all the info, in a way thats both intuitive for understanding the duplication report.
+
+---
+
+be sure to add/update e2e tests as needed.

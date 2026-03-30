@@ -282,7 +282,7 @@ def get_duplication_candidate(dataset_id: int) -> dict:
     Jaccard similarity of MD5 checksums over INSPECTED, non-deleted datasets of
     the same type created before the incoming dataset.
 
-    Response: { candidate: { dataset, jaccard_score, common_files,
+    Response: { candidate: { dataset, content_similarity_score, common_files,
                               incoming_total_files, original_total_files } | None }
     """
     with APIServerSession() as s:

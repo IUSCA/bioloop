@@ -1,12 +1,11 @@
 /**
  * Routes related to dataset duplicate detection.
  *
- * All routes are feature-gated: they return 403 when duplicate_detection is
- * disabled unless otherwise noted (e.g. the config endpoint is always enabled
- * so the UI can show the right UI).
+ * This router is mounted from `api/src/routes/index.js` only when
+ * `duplicate_detection` is enabled, so callers never hit these paths when the
+ * feature is off.
  *
- * Route summary:
- * All routes are mounted under /datasets/duplication.  Full paths:
+ * Route summary (all under /datasets/duplication):
  *   GET  /datasets/duplication/config        - Feature flags + threshold for UI
  *   GET  /datasets/duplication/:id/candidate - Best duplicate candidate (workers)
  *   POST  /datasets/duplication/:id                    - Register a detected duplicate (workers)
@@ -33,19 +32,7 @@ const router = express.Router();
 const isPermittedTo = accessControl('datasets_duplication');
 
 // ---------------------------------------------------------------------------
-// Feature-gate middleware
-// ---------------------------------------------------------------------------
-
-function requireDuplicateDetection(req, res, next) {
-  if (!config.enabled_features?.duplicate_detection?.enabled) {
-    return next(createError.Forbidden('Duplicate detection is not enabled on this instance.'));
-  }
-  return next();
-}
-
-// ---------------------------------------------------------------------------
 // GET /datasets/duplication/config
-// Always accessible — the UI needs this to decide whether to show duplication UI.
 // ---------------------------------------------------------------------------
 router.get(
   '/config',
@@ -65,18 +52,17 @@ router.get(
 
 // ---------------------------------------------------------------------------
 // GET /datasets/:id/duplication/candidate
-// Returns the best duplicate candidate for a given dataset based on Jaccard
-// similarity of MD5 checksums.  Called by workers during the inspect task.
+// Returns the best duplicate candidate using a file-count similarity score
+// (Jaccard index on MD5 overlap).  Called by workers during inspect.
 // Only compares against datasets that have reached INSPECTED state.
 // ---------------------------------------------------------------------------
 router.get(
   '/:id/candidate',
-  requireDuplicateDetection,
   isPermittedTo('read'),
   validate([param('id').isInt().toInt()]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Return best duplicate candidate using Jaccard similarity on MD5 checksums.'
+    // #swagger.summary = 'Return best duplicate candidate using MD5 overlap (Jaccard index).'
     const incoming_id = req.params.id;
 
     const incoming = await prisma.dataset.findUniqueOrThrow({
@@ -84,7 +70,7 @@ router.get(
       select: { id: true, type: true, created_at: true },
     });
 
-    // Raw SQL: Jaccard similarity via MD5 set intersection.
+    // Raw SQL: Jaccard index on MD5 multiset intersection (see worker docs).
     // Only considers non-deleted, same-type datasets that have reached INSPECTED
     // state and were created before the incoming dataset.
     const candidates = await prisma.$queryRaw`
@@ -132,11 +118,11 @@ router.get(
         ct.total_files AS original_total_files,
         ic.total AS incoming_total_files,
         CAST(ci.common_files AS FLOAT)
-          / (ct.total_files + ic.total - ci.common_files) AS jaccard_score
+          / (ct.total_files + ic.total - ci.common_files) AS content_similarity_score
       FROM candidate_intersections ci
       JOIN candidate_totals ct ON ct.dataset_id = ci.candidate_id
       CROSS JOIN incoming_count ic
-      ORDER BY jaccard_score DESC
+      ORDER BY content_similarity_score DESC
       LIMIT 1
     `;
 
@@ -152,7 +138,7 @@ router.get(
     res.json({
       candidate: {
         dataset: candidate_dataset,
-        jaccard_score: Number(best.jaccard_score),
+        content_similarity_score: Number(best.content_similarity_score),
         common_files: Number(best.common_files),
         incoming_total_files: Number(best.incoming_total_files),
         original_total_files: Number(best.original_total_files),
@@ -163,12 +149,11 @@ router.get(
 
 // ---------------------------------------------------------------------------
 // POST /datasets/duplication/:id
-// Called by workers after Jaccard detection.  Creates the dataset_duplication
+// Called by workers after candidate similarity detection.  Creates the dataset_duplication
 // record and transitions the dataset to DUPLICATE_REGISTERED in one transaction.
 // ---------------------------------------------------------------------------
 router.post(
   '/:id',
-  requireDuplicateDetection,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -200,14 +185,22 @@ router.post(
 // ---------------------------------------------------------------------------
 router.put(
   '/:id/comparison',
-  requireDuplicateDetection,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
-    body('jaccard_score').isFloat({ min: 0, max: 1 }),
+    body('content_similarity_score').isFloat({ min: 0, max: 1 }),
     body('total_incoming_files').isInt({ min: 0 }),
     body('total_original_files').isInt({ min: 0 }),
     body('total_common_files').isInt({ min: 0 }),
+    body('exact_content_match_count').optional().isInt({ min: 0 }),
+    body('same_path_same_content_count').optional().isInt({ min: 0 }),
+    body('same_path_different_content_count').optional().isInt({ min: 0 }),
+    body('same_content_different_path_count').optional().isInt({ min: 0 }),
+    body('only_in_incoming_count').optional().isInt({ min: 0 }),
+    body('only_in_original_count').optional().isInt({ min: 0 }),
+    body('file_count_delta').optional().isInt(),
+    body('path_union_file_count').optional().isInt({ min: 0 }),
+    body('path_preserving_similarity').optional().isFloat({ min: 0, max: 1 }),
     body('ingestion_checks').isArray(),
   ]),
   asyncHandler(async (req, res) => {
@@ -229,7 +222,6 @@ router.put(
 // ---------------------------------------------------------------------------
 router.patch(
   '/:id/comparison/progress',
-  requireDuplicateDetection,
   isPermittedTo('update'),
   validate([
     param('id').isInt().toInt(),
@@ -253,7 +245,6 @@ router.patch(
 // ---------------------------------------------------------------------------
 router.post(
   '/:id/accept',
-  requireDuplicateDetection,
   isPermittedTo('update'),
   validate([param('id').isInt().toInt()]),
   asyncHandler(async (req, res, next) => {
@@ -278,7 +269,6 @@ router.post(
 // ---------------------------------------------------------------------------
 router.post(
   '/:id/reject',
-  requireDuplicateDetection,
   isPermittedTo('update'),
   validate([param('id').isInt().toInt()]),
   asyncHandler(async (req, res, next) => {

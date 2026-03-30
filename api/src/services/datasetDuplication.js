@@ -148,7 +148,7 @@ const reject_concurrent_active_duplicates = async ({ prisma_tx, original_dataset
 /**
  * Records that a dataset is a duplicate of an existing one.
  *
- * Called by the inspect task after Jaccard detection.  Creates the
+ * Called by the inspect task after duplicate candidate detection.  Creates the
  * dataset_duplication row and transitions the dataset to DUPLICATE_REGISTERED.
  *
  * @param {Object} params
@@ -208,7 +208,7 @@ async function register_duplicate({ duplicate_dataset_id, original_dataset_id, c
  * @param {number} params.duplicate_dataset_id
  * @param {Object} params.comparison_result
  *   {
- *     jaccard_score: number,
+ *     content_similarity_score: number,
  *     total_incoming_files: number,
  *     total_original_files: number,
  *     total_common_files: number,
@@ -222,10 +222,19 @@ async function register_duplicate({ duplicate_dataset_id, original_dataset_id, c
  */
 async function save_comparison_result({ duplicate_dataset_id, comparison_result }) {
   const {
-    jaccard_score,
+    content_similarity_score,
     total_incoming_files,
     total_original_files,
     total_common_files,
+    exact_content_match_count,
+    same_path_same_content_count,
+    same_path_different_content_count,
+    same_content_different_path_count,
+    only_in_incoming_count,
+    only_in_original_count,
+    file_count_delta,
+    path_union_file_count,
+    path_preserving_similarity,
     ingestion_checks,
   } = comparison_result;
 
@@ -274,10 +283,19 @@ async function save_comparison_result({ duplicate_dataset_id, comparison_result 
       data: {
         comparison_status: CONSTANTS.COMPARISON_STATUSES.COMPLETED,
         metadata: {
-          jaccard_score,
+          content_similarity_score,
           total_incoming_files,
           total_original_files,
           total_common_files,
+          exact_content_match_count: exact_content_match_count ?? total_common_files,
+          same_path_same_content_count: same_path_same_content_count ?? null,
+          same_path_different_content_count: same_path_different_content_count ?? null,
+          same_content_different_path_count: same_content_different_path_count ?? null,
+          only_in_incoming_count: only_in_incoming_count ?? null,
+          only_in_original_count: only_in_original_count ?? null,
+          file_count_delta: file_count_delta ?? (total_incoming_files - total_original_files),
+          path_union_file_count: path_union_file_count ?? null,
+          path_preserving_similarity: path_preserving_similarity ?? null,
         },
       },
     });
