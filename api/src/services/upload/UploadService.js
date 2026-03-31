@@ -215,8 +215,8 @@ class UploadService {
        *
        * The sidecar carries upload metadata (dataset_id, filename,
        * selection_mode, relative_path, etc). We read it first, then:
-       *   - relocate sidecar JSON into uploaded_data/<dataset_id>/ for cleanup
-       *     organization
+       *   - mirror sidecar JSON into uploaded_data/<dataset_id>/ for cleanup
+       *     organization (source sidecar is kept for TUS internals)
        *   - move the payload file to the dataset's final origin_path
        *
        * The UI sends routing metadata on the initial POST /uploads/files
@@ -257,11 +257,11 @@ class UploadService {
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
         
-        // Move the sidecar metadata file corresponding to this uploaded file to the dataset-specific folder
-        // This is done for logical organization of the TUS metadata files.
-        // - Path where metadata file is initially stored:
+        // Mirror this sidecar metadata file into a dataset-specific folder
+        // for cleanup organization while keeping the source sidecar in place.
+        // - Canonical path where metadata file is stored by TUS:
         //    <uploadDir>/<processId>.json
-        // - Path where metadata file is moved:
+        // - Additional dataset-scoped copy:
         //    <uploadDir>/uploaded_data/<datasetId>/<processId>.json
         const sidecarRelocation = relocateSidecarForUpload({
           uploadDir,

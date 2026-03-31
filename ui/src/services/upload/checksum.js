@@ -23,7 +23,7 @@ async function _loadBlake3() {
     const hashWasm = await import("hash-wasm");
     // Use createBLAKE3 for streaming (not blake3 which loads entire file)
     blake3Fn = hashWasm.createBLAKE3;
-    console.log("[manifest-hash.js] ✓ BLAKE3 (streaming) loaded");
+    // console.log("[manifest-hash.js] ✓ BLAKE3 (streaming) loaded");
     return blake3Fn;
   } catch (error) {
     console.error("Failed to load hash-wasm module:", error);
@@ -135,12 +135,12 @@ async function _hashFile(file, hasher, onProgress = null) {
  * @returns {Promise<Object|null>} See return value semantics above.
  */
 export async function computeManifestHash(files, progressCallback = null) {
-  console.log("[manifest-hash.js] computeManifestHash called");
-  console.log("[manifest-hash.js]   files:", files?.length || 0);
-  console.log(
-    "[manifest-hash.js]   progressCallback:",
-    typeof progressCallback,
-  );
+  // console.log("[manifest-hash.js] computeManifestHash called");
+  // console.log("[manifest-hash.js]   files:", files?.length || 0);
+  // console.log(
+  //   "[manifest-hash.js]   progressCallback:",
+  //   typeof progressCallback,
+  // );
 
   // Guard: callers should check _isChecksumVerificationEnabled() first,
   // but this provides a safe fallback if called directly.
@@ -174,9 +174,9 @@ export async function computeManifestHash(files, progressCallback = null) {
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      console.log(
-        `[manifest-hash.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
-      );
+      // console.log(
+      //   `[manifest-hash.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+      // );
 
       const fileHash = await _hashFile(file, hasher, (fileProgress) => {
         const currentFileBytes = (fileProgress / 100) * file.size;
@@ -215,7 +215,7 @@ export async function computeManifestHash(files, progressCallback = null) {
     hasher.init();
     hasher.update(new TextEncoder().encode(manifestStr));
     const manifestHash = hasher.digest("hex");
-    console.log("[manifest-hash.js] ✓ Manifest-hash:", manifestHash);
+    // console.log("[manifest-hash.js] ✓ Manifest-hash:", manifestHash);
 
     const result = {
       algorithm: "blake3",

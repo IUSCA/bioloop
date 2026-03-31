@@ -1235,6 +1235,13 @@ const uploadFilesWithTus = async (files, endpoint) => {
   let uploadedCount = 0;
   let totalBytes = 0;
   let uploadedBytes = 0;
+  const failureStatusHistogram = {};
+  const failureMessageHistogram = {};
+
+  const bumpCounter = (counter, key) => {
+    const normalizedKey = String(key ?? "unknown");
+    counter[normalizedKey] = (counter[normalizedKey] || 0) + 1;
+  };
 
   // Calculate total size
   files.forEach((file) => {
@@ -1261,6 +1268,18 @@ const uploadFilesWithTus = async (files, endpoint) => {
       // point the upload is considered permanently failed.
       upload = new tus.Upload(file, {
         endpoint,
+        // Do not persist per-file resume fingerprints in localStorage.
+        // Large upload sessions can exceed browser storage quota and abort
+        // uploads with QuotaExceededError before PATCH begins. 
+        // ** NOTE: **
+        // Setting storeFingerprintForResuming: false affects 
+        // *persistent* resume (the feature that survives page reload/browser 
+        // restart), because tus-js no longer stores fingerprint→upload URL 
+        // in localStorage.
+        storeFingerprintForResuming: false,
+        // Send each file as bounded PATCH chunks so upstream proxies with
+        // request-size limits (e.g. 100M) do not reject larger files with 413.
+        chunkSize: config.upload.tus_chunk_size_bytes,
         // Fibonacci-progression retry delays (~16 min of cumulative back-off).
         // Start above 0 ms so a retried PATCH does not immediately race a lock
         // held by the prior in-flight request on the same upload resource.
@@ -1270,6 +1289,21 @@ const uploadFilesWithTus = async (files, endpoint) => {
           1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
           144000, 233000, 377000,
         ],
+        onShouldRetry: (err, retryAttempt, options) => {
+          const status = err?.originalResponse?.getStatus?.();
+          const body = err?.originalResponse?.getBody?.();
+          console.error("[TUS-CLIENT] Retry decision", {
+            file_name: file.name,
+            retry_attempt: retryAttempt,
+            status,
+            body,
+            error_message: err?.message,
+            error_type: err?.constructor?.name,
+          });
+
+          // Preserve tus-js-client default retry behavior after logging.
+          return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
+        },
         metadata: {
           dataset_id: String(datasetUploadLog.value.dataset.id),
           filename: file.name,
@@ -1295,7 +1329,51 @@ const uploadFilesWithTus = async (files, endpoint) => {
               }
             : {}),
         },
+        onBeforeRequest: (req) => {
+          try {
+            console.log("[TUS-CLIENT] Request", {
+              file_name: file.name,
+              method: req?.getMethod?.(),
+              url: req?.getURL?.(),
+            });
+          } catch (hookErr) {
+            console.error("[TUS-CLIENT] onBeforeRequest hook error", {
+              file_name: file.name,
+              error: hookErr?.message,
+            });
+          }
+        },
+        onAfterResponse: (req, res) => {
+          try {
+            console.log("[TUS-CLIENT] Response", {
+              file_name: file.name,
+              method: req?.getMethod?.(),
+              url: req?.getURL?.(),
+              status: res?.getStatus?.(),
+              upload_offset: res?.getHeader?.("Upload-Offset"),
+              upload_length: res?.getHeader?.("Upload-Length"),
+              tus_resumable: res?.getHeader?.("Tus-Resumable"),
+            });
+          } catch (hookErr) {
+            console.error("[TUS-CLIENT] onAfterResponse hook error", {
+              file_name: file.name,
+              error: hookErr?.message,
+            });
+          }
+        },
+        onChunkComplete: (chunkSize, bytesUploaded, bytesTotal) => {
+          console.log("[TUS-CLIENT] Chunk complete", {
+            file_name: file.name,
+            chunk_size: chunkSize,
+            bytes_uploaded: bytesUploaded,
+            bytes_total: bytesTotal,
+          });
+        },
         onError: (error) => {
+          const statusCode = error.originalResponse?.getStatus?.() ?? "unknown";
+          const statusText = error.originalResponse?.getBody?.() || error.message || "unknown";
+          bumpCounter(failureStatusHistogram, statusCode);
+          bumpCounter(failureMessageHistogram, statusText);
           console.error(`[TUS-CLIENT] Upload FAILED for ${file.name}:`, {
             error_message: error.message,
             error_type: error.constructor.name,
@@ -1377,6 +1455,12 @@ const uploadFilesWithTus = async (files, endpoint) => {
       failed_count: rejections.length,
       uploaded_count: uploadedCount,
       failed_files: fileUploadErrors.value.map((e) => e.relativePath),
+    });
+    console.error("[TUS-CLIENT] Failure summary (status/message histogram):", {
+      status_histogram: failureStatusHistogram,
+      top_messages: Object.entries(failureMessageHistogram)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10),
     });
     return false;
   }

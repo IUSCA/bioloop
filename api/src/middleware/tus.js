@@ -127,9 +127,19 @@ function createTusMiddleware(tusServer) {
       const originalEnd = res.end;
       const originalWriteHead = res.writeHead;
       let statusCode = 200;
+      let capturedWriteHeadHeaders = {};
 
       res.writeHead = function writeHead(...args) {
         [statusCode] = args;
+
+        // Capture headers passed directly to writeHead(status, [reason], headers).
+        // getHeader()/getHeaders() may not reliably include these after writeHead.
+        // eslint-disable-next-line no-underscore-dangle
+        const maybeHeaders = typeof args[1] === 'object' && args[1] !== null ? args[1] : args[2];
+        if (maybeHeaders && typeof maybeHeaders === 'object') {
+          capturedWriteHeadHeaders = { ...capturedWriteHeadHeaders, ...maybeHeaders };
+        }
+
         return originalWriteHead.apply(this, args);
       };
 
@@ -143,6 +153,29 @@ function createTusMiddleware(tusServer) {
           user: req.user?.username,
           success: isSuccess,
         });
+
+        // Diagnostic trace for client-side HEAD retry loops:
+        // tus-js-client requires specific TUS headers (especially Upload-Offset)
+        // and may retry HEAD if they are missing/invalid.
+        if (['HEAD', 'POST', 'PATCH'].includes(req.method)) {
+          const headerSnapshot = {
+            ...capturedWriteHeadHeaders,
+            ...res.getHeaders(),
+          };
+          const responseHeaderDebug = {
+            statusCode,
+            uploadId,
+            location: headerSnapshot.Location || headerSnapshot.location,
+            upload_offset: headerSnapshot['Upload-Offset'] || headerSnapshot['upload-offset'],
+            upload_length: headerSnapshot['Upload-Length'] || headerSnapshot['upload-length'],
+            tus_resumable: headerSnapshot['Tus-Resumable'] || headerSnapshot['tus-resumable'],
+            cache_control: headerSnapshot['Cache-Control'] || headerSnapshot['cache-control'],
+            all_headers: headerSnapshot,
+          };
+          logger.info(
+            `[TUS] ${req.method} ${req.path} response headers ${JSON.stringify(responseHeaderDebug)}`,
+          );
+        }
 
         return originalEnd.apply(this, args);
       };

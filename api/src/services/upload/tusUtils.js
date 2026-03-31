@@ -78,6 +78,7 @@ function moveTusFileToDestination({
 }) {
   const baseOriginPath = dataset.origin_path;
   let finalPath;
+  let createdFromMissingTusDataFile = false;
 
   if (selection_mode === 'directory' && relative_path) {
     // relative_path has the root directory stripped on the client side, so files
@@ -134,6 +135,7 @@ function moveTusFileToDestination({
         destination: finalPath,
       });
       fs.writeFileSync(finalPath, '');
+      createdFromMissingTusDataFile = true;
     }
   } else {
     logger.info('[TUS] File already exists at destination (idempotent)', {
@@ -142,16 +144,13 @@ function moveTusFileToDestination({
     });
   }
 
-  // @tus/server v1.6 PostHandler calls store.getUpload() AFTER onUploadFinish
-  // to add the Upload-Expires response header.  getUpload() calls fs.stat() on
-  // the TUS staging data file — if we have already moved it the stat fails with
-  // ENOENT and TUS turns that into a 410 Gone error sent back to the client.
-  // Recreate an empty placeholder at the staging path so the stat succeeds.
-  // TUS's own 7-day expiry sweep will clean it up later.
-  // (The PatchHandler's expiry check explicitly skips complete uploads without
-  // calling getUpload(), so this placeholder is only critical for 0-byte files
-  // whose onUploadFinish fires during the POST creation request itself.)
-  if (!fs.existsSync(tusFilePath)) {
+  // @tus/server v1.6 PostHandler may call store.getUpload() after onUploadFinish
+  // on POST create flow for 0-byte uploads. In that specific case there was no
+  // staged data file to begin with, so create a placeholder for PostHandler's
+  // immediate fs.stat(). For normal uploads finalized on PATCH, do NOT recreate
+  // a placeholder — leaving a zero-byte file behind can confuse subsequent HEAD
+  // offset checks and cause apparent "stuck at 0%" behavior.
+  if (createdFromMissingTusDataFile && !fs.existsSync(tusFilePath)) {
     logger.info('[TUS] Recreating TUS staging placeholder (PostHandler expiry compat)', {
       dataset_id: datasetId,
       path: tusFilePath,

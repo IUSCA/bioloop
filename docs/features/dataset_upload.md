@@ -268,44 +268,45 @@ before starting the next upload is sufficient.
 
 #### 1. Update properties
 
-- Some properties are now outdated and will need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance).
+- Some properties are now outdated and may need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance):
 
 ```
-# ui/.env
+# 📄 ui/.env
 
 # Remove this property:
 VITE_UPLOAD_API_BASE_PATH=https://...
 
 # ---
 
-# api/.env
+# 📄 api/.env
 
 # Remove these properties:
 OAUTH_UPLOAD_CLIENT_ID=xxx
 OAUTH_UPLOAD_CLIENT_SECRET=xxx
-UPLOAD_DIR=/path/to/uploads/directory
+UPLOAD_DIR=/x/y/z
 
 # ---
 
-# secure_download/.env
+# 📄 secure_download/.env
 
 # Remove this property
-# Note: this will need to be done on the host where secure_downloaded is hosted
-UPLOAD_PATH_DATA_PRODUCTS=/opt/sca/data
+# ℹ️ This will need to be done on the host where secure_downloaded is hosted
+UPLOAD_PATH_DATA_PRODUCTS=/a/b/c
 
 ```
 
 - The following properties will need to be added:
 ```
-# workers/workers/config/production.py
-# NOTE: This update will need to be performed on the host where the workers run.
+# 📄 workers/workers/config/production.py
+# ℹ️ This update will need to be performed on the host where the workers run.
+# ℹ️ `/home/bioloop/landing/uploads` (and its subdirectories) in this example is where uploaded content will be written to on disk.
     ...,
     'paths': {
         'RAW_DATA': {
-            'upload': '/N/scratch/scadev/bioloop/dev/uploads/raw_data',
+            'upload': '/home/bioloop/landing/uploads/raw_data',
         },
         'DATA_PRODUCT': {
-            'upload': '/N/scratch/scadev/bioloop/dev/uploads/data_products',
+            'upload': '/home/bioloop/landing/uploads/data_products',
         },
     },
     ...
@@ -315,10 +316,10 @@ UPLOAD_PATH_DATA_PRODUCTS=/opt/sca/data
 #### 2. Volume Mounts
 Uploads are written to the host through a volume-mount. This volume will have to be declared within the `api` service of the docker-compose YML file:
 ```
-# docker-compose-prod.yml (or appropriate docker-compose file)
+# 📄 docker-compose-prod.yml (or appropriate docker-compose file)
   api:
     volumes:
-      - /path/to/host/uploads/space:/opt/sca/data/uploads
+      - /home/bioloop/landing/uploads:/opt/sca/data/uploads
 ```
 
 #### 3. Database Migration
@@ -327,12 +328,13 @@ Do a Prisma migration, which will create the necessary database-schema changes.
 ```
 npx prisma migrate deploy
 ```
-💡 **Note:** Restart of the API will be needed after Prisma migration.
+💡 **Note:** Restart of the API/application will be needed after Prisma migration.
 
 
 #### 4. Install worker dependencies
 ```
 cd workers
+# bioloop/workers
 poetry install --no-root
 ```
 
@@ -341,17 +343,24 @@ poetry install --no-root
 - Running the script with the `--create` flag will create any directories that do not exist.
 - The 2 property-additions made to `production.py` in Step 1 will need to be done before this step. 
 
-#### 6. Start workers
 ```
 # bioloop/workers
 poetry shell
+python -um workers.scripts.setup_dirs --create
+```
+
+#### 6. Start workers
+```
+# bioloop/workers
+poetry shell (if shell not already activated)
 pm2 start ecosystem.config.js
 ```
 
 #### 7. Nginx configuration changes
 
-Add a `/api/uploads/` sub-block to the API's Nginx configuration (main `/api/` block)
+Add a `/api/uploads/` sub-block to the API's Nginx configuration (main `/api/` block), which will apply customizations needed to make uploads of large files work.
 
+Example:
 ```
 location /api/ {
     proxy_pass http://172.19.0.2:3030/;
@@ -368,11 +377,16 @@ location /api/ {
 }
 ```
 
+💡 **Tip:** Adjust IPv4 address as per your environment. See the `api` service in the docker-compose file corresponding to your environment, for the IPv4 address used by the `api` service.
+
+ℹ️ Why these are needed:
 - `proxy_read_timeout 300` — This is the timeout for reading a response from the API after nginx has already forwarded the request. The default 60s would only be a problem if the API took > 60s to process a chunk and send back a response. For a 50MB chunk write to disk, that's very unlikely to hit 60s, so this also doesn't change much for uploads.
 - `proxy_request_buffering off` - this controls whether nginx buffers the incoming request body before forwarding it to the API. With buffering on (the default), nginx holds the full chunk in memory/disk before the API sees any of it. With it off, nginx streams the bytes directly to the API as they arrive. For upload endpoints specifically, disabling this is the right call.
 - `client_body_timeout 300` — this is the timeout for reading the request body from the client. The default is 60 seconds. For a slow connection uploading a 50MB chunk at ~1MB/s, that would take 50 seconds — borderline. A 300 second timeout here is the safer choice.
 
 💡 **Note:** Restart Nginx after making these changes.
+
+---
 
 ### Post-Deploy Smoke Test
 
