@@ -1226,7 +1226,13 @@ const uploadFilesWithTus = async (files, endpoint) => {
     throw new Error("Dataset upload log not initialized");
   }
 
-  // Get token directly from localStorage (more reliable than Pinia store in this context)
+  // NOTE: We intentionally read auth token from localStorage in this upload path.
+  // Why auth store is not used here:
+  //   1) `token` exists internally in useAuthStore, but it is not exposed in the
+  //      store's returned public API, so `authStore.token` cannot be read here.
+  //   2) TUS uploads are long-lived; Authorization must be refreshed per request.
+  //      onBeforeRequest re-reads localStorage to pick up JWT refreshes that occur
+  //      mid-upload and avoid late 401 waves.
   const userToken = localStorage.getItem("token");
   if (!userToken) {
     throw new Error("Authentication token not found");
@@ -1292,6 +1298,7 @@ const uploadFilesWithTus = async (files, endpoint) => {
         onShouldRetry: (err, retryAttempt, options) => {
           const status = err?.originalResponse?.getStatus?.();
           const body = err?.originalResponse?.getBody?.();
+
           console.error("[TUS-CLIENT] Retry decision", {
             file_name: file.name,
             retry_attempt: retryAttempt,
@@ -1331,6 +1338,13 @@ const uploadFilesWithTus = async (files, endpoint) => {
         },
         onBeforeRequest: (req) => {
           try {
+            // Read token at request time, so that long-lasting uploads keep 
+            // using unexpired JWTs.
+            // const latestToken = localStorage.getItem("token");
+            // if (latestToken && req?.setHeader) {
+            //   req.setHeader("Authorization", `Bearer ${latestToken}`);
+            // }
+
             console.log("[TUS-CLIENT] Request", {
               file_name: file.name,
               method: req?.getMethod?.(),

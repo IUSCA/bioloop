@@ -65,6 +65,93 @@ Uploads use TUS resumable transfer handled directly by the core API.
 
 ![Upload status state machine](../diagrams/upload/upload_status_state_machine.png)
 
+## HTTP Status Code Reference (Upload APIs)
+
+This section documents status codes that are expected/possible for the upload
+endpoints used by the UI, plus what they typically mean in this app.
+
+### A) `POST /datasets/uploads` (register upload session)
+
+- `200` - Registration succeeded; dataset + `dataset_upload_log` created (`UPLOADING`).
+  - **Tolerability:** expected.
+- `400` - Request body validation failed (missing/invalid `type`, `name`, etc.).
+  - **Tolerability:** not expected in normal UI flow; investigate client payload.
+- `401` - Authentication failed / missing token.
+  - **Tolerability:** not expected after login; investigate auth/session.
+- `403` - Caller lacks permission to create dataset/upload.
+  - **Tolerability:** expected only for non-allowed roles.
+- `409` - Name collision (concurrent or existing dataset with same name).
+  - **Tolerability:** expected occasionally; user action required (rename).
+- `5xx` - Server/database failure during registration.
+  - **Tolerability:** investigate.
+
+### B) TUS create: `POST /api/uploads/files`
+
+- `201` - TUS upload resource created; `Location` header returned.
+  - **Tolerability:** expected.
+- `400` - `dataset_id` missing/invalid in TUS metadata (`onUploadCreate` guard).
+  - **Tolerability:** investigate metadata generation in UI.
+- `401` - Auth failed.
+  - **Tolerability:** investigate auth/session/proxy auth headers.
+- `403` - User not authorized for that dataset (`onUploadCreate`).
+  - **Tolerability:** expected for unauthorized user; otherwise investigate ownership/roles.
+- `404` - Upload log not found for dataset (`onUploadCreate`) or invalid upload URL path.
+  - **Tolerability:** investigate; not expected in healthy upload flow.
+- `409` - Upload log is not in `UPLOADING` (already advanced/failed).
+  - **Tolerability:** can happen for stale retries; investigate if frequent.
+- `410` - Upload URL no longer valid (`The file for this url no longer exists`).
+  - **Tolerability:** a small number can be tolerated as stale retries during large transfers.
+    Frequent 410s with many failed files should be investigated.
+- `423` - Lock contention on same TUS resource (`lock acquired` class).
+  - **Tolerability:** transient/retryable; occasional occurrences are expected under concurrency.
+    Persistent/frequent 423s should be investigated.
+- `5xx` - TUS/datastore/server error.
+  - **Tolerability:** investigate.
+
+### C) TUS offset check: `HEAD /api/uploads/files/:uploadId`
+
+- `200` - Upload resource exists; headers include `Upload-Offset`, `Upload-Length`.
+  - **Tolerability:** expected.
+- `404` - Upload resource path not found.
+  - **Tolerability:** investigate.
+- `410` - Upload resource expired/removed.
+  - **Tolerability:** can be tolerated for stale retries; investigate if tied to active uploads.
+- `423` - Lock contention.
+  - **Tolerability:** occasional/transient is acceptable; persistent loops are not.
+
+### D) TUS data chunk write: `PATCH /api/uploads/files/:uploadId`
+
+- `204` - Chunk accepted / upload offset advanced.
+  - **Tolerability:** expected (normal successful chunk writes).
+- `401` / `403` - Auth/authz failure.
+  - **Tolerability:** investigate.
+- `404` / `410` - Upload resource unavailable/no longer exists.
+  - **Tolerability:** occasional stale retry can happen; repeated occurrences should be investigated.
+- `413` - Request chunk too large for proxy/server limits.
+  - **Tolerability:** investigate deployment limits and configured chunk size.
+- `423` - Lock contention.
+  - **Tolerability:** occasional/transient is acceptable.
+- `5xx` - Server/TUS write failure.
+  - **Tolerability:** investigate.
+
+### E) `POST /datasets/uploads/:id/complete` (mark upload complete)
+
+- `200` - Upload log transitioned to `UPLOADED` (idempotent success allowed).
+  - **Tolerability:** expected.
+- `404` - Upload log not found for dataset.
+  - **Tolerability:** investigate.
+- `409` - Status already advanced past upload stage (regression protection).
+  - **Tolerability:** can be acceptable race outcome; typically not a data-loss signal.
+- `500` - Completion/update failure.
+  - **Tolerability:** investigate.
+
+### Practical triage guidance
+
+- **Usually tolerable transient statuses:** occasional `410`, occasional `423`.
+- **Usually actionable immediately:** repeated `404` on TUS create/write, repeated `410`
+  tied to active files, any persistent `5xx`, any `413` during normal file sizes/chunks,
+  and upload sessions that never progress beyond repeated `HEAD` with `Upload-Offset: 0`.
+
 ## Data Model
 
 ### `dataset`
