@@ -27,10 +27,10 @@ and which decisions are currently locked.
 ## Feature Flags and Thresholds
 
 - API config: `api/config/default.json`
-  - `enabled_features.duplicate_detection.enabled`
-  - `enabled_features.duplicate_detection.jaccard_threshold`
-  - `enabled_features.duplicate_detection.concurrent_inspection_wait_timeout_seconds`
-- Worker config mirrors these values in `workers/workers/config/common.py`.
+  - `enabled_features.duplicate_detection.enabled` (feature toggle only)
+  - `dataset_duplication.jaccard_threshold`
+  - `dataset_duplication.concurrent_inspection_wait_timeout_seconds`
+- Worker config mirrors the same keys in `workers/workers/config/common.py`.
 
 ## Worker Implementation Map
 

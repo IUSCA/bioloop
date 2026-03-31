@@ -155,7 +155,7 @@ const reject_concurrent_active_duplicates = async ({ prisma_tx, original_dataset
  * @param {number} params.duplicate_dataset_id
  * @param {number} params.original_dataset_id
  * @param {string|null} params.comparison_process_id  Celery task ID for the compare task
- * @param {string} params.comparison_status  COMPARISON_STATUS enum value
+ * @param {string} params.comparison_status  DATASET_DUPLICATION_ANALYSIS_STATUS enum value
  * @returns {Promise<Object>} The created dataset_duplication record
  */
 async function register_duplicate({ duplicate_dataset_id, original_dataset_id, comparison_process_id, comparison_status }) {
@@ -172,7 +172,7 @@ async function register_duplicate({ duplicate_dataset_id, original_dataset_id, c
         duplicate_dataset_id,
         original_dataset_id,
         comparison_process_id: comparison_process_id || null,
-        comparison_status: comparison_status || CONSTANTS.COMPARISON_STATUSES.PENDING,
+        comparison_status: comparison_status || CONSTANTS.DATASET_DUPLICATION_ANALYSIS_STATUSES.PENDING,
       },
       include: {
         duplicate_dataset: true,
@@ -181,7 +181,7 @@ async function register_duplicate({ duplicate_dataset_id, original_dataset_id, c
     });
 
     // Transition to DUPLICATE_REGISTERED only when it's an actual duplicate detection
-    if (comparison_status !== CONSTANTS.COMPARISON_STATUSES.NOT_DUPLICATE) {
+    if (comparison_status !== CONSTANTS.DATASET_DUPLICATION_ANALYSIS_STATUSES.NOT_DUPLICATE) {
       await tx.dataset_state.create({
         data: {
           state: CONSTANTS.DATASET_STATES.DUPLICATE_REGISTERED,
@@ -281,7 +281,7 @@ async function save_comparison_result({ duplicate_dataset_id, comparison_result 
     await tx.dataset_duplication.update({
       where: { duplicate_dataset_id },
       data: {
-        comparison_status: CONSTANTS.COMPARISON_STATUSES.COMPLETED,
+        comparison_status: CONSTANTS.DATASET_DUPLICATION_ANALYSIS_STATUSES.COMPLETED,
         metadata: {
           content_similarity_score,
           total_incoming_files,

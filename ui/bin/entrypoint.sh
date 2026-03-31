@@ -17,11 +17,7 @@ if [ -f .cert/cert.pem ] && [ -f .cert/key.pem ]; then
 else
   echo "Generating self-signed TLS cert (rsa:2048)..."
   cd .cert
-  openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes \
-    -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost" \
-    -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
-    -addext "extendedKeyUsage=serverAuth" \
-    -addext "keyUsage=digitalSignature,keyEncipherment"
+  openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/C=US/ST=IN/L=Bloomington/O=IU/OU=SCA/CN=localhost"
   cd ..
   echo "TLS cert generation done."
 fi

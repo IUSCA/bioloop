@@ -18,6 +18,7 @@ const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
+const featureService = require('@/services/features');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 
@@ -311,7 +312,8 @@ router.get(
  * @param {string} req.user.id - The ID of the authenticated user.
  * @param {string[]} req.user.roles - The roles of the authenticated user.
  * @returns {Promise<Object>} The created dataset object.
- * @throws {Error} If dataset creation fails or if the origin path is restricted.
+ * @throws {Error} If dataset creation fails, if the origin path is restricted for the import space,
+ *   or if the origin path is outside any configured import source.
  */
 router.post(
   '/',
@@ -354,12 +356,10 @@ router.post(
     const decoded_origin_path = he.decode(origin_path);
 
     if (import_space) {
-      // if dataset's origin_path is a restricted for dataset creation, throw error
       const restricted_import_dirs = config.restricted_import_dirs[import_space].split(',');
       const is_origin_path_restricted = restricted_import_dirs.some((glob) => {
-        const isMatch = pm(glob);
-        const matches = isMatch(decoded_origin_path, glob);
-        return matches.isMatch;
+        const matchGlob = pm(glob);
+        return matchGlob(decoded_origin_path);
       });
       if (is_origin_path_restricted) {
         return next(createError.Forbidden({
@@ -368,13 +368,25 @@ router.post(
       }
     }
 
+    if (create_method === CONSTANTS.DATASET_CREATE_METHODS.IMPORT && decoded_origin_path) {
+      const importSources = await prisma.import_source.findMany();
+      const isWithinImportSource = importSources.some((source) => {
+        const sourcePathWithSlash = source.path.endsWith('/') ? source.path : `${source.path}/`;
+        return decoded_origin_path === source.path || decoded_origin_path.startsWith(sourcePathWithSlash);
+      });
+      if (!isWithinImportSource) {
+        return next(createError.Forbidden({
+          message: 'Dataset origin path is not within any configured import source',
+        }));
+      }
+    }
+
     // When duplicate_detection is enabled and a non-deleted INSPECTED dataset
     // with the same name/type already exists, rename the incoming dataset with
-    // a _DUPLICATE_ suffix so both can coexist.  The inspect task will later
+    // a _DUPLICATE_ suffix so both can coexist. The inspect task will later
     // compare checksums and determine whether it is truly a duplicate.
     let effective_name = name;
-    const dup_detection_enabled = config.enabled_features?.duplicate_detection?.enabled;
-    if (dup_detection_enabled) {
+    if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
       const existing = await prisma.dataset.findFirst({
         where: {
           name,

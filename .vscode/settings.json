@@ -32,5 +32,12 @@
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "playwright.configFile": "tests/playwright.config.js",
+  "playwright.env": {
+    "NODE_CONFIG_DIR": "${workspaceFolder}/tests/config"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "yzhang.markdown-all-in-one"
   }
 }

@@ -168,7 +168,7 @@ def run() -> None:
         logger.warning(
             'The dataset was NOT detected as a duplicate (reached ARCHIVED/STAGED). '
             f'Jaccard {jaccard_str} is unexpectedly below the configured threshold. '
-            'Check enabled_features.duplicate_detection.jaccard_threshold in the API config.'
+            'Check dataset_duplication.jaccard_threshold in the API config.'
         )
     else:
         logger.warning(f'Unexpected final state: {final_state}')

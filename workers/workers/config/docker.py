@@ -8,6 +8,7 @@ config = {
     'paths': {
         'scratch': '/opt/sca/data/scratch',
         'RAW_DATA': {
+            'upload': '/opt/sca/data/uploads/raw_data',
             'archive': f'/opt/sca/data/archive/{YEAR}/raw_data',
             'stage': '/opt/sca/data/staged/raw_data',
             'bundle': {
@@ -17,7 +18,7 @@ config = {
             'qc': '/opt/sca/data/qc/raw_data'
         },
         'DATA_PRODUCT': {
-            'upload': '/opt/sca/data/uploads',
+            'upload': '/opt/sca/data/uploads/data_product',
             'archive': f'/opt/sca/data/archive/{YEAR}/data_products',
             'stage': '/opt/sca/data/staged/data_products',
             'bundle': {

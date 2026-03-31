@@ -4,7 +4,7 @@ Case 03 — Near-miss: similarity detected but below the Jaccard threshold.
 Scenario
 --------
 The incoming dataset shares several files with the original but not enough to
-cross the duplicate_detection.jaccard_threshold (default 0.85).
+cross the dataset_duplication.jaccard_threshold (default 0.85).
 
 Because the incoming dataset's name will contain '_DUPLICATE_' (added by the
 app when the same name is registered twice), the inspect task records the
@@ -156,7 +156,7 @@ def run() -> None:
         logger.error(
             'UNEXPECTED: near-miss was flagged as a duplicate. '
             'Check the Jaccard threshold in the feature config '
-            '(enabled_features.duplicate_detection.jaccard_threshold).'
+            '(dataset_duplication.jaccard_threshold).'
         )
     else:
         logger.warning(f'Unexpected final state: {final_state}')

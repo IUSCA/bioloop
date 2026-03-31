@@ -16,8 +16,7 @@ async function getTokenByRole({ role }) {
   const apiContext = await baseRequest.newContext({
     ignoreHTTPSErrors: true,
   });
-  const url = `${config.apiBaseURL}/auth/cas/verify`;
-  const res = await apiContext.post(url, {
+  const res = await apiContext.post(`${config.apiBaseURL}/auth/cas/verify`, {
     data: { ticket: role },
   });
   const body = await res.json();

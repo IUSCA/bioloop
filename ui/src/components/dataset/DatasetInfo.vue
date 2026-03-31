@@ -63,6 +63,34 @@
         <!--            {{ datasetCreatorDisplayed }}-->
         <!--          </td>-->
         <!--        </tr>-->
+        <tr v-if="props.dataset.create_method">
+          <td>Created via</td>
+          <td>
+            <div class="flex items-center gap-2">
+              <DatasetCreateMethod
+                :create-method="props.dataset.create_method"
+                :origin-path="props.dataset.origin_path"
+              />
+              <!-- Upload status indicator (all roles) -->
+              <UploadStatusBadge
+                v-if="isUpload"
+                :status="uploadLogStatus"
+                :integrated-status="integratedStatus"
+                :failure-reason="uploadLogFailureReason"
+              />
+              <!-- Admin: link to upload details page -->
+              <router-link
+                v-if="isUpload && auth.canAdmin"
+                :to="`/datasets/uploads/${props.dataset.id}`"
+                target="_blank"
+                class="va-link"
+                title="View upload details"
+              >
+                <va-icon name="open_in_new" size="small" />
+              </router-link>
+            </div>
+          </td>
+        </tr>
         <tr>
           <td>Description</td>
           <td>
@@ -77,24 +105,52 @@
 </template>
 
 <script setup>
+import DatasetCreateMethod from "@/components/dataset/DatasetCreateMethod.vue";
+import UploadStatusBadge from "@/components/dataset/upload/UploadStatusBadge.vue";
+import constants from "@/constants";
+import datasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
+import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({ dataset: Object });
 
 const auth = useAuthStore();
 
-// const datasetCreateLog = computed(() => {
-//   return (props.dataset?.audit_logs || []).find((e) => !!e.create_method);
-// });
+const isUpload = computed(
+  () =>
+    props.dataset?.create_method === constants.DATASET_CREATE_METHODS.UPLOAD,
+);
 
-// const datasetCreatorDisplayed = computed(() => {
-//   const datasetCreator = datasetCreateLog.value?.user;
-//   return datasetCreator
-//     ? `${datasetCreator.username} (${datasetCreator.name})`
-//     : null;
-// });
+// Integrated workflow status derived from the dataset's workflows array
+// (already fetched by Dataset.vue with bundle:true).
+const integratedStatus = computed(() =>
+  wfService.get_integrated_workflow_status(props.dataset?.workflows),
+);
+
+// Upload log status and failure reason — fetched lazily for UPLOAD datasets.
+const uploadLogStatus = ref(null);
+const uploadLogFailureReason = ref(null);
+
+async function fetchUploadStatus() {
+  if (!isUpload.value || !props.dataset?.id) return;
+  try {
+    const res = await datasetService.getUploadLogByDatasetId(props.dataset.id);
+    uploadLogStatus.value = res.data?.status ?? null;
+    uploadLogFailureReason.value = res.data?.metadata?.failure_reason ?? null;
+  } catch {
+    // silently ignore — badge falls back to unknown/null state
+  }
+}
+
+// Fetch on mount and re-fetch whenever the dataset id changes.
+watch(
+  () => props.dataset?.id,
+  () => fetchUploadStatus(),
+  { immediate: true },
+);
 </script>
 
 <style lang="scss" scoped>

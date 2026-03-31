@@ -83,23 +83,18 @@ const find_or_create_test_user = async ({ identifier }) => {
   const is_test_user = ['admin', 'operator', 'user'].includes(identifier);
 
   const test_user_config = is_test_user ? config.e2e.users[identifier] : null;
-  // Use the configured username when set; fall back to the role identifier itself
-  // so that CI deployments without an admins.json still get a usable test user.
-  const test_user_username = test_user_config?.username || identifier;
+  const test_user_username = test_user_config ? test_user_config.username : identifier;
+  // Resolve the expected role up-front so we can enforce it whether the user
+  // already exists or is being created for the first time.
+  const requested_role = is_test_user
+    ? await prisma.role.findFirstOrThrow({ where: { name: identifier } })
+    : null;
 
   let test_user = await prisma.user.findUnique({
-    where: {
-      username: test_user_username,
-    },
+    where: { username: test_user_username },
   });
 
   if (!test_user) {
-    const requested_role = await prisma.role.findFirstOrThrow({
-      where: {
-        name: identifier,
-      },
-    });
-
     test_user = await prisma.user.create({
       data: {
         username: test_user_username,
@@ -107,26 +102,50 @@ const find_or_create_test_user = async ({ identifier }) => {
         cas_id: test_user_username,
         email: `${test_user_username}@iu.edu`,
         user_role: {
-          create: {
-            role_id: requested_role.id,
-          },
+          create: { role_id: requested_role.id },
         },
       },
+    });
+  } else if (is_test_user) {
+    const existing_roles = await prisma.user_role.findMany({
+      where: {
+        user_id: test_user.id,
+      },
+      select: {
+        role_id: true,
+      },
+    });
+    const has_requested_role = existing_roles.some(
+      (role) => role.role_id === requested_role.id,
+    );
+
+    // Keep CI ticket behavior deterministic by ensuring each role ticket maps
+    // to a user whose effective role matches that ticket.
+    if (!has_requested_role || existing_roles.length !== 1) {
+      await prisma.user_role.deleteMany({
+        where: {
+          user_id: test_user.id,
+        },
+      });
+      await prisma.user_role.create({
+        data: {
+          user_id: test_user.id,
+          role_id: requested_role.id,
+        },
+      });
+    }
+  } else if (requested_role) {
+    // The user exists but may have been given different roles by a previous
+    // test run.  Reset to the single expected role so tests always start from
+    // a clean, predictable state.
+    await prisma.user_role.deleteMany({ where: { user_id: test_user.id } });
+    await prisma.user_role.create({
+      data: { user_id: test_user.id, role_id: requested_role.id },
     });
   }
 
   return test_user;
 };
-
-function get_upload_token(file_path) {
-  // [^\w.-]+ matches one or more characters that are not word
-  // characters (letters, digits, or underscore), dots, or hyphens
-  const hyphen_delimited_file_path = file_path.replace(/[^\w.-]+/g, '-');
-  const scope = `${config.get('oauth.upload.scope_prefix')}${hyphen_delimited_file_path}`;
-  return oAuth2SecureTransferClient.clientCredentials({
-    scope: [scope],
-  });
-}
 
 // Function to load and convert the public key to JWKS
 function getJWKS() {
@@ -244,7 +263,6 @@ module.exports = {
   get_user_profile,
   get_download_token,
   find_or_create_test_user,
-  get_upload_token,
   getJWKS,
   issueGrafanaToken,
   getLoginUser,

@@ -14,14 +14,14 @@ test.describe.serial('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
   test.describe('File selection and deletion', () => {
     test('Should allow selecting files', async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
 
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
@@ -29,7 +29,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
     test('Should show the correct number of files in the table', async () => {
       // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
@@ -101,20 +101,18 @@ test.describe.serial('Dataset Upload Process', () => {
       // Wait for the file upload table to be visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).toBeVisible();
 
-      const initialFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
-
-      // Delete all files
-      const deletePromises = Array.from({ length: initialFileCount }, async (_, i) => {
+      // Delete all files one by one so row-count assertions follow the actual UI transition order.
+      let currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
+      while (currentFileCount > 0) {
         await page.locator('[data-testid="delete-file-button"]').first().click();
 
-        // Wait for the current file to be removed from the list
+        const expectedCount = currentFileCount - 1;
         await expect(async () => {
-          const currentFileCount = await page.locator('[data-testid="file-table-row-name"]').count();
-          expect(currentFileCount).toBe(initialFileCount - i - 1);
+          const refreshedCount = await page.locator('[data-testid="file-table-row-name"]').count();
+          expect(refreshedCount).toBe(expectedCount);
         }).toPass();
-      });
-
-      await Promise.all(deletePromises);
+        currentFileCount = expectedCount;
+      }
 
       // Assert that the file table is no longer visible
       await expect(page.locator('[data-testid="upload-selected-files-table"]')).not.toBeVisible();

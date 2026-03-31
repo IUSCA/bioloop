@@ -57,7 +57,6 @@
             </va-chip>
           </td>
         </tr>
-
         <tr data-testid="source-raw-data-row">
           <td>Source Raw Data</td>
           <td class="metadata">
@@ -70,7 +69,6 @@
             </router-link>
           </td>
         </tr>
-
         <tr data-testid="project-row">
           <td>Project</td>
           <td class="metadata">
@@ -123,9 +121,9 @@
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
 import OutlinedAlert from "@/components/utils/OutlinedAlert.vue";
 import { snakeCaseToTitleCase } from "@/services/utils";
+import { useAuthStore } from "@/stores/auth";
 
 const props = defineProps({
   // `dataset`: Dataset to be uploaded

@@ -66,13 +66,11 @@
       "client_id": "",
       "client_secret": "",
       "scope_prefix": "download_file:"
-    },
-    "upload": {
-      "scope_prefix": "upload_file:"
     }
   },
   "upload": {
-    "path": ""
+    "path": "",
+    "max_file_size_bytes": 107374182400
   },
   "download_server": {
     "base_url": ""
@@ -130,63 +128,7 @@
           "task": "delete_dataset"
         }
       ]
-    },
-    "process_dataset_upload": {
-      "steps": [
-        {
-          "name": "Process Dataset Upload",
-          "task": "process_dataset_upload"
-        }
-      ]
-    },
-    "cancel_dataset_upload": {
-      "steps": [
-        {
-          "name": "Cancel Dataset Upload",
-          "task": "cancel_dataset_upload"
-        }
-      ]
-    },
-    "accept_duplicate_dataset": {
-      "description": "Overwrites an existing dataset with its incoming duplicate.",
-      "steps": [
-        {
-          "name": "archive",
-          "task": "archive_dataset"
-        }, {
-          "name": "stage",
-          "task": "stage_dataset"
-        }, {
-          "name": "validate",
-          "task": "validate_dataset"
-        }, {
-          "name": "setup_download",
-          "task": "setup_dataset_download"
-        }
-      ]
-    },
-    "reject_duplicate_dataset": {
-      "description": "Rejects an incoming duplicate dataset by prohibiting its ingestion into the system.",
-      "steps": [
-        {
-          "name": "purge resources",
-          "task": "purge_duplicate_dataset_resources"
-        }
-      ]
     }
-  },
-  "DATASET_STATES": {
-      "REGISTERED": "REGISTERED",
-      "READY": "READY",
-      "INSPECTED": "INSPECTED",
-      "ARCHIVED": "ARCHIVED",
-      "FETCHED": "FETCHED",
-      "STAGED": "STAGED",
-      "DUPLICATE_REGISTERED": "DUPLICATE_REGISTERED",
-      "DUPLICATE_READY": "DUPLICATE_READY",
-      "DUPLICATE_REJECTED": "DUPLICATE_REJECTED",
-      "OVERWRITTEN": "OVERWRITTEN",
-      "DELETED": "DELETED"
   },
   "dataset_types": [
     "RAW_DATA",
@@ -208,19 +150,6 @@
       }
     }
   },
-  "filesystem_search_spaces": "",
-  "filesystem": {
-    "search_spaces": "",
-    "base_dir": {
-      "slateScratch": ""
-    },
-    "mount_dir": {
-      "slateScratch": ""
-    }
-  },
-  "restricted_import_dirs": {
-    "slateScratch": ""
-  },
   "enabled_features": {
     "import": true,
     "upload": true,
@@ -229,10 +158,13 @@
     "signup": true,
     "auto_create_project_on_dataset_creation": true,
     "duplicate_detection": {
-      "enabled": true,
-      "jaccard_threshold": 0.85,
-      "concurrent_inspection_wait_timeout_seconds": 7200
-    }
+      "enabled": true
+    },
+    "notifications": true
+  },
+  "dataset_duplication": {
+    "jaccard_threshold": 0.85,
+    "concurrent_inspection_wait_timeout_seconds": 7200
   },
   "institution_types": [
     "Commercial",
@@ -240,12 +172,5 @@
     "Internal Academic",
     "Non-profit",
     "Other"
-  ],
-  "WORKFLOW_STATUS": {
-    "PENDING": "PENDING",
-    "STARTED": "STARTED",
-    "SUCCESS": "SUCCESS",
-    "FAILURE": "FAILURE",
-    "REVOKED": "REVOKED"
-  }
+  ]
 }

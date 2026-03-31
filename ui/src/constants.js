@@ -14,15 +14,15 @@ const exports = {
         children: [
           {
             feature_key: "import",
-            icon: "mdi-file-cog-outline",
+            icon: "mdi-file-import-outline",
             title: "Import",
             path: "/datasets/import",
           },
           {
             feature_key: "uploads",
-            icon: "mdi:folder-upload",
+            icon: "mdi-cloud-upload-outline",
             title: "Upload",
-            path: "/datasetUpload",
+            path: "/datasets/uploads",
           },
         ],
       },
@@ -128,9 +128,13 @@ const exports = {
     UPLOADING: "UPLOADING",
     UPLOAD_FAILED: "UPLOAD_FAILED",
     UPLOADED: "UPLOADED",
+    VERIFYING: "VERIFYING",
+    VERIFIED: "VERIFIED",
+    VERIFICATION_FAILED: "VERIFICATION_FAILED",
     PROCESSING: "PROCESSING",
     PROCESSING_FAILED: "PROCESSING_FAILED",
     COMPLETE: "COMPLETE",
+    PERMANENTLY_FAILED: "PERMANENTLY_FAILED",
   },
   DATASET_CREATE_METHODS: {
     UPLOAD: "UPLOAD",
@@ -158,6 +162,33 @@ const exports = {
       SCHEDULED: "SCHEDULED",
       ACTIVE: "ACTIVE",
       EXPIRED: "EXPIRED",
+    },
+  },
+  notificationTheme: {
+    filters: {
+      unread: {
+        color: "primary",
+        iconOn: "mdi:email",
+        iconOff: "mdi:email-outline",
+      },
+      read: {
+        color: "info",
+        iconOn: "mdi:email-open",
+        iconOff: "mdi:email-open-outline",
+      },
+      bookmarked: {
+        color: "success",
+        iconOn: "mdi:bookmark",
+        iconOff: "mdi:bookmark-outline",
+      },
+    },
+    delivery: {
+      roleBroadcast: { color: "primary" },
+    },
+    actions: {
+      read: { color: "info", icon: "mdi:email-open-outline" },
+      bookmark: { color: "success", icon: "mdi:bookmark-outline" },
+      link: { color: "primary", icon: "mdi:open-in-new" },
     },
   },
 };

@@ -13,9 +13,10 @@ RUN pip install poetry==$POETRY_VERSION
 # Copy only the necessary files
 COPY pyproject.toml poetry.lock ./
 
-# Install all dependencies (including dev extras (pytest etc.) so the container
-# can run integration tests directly without a separate test image.)
-RUN poetry config virtualenvs.create false && poetry install
+# Install dependencies from the lock file only (--no-root: application code is
+# mounted or copied afterward; installing the project package here would fail
+# before the rest of the tree exists.)
+RUN poetry config virtualenvs.create false && poetry install --no-root
 
 # Copy the rest of the application code
 COPY . /opt/sca/app

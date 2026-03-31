@@ -11,6 +11,7 @@ const getRequestContext = async (requestContext) => requestContext || request.ne
   // ignoreHTTPSErrors is required when the Vite dev server uses a self-signed TLS cert
   // (the default for the Docker dev/e2e environment).
   ignoreHTTPSErrors: true,
+  baseURL: config.apiBaseURL,
 });
 
 const get = async ({

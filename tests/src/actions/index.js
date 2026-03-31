@@ -120,16 +120,14 @@ export async function selectAutocompleteResult({
   resultText,
   verify = false,
 } = {}) {
-  let _resultIndex;
   // Validate that exactly one selection method is provided
-  if ((resultIndex != null && resultText != null)) {
+  if (resultIndex != null && resultText != null) {
     throw new Error('Must not provide both resultIndex and resultText');
   }
 
-  // If no selection method is provided, default to the first result
-  if (resultIndex == null && resultText == null) {
-    _resultIndex = 0;
-  }
+  // Determine the index to use: explicit resultIndex takes priority, default to 0
+  // when neither is provided (text-based search uses resultText instead)
+  let _resultIndex = resultIndex != null ? resultIndex : (resultText == null ? 0 : null);
 
   const searchInput = page.getByTestId(testId);
   await expect(searchInput).toBeVisible();
@@ -448,5 +446,37 @@ export async function typeInputValue({
 
   if (verify) {
     await expect(inputElement).toHaveValue(value);
+  }
+}
+
+/**
+ * Clears a text input that exposes a Vuestic reset button.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string} params.testId - The data-testid of the input element
+ * @param {boolean} [params.verify=false] - Whether to verify the input value is empty
+ * @returns {Promise<void>}
+ */
+export async function clearInputByTestId({
+  page,
+  testId,
+  verify = false,
+}) {
+  const inputElement = page.locator(`input[data-testid="${testId}"], [data-testid="${testId}"] input`).first();
+  await expect(inputElement).toBeVisible();
+
+  const inputWrapper = inputElement.locator(
+    'xpath=ancestor::div[contains(@class, "va-input-wrapper")][1]',
+  );
+  await inputWrapper.hover();
+  const resetButton = inputWrapper.locator('[aria-label="reset"]').first();
+  if (await resetButton.count()) {
+    await resetButton.click({ force: true });
+  } else {
+    await inputElement.fill('');
+  }
+
+  if (verify) {
+    await expect(inputElement).toHaveValue('');
   }
 }

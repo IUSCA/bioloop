@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
+const testRuntimeConfig = require('config');
 
 const USER_STORAGE_STATE = path.join(__dirname, '/.auth/user_storage_state.json');
 const OPERATOR_STORAGE_STATE = path.join(__dirname, '/.auth/operator_storage_state.json');
@@ -37,7 +38,7 @@ module.exports = {
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
       // baseURL: 'https://localhost',
-      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || testRuntimeConfig.baseURL || 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
@@ -110,19 +111,37 @@ module.exports = {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
+        ],
       },
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['admin_notifications', 'operator_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
+        ],
       },
       {
         name: 'user_notifications',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
-        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+        ],
       },
       /** User-management tests */
       {
@@ -180,6 +199,73 @@ module.exports = {
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/duplication/access_control_user_role.spec.js',
+        testIgnore: [
+          '/view/authenticated/upload/project_association/user_role/association.spec.js',
+          '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
+        ],
+      },
+      {
+        name: 'upload_role_visibility',
+        use: { ...devices['Desktop Chrome'] },
+        testMatch: '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
+      },
+      {
+        name: 'upload--project_association--user_role--association',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
+      },
+      /**
+       * Role-Gated Feature Tests
+       *
+       * When a feature is role-gated, each role needs its own project so the
+       * correct set of tests runs under the correct session.  The pattern is:
+       *
+       *  - Roles WITH access   → testMatch the full feature glob
+       *                          testIgnore access_control.spec.js
+       *                          (these roles reach the real UI, so the
+       *                          "feature disabled" check must not run for them)
+       *
+       *  - Roles WITHOUT access → testMatch ONLY access_control.spec.js,
+       *                           which asserts the "feature disabled" alert
+       *                           is shown instead of the feature UI
+       *
+       * IMPORTANT — three configs must stay in sync whenever the role list changes:
+       *   1. ui/src/config.js          enabledFeatures.<feature>.enabledForRoles
+       *   2. tests/config/default.json enabledFeatures.<feature>.enabledForRoles
+       *      (see the _sync_note key in that file)
+       *   3. This file                 testMatch / testIgnore per project below
+       *
+       * To give a role access to the feature:
+       *   - Add the role to both config files (steps 1 & 2).
+       *   - Switch the project's testMatch to the full glob and add testIgnore
+       *     for access_control.spec.js (step 3).
+       *
+       * To remove a role's access, reverse the steps above.
+       */
+
+      // admin — has import access: runs all functional tests
+      {
+        name: 'admin_import',
+        use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
+        dependencies: ['admin_login'],
+        testMatch: '/view/authenticated/import/*.spec.js',
+        testIgnore: '/view/authenticated/import/access_control.spec.js',
+      },
+      // operator — has import access: runs all functional tests
+      {
+        name: 'operator_import',
+        use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
+        dependencies: ['operator_login'],
+        testMatch: '/view/authenticated/import/*.spec.js',
+        testIgnore: '/view/authenticated/import/access_control.spec.js',
+      },
+      // user — no import access: only verifies the "feature disabled" alert
+      {
+        name: 'user_import',
+        use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
+        dependencies: ['user_login'],
+        testMatch: '/view/authenticated/import/access_control.spec.js',
       },
 
       // { name: 'firefox', use: {

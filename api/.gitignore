@@ -9,6 +9,7 @@ logs
 npm-debug.log*
 
 # Runtime data
+# cspell:ignore pids
 pids
 *.pid
 *.seed
@@ -20,9 +21,6 @@ pids
 # Optional REPL history
 .node_repl_history
 .pnpm-store
-
-# MacOS metadata file
-.DS_store
 
 # keys
 keys/*.pub

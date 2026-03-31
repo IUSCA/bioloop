@@ -12,10 +12,6 @@
     "download": {
       "client_id": "OAUTH_DOWNLOAD_CLIENT_ID",
       "client_secret": "OAUTH_DOWNLOAD_CLIENT_SECRET"
-    },
-    "upload": {
-      "client_id": "OAUTH_UPLOAD_CLIENT_ID",
-      "client_secret": "OAUTH_UPLOAD_CLIENT_SECRET"
     }
   },
   "auth": {
@@ -36,7 +32,11 @@
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
   },
   "upload": {
-    "path": "UPLOAD_DIR"
+    "path": "UPLOAD_HOST_DIR",
+    "max_file_size_bytes": {
+      "__name": "UPLOAD_MAX_FILE_SIZE_BYTES",
+      "__format": "number"
+    }
   },
   "e2e": {
     "users": {
@@ -51,16 +51,14 @@
       }
     }
   },
-  "filesystem": {
-    "search_spaces": "FILESYSTEM_SEARCH_SPACES",
-    "base_dir": {
-      "slateScratch": "FILESYSTEM_BASE_DIR_SCRATCH"
+  "dataset_duplication": {
+    "jaccard_threshold": {
+      "__name": "DATASET_DUPLICATION_JACCARD_THRESHOLD",
+      "__format": "number"
     },
-    "mount_dir": {
-      "slateScratch": "FILESYSTEM_MOUNT_DIR_SCRATCH"
+    "concurrent_inspection_wait_timeout_seconds": {
+      "__name": "DATASET_DUPLICATION_CONCURRENT_INSPECTION_WAIT_TIMEOUT_SECONDS",
+      "__format": "number"
     }
-  },
-  "restricted_import_dirs": {
-    "slateScratch": "SCRATCH_IMPORT_RESTRICTED_DIRS"
   }
 }

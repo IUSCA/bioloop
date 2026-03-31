@@ -45,8 +45,8 @@
 <script setup>
 import datasetService from "@/services/dataset";
 import { filterByValues } from "@/services/utils";
-import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { useAuthStore } from "@/stores/auth";
+import { useFileBrowserStore } from "@/stores/fileBrowser";
 import { storeToRefs } from "pinia";
 
 const auth = useAuthStore();

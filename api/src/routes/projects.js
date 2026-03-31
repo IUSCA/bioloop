@@ -703,6 +703,13 @@ router.patch(
       // allowed and user role is forbidden
       /* eslint-enable                                                             */
 
+    // get project or send 404 if not found
+    await prisma.project.findFirstOrThrow({
+      where: {
+        id: req.params.id,
+      },
+    });
+
     const add_dataset_ids = req.body.add_dataset_ids || [];
     const remove_dataset_ids = req.body.remove_dataset_ids || [];
 
@@ -724,6 +731,7 @@ router.patch(
         },
       });
 
+      // If client is trying to assign duplicate Datasets to a Project, send an error
       if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
         const duplicate_datasets_being_assigned = await tx.dataset.findMany({
           where: {

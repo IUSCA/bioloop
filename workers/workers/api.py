@@ -150,11 +150,11 @@ def get_all_datasets(
             'days_since_last_staged': days_since_last_staged,
             'deleted': deleted,
             'archived': archived,
-            'is_duplicate': is_duplicate,
             'bundle': bundle,
-            'include_duplications': include_duplications,
             'match_name_exact': match_name_exact,
             'include_audit_logs': include_audit_logs,
+            'is_duplicate': is_duplicate,
+            'include_duplications': include_duplications,
         }
         r = s.get('datasets', params=payload)
         r.raise_for_status()
@@ -162,12 +162,14 @@ def get_all_datasets(
         return [dataset_getter(dataset) for dataset in datasets]
 
 
-def get_dataset(dataset_id: str,
-                files: bool = False,
-                bundle: bool = False,
-                include_audit_logs: bool = False,
-                workflows: bool = False,
-                include_duplications: bool = False):
+def get_dataset(
+    dataset_id: str,
+    files: bool = False,
+    bundle: bool = False,
+    workflows: bool = False,
+    include_audit_logs: bool = False,
+    include_duplications: bool = False,
+):
     with APIServerSession() as s:
         payload = {
             'files': files,
@@ -448,6 +450,77 @@ def update_dataset_upload(uploaded_dataset_id: int, log_data: dict):
     with APIServerSession() as s:
         r = s.patch(f'datasets/uploads/{uploaded_dataset_id}', json=log_data)
         r.raise_for_status()
+
+
+def get_stalled_uploads():
+    """Get uploads that are UPLOADED but workflow hasn't started (>30s)"""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/stalled')
+        r.raise_for_status()
+        return r.json()
+
+
+def get_expired_uploads(status='UPLOADING', age_days=0.25):
+    """Get uploads that have been stuck in *status* for longer than *age_days*."""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/expired', params={
+            'status': status,
+            'age_days': age_days,
+        })
+        r.raise_for_status()
+        return r.json()
+
+
+def get_failed_uploads(max_retry_count=2, max_age_hours=72):
+    """Get PROCESSING_FAILED uploads eligible for retry"""
+    with APIServerSession() as s:
+        r = s.get('datasets/uploads/failed', params={
+            'max_retry_count': max_retry_count,
+            'max_age_hours': max_age_hours,
+        })
+        r.raise_for_status()
+        return r.json()
+
+
+def update_upload_retry(upload_id: int, retry_count: int, status: str = None, failure_reason: str = None):
+    """Update upload retry count and status"""
+    with APIServerSession() as s:
+        data = {'retry_count': retry_count}
+        if status:
+            data['status'] = status
+        if failure_reason:
+            data['metadata'] = {'failure_reason': failure_reason}
+        r = s.patch(f'datasets/uploads/{upload_id}/upload-log', json=data)
+        r.raise_for_status()
+        return r.json()
+
+
+def get_dataset_upload_log(dataset_id: int) -> dict:
+    """Get upload log for a dataset"""
+    with APIServerSession() as s:
+        r = s.get(f'datasets/uploads/{dataset_id}/upload-log')
+        r.raise_for_status()
+        return r.json()
+
+
+def update_dataset_upload_log(
+    dataset_id: int,
+    log_data: dict,
+    workflow_id: str | None = None,
+) -> dict:
+    """Update upload log metadata, status, and/or retry count.
+
+    If *workflow_id* is supplied it is sent to the API which will associate the
+    workflow with the dataset inside the same DB transaction as the upload-log
+    update, providing atomicity for the VERIFIED → COMPLETE transition.
+    """
+    body = dict(log_data)
+    if workflow_id is not None:
+        body['workflow_id'] = workflow_id
+    with APIServerSession() as s:
+        r = s.patch(f'datasets/uploads/{dataset_id}/upload-log', json=body)
+        r.raise_for_status()
+        return r.json()
 
 
 def create_notification(payload: dict):

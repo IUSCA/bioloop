@@ -4,7 +4,7 @@
 --   1. Remove version column from dataset and update unique constraint
 --   2. Remove dataset_action_item table and its enums
 --   3. Add comparison_process_id, comparison_status, metadata to dataset_duplication
---   4. Add COMPARISON_STATUS enum
+--   4. Add DATASET_DUPLICATION_ANALYSIS_STATUS enum
 --   5. Replace DATASET_INGESTION_CHECK_TYPE enum values with new ones
 --   6. Add source_dataset_id to dataset_ingestion_file_check
 --   7. Add md5 index to dataset_file
@@ -24,9 +24,16 @@ ALTER TABLE "dataset" DROP CONSTRAINT IF EXISTS "dataset_name_type_is_deleted_is
 ALTER TABLE "dataset" DROP CONSTRAINT IF EXISTS "dataset_name_type_is_deleted_key";
 ALTER TABLE "dataset" ADD CONSTRAINT "dataset_name_type_is_deleted_key" UNIQUE ("name", "type", "is_deleted");
 
--- Step 4: Add COMPARISON_STATUS enum
+-- Step 4: DATASET_DUPLICATION_ANALYSIS_STATUS enum (renamed from COMPARISON_STATUS)
 DO $$ BEGIN
-  CREATE TYPE "COMPARISON_STATUS" AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'NOT_DUPLICATE', 'FAILED');
+  ALTER TYPE "COMPARISON_STATUS" RENAME TO "DATASET_DUPLICATION_ANALYSIS_STATUS";
+EXCEPTION
+  WHEN undefined_object THEN null;
+  WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE "DATASET_DUPLICATION_ANALYSIS_STATUS" AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'NOT_DUPLICATE', 'FAILED');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
@@ -34,7 +41,7 @@ END $$;
 -- Step 5: Add new columns to dataset_duplication
 ALTER TABLE "dataset_duplication"
   ADD COLUMN IF NOT EXISTS "comparison_process_id" TEXT,
-  ADD COLUMN IF NOT EXISTS "comparison_status" "COMPARISON_STATUS" NOT NULL DEFAULT 'PENDING',
+  ADD COLUMN IF NOT EXISTS "comparison_status" "DATASET_DUPLICATION_ANALYSIS_STATUS" NOT NULL DEFAULT 'PENDING',
   ADD COLUMN IF NOT EXISTS "metadata" JSONB;
 
 -- Step 6: Replace DATASET_INGESTION_CHECK_TYPE enum values.

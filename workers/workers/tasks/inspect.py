@@ -84,18 +84,23 @@ def inspect_dataset(celery_task, dataset_id, **kwargs):
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)
 
-    # Write file metadata in batches to avoid oversized payloads
     for batch in utils.batched(metadata, n=config['inspect']['file_metadata_batch_size']):
         api.add_files_to_dataset(dataset_id=dataset_id, files=batch)
 
-    # Mark the dataset as fully inspected so it becomes eligible as a comparison
-    # target for future incoming datasets
     api.add_state_to_dataset(dataset_id, 'INSPECTED')
     logger.info(f'inspect_dataset[{dataset_id}]: marked as INSPECTED.')
 
-    # Duplicate detection — only when the feature is enabled
-    if config.get('enabled_features', {}).get('duplicate_detection', {}).get('enabled'):
-        # Re-fetch with states so wait_for_concurrent_inspections can filter correctly
+    dup_feature = config.get('enabled_features', {}).get('duplicate_detection')
+    if dup_feature is None:
+        dup_enabled = True
+    elif isinstance(dup_feature, bool):
+        dup_enabled = dup_feature
+    elif isinstance(dup_feature, dict):
+        dup_enabled = bool(dup_feature.get('enabled'))
+    else:
+        dup_enabled = False
+
+    if dup_enabled:
         fresh_dataset = api.get_dataset(dataset_id=dataset_id)
         run_duplicate_detection(celery_task, dataset_id, fresh_dataset)
 

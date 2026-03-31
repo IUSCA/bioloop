@@ -11,6 +11,5 @@ router.get('/favicon.ico', (req, res) => res.status(204));
 router.use(authenticate);
 
 router.use('/download', require('./download'));
-router.use('/upload', require('./upload'));
 
 module.exports = router;

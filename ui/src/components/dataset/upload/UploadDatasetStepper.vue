@@ -37,9 +37,10 @@
         </va-button>
       </template>
 
-      <!-- Step 0 content -->
+      <!-- Step 0 (File selector) -->
       <template #step-content-0>
         <div class="flex flex-col" data-testid="step-content-0">
+          <!-- Buttons to select the files/directory to upload -->
           <SelectFileButtons
             :disabled="submitAttempted || loading || validatingForm"
             @files-added="onFilesAdded"
@@ -55,7 +56,7 @@
         </div>
       </template>
 
-      <!-- Step 1 content -->
+      <!-- Step 1: Metadata ('General Info') -->
       <template #step-content-1>
         <div
           class="flex w-full pb-6 items-center"
@@ -104,42 +105,6 @@
                 label="Assign source Raw Data"
                 class="flex-grow"
                 data-testid="upload-metadata-assign-source-checkbox"
-              />
-            </div>
-          </div>
-
-          <div
-            class="flex-grow flex items-center"
-            data-testid="upload-metadata-dataset-autocomplete-row"
-          >
-            <DatasetSelectAutoComplete
-              v-model:selected="selectedRawData"
-              v-model:search-term="datasetSearchText"
-              :disabled="submitAttempted || !isRawDataSearchEnabled"
-              :dataset-type="config.dataset.types.RAW_DATA.key"
-              placeholder="Search Raw Data"
-              @clear="resetRawDataSearch"
-              @open="onRawDataSearchOpen"
-              @close="onRawDataSearchClose"
-              class="flex-grow"
-              :label="'Dataset'"
-              :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
-              data-test-id="upload-metadata-dataset-autocomplete"
-            >
-            </DatasetSelectAutoComplete>
-            <va-popover data-testid="upload-metadata-dataset-autocomplete-popover">
-              <template #body>
-                <div class="w-96" data-testid="raw-data-help-text">
-                  Associating a Data Product with a source Raw Data establishes
-                  a clear lineage between the original data and its processed
-                  form. This linkage helps to trace the origins of processed
-                  data
-                </div>
-              </template>
-              <Icon
-                icon="mdi:help-circle"
-                class="ml-2 text-xl text-gray-500"
-                data-testid="raw-data-help-icon"
               />
             </va-popover>
           </div>
@@ -250,12 +215,164 @@
               </va-popover>
             </div>
           </div>
+
+          <div
+            class="flex-grow flex items-center"
+            data-testid="upload-metadata-dataset-autocomplete-row"
+          >
+            <DatasetSelectAutoComplete
+              v-model:selected="selectedRawData"
+              v-model:search-term="datasetSearchText"
+              :disabled="submitAttempted || !isRawDataSearchEnabled"
+              :dataset-type="config.dataset.types.RAW_DATA.key"
+              placeholder="Search Raw Data"
+              @clear="resetRawDataSearch"
+              @open="onRawDataSearchOpen"
+              @close="onRawDataSearchClose"
+              class="flex-grow"
+              :label="'Dataset'"
+              :messages="noRawDataToAssign ? 'No Raw Data to select' : null"
+              data-test-id="upload-metadata-dataset-autocomplete"
+            >
+            </DatasetSelectAutoComplete>
+            <va-popover
+              data-testid="upload-metadata-dataset-autocomplete-popover"
+            >
+              <template #body>
+                <div class="w-96" data-testid="raw-data-help-text">
+                  Associating a Data Product with a source Raw Data establishes
+                  a clear lineage between the original data and its processed
+                  form. This linkage helps to trace the origins of processed
+                  data
+                </div>
+              </template>
+              <Icon
+                icon="mdi:help-circle"
+                class="ml-2 text-xl text-gray-500"
+                data-testid="raw-data-help-icon"
+              />
+            </va-popover>
+          </div>
+        </div>
+
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-project-row"
+        >
+          <div class="w-60 flex flex-shrink-0 mr-4">
+            <div class="flex items-center">
+              <va-checkbox
+                v-model="willAssignProject"
+                @update:modelValue="
+                  (val) => {
+                    if (!val) {
+                      projectSelected = null;
+                    }
+                  }
+                "
+                :disabled="submitAttempted || isProjectCheckboxDisabled"
+                color="primary"
+                label="Assign Project"
+                class="flex-grow"
+                data-testid="upload-metadata-assign-project-checkbox"
+              />
+            </div>
+          </div>
+
+          <div class="flex-grow flex items-center">
+            <ProjectAsyncAutoComplete
+              v-model:selected="projectSelected"
+              v-model:search-term="projectSearchText"
+              :disabled="submitAttempted || !isProjectSearchEnabled"
+              placeholder="Search Projects"
+              @clear="resetProjectSearch"
+              @open="onProjectSearchOpen"
+              @close="onProjectSearchClose"
+              class="flex-grow"
+              :label="'Project'"
+              :messages="noProjectsToAssign ? 'No Projects to select' : null"
+              data-test-id="upload-metadata-project-autocomplete"
+            >
+            </ProjectAsyncAutoComplete>
+            <va-popover
+              data-testid="upload-metadata-project-autocomplete-popover"
+            >
+              <template #body>
+                <div class="w-96">
+                  Assigning a dataset to a project establishes a connection
+                  between your data and a specific research initiatives. This
+                  association helps organize and categorize datasets within the
+                  context of your research projects, facilitating easier data
+                  management, access control, and collaboration among team
+                  members working on the same project.
+                </div>
+              </template>
+              <Icon icon="mdi:help-circle" class="ml-2 text-xl text-gray-500" />
+            </va-popover>
+          </div>
+        </div>
+
+        <div
+          class="flex w-full pb-6"
+          data-testid="upload-metadata-assign-instrument-row"
+        >
+          <div class="w-60 flex flex-shrink-0 mr-4">
+            <div class="flex items-center">
+              <va-checkbox
+                v-model="willAssignSourceInstrument"
+                @update:modelValue="
+                  (val) => {
+                    if (!val) {
+                      selectedSourceInstrument = null;
+                    }
+                  }
+                "
+                :disabled="submitAttempted || isInstrumentsCheckboxDisabled"
+                color="primary"
+                label="Assign source Instrument"
+                class="flex-grow"
+                data-testid="upload-metadata-assign-instrument-checkbox"
+              />
+            </div>
+          </div>
+
+          <div class="flex-grow flex items-center">
+            <va-select
+              v-model="selectedSourceInstrument"
+              :options="sourceInstrumentOptions"
+              :disabled="submitAttempted || !isInstrumentSelectionEnabled"
+              label="Source Instrument"
+              placeholder="Select Source Instrument"
+              class="flex-grow"
+              :text-by="'name'"
+              :track-by="'id'"
+              :messages="
+                noInstrumentsToAssign ? 'No Instruments to select' : null
+              "
+              data-testid="upload-metadata-source-instrument-select"
+            />
+            <div class="flex items-center ml-2">
+              <va-popover
+                data-testid="upload-metadata-source-instrument-popover"
+              >
+                <template #body>
+                  <div class="w-72">
+                    Source instrument where this data was collected from.
+                  </div>
+                </template>
+                <Icon icon="mdi:help-circle" class="text-xl text-gray-500" />
+              </va-popover>
+            </div>
+          </div>
         </div>
       </template>
 
+      <!-- Step 2: Start Upload / Upload Details -->
       <template #step-content-2>
+        <!-- Always show two cards: Left (metadata with dataset name) and Right (file list with upload progress) -->
         <div class="flex flex-row" v-if="selectingFiles || selectingDirectory">
-          <div class="flex-1" data-testid="uploaded-dataset-details">
+          <!-- LEFT CARD: Dataset Metadata -->
+          <div class="flex-1">
             <va-card class="upload-details">
               <va-card-title>
                 <div class="flex flex-nowrap items-center w-full">
@@ -266,14 +383,13 @@
                 <UploadedDatasetDetails
                   v-if="selectingFiles || selectingDirectory"
                   v-model:populated-dataset-name="uploadedDatasetName"
-                  :dataset="datasetUploadLog?.audit_log.dataset"
+                  :dataset="datasetUploadLog?.dataset"
                   :selected-dataset-type="selectedDatasetType.value"
                   :input-disabled="submitAttempted"
                   :dataset-name-error="
-                    !stepIsPristine && formErrors[STEP_KEYS.UPLOAD]
+                    !stepIsPristine ? formErrors[STEP_KEYS.UPLOAD] : ''
                   "
-                  :project="projectSelected || projectCreated"
-                  :creating-new-project="willCreateNewProject"
+                  :project="projectSelected"
                   :source-instrument="selectedSourceInstrument"
                   :source-raw-data="selectedRawData"
                   :submission-status="submissionStatus"
@@ -288,14 +404,160 @@
 
           <va-divider vertical />
 
-          <div class="flex-1" data-testid="dataset-upload-table">
-            <DatasetFileUploadTable :files="displayedFilesToUpload" />
+          <!-- RIGHT CARD: File List and Upload Progress -->
+          <div class="flex-1">
+            <va-card>
+              <va-card-title>{{
+                isUploadComplete ? "Files Uploaded" : "Files to Upload"
+              }}</va-card-title>
+              <va-card-content>
+                <!-- Upload progress (always shown, above file list) -->
+                <div
+                  class="mb-4 pb-4 border-b border-gray-300 flex flex-col gap-3"
+                >
+                  <!-- Manifest-hash computation progress — amber/warning treatment -->
+                  <div
+                    v-if="isComputingChecksum"
+                    class="rounded-md px-3 py-2 border border-amber-300 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20"
+                  >
+                    <div
+                      class="flex items-center gap-2 text-sm font-semibold mb-2 text-amber-700 dark:text-amber-400"
+                    >
+                      <Icon
+                        icon="mdi:fingerprint"
+                        class="text-base flex-none"
+                      />
+                      <span
+                        >Computing manifest-hash… {{ checksumProgress }}%</span
+                      >
+                    </div>
+                    <va-progress-bar
+                      :model-value="checksumProgress"
+                      color="warning"
+                    />
+                  </div>
+
+                  <!-- Overall upload progress — primary treatment -->
+                  <div
+                    class="rounded-md px-3 py-2 border border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-900/10"
+                  >
+                    <div
+                      class="flex items-center gap-2 text-sm font-semibold mb-2 text-blue-700 dark:text-blue-400"
+                    >
+                      <Icon
+                        icon="mdi:cloud-upload-outline"
+                        class="text-base flex-none"
+                      />
+                      <span>
+                        {{
+                          submitAttempted && !isComputingChecksum
+                            ? `Uploading… ${filesUploaded} / ${totalFiles} files (${uploadProgress}%)`
+                            : isComputingChecksum
+                              ? "Upload queued"
+                              : "Upload Progress: Not started"
+                        }}
+                      </span>
+                    </div>
+                    <va-progress-bar
+                      :model-value="
+                        submitAttempted && !isComputingChecksum
+                          ? uploadProgress
+                          : 0
+                      "
+                      :color="
+                        submitAttempted && !isComputingChecksum
+                          ? 'primary'
+                          : 'secondary'
+                      "
+                    />
+                  </div>
+
+                  <!-- Per-file failure summary — only shown when one or more files failed -->
+                  <div
+                    v-if="fileUploadErrors.length > 0"
+                    class="rounded-md px-3 py-2 border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
+                  >
+                    <div
+                      class="flex items-center gap-2 text-sm font-semibold mb-2 text-red-700 dark:text-red-400"
+                    >
+                      <Icon
+                        icon="mdi:alert-circle-outline"
+                        class="text-base flex-none"
+                      />
+                      <span
+                        >{{ fileUploadErrors.length }} file{{
+                          fileUploadErrors.length === 1 ? "" : "s"
+                        }}
+                        failed to upload</span
+                      >
+                    </div>
+                    <ul
+                      class="text-xs text-red-700 dark:text-red-300 space-y-1 max-h-32 overflow-y-auto"
+                    >
+                      <li
+                        v-for="err in fileUploadErrors"
+                        :key="err.relativePath"
+                        class="flex items-start gap-1"
+                      >
+                        <Icon
+                          icon="mdi:close-circle"
+                          class="flex-none mt-0.5"
+                        />
+                        <span class="break-all">{{ err.relativePath }}</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- File list -->
+                <div
+                  class="file-list"
+                  style="max-height: 400px; overflow-y: auto"
+                >
+                  <div
+                    v-for="file in displayedFilesToUpload"
+                    :key="file.name"
+                    class="mb-2 pb-2 border-b border-gray-200 last:border-b-0"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span class="truncate flex-grow mr-2">{{
+                        file.name
+                      }}</span>
+                      <div class="flex items-center gap-1.5 flex-none">
+                        <!-- Upload-complete check (all succeeded, no per-file tracking needed) -->
+                        <Icon
+                          v-if="
+                            isUploadComplete && fileUploadErrors.length === 0
+                          "
+                          icon="mdi:check-circle"
+                          class="text-green-500 text-base"
+                        />
+                        <!-- Per-file failure indicator -->
+                        <Icon
+                          v-else-if="
+                            fileUploadErrorMap.has(
+                              file.webkitRelativePath || file.name,
+                            )
+                          "
+                          icon="mdi:close-circle"
+                          class="text-red-500 text-base"
+                        />
+                        <span class="text-sm text-gray-500 whitespace-nowrap">{{
+                          file.formattedSize
+                        }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </va-card-content>
+            </va-card>
           </div>
         </div>
       </template>
 
       <template #controls="{ nextStep, prevStep }">
         <div class="flex items-center justify-around w-full">
+          <!-- Previous button -->
           <va-button
             class="flex-none"
             preset="primary"
@@ -310,16 +572,24 @@
           >
             Previous
           </va-button>
-          <va-button
-            class="flex-none"
-            @click="onNextClick(nextStep)"
-            :color="isLastStep ? 'success' : 'primary'"
-            :disabled="isNextButtonDisabled"
-            data-testid="upload-next-button"
-          >
-            <!--            {{ isLastStep ? (submitAttempted ? "Retry" : "Upload") : "Next" }}-->
-            {{ isLastStep ? "Upload" : "Next" }}
-          </va-button>
+          <!-- Next / Upload / Retry buttons -->
+          <div class="flex-none" data-testid="upload-next-button">
+            <va-button
+              v-if="uploadRegistrationFailed"
+              @click="retryApiCall"
+              color="warning"
+            >
+              Retry
+            </va-button>
+            <va-button
+              v-else
+              @click="onNextClick(nextStep)"
+              :color="isLastStep ? 'success' : 'primary'"
+              :disabled="isNextButtonDisabled"
+            >
+              {{ isLastStep ? "Upload" : "Next" }}
+            </va-button>
+          </div>
         </div>
       </template>
     </va-stepper>
@@ -334,20 +604,23 @@ import datasetService from "@/services/dataset";
 import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
-import uploadService from "@/services/upload";
+import { _getUploadServiceURL } from "@/services/upload";
+import {
+  computeManifestHash,
+  isChecksumVerificationEnabled,
+} from "@/services/upload/checksum";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
 import { Icon } from "@iconify/vue";
-import { jwtDecode } from "jwt-decode";
 import _ from "lodash";
-import SparkMD5 from "spark-md5";
+import * as tus from "tus-js-client";
 import { VaDivider, VaPopover } from "vuestic-ui";
 
 const auth = useAuthStore();
 
 const STEP_KEYS = {
-  GENERAL_INFO: "generalInfo",
   SELECT_FILES: "selectFiles",
+  GENERAL_INFO: "generalInfo",
   UPLOAD: "upload",
 };
 
@@ -357,15 +630,6 @@ const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
 const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
 const DATASET_NAME_MIN_LENGTH_ERROR =
   "Dataset name must have 3 or more characters.";
-
-const RETRY_COUNT_THRESHOLD = 5;
-const CHUNK_SIZE = 2 * 1024 * 1024; // Size of each chunk, set to 2 Mb
-
-// Blob.slice method is used to segment files.
-// At the same time, this method is used in different browsers in different
-// ways.
-const blobSlice =
-  File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 
 // The various steps that the user will taken through during the process of uploading a dataset.
 const steps = [
@@ -406,13 +670,10 @@ const FILE_TYPE = {
 
 // An object containing the form validation errors for each step.
 const formErrors = ref({
-  [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.SELECT_FILES]: null,
+  [STEP_KEYS.GENERAL_INFO]: null,
   [STEP_KEYS.UPLOAD]: null,
 });
-
-// Bearer token used to send requests to the File-Upload API
-const uploadToken = ref(useLocalStorage("uploadToken", ""));
 
 // Search-text for Dataset Search
 const datasetSearchText = ref("");
@@ -433,8 +694,8 @@ const selectedDatasetType = ref(
  * Errors are only shown when a step's form fields are not pristine.
  */
 const stepPristineStates = ref([
-  { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.SELECT_FILES]: true },
+  { [STEP_KEYS.GENERAL_INFO]: true },
   { [STEP_KEYS.UPLOAD]: true },
 ]);
 // `stepIsPristine` determines whether any of the fields in the current step have been interacted with by the user.
@@ -469,11 +730,6 @@ const noFilesSelected = computed(() => {
   return filesToUpload.value?.length === 0;
 });
 
-const selectedDirectoryChunkCount = ref(0);
-const totalUploadedChunkCount = ref(0);
-
-const uploadingFilesState = ref({});
-
 // Determines if a file has been selected to upload
 const selectingFiles = ref(false);
 // Determines if a directory has been selected to upload
@@ -506,7 +762,6 @@ const selectedRawData = ref(null);
 // The (existing) Project that will be assigned to the Dataset being ingested.
 const projectSelected = ref(null);
 // The (new) Project that will be assigned to the Dataset being ingested.
-const projectCreated = ref(null);
 // The Instrument that will be assigned to the Dataset being uploaded.
 const selectedSourceInstrument = ref(null);
 
@@ -532,12 +787,46 @@ const willCreateNewProject = computed(() => {
   );
 });
 
+// Upload progress state
+const uploadProgress = ref(0);
+const filesUploaded = ref(0);
+const totalFiles = ref(0);
+const lastUploadProcessId = ref(null); // A TUS process_id from this batch — sent to /complete as audit reference only
+
+// Per-file failure tracking — populated after upload; each entry:
+// { name: string, relativePath: string, message: string }
+const fileUploadErrors = ref([]);
+// O(1) lookup: relativePath → error message, for the file-list status icons
+const fileUploadErrorMap = computed(
+  () => new Map(fileUploadErrors.value.map((e) => [e.relativePath, e.message])),
+);
+const uploadRegistrationFailed = ref(false); // Track if final API call failed
+const isComputingChecksum = ref(false); // Track manifest-hash computation state
+const checksumProgress = ref(0); // Track manifest-hash computation progress (0-100)
+const computedChecksum = ref(null); // Store computed manifest-hash payload before upload
+
+/**
+ * Computed: Determine if upload completed successfully
+ * Used to show success indicators and change UI text from "Files to Upload" to "Files Uploaded"
+ *
+ * Success condition: When files are uploaded AND registered with API successfully
+ * This is indicated by:
+ * - statusChipColor is "success" (set in handleUploadComplete after successful API registration)
+ * - OR submissionAlertColor is "success" with alert visible
+ */
+const isUploadComplete = computed(() => {
+  return (
+    statusChipColor.value === "success" ||
+    (submissionAlertColor.value === "success" && isSubmissionAlertVisible.value)
+  );
+});
+
 /**
  * Determines if the upload process has been completed.
  *
  * An upload is considered complete if `submissionStatus` has been set to `UPLOADED`. This occurs when:
  * - All files have been uploaded
- * - A network request to initiate the `process_dataset_upload` has been made
+ * - The upload has been registered with the API (process_id recorded)
  */
 const isUploadIncomplete = computed(() => {
   return (
@@ -546,7 +835,6 @@ const isUploadIncomplete = computed(() => {
   );
 });
 
-// Determines whether the current step has form-validation errors.
 const stepHasErrors = computed(() => {
   if (step.value === 0) {
     return !!formErrors.value[STEP_KEYS.SELECT_FILES];
@@ -580,21 +868,16 @@ const isNextButtonDisabled = computed(() => {
   );
 });
 
-// List of files whose uploads are pending or in progress
 const filesNotUploaded = computed(() => {
   return filesToUpload.value.filter(
     (e) => e.uploadStatus !== Constants.UPLOAD_STATUSES.UPLOADED,
   );
 });
 
-// Determines whether there are any files whose uploads are pending or in progress.
 const someFilesPendingUpload = computed(
   () => filesNotUploaded.value.length > 0,
 );
 
-/**
- * Payload sent along with the network request responsible for creating a database entry of the Dataset being uploaded.
- */
 const uploadFormData = computed(() => {
   return {
     name: uploadedDatasetName.value,
@@ -602,17 +885,12 @@ const uploadFormData = computed(() => {
     ...(selectedRawData.value && {
       src_dataset_id: selectedRawData.value.id,
     }),
-    ...(projectSelected.value && !willCreateNewProject.value && { project_id: projectSelected.value.id }),
+    ...(projectSelected.value &&
+      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
+    ...(projectSelected.value &&
+      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
     ...(selectedSourceInstrument.value && {
       src_instrument_id: selectedSourceInstrument.value.id,
-    }),
-    files_metadata: filesToUpload.value.map((e) => {
-      return {
-        name: e.name,
-        checksum: e.fileChecksum,
-        num_chunks: e.numChunks,
-        path: e.path,
-      };
     }),
   };
 });
@@ -625,6 +903,15 @@ const uploadFormData = computed(() => {
  */
 const onFilesAdded = (files) => {
   clearSelectedDirectoryToUpload();
+  const oversized = Array.from({ length: files.length }, (_, i) =>
+    files.item(i),
+  ).filter((f) => f.size > config.upload.max_file_size_bytes);
+  if (oversized.length > 0) {
+    submissionAlert.value = `${oversized.map((f) => f.name).join(", ")} exceed${oversized.length === 1 ? "s" : ""} the ${formatBytes(config.upload.max_file_size_bytes)} per-file size limit.`;
+    submissionAlertColor.value = "danger";
+    isSubmissionAlertVisible.value = true;
+    return;
+  }
   setFiles(files);
   isSubmissionAlertVisible.value = false;
   setUploadedFileType(FILE_TYPE.FILE);
@@ -640,6 +927,15 @@ const onFilesAdded = (files) => {
  */
 const onDirectoryAdded = (directoryDetails) => {
   clearSelectedFilesToUpload();
+  const oversized = Array.from(directoryDetails.files).filter(
+    (f) => f.size > config.upload.max_file_size_bytes,
+  );
+  if (oversized.length > 0) {
+    submissionAlert.value = `${oversized.map((f) => f.name).join(", ")} exceed${oversized.length === 1 ? "s" : ""} the ${formatBytes(config.upload.max_file_size_bytes)} per-file size limit.`;
+    submissionAlertColor.value = "danger";
+    isSubmissionAlertVisible.value = true;
+    return;
+  }
   setDirectory(directoryDetails);
   isSubmissionAlertVisible.value = false;
   setUploadedFileType(FILE_TYPE.DIRECTORY);
@@ -766,7 +1062,9 @@ const validateDatasetName = async () => {
 };
 
 // Clears any details related to the directory that is currently selected for upload, and the files within it.
-const clearSelectedDirectoryToUpload = () => {
+const clearSelectedDirectoryToUpload = ({
+  clearDirectoryFiles = true,
+} = {}) => {
   // clear files within the directory being removed
   clearSelectedFilesToUpload();
   // clear directory being removed
@@ -782,6 +1080,15 @@ const clearSelectedFilesToUpload = () => {
 const setUploadedFileType = (fileType) => {
   selectingFiles.value = fileType === FILE_TYPE.FILE;
   selectingDirectory.value = fileType === FILE_TYPE.DIRECTORY;
+};
+
+// Reset form errors across all steps.
+const resetFormErrors = () => {
+  formErrors.value = {
+    [STEP_KEYS.SELECT_FILES]: null,
+    [STEP_KEYS.GENERAL_INFO]: null,
+    [STEP_KEYS.UPLOAD]: null,
+  };
 };
 
 // Reset form errors across all steps.
@@ -826,366 +1133,6 @@ const setFormErrors = async () => {
   }
 };
 
-/**
- * Evaluates the checksums for a given file by reading it in chunks.
- *
- * @param {File} file - The file to evaluate checksums for.
- * @returns {Promise<Object>} A promise that resolves to an object containing:
- *   - fileChecksum: The MD5 checksum of the entire file.
- *   - chunkChecksums: An array of MD5 checksums for each chunk of the file.
- *
- * @description
- * This function performs the following steps:
- * 1. Initializes a FileReader and a SparkMD5 instance for checksum calculation.
- * 2. Calculates the total number of chunks based on the file size and a predefined CHUNK_SIZE.
- * 3. Reads the file in chunks:
- *    - For each chunk, it calculates and stores its individual MD5 checksum.
- *    - It also appends each chunk to the SparkMD5 instance for the full file checksum.
- * 4. Once all chunks are processed, it finalizes the full file checksum.
- * 5. Returns both the full file checksum and an array of individual chunk checksums.
- *
- * @throws Will reject the promise if there's an error during file reading or checksum calculation.
- */
-const evaluateFileChecksums = (file) => {
-  return new Promise((resolve, reject) => {
-    const fileReader = new FileReader();
-
-    function loadNext(currentChunkIndex) {
-      const start = currentChunkIndex * CHUNK_SIZE;
-      const end =
-        start + CHUNK_SIZE >= file.size ? file.size : start + CHUNK_SIZE;
-      fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
-    }
-
-    try {
-      let chunkIndex = 0;
-      const chunks = Math.ceil(file.size / CHUNK_SIZE);
-      const buffer = new SparkMD5.ArrayBuffer();
-      const chunkChecksums = [];
-
-      fileReader.onload = (e) => {
-        const result = e.target.result;
-        chunkChecksums.push(SparkMD5.ArrayBuffer.hash(result));
-
-        buffer.append(result); // Append to array buffer
-        chunkIndex += 1;
-        if (chunkIndex < chunks) {
-          loadNext(chunkIndex);
-        } else {
-          resolve({
-            fileChecksum: buffer.end(),
-            chunkChecksums,
-          });
-        }
-      };
-
-      fileReader.onerror = () => {
-        // console.error(`file reading failed for file ${file.name}`);
-        reject(fileReader.error);
-      };
-
-      loadNext(chunkIndex);
-    } catch (err) {
-      // console.error(err);
-      reject(err);
-    }
-  });
-};
-
-const evaluateChecksums = (filesToUpload) => {
-  return new Promise((resolve, reject) => {
-    const filePromises = [];
-    for (let i = 0; i < filesToUpload.length; i++) {
-      let fileDetails = filesToUpload[i];
-      if (!fileDetails.checksumsEvaluated) {
-        const file = fileDetails.file;
-        // Total number of chunks to be uploaded.
-        // A single chunk is uploaded for an empty file
-        fileDetails.numChunks =
-          file.size > 0 ? Math.ceil(file.size / CHUNK_SIZE) : 1;
-        if (selectingDirectory.value) {
-          selectedDirectoryChunkCount.value += fileDetails.numChunks;
-        }
-
-        filePromises.push(
-          new Promise((resolve, reject) => {
-            evaluateFileChecksums(file)
-              .then(({ fileChecksum, chunkChecksums }) => {
-                fileDetails.fileChecksum = fileChecksum;
-                fileDetails.chunkChecksums = chunkChecksums;
-                fileDetails.checksumsEvaluated = true;
-                resolve();
-              })
-              .catch(() => {
-                fileDetails.checksumsEvaluated = false;
-                // console.error(
-                //   `Failed to evaluate checksums of file ${file.name}`,
-                // );
-                reject();
-              });
-          }),
-        );
-      }
-    }
-
-    Promise.all(filePromises)
-      .then(() => {
-        resolve();
-      })
-      .catch(() => {
-        reject();
-      });
-  });
-};
-
-/**
- * Updates the bearer token used to send requests to the File-Upload API.
- *
- * @async
- * @function updateUploadToken
- * @param {string} fileName - The name of the file currently being uploaded.
- * @returns {Promise<void>} A promise that resolves when the token has been updated.
- *
- * @description
- * 1. This function decodes the current bearer token and extracts the last uploaded file name from the
- * token's scope.
- * 2. It then calls the auth service to refresh the bearer token if necessary,
- * and explicitly requests the auth service to provide a new token if the current token was generated for a different
- * file.
- * 3. It updates the upload service with the new token.
- *
- * @throws Will throw an error if the token refresh operation fails.
- */
-const updateUploadToken = async (fileName) => {
-  const currentToken = uploadToken.value;
-  const currentTokenDecoded = currentToken ? jwtDecode(currentToken) : null;
-  const lastUploadedFileName = currentTokenDecoded
-    ? currentTokenDecoded.scope.slice(config.upload.scope_prefix.length)
-    : null;
-
-  await auth.refreshUploadToken({
-    fileName,
-    refreshToken: fileName !== lastUploadedFileName,
-  });
-  uploadService.setToken(uploadToken.value);
-};
-
-/**
- * Uploads a single chunk of a file. Retries to upload chunk upto 5 times in case of network errors.
- * @param {FormData} chunkData - The FormData object containing the chunk and its metadata.
- * @returns {Promise<boolean>} A promise that resolves to true if the chunk was uploaded successfully, false otherwise.
- */
-const uploadChunk = async (chunkData) => {
-  const upload = async () => {
-    if (uploadCancelled.value) {
-      return false;
-    }
-
-    let chunkUploaded = false;
-    try {
-      // update upload token if needed
-      await updateUploadToken(chunkData.get("name"));
-      await uploadService.uploadFile(chunkData);
-      chunkUploaded = true;
-    } catch (e) {
-      // console.error(`Encountered error uploading chunk`, e);
-    }
-    return chunkUploaded;
-  };
-
-  let retry_count = 0;
-  let uploaded = false;
-  while (!uploaded && !uploadCancelled.value) {
-    // uploaded = true; // Placeholder: Replace with actual upload logic
-    uploaded = await upload();
-    if (!uploaded) {
-      retry_count += 1;
-    }
-    if (retry_count > RETRY_COUNT_THRESHOLD) {
-      // console.error(
-      //   `Exceeded retry threshold of ${RETRY_COUNT_THRESHOLD} times`,
-      // );
-      break;
-    }
-  }
-
-  return uploaded;
-};
-
-const getFileUploadLog = ({ name, path }) => {
-  return datasetUploadLog.value.files.find((fileUploadLog) => {
-    return selectingDirectory.value
-      ? fileUploadLog.name === name && fileUploadLog.path === path
-      : fileUploadLog.name === name;
-  });
-};
-
-const isFileUploadInProgress = ({ fileUploadLogId } = {}) => {
-  return !!uploadingFilesState.value[fileUploadLogId];
-};
-
-const isFileChunkUploadInterrupted = ({ fileUploadLogId, chunkIndex } = {}) => {
-  return (
-    isFileUploadInProgress({ fileUploadLogId }) &&
-    !uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] &&
-    uploadingFilesState.value[fileUploadLogId][
-      "resumeFileUploadAtChunkIndex"
-      ] === chunkIndex
-  );
-};
-
-const postChunkUploadAttempt = ({
-                                  fileUploadLogId,
-                                  chunkIndex,
-                                  isChunkUploaded,
-                                } = {}) => {
-  if (isChunkUploaded) {
-    totalUploadedChunkCount.value += 1;
-    uploadingFilesState.value[fileUploadLogId]["uploadedChunks"].push(
-      chunkIndex,
-    );
-    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = true;
-    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
-      null;
-  } else {
-    uploadingFilesState.value[fileUploadLogId]["fileUploadInProgress"] = false;
-    uploadingFilesState.value[fileUploadLogId]["resumeFileUploadAtChunkIndex"] =
-      chunkIndex;
-  }
-};
-
-const uploadFileChunks = async (fileDetails) => {
-  let file = fileDetails.file;
-  const fileUploadLog = getFileUploadLog({
-    name: fileDetails.name,
-    path: fileDetails.path,
-  });
-
-  // initialize state to track upload state of each file chunk
-  if (!uploadingFilesState.value[fileUploadLog.id]) {
-    uploadingFilesState.value[fileUploadLog.id] = {};
-  }
-  if (!uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"]) {
-    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"] = [];
-  }
-
-  const numberOfChunksToUpload = fileDetails.numChunks;
-
-  for (let i = 0; i < numberOfChunksToUpload; i++) {
-    const start = i * CHUNK_SIZE;
-    const end = Math.min(file.size, start + CHUNK_SIZE);
-
-    const fileData = blobSlice.call(file, start, end);
-    // Building form data
-    const chunkData = new FormData();
-    // If the request's body needs to be accessed before the request's file,
-    // the body's fields should be set before the `file` field.
-    chunkData.append("checksum", fileDetails.fileChecksum);
-    chunkData.append("name", fileDetails.name);
-    chunkData.append("total", numberOfChunksToUpload);
-    chunkData.append("index", i);
-    chunkData.append("size", file.size);
-    chunkData.append("chunk_checksum", fileDetails.chunkChecksums[i]);
-    chunkData.append(
-      "uploaded_entity_id",
-      datasetUploadLog.value.audit_log.dataset.id,
-    );
-    chunkData.append(
-      "upload_path",
-      datasetUploadLog.value.audit_log.dataset.origin_path,
-    );
-    chunkData.append("file_upload_log_id", fileUploadLog?.id);
-    // After setting the request's body, set the request's file
-    chunkData.append("file", fileData);
-
-    const isFileUploadNotInitiated = isFileUploadInProgress({
-      fileUploadLogId: chunkData.get("file_upload_log_id"),
-    });
-    let isChunkUploadInterrupted = isFileChunkUploadInterrupted({
-      fileUploadLogId: chunkData.get("file_upload_log_id"),
-      chunkIndex: chunkData.get("index"),
-    });
-    let isChunkUploaded = uploadingFilesState.value[fileUploadLog.id][
-      "uploadedChunks"
-      ].includes(chunkData.get("index"));
-    const willUploadChunk =
-      !isFileUploadNotInitiated || !isChunkUploaded || isChunkUploadInterrupted;
-
-    if (willUploadChunk) {
-      isChunkUploaded = await uploadChunk(chunkData);
-      postChunkUploadAttempt({
-        fileUploadLogId: chunkData.get("file_upload_log_id"),
-        chunkIndex: chunkData.get("index"),
-        isChunkUploaded,
-      });
-      if (!isChunkUploaded) {
-        break;
-      }
-    }
-
-    if (isChunkUploaded) {
-      // Update the percentage upload progress of the file/directory currently
-      // being uploaded
-      if (selectingDirectory.value) {
-        selectedDirectory.value.progress = Math.trunc(
-          (totalUploadedChunkCount.value / selectedDirectoryChunkCount.value) *
-          100,
-        );
-      } else {
-        fileDetails.progress = Math.trunc(
-          ((i + 1) / numberOfChunksToUpload) * 100,
-        );
-      }
-    }
-  }
-
-  return (
-    uploadingFilesState.value[fileUploadLog.id]["uploadedChunks"].length ===
-    numberOfChunksToUpload
-  );
-};
-
-const uploadFile = async (fileDetails) => {
-  fileDetails.uploadStatus = Constants.UPLOAD_STATUSES.UPLOADING;
-
-  const uploaded = await uploadFileChunks(fileDetails);
-  if (!uploaded) {
-    // console.error(`Upload of file ${fileDetails.name} failed`);
-  }
-
-  fileDetails.uploadStatus = uploaded
-    ? Constants.UPLOAD_STATUSES.UPLOADED
-    : Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
-
-  if (!uploaded) {
-    if (selectingDirectory.value) {
-      delete selectedDirectory.value.progress;
-    } else if (selectingFiles.value) {
-      delete fileDetails.progress;
-    }
-  }
-
-  return uploaded;
-};
-
-/**
- * Handles the submission of the dataset upload form.
- * This function is called when the user clicks the "Upload" button on the final step of the stepper.
- *
- * @async
- * @function onSubmit
- *
- * @description
- * This function performs the following steps:
- * 1. Sets the submission attributes to indicate that an upload is in progress.
- * 2. Before initiating the upload, evaluates file checksums, and registers the Dataset to be uploaded in the database.
- * 3. Sequentially uploads any files that have not been uploaded yet.
- * 4. Once all files have been uploaded, or if the upload is interrupted, it sets appropriate error messages and status.
- *
- * @throws {Error} If there's an issue with dataset creation or file upload.
- *
- * @returns {Promise<void>}
- */
 const onSubmit = async () => {
   if (filesToUpload.value.length === 0) {
     await setFormErrors();
@@ -1197,16 +1144,67 @@ const onSubmit = async () => {
   submissionAlert.value = null; // reset any alerts from previous submissions
   isSubmissionAlertVisible.value = false;
   submitAttempted.value = true;
+  fileUploadErrors.value = [];
 
   return new Promise((resolve, reject) => {
     preUpload()
       .then(async () => {
         submissionSuccess.value = true;
+
+        // COMPUTE MANIFEST-HASH FIRST (before upload starts)
+        // Skip if already computed (e.g., on retry after upload failure)
+        if (isChecksumVerificationEnabled() && !computedChecksum.value) {
+          try {
+            isComputingChecksum.value = true;
+            checksumProgress.value = 0;
+            submissionStatus.value =
+              Constants.UPLOAD_STATUSES.COMPUTING_CHECKSUMS;
+
+            const files = filesToUpload.value.map((f) => f.file);
+            computedChecksum.value = await computeManifestHash(
+              files,
+              (progress) => {
+                checksumProgress.value = progress;
+              },
+            );
+          } catch (error) {
+            // computeManifestHash catches internally and returns a skip-marker.
+            // This outer catch is a safety net for any unexpected escape.
+            // Record the skip-marker so the worker knows computation was attempted
+            // (as opposed to feature-disabled / legacy), and doesn't retry on
+            // subsequent upload attempts.
+            console.error(
+              "[UploadDatasetStepper] Unexpected error during manifest-hash computation:",
+              error,
+            );
+            computedChecksum.value = {
+              skipped: true,
+              skipped_reason: "client_computation_failed",
+              error: String(error),
+            };
+          } finally {
+            isComputingChecksum.value = false;
+            checksumProgress.value = 0;
+          }
+        }
+
+        // NOW START UPLOAD
         submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOADING;
 
-        const filesUploaded = await uploadFiles(filesNotUploaded.value);
-        // const filesUploaded = true; // placeholder for actual upload logic
-        if (filesUploaded) {
+        const filesToUploadList = filesToUpload.value.map((f) => f.file);
+
+        totalFiles.value = filesToUploadList.length;
+        filesUploaded.value = 0;
+        uploadProgress.value = 0;
+
+        const uploadServiceURL = _getUploadServiceURL(window.location.origin);
+        const uploaded = await uploadFilesWithTus(
+          filesToUploadList,
+          uploadServiceURL,
+        );
+
+        if (uploaded) {
+          handleUploadComplete();
           resolve();
         } else {
           submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
@@ -1236,57 +1234,36 @@ const setPostSubmissionSuccessState = () => {
 };
 
 /**
- * Called when all files have been successfully uploaded, and a network request has been made
- * to initiate the `process_dataset_upload` workflow.
+ * Called when all files have been successfully uploaded, and the upload has been registered
+ * with the API. The integrated workflow will be triggered by the polling job.
  */
 const postSubmit = () => {
   if (uploadCancelled.value) {
     return;
   }
 
+  // TUS handles file tracking internally, no need to update individual file statuses
+  // Just set the overall success state
   setPostSubmissionSuccessState();
-
-  const failedFileUpdates = filesNotUploaded.value.map((file) => {
-    return {
-      id: datasetUploadLog.value.files.find((f) => f.md5 === file.fileChecksum)
-        .id,
-      data: {
-        status: Constants.UPLOAD_STATUSES.UPLOAD_FAILED,
-      },
-    };
-  });
-
-  if (datasetUploadLog.value) {
-    createOrUpdateUploadLog({
-      status: someFilesPendingUpload.value
-        ? Constants.UPLOAD_STATUSES.UPLOAD_FAILED
-        : Constants.UPLOAD_STATUSES.UPLOADED,
-      files: failedFileUpdates,
-    })
-      .then((res) => {
-        datasetUploadLog.value = res.data;
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }
 };
 
 const handleSubmit = () => {
   onSubmit() // resolves once all files have been uploaded
     .then(() => {
-      return !uploadCancelled.value
-        ? datasetService.processDatasetUpload(
-          datasetUploadLog.value.audit_log.dataset.id,
-        )
-        : Promise.reject();
+      // Upload complete - handleUploadComplete() already triggered the workflow
+      // Nothing more to do here
     })
-    .catch((e) => {
-      // console.error(e);
+    .catch(() => {
       submissionSuccess.value = false;
       statusChipColor.value = "warning";
-      submissionAlert.value = "An error occurred.";
-      submissionAlertColor.value = "warning";
+      // Only set a generic fallback if onSubmit() didn't already set a more
+      // specific message.  submissionAlert is reset to null at the start of
+      // each submission attempt, so any non-null value here was deliberately
+      // written by the failing code path and should be preserved.
+      if (!submissionAlert.value) {
+        submissionAlert.value = "An error occurred.";
+        submissionAlertColor.value = "warning";
+      }
       isSubmissionAlertVisible.value = true;
     })
     .finally(() => {
@@ -1309,30 +1286,24 @@ const onNextClick = (nextStep) => {
 };
 
 /**
- * This function:
- * 1. evaluates the checksums of the files to be uploaded.
- * 2. Logs any upload-related information that needs to be persisted in the database.
+ * This function logs any upload-related information that needs to be persisted in the database.
  */
 const preUpload = async () => {
-  await evaluateChecksums(filesNotUploaded.value);
+  // Create or update the upload log
 
-  const logData = datasetUploadLog.value?.id
+  const isUpdate = !!datasetUploadLog.value?.id;
+  const logData = isUpdate
     ? {
-      status: Constants.UPLOAD_STATUSES.UPLOADING,
-    }
+        status: Constants.UPLOAD_STATUSES.UPLOADING,
+      }
     : {
-      ...uploadFormData.value,
-    };
+        ...uploadFormData.value,
+      };
 
   try {
     const res = await createOrUpdateUploadLog(logData);
     datasetUploadLog.value = res.data;
-    if ((datasetUploadLog.value.audit_log.dataset.projects || []).length > 0) {
-      projectCreated.value =
-        datasetUploadLog.value.audit_log.dataset.projects[0]?.project;
-    }
   } catch (err) {
-    // console.error(err);
     throw new Error("Error logging dataset upload");
   }
 };
@@ -1343,27 +1314,246 @@ const preUpload = async () => {
  */
 const createOrUpdateUploadLog = (data) => {
   if (!uploadCancelled.value) {
-    return !datasetUploadLog.value
+    const isCreate = !datasetUploadLog.value;
+    return isCreate
       ? datasetService.logDatasetUpload(data)
       : datasetService.updateDatasetUploadLog(
-        datasetUploadLog.value?.audit_log?.dataset.id,
-        data,
-      );
+          datasetUploadLog.value?.dataset?.id,
+          data,
+        );
   } else {
     return Promise.reject();
   }
 };
 
-const uploadFiles = async (files) => {
-  let uploaded = false;
-  for (let f = 0; f < files.length; f++) {
-    let fileDetails = files[f];
-    uploaded = await uploadFile(fileDetails);
-    if (!uploaded) {
-      break;
-    }
+// TUS upload logic
+const uploadFilesWithTus = async (files, endpoint) => {
+  // Safety check: ensure upload log exists
+  if (!datasetUploadLog.value || !datasetUploadLog.value.dataset) {
+    console.error("Dataset upload log not initialized");
+    throw new Error("Dataset upload log not initialized");
   }
-  return uploaded;
+
+  // Get token directly from localStorage (more reliable than Pinia store in this context)
+  const userToken = localStorage.getItem("token");
+  if (!userToken) {
+    throw new Error("Authentication token not found");
+  }
+
+  let uploadedCount = 0;
+  let totalBytes = 0;
+  let uploadedBytes = 0;
+
+  // Calculate total size
+  files.forEach((file) => {
+    totalBytes += file.size;
+  });
+
+  // TEST ONLY: Check if we should simulate mid-upload failure
+  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload') to enable
+  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times
+  const simulateFailure = localStorage.getItem("SIMULATE_UPLOAD_FAILURE");
+  const uploadPromises = files.map((file) => {
+    return new Promise((resolve, reject) => {
+      // TEST ONLY: Check for failure count configuration
+      // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
+      const simulateFailureCount = localStorage.getItem(
+        "SIMULATE_UPLOAD_FAILURE_COUNT",
+      );
+
+      let upload = null;
+
+      // No hard wall-clock timeout: TUS is designed for large resumable uploads
+      // (up to 100 GB). Failure handling is fully delegated to the retry schedule
+      // below — onError fires only after all retryDelays are exhausted, at which
+      // point the upload is considered permanently failed.
+      upload = new tus.Upload(file, {
+        endpoint,
+        // Fibonacci-progression retry delays (~16 min of cumulative back-off).
+        // tus-js-client retries automatically on network errors; onError is called
+        // only once the final delay has elapsed without a successful reconnect.
+        retryDelays: [
+          0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+          144000, 233000, 377000,
+        ],
+        metadata: {
+          dataset_id: String(datasetUploadLog.value.dataset.id),
+          filename: file.name,
+          filetype: file.type || "application/octet-stream",
+          selection_mode: selectingDirectory.value ? "directory" : "files",
+          relative_path:
+            selectingDirectory.value && file.webkitRelativePath
+              ? file.webkitRelativePath.split("/").slice(1).join("/")
+              : file.webkitRelativePath || file.name,
+          directory_name:
+            selectingDirectory.value && selectedDirectory.value
+              ? selectedDirectory.value.name
+              : "",
+        },
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          ...(simulateFailure
+            ? {
+                "X-Simulate-Failure": simulateFailure,
+                ...(simulateFailureCount
+                  ? { "X-Simulate-Failure-Count": simulateFailureCount }
+                  : {}),
+              }
+            : {}),
+        },
+        onError: (error) => {
+          console.error(`[TUS-CLIENT] Upload FAILED for ${file.name}:`, {
+            error_message: error.message,
+            error_type: error.constructor.name,
+            error_stack: error.stack,
+            file_name: file.name,
+            file_size: file.size,
+            dataset_id: datasetUploadLog.value.dataset.id,
+            upload_url: upload.url,
+            // Check if it's an HTTP error
+            originalRequest: error.originalRequest
+              ? {
+                  method: error.originalRequest.getMethod(),
+                  url: error.originalRequest.getURL(),
+                  status: error.originalResponse?.getStatus(),
+                  statusText: error.originalResponse?.getBody(),
+                }
+              : null,
+          });
+          reject(error);
+        },
+        onProgress: (bytesUploaded) => {
+          // Update overall progress
+          const totalUploadedSoFar = uploadedBytes + bytesUploaded;
+          uploadProgress.value = Math.round(
+            (totalUploadedSoFar / totalBytes) * 100,
+          );
+        },
+        onSuccess: async () => {
+          uploadedCount++;
+          uploadedBytes += file.size;
+          filesUploaded.value = uploadedCount;
+          uploadProgress.value = Math.round((uploadedBytes / totalBytes) * 100);
+
+          // Record any one process_id for the /complete call (audit reference only;
+          // file moving is handled server-side in the onUploadFinish TUS hook).
+          lastUploadProcessId.value = upload.url.split("/").pop();
+
+          resolve();
+        },
+      });
+
+      upload.start();
+    });
+  });
+
+  // allSettled lets every file run to success or exhausted-retries before we
+  // evaluate the outcome — we get the full failure list rather than stopping
+  // at the first rejection.
+  const results = await Promise.allSettled(uploadPromises);
+
+  const rejections = results
+    .map((r, i) => ({ result: r, file: files[i] }))
+    .filter(({ result }) => result.status === "rejected");
+
+  if (rejections.length > 0) {
+    fileUploadErrors.value = rejections.map(({ result, file }) => ({
+      name: file.name,
+      relativePath: file.webkitRelativePath || file.name,
+      message: result.reason?.message || "Upload failed",
+    }));
+    console.error("[TUS-CLIENT] Some uploads failed:", {
+      total_files: files.length,
+      failed_count: rejections.length,
+      uploaded_count: uploadedCount,
+      failed_files: fileUploadErrors.value.map((e) => e.relativePath),
+    });
+    return false;
+  }
+
+  return true;
+};
+
+const buildSizeManifest = (files) => {
+  const normalized = files.map((file) => {
+    const relativePath = file.webkitRelativePath
+      ? file.webkitRelativePath
+          .replace(/\\/g, "/")
+          .split("/")
+          .slice(1)
+          .join("/")
+      : file.name.replace(/\\/g, "/").replace(/^\.\//, "");
+    return {
+      path: relativePath,
+      size: file.size,
+    };
+  });
+
+  normalized.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+
+  return {
+    mode: "path-size-v1",
+    file_count: normalized.length,
+    total_size: normalized.reduce((sum, f) => sum + f.size, 0),
+    files: normalized,
+  };
+};
+
+const handleUploadComplete = async () => {
+  // Files are already at origin_path — the TUS onUploadFinish hook moved each
+  // file as it completed.  This call just records the final status + metadata.
+  try {
+    const datasetId = datasetUploadLog.value.dataset.id;
+
+    const sizeManifest = buildSizeManifest(
+      filesToUpload.value.map((f) => f.file),
+    );
+    const metadataPayload = {
+      size_manifest: sizeManifest,
+      ...(computedChecksum.value ? { checksum: computedChecksum.value } : {}),
+    };
+
+    const completePayload = {
+      process_id: lastUploadProcessId.value,
+      metadata: metadataPayload,
+    };
+
+    await datasetService.completeDatasetUpload(datasetId, completePayload);
+
+    // Success - show green status
+    uploadRegistrationFailed.value = false;
+    submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOADED;
+    statusChipColor.value = "success";
+    submissionAlert.value = "All files have been uploaded successfully!";
+    submissionAlertColor.value = "success";
+    isSubmissionAlertVisible.value = true;
+    submissionSuccess.value = true;
+  } catch (error) {
+    console.error("[UPLOAD-COMPLETE] API call FAILED:", {
+      error_message: error.message,
+      error_response: error.response?.data,
+      error_status: error.response?.status,
+      error_stack: error.stack,
+      dataset_id: datasetUploadLog.value?.dataset?.id,
+    });
+
+    // API call failed - show retry option
+    uploadRegistrationFailed.value = true;
+    submissionStatus.value = Constants.UPLOAD_STATUSES.UPLOAD_FAILED;
+    statusChipColor.value = "warning";
+    submissionAlert.value =
+      "Files uploaded but registration failed. Please retry.";
+    submissionAlertColor.value = "warning";
+    isSubmissionAlertVisible.value = true;
+    submissionSuccess.value = false;
+  }
+};
+
+// Retry the API call to register the upload
+const retryApiCall = async () => {
+  submissionAlert.value = "Retrying ...";
+  submissionAlertColor.value = "info";
+  await handleUploadComplete();
 };
 
 /**
@@ -1764,7 +1954,7 @@ onMounted(() => {
  *
  * This mechanism is designed to handle the scenario when a user attempts to navigate away from the current page
  * while the upload is incomplete. It uses Vue Router's navigation guards and component lifecycle hooks
- * to prompt the user for confirmation and cancel the upload if necessary.
+ * to prompt the user for confirmation and to mark the upload as cancelled if necessary.
  *
  * Key Components:
  *
@@ -1777,7 +1967,7 @@ onMounted(() => {
  *
  * 3. `onBeforeUnmount`:
  *    Lifecycle hook triggered when the component is about to be unmounted (which happens during navigation).
- *    It cancels the upload if it's incomplete.
+ *    It marks the upload as cancelled if it's incomplete.
  *
  * 4. `uploadCancelled`:
  *    A reactive variable used to signal that the upload should be considered cancelled.
@@ -1789,26 +1979,50 @@ onMounted(() => {
  *    - If user confirms, allows navigation; if user cancels, prevents navigation
  * 3. If navigation is allowed, `onBeforeUnmount` is triggered
  *    - Sets `uploadCancelled` to true
- *    - If upload is incomplete, sends a request to cancel the upload
+ *    - If upload is incomplete, marks the upload as cancelled
  *
  */
+
 onBeforeRouteLeave(() => {
   // Before navigating to a different route, show user a confirmation dialog
   return isUploadIncomplete.value
     ? window.confirm(
-      "Leaving this page before all files have been uploaded will" +
-      " cancel the upload. Do you wish to continue?",
-    )
+        "Leaving this page before all files have been uploaded will" +
+          " cancel the upload. Do you wish to continue?",
+      )
     : true;
 });
 
 onBeforeUnmount(() => {
   uploadCancelled.value = true;
-  if (isUploadIncomplete.value && datasetUploadLog.value) {
-    datasetService.cancelDatasetUpload(
-      datasetUploadLog.value.audit_log.dataset.id,
-    );
+  // Upload cleanup will be handled by background monitoring process
+});
+
+/**
+ * Browser Tab Closure Handling Mechanism
+ *
+ * This handler is triggered when the user attempts to close the browser tab or navigate away from the page.
+ * It shows a browser alert to confirm the user's intention if an upload is in progress.
+ *
+ * @description
+ * - Checks if an upload is incomplete using the `isUploadIncomplete` computed property.
+ * - If an upload is incomplete:
+ *   - Sets the `returnValue` of the event to `true`, which prompts the browser to show a confirmation dialog.
+ * - This prevents accidental data loss by giving the user a chance to confirm before leaving the page during an upload.
+ *
+ */
+const onBeforeUnload = (e) => {
+  if (isUploadIncomplete.value) {
+    e.returnValue = true;
   }
+};
+
+onMounted(() => {
+  window.addEventListener("beforeunload", onBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", onBeforeUnload);
 });
 
 /**
@@ -1881,8 +2095,7 @@ onBeforeUnmount(() => {
   }
 
   .upload-details {
-    height: 400px;
-    max-height: 400px;
+    min-height: 400px;
   }
 }
 </style>

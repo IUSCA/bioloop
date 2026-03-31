@@ -23,7 +23,7 @@ test.describe.serial('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
   test.describe('Upload-initiation step', () => {
@@ -31,15 +31,15 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
       // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
 
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
@@ -68,7 +68,7 @@ test.describe.serial('Dataset Upload Process', () => {
       });
 
       // Navigate to next step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       // Set the name of the dataset being uploaded
       const token = await page.evaluate(() => localStorage.getItem('token'));
@@ -84,29 +84,28 @@ test.describe.serial('Dataset Upload Process', () => {
     });
 
     test('should not associate the uploaded Dataset with any Project', async () => {
-      // Verify that the uploaded Dataset is associated with the selected
+          // Verify that the uploaded Dataset is associated with the selected
       // any Project
 
       // Get token for admin role which will be used to call the datasets API
       const adminToken = await getTokenByRole({ role: 'admin' });
+      let matchingDataset = null;
 
-      const response = await getDatasets({
-        token: adminToken,
-        params: {
-          name: uploadedDatasetName,
-          type: selectedDatasetType.split(' ').join('_').toUpperCase(),
-          include_projects: true,
-        },
-      });
-      const body = await response.json();
-      if (!body || !body.datasets || body.datasets.length === 0) {
-        throw new Error(`No datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()} `);
-      }
-      if (body.datasets.length > 1) {
-        throw new Error(`Multiple datasets found matching name: ${uploadedDatasetName}, type: ${selectedDatasetType.split(' ').join('_').toUpperCase()}`);
-      }
-      const matching_dataset = body.datasets[0];
-      expect(matching_dataset.projects).toHaveLength(0);
+      await expect(async () => {
+        const response = await getDatasets({
+          token: adminToken,
+          params: {
+            name: uploadedDatasetName,
+            type: selectedDatasetType.split(' ').join('_').toUpperCase(),
+            include_projects: true,
+          },
+        });
+        const body = await response.json();
+        expect(body?.datasets?.length || 0).toBe(1);
+        [matchingDataset] = body.datasets;
+      }).toPass();
+
+      expect(matchingDataset.projects).toHaveLength(0);
     });
   });
 });

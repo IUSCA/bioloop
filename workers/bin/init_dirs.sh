@@ -33,7 +33,10 @@ set -e
 #   ├── qc/                       # Quality control files and reports
 #   │   └── raw_data/
 #   ├── downloads/                # User-accessible download area
-#   └── scratch/                  # Temporary files and working directories
+#   ├── scratch/                  # Temporary files and working directories
+#   └── imports/                  # Drop locations where lab instruments deposit raw output
+#       ├── genomics_lab_instrument_drop/
+#       └── proteomics_lab_instrument_drop/
 #
 # =============================================================================
 
@@ -86,5 +89,9 @@ create_dir "/opt/sca/data/scratch"                # Temporary files and working 
 # Duplicate-detection testing directory — operators drop synthetic datasets here
 # to verify the end-to-end duplicate detection pipeline.  Observed by watch.py.
 create_dir "/opt/sca/data/duplicates_testing"
+# Instrument drop directories - network locations where lab instruments deposit
+# raw output for researchers to browse and import into Bioloop.
+create_dir "/opt/sca/data/imports/genomics_lab_instrument_drop"
+create_dir "/opt/sca/data/imports/proteomics_lab_instrument_drop"
 
 echo "Directory structure initialization completed!"

@@ -38,6 +38,8 @@ model dataset {
   bundle            bundle?
   src_instrument    instrument?         @relation(fields: [src_instrument_id], references: [id])
   src_instrument_id Int?
+  create_method     DATASET_CREATE_METHOD?
+  upload_logs       dataset_upload_log[]
   is_duplicate      Boolean             @default(false)
   duplicated_from   dataset_duplication?  @relation("duplicated_from")
   duplicated_by     dataset_duplication[] @relation("duplicated_by")
@@ -53,7 +55,7 @@ model dataset_duplication {
   original_dataset      dataset           @relation(name: "duplicated_by", fields: [original_dataset_id], references: [id], onDelete: Cascade)
   created_at            DateTime          @default(now()) @db.Timestamp(6)
   comparison_process_id   String?
-  comparison_status       COMPARISON_STATUS @default(PENDING)
+  comparison_status       DATASET_DUPLICATION_ANALYSIS_STATUS @default(PENDING)
   comparison_fraction_done Float?
   metadata                Json?
 }
@@ -100,29 +102,21 @@ model dataset_file_hierarchy {
 }
 
 model dataset_upload_log {
-  id           Int               @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   status       upload_status
-  files        file_upload_log[]
-  updated_at   DateTime          @default(now()) @updatedAt @db.Timestamp(6)
-  audit_log    dataset_audit     @relation(fields: [audit_log_id], references: [id], onDelete: Cascade)
-  audit_log_id Int               @unique
-}
+  process_id   String?       // Generic upload identifier (TUS ID, S3 key, etc.)
+  retry_count  Int           @default(0) // Track workflow retry attempts
+  metadata     Json?         // { checksum?: {...}, failure_reason?: "...", worker_process_id?: ... }
+  updated_at   DateTime      @default(now()) @updatedAt @db.Timestamp(6)
+  dataset      dataset       @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  dataset_id   Int
 
-model file_upload_log {
-  id                    Int                 @id @default(autoincrement())
-  name                  String
-  md5                   String
-  num_chunks            Int
-  status                upload_status
-  path                  String?
-  dataset_upload_log    dataset_upload_log? @relation(fields: [dataset_upload_log_id], references: [id], onDelete: Cascade)
-  dataset_upload_log_id Int?
+  @@unique([dataset_id])
 }
 
 model dataset_audit {
   id            Int                    @id @default(autoincrement())
   action        String
-  create_method DATASET_CREATE_METHOD?
   updated_at    DateTime               @default(now()) @updatedAt @db.Timestamp(6)
   timestamp     DateTime               @default(now())
   old_data      Json?
@@ -131,9 +125,6 @@ model dataset_audit {
   user          user?                  @relation(fields: [user_id], references: [id], onDelete: SetNull)
   dataset_id    Int?
   dataset       dataset?               @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  upload        dataset_upload_log?
-
-  @@unique([dataset_id, create_method])
 }
 
 model dataset_state {
@@ -229,10 +220,12 @@ model user {
   project_datasets_assigned  project_dataset[]
   project_contacts_assigned  project_contact[]
   initiated_workflows        workflow[]          @relation("initiated_workflows")
-  acknowledged_notifications notification[]
-  user_notifications         user_notification[]
+  created_notifications      notification[]      @relation("created_notifications")
+  notification_recipients    notification_recipient[]
   owned_projects             project[]
+  // created_datasets           dataset_create_log[]
   alerts_created             alert[]
+  owned_import_sources       import_source[]
 }
 
 model user_password {
@@ -260,37 +253,38 @@ model user_settings {
 }
 
 model notification {
-  id                   Int                   @id @default(autoincrement())
-  created_at           DateTime              @default(now()) @db.Timestamp(6)
-  updated_at           DateTime              @default(now()) @updatedAt @db.Timestamp(6)
-  type                 NOTIFICATION_TYPE
-  label                String
-  text                 String?
-  status               NOTIFICATION_STATUS   @default(CREATED)
-  acknowledged_by_id   Int?
-  acknowledged_by      user?                 @relation(fields: [acknowledged_by_id], references: [id])
-  role_notifications   role_notification[]
-  user_notifications   user_notification[]
+  id            Int                      @id @default(autoincrement())
+  created_at    DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at    DateTime                 @default(now()) @updatedAt @db.Timestamp(6)
+  created_by_id Int?
+  created_by    user?                    @relation("created_notifications", fields: [created_by_id], references: [id], onDelete: SetNull)
+  type          String?
+  label         String
+  text          String?
+  metadata      Json?
+  recipients    notification_recipient[]
 }
 
-model role_notification {
-  id              Int          @id @default(autoincrement())
-  role_id         Int
-  role            role         @relation(fields: [role_id], references: [id])
+model notification_recipient {
+  id              Int                        @id @default(autoincrement())
   notification_id Int
-  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-
-  @@unique([notification_id, role_id])
-}
-
-model user_notification {
-  id              Int          @id @default(autoincrement())
+  notification    notification               @relation(fields: [notification_id], references: [id], onDelete: Cascade)
   user_id         Int
-  user            user         @relation(fields: [user_id], references: [id])
-  notification_id Int
-  notification    notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  user            user                       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  delivery_type   NOTIFICATION_DELIVERY_TYPE
+  delivery_role_id Int?
+  delivery_role   role?                      @relation(fields: [delivery_role_id], references: [id], onDelete: SetNull)
+  is_read         Boolean                    @default(false)
+  is_archived     Boolean                    @default(false)
+  is_bookmarked   Boolean                    @default(false)
+  read_at         DateTime?                  @db.Timestamp(6)
+  archived_at     DateTime?                  @db.Timestamp(6)
+  bookmarked_at   DateTime?                  @db.Timestamp(6)
+  created_at      DateTime                   @default(now()) @db.Timestamp(6)
+  updated_at      DateTime                   @default(now()) @updatedAt @db.Timestamp(6)
 
   @@unique([notification_id, user_id])
+  @@index([user_id, is_archived, is_read, is_bookmarked])
 }
 
 model contact {
@@ -310,7 +304,7 @@ model role {
   name               String              @db.VarChar(50)
   description        String              @default("") @db.VarChar(255)
   user_role          user_role[]
-  role_notifications role_notification[]
+  delivered_notifications notification_recipient[]
 }
 
 model user_role {
@@ -324,11 +318,13 @@ model user_role {
 }
 
 model workflow {
-  id           String   @id
-  dataset_id   Int?
-  dataset      dataset? @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
-  initiator_id Int?
-  initiator    user?    @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
+  id               String            @id
+  dataset_id       Int?
+  dataset          dataset?          @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  initiator_id     Int?
+  initiator        user?             @relation("initiated_workflows", fields: [initiator_id], references: [id], onDelete: SetNull)
+  metadata         Json?
+  worker_processes worker_process[]
 }
 
 model metric {
@@ -408,13 +404,14 @@ model log {
 }
 
 model worker_process {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   pid         Int
   task_id     String
   step        String
-  workflow_id String
+  workflow_id String?
+  workflow    workflow? @relation(fields: [workflow_id], references: [id])
   tags        Json?
-  start_time  DateTime @default(now()) @db.Timestamp(6)
+  start_time  DateTime  @default(now()) @db.Timestamp(6)
   hostname    String
   logs        log[]
 }
@@ -458,25 +455,41 @@ model alert {
   is_hidden     Boolean?   @default(false)
 }
 
+model import_source {
+  id             Int       @id @default(autoincrement())
+  path           String    @unique
+  mounted_path   String?
+  label          String?
+  description    String?
+  sort_order     Int?
+  owner_id       Int?
+  owner          user?     @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  updated_at     DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  metadata       Json?
+}
+
 enum access_type {
   BROWSER
   SLATE_SCRATCH
 }
 
-enum NOTIFICATION_STATUS {
-  CREATED
-  ACKNOWLEDGED
-  RESOLVED
+enum NOTIFICATION_DELIVERY_TYPE {
+  ROLE_BROADCAST
+  DIRECT
 }
 
 enum upload_status {
   UPLOADING
   UPLOAD_FAILED
   UPLOADED
+  VERIFYING        // Integrity verification in progress (async Celery task)
+  VERIFIED         // Integrity verified, ready to trigger 'Integrated' workflow
+  VERIFICATION_FAILED // Integrity check failed before registering the uploaded dataset into the system
   PROCESSING
   PROCESSING_FAILED
   COMPLETE
-  FAILED
+  PERMANENTLY_FAILED // After 3 retry attempts; no further automatic retries
 }
 
 enum upload_type {
@@ -496,7 +509,7 @@ enum DATASET_INGESTION_CHECK_TYPE {
   ONLY_IN_ORIGINAL
 }
 
-enum COMPARISON_STATUS {
+enum DATASET_DUPLICATION_ANALYSIS_STATUS {
   PENDING
   RUNNING
   COMPLETED

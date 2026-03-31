@@ -44,6 +44,7 @@ config = {
     'paths': {
         'scratch': '/path/to/scratch',
         'RAW_DATA': {
+            'upload': '/path/to/uploads/raw_data',
             'archive': f'development/{YEAR}/raw_data',
             'stage': '/path/to/staged/raw_data',
             'bundle': {
@@ -53,7 +54,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/opt/sca/data',
+            'upload': '/path/to/uploads/data_product',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {
@@ -160,22 +161,6 @@ config = {
                     'task': 'setup_dataset_download'
                 }
             ]
-        },
-        'process_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Process Dataset Upload',
-                    'task': 'process_dataset_upload'
-                }
-            ]
-        },
-        'cancel_dataset_upload': {
-            'steps': [
-                {
-                    'name': 'Cancel Dataset Upload',
-                    'task': 'cancel_dataset_upload'
-                }
-            ]
         }
     },
     'celery': {
@@ -199,6 +184,9 @@ config = {
             'max_purge_count': 10
         }
     },
+    'inspect': {
+        'file_metadata_batch_size': 25000
+    },
     'DATASET_STATES': {
         'REGISTERED': 'REGISTERED',
         'READY': 'READY',
@@ -215,11 +203,11 @@ config = {
     'enabled_features': {
         'duplicate_detection': {
             'enabled': True,
-            'jaccard_threshold': 0.85,
-            'concurrent_inspection_wait_timeout_seconds': 7200,
         },
+        'notifications': False,
     },
-    'inspect': {
-        'file_metadata_batch_size': 25000
-    }
+    'dataset_duplication': {
+        'jaccard_threshold': 0.85,
+        'concurrent_inspection_wait_timeout_seconds': 7200,
+    },
 }

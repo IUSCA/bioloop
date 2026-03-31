@@ -3,6 +3,10 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const featureService = require('../services/features');
 const uploadRouter = require('./datasets/uploads');
+const importRouter = require('./datasets/imports');
+const fsRouter = require('./fs');
+const notificationsRouter = require('./notifications');
+const datasetDuplicationRouter = require('./datasets/duplication');
 
 const router = express.Router();
 
@@ -18,30 +22,32 @@ router.use('/env', require('./env'));
 router.use(authenticate);
 
 /**
- * Note: The `/datasets/uploads` route needs to be registered before the `/datasets` route.
- * If the `/datasets` route is registered first, Express interprets the path `/datasets/uploads`
- * as a call to the `/datasets/:datasetId` API.
+ * Sub-routes under /datasets must be registered before /datasets itself,
+ * otherwise Express interprets /datasets/anything as /datasets/:datasetId.
  */
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
-
-if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
-  router.use('/datasets/duplication', require('./datasets/duplication') /* #swagger.security = [{"BearerAuth": []}] */);
+if (featureService.isFeatureEnabled({ key: 'import' })) {
+  router.use('/datasets/imports', importRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
+if (featureService.isFeatureEnabled({ key: 'notifications' })) {
+  router.use('/notifications', notificationsRouter /* #swagger.security = [{"BearerAuth": []}] */);
+}
+if (featureService.isFeatureEnabled({ key: 'fs' })) {
+  router.use('/fs', fsRouter /* #swagger.security = [{"BearerAuth": []}] */);
+}
+if (featureService.isFeatureEnabled({ key: 'duplicate_detection' })) {
+  router.use('/datasets/duplication', datasetDuplicationRouter /* #swagger.security = [{"BearerAuth": []}] */);
+}
+
 router.use('/datasets', require('./datasets') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/metrics', require('./metrics') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/users', require('./users') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/workflows', require('./workflows') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/projects', require('./projects') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/statistics', require('./statistics') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/notifications', require('./notifications') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/instruments', require('./instruments') /* #swagger.security = [{"BearerAuth": []}] */);
-router.use('/uploads', require('./uploads') /* #swagger.security = [{"BearerAuth": []}] */);
 router.use('/alerts', require('./alerts') /* #swagger.security = [{"BearerAuth": []}] */);
-
-if (featureService.isFeatureEnabled({ key: 'fs' })) {
-  router.use('/fs', require('./fs') /* #swagger.security = [{"BearerAuth": []}] */);
-}
 
 module.exports = router;

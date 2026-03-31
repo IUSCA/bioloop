@@ -289,7 +289,7 @@ def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id
 
     log('INFO',
         f'Comparison complete. Dataset {duplicate_dataset_id} is '
-        f'{"a strong duplicate" if content_similarity_score >= config["enabled_features"]["duplicate_detection"]["jaccard_threshold"] else "similar but below threshold"} '
+        f'{"a strong duplicate" if content_similarity_score >= config["dataset_duplication"]["jaccard_threshold"] else "similar but below threshold"} '
         f'of dataset {original_dataset_id} (content_similarity_score {content_similarity_score:.4f}).')
 
     return duplicate_dataset_id, original_dataset_id

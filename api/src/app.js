@@ -16,12 +16,22 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+const createTusMiddleware = require('./middleware/tus');
+const uploadService = require('./services/upload');
+const logger = require('./services/logger');
 
 // Register application
 const app = express();
 
 // remove fingerprinting header
 app.disable('x-powered-by');
+
+// Mount TUS server BEFORE ALL middleware (including morgan)
+// TUS needs completely raw request/response objects
+const tusServer = uploadService.getServer();
+
+app.use(createTusMiddleware(tusServer));
+logger.info('TUS server mounted at /uploads/files');
 
 // request logger - https://github.com/expressjs/morgan
 if (config.get('mode') === 'production') {

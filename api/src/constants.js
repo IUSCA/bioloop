@@ -95,42 +95,38 @@ const INCLUDE_PROJECTS = {
 };
 
 const INCLUDE_DATASET_UPLOAD_LOG_RELATIONS = {
-  audit_log: {
+  dataset: {
     select: {
       id: true,
-      user: true,
-      timestamp: true,
-      upload: {
-        select: {
-          status: true,
-        },
-      },
-      dataset: {
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          origin_path: true,
-          source_datasets: {
-            select: {
-              source_dataset: true,
-            },
-          },
-          projects: {
-            select: {
-              project: true,
-            },
-          },
-        },
-      },
-    },
-  },
-  files: {
-    select: {
-      id: true,
-      md5: true,
       name: true,
-      path: true,
+      type: true,
+      metadata: true,
+      origin_path: true,
+      create_method: true,
+      created_at: true,
+      source_datasets: {
+        select: {
+          source_dataset: true,
+        },
+      },
+      projects: {
+        select: {
+          project: true,
+        },
+      },
+      audit_logs: {
+        where: {
+          action: 'create',
+        },
+        select: {
+          user: true,
+          timestamp: true,
+        },
+        orderBy: {
+          timestamp: 'asc',
+        },
+        take: 1,
+      },
     },
   },
 };
@@ -147,9 +143,13 @@ const UPLOAD_STATUSES = {
   UPLOADING: 'UPLOADING',
   UPLOAD_FAILED: 'UPLOAD_FAILED',
   UPLOADED: 'UPLOADED',
+  VERIFYING: 'VERIFYING',
+  VERIFIED: 'VERIFIED',
+  VERIFICATION_FAILED: 'VERIFICATION_FAILED',
   PROCESSING: 'PROCESSING',
   PROCESSING_FAILED: 'PROCESSING_FAILED',
   COMPLETE: 'COMPLETE',
+  PERMANENTLY_FAILED: 'PERMANENTLY_FAILED',
 };
 
 const WORKFLOWS = {
@@ -173,7 +173,7 @@ const DATASET_STATES = {
   OVERWRITTEN: 'OVERWRITTEN',
 };
 
-const COMPARISON_STATUSES = {
+const DATASET_DUPLICATION_ANALYSIS_STATUSES = {
   PENDING: 'PENDING',
   RUNNING: 'RUNNING',
   COMPLETED: 'COMPLETED',
@@ -214,6 +214,10 @@ const ALERT_TYPES = {
   ERROR: 'ERROR',
 };
 
+const NOTIFICATION_TYPES = {
+  DATASET_CREATED: 'DATASET_CREATED',
+};
+
 module.exports = {
   INCLUDE_FILES,
   INCLUDE_STATES,
@@ -229,7 +233,8 @@ module.exports = {
   ALERT_TYPES,
   ALERT_STATUSES,
   DATASET_STATES,
-  COMPARISON_STATUSES,
+  DATASET_DUPLICATION_ANALYSIS_STATUSES,
   INGESTION_CHECK_TYPES,
   INCLUDE_PROJECTS,
+  NOTIFICATION_TYPES,
 };

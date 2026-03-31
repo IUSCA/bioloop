@@ -1,12 +1,11 @@
-from pathlib import Path
 import argparse
-from typing import List, Tuple, Dict
 import logging
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 import workers.api as api
 from workers.config import config
-
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +333,14 @@ class Registration:
         for d in self.conflicted:
             conflicted = self.get_dataset_by_name(dataset_name=d['name'],
                                                   include_audit_logs=True)
-            conflicted_dataset_creation_log = [log for log in conflicted['audit_logs'] if log['create_method'] == 'ON_DEMAND'][0]
+            # Check dataset's creation-method
+            if conflicted.get('create_method') != 'ON_DEMAND':
+                logger.info(f"Conflicting dataset {d['name']} was not created via ON_DEMAND - skipping workflow initiation")
+                continue
+            
+            # Find creation audit-log by action='create' instead of create_method
+            conflicted_dataset_creation_log = [log for log in conflicted['audit_logs'] if log['action'] == 'create'][0]
+            
             # If dataset was created by the service user (i.e. this script), it is eligible for workflow initiation
             logger.info(f"conflicted dataset {d['name']} was created by user {conflicted_dataset_creation_log['user']['username']}")
             if conflicted_dataset_creation_log['user']['username'] == config['service_user']:

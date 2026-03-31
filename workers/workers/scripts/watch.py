@@ -41,16 +41,31 @@ class Register:
         if event not in ['add', 'full_scan']:
             return
 
-        # Apply node-level rules to filter out rejected directory names
+        # apply node level rules to filter out bad directories
         candidates = [p for p in new_dirs if not self.is_a_reject(p.name)]
 
-        # Batch registrations to avoid overwhelming the API
+        # for candidate in candidates:
+        #     try:
+        #         self.register_candidate(candidate)
+        #     except Exception as e:
+        #         logger.error(f'Error registering dataset {candidate.name}: {e}')
+
+        # if we are ingesting a full directory of 1000+ subdirectories, we may want to batch the requests
         for batch in batched(candidates, n=self.batch_size):
             self.register_batch(batch)
 
     def register_candidate(self, candidate: Path) -> None:
-        # Idempotent: DatasetAlreadyExistsError is silently ignored because the
-        # dataset was already created (possibly by a concurrent watch instance).
+        # idempotence: if dataset already exists, do nothing
+        # fault tolerance:
+        #  possibility 1: error happened before dataset creation - skipping is okay, because we can try again
+        #  possibility 2: error happened after dataset creation - somehow need to add workflow to dataset
+        #       because when we retry, it will raise DatasetAlreadyExistsError.
+        #  Track datasets without workflows on the UI and trigger a workflow manually.
+        #  Option 1: infer from the dataset state
+        #  - Avoid datasets that are just created
+        #  - Avoid datasets that are already processed but their associated workflows are deleted (updated date will be recent)
+        #  Option 2:
+        #   - keep track of failures
         logger.info(f'registering {self.dataset_type} dataset - {candidate.name}')
         dataset_payload = {
             'name': candidate.name,
@@ -64,10 +79,12 @@ class Register:
             created_dataset = api.create_dataset(dataset_payload)
             self.run_workflows(created_dataset)
         except DatasetAlreadyExistsError:
-            # Dataset already exists; nothing to do.
+            # nothing to do if dataset already exists
             return
 
     def register_batch(self, candidates: list[Path]) -> None:
+        # fault tolerance: similar to register_candidate, the problem is when failure happens after the dataset creation
+        # - we can track datasets without workflows on the UI and trigger a workflow manually
         data = []
         for candidate in candidates:
             dataset_payload = {
@@ -81,8 +98,10 @@ class Register:
             data.append(dataset_payload)
 
         try:
+            # failure point but has built in retry ability
             result = api.bulk_create_datasets(data)
-            # result = {created: [...], conflicted: [...], errored: [...]}
+            # result looks like {created: [], conflicted: [], errored: []}
+            # only create workflows for created datasets
             for dataset in result['created']:
                 try:
                     self.run_workflows(dataset)
@@ -96,8 +115,13 @@ class Register:
         dataset_id = dataset['id']
         wf_body = wf_utils.get_wf_body(wf_name=self.default_wf_name)
 
+        # connects to mongodb to create a document in the workflows collection - failure point
         wf = Workflow(celery_app=celery_app, **wf_body)
+
+        # connects to API - failure point - has built in retry ability
         api.add_workflow_to_dataset(dataset_id=dataset_id, workflow_id=wf.workflow['_id'])
+
+        # connects to celery - failure point
         wf.start(dataset_id, **self.wf_start_kwargs)
 
 
@@ -121,6 +145,7 @@ if __name__ == "__main__":
         name='data_products_obs',
         dir_path=config['registration']['DATA_PRODUCT']['source_dir'],
         callback=Register('DATA_PRODUCT').register,
+        # callback=RegisterDataProduct().register,
         interval=config['registration']['poll_interval_seconds'],
         full_scan_every_n_scans=config['registration']['full_scan_every_n_scans']
     )
@@ -129,3 +154,13 @@ if __name__ == "__main__":
     poller.register(obs1)
     poller.register(obs2)
     poller.poll()
+
+    # try:
+    #     with RabbitMqConsumer(queue_name='registration') as consumer:
+    #         while True:
+    #             for message in consumer.consume_messages():
+    #                 logger.info(f"Received message: {message}")
+    #                 # process messages here
+    #             poller.poll(loop=False)
+    # except KeyboardInterrupt:
+    #     logger.info('KeyboardInterrupt received. Exiting.')

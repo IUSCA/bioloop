@@ -6,6 +6,8 @@
 *nginx.key
 
 .idea
+.DS_Store
+**/.DS_Store
 
 ui/node_modules
 ui/dist
@@ -77,6 +79,9 @@ rhythm/rhythm_api
 
 signet/signet
 
-.cursorrules
-.ai/
+# begin: Added for duplication feature
 workers/nohup.out
+# end: Added for duplication feature
+.ai/
+.cursor/
+.cursorrules

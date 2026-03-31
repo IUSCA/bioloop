@@ -40,12 +40,18 @@ router.get(
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Return duplicate-detection feature flags and configuration.'
-    const dup_config = config.enabled_features?.duplicate_detection || {};
+    const dup_feature = config.enabled_features?.duplicate_detection;
+    const dup_enabled = typeof dup_feature === 'boolean'
+      ? dup_feature
+      : !!dup_feature?.enabled;
+    const dup_tuning = config.has('dataset_duplication')
+      ? config.get('dataset_duplication')
+      : {};
     res.json({
-      enabled: !!dup_config.enabled,
-      jaccard_threshold: dup_config.jaccard_threshold ?? 0.85,
+      enabled: dup_enabled,
+      jaccard_threshold: dup_tuning.jaccard_threshold ?? 0.85,
       concurrent_inspection_wait_timeout_seconds:
-        dup_config.concurrent_inspection_wait_timeout_seconds ?? 7200,
+        dup_tuning.concurrent_inspection_wait_timeout_seconds ?? 7200,
     });
   }),
 );
@@ -170,7 +176,7 @@ router.post(
       duplicate_dataset_id: req.params.id,
       original_dataset_id,
       comparison_process_id: comparison_process_id || null,
-      comparison_status: comparison_status || CONSTANTS.COMPARISON_STATUSES.PENDING,
+      comparison_status: comparison_status || CONSTANTS.DATASET_DUPLICATION_ANALYSIS_STATUSES.PENDING,
     });
 
     res.status(201).json(duplication);

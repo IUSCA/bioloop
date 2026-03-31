@@ -91,7 +91,7 @@ def wait_for_concurrent_inspections(dataset_id: int, dataset_type: str, created_
     Uses _is_actively_inspecting() to exclude datasets that are stale or
     seeded directly into the DB (see that function's docstring for details).
     """
-    timeout = config['enabled_features']['duplicate_detection']['concurrent_inspection_wait_timeout_seconds']
+    timeout = config['dataset_duplication']['concurrent_inspection_wait_timeout_seconds']
     poll_interval = 30
     elapsed = 0
 
@@ -133,8 +133,7 @@ def run_duplicate_detection(celery_task, dataset_id: int, dataset: dict) -> None
     with _DUPLICATE_ (indicating a prior name conflict), records the near-miss
     for UI visibility.
     """
-    dup_config = config['enabled_features']['duplicate_detection']
-    threshold = dup_config['jaccard_threshold']
+    threshold = config['dataset_duplication']['jaccard_threshold']
 
     # Wait for any earlier same-type datasets still being inspected
     wait_for_concurrent_inspections(

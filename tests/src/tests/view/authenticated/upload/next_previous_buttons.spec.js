@@ -20,24 +20,24 @@ test.describe.serial('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
-  test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
+test('should show the Previous button as disabled and Next button as enabled on page load', async () => {
     // Check the Previous button
     const previousButton = page.getByTestId('upload-previous-button');
     await expect(previousButton).toBeDisabled();
 
     // Check the Next button
     const nextButton = page.getByTestId('upload-next-button');
-    await expect(nextButton).toBeDisabled();
+    await expect(nextButton).toBeEnabled();
   });
 
   test.describe('should show the Next button as enabled after a file is selected', async () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
     });
 
     test('should show the Next button as enabled', async () => {
@@ -57,7 +57,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('should show the Previous button enabled and Next button disabled on the `General Info` step', async () => {
     test.beforeAll(async () => {
       // Click the Next button to move to the General-Info step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show the Previous button as enabled and Next button disabled', async () => {
@@ -68,9 +68,8 @@ test.describe.serial('Dataset Upload Process', () => {
         // Check if the Previous button is now enabled
         expect(page.getByTestId('upload-previous-button')).toBeEnabled(),
 
-        // Check if the Next button is disabled (as no selections have been
-        // made yet in the General-Info form)
-        expect(page.getByTestId('upload-next-button')).toBeDisabled(),
+        // On the redesigned stepper, defaults allow proceeding immediately.
+        expect(page.getByTestId('upload-next-button')).toBeEnabled(),
       ]);
     });
   });
@@ -107,7 +106,7 @@ test.describe.serial('Dataset Upload Process', () => {
         testId: 'upload-metadata-dataset-autocomplete',
       });
       // check buttons
-      await expect(page.getByTestId('upload-next-button')).toBeDisabled();
+      await expect(page.getByTestId('upload-next-button')).toBeEnabled();
       await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
 
       // Refill Raw Data
@@ -122,7 +121,7 @@ test.describe.serial('Dataset Upload Process', () => {
         testId: 'upload-metadata-project-autocomplete',
       });
       // check buttons
-      await expect(page.getByTestId('upload-next-button')).toBeDisabled();
+      await expect(page.getByTestId('upload-next-button')).toBeEnabled();
       await expect(page.getByTestId('upload-previous-button')).toBeEnabled();
 
       // Refill Project
