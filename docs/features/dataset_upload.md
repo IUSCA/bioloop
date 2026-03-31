@@ -11,6 +11,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - **UI** (`UploadDatasetStepper`) orchestrates metadata collection and TUS transfer.
 - **API** hosts TUS server and upload routes (`/datasets/uploads/*`).
 - **Worker cron** (`manage_upload_workflows.py`) drives status transitions.
+- **Worker cron** (`purge_stale_uploaded.py`) removes stale TUS staging artifacts.
 - **Celery task** (`verify_upload_integrity.py`) performs async verification.
 - **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
@@ -38,6 +39,8 @@ Uploads use TUS resumable transfer handled directly by the core API.
 `POST/PATCH /api/uploads/files`
 
 - TUS metadata includes `dataset_id`, `filename`, and directory metadata.
+- Authorization header is set in `onBeforeRequest` for every TUS request using
+  the in-memory auth-store token.
 - In non-production test mode, failure simulation can be injected with:
   - `X-Simulate-Failure`
   - `X-Simulate-Failure-Count`
@@ -64,6 +67,70 @@ Uploads use TUS resumable transfer handled directly by the core API.
 ![Upload request flow sequence](../diagrams/upload/request_flow_sequence.png)
 
 ![Upload status state machine](../diagrams/upload/upload_status_state_machine.png)
+
+## API staging paths and file moves
+
+During upload, `@tus/file-store` keeps **per-upload-ID** artifacts under the API’s
+configured staging root (`upload.path` in config, typically the container mount
+such as `/opt/sca/data/uploads`):
+
+| Artifact | Path | Role |
+|----------|------|------|
+| Payload | `<upload_root>/<tus_id>` | Bytes streamed by TUS until the upload completes. |
+| Sidecar | `<upload_root>/<tus_id>.json` | Metadata from the client (`dataset_id`, `filename`, `relative_path`, etc.) used to route the final move. |
+
+When a single file finishes, `onUploadFinish` (in `UploadService`):
+
+1. **Reads** the sidecar JSON to know the intended filename and directory layout.
+2. **Mirrors** that JSON to `<upload_root>/uploaded_data/<dataset_id>/<tus_id>.json`.
+   This copy exists so cleanup jobs can target dataset-scoped sidecars without
+   scanning unrelated staging IDs. The **original** sidecar stays under
+   `<upload_root>/<tus_id>.json` so TUS can still read it during the same request
+   lifecycle (moving only the sidecar away caused missing-metadata / `404` / `410`
+   symptoms for in-flight uploads).
+3. **Materializes the dataset file** under `dataset.origin_path`:
+   - Non-empty payloads: **rename** from `<tus_id>` into the final path (atomic where the filesystem allows).
+   - Zero-byte edge case: **copy** from the empty staging file to the destination
+     instead of renaming it away, so a staging placeholder can remain for TUS
+     post-create checks; an empty destination file is still created as needed.
+
+`origin_path` is chosen at registration time and may be a **host-visible** path
+when `UPLOAD_HOST_DIR` / `upload.host_path` is set, while the API process writes
+through the **mounted** tree (`upload.path`). The service resolves a writable
+container path for renames/copies so workers and DB metadata stay consistent
+with deployment layout (see **Volume Mounts** under Deployment Notes).
+
+## UI upload concurrency and chunk size
+
+Large directory uploads use many parallel TUS uploads. The stepper limits how
+many files upload at once and how large each `PATCH` body can be (see
+`ui/src/config.js`):
+
+- **`upload.max_concurrent_files`** (`VITE_UPLOAD_MAX_CONCURRENT_UPLOADS`, default `4`) —
+  caps simultaneous uploads so the browser does not exhaust connections or hit
+  `ERR_INSUFFICIENT_RESOURCES` when thousands of small files are queued.
+- **`upload.tus_chunk_size_bytes`** (`VITE_UPLOAD_TUS_CHUNK_SIZE_BYTES`, default `25 MB`) —
+  bounds each chunk so a single `PATCH` stays within reverse-proxy and API body
+  limits; without this, large files can fail with `413` where nginx or similar
+  enforces `client_max_body_size` (see **Nginx configuration changes**).
+
+## TUS middleware (auth and errors)
+
+`api/src/middleware/tus.js` runs **before** the TUS server handles the request:
+
+- **Authentication** — every `POST` / `HEAD` / `PATCH` on the upload route must
+  pass the same JWT gate as other API routes.
+- **Path normalization** — when nginx forwards `/uploads/files` without the
+  `/api` prefix, the middleware prepends `/api` so the server’s registered path
+  matches.
+- **Failure simulation** — non-production only; see **Failure Simulation** below.
+
+`UploadService` surfaces TUS internal failures via `onResponseError`. Responses
+that indicate **lock contention** on the same upload resource (`423` or messages
+containing `lock acquired`) are logged at **warn** severity so expected retries
+under concurrency do not look like hard errors in logs. Operational meaning of
+HTTP codes (including `423`) is still summarized in **HTTP Status Code Reference**
+below.
 
 ## HTTP Status Code Reference (Upload APIs)
 
@@ -273,7 +340,7 @@ trigger one simulated failure.
 (~16 minutes cumulative):
 
 ```
-[0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+[1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
  144000, 233000, 377000]
 ```
 
@@ -348,6 +415,40 @@ before starting the next upload is sufficient.
   tombstone the dataset (`name -> name--id`, `is_deleted = true`) to free name.
 - Verification timeout protection marks stuck `VERIFYING` sessions failed.
 - `VERIFIED -> COMPLETE` flow is guarded against duplicate workflow starts.
+
+## Uploaded-artifacts Cleanup (TTL Job)
+
+The upload flow leaves TUS-managed uploaded artifacts that must be cleaned
+independently of dataset payloads.
+
+- Script: `workers/workers/scripts/purge_stale_uploaded.py`
+- Schedule: `workers/ecosystem.config.js` app `purge_stale_uploaded`
+  - cron: `15 07 * * *` (daily, 07:15)
+  - args: `--ttl-days=14`
+- Entrypoint support: `workers/bin/entrypoint.sh` (`WORKER_TYPE=purge_stale_uploaded`)
+
+What is cleaned:
+
+- Top-level stale TUS artifacts under `<uploads_root>`:
+  - `<tus_id>`
+  - `<tus_id>.json`
+- Dataset-scoped mirrored sidecars:
+  - `<uploads_root>/uploaded_data/<dataset_id>/*.json`
+
+What is protected:
+
+- Dataset payload directories are never deleted by this job:
+  - `raw_data`
+  - `data_product`
+  - `data_products`
+
+Manual run examples:
+
+```bash
+python -m workers.scripts.purge_stale_uploaded
+python -m workers.scripts.purge_stale_uploaded --dry-run
+python -m workers.scripts.purge_stale_uploaded --ttl-days=30
+```
 
 ---
 

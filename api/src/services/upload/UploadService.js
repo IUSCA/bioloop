@@ -197,12 +197,6 @@ class UploadService {
           }
         }
 
-        logger.info('[TUS] onUploadCreate: authorized', {
-          dataset_id: datasetId,
-          user: req.user?.username,
-          privileged: isPrivileged,
-        });
-
         return res;
       },
 
@@ -233,14 +227,6 @@ class UploadService {
         const directory_name = upload.metadata?.directory_name;
         const process_id = upload.id;
 
-        logger.info('[TUS] onUploadFinish: moving file to origin_path', {
-          dataset_id: datasetId,
-          process_id,
-          selection_mode,
-          relative_path,
-          directory_name,
-        });
-
         const uploadLog = await prisma.dataset_upload_log.findUnique({
           where: { dataset_id: datasetId },
           include: { dataset: true },
@@ -263,18 +249,13 @@ class UploadService {
         //    <uploadDir>/<processId>.json
         // - Additional dataset-scoped copy:
         //    <uploadDir>/uploaded_data/<datasetId>/<processId>.json
-        const sidecarRelocation = relocateSidecarForUpload({
+        relocateSidecarForUpload({
           uploadDir,
           datasetId,
           processId: process_id,
         });
-        logger.info('[TUS] Sidecar relocation', {
-          dataset_id: datasetId,
-          process_id,
-          ...sidecarRelocation,
-        });
 
-        // locate the host path (as opposed to the containerized path) for the uploaded file
+        // locate the containerized path (as opposed to the host path) for the uploaded file
         const writableOriginPath = resolveWritableOriginPath(
           uploadLog.dataset.origin_path,
           uploadHostPath,
@@ -290,13 +271,6 @@ class UploadService {
           originalFilename,
           datasetId,
           process_id,
-        });
-
-        logger.info('[TUS] onUploadFinish: file moved', {
-          dataset_id: datasetId,
-          process_id,
-          origin_path: uploadLog.dataset.origin_path,
-          writable_origin_path: writableOriginPath,
         });
 
         return res;

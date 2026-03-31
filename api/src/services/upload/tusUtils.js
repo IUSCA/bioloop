@@ -38,12 +38,6 @@ function readTusFileInfo({ tusInfoPath, datasetId, process_id }) {
     || tusMetadata.metadata?.name
     || 'uploaded_file';
 
-  logger.info('[TUS] Metadata read', {
-    dataset_id: datasetId,
-    process_id,
-    filename: originalFilename,
-  });
-
   return { originalFilename, tusMetadata };
 }
 
@@ -85,29 +79,12 @@ function moveTusFileToDestination({
     // land directly under origin_path preserving the inner directory structure.
     finalPath = path.join(baseOriginPath, relative_path);
 
-    logger.info('[TUS] Directory upload mode', {
-      dataset_id: datasetId,
-      process_id,
-      directory_name,
-      relative_path,
-      source: tusFilePath,
-      destination: finalPath,
-    });
-
     const parentDir = path.dirname(finalPath);
     if (!fs.existsSync(parentDir)) {
       fs.mkdirSync(parentDir, { recursive: true });
     }
   } else {
     finalPath = path.join(baseOriginPath, originalFilename);
-
-    logger.info('[TUS] Single file upload mode', {
-      dataset_id: datasetId,
-      process_id,
-      filename: originalFilename,
-      source: tusFilePath,
-      destination: finalPath,
-    });
 
     if (!fs.existsSync(baseOriginPath)) {
       fs.mkdirSync(baseOriginPath, { recursive: true });
@@ -122,41 +99,17 @@ function moveTusFileToDestination({
         // immediate post-create lifecycle checks, and materialize the final
         // empty file via copy. A rename here removes the staging path and can
         // cause TUS to report "file for this url not found" for empty files.
-        logger.info('[TUS] 0-byte staged file detected — copying (not renaming)', {
-          dataset_id: datasetId,
-          source: tusFilePath,
-          destination: finalPath,
-        });
         fs.copyFileSync(tusFilePath, finalPath);
       } else {
         // Normal case: TUS staged a non-empty data file — move it to final location.
-        logger.info('[TUS] Moving file', {
-          dataset_id: datasetId,
-          source: tusFilePath,
-          destination: finalPath,
-          size_bytes: stagedSize,
-        });
         fs.renameSync(tusFilePath, finalPath);
-        logger.info('[TUS] File moved successfully', {
-          dataset_id: datasetId,
-          destination: finalPath,
-        });
       }
     } else {
       // 0-byte file: @tus/file-store v1.4 normally creates an empty data file
       // on create(), but as a safety net handle the case where it doesn't.
-      logger.info('[TUS] 0-byte file — creating empty file at destination', {
-        dataset_id: datasetId,
-        destination: finalPath,
-      });
       fs.writeFileSync(finalPath, '');
       createdFromMissingTusDataFile = true;
     }
-  } else {
-    logger.info('[TUS] File already exists at destination (idempotent)', {
-      dataset_id: datasetId,
-      destination: finalPath,
-    });
   }
 
   // @tus/server v1.6 PostHandler may call store.getUpload() after onUploadFinish
@@ -166,10 +119,6 @@ function moveTusFileToDestination({
   // a placeholder — leaving a zero-byte file behind can confuse subsequent HEAD
   // offset checks and cause apparent "stuck at 0%" behavior.
   if (createdFromMissingTusDataFile && !fs.existsSync(tusFilePath)) {
-    logger.info('[TUS] Recreating TUS staging placeholder (PostHandler expiry compat)', {
-      dataset_id: datasetId,
-      path: tusFilePath,
-    });
     fs.writeFileSync(tusFilePath, '');
   }
 
