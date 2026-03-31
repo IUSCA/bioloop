@@ -1228,7 +1228,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
     }
   };
   const getTestSetting = (storageKey) =>
-    safeStorageGet(window?.sessionStorage, storageKey) ??
     safeStorageGet(window?.localStorage, storageKey);
   const normalizeToken = (rawToken) => {
     if (!rawToken) {
@@ -1260,14 +1259,9 @@ const uploadFilesWithTus = async (files, endpoint) => {
     return token || null;
   };
   const getAuthToken = () => {
-    // Prefer in-memory token from auth store. In some browsers (e.g., Brave)
-    // localStorage can hit quota and fail writes, which can leave storage with
-    // a stale token even after a successful in-app refresh.
-    const inMemoryToken = normalizeToken(auth?.token);
-    if (inMemoryToken) {
-      return inMemoryToken;
-    }
-    return normalizeToken(safeStorageGet(window?.localStorage, "token"));
+    // Upload auth: in-memory auth store token.
+    // This avoids stale-token behavior when browser storage is quota-constrained.
+    return normalizeToken(auth?.token);
   };
 
   // Safety check: ensure upload log exists
@@ -1276,8 +1270,7 @@ const uploadFilesWithTus = async (files, endpoint) => {
     throw new Error("Dataset upload log not initialized");
   }
 
-  // Read auth token from the freshest source (auth store first, storage fallback).
-  // TUS uploads are long-lived, so onBeforeRequest re-reads token per request.
+  // TUS uploads are long-lived, so onBeforeRequest re-reads auth token per request.
   const userToken = getAuthToken();
   if (!userToken) {
     throw new Error("Authentication token not found");
@@ -1300,8 +1293,8 @@ const uploadFilesWithTus = async (files, endpoint) => {
   });
 
   // TEST ONLY: Check if we should simulate mid-upload failure.
-  // Example: window.sessionStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload')
-  // Example: window.sessionStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5')
+  // Example: window.localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload')
+  // Example: window.localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5')
   const simulateFailure = getTestSetting("SIMULATE_UPLOAD_FAILURE");
   const uploadSingleFileWithTus = (file) => {
     return new Promise((resolve, reject) => {
@@ -1337,10 +1330,11 @@ const uploadFilesWithTus = async (files, endpoint) => {
           1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
           144000, 233000, 377000,
         ],
-        onShouldRetry: (err, retryAttempt, options) => {
-          // Preserve tus-js-client default retry behavior after logging.
-          return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
-        },
+        // onShouldRetry: (err, retryAttempt, options) => {
+        //   // Optional hook for debugging into retry attempts.
+        //   // Preserve tus-js-client default retry behavior after logging.
+        // return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
+        // },
         metadata: {
           dataset_id: String(datasetUploadLog.value.dataset.id),
           filename: file.name,
