@@ -1220,23 +1220,95 @@ const createOrUpdateUploadLog = (data) => {
 
 // TUS upload logic
 const uploadFilesWithTus = async (files, endpoint) => {
+  const safeStorageGet = (storage, key) => {
+    try {
+      return storage?.getItem?.(key) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const getDebugFlag = (storageKey, runtimeWindowKey) => {
+    if (
+      typeof window !== "undefined" &&
+      window[runtimeWindowKey] === true
+    ) {
+      return true;
+    }
+    const sessionValue = safeStorageGet(window?.sessionStorage, storageKey);
+    if (sessionValue === "1" || sessionValue === "true") {
+      return true;
+    }
+    const localValue = safeStorageGet(window?.localStorage, storageKey);
+    return localValue === "1" || localValue === "true";
+  };
+  const getTestSetting = (storageKey) =>
+    safeStorageGet(window?.sessionStorage, storageKey) ??
+    safeStorageGet(window?.localStorage, storageKey);
+  const normalizeToken = (rawToken) => {
+    if (!rawToken) {
+      return null;
+    }
+    let token = String(rawToken).trim();
+    if (!token) {
+      return null;
+    }
+    if (token.startsWith("Bearer ")) {
+      token = token.slice("Bearer ".length).trim();
+    }
+    // localStorage may contain a JSON-serialized string token: "\"eyJ...\""
+    if (
+      (token.startsWith('"') && token.endsWith('"')) ||
+      (token.startsWith("'") && token.endsWith("'"))
+    ) {
+      try {
+        const parsed = JSON.parse(token);
+        if (typeof parsed === "string") {
+          token = parsed.trim();
+        } else {
+          token = token.slice(1, -1).trim();
+        }
+      } catch {
+        token = token.slice(1, -1).trim();
+      }
+    }
+    return token || null;
+  };
+  const getAuthToken = () => {
+    // Prefer in-memory token from auth store. In some browsers (e.g., Brave)
+    // localStorage can hit quota and fail writes, which can leave storage with
+    // a stale token even after a successful in-app refresh.
+    const inMemoryToken = normalizeToken(auth?.token);
+    if (inMemoryToken) {
+      return inMemoryToken;
+    }
+    return normalizeToken(safeStorageGet(window?.localStorage, "token"));
+  };
+
   // Safety check: ensure upload log exists
   if (!datasetUploadLog.value || !datasetUploadLog.value.dataset) {
     console.error("Dataset upload log not initialized");
     throw new Error("Dataset upload log not initialized");
   }
 
-  // NOTE: We intentionally read auth token from localStorage in this upload path.
-  // Why auth store is not used here:
-  //   1) `token` exists internally in useAuthStore, but it is not exposed in the
-  //      store's returned public API, so `authStore.token` cannot be read here.
-  //   2) TUS uploads are long-lived; Authorization must be refreshed per request.
-  //      onBeforeRequest re-reads localStorage to pick up JWT refreshes that occur
-  //      mid-upload and avoid late 401 waves.
-  const userToken = localStorage.getItem("token");
+  // Read auth token from the freshest source (auth store first, storage fallback).
+  // TUS uploads are long-lived, so onBeforeRequest re-reads token per request.
+  const userToken = getAuthToken();
   if (!userToken) {
     throw new Error("Authentication token not found");
   }
+  const uploadDebugEnabled = getDebugFlag("UPLOAD_DEBUG", "__UPLOAD_DEBUG__");
+  const uploadAuthDebugEnabled = getDebugFlag(
+    "UPLOAD_AUTH_DEBUG",
+    "__UPLOAD_AUTH_DEBUG__",
+  );
+  let lastTokenFingerprint = null;
+  const tokenFingerprint = (token) =>
+    token ? `${token.slice(0, 8)}...${token.slice(-8)}` : "none";
+  const logTusDebug = (...args) => {
+    if (uploadDebugEnabled) {
+      console.log(...args);
+    }
+  };
 
   let uploadedCount = 0;
   let totalBytes = 0;
@@ -1254,17 +1326,14 @@ const uploadFilesWithTus = async (files, endpoint) => {
     totalBytes += file.size;
   });
 
-  // TEST ONLY: Check if we should simulate mid-upload failure
-  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload') to enable
-  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times
-  const simulateFailure = localStorage.getItem("SIMULATE_UPLOAD_FAILURE");
+  // TEST ONLY: Check if we should simulate mid-upload failure.
+  // Example: window.sessionStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload')
+  // Example: window.sessionStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5')
+  const simulateFailure = getTestSetting("SIMULATE_UPLOAD_FAILURE");
   const uploadSingleFileWithTus = (file) => {
     return new Promise((resolve, reject) => {
-      // TEST ONLY: Check for failure count configuration
-      // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
-      const simulateFailureCount = localStorage.getItem(
-        "SIMULATE_UPLOAD_FAILURE_COUNT",
-      );
+      // TEST ONLY: Check for failure count configuration.
+      const simulateFailureCount = getTestSetting("SIMULATE_UPLOAD_FAILURE_COUNT");
 
       let upload = null;
 
@@ -1298,15 +1367,16 @@ const uploadFilesWithTus = async (files, endpoint) => {
         onShouldRetry: (err, retryAttempt, options) => {
           const status = err?.originalResponse?.getStatus?.();
           const body = err?.originalResponse?.getBody?.();
-
-          console.error("[TUS-CLIENT] Retry decision", {
-            file_name: file.name,
-            retry_attempt: retryAttempt,
-            status,
-            body,
-            error_message: err?.message,
-            error_type: err?.constructor?.name,
-          });
+          if (uploadDebugEnabled || status === 401) {
+            console.error("[TUS-CLIENT] Retry decision", {
+              file_name: file.name,
+              retry_attempt: retryAttempt,
+              status,
+              body,
+              error_message: err?.message,
+              error_type: err?.constructor?.name,
+            });
+          }
 
           // Preserve tus-js-client default retry behavior after logging.
           return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
@@ -1326,7 +1396,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
               : "",
         },
         headers: {
-          Authorization: `Bearer ${userToken}`,
           ...(simulateFailure
             ? {
                 "X-Simulate-Failure": simulateFailure,
@@ -1340,12 +1409,35 @@ const uploadFilesWithTus = async (files, endpoint) => {
           try {
             // Read token at request time, so that long-lasting uploads keep 
             // using unexpired JWTs.
-            // const latestToken = localStorage.getItem("token");
-            // if (latestToken && req?.setHeader) {
-            //   req.setHeader("Authorization", `Bearer ${latestToken}`);
-            // }
+            const latestToken = getAuthToken();
+            if (latestToken && req?.setHeader) {
+              req.setHeader("Authorization", `Bearer ${latestToken}`);
+              if (uploadAuthDebugEnabled) {
+                const fp = tokenFingerprint(latestToken);
+                if (fp !== lastTokenFingerprint) {
+                  console.info("[TUS-AUTH] Request token changed", {
+                    file_name: file.name,
+                    method: req?.getMethod?.(),
+                    url: req?.getURL?.(),
+                    previous_token: lastTokenFingerprint,
+                    next_token: fp,
+                    token_shape: {
+                      length: latestToken.length,
+                      jwt_segments: latestToken.split(".").length,
+                    },
+                  });
+                }
+                lastTokenFingerprint = fp;
+              }
+            } else if (uploadAuthDebugEnabled) {
+              console.warn("[TUS-AUTH] Missing token before request", {
+                file_name: file.name,
+                method: req?.getMethod?.(),
+                url: req?.getURL?.(),
+              });
+            }
 
-            console.log("[TUS-CLIENT] Request", {
+            logTusDebug("[TUS-CLIENT] Request", {
               file_name: file.name,
               method: req?.getMethod?.(),
               url: req?.getURL?.(),
@@ -1359,11 +1451,21 @@ const uploadFilesWithTus = async (files, endpoint) => {
         },
         onAfterResponse: (req, res) => {
           try {
-            console.log("[TUS-CLIENT] Response", {
+            const status = res?.getStatus?.();
+            if (status === 401) {
+              console.error("[TUS-AUTH] 401 response", {
+                file_name: file.name,
+                method: req?.getMethod?.(),
+                url: req?.getURL?.(),
+                token_present: Boolean(getAuthToken()),
+                token_fingerprint: tokenFingerprint(getAuthToken()),
+              });
+            }
+            logTusDebug("[TUS-CLIENT] Response", {
               file_name: file.name,
               method: req?.getMethod?.(),
               url: req?.getURL?.(),
-              status: res?.getStatus?.(),
+              status,
               upload_offset: res?.getHeader?.("Upload-Offset"),
               upload_length: res?.getHeader?.("Upload-Length"),
               tus_resumable: res?.getHeader?.("Tus-Resumable"),
@@ -1376,7 +1478,7 @@ const uploadFilesWithTus = async (files, endpoint) => {
           }
         },
         onChunkComplete: (chunkSize, bytesUploaded, bytesTotal) => {
-          console.log("[TUS-CLIENT] Chunk complete", {
+          logTusDebug("[TUS-CLIENT] Chunk complete", {
             file_name: file.name,
             chunk_size: chunkSize,
             bytes_uploaded: bytesUploaded,

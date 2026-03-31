@@ -15,6 +15,57 @@ export const useAuthStore = defineStore("auth", () => {
   const signupToken = ref(useLocalStorage("signup_token", ""));
   const signupEmail = ref("");
   let refreshTokenTimer = null;
+  const safeStorageGet = (storage, key) => {
+    try {
+      return storage?.getItem?.(key) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const isUploadAuthDebugEnabled = () => {
+    if (
+      typeof window !== "undefined" &&
+      window.__UPLOAD_AUTH_DEBUG__ === true
+    ) {
+      return true;
+    }
+    const sessionValue = safeStorageGet(
+      window?.sessionStorage,
+      "UPLOAD_AUTH_DEBUG",
+    );
+    if (sessionValue === "1" || sessionValue === "true") {
+      return true;
+    }
+    const localValue = safeStorageGet(
+      window?.localStorage,
+      "UPLOAD_AUTH_DEBUG",
+    );
+    return localValue === "1" || localValue === "true";
+  };
+  const describeToken = (rawToken) => {
+    if (!rawToken) {
+      return { present: false, fingerprint: "none", exp_iso: null, ttl_seconds: null };
+    }
+    const fingerprint = `${rawToken.slice(0, 8)}...${rawToken.slice(-8)}`;
+    try {
+      const payload = jwtDecode(rawToken);
+      const expMs = payload?.exp ? payload.exp * 1000 : null;
+      return {
+        present: true,
+        fingerprint,
+        exp_iso: expMs ? new Date(expMs).toISOString() : null,
+        ttl_seconds: expMs ? Math.round((expMs - Date.now()) / 1000) : null,
+      };
+    } catch (err) {
+      return {
+        present: true,
+        fingerprint,
+        exp_iso: null,
+        ttl_seconds: null,
+        decode_error: err?.message,
+      };
+    }
+  };
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
   });
@@ -30,10 +81,17 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function onLogin(data) {
+    const before = token.value;
     user.value = data.profile;
     token.value = data.token;
     loggedIn.value = true;
     useNotificationStore().resetSession();
+    if (isUploadAuthDebugEnabled()) {
+      console.info("[AUTH] onLogin token update", {
+        previous: describeToken(before),
+        next: describeToken(token.value),
+      });
+    }
     refreshTokenBeforeExpiry();
   }
 
@@ -123,11 +181,13 @@ export const useAuthStore = defineStore("auth", () => {
           // token is still alive
           const delay =
             expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
-          console.log(
-            "auth store: refreshTokenBeforeExpiry: triggering refreshToken in ",
-            delay / 1000,
-            "seconds",
-          );
+          if (isUploadAuthDebugEnabled()) {
+            console.info("[AUTH] refreshTokenBeforeExpiry scheduled", {
+              delay_seconds: Math.round(delay / 1000),
+              refresh_tminus_seconds: config.refreshTokenTMinusSeconds.appToken,
+              token: describeToken(token.value),
+            });
+          }
           refreshTokenTimer = setTimeout(refreshToken, delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
@@ -138,14 +198,34 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function refreshToken() {
+    const tokenBeforeRefresh = token.value;
     refreshTokenTimer = null; // reset timer state
+    if (isUploadAuthDebugEnabled()) {
+      console.info("[AUTH] refreshToken start", {
+        token_before: describeToken(tokenBeforeRefresh),
+      });
+    }
     authService
       .refreshToken()
       .then((res) => {
-        if (res.data) onLogin(res.data);
+        if (res.data) {
+          onLogin(res.data);
+          if (isUploadAuthDebugEnabled()) {
+            console.info("[AUTH] refreshToken success", {
+              token_before: describeToken(tokenBeforeRefresh),
+              token_after: describeToken(token.value),
+            });
+          }
+        }
       })
       .catch((err) => {
         console.error("Unable to refresh token", err);
+        if (isUploadAuthDebugEnabled()) {
+          console.error("[AUTH] refreshToken failed", {
+            error: err?.message,
+            token_before: describeToken(tokenBeforeRefresh),
+          });
+        }
       });
   }
 
@@ -187,6 +267,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     user,
+    token,
     loggedIn,
     initialize,
     logout,
