@@ -5,6 +5,7 @@ sequenceDiagram
     participant FS as Filesystem
     participant DB as PostgreSQL
     participant CRON as manage_upload_workflows
+    participant PURGE as purge_stale_uploaded
     participant CELERY as verify_upload_integrity
     participant WF as Integrated Workflow
 
@@ -14,6 +15,7 @@ sequenceDiagram
 
     loop each file
       UI->>TUS: POST/PATCH /api/uploads/files
+      UI->>TUS: Authorization from auth-store token (per request)
       TUS->>DB: validate dataset_id + auth + status
       TUS->>FS: write chunks, then move file to origin_path
       TUS-->>UI: resumable progress
@@ -31,3 +33,5 @@ sequenceDiagram
 
     CRON->>WF: start workflow (when VERIFIED)
     CRON->>DB: set COMPLETE (or PROCESSING_FAILED / PERMANENTLY_FAILED)
+
+    PURGE->>FS: daily TTL cleanup of stale TUS artifacts

@@ -11,6 +11,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - **UI** (`UploadDatasetStepper`) orchestrates metadata collection and TUS transfer.
 - **API** hosts TUS server and upload routes (`/datasets/uploads/*`).
 - **Worker cron** (`manage_upload_workflows.py`) drives status transitions.
+- **Worker cron** (`purge_stale_uploaded.py`) removes stale TUS staging artifacts.
 - **Celery task** (`verify_upload_integrity.py`) performs async verification.
 - **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
@@ -38,6 +39,8 @@ Uploads use TUS resumable transfer handled directly by the core API.
 `POST/PATCH /api/uploads/files`
 
 - TUS metadata includes `dataset_id`, `filename`, and directory metadata.
+- Authorization header is set in `onBeforeRequest` for every TUS request using
+  the in-memory auth-store token.
 - In non-production test mode, failure simulation can be injected with:
   - `X-Simulate-Failure`
   - `X-Simulate-Failure-Count`
@@ -64,6 +67,157 @@ Uploads use TUS resumable transfer handled directly by the core API.
 ![Upload request flow sequence](../diagrams/upload/request_flow_sequence.png)
 
 ![Upload status state machine](../diagrams/upload/upload_status_state_machine.png)
+
+## API staging paths and file moves
+
+During upload, `@tus/file-store` keeps **per-upload-ID** artifacts under the API’s
+configured staging root (`upload.path` in config, typically the container mount
+such as `/opt/sca/data/uploads`):
+
+| Artifact | Path | Role |
+|----------|------|------|
+| Payload | `<upload_root>/<tus_id>` | Bytes streamed by TUS until the upload completes. |
+| Sidecar | `<upload_root>/<tus_id>.json` | Metadata from the client (`dataset_id`, `filename`, `relative_path`, etc.) used to route the final move. |
+
+When a single file finishes, `onUploadFinish` (in `UploadService`):
+
+1. **Reads** the sidecar JSON to know the intended filename and directory layout.
+2. **Mirrors** that JSON to `<upload_root>/uploaded_data/<dataset_id>/<tus_id>.json`.
+   This copy exists so cleanup jobs can target dataset-scoped sidecars without
+   scanning unrelated staging IDs. The **original** sidecar stays under
+   `<upload_root>/<tus_id>.json` so TUS can still read it during the same request
+   lifecycle (moving only the sidecar away caused missing-metadata / `404` / `410`
+   symptoms for in-flight uploads).
+3. **Materializes the dataset file** under `dataset.origin_path`:
+   - Non-empty payloads: **rename** from `<tus_id>` into the final path (atomic where the filesystem allows).
+   - Zero-byte edge case: **copy** from the empty staging file to the destination
+     instead of renaming it away, so a staging placeholder can remain for TUS
+     post-create checks; an empty destination file is still created as needed.
+
+`origin_path` is chosen at registration time and may be a **host-visible** path
+when `UPLOAD_HOST_DIR` / `upload.host_path` is set, while the API process writes
+through the **mounted** tree (`upload.path`). The service resolves a writable
+container path for renames/copies so workers and DB metadata stay consistent
+with deployment layout (see **Volume Mounts** under Deployment Notes).
+
+## UI upload concurrency and chunk size
+
+Large directory uploads use many parallel TUS uploads. The stepper limits how
+many files upload at once and how large each `PATCH` body can be (see
+`ui/src/config.js`):
+
+- **`upload.max_concurrent_files`** (`VITE_UPLOAD_MAX_CONCURRENT_UPLOADS`, default `4`) —
+  caps simultaneous uploads so the browser does not exhaust connections or hit
+  `ERR_INSUFFICIENT_RESOURCES` when thousands of small files are queued.
+- **`upload.tus_chunk_size_bytes`** (`VITE_UPLOAD_TUS_CHUNK_SIZE_BYTES`, default `25 MB`) —
+  bounds each chunk so a single `PATCH` stays within reverse-proxy and API body
+  limits; without this, large files can fail with `413` where nginx or similar
+  enforces `client_max_body_size` (see **Nginx configuration changes**).
+
+## TUS middleware (auth and errors)
+
+`api/src/middleware/tus.js` runs **before** the TUS server handles the request:
+
+- **Authentication** — every `POST` / `HEAD` / `PATCH` on the upload route must
+  pass the same JWT gate as other API routes.
+- **Path normalization** — when nginx forwards `/uploads/files` without the
+  `/api` prefix, the middleware prepends `/api` so the server’s registered path
+  matches.
+- **Failure simulation** — non-production only; see **Failure Simulation** below.
+
+`UploadService` surfaces TUS internal failures via `onResponseError`. Responses
+that indicate **lock contention** on the same upload resource (`423` or messages
+containing `lock acquired`) are logged at **warn** severity so expected retries
+under concurrency do not look like hard errors in logs. Operational meaning of
+HTTP codes (including `423`) is still summarized in **HTTP Status Code Reference**
+below.
+
+## HTTP Status Code Reference (Upload APIs)
+
+This section documents status codes that are expected/possible for the upload
+endpoints used by the UI, plus what they typically mean in this app.
+
+### A) `POST /datasets/uploads` (register upload session)
+
+- `200` - Registration succeeded; dataset + `dataset_upload_log` created (`UPLOADING`).
+  - **Tolerability:** expected.
+- `400` - Request body validation failed (missing/invalid `type`, `name`, etc.).
+  - **Tolerability:** not expected in normal UI flow; investigate client payload.
+- `401` - Authentication failed / missing token.
+  - **Tolerability:** not expected after login; investigate auth/session.
+- `403` - Caller lacks permission to create dataset/upload.
+  - **Tolerability:** expected only for non-allowed roles.
+- `409` - Name collision (concurrent or existing dataset with same name).
+  - **Tolerability:** expected occasionally; user action required (rename).
+- `5xx` - Server/database failure during registration.
+  - **Tolerability:** investigate.
+
+### B) TUS create: `POST /api/uploads/files`
+
+- `201` - TUS upload resource created; `Location` header returned.
+  - **Tolerability:** expected.
+- `400` - `dataset_id` missing/invalid in TUS metadata (`onUploadCreate` guard).
+  - **Tolerability:** investigate metadata generation in UI.
+- `401` - Auth failed.
+  - **Tolerability:** investigate auth/session/proxy auth headers.
+- `403` - User not authorized for that dataset (`onUploadCreate`).
+  - **Tolerability:** expected for unauthorized user; otherwise investigate ownership/roles.
+- `404` - Upload log not found for dataset (`onUploadCreate`) or invalid upload URL path.
+  - **Tolerability:** investigate; not expected in healthy upload flow.
+- `409` - Upload log is not in `UPLOADING` (already advanced/failed).
+  - **Tolerability:** can happen for stale retries; investigate if frequent.
+- `410` - Upload URL no longer valid (`The file for this url no longer exists`).
+  - **Tolerability:** a small number can be tolerated as stale retries during large transfers.
+    Frequent 410s with many failed files should be investigated.
+- `423` - Lock contention on same TUS resource (`lock acquired` class).
+  - **Tolerability:** transient/retryable; occasional occurrences are expected under concurrency.
+    Persistent/frequent 423s should be investigated.
+- `5xx` - TUS/datastore/server error.
+  - **Tolerability:** investigate.
+
+### C) TUS offset check: `HEAD /api/uploads/files/:uploadId`
+
+- `200` - Upload resource exists; headers include `Upload-Offset`, `Upload-Length`.
+  - **Tolerability:** expected.
+- `404` - Upload resource path not found.
+  - **Tolerability:** investigate.
+- `410` - Upload resource expired/removed.
+  - **Tolerability:** can be tolerated for stale retries; investigate if tied to active uploads.
+- `423` - Lock contention.
+  - **Tolerability:** occasional/transient is acceptable; persistent loops are not.
+
+### D) TUS data chunk write: `PATCH /api/uploads/files/:uploadId`
+
+- `204` - Chunk accepted / upload offset advanced.
+  - **Tolerability:** expected (normal successful chunk writes).
+- `401` / `403` - Auth/authz failure.
+  - **Tolerability:** investigate.
+- `404` / `410` - Upload resource unavailable/no longer exists.
+  - **Tolerability:** occasional stale retry can happen; repeated occurrences should be investigated.
+- `413` - Request chunk too large for proxy/server limits.
+  - **Tolerability:** investigate deployment limits and configured chunk size.
+- `423` - Lock contention.
+  - **Tolerability:** occasional/transient is acceptable.
+- `5xx` - Server/TUS write failure.
+  - **Tolerability:** investigate.
+
+### E) `POST /datasets/uploads/:id/complete` (mark upload complete)
+
+- `200` - Upload log transitioned to `UPLOADED` (idempotent success allowed).
+  - **Tolerability:** expected.
+- `404` - Upload log not found for dataset.
+  - **Tolerability:** investigate.
+- `409` - Status already advanced past upload stage (regression protection).
+  - **Tolerability:** can be acceptable race outcome; typically not a data-loss signal.
+- `500` - Completion/update failure.
+  - **Tolerability:** investigate.
+
+### Practical triage guidance
+
+- **Usually tolerable transient statuses:** occasional `410`, occasional `423`.
+- **Usually actionable immediately:** repeated `404` on TUS create/write, repeated `410`
+  tied to active files, any persistent `5xx`, any `413` during normal file sizes/chunks,
+  and upload sessions that never progress beyond repeated `HEAD` with `Upload-Offset: 0`.
 
 ## Data Model
 
@@ -186,7 +340,7 @@ trigger one simulated failure.
 (~16 minutes cumulative):
 
 ```
-[0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+[1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
  144000, 233000, 377000]
 ```
 
@@ -262,50 +416,85 @@ before starting the next upload is sufficient.
 - Verification timeout protection marks stuck `VERIFYING` sessions failed.
 - `VERIFIED -> COMPLETE` flow is guarded against duplicate workflow starts.
 
+## Uploaded-artifacts Cleanup (TTL Job)
+
+The upload flow leaves TUS-managed uploaded artifacts that must be cleaned
+independently of dataset payloads.
+
+- Script: `workers/workers/scripts/purge_stale_uploaded.py`
+- Schedule: `workers/ecosystem.config.js` app `purge_stale_uploaded`
+  - cron: `15 07 * * *` (daily, 07:15)
+  - args: `--ttl-days=14`
+- Entrypoint support: `workers/bin/entrypoint.sh` (`WORKER_TYPE=purge_stale_uploaded`)
+
+What is cleaned:
+
+- Top-level stale TUS artifacts under `<uploads_root>`:
+  - `<tus_id>`
+  - `<tus_id>.json`
+- Dataset-scoped mirrored sidecars:
+  - `<uploads_root>/uploaded_data/<dataset_id>/*.json`
+
+What is protected:
+
+- Dataset payload directories are never deleted by this job:
+  - `raw_data`
+  - `data_product`
+  - `data_products`
+
+Manual run examples:
+
+```bash
+python -m workers.scripts.purge_stale_uploaded
+python -m workers.scripts.purge_stale_uploaded --dry-run
+python -m workers.scripts.purge_stale_uploaded --ttl-days=30
+```
+
 ---
 
 ### Deployment Notes
 
 #### 1. Update properties
 
-- Some properties are now outdated and will need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance).
+- Some properties are now outdated and may need to be removed in your `.env` files (if these outdated properties currently exist in your Bioloop instance):
 
 ```
-# ui/.env
+# 📄 ui/.env
 
 # Remove this property:
 VITE_UPLOAD_API_BASE_PATH=https://...
 
 # ---
 
-# api/.env
+# 📄 api/.env
 
 # Remove these properties:
 OAUTH_UPLOAD_CLIENT_ID=xxx
 OAUTH_UPLOAD_CLIENT_SECRET=xxx
-UPLOAD_DIR=/path/to/uploads/directory
+UPLOAD_DIR=/x/y/z
 
 # ---
 
-# secure_download/.env
+# 📄 secure_download/.env
 
 # Remove this property
-# Note: this will need to be done on the host where secure_downloaded is hosted
-UPLOAD_PATH_DATA_PRODUCTS=/opt/sca/data
+# ℹ️ This will need to be done on the host where secure_downloaded is hosted
+UPLOAD_PATH_DATA_PRODUCTS=/a/b/c
 
 ```
 
 - The following properties will need to be added:
 ```
-# workers/workers/config/production.py
-# NOTE: This update will need to be performed on the host where the workers run.
+# 📄 workers/workers/config/production.py
+# ℹ️ This update will need to be performed on the host where the workers run.
+# ℹ️ `/home/bioloop/landing/uploads` (and its subdirectories) in this example is where uploaded content will be written to on disk.
     ...,
     'paths': {
         'RAW_DATA': {
-            'upload': '/N/scratch/scadev/bioloop/dev/uploads/raw_data',
+            'upload': '/home/bioloop/landing/uploads/raw_data',
         },
         'DATA_PRODUCT': {
-            'upload': '/N/scratch/scadev/bioloop/dev/uploads/data_products',
+            'upload': '/home/bioloop/landing/uploads/data_products',
         },
     },
     ...
@@ -315,10 +504,10 @@ UPLOAD_PATH_DATA_PRODUCTS=/opt/sca/data
 #### 2. Volume Mounts
 Uploads are written to the host through a volume-mount. This volume will have to be declared within the `api` service of the docker-compose YML file:
 ```
-# docker-compose-prod.yml (or appropriate docker-compose file)
+# 📄 docker-compose-prod.yml (or appropriate docker-compose file)
   api:
     volumes:
-      - /path/to/host/uploads/space:/opt/sca/data/uploads
+      - /home/bioloop/landing/uploads:/opt/sca/data/uploads
 ```
 
 #### 3. Database Migration
@@ -327,12 +516,13 @@ Do a Prisma migration, which will create the necessary database-schema changes.
 ```
 npx prisma migrate deploy
 ```
-💡 **Note:** Restart of the API will be needed after Prisma migration.
+💡 **Note:** Restart of the API/application will be needed after Prisma migration.
 
 
 #### 4. Install worker dependencies
 ```
 cd workers
+# bioloop/workers
 poetry install --no-root
 ```
 
@@ -341,17 +531,24 @@ poetry install --no-root
 - Running the script with the `--create` flag will create any directories that do not exist.
 - The 2 property-additions made to `production.py` in Step 1 will need to be done before this step. 
 
-#### 6. Start workers
 ```
 # bioloop/workers
 poetry shell
+python -um workers.scripts.setup_dirs --create
+```
+
+#### 6. Start workers
+```
+# bioloop/workers
+poetry shell (if shell not already activated)
 pm2 start ecosystem.config.js
 ```
 
 #### 7. Nginx configuration changes
 
-Add a `/api/uploads/` sub-block to the API's Nginx configuration (main `/api/` block)
+Add a `/api/uploads/` sub-block to the API's Nginx configuration (main `/api/` block), which will apply customizations needed to make uploads of large files work.
 
+Example:
 ```
 location /api/ {
     proxy_pass http://172.19.0.2:3030/;
@@ -368,11 +565,16 @@ location /api/ {
 }
 ```
 
+💡 **Tip:** Adjust IPv4 address as per your environment. See the `api` service in the docker-compose file corresponding to your environment, for the IPv4 address used by the `api` service.
+
+ℹ️ Why these are needed:
 - `proxy_read_timeout 300` — This is the timeout for reading a response from the API after nginx has already forwarded the request. The default 60s would only be a problem if the API took > 60s to process a chunk and send back a response. For a 50MB chunk write to disk, that's very unlikely to hit 60s, so this also doesn't change much for uploads.
 - `proxy_request_buffering off` - this controls whether nginx buffers the incoming request body before forwarding it to the API. With buffering on (the default), nginx holds the full chunk in memory/disk before the API sees any of it. With it off, nginx streams the bytes directly to the API as they arrive. For upload endpoints specifically, disabling this is the right call.
 - `client_body_timeout 300` — this is the timeout for reading the request body from the client. The default is 60 seconds. For a slow connection uploading a 50MB chunk at ~1MB/s, that would take 50 seconds — borderline. A 300 second timeout here is the safer choice.
 
 💡 **Note:** Restart Nginx after making these changes.
+
+---
 
 ### Post-Deploy Smoke Test
 

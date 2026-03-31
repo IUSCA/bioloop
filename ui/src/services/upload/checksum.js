@@ -23,7 +23,7 @@ async function _loadBlake3() {
     const hashWasm = await import("hash-wasm");
     // Use createBLAKE3 for streaming (not blake3 which loads entire file)
     blake3Fn = hashWasm.createBLAKE3;
-    console.log("[manifest-hash.js] ✓ BLAKE3 (streaming) loaded");
+    // console.log("[manifest-hash.js] ✓ BLAKE3 (streaming) loaded");
     return blake3Fn;
   } catch (error) {
     console.error("Failed to load hash-wasm module:", error);
@@ -135,27 +135,27 @@ async function _hashFile(file, hasher, onProgress = null) {
  * @returns {Promise<Object|null>} See return value semantics above.
  */
 export async function computeManifestHash(files, progressCallback = null) {
-  console.log("[manifest-hash.js] computeManifestHash called");
-  console.log("[manifest-hash.js]   files:", files?.length || 0);
-  console.log(
-    "[manifest-hash.js]   progressCallback:",
-    typeof progressCallback,
-  );
+  // console.log("[manifest-hash.js] computeManifestHash called");
+  // console.log("[manifest-hash.js]   files:", files?.length || 0);
+  // console.log(
+  //   "[manifest-hash.js]   progressCallback:",
+  //   typeof progressCallback,
+  // );
 
   // Guard: callers should check _isChecksumVerificationEnabled() first,
   // but this provides a safe fallback if called directly.
   if (!config.enabledFeatures.upload_verify_checksums) {
-    console.log("[manifest-hash.js] Feature disabled via config");
+    // console.log("[manifest-hash.js] Feature disabled via config");
     return null;
   }
 
   if (!files || files.length === 0) {
-    console.log("[manifest-hash.js] No files to manifest-hash");
+    // console.log("[manifest-hash.js] No files to manifest-hash");
     return null;
   }
 
   try {
-    console.log("[manifest-hash.js] Loading BLAKE3 (streaming)...");
+    // console.log("[manifest-hash.js] Loading BLAKE3 (streaming)...");
     const createBlake3 = await _loadBlake3();
 
     // Create a SINGLE hasher instance reused across all files.
@@ -168,15 +168,15 @@ export async function computeManifestHash(files, progressCallback = null) {
     const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
     let processedBytes = 0;
 
-    console.log(
-      `[manifest-hash.js] Hashing ${totalFiles} file(s) (${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB total)...`,
-    );
+    // console.log(
+    //   `[manifest-hash.js] Hashing ${totalFiles} file(s) (${(totalBytes / 1024 / 1024 / 1024).toFixed(2)} GB total)...`,
+    // );
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      console.log(
-        `[manifest-hash.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
-      );
+      // console.log(
+      //   `[manifest-hash.js] [${i + 1}/${totalFiles}] ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`,
+      // );
 
       const fileHash = await _hashFile(file, hasher, (fileProgress) => {
         const currentFileBytes = (fileProgress / 100) * file.size;
@@ -215,7 +215,7 @@ export async function computeManifestHash(files, progressCallback = null) {
     hasher.init();
     hasher.update(new TextEncoder().encode(manifestStr));
     const manifestHash = hasher.digest("hex");
-    console.log("[manifest-hash.js] ✓ Manifest-hash:", manifestHash);
+    // console.log("[manifest-hash.js] ✓ Manifest-hash:", manifestHash);
 
     const result = {
       algorithm: "blake3",
@@ -226,14 +226,15 @@ export async function computeManifestHash(files, progressCallback = null) {
       computed_at: new Date().toISOString(),
     };
 
-    console.log("[manifest-hash.js] ✓ Done:", result);
+    // console.log("[manifest-hash.js] ✓ Done:", result);
     return result;
   } catch (error) {
-    console.error(
-      "[manifest-hash.js] ✗ Failed to compute manifest-hash:",
-      error,
-    );
-    console.error("[manifest-hash.js] Error stack:", error.stack);
+    console.error("✗ Failed to compute manifest-hash");
+    // console.error(
+    //   "[manifest-hash.js] ✗ Failed to compute manifest-hash:",
+    //   error,
+    // );
+    // console.error("[manifest-hash.js] Error stack:", error.stack);
     // Do not fail the upload — return a skip-marker so the API records that
     // computation was attempted but failed.  The worker reads this marker and
     // logs a clear explanation instead of silently treating the upload as a
