@@ -1227,20 +1227,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
       return null;
     }
   };
-  const getDebugFlag = (storageKey, runtimeWindowKey) => {
-    if (
-      typeof window !== "undefined" &&
-      window[runtimeWindowKey] === true
-    ) {
-      return true;
-    }
-    const sessionValue = safeStorageGet(window?.sessionStorage, storageKey);
-    if (sessionValue === "1" || sessionValue === "true") {
-      return true;
-    }
-    const localValue = safeStorageGet(window?.localStorage, storageKey);
-    return localValue === "1" || localValue === "true";
-  };
   const getTestSetting = (storageKey) =>
     safeStorageGet(window?.sessionStorage, storageKey) ??
     safeStorageGet(window?.localStorage, storageKey);
@@ -1296,19 +1282,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
   if (!userToken) {
     throw new Error("Authentication token not found");
   }
-  const uploadDebugEnabled = getDebugFlag("UPLOAD_DEBUG", "__UPLOAD_DEBUG__");
-  const uploadAuthDebugEnabled = getDebugFlag(
-    "UPLOAD_AUTH_DEBUG",
-    "__UPLOAD_AUTH_DEBUG__",
-  );
-  let lastTokenFingerprint = null;
-  const tokenFingerprint = (token) =>
-    token ? `${token.slice(0, 8)}...${token.slice(-8)}` : "none";
-  const logTusDebug = (...args) => {
-    if (uploadDebugEnabled) {
-      console.log(...args);
-    }
-  };
 
   let uploadedCount = 0;
   let totalBytes = 0;
@@ -1365,19 +1338,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
           144000, 233000, 377000,
         ],
         onShouldRetry: (err, retryAttempt, options) => {
-          const status = err?.originalResponse?.getStatus?.();
-          const body = err?.originalResponse?.getBody?.();
-          if (uploadDebugEnabled || status === 401) {
-            console.error("[TUS-CLIENT] Retry decision", {
-              file_name: file.name,
-              retry_attempt: retryAttempt,
-              status,
-              body,
-              error_message: err?.message,
-              error_type: err?.constructor?.name,
-            });
-          }
-
           // Preserve tus-js-client default retry behavior after logging.
           return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
         },
@@ -1412,78 +1372,13 @@ const uploadFilesWithTus = async (files, endpoint) => {
             const latestToken = getAuthToken();
             if (latestToken && req?.setHeader) {
               req.setHeader("Authorization", `Bearer ${latestToken}`);
-              if (uploadAuthDebugEnabled) {
-                const fp = tokenFingerprint(latestToken);
-                if (fp !== lastTokenFingerprint) {
-                  console.info("[TUS-AUTH] Request token changed", {
-                    file_name: file.name,
-                    method: req?.getMethod?.(),
-                    url: req?.getURL?.(),
-                    previous_token: lastTokenFingerprint,
-                    next_token: fp,
-                    token_shape: {
-                      length: latestToken.length,
-                      jwt_segments: latestToken.split(".").length,
-                    },
-                  });
-                }
-                lastTokenFingerprint = fp;
-              }
-            } else if (uploadAuthDebugEnabled) {
-              console.warn("[TUS-AUTH] Missing token before request", {
-                file_name: file.name,
-                method: req?.getMethod?.(),
-                url: req?.getURL?.(),
-              });
             }
-
-            logTusDebug("[TUS-CLIENT] Request", {
-              file_name: file.name,
-              method: req?.getMethod?.(),
-              url: req?.getURL?.(),
-            });
           } catch (hookErr) {
             console.error("[TUS-CLIENT] onBeforeRequest hook error", {
               file_name: file.name,
               error: hookErr?.message,
             });
           }
-        },
-        onAfterResponse: (req, res) => {
-          try {
-            const status = res?.getStatus?.();
-            if (status === 401) {
-              console.error("[TUS-AUTH] 401 response", {
-                file_name: file.name,
-                method: req?.getMethod?.(),
-                url: req?.getURL?.(),
-                token_present: Boolean(getAuthToken()),
-                token_fingerprint: tokenFingerprint(getAuthToken()),
-              });
-            }
-            logTusDebug("[TUS-CLIENT] Response", {
-              file_name: file.name,
-              method: req?.getMethod?.(),
-              url: req?.getURL?.(),
-              status,
-              upload_offset: res?.getHeader?.("Upload-Offset"),
-              upload_length: res?.getHeader?.("Upload-Length"),
-              tus_resumable: res?.getHeader?.("Tus-Resumable"),
-            });
-          } catch (hookErr) {
-            console.error("[TUS-CLIENT] onAfterResponse hook error", {
-              file_name: file.name,
-              error: hookErr?.message,
-            });
-          }
-        },
-        onChunkComplete: (chunkSize, bytesUploaded, bytesTotal) => {
-          logTusDebug("[TUS-CLIENT] Chunk complete", {
-            file_name: file.name,
-            chunk_size: chunkSize,
-            bytes_uploaded: bytesUploaded,
-            bytes_total: bytesTotal,
-          });
         },
         onError: (error) => {
           const statusCode = error.originalResponse?.getStatus?.() ?? "unknown";
