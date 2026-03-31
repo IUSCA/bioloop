@@ -9,4 +9,4 @@ also, don't accopunt for backward cmpatibility.
 
 - diagrams update?
 
-- notifications not being created?
+- remove logging we may have added in ui/api for debugging the various issues we fixed

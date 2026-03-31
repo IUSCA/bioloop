@@ -116,17 +116,32 @@ function moveTusFileToDestination({
 
   if (!fs.existsSync(finalPath)) {
     if (fs.existsSync(tusFilePath)) {
-      // Normal case: TUS staged a data file — move it to its final location.
-      logger.info('[TUS] Moving file', {
-        dataset_id: datasetId,
-        source: tusFilePath,
-        destination: finalPath,
-      });
-      fs.renameSync(tusFilePath, finalPath);
-      logger.info('[TUS] File moved successfully', {
-        dataset_id: datasetId,
-        destination: finalPath,
-      });
+      const stagedSize = fs.statSync(tusFilePath).size;
+      if (stagedSize === 0) {
+        // 0-byte upload: keep the staging placeholder in place for TUS's
+        // immediate post-create lifecycle checks, and materialize the final
+        // empty file via copy. A rename here removes the staging path and can
+        // cause TUS to report "file for this url not found" for empty files.
+        logger.info('[TUS] 0-byte staged file detected — copying (not renaming)', {
+          dataset_id: datasetId,
+          source: tusFilePath,
+          destination: finalPath,
+        });
+        fs.copyFileSync(tusFilePath, finalPath);
+      } else {
+        // Normal case: TUS staged a non-empty data file — move it to final location.
+        logger.info('[TUS] Moving file', {
+          dataset_id: datasetId,
+          source: tusFilePath,
+          destination: finalPath,
+          size_bytes: stagedSize,
+        });
+        fs.renameSync(tusFilePath, finalPath);
+        logger.info('[TUS] File moved successfully', {
+          dataset_id: datasetId,
+          destination: finalPath,
+        });
+      }
     } else {
       // 0-byte file: @tus/file-store v1.4 normally creates an empty data file
       // on create(), but as a safety net handle the case where it doesn't.
