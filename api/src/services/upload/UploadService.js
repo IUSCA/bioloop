@@ -85,6 +85,11 @@ function tusError(statusCode, body) {
   return Object.assign(new Error(body), { status_code: statusCode, body });
 }
 
+function isLockAcquiredError(err) {
+  const msg = String(err?.message || err?.body || '').toLowerCase();
+  return msg.includes('lock acquired');
+}
+
 /**
  * Convert a host-visible dataset origin path to the equivalent container path
  * used by this API process for local filesystem writes.
@@ -300,14 +305,18 @@ class UploadService {
       onResponseError: (req, res, err) => {
         // TUS-internal errors (ResponseError) carry `status_code` and `body`
         // rather than `message`, so log both to make diagnosis straightforward.
-        logger.error(
+        const statusCode = err.status_code || 500;
+        const lockContention = statusCode === 423 || isLockAcquiredError(err);
+        const level = lockContention ? 'warn' : 'error';
+        logger[level](
           `[TUS] Response error on ${req.method} ${req.url}: ${err.message ?? err.body ?? err}`,
           {
             method: req.method,
             url: req.url,
             error_message: err.message,
             error_body: err.body,
-            status_code: err.status_code || 500,
+            status_code: statusCode,
+            lock_contention: lockContention,
           },
         );
       },

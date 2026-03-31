@@ -686,6 +686,12 @@ const uploadProgress = ref(0);
 const filesUploaded = ref(0);
 const totalFiles = ref(0);
 const lastUploadProcessId = ref(null); // A TUS process_id from this batch — sent to /complete as audit reference only
+// Limit concurrent TUS uploads to avoid exhausting browser/network resources
+// when a directory contains many files.
+const MAX_CONCURRENT_TUS_UPLOADS = Math.max(
+  1,
+  parseInt(config.upload.max_concurrent_files, 10) || 4,
+);
 
 // Per-file failure tracking — populated after upload; each entry:
 // { name: string, relativePath: string, message: string }
@@ -1239,7 +1245,7 @@ const uploadFilesWithTus = async (files, endpoint) => {
   // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload') to enable
   // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times
   const simulateFailure = localStorage.getItem("SIMULATE_UPLOAD_FAILURE");
-  const uploadPromises = files.map((file) => {
+  const uploadSingleFileWithTus = (file) => {
     return new Promise((resolve, reject) => {
       // TEST ONLY: Check for failure count configuration
       // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
@@ -1256,10 +1262,12 @@ const uploadFilesWithTus = async (files, endpoint) => {
       upload = new tus.Upload(file, {
         endpoint,
         // Fibonacci-progression retry delays (~16 min of cumulative back-off).
-        // tus-js-client retries automatically on network errors; onError is called
-        // only once the final delay has elapsed without a successful reconnect.
+        // Start above 0 ms so a retried PATCH does not immediately race a lock
+        // held by the prior in-flight request on the same upload resource.
+        // tus-js-client retries automatically on retryable errors; onError is
+        // called only once all retries are exhausted.
         retryDelays: [
-          0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+          1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
           144000, 233000, 377000,
         ],
         metadata: {
@@ -1331,12 +1339,28 @@ const uploadFilesWithTus = async (files, endpoint) => {
 
       upload.start();
     });
+  };
+
+  // Run uploads with a bounded pool instead of launching every file at once.
+  // This prevents browser-level socket/request exhaustion on large directories.
+  const workerCount = Math.min(MAX_CONCURRENT_TUS_UPLOADS, files.length);
+  const results = new Array(files.length);
+  let nextFileIndex = 0;
+
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextFileIndex < files.length) {
+      const fileIndex = nextFileIndex++;
+      const file = files[fileIndex];
+      try {
+        await uploadSingleFileWithTus(file);
+        results[fileIndex] = { status: "fulfilled" };
+      } catch (error) {
+        results[fileIndex] = { status: "rejected", reason: error };
+      }
+    }
   });
 
-  // allSettled lets every file run to success or exhausted-retries before we
-  // evaluate the outcome — we get the full failure list rather than stopping
-  // at the first rejection.
-  const results = await Promise.allSettled(uploadPromises);
+  await Promise.all(workers);
 
   const rejections = results
     .map((r, i) => ({ result: r, file: files[i] }))
