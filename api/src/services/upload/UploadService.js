@@ -59,6 +59,7 @@ const prisma = require('@/db');
 const CONSTANTS = require('@/constants');
 const datasetService = require('@/services/dataset');
 const { readTusFileInfo, moveTusFileToDestination } = require('./tusUtils');
+const { relocateSidecarForUpload } = require('./sidecarUtils');
 
 // TestableFileStore is only loaded in non-production environments.
 // In production a plain FileStore is used — no simulation code is loaded or
@@ -203,10 +204,19 @@ class UploadService {
       /**
        * Fires once TUS has received all bytes for a single file upload.
        *
-       * Moves the staged TUS file to its final location under the dataset's
-       * origin_path.  The UI sends all routing metadata (selection_mode,
-       * relative_path, directory_name) as TUS upload metadata on the initial
-       * POST /uploads/files request, so everything needed is available here.
+       * TUS stores two staging artifacts per upload ID:
+       *   1) payload file:  <upload.path>/<process_id>
+       *   2) sidecar JSON:  <upload.path>/<process_id>.json
+       *
+       * The sidecar carries upload metadata (dataset_id, filename,
+       * selection_mode, relative_path, etc). We read it first, then:
+       *   - relocate sidecar JSON into uploaded_data/<dataset_id>/ for cleanup
+       *     organization
+       *   - move the payload file to the dataset's final origin_path
+       *
+       * The UI sends routing metadata on the initial POST /uploads/files
+       * request, so everything needed for the destination path is available
+       * here during onUploadFinish.
        *
        * Throwing tusError() here aborts the TUS response with an HTTP error,
        * which the tus-js-client surfaces as an upload failure and may retry.
@@ -241,6 +251,25 @@ class UploadService {
         const tusInfoPath = `${tusFilePath}.json`;
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
+        
+        // Move the sidecar metadata file corresponding to this uploaded file to the dataset-specific folder
+        // This is done for logical organization of the TUS metadata files.
+        // - Path where metadata file is initially stored:
+        //    <uploadDir>/<processId>.json
+        // - Path where metadata file is moved:
+        //    <uploadDir>/uploaded_data/<datasetId>/<processId>.json
+        const sidecarRelocation = relocateSidecarForUpload({
+          uploadDir,
+          datasetId,
+          processId: process_id,
+        });
+        logger.info('[TUS] Sidecar relocation', {
+          dataset_id: datasetId,
+          process_id,
+          ...sidecarRelocation,
+        });
+
+        // locate the host path (as opposed to the containerized path) for the uploaded file
         const writableOriginPath = resolveWritableOriginPath(
           uploadLog.dataset.origin_path,
           uploadHostPath,

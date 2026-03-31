@@ -4,7 +4,14 @@ const logger = require('@/services/logger');
 
 /**
  * Reads the TUS sidecar (.json) file to extract the original filename and raw
- * TUS metadata.  Throws if the sidecar is absent.
+ * TUS metadata. Throws if the sidecar is absent.
+ *
+ * Sidecar meaning:
+ *   @tus/file-store keeps one JSON metadata file per upload ID
+ *   (<process_id>.json) in TUS staging. It stores metadata sent at upload
+ *   creation (dataset_id, filename, relative_path, selection_mode, etc).
+ *   This app uses that metadata to determine where the uploaded payload file
+ *   must be moved under dataset.origin_path.
  *
  * The old behavior silently fell back to `originalFilename = 'uploaded_file'`
  * when the sidecar was missing.  In a multi-file upload this caused every
@@ -51,6 +58,12 @@ function readTusFileInfo({ tusInfoPath, datasetId, process_id }) {
  *
  * Operation is idempotent — if the file already exists at the destination the
  * move is skipped.  Parent directories are created as needed.
+ *
+ * Why/how this move happens:
+ *   TUS initially writes bytes to a staging file named by upload ID
+ *   (<uploadDir>/<process_id>). Once a file is complete, onUploadFinish calls
+ *   this helper to atomically rename that staged file into the dataset's final
+ *   origin_path layout (directory-preserving or single-file mode).
  * Returns the resolved final destination path.
  */
 function moveTusFileToDestination({
