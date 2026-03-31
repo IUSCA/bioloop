@@ -36,6 +36,8 @@ declare module 'vue-router/auto-routes' {
     '/datasets/[datasetId]/': RouteRecordInfo<'/datasets/[datasetId]/', '/datasets/:datasetId', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,
     '/datasets/[datasetId]/filebrowser': RouteRecordInfo<'/datasets/[datasetId]/filebrowser', '/datasets/:datasetId/filebrowser', { datasetId: ParamValue<true> }, { datasetId: ParamValue<false> }>,
     '/datasets/import': RouteRecordInfo<'/datasets/import', '/datasets/import', Record<never, never>, Record<never, never>>,
+    '/datasets/imports/': RouteRecordInfo<'/datasets/imports/', '/datasets/imports', Record<never, never>, Record<never, never>>,
+    '/datasets/imports/new': RouteRecordInfo<'/datasets/imports/new', '/datasets/imports/new', Record<never, never>, Record<never, never>>,
     '/datasets/uploads/': RouteRecordInfo<'/datasets/uploads/', '/datasets/uploads', Record<never, never>, Record<never, never>>,
     '/datasets/uploads/[id]': RouteRecordInfo<'/datasets/uploads/[id]', '/datasets/uploads/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/datasets/uploads/new': RouteRecordInfo<'/datasets/uploads/new', '/datasets/uploads/new', Record<never, never>, Record<never, never>>,
