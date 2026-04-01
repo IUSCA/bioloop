@@ -11,7 +11,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - **UI** (`UploadDatasetStepper`) orchestrates metadata collection and TUS transfer.
 - **API** hosts TUS server and upload routes (`/datasets/uploads/*`).
 - **Worker cron** (`manage_upload_workflows.py`) drives status transitions.
-- **Worker cron** (`purge_stale_uploaded.py`) removes stale TUS staging artifacts.
+- **Worker cron** (`purge_stale_uploaded.py`) cleans TUS artifacts + upload payload leftovers.
 - **Celery task** (`verify_upload_integrity.py`) performs async verification.
 - **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
@@ -51,7 +51,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 `POST /datasets/uploads/:id/complete`
 
 - Transitions upload log to `UPLOADED` in an idempotent manner.
-- Records `process_id` and optional metadata (e.g. upload manifest-hash, size manifest).
+- Records optional metadata (e.g. upload manifest-hash, size manifest).
 - Rejects status regression if upload already advanced beyond upload stage.
 
 ### 4) Worker-Orchestrated Post-Upload Pipeline
@@ -96,7 +96,7 @@ When a single file finishes, `onUploadFinish` (in `UploadService`):
 
 `origin_path` is chosen at registration time and may be a **host-visible** path
 when `UPLOAD_HOST_DIR` / `upload.host_path` is set, while the API process writes
-through the **mounted** tree (`upload.path`). The service resolves a writable
+through the **mounted** tree (`upload.path`). The API code resolves a writable
 container path for renames/copies so workers and DB metadata stay consistent
 with deployment layout (see **Volume Mounts** under Deployment Notes).
 
@@ -416,31 +416,44 @@ before starting the next upload is sufficient.
 - Verification timeout protection marks stuck `VERIFYING` sessions failed.
 - `VERIFIED -> COMPLETE` flow is guarded against duplicate workflow starts.
 
-## Uploaded-artifacts Cleanup (TTL Job)
+## Uploaded-artifacts Cleanup (daily job)
 
-The upload flow leaves TUS-managed uploaded artifacts that must be cleaned
-independently of dataset payloads.
+The upload flow leaves TUS-managed artifacts and on-disk upload payloads. The
+worker script reconciles **filesystem state with the API** (upload log status,
+`archive_path`).
+
+`<uploads_root>` here is derived from worker config by taking the parent of:
+- `config['paths']['RAW_DATA']['upload']`
+- `config['paths']['DATA_PRODUCT']['upload']`
 
 - Script: `workers/workers/scripts/purge_stale_uploaded.py`
 - Schedule: `workers/ecosystem.config.js` app `purge_stale_uploaded`
   - cron: `15 07 * * *` (daily, 07:15)
-  - args: `--ttl-days=14`
-- Entrypoint support: `workers/bin/entrypoint.sh` (`WORKER_TYPE=purge_stale_uploaded`)
+  - args: `--ttl-days=14 --stale-uploading-days=14`
 
 What is cleaned:
 
-- Top-level stale TUS artifacts under `<uploads_root>`:
-  - `<tus_id>`
-  - `<tus_id>.json`
-- Dataset-scoped mirrored sidecars:
-  - `<uploads_root>/uploaded_data/<dataset_id>/*.json`
+1. **Top-level stale TUS artifacts** under `<uploads_root>` (TTL only; abandoned
+   in-progress uploads):
+   - `<tus_id>`
+   - `<tus_id>.json`
+2. **Mirrored sidecars** under `<uploads_root>/uploaded_data/<dataset_id>/*.json`:
+   - Removed as soon as the upload log is **COMPLETE** or a **terminal failure**
+     (`UPLOAD_FAILED`, `VERIFICATION_FAILED`, `PERMANENTLY_FAILED`) — no 14-day wait.
+   - If there is **no** upload log row for that `dataset_id`, JSON files are removed
+    immediately (orphans). Rows still **in progress** (e.g. `VERIFYING`) are
+    not deleted from this path.
+3. **Upload payload directories** for archived datasets: the tree at
+   `dataset.origin_path` is removed when the dataset has **`archive_path` set**
+   (same archive workflow that records `ARCHIVED` state). Only paths under
+   `<uploads_root>` inside `raw_data/` or `data_products/` are eligible (so
+   other `origin_path` layouts are never touched).
+4. **Stale UPLOADING guard:** upload logs still in `UPLOADING` past
+   `--stale-uploading-days`
+   are marked `PERMANENTLY_FAILED` and their known upload artifacts are removed
+   (top-level `<tus_id>` / `<tus_id>.json` and `origin_path` tree when present).
 
-What is protected:
 
-- Dataset payload directories are never deleted by this job:
-  - `raw_data`
-  - `data_product`
-  - `data_products`
 
 Manual run examples:
 
@@ -448,6 +461,7 @@ Manual run examples:
 python -m workers.scripts.purge_stale_uploaded
 python -m workers.scripts.purge_stale_uploaded --dry-run
 python -m workers.scripts.purge_stale_uploaded --ttl-days=30
+python -m workers.scripts.purge_stale_uploaded --ttl-days=7 --stale-uploading-days=14
 ```
 
 ---
@@ -487,7 +501,6 @@ UPLOAD_PATH_DATA_PRODUCTS=/a/b/c
 ```
 # 📄 workers/workers/config/production.py
 # ℹ️ This update will need to be performed on the host where the workers run.
-# ℹ️ `/home/bioloop/landing/uploads` (and its subdirectories) in this example is where uploaded content will be written to on disk.
     ...,
     'paths': {
         'RAW_DATA': {
@@ -500,15 +513,21 @@ UPLOAD_PATH_DATA_PRODUCTS=/a/b/c
     ...
 ```
 
+💡 **Note:** The `/home/bioloop/landing/uploads` directory (and its `[ raw_data | data_products ]` subdirectories) in this example is where uploaded content will be written to on disk.
+
 
 #### 2. Volume Mounts
-Uploads are written to the host through a volume-mount. This volume will have to be declared within the `api` service of the docker-compose YML file:
+Uploads are written to the host through a volume-mount. This volume will have to be declared within the `api` service of the docker-compose YML file.
+
+Example:
 ```
 # 📄 docker-compose-prod.yml (or appropriate docker-compose file)
   api:
     volumes:
       - /home/bioloop/landing/uploads:/opt/sca/data/uploads
 ```
+
+💡 **Note:** `/home/bioloop/landing/uploads` (in this example) is the same path that was used in `production.py` in the step above.
 
 #### 3. Database Migration
 
@@ -560,7 +579,6 @@ location /api/ {
         proxy_pass http://172.19.0.2:3030/uploads/;
         proxy_request_buffering off;
         client_body_timeout 300;
-        proxy_read_timeout 300;
     }
 }
 ```
@@ -568,9 +586,8 @@ location /api/ {
 💡 **Tip:** Adjust IPv4 address as per your environment. See the `api` service in the docker-compose file corresponding to your environment, for the IPv4 address used by the `api` service.
 
 ℹ️ Why these are needed:
-- `proxy_read_timeout 300` — This is the timeout for reading a response from the API after nginx has already forwarded the request. The default 60s would only be a problem if the API took > 60s to process a chunk and send back a response. For a 50MB chunk write to disk, that's very unlikely to hit 60s, so this also doesn't change much for uploads.
-- `proxy_request_buffering off` - this controls whether nginx buffers the incoming request body before forwarding it to the API. With buffering on (the default), nginx holds the full chunk in memory/disk before the API sees any of it. With it off, nginx streams the bytes directly to the API as they arrive. For upload endpoints specifically, disabling this is the right call.
-- `client_body_timeout 300` — this is the timeout for reading the request body from the client. The default is 60 seconds. For a slow connection uploading a 50MB chunk at ~1MB/s, that would take 50 seconds — borderline. A 300 second timeout here is the safer choice.
+- `proxy_request_buffering off` - this controls whether nginx buffers the incoming request body before forwarding it to the API. With buffering on (the default), nginx holds the full chunk in memory/disk before the API sees any of it. With it off, nginx streams the bytes directly to the API as they arrive. For upload endpoints specifically, disabling this better for large uploads.
+- `client_body_timeout 300` — this is the timeout for reading the request body from the client. The default is 60 seconds. For a slow connection uploading a 50MB chunk at ~1MB/s, that would take 50 seconds — borderline. A 300 second timeout here is a safe choice.
 
 💡 **Note:** Restart Nginx after making these changes.
 

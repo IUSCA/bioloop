@@ -97,7 +97,13 @@ module.exports = {
     {
       name: 'purge_stale_uploaded',
       script: 'python',
-      args: '-u -m workers.scripts.purge_stale_uploaded --ttl-days=14',
+      args: [
+        '-u',
+        '-m', 
+        'workers.scripts.purge_stale_uploaded',
+        '--ttl-days=14',
+        '--stale-uploading-days=14'
+      ],
       watch: false,
       interpreter: '',
       log_date_format: 'YYYY-MM-DD HH:mm Z',
