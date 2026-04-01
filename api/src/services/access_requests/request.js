@@ -5,8 +5,7 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const { TARGET_TYPE } = require('@/authorization/builtin/audit');
-const { resolveEntityName, resolveResources, resolveSubjects } = require('@/authorization/builtin/audit/helpers');
+const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 
 /**
@@ -94,35 +93,24 @@ async function createAccessRequest(data, requester_id) {
           access_request_id: accessRequest.id,
           access_type_id: item.access_type_id ?? Prisma.skip,
           preset_id: item.preset_id ?? Prisma.skip,
-          requested_until: item.requested_expiry?.toValue(), // convert Expiry instance to value for DB
+          requested_until: item.requested_expiry ? item.requested_expiry.toValue() : Prisma.skip,
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
       });
     }
 
-    // Create audit record for request creation
-    const requesterName = await resolveEntityName(tx, 'user', requester_id);
-    const resourceMap = await resolveResources(tx, [data.resource_id]);
-    const subjectMap = await resolveSubjects(tx, [data.subject_id]);
+    // Use AuditBuilder
+    const builder = new AuditBuilder(tx, { actor_id: requester_id });
+    await builder
+      .setTarget('ACCESS_REQUEST', accessRequest.id)
+      .setSubject(data.subject_id)
+      .setResource(data.resource_id);
 
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_CREATED,
-        actor_id: requester_id,
-        actor_name: requesterName,
-        subject_id: data.subject_id,
-        subject_name: subjectMap[data.subject_id]?.name ?? Prisma.skip,
-        subject_type: subjectMap[data.subject_id]?.type ?? Prisma.skip,
-        target_type: TARGET_TYPE.ACCESS_REQUEST,
-        target_id: accessRequest.id,
-        metadata: {
-          resource_id: data.resource_id,
-          resource_type: resourceMap[data.resource_id]?.type || null,
-          resource_name: resourceMap[data.resource_id]?.name || null,
-          status: ACCESS_REQUEST_STATUS.DRAFT,
-        },
-      },
+    builder.mergeMetadata({
+      status: ACCESS_REQUEST_STATUS.DRAFT,
     });
+
+    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_CREATED);
 
     // Return updated request with items
     return _getRequestById(tx, accessRequest.id);
@@ -179,24 +167,30 @@ async function updateAccessRequest(request_id, actor_id, data) {
           access_request_id: request_id,
           access_type_id: item.access_type_id ?? Prisma.skip,
           preset_id: item.preset_id ?? Prisma.skip,
-          requested_until: item.requested_expiry.toValue(), // convert Expiry instance to value for DB
+          requested_until: item.requested_expiry ? item.requested_expiry.toValue() : Prisma.skip,
           decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
         })),
+
       });
     }
 
-    // Create audit record
-    const requesterName = await resolveEntityName(tx, 'user', actor_id);
+    // Use AuditBuilder
+    const builder = new AuditBuilder(tx, { actor_id });
 
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_UPDATED,
-        actor_id,
-        actor_name: requesterName,
-        target_type: TARGET_TYPE.ACCESS_REQUEST,
-        target_id: request_id,
+    const requestWithRelations = await tx.access_request.findUnique({
+      where: { id: request_id },
+      include: {
+        resource: { include: { dataset: true, collection: true } },
+        subject: { include: { user: true, group: true } },
       },
     });
+
+    await builder
+      .setTarget('ACCESS_REQUEST', request_id)
+      .setSubject(requestWithRelations?.subject_id)
+      .setResource(requestWithRelations?.resource_id);
+
+    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_UPDATED);
 
     // Return updated request with items
     return _getRequestById(tx, request_id);
@@ -314,22 +308,19 @@ async function submitRequest(request_id, actor_id) {
       throw createError.Conflict('Request is no longer in DRAFT status');
     }
 
-    // Create audit record
-    const actorName = await resolveEntityName(tx, 'user', actor_id);
+    // Use AuditBuilder
+    const builder = new AuditBuilder(tx, { actor_id });
+    await builder
+      .setTarget('ACCESS_REQUEST', request_id)
+      .setSubject(request.subject_id)
+      .setResource(request.resource_id);
 
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_SUBMITTED,
-        actor_id,
-        actor_name: actorName,
-        target_type: TARGET_TYPE.ACCESS_REQUEST,
-        target_id: request_id,
-        metadata: {
-          from_status: ACCESS_REQUEST_STATUS.DRAFT,
-          to_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-        },
-      },
+    builder.mergeMetadata({
+      from_status: ACCESS_REQUEST_STATUS.DRAFT,
+      to_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
     });
+
+    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_SUBMITTED);
 
     return _getRequestById(tx, request_id);
   });

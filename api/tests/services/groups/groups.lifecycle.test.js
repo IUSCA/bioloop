@@ -425,14 +425,14 @@ describe('groups - lifecycle', () => {
       ]));
     });
 
-    it('direct_membership_only returns only groups where user has a direct role', async () => {
+    it('scope: direct returns only groups where user has a direct role', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        direct_membership_only: true,
+        scope: 'direct',
       });
       const ids = result.data.map((g) => g.id);
       expect(ids).toEqual(expect.arrayContaining([
@@ -443,14 +443,14 @@ describe('groups - lifecycle', () => {
       expect(ids).not.toContain(child.id);
     });
 
-    it('oversight_only returns at least the transitive child but never the bare member-only group', async () => {
+    it('scope: oversight returns at least the transitive child but never the bare member-only group', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        oversight_only: true,
+        scope: 'oversight',
       });
       const ids = result.data.map((g) => g.id);
 
@@ -459,14 +459,14 @@ describe('groups - lifecycle', () => {
       expect(ids).not.toContain(directGroup.id);
     });
 
-    it('admin_only returns only groups where user role is ADMIN', async () => {
+    it('scope: admin returns only groups where user role is ADMIN', async () => {
       const result = await groupsService.searchGroupsForUser({
         user_id: actor.subject_id,
         sort_by: 'name',
         sort_order: 'asc',
         limit: 100,
         offset: 0,
-        admin_only: true,
+        scope: 'admin',
       });
       const ids = result.data.map((g) => g.id);
       expect(ids).toEqual(expect.arrayContaining([

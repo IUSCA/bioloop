@@ -5,6 +5,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
+const Expiry = require('@/utils/expiry');
 const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const {
   createTestUser,
@@ -54,7 +55,6 @@ beforeAll(async () => {
     testPreset = await prisma.grant_preset.create({
       data: {
         name: `Test Preset Lifecycle ${Date.now()}`,
-        slug: `test-preset-lc-${Date.now()}`,
         is_active: true,
         access_type_items: {
           create: [
@@ -277,7 +277,7 @@ describe('access requests with presets', () => {
           item_decisions: itemIds.map((id) => ({
             id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },
@@ -331,7 +331,7 @@ describe('access requests with presets', () => {
           item_decisions: itemIds.map((id) => ({
             id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },
@@ -354,7 +354,6 @@ describe('access requests with presets', () => {
       const secondPreset = await prisma.grant_preset.create({
         data: {
           name: `Test Preset Overlap ${Date.now()}`,
-          slug: `test-preset-overlap-${Date.now()}`,
           is_active: true,
           access_type_items: {
             create: [
@@ -392,7 +391,7 @@ describe('access requests with presets', () => {
           item_decisions: itemIds.map((id) => ({
             id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Overlap test',
         },
@@ -451,7 +450,7 @@ describe('access requests with presets', () => {
           item_decisions: itemIds.map((id) => ({
             id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Supersede test',
         },
@@ -517,7 +516,7 @@ describe('access requests with presets', () => {
           item_decisions: updatedRequest.access_request_items.map((item) => ({
             id: item.id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Skip test',
         },
@@ -580,7 +579,7 @@ describe('access requests with presets', () => {
           item_decisions: updatedRequest.access_request_items.map((item) => ({
             id: item.id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Skip indefinite test',
         },
@@ -655,7 +654,7 @@ describe('access requests with presets', () => {
           item_decisions: updatedRequest.access_request_items.map((item) => ({
             id: item.id,
             decision: 'APPROVED',
-            approved_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            approved_expiry: Expiry.at(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Mixed branch test',
         },
@@ -741,7 +740,7 @@ describe('access requests with presets', () => {
           item_decisions: updatedRequest.access_request_items.map((item) => ({
             id: item.id,
             decision: 'APPROVED',
-            approved_until: null,
+            approved_expiry: Expiry.never(),
           })),
           decision_reason: 'Indefinite test',
         },
@@ -796,7 +795,7 @@ describe('access requests with presets', () => {
             {
               id: presetItem.id,
               decision: 'APPROVED',
-              approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+              approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
             },
             {
               id: directItem.id,

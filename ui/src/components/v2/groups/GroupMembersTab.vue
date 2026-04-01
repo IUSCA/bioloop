@@ -330,7 +330,7 @@ function setScope(value) {
 }
 
 watch([itemsPerPage, searchTerm, activeScope], () => {
-  if (currentPage.value !== 1) {
+  if (currentPage.value === 1) {
     fetchMembers();
     return;
   }

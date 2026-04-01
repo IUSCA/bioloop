@@ -860,20 +860,20 @@ model authorization_audit {
   actor_name String? // Snapshot of actor name at write-time
   actor      user?   @relation(fields: [actor_id], references: [subject_id], onDelete: SetNull)
 
-  // Subject — who/what was acted upon (distinct from actor)
+  // Subject — secondary entity: user added to group, dataset added to collection, etc.
   subject_id   String?
   subject_name String? // Snapshot of subject name at write-time
-  subject_type String? // 'USER', 'GROUP', or used for access checks
+  subject_type String? // 'USER', 'GROUP'
 
-  // Resource - useful for grants and access requests
-  // resource_id   String?
-  // resource_type String? // 'DATASET', 'COLLECTION', etc.
-  // resource_name String? // Snapshot of resource name at write-time
+  // Resource - affected resource: dataset, collection, etc.
+  resource_id   String?
+  resource_type String? // 'DATASET', 'COLLECTION', etc.
+  resource_name String? // Snapshot of resource name at write-time
 
-  // Target — what resource is being accessed/modified (collection, dataset, grant, etc.)
+  // Target — the thing being changed (collection, dataset, grant, etc.)
   target_id   String?
-  target_name String? // Snapshot of resource name at write-time
-  target_type String? // 'DATASET', 'COLLECTION', 'GRANT', or used for access checks
+  target_name String? // Snapshot of target name at write-time
+  target_type String? // 'DATASET', 'COLLECTION', 'GRANT', etc
 
   // Details
   action   String? // 'create', 'revoke', 'approve', 'reparent', etc.

@@ -13,6 +13,7 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
+const auditService = require('@/services/audit');
 const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
 const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
@@ -115,12 +116,31 @@ describe('grants - lifecycle', () => {
       expect(grant.valid_until).toBeNull();
     });
 
-    it('creates a GRANT_CREATED audit row', async () => {
+    it('creates a GRANT_CREATED audit row with subject/resource metadata', async () => {
       const auditRow = await prisma.authorization_audit.findFirst({
         where: { event_type: AUTH_EVENT_TYPE.GRANT_CREATED, target_type: TARGET_TYPE.GRANT, target_id: grant.id },
       });
       expect(auditRow).not.toBeNull();
       expect(auditRow.actor_id).toBe(actor.subject_id);
+      expect(auditRow.subject_id).toBe(member.subject_id);
+      expect(auditRow.subject_type).toBe('USER');
+      expect(auditRow.resource_id).toBe(dataset.resource_id);
+      expect(auditRow.resource_type).toBe('DATASET');
+      expect(auditRow.resource_name).toBe(dataset.name);
+      expect(auditRow.metadata?.access_type_name).toBe('DATASET:VIEW_METADATA');
+    });
+
+    it('allows filtering audit by resource (metadata-based)', async () => {
+      const entries = await auditService.getAuditRecords({
+        filter: {
+          resource_id: dataset.resource_id,
+          resource_type: 'DATASET',
+          event_type: AUTH_EVENT_TYPE.GRANT_CREATED,
+        },
+        limit: 10,
+        offset: 0,
+      });
+      expect(entries.length).toBeGreaterThan(0);
     });
 
     afterAll(async () => {

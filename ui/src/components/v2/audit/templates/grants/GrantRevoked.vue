@@ -9,13 +9,13 @@
     revoked on
 
     <span class="capitalize">
-      {{ props.record.metadata?.resource_type || "Unknown" }}
+      {{ props.record.resource_type || "Unknown" }}
     </span>
 
     <ResourceToken
-      :type="record.metadata?.resource_type"
-      :name="record.metadata?.resource_name"
-      :id="record.metadata?.resource_id"
+      :type="record.resource_type"
+      :name="record.resource_name"
+      :id="record.resource_id"
     />
     for
 

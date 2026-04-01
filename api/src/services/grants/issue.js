@@ -6,6 +6,7 @@ const createError = require('http-errors');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const Expiry = require('@/utils/expiry');
 const audit = require('@/authorization/builtin/audit');
+const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const prisma = require('@/db');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const { getResourceOwnerGroupId } = require('./helpers');
@@ -67,28 +68,33 @@ async function _createGrant(tx, data, auditData = {}) {
     throw e;
   }
 
-  const actor_name = auditData.actor_name ?? await resolveEntityName(tx, 'user', data.granted_by);
+  // Use AuditBuilder for consistent audit record creation
+  const builder = new AuditBuilder(tx, { actor_id: data.granted_by });
+  await builder
+    .setTarget('GRANT', grant.id)
+    .setSubject(data.subject_id)
+    .setResource(data.resource_id);
 
-  // override actor_id, target_type, and target_id
-  // provide fallback for actor_name and event_type
-  const _auditData = {
-    ...auditData, // keep existing optional fields
-    event_type: auditData.event_type ?? audit.AUTH_EVENT_TYPE.GRANT_CREATED,
-    actor_id: data.granted_by,
-    actor_name,
-    target_type: audit.TARGET_TYPE.GRANT,
-    target_id: grant.id,
-  };
+  // Resolve access type name into metadata
+  const accessTypeName = await resolveEntityName(tx, 'grant_access_type', data.access_type_id);
+  if (accessTypeName) {
+    builder.mergeMetadata({ access_type_name: accessTypeName });
+  }
 
-  await tx.authorization_audit.create({
-    data: _auditData,
-  });
+  // Merge any caller-provided audit data metadata
+  if (auditData && auditData.metadata) {
+    builder.mergeMetadata(auditData.metadata);
+  }
+
+  // Determine event type - use provided or default to GRANT_CREATED
+  const auditEventType = auditData?.event_type || audit.AUTH_EVENT_TYPE.GRANT_CREATED;
+  await builder.create(tx, auditEventType);
 
   return grant;
 }
 
 /**
- * Create a single grant (backwards compatibility wrapper for legacy createGrant API)
+ * Create a single grant (backwards compatibility wrapper for legacy createGrant API - used for testing)
  * @param {Object} data - grant fields (subject_id, resource_id, access_type_id, valid_from?, valid_until?, etc.)
  * @param {string} granted_by - user ID performing grant creation
  */
@@ -305,26 +311,29 @@ class GrantIssueService {
     return _createGrant(tx, data, auditData);
   }
 
-  // async _createAuditRecordForSkippedGrant(tx, existingGrant) {
-  // The audit record notes that no grant was created because an existing grant with a later expiry already covers this access type,
-  // referencing the existing grant ID.
-  // return tx.authorization_audit.create({
-  //   data: {
-  //     event_type: AUTH_EVENT_TYPE.GRANT_CREATION_SKIPPED,
-  //     actor_id: this.reviewerId,
-  //     subject_id: this.request.subject_id,
-  //     subject_type: this.request.subject.type,
-  //     target_type: audit.TARGET_TYPE.ACCESS_REQUEST,
-  //     target_id: this.requestId,
-  //     metadata: {
-  //       reason: 'Existing active grant with later expiration already covers this access type',
-  //       existing_grant_id: existingGrant.id,
-  //       access_type_id: existingGrant.access_type_id,
-  //       existing_grant_valid_until: existingGrant.valid_until,
-  //     },
-  //   },
-  // });
-  // }
+  async _createAuditRecordForSkippedGrant(tx, existingGrant, accessTypeId) {
+    // The audit record notes that no grant was created because an existing grant with a later expiry already covers this access type,
+    // referencing the existing grant ID.
+    // Only create audit record if this grant issuance is tied to an access request
+    if (!this.access_request_id) {
+      return;
+    }
+
+    const builder = new AuditBuilder(tx, { actor_id: this.granted_by });
+    await builder
+      .setTarget('ACCESS_REQUEST', this.access_request_id)
+      .setSubject(this.subject_id)
+      .setResource(this.resource_id);
+
+    builder.mergeMetadata({
+      reason: 'Existing active grant with later expiration already covers this access type',
+      existing_grant_id: existingGrant.id,
+      access_type_id: accessTypeId,
+      existing_grant_valid_until: existingGrant.valid_until,
+    });
+
+    await builder.create(tx, audit.AUTH_EVENT_TYPE.GRANT_CREATION_SKIPPED);
+  }
 
   async _supersedeGrant(tx, existingGrant, { valid_from, expiry, access_type_id }) {
     // Revoke the existing grant with revocation_type = SUPERSEDED
@@ -386,7 +395,7 @@ class GrantIssueService {
           access_type_id: effectiveGrant.access_type_id,
         });
       } else if (effectiveGrant.type === 'existing') {
-        // await this._createAuditRecordForSkippedGrant(tx, effectiveGrant);
+        await this._createAuditRecordForSkippedGrant(tx, effectiveGrant.existingGrant, effectiveGrant.access_type_id);
       } else if (effectiveGrant.type === 'supersede') {
         await this._supersedeGrant(tx, effectiveGrant.existingGrant, {
           valid_from: now,

@@ -20,6 +20,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
 const grantsService = require('@/services/grants');
+const Expiry = require('@/utils/expiry');
 const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const {
   createTestUser,
@@ -109,7 +110,7 @@ function allApproveItems(ar) {
   return ar.access_request_items.map((item) => ({
     id: item.id,
     decision: 'APPROVED',
-    approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+    approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
   }));
 }
 
@@ -221,7 +222,7 @@ describe('access requests - lifecycle', () => {
       await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
 
-    it('creates a REQUEST_SUBMITTED audit row', async () => {
+    it('creates a REQUEST_SUBMITTED audit row with subject/resource metadata', async () => {
       const ar = await newDraftRequest([{ access_type_id: viewMetadataTypeId }]);
       const submitted = await arService.submitRequest(ar.id, requester.subject_id);
       const audit = await prisma.authorization_audit.findFirst({
@@ -232,6 +233,11 @@ describe('access requests - lifecycle', () => {
         },
       });
       expect(audit).not.toBeNull();
+      expect(audit.subject_id).toBe(requester.subject_id);
+      expect(audit.subject_type).toBe('USER');
+      expect(audit.resource_id).toBe(dataset.resource_id);
+      expect(audit.resource_type).toBe('DATASET');
+      expect(audit.resource_name).toBe(dataset.name);
       // withdraw to clean up
       await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
     });
@@ -351,7 +357,7 @@ describe('access requests - lifecycle', () => {
       const mixedItems = submitted.access_request_items.map((item, idx) => ({
         id: item.id,
         decision: idx === 0 ? 'APPROVED' : 'REJECTED',
-        ...(idx === 0 && { approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000) }),
+        ...(idx === 0 && { approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)) }),
       }));
 
       const reviewed = await arService.submitReview({

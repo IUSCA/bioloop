@@ -23,6 +23,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
+const Expiry = require('@/utils/expiry');
 const {
   createTestUser,
   createTestGroup,
@@ -192,7 +193,7 @@ describe('access requests - concurrency', () => {
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
         decision: 'APPROVED',
-        approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
       }));
 
       await Promise.allSettled([
@@ -223,7 +224,6 @@ describe('access requests - concurrency', () => {
       const preset = await prisma.grant_preset.create({
         data: {
           name: `test-concurrent-preset-${Date.now()}`,
-          slug: `test-concurrent-preset-${Date.now()}`,
           is_active: true,
           access_type_items: {
             create: [{ access_type_id: viewMetadataTypeId }],
@@ -237,7 +237,7 @@ describe('access requests - concurrency', () => {
       const reviewItems = submitted.access_request_items.map((item) => ({
         id: item.id,
         decision: 'APPROVED',
-        approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
       }));
 
       const results = await Promise.allSettled([

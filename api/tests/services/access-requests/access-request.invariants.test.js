@@ -19,6 +19,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
+const Expiry = require('@/utils/expiry');
 const {
   createTestUser,
   createTestGroup,
@@ -275,7 +276,7 @@ describe('access requests - invariants', () => {
         reviewer_id: reviewer.subject_id,
         options: {
           item_decisions: submitted.access_request_items.map((i) => ({
-            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            id: i.id, decision: 'APPROVED', approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },
@@ -370,7 +371,7 @@ describe('access requests - invariants', () => {
         reviewer_id: reviewer.subject_id,
         options: {
           item_decisions: submitted.access_request_items.map((i) => ({
-            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            id: i.id, decision: 'APPROVED', approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },
@@ -396,7 +397,7 @@ describe('access requests - invariants', () => {
         reviewer_id: reviewer.subject_id,
         options: {
           item_decisions: submitted.access_request_items.map((i) => ({
-            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            id: i.id, decision: 'APPROVED', approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },
@@ -456,7 +457,7 @@ describe('access requests - invariants', () => {
         reviewer_id: reviewer.subject_id,
         options: {
           item_decisions: submitted.access_request_items.map((i) => ({
-            id: i.id, decision: 'APPROVED', approved_until: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            id: i.id, decision: 'APPROVED', approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
           })),
           decision_reason: 'Test',
         },

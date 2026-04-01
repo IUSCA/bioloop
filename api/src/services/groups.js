@@ -7,7 +7,9 @@ const prisma = require('@/db');
 
 const { generate_slug } = require('@/utils/slug');
 const audit = require('@/authorization/builtin/audit');
-const { resolveUserNames, resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+
+const { AuditBuilder } = audit;
+const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const assert = require('assert');
 
@@ -32,25 +34,14 @@ async function createMembershipAuditRecords(tx, {
 }) {
   if (user_ids.length === 0) return;
 
-  const allIds = [actor_id, ...user_ids];
-  const userNames = await resolveUserNames(tx, allIds);
-
-  await tx.authorization_audit.createMany({
-    data: user_ids.map((user_id) => ({
-      event_type: eventType,
-      actor_id,
-      actor_name: userNames.get(actor_id),
-      subject_id: user_id,
-      subject_name: userNames.get(user_id),
-      subject_type: audit.SUBJECT_TYPE.USER,
-      target_type: audit.TARGET_TYPE.GROUP,
-      target_id: group_id,
-      target_name: groupName,
-      metadata: {
-        role,
-      },
-    })),
-  });
+  const builder = new AuditBuilder(tx, { actor_id });
+  await builder
+    .setTarget(audit.TARGET_TYPE.GROUP, group_id, groupName)
+    .mergeMetadata({ role });
+  await builder.createBatch(tx, eventType, user_ids.map((user_id) => ({
+    subject_id: user_id,
+    subject_type: audit.SUBJECT_TYPE.USER,
+  })));
 }
 
 async function _getGroup(by, value) {
@@ -249,27 +240,20 @@ async function createGroup({
     // so we don't need to create closure entries for descendant groups
 
     // create audit record for group creation
-    const actorNames = await resolveUserNames(tx, [actor_id]);
-
-    const auditData = {
-      event_type: audit.AUTH_EVENT_TYPE.GROUP_CREATED,
-      actor_id,
-      actor_name: actorNames.get(actor_id),
-      target_type: audit.TARGET_TYPE.GROUP,
-      target_id: _group.id,
-      target_name: _group.name,
-      metadata: {
+    const builder = new AuditBuilder(tx, { actor_id });
+    await builder
+      .setTarget(audit.TARGET_TYPE.GROUP, _group.id, _group.name)
+      .mergeMetadata({
         group_hierarchy_type: parent_id ? 'CHILD' : 'ROOT',
-      },
-    };
+      });
     if (parent_id != null) {
       const parentName = await resolveEntityName(tx, 'group', parent_id);
-      auditData.metadata.parent_id = parent_id;
-      auditData.metadata.parent_name = parentName;
+      builder.mergeMetadata({
+        parent_id,
+        parent_name: parentName,
+      });
     }
-    await tx.authorization_audit.create({
-      data: auditData,
-    });
+    await builder.create(tx, audit.AUTH_EVENT_TYPE.GROUP_CREATED);
 
     // Add members and admins if provided
     // deduplicate user IDs
@@ -414,20 +398,11 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
       if (data.metadata && !_.isEqual(data.metadata, currentGroup.metadata)) changedFields.push('metadata');
 
       if (changedFields.length > 0) {
-        const actorNames = await resolveUserNames(tx, [actor_id]);
-        await tx.authorization_audit.create({
-          data: {
-            event_type: audit.AUTH_EVENT_TYPE.GROUP_METADATA_UPDATED,
-            actor_id,
-            actor_name: actorNames.get(actor_id),
-            target_type: audit.TARGET_TYPE.GROUP,
-            target_id: group_id,
-            target_name: updatedGroup.name,
-            metadata: {
-              changed_fields: changedFields,
-            },
-          },
-        });
+        const builder = new AuditBuilder(tx, { actor_id });
+        await builder
+          .setTarget(audit.TARGET_TYPE.GROUP, group_id, updatedGroup.name)
+          .mergeMetadata({ changed_fields: changedFields })
+          .create(tx, audit.AUTH_EVENT_TYPE.GROUP_METADATA_UPDATED);
       }
     }
 
@@ -453,17 +428,10 @@ async function archiveGroup(group_id, actor_id) {
     });
 
     // create audit record for group archival
-    const actorNames = await resolveUserNames(tx, [actor_id]);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: audit.AUTH_EVENT_TYPE.GROUP_ARCHIVED,
-        actor_id,
-        actor_name: actorNames.get(actor_id),
-        target_type: audit.TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: updatedGroup.name,
-      },
-    });
+    const builder = new AuditBuilder(tx, { actor_id });
+    await builder
+      .setTarget(audit.TARGET_TYPE.GROUP, group_id, updatedGroup.name)
+      .create(tx, audit.AUTH_EVENT_TYPE.GROUP_ARCHIVED);
     return updatedGroup;
   });
 }
@@ -486,17 +454,10 @@ async function unarchiveGroup(group_id, actor_id) {
     });
 
     // create audit record for group unarchival
-    const actorNames = await resolveUserNames(tx, [actor_id]);
-    await tx.authorization_audit.create({
-      data: {
-        event_type: audit.AUTH_EVENT_TYPE.GROUP_UNARCHIVED,
-        actor_id,
-        actor_name: actorNames.get(actor_id),
-        target_type: audit.TARGET_TYPE.GROUP,
-        target_id: group_id,
-        target_name: updatedGroup.name,
-      },
-    });
+    const builder = new AuditBuilder(tx, { actor_id });
+    await builder
+      .setTarget(audit.TARGET_TYPE.GROUP, group_id, updatedGroup.name)
+      .create(tx, audit.AUTH_EVENT_TYPE.GROUP_UNARCHIVED);
     return updatedGroup;
   });
 }

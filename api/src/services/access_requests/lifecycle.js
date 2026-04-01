@@ -1,11 +1,9 @@
-const {
-  ACCESS_REQUEST_STATUS, SUBJECT_TYPE,
-} = require('@prisma/client');
+const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit');
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 
 /**
@@ -19,6 +17,10 @@ async function withdrawRequest({ request_id, requester_id }) {
     // Fetch current request
     const currentRequest = await tx.access_request.findUniqueOrThrow({
       where: { id: request_id },
+      include: {
+        resource: { include: { dataset: true, collection: true } },
+        subject: { include: { user: true, group: true } },
+      },
     });
 
     // Update status to WITHDRAWN
@@ -38,25 +40,19 @@ async function withdrawRequest({ request_id, requester_id }) {
       throw createError.Conflict('Request cannot be withdrawn at this stage');
     }
 
-    // Create audit record
-    const requesterName = await resolveEntityName(tx, 'user', requester_id);
+    // Use AuditBuilder
+    const builder = new AuditBuilder(tx, { actor_id: requester_id });
+    await builder
+      .setTarget('ACCESS_REQUEST', request_id)
+      .setSubject(currentRequest.subject_id)
+      .setResource(currentRequest.resource_id);
 
-    await tx.authorization_audit.create({
-      data: {
-        event_type: AUTH_EVENT_TYPE.REQUEST_WITHDRAWN,
-        actor_id: requester_id,
-        actor_name: requesterName,
-        subject_id: requester_id,
-        subject_name: requesterName,
-        subject_type: SUBJECT_TYPE.USER,
-        target_type: TARGET_TYPE.ACCESS_REQUEST,
-        target_id: request_id,
-        metadata: {
-          from_status: currentRequest.status,
-          to_status: ACCESS_REQUEST_STATUS.WITHDRAWN,
-        },
-      },
+    builder.mergeMetadata({
+      from_status: currentRequest.status,
+      to_status: ACCESS_REQUEST_STATUS.WITHDRAWN,
     });
+
+    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_WITHDRAWN);
 
     return _getRequestById(tx, request_id);
   });
@@ -75,8 +71,22 @@ async function expireStaleRequests({ max_age_days }) {
 
   return prisma.$transaction(async (tx) => {
     // Find all UNDER_REVIEW requests older than the cutoff date
+    const expiredRequests = await tx.access_request.findMany({
+      where: {
+        status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+        submitted_at: {
+          lte: cutoffDate,
+        },
+      },
+      select: {
+        id: true,
+        subject_id: true,
+        resource_id: true,
+      },
+    });
+
     // Update all stale requests to EXPIRED
-    const updatedRequests = await tx.access_request.updateManyAndReturn({
+    const updatedRequests = await tx.access_request.updateMany({
       where: {
         status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
         submitted_at: {
@@ -87,29 +97,24 @@ async function expireStaleRequests({ max_age_days }) {
         status: ACCESS_REQUEST_STATUS.EXPIRED,
         closed_at: new Date(),
       },
-      select: {
-        id: true,
+    });
+
+    // Use AuditBuilder batch creation
+    const builder = new AuditBuilder(tx, { actor_id: null, actor_name: 'system' });
+
+    const items = expiredRequests.map((request) => ({
+      subject_id: request.subject_id,
+      resource_id: request.resource_id,
+      metadata: {
+        from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+        to_status: ACCESS_REQUEST_STATUS.EXPIRED,
+        max_age_days,
       },
-    });
-    const requestIds = updatedRequests.map((r) => r.id);
+    }));
 
-    // Create audit records for each expired request
-    await tx.authorization_audit.createMany({
-      data: requestIds.map((request_id) => ({
-        event_type: AUTH_EVENT_TYPE.REQUEST_EXPIRED,
-        actor_id: null, // System action
-        actor_name: 'system',
-        target_type: TARGET_TYPE.ACCESS_REQUEST,
-        target_id: request_id,
-        metadata: {
-          from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-          to_status: ACCESS_REQUEST_STATUS.EXPIRED,
-          max_age_days,
-        },
-      })),
-    });
+    await builder.createBatch(tx, AUTH_EVENT_TYPE.REQUEST_EXPIRED, items);
 
-    return updatedRequests.length;
+    return updatedRequests.count;
   });
 }
 

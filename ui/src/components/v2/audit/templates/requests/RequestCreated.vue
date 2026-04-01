@@ -4,9 +4,9 @@
   >
     Access request for
     <ResourceToken
-      :type="record.metadata?.resource_type"
-      :name="record.metadata?.resource_name"
-      :id="record.metadata?.resource_id"
+      :type="record.resource_type"
+      :name="record.resource_name"
+      :id="record.resource_id"
     />
     created by
     <UserToken :name="record.actor_name" :id="record.actor_id" />

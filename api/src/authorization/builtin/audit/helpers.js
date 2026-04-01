@@ -92,7 +92,7 @@ async function resolveEntityName(tx, type, id) {
             subject_id: true,
             resource: {
               select: {
-                resource_type: true,
+                type: true,
               },
             },
             subject: {

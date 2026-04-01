@@ -7,7 +7,7 @@ const prisma = require('@/db');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const { setsEqual } = require('@/utils');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const audit = require('@/authorization/builtin/audit');
+const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 
 const { _getRequestById } = require('./fetch');
 const grants = require('../grants');
@@ -46,8 +46,9 @@ function validateReviewItems(requestItems, reviewItems) {
 
 function updateRequestItem(tx, reviewItem) {
   const approved_until = reviewItem.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED
-    ? reviewItem.approved_expiry.toValue()
+    ? reviewItem.approved_expiry?.toValue()
     : null;
+
   return tx.access_request_item.update({
     where: { id: reviewItem.id },
     data: {
@@ -110,29 +111,42 @@ class Review {
     if (!Array.isArray(this.itemDecisions) || this.itemDecisions.length === 0) {
       throw createError.BadRequest('item_decisions must be a non-empty array');
     }
+    // validate each item decision has required fields: id, decision, approved_expiry (if approved)
+    for (const itemDecision of this.itemDecisions) {
+      if (!itemDecision.id) {
+        throw createError.BadRequest('Each item decision must include id');
+      }
+      if (!Object.values(ACCESS_REQUEST_ITEM_DECISION).includes(itemDecision.decision)) {
+        throw createError.BadRequest(`Invalid decision value for item ${itemDecision.id}`);
+      }
+      if (itemDecision.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) {
+        if (!itemDecision.approved_expiry) {
+          throw createError.BadRequest(`approved_expiry is required for APPROVED decisions on item ${itemDecision.id}`);
+        }
+        if (itemDecision.approved_expiry.hasExpired()) {
+          throw createError.BadRequest(`approved_expiry has already expired for item ${itemDecision.id}`);
+        }
+      }
+    }
   }
 
   async createRequestAuditRecord(tx, {
-    finalStatus, eventType, approvedCount, rejectedCount,
+    finalStatus, auditEventType, approvedCount, rejectedCount,
   }) {
-    return tx.authorization_audit.create({
-      data: {
-        event_type: eventType,
-        actor_id: this.reviewerId,
-        actor_name: this.reviewerName,
-        subject_id: this.request.subject_id,
-        subject_name: this.subjectName,
-        subject_type: this.request.subject.type,
-        target_type: audit.TARGET_TYPE.ACCESS_REQUEST,
-        target_id: this.requestId,
-        metadata: {
-          from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-          to_status: finalStatus,
-          approved_count: approvedCount,
-          rejected_count: rejectedCount,
-        },
-      },
+    const builder = new AuditBuilder(tx, { actor_id: this.reviewerId });
+    await builder
+      .setTarget('ACCESS_REQUEST', this.requestId)
+      .setSubject(this.request.subject_id)
+      .setResource(this.request.resource_id);
+
+    builder.mergeMetadata({
+      from_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+      to_status: finalStatus,
+      approved_count: approvedCount,
+      rejected_count: rejectedCount,
     });
+
+    return builder.create(tx, auditEventType);
   }
 
   async submit() {
@@ -208,6 +222,19 @@ class Review {
   }
 }
 
+/**
+ * Submit a review for an access request
+ * @param {Object} reviewData - Data for the review
+ * @param {string} reviewData.request_id - ID of the access request being reviewed
+ * @param {number} reviewData.reviewer_id - ID of the user submitting the review
+ * @param {Array<Object>} reviewData.options.item_decisions - Array of decisions for each request item: { id, decision, approved_expiry }
+ *   Each decision object should have:
+ *   - id: Request item ID
+ *   - decision: ACCESS_REQUEST_ITEM_DECISION enum value (APPROVED or REJECTED)
+ *   - approved_expiry: Expiry class instance (required if decision is APPROVED, optional otherwise)
+ * @param {string} [reviewData.options.decision_reason] - Optional reason for the decisions (e.g. if rejected)
+ * @returns {Promise<Object>} Updated access request after review is processed
+ */
 function submitReview(reviewData) {
   const review = new Review(reviewData);
   return review.submit();

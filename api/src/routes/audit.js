@@ -16,6 +16,8 @@ router.get(
     query('filter[subject_type]').optional().isString().trim(),
     query('filter[target_type]').optional().isString().trim(),
     query('filter[target_id]').optional().isUUID(),
+    query('filter[resource_id]').optional().isUUID(),
+    query('filter[resource_type]').optional().isString().trim(),
     query('start_date').optional().isISO8601().toDate(),
     query('end_date').optional().isISO8601().toDate(),
     query('sort_by').optional().isIn(['timestamp', 'actor_id', 'event_type']),
