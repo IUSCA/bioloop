@@ -1,36 +1,263 @@
 <template>
-  <va-inner-loading>
-    <va-menu placement="left-bottom">
-      <template #anchor>
-        <va-badge
-          :offset="[-3, 10]"
-          :text="`${notifications.length > 0 ? notifications.length : ''}`"
-          overlap
-          data-testid="notification-count"
-        >
-          <va-button
-            data-testid="notification-icon"
-            class="notification-bell"
-            plain
+  <div ref="dropdownRootRef" class="notification-dropdown-root relative">
+    <va-badge
+      :offset="[-3, 10]"
+      :text="`${badgeCount > 0 ? badgeCount : ''}`"
+      overlap
+      data-testid="notification-count"
+    >
+      <va-button
+        ref="notificationOpenButtonRef"
+        data-testid="notification-open-button"
+        class="notification-open-button"
+        plain
+        :aria-expanded="isMenuOpen ? 'true' : 'false'"
+        aria-haspopup="dialog"
+        @click="toggleNotificationMenu"
+        @keydown.enter.prevent.stop="openNotificationMenuFromKeyboard"
+        @keydown.space.prevent.stop="openNotificationMenuFromKeyboard"
+      >
+        <Icon icon="mdi-bell-outline" height="36px" width="36px" />
+      </va-button>
+    </va-badge>
+
+    <button
+      v-if="isMenuOpen"
+      class="notification-menu-backdrop"
+      data-testid="notification-menu-backdrop"
+      type="button"
+      aria-label="Close notifications menu"
+      @click="closeNotificationMenu"
+      @keydown.enter.prevent.stop="closeNotificationMenu"
+      @keydown.space.prevent.stop="closeNotificationMenu"
+    />
+    <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+    <div
+      v-if="isMenuOpen"
+      ref="menuPanelRef"
+      class="notification-menu-panel notification-menu-panel--anchored flex flex-col max-h-96"
+      data-testid="notification-menu-items"
+      role="dialog"
+      aria-label="Notifications menu"
+      :aria-busy="notificationMenuBusy ? 'true' : 'false'"
+      tabindex="-1"
+      @keydown.esc.prevent.stop="closeNotificationMenu"
+    >
+      <div
+        class="shrink-0 px-3 py-2 border-b relative z-10 bg-[var(--va-background-element)]"
+      >
+        <div class="notification-top-controls">
+          <va-popover message="Filter Unread">
+            <va-button
+              ref="firstTopControlRef"
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isUnreadFilterActive ? theme.filters.unread.color : 'secondary'
+              "
+              data-testid="filter-unread"
+              data-notification-menu-initial-focus="true"
+              aria-label="Unread filter"
+              title="Filter Unread"
+              :disabled="controlsDisabled"
+              @click="toggleUnreadFilter"
+              @keydown.enter.prevent="toggleUnreadFilter"
+              @keydown.space.prevent="toggleUnreadFilter"
+            >
+              <Icon
+                :icon="
+                  isUnreadFilterActive
+                    ? theme.filters.unread.iconOn
+                    : theme.filters.unread.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isReadFilterActive ? theme.filters.read.color : 'secondary'
+              "
+              data-testid="filter-read"
+              aria-label="Read filter"
+              title="Filter Read"
+              :disabled="controlsDisabled"
+              @click="toggleReadFilter"
+              @keydown.enter.prevent="toggleReadFilter"
+              @keydown.space.prevent="toggleReadFilter"
+            >
+              <Icon
+                :icon="
+                  isReadFilterActive
+                    ? theme.filters.read.iconOn
+                    : theme.filters.read.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Filter Bookmarked">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              :color="
+                isBookmarkedFilterActive
+                  ? theme.filters.bookmarked.color
+                  : 'secondary'
+              "
+              data-testid="filter-bookmarked"
+              aria-label="Bookmark filter"
+              title="Filter Bookmarked"
+              :disabled="controlsDisabled"
+              @click="toggleBookmarkedFilter"
+              @keydown.enter.prevent="toggleBookmarkedFilter"
+              @keydown.space.prevent="toggleBookmarkedFilter"
+            >
+              <Icon
+                :icon="
+                  isBookmarkedFilterActive
+                    ? theme.filters.bookmarked.iconOn
+                    : theme.filters.bookmarked.iconOff
+                "
+              />
+            </va-button>
+          </va-popover>
+          <va-popover message="Mark all as read">
+            <va-button
+              preset="secondary"
+              size="small"
+              block
+              class="notification-top-control-button"
+              data-testid="mark-all-read"
+              aria-label="Mark all as read"
+              title="Mark all as read"
+              :disabled="controlsDisabled"
+              @click="onMarkAllRead"
+              @keydown.enter.prevent="onMarkAllRead"
+              @keydown.space.prevent="onMarkAllRead"
+            >
+              <Icon :icon="theme.actions.read.icon" />
+            </va-button>
+          </va-popover>
+        </div>
+        <div class="flex items-center justify-between mt-2">
+          <div
+            class="text-xs text-secondary"
+            data-testid="notification-visible-count"
           >
-            <Icon icon="mdi-bell-outline" height="36px" width="36px" />
-          </va-button>
-        </va-badge>
-      </template>
+            Showing {{ displayedNotifications.length }}
+          </div>
+          <va-popover v-if="hasActiveFilters" message="Clear all filters">
+            <button
+              type="button"
+              class="notification-clear-filters-button"
+              data-testid="clear-notification-filters"
+              aria-label="Clear filters"
+              title="Clear all filters"
+              :disabled="controlsDisabled"
+              @click="handleClearFilters"
+            >
+              <Icon icon="mdi:filter-remove-outline" />
+            </button>
+          </va-popover>
+        </div>
+        <div v-if="hasActiveFilterChips" class="flex gap-2 mt-2 flex-wrap">
+          <div
+            v-if="isReadFilterActive"
+            class="notification-filter-chip notification-filter-chip--info"
+            data-testid="active-filter-chip-read"
+          >
+            Read
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Read filter"
+              data-testid="active-filter-chip-read-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearReadFilter"
+              @keydown.enter.prevent.stop="clearReadFilter"
+              @keydown.space.prevent.stop="clearReadFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+          <div
+            v-if="isBookmarkedFilterActive"
+            class="notification-filter-chip notification-filter-chip--success"
+            data-testid="active-filter-chip-bookmarked"
+          >
+            Bookmarked
+            <button
+              type="button"
+              class="notification-filter-chip__clear"
+              aria-label="Clear Bookmarked filter"
+              data-testid="active-filter-chip-bookmarked-clear"
+              tabindex="0"
+              :disabled="controlsDisabled"
+              @click.prevent.stop="clearBookmarkedFilter"
+              @keydown.enter.prevent.stop="clearBookmarkedFilter"
+              @keydown.space.prevent.stop="clearBookmarkedFilter"
+            >
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </div>
+        <div class="mt-2">
+          <va-input
+            v-model="searchInput"
+            class="notification-search-input"
+            placeholder="Search notifications"
+            clearable
+            :disabled="controlsDisabled"
+            @keydown.stop="onSearchInputKeydown"
+            @keydown.shift.tab.prevent.stop="onSearchShiftTab"
+            @click.capture="onSearchInputClick"
+            @clear="clearSearchFilter"
+            @focus="onSearchFocus"
+            @blur="onSearchBlur"
+            data-testid="notification-search"
+          />
+        </div>
+      </div>
 
-      <div class="max-w-md max-h-96" data-testid="notification-menu-items">
-        <va-menu-item v-if="notifications.length === 0">
-          No pending notifications
-        </va-menu-item>
-
-        <va-menu-item
-          v-else
-          v-for="(notification, index) in notifications"
-          :key="index"
-        >
-          <notification :notification="notification"></notification>
-          <va-divider />
-        </va-menu-item>
+      <div
+        class="notification-menu-list flex-1 min-h-0 overflow-y-auto relative"
+        data-testid="notification-menu-scroll"
+        @scroll.passive="onMenuScroll"
+      >
+        <va-inner-loading :loading="listFetching || mutationPending">
+          <template v-if="displayedNotifications.length === 0">
+            <div
+              class="px-3 py-3 text-sm text-secondary"
+              data-testid="notification-empty-state"
+            >
+              No pending notifications
+            </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="notification in displayedNotifications"
+              :key="notification.id"
+              class="px-3 py-2"
+            >
+              <notification
+                :notification="notification"
+                :disabled="controlsDisabled"
+                @toggle-read="onToggleRead"
+                @toggle-bookmarked="onToggleBookmarked"
+              ></notification>
+              <va-divider class="mt-2" />
+            </div>
+          </template>
+        </va-inner-loading>
       </div>
     </div>
   </div>
@@ -38,8 +265,14 @@
 
 <script setup>
 import config from "@/config";
+import constants from "@/constants";
+import { viewerHasPrivilegedNotificationAccess } from "@/services/notifications/viewerAccess";
+import { nextTick } from "vue";
+import { useAuthStore } from "@/stores/auth";
 import { useNotificationStore } from "@/stores/notification";
 import { storeToRefs } from "pinia";
+
+const { notificationTheme: theme } = constants;
 
 const notificationStore = useNotificationStore();
 const auth = useAuthStore();

@@ -1,12 +1,12 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop-feature-duplicate-e2e
+name: bioloop
 services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:4443:443
+      - 127.0.0.1:443:443
     env_file:
       - ui/.env.default
     # environment:
@@ -70,7 +70,7 @@ services:
     expose:
       - 5432
     ports:
-      - 127.0.0.1:5437:5432
+      - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -364,198 +364,9 @@ services:
     profiles:
       - metrics
 
-# Workers
-  init_data_dirs:
-    build:
-      context: ./workers
-    environment:
-      - APP_ENV=docker
-    volumes:
-      - ./workers/:/opt/sca/app
-      - landing_volume:/opt/sca/data
-    command: ["bin/init_dirs.sh"]
-
-  celery_worker:
-    build:
-      context: ./workers
-    environment:
-      - WORKER_TYPE=celery_worker
-      - APP_ENV=docker
-      - CELERY_AUTOSCALE_MAX=16
-      - CELERY_AUTOSCALE_MIN=4
-    env_file:
-      - db/mongo/.env.default # For MongoDB connection settings
-      - db/queue/.env.default # For RabbitMQ connection settings
-      - workers/.env.default # For all default settings
-      # - workers/.env? # For keys made after the first run
-    working_dir: /opt/sca/app
-    volumes:
-      - ./workers/:/opt/sca/app
-      - landing_volume:/opt/sca/data
-    entrypoint: [ "bin/entrypoint.sh" ]
-    depends_on:
-      init_data_dirs:
-        condition: service_completed_successfully
-      api:
-        condition: service_healthy
-      mongo:
-        condition: service_started
-      queue:
-        condition: service_started
-
-
-  watch:
-    build:
-      context: ./workers
-    environment:
-      - WORKER_TYPE=watch
-      - APP_ENV=docker
-    env_file:
-      - db/mongo/.env.default # For MongoDB connection settings
-      - db/queue/.env.default # For RabbitMQ connection settings
-      - workers/.env.default # For all default settings
-      # - workers/.env? # For keys made after the first run
-    working_dir: /opt/sca/app
-    volumes:
-      - ./workers/:/opt/sca/app
-      - landing_volume:/opt/sca/data
-    entrypoint: [ "bin/entrypoint.sh" ]
-    depends_on:
-      init_data_dirs:
-        condition: service_completed_successfully
-      api:
-        condition: service_healthy
-      mongo:
-        condition: service_started
-      queue:
-        condition: service_started
-
-  # Rhythm_api containers
-  queue:
-    # https://hub.docker.com/_/rabbitmq/
-    image: rabbitmq:4-management
-    expose:
-      - 5672
-    ports:
-      # Published on host as 15678; does not conflict with dev stack (15676).
-      - 127.0.0.1:15678:15672
-    env_file:
-      - db/queue/.env.default # For RabbitMQ connection settings
-    volumes:
-      - queue_volume:/var/lib/rabbitmq/
-
-
-  mongo:
-    # https://hub.docker.com/_/mongo
-    image: mongo:5
-    expose:
-      - 27017
-    ports:
-      # Published on host as 27021; does not conflict with dev stack (27020).
-      - 127.0.0.1:27021:27017
-    env_file:
-      - db/mongo/.env.default # For MongoDB connection settings
-    volumes:
-      - e2e_mongo_data:/data/db # named volume isolated from the dev stack bind mount
-      - ./db/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro # for importing database files.  This will automatically be run by being moutned into the initialization folder, if you're not using docker you will need to run this manually.
-
-  # You must clone the rhythm_api repo and place it in the rhythm folder
-  rhythm:
-    restart: unless-stopped
-    image: harbor.sca.iu.edu/rhythm/api:latest
-    expose:
-      - 5001
-    env_file:
-      - db/mongo/.env.default # For MongoDB connection settings
-      - db/queue/.env.default # For RabbitMQ connection settings
-      - rhythm/.env.default # For all default settings
-    volumes:
-      - ./rhythm/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
-      - rhythm_keys:/app/keys # Persist rhythm's signing keys so the WORKFLOW_AUTH_TOKEN stays valid across restarts
-      - ./api:/app/api # This is the api folder that is used to set up the environment vars for the api. We need this to be mounted in so we can use the api keys in the rhythm_api. We don't want to do this on production.
-    working_dir: /app
-    entrypoint: ["/opt/bin/entrypoint.sh"]
-    command: ["uvicorn", "rhythm_api.main:app", "--host", "0.0.0.0", "--port", "5001", "--root-path", "/rhythm"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 15s
-    depends_on:
-      - queue
-      - mongo
-
-  # Secure_download container
-  secure_download:
-    image: node:19
-    restart: unless-stopped
-    ports:
-      - "3066:3060"
-    env_file:
-      - secure_download/.env.default # For all default settings
-    volumes:
-      - landing_volume:/opt/sca/data # This is where all the files are uploaded/downloaded to. If using upload, you need this on api, worker, and secure_download containers.
-      - ./secure_download/:/opt/sca/app
-      - secure_download_node_modules:/opt/sca/app/node_modules # named volume so npm install is cached across restarts
-    working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3060/health"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 15s
-
-# Signet containers
-  # You must clone the signet repo and place it in the signet folder
-  signet:
-    restart: unless-stopped
-    image: harbor.sca.iu.edu/signet/signet:latest
-    expose:
-      - 5050
-    env_file:
-      - signet/.env.default # For all default settings
-    volumes:
-      - ./signet/bin/entrypoint.sh:/opt/bin/entrypoint.sh # This is the entrypoint script that sets up the environment
-    entrypoint: ["/opt/bin/entrypoint.sh"]
-    command: ["exec", "gunicorn", "--bind", ":5050", "--workers", "1", "--threads", "1", "--timeout", "0", "app:app"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5050/health"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 10s
-    depends_on:
-      signet_db:
-        condition: service_healthy
-
-
-  # For ease of startup we just do another postgres container for signet.  You can use the same one as the api if you want, but this is easier to manage.
-  signet_db:
-    image: postgres:14.5
-    expose:
-      - 5432
-    restart: unless-stopped
-    env_file:
-      - signet/.env.default # For Postgres connection settings
-    volumes:
-      - signet_db:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "appuser"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 5s
 
   e2e:
     build: tests
-    environment:
-      # Override baseURL and apiBaseURL so Playwright and API helpers resolve
-      # to the correct ports for this e2e stack (not the default https://localhost).
-      - TEST_BASE_URL=https://localhost:4443
-      - API_BASE_URL=https://localhost:4443/api
     restart: "no"
     profiles:
       - e2e-runner
@@ -568,28 +379,16 @@ services:
     # the command, e.g.:
     #   docker compose run --rm e2e test --project=admin_import
     entrypoint:
-      - sh
-      - -c
-      - |
-        # On the first run, Vite performs dependency optimisation (pre-bundling) after
-        # the server reports healthy, which causes the dev server to reload.  A reload
-        # mid-auth-flow breaks login setup.  Waiting here gives Vite time to finish
-        # all optimisation cycles before the browser connects.
-        echo "Waiting 60s for Vite to complete dependency optimisation..."
-        sleep 60
-        echo "Starting Playwright tests."
-        /opt/sca/app/node_modules/.bin/playwright test --project=operator_duplication
+      - /opt/sca/app/node_modules/.bin/playwright
+    command:
+      - test
     depends_on:
-      # Tests must not start until both the API and the UI Vite dev server are healthy.
-      # The UI healthcheck has a 300s start_period to allow for first-run npm install
-      # and Vite dependency optimisation (which can trigger page reloads that break auth).
       api:
         condition: service_healthy
       ui:
         condition: service_healthy
       init_test_data:
         condition: service_completed_successfully
-    network_mode: "host"
 
 volumes:
   grafana_data:
@@ -613,8 +412,4 @@ volumes:
   secure_download_node_modules:
     external: false
   test_modules:
-    external: false
-  e2e_postgres_data:
-    external: false
-  e2e_mongo_data:
     external: false

@@ -86,9 +86,6 @@ create_dir "/opt/sca/data/uploads"                # Temporary upload directory
 
 create_dir "/opt/sca/data/scratch"                # Temporary files and working directories
 
-# Duplicate-detection testing directory — operators drop synthetic datasets here
-# to verify the end-to-end duplicate detection pipeline.  Observed by watch.py.
-create_dir "/opt/sca/data/duplicates_testing"
 # Instrument drop directories - network locations where lab instruments deposit
 # raw output for researchers to browse and import into Bioloop.
 create_dir "/opt/sca/data/imports/genomics_lab_instrument_drop"

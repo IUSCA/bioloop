@@ -216,6 +216,8 @@ const ALERT_TYPES = {
 
 const NOTIFICATION_TYPES = {
   DATASET_CREATED: 'DATASET_CREATED',
+  /** Duplicate candidate registered; operators review on the duplicate dataset page. */
+  INCOMING_DUPLICATE_DATASET: 'INCOMING_DUPLICATE_DATASET',
 };
 
 module.exports = {
