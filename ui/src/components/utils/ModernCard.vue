@@ -10,11 +10,14 @@
         v-if="props.icon"
         class="text-gray-600 dark:text-gray-400"
       />
-      <h3
-        class="text-sm font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100"
-      >
-        <slot name="title"> {{ props.title }} </slot>
-      </h3>
+
+      <slot name="title">
+        <h3
+          class="text-sm font-semibold uppercase tracking-wider text-gray-900 dark:text-gray-100"
+        >
+          {{ props.title }}
+        </h3>
+      </slot>
     </div>
 
     <div class="p-4">

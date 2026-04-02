@@ -375,6 +375,7 @@ class GrantIssueService {
   /**
    * Issues grants for the subject/resource
    *
+   * @param {Object} tx - Prisma transaction
    * @param {Array} items
    * @param {number} items[].access_type_id - The access type to grant (e.g. read, write, etc.)
    * @param {number} items[].grant_preset_id - The grant preset to apply which determines the access type and duration of the grant. Mutually exclusive with access_type_id.

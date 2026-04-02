@@ -9,19 +9,108 @@ const grantService = require('@/services/grants');
 const { isPlatformAdmin } = require('@/services/auth');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
+const { RESOURCE_TYPE } = require('@prisma/client');
 
 const router = express.Router();
 
-// List grants (filtered by user authority)
-// router.get('/');
+// ============================================================================
+// Shared Validation Constants & Helpers
+// ============================================================================
 
+/**
+ * Base validation for grant fields common to create and compute-effective-grants
+ */
+const baseGrantValidation = [
+  body('subject_id').isUUID(),
+  body('resource_type').isIn(['DATASET', 'COLLECTION']),
+  body('resource_id').isUUID(),
+];
+
+/**
+ * Items array validation for create and compute-effective-grants
+ */
+const grantItemsValidation = [
+  body('items').isArray({ min: 1 }),
+  body('items.*.access_type_id').optional().isInt(),
+  body('items.*.preset_id').optional().isInt(),
+  body('items.*.approved_expiry')
+    .custom(Expiry.validate)
+    .bail()
+    .customSanitizer((val) => Expiry.fromJSON(val)),
+  body('items.*').custom((item) => {
+    const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
+    const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
+    if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
+      throw new Error('Item must have exactly one of access_type_id or preset_id');
+    }
+    return true;
+  }),
+];
+
+/**
+ * Handler-level validation for grant creation requests
+ * Returns null if valid, or error response object if invalid
+ */
+async function validateGrantCreationRequest(req) {
+  // Validate access_type_id items are unique within the request
+  const accessTypeIds = req.body.items
+    .filter((item) => item.access_type_id !== undefined)
+    .map((item) => item.access_type_id);
+  if (new Set(accessTypeIds).size !== accessTypeIds.length) {
+    return { status: 400, message: 'Items must have unique access_type_id within the request' };
+  }
+
+  // Validate preset_id items are unique within the request
+  const presetIds = req.body.items
+    .filter((item) => item.preset_id !== undefined)
+    .map((item) => item.preset_id);
+  if (new Set(presetIds).size !== presetIds.length) {
+    return { status: 400, message: 'Items must have unique preset_id within the request' };
+  }
+
+  // validate preset_id exists and is active
+  if (presetIds.length > 0) {
+    const existingPresets = await prisma.grant_preset.findMany({
+      where: { id: { in: presetIds }, is_active: true },
+      select: { id: true },
+    });
+    const existingPresetIds = new Set(existingPresets.map((p) => p.id));
+    for (const presetId of presetIds) {
+      if (!existingPresetIds.has(presetId)) {
+        return { status: 400, message: `preset_id ${presetId} does not exist or is not active` };
+      }
+    }
+  }
+
+  // validate approved_expiry is in the future
+  for (const item of req.body.items) {
+    if (item.approved_expiry.hasExpired()) {
+      return { status: 400, message: 'approved_expiry must be in the future' };
+    }
+  }
+
+  return null; // validation passed
+}
+
+// List access types by resource type
 router.get(
   '/access-types',
+  validate([
+    query('resource_type').isIn(Object.values(RESOURCE_TYPE)),
+  ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List all access types'
 
     const accessTypes = await grantService.listAccessTypes();
+
+    // for collections, return all access types
+    // for datasets, filter out access types that are only applicable to datasets
+    if (req.query.resource_type === RESOURCE_TYPE.DATASET) {
+      const filteredAccessTypes = accessTypes.filter(({ name }) => name.startsWith('DATASET:'));
+      return res.json(filteredAccessTypes);
+    }
+
     res.json(accessTypes);
   }),
 );
@@ -42,23 +131,10 @@ router.get(
 router.post(
   '/',
   validate([
-    body('subject_id').isUUID(),
-    body('resource_type').isIn(['DATASET', 'COLLECTION']),
-    body('resource_id').isUUID(),
+    ...baseGrantValidation,
     body('justification').optional().isString(),
     body(('source_preset_id')).optional().isInt(), // if created via a grant preset, link back to the preset item that led to this grant
-    body('items').isArray({ min: 1 }),
-    body('items.*.access_type_id').optional().isInt(),
-    body('items.*.preset_id').optional().isInt(),
-    body('items.*.approved_expiry').customSanitizer((val) => Expiry.fromJSON(val)),
-    body('items.*').custom((item) => {
-      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
-      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
-      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
-        throw new Error('Item must have exactly one of access_type_id or preset_id');
-      }
-      return true;
-    }),
+    ...grantItemsValidation,
   ]),
   authorize('grant', 'create', {
     resourceIdFn: () => null, // no specific resource to check for create
@@ -71,50 +147,20 @@ router.post(
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'Create new grants for a subject on a resource'
 
-    // Validate access_type_id items are unique within the request
-    const accessTypeIds = req.body.items
-      .filter((item) => item.access_type_id !== undefined)
-      .map((item) => item.access_type_id);
-    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
-      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
-    }
-
-    // Validate preset_id items are unique within the request
-    const presetIds = req.body.items
-      .filter((item) => item.preset_id !== undefined)
-      .map((item) => item.preset_id);
-    if (new Set(presetIds).size !== presetIds.length) {
-      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
-    }
-
-    // validate preset_id exists and is active
-    if (presetIds.length > 0) {
-      const existingPresets = await prisma.grant_preset.findMany({
-        where: { id: { in: presetIds }, is_active: true },
-        select: { id: true },
-      });
-      const existingPresetIds = new Set(existingPresets.map((p) => p.id));
-      for (const presetId of presetIds) {
-        if (!existingPresetIds.has(presetId)) {
-          return res.status(400).json({ message: `preset_id ${presetId} does not exist or is not active` });
-        }
-      }
-    }
-
-    // validate approved_expiry is in the future
-    for (const item of req.body.items) {
-      if (item.approved_expiry.hasExpired()) {
-        return res.status(400).json({ message: 'approved_expiry must be in the future' });
-      }
+    // Validate request
+    const validationError = await validateGrantCreationRequest(req);
+    if (validationError) {
+      return res.status(validationError.status).json({ message: validationError.message });
     }
 
     const data = pickNonNil([
       'subject_id',
       'resource_id',
       'justification', 'source_preset_id'])(req.body);
+
     data.granted_by = req.user.subject_id;
-    await grantService.issueGrants(prisma, data, req.body.items);
-    res.status(201);
+    await prisma.$transaction(async (tx) => grantService.issueGrants(tx, data, req.body.items));
+    res.status(201).end();
   }),
 );
 
@@ -122,21 +168,8 @@ router.post(
 router.post(
   '/compute-effective-grants',
   validate([
-    body('subject_id').isUUID(),
-    body('resource_type').isIn(['DATASET', 'COLLECTION']),
-    body('resource_id').isUUID(),
-    body('items').isArray({ min: 1 }),
-    body('items.*.access_type_id').optional().isInt(),
-    body('items.*.preset_id').optional().isInt(),
-    body('items.*.approved_expiry').customSanitizer((val) => Expiry.fromJSON(val)),
-    body('items.*').custom((item) => {
-      const hasAccessType = item.access_type_id !== undefined && item.access_type_id !== null;
-      const hasPreset = item.preset_id !== undefined && item.preset_id !== null;
-      if ((hasAccessType && hasPreset) || (!hasAccessType && !hasPreset)) {
-        throw new Error('Item must have exactly one of access_type_id or preset_id');
-      }
-      return true;
-    }),
+    ...baseGrantValidation,
+    ...grantItemsValidation,
   ]),
   authorize('grant', 'create', {
     resourceIdFn: () => null, // no specific resource to check for create
@@ -149,27 +182,10 @@ router.post(
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'Compute effective grants without creating (dry run)'
 
-    // Validate access_type_id items are unique within the request
-    const accessTypeIds = req.body.items
-      .filter((item) => item.access_type_id !== undefined)
-      .map((item) => item.access_type_id);
-    if (new Set(accessTypeIds).size !== accessTypeIds.length) {
-      return res.status(400).json({ message: 'Items must have unique access_type_id within the request' });
-    }
-
-    // Validate preset_id items are unique within the request
-    const presetIds = req.body.items
-      .filter((item) => item.preset_id !== undefined)
-      .map((item) => item.preset_id);
-    if (new Set(presetIds).size !== presetIds.length) {
-      return res.status(400).json({ message: 'Items must have unique preset_id within the request' });
-    }
-
-    // validate approved_expiry is in the future
-    for (const item of req.body.items) {
-      if (item.approved_expiry.hasExpired()) {
-        return res.status(400).json({ message: 'approved_expiry must be in the future' });
-      }
+    // Validate request
+    const validationError = await validateGrantCreationRequest(req);
+    if (validationError) {
+      return res.status(validationError.status).json({ message: validationError.message });
     }
 
     const data = pickNonNil([
@@ -177,8 +193,11 @@ router.post(
       'resource_id'])(req.body);
     data.granted_by = req.user.subject_id;
 
-    // [{type: 'new' | 'existing', 'supersede', access_type_id, expiry, existing_grant}]
-    const effectiveGrants = await grantService.buildEffectiveGrants(prisma, data, req.body.items);
+    // [{type: 'new' | 'existing' | 'supersede', access_type_id: int, expiry: Expiry, existing_grant: Object?}]
+    // expiry is the latest approved expiry for the access type, either from preset or directly from the item, that would result from the request
+    const effectiveGrants = await prisma.$transaction(
+      (tx) => grantService.buildEffectiveGrants(tx, data, req.body.items),
+    );
     res.json(effectiveGrants);
   }),
 );

@@ -871,6 +871,10 @@ async function searchGroupsForUser({
     membershipClause = Prisma.sql`
       og.id IS NOT NULL
     `;
+  } else if (scope === 'all') {
+    membershipClause = Prisma.sql`
+    (ag.id IS NOT NULL OR og.id IS NOT NULL)
+  `;
   }
 
   const finalWhereClause = sqlUtils.buildWhereClause(
@@ -907,6 +911,8 @@ async function searchGroupsForUser({
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} OFFSET ${offset}
   `;
+
+  // console.log(dataSql.sql, dataSql.values); // log the generated SQL for debugging
 
   const countSql = Prisma.sql`
     WITH all_groups AS (

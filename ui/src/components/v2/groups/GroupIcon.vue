@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import constants from "@/constants";
 
 const props = defineProps({
   group: {
@@ -42,6 +42,11 @@ const colorMap = {
 };
 
 const icon = computed(() => {
+  // for everyone group, we want to show the earth icon regardless of metadata type
+  if (props.group.id === constants.EVERYONE_GROUP.id) {
+    return constants.EVERYONE_GROUP.icon;
+  }
+
   const type = props.group?.metadata?.type || "default";
   return iconMap[type] || iconMap.default;
 });

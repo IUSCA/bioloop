@@ -196,8 +196,8 @@ const GRANT_ACCESS_TYPES = [
   {
     id: 3,
     name: 'DATASET:REQUEST_ACCESS',
-    description: 'Able to request other access types',
-    long_description: 'Able to request other access types, which may include '
+    description: 'Can request access',
+    long_description: 'Can request other access types, which may include '
     + 'viewing sensitive metadata, listing files, downloading, remote access, or compute access',
   },
   {
@@ -227,8 +227,8 @@ const GRANT_ACCESS_TYPES = [
   {
     id: 8,
     name: 'COLLECTION:REQUEST_ACCESS',
-    description: 'Able to request other access types',
-    long_description: 'Able to request other access types, which may include listing datasets in collection',
+    description: 'Can request access',
+    long_description: 'Can request other access types, which may include listing datasets in collection',
   },
   {
     id: 9,
@@ -255,7 +255,7 @@ const GRANT_PRESETS = [
     id: 1,
     name: 'Discoverable',
     description: 'Allows users to view collection and dataset metadata and request further access',
-    access_type_ids: [1, 3, 7, 8, 9],
+    access_type_ids: [1, 3, 7, 9],
   },
   {
     id: 2,

@@ -15,7 +15,16 @@ function listGrantsForResource(resource_type, resource_id, params = {}) {
 export default {
   listGrantsForSubject,
   listGrantsForResource,
-
+  listGrantsForSubjectGrouped(subject_type, subject_id, params = {}) {
+    return api.get(`/grants/subject/${subject_type}/${subject_id}`, {
+      params,
+    });
+  },
+  listGrantsForResourceGrouped(resource_type, resource_id, params = {}) {
+    return api.get(`/grants/resource/${resource_type}/${resource_id}`, {
+      params,
+    });
+  },
   listGrantsForDataset(resource_id, params = {}) {
     return listGrantsForResource("DATASET", resource_id, params);
   },
@@ -56,7 +65,22 @@ export default {
   },
 
   /** List available access types (lookup table). */
-  listAccessTypes() {
-    return api.get("/grants/access-types");
+  listAccessTypes(resourceType) {
+    return api.get("/grants/access-types", {
+      params: { resource_type: resourceType },
+    });
+  },
+
+  /** List available presets. */
+  listGrantPresets() {
+    return api.get("/grants/presets");
+  },
+
+  expiringGrants(params = {}) {
+    return api.get("/grants/expiring-soon", { params });
+  },
+
+  computeEffectiveGrants(data) {
+    return api.post("/grants/compute-effective-grants", data);
   },
 };

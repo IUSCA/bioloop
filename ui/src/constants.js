@@ -197,6 +197,16 @@ const exports = {
     },
   },
   icons,
+  // A special group that implicitly contains all users. It is used for granting access to all users without having to
+  // explicitly add them to a group. id will always be "00000000-0000-0000-0000-000000000000" for consistency,
+  // and the backend recognizes this as a special case.
+  EVERYONE_GROUP: {
+    id: "00000000-0000-0000-0000-000000000000",
+    name: "Everyone",
+    tag: "everyone",
+    icon: "mdi-earth",
+    description: "All users in the system, including external collaborators",
+  },
 };
 
 export default exports;

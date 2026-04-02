@@ -5,7 +5,7 @@
       <div :class="titleClass">
         {{ props.title }}
       </div>
-      <div :class="textClass + ' text-xs mt-1'">
+      <div :class="textClass + ' text-xs mt-1'" v-if="props.description">
         <slot>
           {{ props.description }}
         </slot>

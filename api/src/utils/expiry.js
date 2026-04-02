@@ -23,6 +23,21 @@ class Expiry {
     }
   }
 
+  static validate(value) {
+    if (value == null) throw new Error('Expiry value cannot be null or undefined');
+    // should have type and value properties
+    if (typeof value !== 'object' || !('type' in value) || !('value' in value)) {
+      throw new Error('Invalid Expiry value: must be an object with type and value properties');
+    }
+    Expiry._validateType(value.type);
+    if (value.type === 'date') {
+      if (!isISO8601(value.value)) {
+        throw new Error('Invalid ISO8601 date for Expiry');
+      }
+    }
+    return true;
+  }
+
   static never() {
     return new Expiry('never');
   }

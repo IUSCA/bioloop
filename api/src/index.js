@@ -1,3 +1,8 @@
+// entry point of the application
+const { performance } = require('perf_hooks');
+
+const start = performance.now();
+
 require('module-alias/register');
 const path = require('path');
 
@@ -28,6 +33,8 @@ async function init() {
   await validateGrantAccessTypes();
 
   const server = app.listen(port, () => {
+    const end = performance.now();
+    logger.info(`Server initialized in ${(end - start).toFixed(2)} ms`);
     logger.info(`Listening: http://${host}:${port}`);
   });
 

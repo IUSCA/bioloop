@@ -9,11 +9,13 @@
         <template v-if="props.group.metadata?.type">
           {{ props.group.metadata.type }} ·
         </template>
-        {{
-          maybePluralize(props.group._count?.members, "member", {
-            formatter: number_formatter.format,
-          })
-        }}
+        <span v-if="props.group._count?.members != null">
+          {{
+            maybePluralize(props.group._count.members, "member", {
+              formatter: number_formatter.format,
+            })
+          }}
+        </span>
       </span>
     </div>
     <button

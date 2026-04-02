@@ -46,6 +46,7 @@ const userIds = [];
 const groupIds = [];
 const datasetIds = [];
 const arIds = [];
+const presetIds = [];
 
 beforeAll(async () => {
   requester = await createTestUser('_arc_req');
@@ -125,6 +126,16 @@ async function revokeOutstandingGrants() {
 describe('access requests - concurrency', () => {
   afterEach(async () => {
     await revokeOutstandingGrants();
+
+    if (presetIds.length) {
+      await prisma.grant_preset_item.deleteMany({
+        where: { preset_id: { in: presetIds } },
+      }).catch(() => {});
+      await prisma.grant_preset.deleteMany({
+        where: { id: { in: presetIds } },
+      }).catch(() => {});
+      presetIds.length = 0;
+    }
   });
 
   describe('concurrent submit of the same DRAFT request', () => {
@@ -230,6 +241,7 @@ describe('access requests - concurrency', () => {
           },
         },
       });
+      presetIds.push(preset.id);
 
       const ar = await newDraftRequest([{ preset_id: preset.id }]);
       const submitted = await arService.submitRequest(ar.id, requester.subject_id);
