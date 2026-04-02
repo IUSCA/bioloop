@@ -42,7 +42,7 @@
           v-if="rowData.integrated_status === 'ACTIVE'"
           class="flex justify-center"
         >
-          <va-popover message="Registration in progress">
+          <va-popover :message="'Registration in progress'">
             <half-circle-spinner
               class="flex-none"
               :animation-duration="1000"
@@ -55,7 +55,7 @@
           v-else-if="rowData.integrated_status === 'SUCCESS'"
           class="flex justify-center"
         >
-          <va-popover message="Registration completed successfully">
+          <va-popover :message="'Registration completed successfully'">
             <va-icon name="check_circle" color="success" />
           </va-popover>
         </div>
@@ -63,7 +63,7 @@
           v-else-if="rowData.integrated_status === 'FAILURE'"
           class="flex justify-center"
         >
-          <va-popover message="Registration failed">
+          <va-popover :message="'Registration failed'">
             <va-icon name="warning" color="warning" />
           </va-popover>
         </div>
@@ -83,7 +83,9 @@
       </template>
 
       <template #cell(imported_dataset_type)="{ value }">
-        <DatasetType v-if="value" :type="value" :show-icon="true" />
+        <va-chip size="small" outline v-if="value">
+          {{ value }}
+        </va-chip>
       </template>
 
       <template #cell(source_dataset)="{ rowData }">
@@ -125,12 +127,12 @@
 </template>
 
 <script setup>
-import DatasetType from "@/components/dataset/DatasetType.vue";
 import useSearchKeyShortcut from "@/composables/useSearchKeyShortcut";
 import config from "@/config";
 import datasetService from "@/services/dataset";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
+import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
 import { Icon } from "@iconify/vue";
@@ -148,7 +150,6 @@ nav.setNavItems([{ label: "Dataset Imports" }]);
 useSearchKeyShortcut();
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
-const ACTIVE_STATES = ["PENDING", "STARTED"];
 
 const filterInput = ref("");
 const pastImports = ref([]);
@@ -191,8 +192,10 @@ const columns = [
     label: "Imported Dataset",
     thAlign: "center",
     tdAlign: "center",
-    tdStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "imported_dataset_type",
@@ -202,65 +205,69 @@ const columns = [
     tdAlign: "center",
   },
   {
-    key: "source_dataset",
-    label: "Source Raw Data",
-    width: "18%",
+    key: "file_type",
+    label: "File Type",
+    width: "10%",
     thAlign: "center",
     tdAlign: "center",
-    tdStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+  },
+  {
+    key: "source_dataset",
+    label: "Source Raw Data",
+    width: "15%",
+    thAlign: "center",
+    tdAlign: "center",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "user",
     label: "Imported By",
-    width: "20%",
+    width: "15%",
     thAlign: "center",
     tdAlign: "center",
-    tdStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
-    thStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    tdStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
   {
     key: "initiated_at",
     label: "Imported On",
-    width: "12%",
+    width: "10%",
     thAlign: "right",
     tdAlign: "right",
-    thStyle: "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
+    thStyle:
+      "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;",
   },
 ];
-
-const getIntegratedWorkflowStatus = (workflows) => {
-  const integratedWorkflows = (workflows || []).filter(
-    (workflow) => workflow.name === "integrated",
-  );
-
-  if (integratedWorkflows.length === 0) return null;
-
-  const latestWorkflow = integratedWorkflows[integratedWorkflows.length - 1];
-  if (!latestWorkflow.status) return null;
-
-  if (ACTIVE_STATES.includes(latestWorkflow.status)) return "ACTIVE";
-  if (latestWorkflow.status === "SUCCESS") return "SUCCESS";
-  return "FAILURE";
-};
 
 const getImportLogs = async () => {
   loading.value = true;
   return datasetService
     .getDatasetImportLogs(filter_query.value)
     .then((res) => {
-      pastImports.value = res.data.imports.map((dataset) => {
-        const status = getIntegratedWorkflowStatus(dataset.workflows);
-        const createAuditLog = dataset.audit_logs?.[0];
+      pastImports.value = res.data.imports.map((e) => {
+        const imported_dataset = e.dataset;
+        const status = wfService.get_integrated_workflow_status(
+          imported_dataset.workflows,
+        );
+        const createAuditLog = imported_dataset.audit_logs?.[0];
         return {
-          imported_dataset: dataset,
-          source_dataset:
-            dataset.source_datasets.length > 0
-              ? dataset.source_datasets[0].source_dataset
-              : null,
-          imported_dataset_type: dataset.type,
-          initiated_at: dataset.created_at,
+          ...e,
+          initiated_at: e.created_at,
           user: createAuditLog?.user,
+          imported_dataset,
+          source_dataset:
+            imported_dataset.source_datasets.length > 0
+              ? imported_dataset.source_datasets[0].source_dataset
+              : null,
+          imported_dataset_type: imported_dataset.type,
+          file_type:
+            imported_dataset.analysis_type?.name ||
+            imported_dataset.metadata?.analysis_type,
           integrated_status: status,
         };
       });
@@ -305,7 +312,7 @@ function fetch_and_update_dataset(id) {
       if (importIndex !== -1) {
         pastImports.value[importIndex].imported_dataset = res.data;
         pastImports.value[importIndex].integrated_status =
-          getIntegratedWorkflowStatus(res.data.workflows);
+          wfService.get_integrated_workflow_status(res.data.workflows);
       }
     })
     .catch((err) => {

@@ -171,19 +171,19 @@ router.post(
 
 async function enrichImportLogsWithWorkflows(importLogs) {
   return Promise.all(
-    importLogs.map(async (dataset) => {
-      const importDataset = dataset;
-      if (importDataset.workflows && importDataset.workflows.length > 0) {
+    importLogs.map(async (log) => {
+      const { dataset } = log;
+      if (dataset.workflows && dataset.workflows.length > 0) {
         try {
-          const workflow_ids = importDataset.workflows.map((workflow) => workflow.id);
+          const workflow_ids = dataset.workflows.map((workflow) => workflow.id);
           const wf_res = await wfService.getAll({ workflow_ids });
-          importDataset.workflows = wf_res.data.results || [];
+          dataset.workflows = wf_res.data.results || [];
         } catch (error) {
-          logger.warn(`Failed to fetch workflow details for dataset ${importDataset.id}: ${error.message}`);
-          importDataset.workflows = [];
+          logger.warn(`Failed to fetch workflow details for dataset ${dataset.id}: ${error.message}`);
+          dataset.workflows = [];
         }
       }
-      return importDataset;
+      return log;
     }),
   );
 }
@@ -201,15 +201,15 @@ router.get(
       dataset_name, offset, limit, sort_by = 'created_at', sort_order = 'desc',
     } = req.query;
 
-    const where = {
-      create_method: CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
-      ...(dataset_name && {
+    const whereClause = {};
+    if (dataset_name) {
+      whereClause.dataset = {
         name: {
           contains: dataset_name,
           mode: 'insensitive',
         },
-      }),
-    };
+      };
+    }
 
     const orderBy = {
       [sort_by]: sort_order,
@@ -218,51 +218,52 @@ router.get(
     const filterQuery = {
       skip: offset ?? Prisma.skip,
       take: limit ?? Prisma.skip,
-      where,
+      where: whereClause,
       orderBy,
     };
 
-    const [datasets, count] = await prisma.$transaction([
-      prisma.dataset.findMany({
+    const [importLogs, count] = await prisma.$transaction([
+      prisma.dataset_import_log.findMany({
         ...filterQuery,
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          metadata: true,
-          created_at: true,
-          source_datasets: {
-            select: {
-              source_dataset: true,
+        include: {
+          dataset: {
+            include: {
+              source_datasets: {
+                include: {
+                  source_dataset: true,
+                },
+              },
+              workflows: {
+                select: {
+                  id: true,
+                },
+              },
+              audit_logs: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+                where: {
+                  action: 'create',
+                },
+              },
             },
-          },
-          workflows: {
-            select: {
-              id: true,
-            },
-          },
-          audit_logs: {
-            where: {
-              action: 'create',
-            },
-            select: {
-              user: true,
-              timestamp: true,
-            },
-            orderBy: {
-              timestamp: 'asc',
-            },
-            take: 1,
           },
         },
       }),
-      prisma.dataset.count({ where }),
+      prisma.dataset_import_log.count({ where: whereClause }),
     ]);
 
-    const enrichedImports = await enrichImportLogsWithWorkflows(datasets);
+    const enrichedImportLogs = await enrichImportLogsWithWorkflows(importLogs);
 
     res.json({
-      imports: enrichedImports,
+      imports: enrichedImportLogs,
       metadata: { count },
     });
   }),
@@ -282,19 +283,20 @@ router.get(
       dataset_name, offset, limit, sort_by = 'created_at', sort_order = 'desc',
     } = req.query;
 
-    const where = {
-      create_method: CONSTANTS.DATASET_CREATE_METHODS.IMPORT,
-      ...(dataset_name && {
-        name: {
-          contains: dataset_name,
-          mode: 'insensitive',
-        },
-      }),
-      audit_logs: {
-        some: {
-          action: 'create',
-          user: {
-            username: req.params.username,
+    const whereClause = {
+      dataset: {
+        ...(dataset_name && {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
+          },
+        }),
+        audit_logs: {
+          some: {
+            action: 'create',
+            user: {
+              username: req.params.username,
+            },
           },
         },
       },
@@ -307,51 +309,52 @@ router.get(
     const filterQuery = {
       skip: offset ?? Prisma.skip,
       take: limit ?? Prisma.skip,
-      where,
+      where: whereClause,
       orderBy,
     };
 
-    const [datasets, count] = await prisma.$transaction([
-      prisma.dataset.findMany({
+    const [importLogs, count] = await prisma.$transaction([
+      prisma.dataset_import_log.findMany({
         ...filterQuery,
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          metadata: true,
-          created_at: true,
-          source_datasets: {
-            select: {
-              source_dataset: true,
+        include: {
+          dataset: {
+            include: {
+              source_datasets: {
+                include: {
+                  source_dataset: true,
+                },
+              },
+              workflows: {
+                select: {
+                  id: true,
+                },
+              },
+              audit_logs: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+                where: {
+                  action: 'create',
+                },
+              },
             },
-          },
-          workflows: {
-            select: {
-              id: true,
-            },
-          },
-          audit_logs: {
-            where: {
-              action: 'create',
-            },
-            select: {
-              user: true,
-              timestamp: true,
-            },
-            orderBy: {
-              timestamp: 'asc',
-            },
-            take: 1,
           },
         },
       }),
-      prisma.dataset.count({ where }),
+      prisma.dataset_import_log.count({ where: whereClause }),
     ]);
 
-    const enrichedImports = await enrichImportLogsWithWorkflows(datasets);
+    const enrichedImportLogs = await enrichImportLogsWithWorkflows(importLogs);
 
     res.json({
-      imports: enrichedImports,
+      imports: enrichedImportLogs,
       metadata: { count },
     });
   }),
