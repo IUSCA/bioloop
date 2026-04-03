@@ -8,7 +8,7 @@ export default {
    *
    * @param {Object} options
    * @param {Object} options.filter - keys: event_type, actor_id, subject_id,
-   *   resource_id, resource_type, target_type, target_id
+   *   resource_id, resource_type, target_type, target_id, subject_type, subject_id
    * @param {string} options.startDate
    * @param {string} options.endDate
    * @param {string} options.sortBy

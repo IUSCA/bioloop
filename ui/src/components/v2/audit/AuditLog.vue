@@ -3,7 +3,7 @@
     <ColoredDot :color="dotColor" />
 
     <span
-      class="flex-shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-100"
+      class="flex-shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase w-64 truncate"
     >
       {{ eventLabel }}
     </span>

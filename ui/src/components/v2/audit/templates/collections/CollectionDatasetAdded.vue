@@ -3,9 +3,12 @@
     class="flex flex-wrap items-center gap-1 min-w-0 text-sm text-slate-700 dark:text-slate-200"
   >
     Dataset
-    <DatasetToken :name="record.subject_name" :id="record.subject_id" />
-    added to collection
-    <CollectionToken :name="record.target_name" :id="record.target_id" />
+    <DatasetToken :name="record.resource_name" :id="record.resource_id" />
+    added
+    <template v-if="!inCollectionContext">
+      to collection
+      <CollectionToken :name="record.target_name" :id="record.target_id" />
+    </template>
     by
     <UserToken :name="record.actor_name" :id="record.actor_id" />
   </div>
@@ -18,4 +21,6 @@ defineProps({
     required: true,
   },
 });
+const context = inject("context", "default");
+const inCollectionContext = context === "collection";
 </script>
