@@ -2,6 +2,7 @@ const {
   Prisma, GRANT_CREATION_TYPE, RESOURCE_TYPE, GRANT_REVOCATION_TYPE,
 } = require('@prisma/client');
 const createError = require('http-errors');
+const _ = require('lodash/fp');
 
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const Expiry = require('@/utils/expiry');
@@ -85,7 +86,11 @@ async function _createGrant(tx, data, auditData = {}) {
 
   // Merge any caller-provided audit data metadata
   if (auditData && auditData.metadata) {
-    builder.mergeMetadata(auditData.metadata);
+    builder.mergeMetadata(_.omitBy(_.isNil)({
+      ...auditData.metadata,
+      access_type_name: accessTypeName,
+      source_preset_id: data.source_preset_id,
+    }));
   }
 
   // Determine event type - use provided or default to GRANT_CREATED

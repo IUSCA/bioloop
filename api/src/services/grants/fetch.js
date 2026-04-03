@@ -1,10 +1,11 @@
 const {
   Prisma,
   GROUP_MEMBER_ROLE,
+  RESOURCE_TYPE,
 } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { enumToSql } = require('@/utils/sql');
+const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 
 const GRANT_INCLUDES = {
   resource: {
@@ -203,27 +204,69 @@ async function listGrantsForResource({
  * List grants for a resource grouped by subject_id (no sort; offset/limit on groups)
  * @param {Object} params
  * @param {string} params.resource_id
+ * @param {number} params.limit - Pagination limit (number of subject groups to return)
+ * @param {number} params.offset - Pagination offset (number of subject groups to skip)
+ * @param {number[]} [params.access_type_ids] - Optional filter to only include grants with specific access type IDs
+ * @param {string} [params.subject_search_term] - Optional search term to filter subjects by name (matches user name/username/email or group name)
+ * @param {string} [params.subject_type] - Optional filter to only include subjects of a specific type ('USER' or 'GROUP')
+ * @returns {Promise<Object>} List of grants grouped by subject, with subject details and aggregated grants for the resource
  */
 async function listGrantsForResourceGrouped({
   resource_id,
+  limit, offset, access_type_ids, subject_search_term, subject_type,
 }) {
+  const resourceClause = Prisma.sql`g.resource_id = ${resource_id}`;
+
+  const accessTypeClause = access_type_ids && access_type_ids.length > 0
+    ? Prisma.sql`g.access_type_id IN (${Prisma.join(access_type_ids)})`
+    : Prisma.empty;
+
+  const subjectTypeClause = subject_type
+    ? Prisma.sql`s.type = ${subject_type}::"SUBJECT_TYPE"`
+    : Prisma.empty;
+
+  let searchClause = Prisma.empty;
+  let joins = Prisma.empty;
+  const needsSubjectJoin = subject_search_term || subject_type;
+
+  if (needsSubjectJoin) {
+    joins = Prisma.sql`JOIN subject s ON g.subject_id = s.id`;
+  }
+
+  if (subject_search_term) {
+    const likePattern = createLikePattern(subject_search_term);
+    searchClause = Prisma.sql`(
+      u.name ILIKE ${likePattern} OR 
+      u.username ILIKE ${likePattern} OR 
+      u.email ILIKE ${likePattern} OR 
+      gr.name ILIKE ${likePattern})`;
+    joins = Prisma.sql`
+      JOIN subject s ON g.subject_id = s.id
+      LEFT JOIN "user" u ON s.id = u.subject_id
+      LEFT JOIN "group" gr ON s.id = gr.id`;
+  }
+
+  const whereClauses = [resourceClause, accessTypeClause, subjectTypeClause, searchClause];
+  const whereClause = buildWhereClause(whereClauses, 'AND');
+
   const sql = Prisma.sql`
     SELECT
       g.subject_id,
       json_agg(json_build_object(
         'id', g.id,
         'access_type_id', g.access_type_id,
-        'access_type_name', gat.name,
         'valid_from', g.valid_from,
         'valid_until', g.valid_until,
         'revoked_at', g.revoked_at
       )) AS grants
     FROM valid_grants g
-    JOIN grant_access_type gat ON g.access_type_id = gat.id
-    WHERE g.resource_id = ${resource_id}
+    ${joins}
+    ${whereClause}
     GROUP BY g.subject_id
     ORDER BY MAX(g.created_at) ASC -- sort groups by most recent grant creation time
+    LIMIT ${limit} OFFSET ${offset}
   `;
+  // console.log(sql.sql, sql.values);
 
   const rows = await prisma.$queryRaw(sql);
 
@@ -248,19 +291,27 @@ async function listGrantsForResourceGrouped({
   return grantsGrouped;
 }
 
-async function listAccessTypes() {
-  return prisma.grant_access_type.findMany({
+async function listAccessTypes({ resource_type } = {}) {
+  const accessTypes = await prisma.grant_access_type.findMany({
     orderBy: {
       name: 'asc',
     },
   });
+
+  // for collections, return all access types
+  // for datasets, filter out access types that are only applicable to datasets
+  if (resource_type && resource_type === RESOURCE_TYPE.DATASET) {
+    const filteredAccessTypes = accessTypes.filter(({ name }) => name.startsWith('DATASET:'));
+    return filteredAccessTypes;
+  }
+  return accessTypes;
 }
 
 /**
  * List all active grant presets with their access types
  * @returns {Promise<Array>} List of active presets with nested access_type_items
  */
-async function listPresets(resource_type) {
+async function listPresets({ resource_type } = {}) {
   const where = { is_active: true };
   if (resource_type) {
     where.resource_types = {

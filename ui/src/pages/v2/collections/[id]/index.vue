@@ -134,7 +134,7 @@
           ref="grantsTabRef"
           v-else-if="activeTab === 'grants'"
           :collection="collection"
-          :can-manage="can('manage_grants')"
+          :can-manage-grants="can('manage_grants')"
           @count-changed="fetchGrantsCount"
         />
 

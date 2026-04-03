@@ -1,5 +1,7 @@
 const express = require('express');
 const { param, query, body } = require('express-validator');
+const _ = require('lodash/fp');
+const { isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -9,7 +11,7 @@ const grantService = require('@/services/grants');
 const { isPlatformAdmin } = require('@/services/auth');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
-const { RESOURCE_TYPE } = require('@prisma/client');
+const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
 
 const router = express.Router();
 
@@ -103,20 +105,14 @@ async function validateGrantCreationRequest(req) {
 router.get(
   '/access-types',
   validate([
-    query('resource_type').isIn(Object.values(RESOURCE_TYPE)),
+    query('resource_type').isIn(Object.values(RESOURCE_TYPE)).optional(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List all access types'
 
-    const accessTypes = await grantService.listAccessTypes();
-
-    // for collections, return all access types
-    // for datasets, filter out access types that are only applicable to datasets
-    if (req.query.resource_type === RESOURCE_TYPE.DATASET) {
-      const filteredAccessTypes = accessTypes.filter(({ name }) => name.startsWith('DATASET:'));
-      return res.json(filteredAccessTypes);
-    }
+    const { resource_type } = req.query;
+    const accessTypes = await grantService.listAccessTypes({ resource_type });
 
     res.json(accessTypes);
   }),
@@ -125,12 +121,14 @@ router.get(
 // List grant presets
 router.get(
   '/presets',
-  validate([query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE))]),
+  validate([
+    query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
+  ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List all grant presets'
 
-    const presets = await grantService.listPresets(req.query.resource_type);
+    const presets = await grantService.listPresets({ resource_type: req.query.resource_type });
     res.json(presets);
   }),
 );
@@ -159,6 +157,14 @@ router.post(
     const validationError = await validateGrantCreationRequest(req);
     if (validationError) {
       return res.status(validationError.status).json({ message: validationError.message });
+    }
+
+    // validate source_preset_id if provided is in items
+    if (req.body.source_preset_id) {
+      const presetIdInItems = req.body.items.some((item) => item.preset_id === req.body.source_preset_id);
+      if (!presetIdInItems) {
+        return res.status(400).json({ message: 'source_preset_id must match the preset_id of one of the items' });
+      }
     }
 
     const data = pickNonNil([
@@ -283,12 +289,20 @@ router.get(
   }),
 );
 
-// List grants for a resource - admins
+// List grants for a resource
 router.get(
   '/resource/:resource_type/:resource_id',
   validate([
-    param('resource_type').isIn(['DATASET', 'COLLECTION']),
+    param('resource_type').isIn(Object.values(RESOURCE_TYPE)),
     param('resource_id').isUUID(),
+    query('limit').optional().isInt({ min: 0, max: 10 }).toInt(),
+    query('offset').optional().isInt({ min: 0 }).toInt(),
+    query('access_type_ids').optional().isArray({ min: 1 })
+      .custom((value) => value.every((val) => isInt(val, { min: 1 })))
+      .bail()
+      .customSanitizer((value) => value.map(Number)),
+    query('subject_search_term').optional().trim(),
+    query('subject_type').optional().isIn(Object.values(SUBJECT_TYPE)),
   ]),
   authorize('grant', 'list_for_resource', {
     resourceIdFn: (req) => req.params.resource_id,
@@ -302,10 +316,12 @@ router.get(
     // #swagger.summary = 'List grants for a resource (grouped by subject)'
 
     const { resource_id } = req.params;
+    const options = _.pick(['limit', 'offset', 'access_type_ids', 'subject_search_term', 'subject_type'])(req.query);
 
     // [{subject, grants: []}, ...]
     const grouped = await grantService.listGrantsForResourceGrouped({
       resource_id,
+      ...options,
     });
 
     const filteredData = grouped.map(({ subject, grants }) => ({

@@ -348,13 +348,17 @@ function buildGrantsData() {
       approved_expiry: expiry.value,
     });
   });
-  return {
+  const data = {
     subject_id: subject.value.id,
     resource_id: props.resource.id,
     resource_type: props.resource.type,
     items,
     justification: justification.value,
   };
+  if (selectedPreset.value) {
+    data.source_preset_id = selectedPreset.value;
+  }
+  return data;
 }
 
 debouncedWatch(
