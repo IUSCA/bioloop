@@ -9,7 +9,9 @@ const audit = require('@/authorization/builtin/audit');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const prisma = require('@/db');
 const { getPrismaGrantValidityFilter } = require('./fetch');
-const { getResourceOwnerGroupId } = require('./helpers');
+const {
+  getResourceOwnerGroupId,
+} = require('./helpers');
 
 // ============================================================================
 // Grant Creation

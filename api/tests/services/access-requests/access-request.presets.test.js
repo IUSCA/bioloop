@@ -28,6 +28,7 @@ const userIds = [];
 const groupIds = [];
 const datasetIds = [];
 const arIds = [];
+const presetIds = [];
 
 beforeAll(async () => {
   presetActor = await createTestUser('_preset_actor');
@@ -64,6 +65,7 @@ beforeAll(async () => {
         },
       },
     });
+    presetIds.push(testPreset.id);
   }
 }, 30_000);
 
@@ -71,6 +73,37 @@ afterAll(async () => {
   for (const id of arIds) {
     await prisma.access_request.deleteMany({ where: { id } }).catch(() => {});
   }
+
+  // Clean up any presets created by these tests, including older leftovers from repeated runs.
+  if (presetIds.length) {
+    await prisma.grant.deleteMany({
+      where: { source_preset_id: { in: presetIds } },
+    }).catch(() => {});
+
+    await prisma.access_request_item.deleteMany({
+      where: { preset_id: { in: presetIds } },
+    }).catch(() => {});
+
+    await prisma.grant_preset_item.deleteMany({
+      where: {
+        preset_id: {
+          in: presetIds,
+        },
+      },
+    }).catch(() => {});
+  }
+
+  await prisma.grant_preset.deleteMany({
+    where: {
+      OR: [
+        { id: { in: presetIds } },
+        { name: { startsWith: 'Test Preset' } },
+        { name: { startsWith: 'test-concurrent-preset-' } },
+      ],
+    },
+  }).catch(() => {});
+  presetIds.length = 0;
+
   await deleteGrantsForResource(presetDataset.resource_id).catch(() => {});
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
@@ -363,6 +396,7 @@ describe('access requests with presets', () => {
           },
         },
       });
+      presetIds.push(secondPreset.id);
 
       const request = await arService.createAccessRequest(
         {

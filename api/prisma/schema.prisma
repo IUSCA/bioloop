@@ -727,6 +727,7 @@ model grant_preset {
   description      String?
   long_description String?
   is_active        Boolean @default(true) // soft-disable; never delete
+  resource_types   RESOURCE_TYPE[] // which resource types this preset can be applied to (DATASET, COLLECTION, etc.)
 
   access_type_items    grant_preset_item[]
   access_request_items access_request_item[]

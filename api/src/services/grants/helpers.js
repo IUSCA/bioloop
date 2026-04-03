@@ -2,6 +2,7 @@ const {
   Prisma,
   RESOURCE_TYPE,
 } = require('@prisma/client');
+const createError = require('http-errors');
 
 const { EVERYONE_GROUP_ID } = require('@/constants');
 const prisma = require('@/db');
@@ -265,11 +266,88 @@ async function getResourceOwnerGroupId(tx, resource_id) {
   return null;
 }
 
+function isAccessTypeOfType(accessTypeName, typePrefix) {
+  return accessTypeName.startsWith(`${typePrefix}:`);
+}
+
+function isAccessTypeApplicableToResourceType(accessTypeName, resourceType) {
+  if (resourceType === RESOURCE_TYPE.DATASET) {
+    return isAccessTypeOfType(accessTypeName, 'DATASET');
+  }
+  if (resourceType === RESOURCE_TYPE.COLLECTION) {
+    return isAccessTypeOfType(accessTypeName, 'DATASET') || isAccessTypeOfType(accessTypeName, 'COLLECTION');
+  }
+  return false;
+}
+
+async function assertGrantItemsApplicableToResourceType(tx, resourceType, items) {
+  const db = tx || prisma;
+  const accessTypeIds = new Set();
+  const presetIds = new Set();
+
+  for (const item of items) {
+    if (item.access_type_id) accessTypeIds.add(item.access_type_id);
+    if (item.preset_id) presetIds.add(item.preset_id);
+  }
+
+  const accessTypeById = new Map(
+    (accessTypeIds.size > 0
+      ? await db.grant_access_type.findMany({
+        where: { id: { in: [...accessTypeIds] } },
+        select: { id: true, name: true },
+      })
+      : []
+    ).map((t) => [t.id, t.name]),
+  );
+
+  for (const item of items) {
+    if (item.access_type_id) {
+      const typeName = accessTypeById.get(item.access_type_id);
+      if (!typeName) {
+        throw createError.BadRequest(`access_type_id ${item.access_type_id} does not exist`);
+      }
+      if (!isAccessTypeApplicableToResourceType(typeName, resourceType)) {
+        throw createError.BadRequest(`access_type ${typeName} not valid for resource type ${resourceType}`);
+      }
+    }
+  }
+
+  if (presetIds.size > 0) {
+    const presets = await db.grant_preset.findMany({
+      where: { id: { in: [...presetIds] }, is_active: true },
+      include: {
+        access_type_items: {
+          include: {
+            access_type: true,
+          },
+        },
+      },
+    });
+
+    const existingPresetIds = new Set(presets.map((preset) => preset.id));
+    for (const presetId of presetIds) {
+      if (!existingPresetIds.has(presetId)) {
+        throw createError.BadRequest(`preset_id ${presetId} does not exist or is not active`);
+      }
+    }
+
+    for (const preset of presets) {
+      if (!preset.resource_types.includes(resourceType)) {
+        throw createError.BadRequest(`preset_id ${preset.id} is not applicable to resource type ${resourceType}`);
+      }
+    }
+  }
+}
+
 module.exports = {
   userHasGrant,
   // grants to a user for a dataset
   getUserDatasetGrants,
   getGrantAccessTypesForUser,
+
+  // resource compatibility helpers
+  isAccessTypeApplicableToResourceType,
+  assertGrantItemsApplicableToResourceType,
 
   // sql queries
   ownerGroupIdsOfResourcesAccessibleByUserQuery,

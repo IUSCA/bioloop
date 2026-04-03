@@ -260,9 +260,16 @@ async function listAccessTypes() {
  * List all active grant presets with their access types
  * @returns {Promise<Array>} List of active presets with nested access_type_items
  */
-async function listPresets() {
+async function listPresets(resource_type) {
+  const where = { is_active: true };
+  if (resource_type) {
+    where.resource_types = {
+      has: resource_type,
+    };
+  }
+
   return prisma.grant_preset.findMany({
-    where: { is_active: true },
+    where,
     include: {
       access_type_items: {
         include: {

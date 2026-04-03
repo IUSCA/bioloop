@@ -72,8 +72,10 @@ export default {
   },
 
   /** List available presets. */
-  listGrantPresets() {
-    return api.get("/grants/presets");
+  listGrantPresets(resourceType) {
+    return api.get("/grants/presets", {
+      params: { resource_type: resourceType },
+    });
   },
 
   expiringGrants(params = {}) {

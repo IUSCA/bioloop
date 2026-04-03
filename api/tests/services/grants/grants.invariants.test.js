@@ -37,6 +37,8 @@ let member;
 let dataset;
 let viewMetaId;
 
+const BUILTIN_PRESET_DISCOVERABLE = 1;
+
 const createdGrantIds = [];
 const createdGroupIds = [];
 const createdUserIds = [];
@@ -313,6 +315,45 @@ describe('grants - invariants', () => {
           actor.subject_id,
         ),
       ).rejects.toMatchObject({ status: 409 });
+    });
+  });
+
+  describe('grant presets resource_type behavior', () => {
+    it('lists dataset-only presets when resource_type=DATASET', async () => {
+      const presets = await grantsService.listPresets('DATASET');
+      expect(presets.length).toBeGreaterThanOrEqual(1);
+      expect(presets.every((preset) => preset.resource_types.includes('DATASET'))).toBe(true);
+    });
+
+    it('rejects collection-specific access types for DATASET resources', async () => {
+      const collectionTypeId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
+      await expect(
+        grantsService.assertGrantItemsApplicableToResourceType(
+          prisma,
+          'DATASET',
+          [{ access_type_id: collectionTypeId }],
+        ),
+      ).rejects.toThrow('not valid for resource type DATASET');
+    });
+
+    it('rejects a collection preset for DATASET resources', async () => {
+      await expect(
+        grantsService.assertGrantItemsApplicableToResourceType(
+          prisma,
+          'DATASET',
+          [{ preset_id: BUILTIN_PRESET_DISCOVERABLE }],
+        ),
+      ).rejects.toThrow('not applicable to resource type DATASET');
+    });
+
+    it('accepts a dataset-specific preset for DATASET resources', async () => {
+      await expect(
+        grantsService.assertGrantItemsApplicableToResourceType(
+          prisma,
+          'DATASET',
+          [{ preset_id: 4 }],
+        ),
+      ).resolves.toBeUndefined();
     });
   });
 });

@@ -89,6 +89,13 @@ async function validateGrantCreationRequest(req) {
     }
   }
 
+  // validate access types and presets are compatible with requested resource type
+  try {
+    await grantService.assertGrantItemsApplicableToResourceType(prisma, req.body.resource_type, req.body.items);
+  } catch (error) {
+    return { status: 400, message: error.message };
+  }
+
   return null; // validation passed
 }
 
@@ -118,11 +125,12 @@ router.get(
 // List grant presets
 router.get(
   '/presets',
+  validate([query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE))]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List all grant presets'
 
-    const presets = await grantService.listPresets();
+    const presets = await grantService.listPresets(req.query.resource_type);
     res.json(presets);
   }),
 );
@@ -156,6 +164,7 @@ router.post(
     const data = pickNonNil([
       'subject_id',
       'resource_id',
+      'resource_type',
       'justification', 'source_preset_id'])(req.body);
 
     data.granted_by = req.user.subject_id;
@@ -190,7 +199,9 @@ router.post(
 
     const data = pickNonNil([
       'subject_id',
-      'resource_id'])(req.body);
+      'resource_id',
+      'resource_type',
+    ])(req.body);
     data.granted_by = req.user.subject_id;
 
     // [{type: 'new' | 'existing' | 'supersede', access_type_id: int, expiry: Expiry, existing_grant: Object?}]

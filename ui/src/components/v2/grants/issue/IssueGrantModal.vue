@@ -221,7 +221,7 @@ const {
   loading: presetsLoading,
   error: presetsError,
   refresh: refreshPresets,
-} = useGrantPresets();
+} = useGrantPresets(props.resource?.type);
 
 // form state
 const subject = ref({});

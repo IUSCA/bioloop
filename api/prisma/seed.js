@@ -396,7 +396,6 @@ async function main() {
       });
     }
   }
-
   // create instruments
   // delete pre-existing records
   await prisma.instrument.deleteMany();
@@ -579,7 +578,9 @@ async function main() {
    */
 
   // update the auto increment id's sequence numbers
-  const tables = ['dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type'];
+  const tables = [
+    'dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type', 'grant_preset', 'grant_access_type',
+  ];
   await Promise.all(tables.map(update_seq));
 }
 

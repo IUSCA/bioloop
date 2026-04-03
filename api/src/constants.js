@@ -255,19 +255,30 @@ const GRANT_PRESETS = [
     id: 1,
     name: 'Discoverable',
     description: 'Allows users to view collection and dataset metadata and request further access',
+    resource_types: ['COLLECTION'],
     access_type_ids: [1, 3, 7, 9],
   },
   {
     id: 2,
     name: 'Standard Research Use',
     description: 'Allows users to view and download datasets',
+    resource_types: ['COLLECTION'],
     access_type_ids: [1, 4, 5, 7, 9],
   },
+  // Dataset-only copies of built-in presets (collection actions removed):
   {
     id: 3,
-    name: 'Restricted Research Use',
-    description: 'Allows users to run compute jobs, except download',
-    access_type_ids: [1, 4, 6, 7, 9],
+    name: 'Discoverable (Dataset)',
+    description: 'Dataset grants only: view metadata and request access',
+    resource_types: ['DATASET'],
+    access_type_ids: [1, 3],
+  },
+  {
+    id: 4,
+    name: 'Standard Research Use (Dataset)',
+    description: 'Dataset grants only: view, list files, download',
+    resource_types: ['DATASET'],
+    access_type_ids: [1, 4, 5],
   },
 ];
 

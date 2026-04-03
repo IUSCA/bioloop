@@ -1,6 +1,6 @@
 import grantService from "@/services/v2/grants";
 
-export function useGrantPresets() {
+export function useGrantPresets(resourceType) {
   const presets = ref([]);
   const loading = ref(false);
   const error = ref(null);
@@ -9,7 +9,7 @@ export function useGrantPresets() {
     loading.value = true;
     error.value = null;
     try {
-      const { data } = await grantService.listGrantPresets();
+      const { data } = await grantService.listGrantPresets(resourceType);
       presets.value = data;
     } catch (err) {
       error.value = err;
