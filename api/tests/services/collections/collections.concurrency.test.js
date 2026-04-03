@@ -16,6 +16,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const collectionsService = require('@/services/collections');
+const { runRace, fanOut } = require('../concurrency-utils');
 const {
   createTestUser,
   createTestGroup,
@@ -79,33 +80,31 @@ describe('collections - concurrency', () => {
   describe('concurrent updateCollectionMetadata', () => {
     /**
      * updateCollectionMetadata increments the version field via `version: { increment: 1 }`.
-     * Two concurrent calls with the same expected_version=1 will race on the DB row;
-     * exactly one wins (version becomes 2) and the other gets 409 (P2025 record not found).
+     * Multiple concurrent calls with the same expected_version will race on the DB row;
+     * exactly one wins (version becomes 2) and the others get 409 (P2025 record not found).
      */
     it('exactly 1 succeeds; the other receives 409', async () => {
-      const c = await freshCollection('_upd_conc');
-
-      const [r1, r2] = await Promise.allSettled([
-        collectionsService.updateCollectionMetadata(c.id, {
-          data: { description: 'update A' },
+      await runRace(
+        async () => freshCollection('_upd_conc'),
+        (c) => fanOut(5, () => collectionsService.updateCollectionMetadata(c.id, {
+          data: { description: 'update' },
           expected_version: 1,
-        }),
-        collectionsService.updateCollectionMetadata(c.id, {
-          data: { description: 'update B' },
-          expected_version: 1,
-        }),
-      ]);
+        })),
+        async (results, c) => {
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          const failed = results.filter((r) => r.status === 'rejected');
 
-      const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
-      const failed = [r1, r2].filter((r) => r.status === 'rejected');
+          expect(succeeded).toHaveLength(1);
+          expect(failed).toHaveLength(4);
+          failed.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      expect(succeeded).toHaveLength(1);
-      expect(failed).toHaveLength(1);
-      expect(failed[0].reason).toMatchObject({ status: 409 });
-
-      // Final version is 2 (exactly one increment)
-      const final = await prisma.collection.findUnique({ where: { id: c.id } });
-      expect(final.version).toBe(2);
+          // Final version is 2 (exactly one increment)
+          const final = await prisma.collection.findUnique({ where: { id: c.id } });
+          expect(final.version).toBe(2);
+        },
+      );
     });
 
     it('two sequential updates with correct versions both succeed (version reaches 3)', async () => {
@@ -146,53 +145,64 @@ describe('collections - concurrency', () => {
 
   describe('concurrent addDatasets', () => {
     it('two concurrent adds of the same dataset result in exactly 1 row', async () => {
-      const c = await freshCollection('_add_conc');
+      await runRace(
+        async () => freshCollection('_add_conc'),
+        (c) => fanOut(5, () => collectionsService.addDatasets(c.id, {
+          dataset_ids: [dsA.resource_id],
+          actor_id: actor.subject_id,
+        })),
+        async (results, c) => {
+          // All serialized by FOR UPDATE — all should resolve
+          results.forEach((r) => {
+            expect(r.status).toBe('fulfilled');
+          });
 
-      const [r1, r2] = await Promise.allSettled([
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-      ]);
-
-      // Both serialized by FOR UPDATE — both should resolve
-      expect(r1.status).toBe('fulfilled');
-      expect(r2.status).toBe('fulfilled');
-
-      const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: dsA.resource_id },
-      });
-      expect(count).toBe(1);
+          const count = await prisma.collection_dataset.count({
+            where: { collection_id: c.id, dataset_id: dsA.resource_id },
+          });
+          expect(count).toBe(1);
+        },
+      );
     });
 
     it('concurrent adds of different datasets both succeed', async () => {
-      const c = await freshCollection('_add_diff');
-
-      await Promise.all([
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsB.resource_id], actor_id: actor.subject_id }),
-      ]);
-
-      const count = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
-      expect(count).toBe(2);
+      await runRace(
+        async () => freshCollection('_add_diff'),
+        (c) => [
+          collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+          collectionsService.addDatasets(c.id, { dataset_ids: [dsB.resource_id], actor_id: actor.subject_id }),
+        ],
+        async (results, c) => {
+          const count = await prisma.collection_dataset.count({ where: { collection_id: c.id } });
+          expect(count).toBe(2);
+        },
+      );
     });
   });
 
   describe('concurrent removeDatasets', () => {
     it('two concurrent removes of the same dataset both resolve with 0 rows remaining', async () => {
-      const c = await freshCollection('_rm_conc');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+      await runRace(
+        async () => {
+          const c = await freshCollection('_rm_conc');
+          await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+          return c;
+        },
+        (c) => fanOut(5, () => collectionsService.removeDatasets(c.id, {
+          dataset_ids: [dsA.resource_id],
+          actor_id: actor.subject_id,
+        })),
+        async (results, c) => {
+          results.forEach((r) => {
+            expect(r.status).toBe('fulfilled');
+          });
 
-      const [r1, r2] = await Promise.allSettled([
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-        collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-      ]);
-
-      expect(r1.status).toBe('fulfilled');
-      expect(r2.status).toBe('fulfilled');
-
-      const count = await prisma.collection_dataset.count({
-        where: { collection_id: c.id, dataset_id: dsA.resource_id },
-      });
-      expect(count).toBe(0);
+          const count = await prisma.collection_dataset.count({
+            where: { collection_id: c.id, dataset_id: dsA.resource_id },
+          });
+          expect(count).toBe(0);
+        },
+      );
     });
 
     it('remove on already-empty collection resolves without error', async () => {
@@ -214,20 +224,22 @@ describe('collections - concurrency', () => {
      * Either way the collection ends up archived and its final state is consistent.
      */
     it('collection is archived after the race regardless of ordering', async () => {
-      const c = await freshCollection('_arch_race');
+      await runRace(
+        async () => freshCollection('_arch_race'),
+        (c) => [
+          collectionsService.archiveCollection(c.id, actor.subject_id),
+          collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
+        ],
+        async (results, c) => {
+          // At least one operation succeeded
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          expect(succeeded.length).toBeGreaterThanOrEqual(1);
 
-      const results = await Promise.allSettled([
-        collectionsService.archiveCollection(c.id, actor.subject_id),
-        collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id }),
-      ]);
-
-      // At least one operation succeeded
-      const succeeded = results.filter((r) => r.status === 'fulfilled');
-      expect(succeeded.length).toBeGreaterThanOrEqual(1);
-
-      // The collection must always end up archived
-      const final = await prisma.collection.findUnique({ where: { id: c.id } });
-      expect(final.is_archived).toBe(true);
+          // The collection must always end up archived
+          const final = await prisma.collection.findUnique({ where: { id: c.id } });
+          expect(final.is_archived).toBe(true);
+        },
+      );
     });
 
     it('addDatasets on already-archived collection throws 409', async () => {

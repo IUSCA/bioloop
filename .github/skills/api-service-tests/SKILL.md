@@ -118,33 +118,114 @@ expect(count).toBe(0);
 
 ## Concurrency Tests
 
-- **Always** use `Promise.allSettled()` — never `Promise.all()` when failures are expected.
-- Count `fulfilled`/`rejected` explicitly; verify DB state after the race.
-- Use `afterEach` (not `afterAll`) when tests create conflicting data.
+Concurrency tests use the `runRace` harness to stress-test race conditions across multiple iterations with higher fan-out.
 
-**OCC race** — exactly one write wins:
+### The `runRace` Harness
+
+`api/tests/services/concurrency-utils.js` exports:
+
 ```js
+const { runRace, fanOut, RACE_RUNS } = require('../concurrency-utils');
+
+// runRace(setup, race, assert, cleanup)
+//   setup(i)        → provision fresh fixtures for iteration i
+//   race(ctx, i)    → return array of promises to race concurrently
+//   assert(results, ctx, i) → check invariants on settled results
+//   cleanup(ctx, i) → optional teardown (errors silently ignored)
+
+// fanOut(n, opFactory)
+//   → create n copies of the same operation
+//   → operationFactory gets called with indices 0..n-1
+```
+
+**Default behavior**: Runs each scenario **8 times** (set via environment: `RACE_RUNS=20 npx jest`).
+
+### Symmetric Scenarios (Same Op Fired N Times)
+
+For "concurrent submit of the same request" style tests:
+
+```js
+await runRace(
+  async () => newDraftRequest(),          // setup: fresh entity per iteration
+  (ar) => fanOut(5, () =>                 // race: 5 concurrent submits
+    arService.submitRequest(ar.id, requester.subject_id)
+  ),
+  async (results, ar) => {                // assert: exactly 1 wins
+    expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter(r => r.status === 'rejected')).toHaveLength(4);
+    results.filter(r => r.status === 'rejected').forEach(r => {
+      expect(r.reason.status).toBe(409);
+    });
+  },
+  async (ar) => {                         // cleanup: return to clean state
+    await arService.withdrawRequest({ request_id: ar.id, ... }).catch(() => {});
+  },
+);
+```
+
+**Total attempts**: 8 iterations × 5 concurrent ops = **40 race attempts** per test.
+
+### Asymmetric Scenarios (2-Way Races)
+
+For "review vs withdraw" or "archive vs add" style tests, keep the 2-party race but run multiple iterations:
+
+```js
+await runRace(
+  async () => {
+    const ar = await newDraftRequest();
+    return { ar };
+  },
+  ({ ar }) => [                           // race: exactly 2 ops
+    arService.submitReview({ request_id: ar.id, ... }),
+    arService.withdrawRequest({ request_id: ar.id, ... }),
+  ],
+  async (results, { ar }) => {
+    expect(results.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    const final = await arService.getRequestById(ar.id);
+    expect(['REJECTED', 'WITHDRAWN']).toContain(final.status);
+  },
+  async ({ ar }) => {
+    await arService.withdrawRequest({ request_id: ar.id, ... }).catch(() => {});
+  },
+);
+```
+
+**Total attempts**: 8 iterations × 2 concurrent ops = **16 race attempts** per test.
+
+### Key Points
+
+- **Always use cleanup**: Between iterations, state must be reset. Use `async (ctx) => { await cleanup() }` as the 4th arg.
+- **Fixture isolation**: Each iteration gets fresh entities via `setup()`. Concurrent ops in the same iteration share that fixture.
+- **Environment tunable**: `RACE_RUNS=20 npm test` runs 20 iterations per scenario for more thorough CI testing.
+- **Precedent**: Do not use bare `Promise.allSettled()` in new concurrency tests. Always wrap in `runRace`.
+
+### Examples
+
+```
+api/tests/services/access-requests/access-request.concurrency.test.js  — 7 wrapped runRace scenarios
+api/tests/services/grants/grants.concurrency.test.js                  — 6 wrapped runRace scenarios
+api/tests/services/groups/groups.concurrency.test.js                  — 5 wrapped runRace scenarios
+api/tests/services/collections/collections.concurrency.test.js        — 4 wrapped runRace scenarios
+api/tests/services/grants/issueGrants.concurrency.test.js             — 6 wrapped runRace scenarios
+api/tests/services/concurrency-utils.js                               — shared runRace, fanOut utilities
+```
+
+---
+
+## Old Pattern (Deprecated)
+
+**Do not use this pattern in new tests:**
+
+```js
+// ❌ Old: single 2-way race, only 1 attempt
 const results = await Promise.allSettled([
   service.update(id, { description: 'A', expected_version: 1 }),
   service.update(id, { description: 'B', expected_version: 1 }),
 ]);
 expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-expect(results.filter((r) => r.status === 'rejected')[0].reason.status).toBe(409);
-// confirm DB version = 2
 ```
 
-**Idempotent operations** (e.g. `ON CONFLICT DO NOTHING`):
-```js
-const results = await Promise.allSettled([
-  service.addMember(entityId, userId),
-  service.addMember(entityId, userId),
-]);
-expect(results.filter((r) => r.status === 'rejected')).toHaveLength(0);
-const count = await prisma.model.count({ where: { ... } });
-expect(count).toBe(1);
-```
-
-**Archive vs mutation race**: assert final DB state reflects a consistent outcome regardless of which operation won.
+**Use the new harness instead** for much higher confidence that race bugs are caught.
 
 ---
 

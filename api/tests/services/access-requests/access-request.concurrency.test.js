@@ -24,6 +24,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
 const Expiry = require('@/utils/expiry');
+const { runRace, fanOut } = require('../concurrency-utils');
 const {
   createTestUser,
   createTestGroup,
@@ -128,252 +129,327 @@ describe('access requests - concurrency', () => {
     await revokeOutstandingGrants();
 
     if (presetIds.length) {
+      await prisma.grant.deleteMany({
+        where: { source_preset_id: { in: presetIds } },
+      }).catch(() => {});
+
+      await prisma.access_request_item.deleteMany({
+        where: { preset_id: { in: presetIds } },
+      }).catch(() => {});
+
       await prisma.grant_preset_item.deleteMany({
         where: { preset_id: { in: presetIds } },
       }).catch(() => {});
-      await prisma.grant_preset.deleteMany({
-        where: { id: { in: presetIds } },
-      }).catch(() => {});
-      presetIds.length = 0;
     }
+
+    await prisma.grant_preset.deleteMany({
+      where: {
+        OR: [
+          { id: { in: presetIds } },
+          { name: { startsWith: 'Test Preset' } },
+          { name: { startsWith: 'test-concurrent-preset-' } },
+        ],
+      },
+    }).catch(() => {});
+
+    presetIds.length = 0;
   });
 
   describe('concurrent submit of the same DRAFT request', () => {
     it('exactly 1 succeeds; the other receives 409', async () => {
-      const ar = await newDraftRequest();
+      await runRace(
+        async () => newDraftRequest(),
+        (ar) => fanOut(5, () => arService.submitRequest(ar.id, requester.subject_id)),
+        async (results, ar) => {
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          const failed = results.filter((r) => r.status === 'rejected');
 
-      const [r1, r2] = await Promise.allSettled([
-        arService.submitRequest(ar.id, requester.subject_id),
-        arService.submitRequest(ar.id, requester.subject_id),
-      ]);
+          expect(succeeded).toHaveLength(1);
+          expect(failed).toHaveLength(4);
+          failed.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
-      const failed = [r1, r2].filter((r) => r.status === 'rejected');
-
-      expect(succeeded).toHaveLength(1);
-      expect(failed).toHaveLength(1);
-      expect(failed[0].reason).toMatchObject({ status: 409 });
-
-      // Request must be UNDER_REVIEW — exactly one transition
-      const final = await arService.getRequestById(ar.id);
-      expect(final.status).toBe('UNDER_REVIEW');
-
-      // Withdraw to return to clean state
-      await arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id });
+          // Request must be UNDER_REVIEW — exactly one transition
+          const final = await arService.getRequestById(ar.id);
+          expect(final.status).toBe('UNDER_REVIEW');
+        },
+        async (ar) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
   });
 
   describe('concurrent review of the same UNDER_REVIEW request', () => {
     it('exactly 1 review succeeds; the other receives 409', async () => {
-      const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
-
-      const reviewItems = submitted.access_request_items.map((item) => ({
-        id: item.id,
-        decision: 'REJECTED',
-      }));
-
-      const [r1, r2] = await Promise.allSettled([
-        arService.submitReview({
+      await runRace(
+        async () => {
+          const ar = await newDraftRequest();
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          const reviewItems = submitted.access_request_items.map((item) => ({
+            id: item.id,
+            decision: 'REJECTED',
+          }));
+          return { ar, submitted, reviewItems };
+        },
+        ({ submitted, reviewItems }) => fanOut(5, () => arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
           options: { item_decisions: reviewItems },
-        }),
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-      ]);
+        })),
+        async (results, { submitted }) => {
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          const failed = results.filter((r) => r.status === 'rejected');
 
-      const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
-      const failed = [r1, r2].filter((r) => r.status === 'rejected');
+          expect(succeeded).toHaveLength(1);
+          expect(failed).toHaveLength(4);
+          failed.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      expect(succeeded).toHaveLength(1);
-      expect(failed).toHaveLength(1);
-      expect(failed[0].reason).toMatchObject({ status: 409 });
-
-      const final = await arService.getRequestById(submitted.id);
-      expect(final.status).toBe('REJECTED');
+          const final = await arService.getRequestById(submitted.id);
+          expect(final.status).toBe('REJECTED');
+        },
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
 
     it('exactly 1 approval succeeds — 1 grant created, not 2', async () => {
-      const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
-
-      const reviewItems = submitted.access_request_items.map((item) => ({
-        id: item.id,
-        decision: 'APPROVED',
-        approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
-      }));
-
-      await Promise.allSettled([
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-      ]);
-
-      const grantCount = await prisma.grant.count({
-        where: {
-          subject_id: requester.subject_id,
-          resource_id: dataset.resource_id,
-          access_type_id: viewMetadataTypeId,
-          revoked_at: null,
+      await runRace(
+        async () => {
+          const ar = await newDraftRequest();
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          const reviewItems = submitted.access_request_items.map((item) => ({
+            id: item.id,
+            decision: 'APPROVED',
+            approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
+          }));
+          return { ar, submitted, reviewItems };
         },
-      });
-      expect(grantCount).toBe(1);
+        ({ submitted, reviewItems }) => fanOut(5, () => arService.submitReview({
+          request_id: submitted.id,
+          reviewer_id: reviewer.subject_id,
+          options: { item_decisions: reviewItems },
+        })),
+        async (results) => {
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          const failed = results.filter((r) => r.status === 'rejected');
+
+          expect(succeeded).toHaveLength(1);
+          expect(failed).toHaveLength(4);
+
+          const grantCount = await prisma.grant.count({
+            where: {
+              subject_id: requester.subject_id,
+              resource_id: dataset.resource_id,
+              access_type_id: viewMetadataTypeId,
+              revoked_at: null,
+            },
+          });
+          expect(grantCount).toBe(1);
+        },
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
 
     it('concurrent preset-based review only creates one set of grants', async () => {
-      const preset = await prisma.grant_preset.create({
-        data: {
-          name: `test-concurrent-preset-${Date.now()}`,
-          is_active: true,
-          access_type_items: {
-            create: [{ access_type_id: viewMetadataTypeId }],
-          },
+      await runRace(
+        async () => {
+          const preset = await prisma.grant_preset.create({
+            data: {
+              name: `test-concurrent-preset-${Date.now()}`,
+              is_active: true,
+              access_type_items: {
+                create: [{ access_type_id: viewMetadataTypeId }],
+              },
+            },
+          });
+          presetIds.push(preset.id);
+
+          const ar = await newDraftRequest([{ preset_id: preset.id }]);
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          const reviewItems = submitted.access_request_items.map((item) => ({
+            id: item.id,
+            decision: 'APPROVED',
+            approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
+          }));
+          return {
+            ar, submitted, reviewItems, preset,
+          };
         },
-      });
-      presetIds.push(preset.id);
-
-      const ar = await newDraftRequest([{ preset_id: preset.id }]);
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
-
-      const reviewItems = submitted.access_request_items.map((item) => ({
-        id: item.id,
-        decision: 'APPROVED',
-        approved_expiry: Expiry.at(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
-      }));
-
-      const results = await Promise.allSettled([
-        arService.submitReview({
+        ({ submitted, reviewItems }) => fanOut(5, () => arService.submitReview({
           request_id: submitted.id,
           reviewer_id: reviewer.subject_id,
           options: { item_decisions: reviewItems },
-        }),
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-      ]);
+        })),
+        async (results) => {
+          const fulfilled = results.filter((r) => r.status === 'fulfilled');
+          const rejected = results.filter((r) => r.status === 'rejected');
+          expect(fulfilled).toHaveLength(1);
+          expect(rejected).toHaveLength(4);
+          rejected.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      const fulfilled = results.filter((r) => r.status === 'fulfilled');
-      const rejected = results.filter((r) => r.status === 'rejected');
-      expect(fulfilled).toHaveLength(1);
-      expect(rejected).toHaveLength(1);
-      expect(rejected[0].reason).toMatchObject({ status: 409 });
-
-      const grantCount = await prisma.grant.count({
-        where: {
-          subject_id: requester.subject_id,
-          resource_id: dataset.resource_id,
-          access_type_id: viewMetadataTypeId,
-          revoked_at: null,
+          const grantCount = await prisma.grant.count({
+            where: {
+              subject_id: requester.subject_id,
+              resource_id: dataset.resource_id,
+              access_type_id: viewMetadataTypeId,
+              revoked_at: null,
+            },
+          });
+          expect(grantCount).toBe(1);
         },
-      });
-      expect(grantCount).toBe(1);
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
   });
 
   describe('review vs withdraw race', () => {
     it('exactly one wins — no corrupt intermediate state, closed_at always set', async () => {
-      const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await runRace(
+        async () => {
+          const ar = await newDraftRequest();
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          const reviewItems = submitted.access_request_items.map((item) => ({
+            id: item.id,
+            decision: 'REJECTED',
+          }));
+          return { ar, submitted, reviewItems };
+        },
+        ({ submitted, reviewItems }) => [
+          arService.submitReview({
+            request_id: submitted.id,
+            reviewer_id: reviewer.subject_id,
+            options: { item_decisions: reviewItems },
+          }),
+          arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
+        ],
+        async (results, { submitted }) => {
+          const successes = results.filter((r) => r.status === 'fulfilled');
+          expect(successes).toHaveLength(1);
 
-      const reviewItems = submitted.access_request_items.map((item) => ({
-        id: item.id,
-        decision: 'REJECTED',
-      }));
-
-      const [review, withdraw] = await Promise.allSettled([
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
-      ]);
-
-      const successes = [review, withdraw].filter((r) => r.status === 'fulfilled');
-      expect(successes).toHaveLength(1);
-
-      const final = await arService.getRequestById(submitted.id);
-      expect(['REJECTED', 'WITHDRAWN']).toContain(final.status);
-      expect(final.closed_at).not.toBeNull();
+          const final = await arService.getRequestById(submitted.id);
+          expect(['REJECTED', 'WITHDRAWN']).toContain(final.status);
+          expect(final.closed_at).not.toBeNull();
+        },
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
 
     it('if review wins, no grant is created for a rejected item', async () => {
-      const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
-
-      const reviewItems = submitted.access_request_items.map((item) => ({
-        id: item.id,
-        decision: 'REJECTED',
-      }));
-
-      await Promise.allSettled([
-        arService.submitReview({
-          request_id: submitted.id,
-          reviewer_id: reviewer.subject_id,
-          options: { item_decisions: reviewItems },
-        }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
-      ]);
-
-      const grantCount = await prisma.grant.count({
-        where: {
-          subject_id: requester.subject_id,
-          resource_id: dataset.resource_id,
-          revoked_at: null,
+      await runRace(
+        async () => {
+          const ar = await newDraftRequest();
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          const reviewItems = submitted.access_request_items.map((item) => ({
+            id: item.id,
+            decision: 'REJECTED',
+          }));
+          return { ar, submitted, reviewItems };
         },
-      });
-      expect(grantCount).toBe(0);
+        ({ submitted, reviewItems }) => [
+          arService.submitReview({
+            request_id: submitted.id,
+            reviewer_id: reviewer.subject_id,
+            options: { item_decisions: reviewItems },
+          }),
+          arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
+        ],
+        async () => {
+          const grantCount = await prisma.grant.count({
+            where: {
+              subject_id: requester.subject_id,
+              resource_id: dataset.resource_id,
+              revoked_at: null,
+            },
+          });
+          expect(grantCount).toBe(0);
+        },
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
   });
 
   describe('concurrent withdraw attempts', () => {
     it('exactly 1 succeeds from DRAFT; the other receives 409', async () => {
-      const ar = await newDraftRequest();
+      await runRace(
+        async () => newDraftRequest(),
+        (ar) => fanOut(5, () => arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id })),
+        async (results, ar) => {
+          const succeeded = results.filter((r) => r.status === 'fulfilled');
+          const failed = results.filter((r) => r.status === 'rejected');
 
-      const [r1, r2] = await Promise.allSettled([
-        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id }),
-        arService.withdrawRequest({ request_id: ar.id, requester_id: requester.subject_id }),
-      ]);
+          expect(succeeded).toHaveLength(1);
+          expect(failed).toHaveLength(4);
+          failed.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      const succeeded = [r1, r2].filter((r) => r.status === 'fulfilled');
-      const failed = [r1, r2].filter((r) => r.status === 'rejected');
-
-      expect(succeeded).toHaveLength(1);
-      expect(failed).toHaveLength(1);
-      expect(failed[0].reason).toMatchObject({ status: 409 });
-
-      const final = await arService.getRequestById(ar.id);
-      expect(final.status).toBe('WITHDRAWN');
+          const final = await arService.getRequestById(ar.id);
+          expect(final.status).toBe('WITHDRAWN');
+        },
+      );
     });
 
     it('exactly 1 succeeds from UNDER_REVIEW; the other receives 409', async () => {
-      const ar = await newDraftRequest();
-      const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+      await runRace(
+        async () => {
+          const ar = await newDraftRequest();
+          const submitted = await arService.submitRequest(ar.id, requester.subject_id);
+          return { ar, submitted };
+        },
+        ({ submitted }) => fanOut(5, () => arService.withdrawRequest({
+          request_id: submitted.id,
+          requester_id: requester.subject_id,
+        })),
+        async (results, { submitted }) => {
+          const failed = results.filter((r) => r.status === 'rejected');
+          expect(failed).toHaveLength(4);
+          failed.forEach((r) => {
+            expect(r.reason).toMatchObject({ status: 409 });
+          });
 
-      const [r1, r2] = await Promise.allSettled([
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
-        arService.withdrawRequest({ request_id: submitted.id, requester_id: requester.subject_id }),
-      ]);
-
-      const failed = [r1, r2].filter((r) => r.status === 'rejected');
-      expect(failed).toHaveLength(1);
-      expect(failed[0].reason).toMatchObject({ status: 409 });
-
-      const final = await arService.getRequestById(submitted.id);
-      expect(final.status).toBe('WITHDRAWN');
+          const final = await arService.getRequestById(submitted.id);
+          expect(final.status).toBe('WITHDRAWN');
+        },
+        async ({ ar }) => {
+          await arService.withdrawRequest({
+            request_id: ar.id,
+            requester_id: requester.subject_id,
+          }).catch(() => {});
+        },
+      );
     });
   });
 
