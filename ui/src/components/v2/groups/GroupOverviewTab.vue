@@ -7,15 +7,6 @@
         <VaCardContent>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold">GROUP DETAILS</h2>
-            <VaButton
-              v-if="props.canEdit"
-              preset="plain"
-              size="small"
-              icon="edit"
-              @click="openEditModal"
-            >
-              Edit Metadata
-            </VaButton>
           </div>
 
           <dl
@@ -302,6 +293,50 @@
           </div>
         </VaCardContent>
       </VaCard>
+
+      <!-- Quick Actions -->
+      <div>
+        <h2 class="text-sm font-semibold mb-3 va-text-secondary">
+          QUICK ACTIONS
+        </h2>
+        <div class="grid grid-cols-2 gap-3">
+          <ActionButton
+            v-if="props.canAddMember"
+            icon="mdi-account-plus"
+            icon-color="text-blue-500"
+            title="Add Member"
+            description="Add a group member"
+            hover-theme="blue"
+            @click="emitAction('add-member', 'members', 'add-member')"
+          />
+
+          <ActionButton
+            v-if="props.canEdit"
+            icon="mdi-pencil"
+            icon-color="text-blue-500"
+            title="Edit Details"
+            description="Update metadata"
+            hover-theme="blue"
+            @click="openEditModal"
+          />
+
+          <ActionButton
+            v-if="props.canCreateCollection"
+            icon="mdi-folder-plus"
+            icon-color="text-emerald-500"
+            title="Create Collection"
+            description="Add a collection to this group"
+            hover-theme="blue"
+            @click="
+              emitAction(
+                'create-collection',
+                'collections',
+                'create-collection',
+              )
+            "
+          />
+        </div>
+      </div>
     </div>
   </div>
   <GroupEditMetadataModal
@@ -327,9 +362,11 @@ const props = defineProps({
   canEdit: { type: Boolean, default: false },
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
+  canAddMember: { type: Boolean, default: false },
+  canCreateCollection: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["toggle-archive", "update"]);
+const emit = defineEmits(["toggle-archive", "update", "action-requested"]);
 
 // sorted from root (highest depth) → nearest parent
 const sortedAncestors = computed(() =>
@@ -358,5 +395,13 @@ const nearestAncestor = computed(
 const editModalRef = ref(null);
 function openEditModal() {
   editModalRef.value?.show();
+}
+
+function emitAction(actionName, tabName, modalName) {
+  emit("action-requested", {
+    actionName,
+    tabName,
+    modalName,
+  });
 }
 </script>

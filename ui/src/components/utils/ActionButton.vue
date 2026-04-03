@@ -3,12 +3,12 @@
     :disabled="disabled"
     @click="$emit('click')"
     :class="{
-      'group relative flex flex-col gap-3 rounded-lg border border-solid border-gray-200 dark:border-gray-700 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-4 transition-all duration-200': true,
-      'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10':
+      'group relative flex flex-col gap-3 rounded-lg border border-solid border-gray-300 dark:border-gray-700 bg-gradient-to-br from-white via-gray-50 to-gray-50 dark:from-gray-900 dark:to-gray-800 p-4 transition-all duration-200 shadow-sm shadow-gray-200/50 dark:shadow-black/20': true,
+      'hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md hover:shadow-blue-400/20 dark:hover:shadow-blue-500/10 hover:-translate-y-0.5':
         config.hoverBorderColor === 'blue' && !disabled,
-      'hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10':
+      'hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-400/20 dark:hover:shadow-emerald-500/10 hover:-translate-y-0.5':
         config.hoverBorderColor === 'emerald' && !disabled,
-      'hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/10':
+      'hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-md hover:shadow-amber-400/20 dark:hover:shadow-amber-500/10 hover:-translate-y-0.5':
         config.hoverBorderColor === 'amber' && !disabled,
       'opacity-50 cursor-not-allowed': disabled,
     }"

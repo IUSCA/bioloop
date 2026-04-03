@@ -295,6 +295,10 @@ const collectionCreateModal = ref(null);
 function navigateToCreateCollection() {
   collectionCreateModal.value?.show();
 }
+
+defineExpose({
+  navigateToCreateCollection,
+});
 </script>
 
 <style scoped>

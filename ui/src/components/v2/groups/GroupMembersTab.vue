@@ -418,6 +418,10 @@ onMounted(() => {
   fetchMembers();
   fetchCounts();
 });
+
+defineExpose({
+  openAddMemberModal,
+});
 </script>
 
 <style scoped>

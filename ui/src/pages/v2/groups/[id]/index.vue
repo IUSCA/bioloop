@@ -106,11 +106,15 @@
           :can-edit="can('edit_metadata') && !group.is_archived"
           :can-archive="can('archive') && !group.is_archived"
           :can-unarchive="can('unarchive') && group.is_archived"
+          :can-add-member="can('add_member') && !group.is_archived"
+          :can-create-collection="can('add_collection') && !group.is_archived"
           @toggle-archive="openArchiveModal"
           @update="fetchGroupData"
+          @action-requested="handleActionRequested"
         />
 
         <GroupMembersTab
+          ref="membersTabRef"
           v-else-if="activeTab === 'members'"
           :group-id="props.id"
           :can-add="can('add_member') && !group.is_archived"
@@ -134,6 +138,7 @@
         />
 
         <GroupCollectionsTab
+          ref="collectionsTabRef"
           v-else-if="activeTab === 'collections'"
           :group="group"
           :can-create="can('add_collection') && !group.is_archived"
@@ -189,6 +194,9 @@ const counts = ref({
   datasets: null,
   collections: null,
 });
+
+const membersTabRef = ref(null);
+const collectionsTabRef = ref(null);
 
 // ── Derived ───────────────────────────────────────────────────────────────
 const ancestors = computed(() => group.value?.ancestors ?? []);
@@ -321,6 +329,23 @@ function openArchiveModal() {
 
 async function handleUpdate() {
   await fetchGroupData();
+}
+
+function handleActionRequested(payload) {
+  // Switch to the requested tab
+  activeTab.value = payload.tabName;
+
+  // Open the modal after DOM has rendered the new tab
+  nextTick(() => {
+    if (payload.modalName === "add-member" && membersTabRef.value) {
+      membersTabRef.value?.openAddMemberModal?.();
+    } else if (
+      payload.modalName === "create-collection" &&
+      collectionsTabRef.value
+    ) {
+      collectionsTabRef.value?.navigateToCreateCollection?.();
+    }
+  });
 }
 
 onMounted(() => fetchGroupData());
