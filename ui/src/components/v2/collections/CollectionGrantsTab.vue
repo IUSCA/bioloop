@@ -64,22 +64,17 @@
 
   <IssueGrantModal
     ref="issueGrantModal"
-    :resource-type="'COLLECTION'"
-    :resource-id="collectionId"
-    :resource-name="collectionName"
     @update="onGrantCreated"
+    :resource="collectionResource"
   />
 </template>
 
 <script setup>
-import GrantTable from "@/components/v2/grants/GrantTable.vue";
-import IssueGrantModal from "@/components/v2/IssueGrantModal.vue";
 import toast from "@/services/toast";
 import GrantService from "@/services/v2/grants";
 
 const props = defineProps({
-  collectionId: { type: String, required: true },
-  collectionName: { type: String, default: "" },
+  collection: { type: Object, required: true },
   canManageGrants: { type: Boolean, default: false },
 });
 
@@ -97,6 +92,11 @@ const sortOrder = ref("desc");
 
 const canIssueGrant = computed(() => props.canManageGrants);
 const canRevoke = computed(() => props.canManageGrants);
+const collectionResource = computed(() => ({
+  type: "COLLECTION",
+  id: props.collection.id,
+  collection: props.collection,
+}));
 
 const issueGrantModal = ref(null);
 
@@ -106,13 +106,16 @@ async function fetchGrants() {
 
   try {
     const offset = (currentPage.value - 1) * itemsPerPage.value;
-    const res = await GrantService.listGrantsForCollection(props.collectionId, {
-      active: true,
-      offset,
-      limit: itemsPerPage.value,
-      sort_by: sortBy.value,
-      sort_order: sortOrder.value,
-    });
+    const res = await GrantService.listGrantsForCollection(
+      props.collection.id,
+      {
+        active: true,
+        offset,
+        limit: itemsPerPage.value,
+        sort_by: sortBy.value,
+        sort_order: sortOrder.value,
+      },
+    );
 
     grants.value = res.data?.data || [];
     total.value = res.data?.metadata?.total ?? 0;
@@ -147,4 +150,6 @@ function onGrantCreated() {
 watch([currentPage, itemsPerPage, sortBy, sortOrder], fetchGrants);
 
 onMounted(() => fetchGrants());
+
+defineExpose({ openIssueGrantModal });
 </script>

@@ -6,15 +6,6 @@
         <VaCardContent>
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-sm font-semibold">COLLECTION DETAILS</h2>
-            <VaButton
-              v-if="props.canEdit"
-              preset="plain"
-              size="small"
-              icon="edit"
-              @click="openEditModal"
-            >
-              Edit Metadata
-            </VaButton>
           </div>
 
           <dl
@@ -146,7 +137,7 @@
     </div>
 
     <!-- Right column: stats -->
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-6">
       <!-- Stat cards (2×2 grid) -->
       <div class="grid grid-cols-2 gap-3">
         <MetricCard
@@ -173,6 +164,42 @@
           :loading="props.counts.grants === null"
         />
       </div>
+
+      <!-- Quick Actions -->
+      <div>
+        <h2 class="text-sm font-semibold mb-3 va-text-secondary">
+          QUICK ACTIONS
+        </h2>
+        <div class="grid grid-cols-2 gap-3">
+          <ActionButton
+            v-if="props.canIssueGrants"
+            icon="mdi-key"
+            icon-color="text-amber-500"
+            title="Grant Access"
+            description="Issue a grant"
+            hover-theme="blue"
+            @click="emitAction('grant-access', 'grants', 'issue-grants')"
+          />
+
+          <ActionButton
+            icon="mdi-pencil"
+            icon-color="text-blue-500"
+            title="Edit Details"
+            description="Update metadata"
+            hover-theme="blue"
+            @click="openEditModal"
+          />
+
+          <ActionButton
+            :icon="getIcon('dataset', { outlined: true })"
+            icon-color="text-emerald-500"
+            title="Add Dataset"
+            description="Add a dataset to this collection"
+            hover-theme="blue"
+            @click="emitAction('add-dataset', 'datasets', 'add-dataset')"
+          />
+        </div>
+      </div>
     </div>
   </div>
 
@@ -188,6 +215,7 @@
 
 <script setup>
 import CollectionEditMetadataModal from "@/components/v2/collections/CollectionEditMetadataModal.vue";
+
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
@@ -201,9 +229,18 @@ const props = defineProps({
   canReview: { type: Boolean, default: false },
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
+  canIssueGrants: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["update", "toggle-archive"]);
+const emit = defineEmits(["update", "toggle-archive", "action-requested"]);
+
+function emitAction(actionName, tabName, modalName) {
+  emit("action-requested", {
+    actionName,
+    tabName,
+    modalName,
+  });
+}
 
 const editModalRef = ref(null);
 function openEditModal() {

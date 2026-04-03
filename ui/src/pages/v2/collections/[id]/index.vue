@@ -115,11 +115,14 @@
           :can-review="can('review_requests')"
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
+          :can-issue-grants="can('manage_grants')"
           @update="fetchCollectionData"
           @toggle-archive="openArchiveModal"
+          @action-requested="handleActionRequested"
         />
 
         <CollectionDatasetsTab
+          ref="datasetsTabRef"
           v-else-if="activeTab === 'datasets'"
           :collection="collection"
           :can-create="can('add_dataset')"
@@ -128,8 +131,9 @@
         />
 
         <CollectionGrantsTab
+          ref="grantsTabRef"
           v-else-if="activeTab === 'grants'"
-          :collection-id="props.id"
+          :collection="collection"
           :can-manage="can('manage_grants')"
           @count-changed="fetchGrantsCount"
         />
@@ -178,6 +182,9 @@ const error = ref(null);
 
 const activeTab = ref("overview");
 const counts = ref({ datasets: null, grants: null, requests: null });
+
+const grantsTabRef = ref(null);
+const datasetsTabRef = ref(null);
 
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
@@ -292,6 +299,20 @@ onMounted(() => fetchCollectionData());
 const archiveModal = ref(null);
 function openArchiveModal() {
   archiveModal.value?.show();
+}
+
+function handleActionRequested(payload) {
+  // Switch to the requested tab
+  activeTab.value = payload.tabName;
+
+  // Open the modal after DOM has rendered the new tab
+  nextTick(() => {
+    if (payload.modalName === "issue-grants" && grantsTabRef.value) {
+      grantsTabRef.value?.openIssueGrantModal?.();
+    } else if (payload.modalName === "add-dataset" && datasetsTabRef.value) {
+      datasetsTabRef.value?.openAddDatasetModal?.();
+    }
+  });
 }
 </script>
 

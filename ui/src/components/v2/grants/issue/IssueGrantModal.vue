@@ -206,7 +206,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["update"]);
 
-const visible = ref(true);
+const visible = ref(false);
 const loading = ref(false);
 
 const {

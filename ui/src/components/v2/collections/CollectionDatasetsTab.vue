@@ -341,6 +341,10 @@ function openAddDatasetModal() {
     addDatasetModal.value.show();
   }
 }
+
+defineExpose({
+  openAddDatasetModal,
+});
 </script>
 
 <style scoped>
