@@ -248,7 +248,15 @@ def get_workflow(
 
 
 class DatasetAlreadyExistsError(Exception):
-    pass
+    """POST /datasets returned 409: duplicate name/type (idempotent skip path)."""
+
+
+class DatasetApiConflictError(Exception):
+    """POST /datasets returned 409 for another reason (e.g. FK / DB constraint)."""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
 
 
 def dataset_name_exists(name: str, dataset_type: str) -> bool:
@@ -263,7 +271,14 @@ def create_dataset(dataset):
     with APIServerSession() as s:
         r = s.post('datasets', json=dataset_setter(dataset))
         if r.status_code == 409:
-            raise DatasetAlreadyExistsError()
+            try:
+                msg = (r.json() or {}).get('message', '') or ''
+            except ValueError:
+                msg = r.text or ''
+            # Same message as datasetService skip-create and Prisma P2002 handler.
+            if 'Unique constraint failed' in msg:
+                raise DatasetAlreadyExistsError()
+            raise DatasetApiConflictError(msg or r.text or '409 Conflict')
         r.raise_for_status()
         return r.json()
 

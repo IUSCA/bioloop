@@ -6,9 +6,9 @@ import config from 'config';
  *
  * Uses string concatenation rather than Playwright's URL resolution because
  * Playwright strips the path component of baseURL when the provided URL starts
- * with "/".  E.g. baseURL="https://localhost:4443/api" + "/auth/cas/verify"
- * resolves to "https://localhost:4443/auth/cas/verify" (wrong) instead of
- * "https://localhost:4443/api/auth/cas/verify" (correct).
+ * with "/".  E.g. baseURL="https://localhost:24443/api" + "/auth/cas/verify"
+ * resolves to "https://localhost:24443/auth/cas/verify" (wrong) instead of
+ * "https://localhost:24443/api/auth/cas/verify" (correct).
  *
  * ignoreHTTPSErrors is required when the Vite dev server uses a self-signed cert.
  */

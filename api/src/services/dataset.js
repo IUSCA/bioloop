@@ -15,7 +15,7 @@ const workflowService = require('./workflow');
 const projectService = require('./project');
 const featureService = require('./features');
 const logger = require('./logger');
-const { buildNotificationPayload } = require('./notifications/typeService');
+const { createNotificationForType } = require('./notifications/typeService');
 
 const { log_axios_error } = require('../utils');
 const {
@@ -919,48 +919,12 @@ async function create({
       requester_id,
     });
 
-    if (featureService.isFeatureEnabled({ key: 'notifications' })) {
-      const operatorRole = await tx.role.findFirst({
-        where: { name: 'operator' },
-        select: { id: true },
-      });
-
-      if (operatorRole) {
-        const operatorUserIds = await tx.user_role.findMany({
-          where: {
-            role_id: operatorRole.id,
-          },
-          select: {
-            user_id: true,
-          },
-        });
-        const recipientRows = operatorUserIds.map((row) => ({
-          user_id: row.user_id,
-          delivery_type: 'ROLE_BROADCAST',
-          delivery_role_id: operatorRole.id,
-        }));
-        if (recipientRows.length > 0) {
-          const notificationPayload = buildNotificationPayload({
-            type: 'DATASET_CREATED',
-            context: {
-              dataset: created_dataset,
-            },
-          });
-
-          await tx.notification.create({
-            data: {
-              ...notificationPayload,
-              created_by_id: requester_id,
-              recipients: {
-                createMany: {
-                  data: recipientRows,
-                },
-              },
-            },
-          });
-        }
-      }
-    }
+    await createNotificationForType({
+      tx,
+      type: CONSTANTS.NOTIFICATION_TYPES.DATASET_CREATED,
+      context: { dataset: created_dataset },
+      created_by_id: requester_id,
+    });
   } catch (e) {
     console.error('Error creating dataset:', e);
     throw e;

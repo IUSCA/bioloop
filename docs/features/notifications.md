@@ -96,6 +96,11 @@ Creation:
 - `POST /api/notifications` creates a notification with recipient resolution from `role_ids` and/or `user_ids`
 - `POST /api/notifications/:id/recipients` extends an existing notification to additional eligible recipients
 
+Notification **type** values are plain strings in `api/src/constants.js` (`NOTIFICATION_TYPES`), not database enums. System-generated notifications use `createNotificationForType` in `api/src/services/notifications/typeService.js`:
+
+- **`DATASET_CREATED`** — on new dataset create; role-broadcast to users in roles listed in `NOTIFICATIONS_TYPES_ROLE_MAP` (default: `admin`, `operator`).
+- **`INCOMING_DUPLICATE_DATASET`** — when a duplicate candidate is registered (`register_duplicate`, excluding `NOT_DUPLICATE` near-misses); recipients use the same map; payload includes links to the duplicate and original dataset pages.
+
 ### Listing and Pagination
 
 Supported query inputs:

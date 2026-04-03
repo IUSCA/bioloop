@@ -75,6 +75,7 @@ const auth = useAuthStore();
 const process = ref(null);
 const loading = ref(false);
 const showModal = ref(false);
+let retryTimer = null;
 
 function openModal() {
   showModal.value = true;
@@ -95,7 +96,38 @@ async function fetchProcess() {
   }
 }
 
-watchEffect(() => {
-  if (props.comparisonProcessId) fetchProcess();
+function stopRetry() {
+  if (retryTimer) {
+    clearInterval(retryTimer);
+    retryTimer = null;
+  }
+}
+
+function startRetry() {
+  if (retryTimer || process.value || !props.comparisonProcessId) return;
+  retryTimer = setInterval(async () => {
+    if (process.value || !props.comparisonProcessId) {
+      stopRetry();
+      return;
+    }
+    await fetchProcess();
+    if (process.value) stopRetry();
+  }, 3000);
+}
+
+watch(
+  () => props.comparisonProcessId,
+  async (taskId) => {
+    stopRetry();
+    process.value = null;
+    if (!taskId) return;
+    await fetchProcess();
+    if (!process.value) startRetry();
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  stopRetry();
 });
 </script>

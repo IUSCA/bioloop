@@ -1,23 +1,21 @@
 # This is the docker-compose file for the Bioloop project
 # Here we make heavy use of entrypoint scripts to set up the keys and any pre-requisites for the containers.
 # We use the command to run a script that runs any commands that need to run after the containers are up.
-name: bioloop
+name: bioloop-feature-duplicate-e2e
 services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:443:443
+      # Host ports in 24xxx / 25xxx / 27xxx range to avoid collisions.
+      - 127.0.0.1:24443:443
     env_file:
       - ui/.env.default
-    # environment:
-      # If this stack's UI port is remapped to something other than :443,
-      # override these so CAS/OAuth callbacks and upload API calls land on the
-      # correct port rather than the default.  Example for a stack on :13443:
-        # - VITE_CAS_RETURN=https://localhost:13443/auth/iucas
-        # - VITE_GOOGLE_RETURN=https://localhost:13443/auth/google
-        # - VITE_CILOGON_RETURN=https://localhost:13443/auth/cil
-        # - VITE_MICROSOFT_RETURN=https://localhost:13443/auth/microsoft
-        # - VITE_UPLOAD_API_BASE_PATH=http://localhost:<secure_download_port>
+    environment:
+      - VITE_CAS_RETURN=https://localhost:24443/auth/iucas
+      - VITE_GOOGLE_RETURN=https://localhost:24443/auth/google
+      - VITE_CILOGON_RETURN=https://localhost:24443/auth/cil
+      - VITE_MICROSOFT_RETURN=https://localhost:24443/auth/microsoft
+      - VITE_UPLOAD_API_BASE_PATH=http://localhost:23060
     volumes:
       - ./ui/:/opt/sca/app
       - ui_node_modules:/opt/sca/app/node_modules
@@ -38,6 +36,7 @@ services:
       - 3030
     environment:
       - NODE_ENV=ci # Activates test-user auth flow (find_or_create_test_user) for e2e login setup
+      - DOWNLOAD_SERVER_BASE_URL=http://localhost:23060
     env_file:
       - tests/.env.default # Variables needed for testing user information
       - db/postgres/.env.default # For Postgres connection settings
@@ -70,7 +69,7 @@ services:
     expose:
       - 5432
     ports:
-      - 127.0.0.1:5433:5432
+      - 127.0.0.1:25433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
     volumes:
@@ -180,7 +179,7 @@ services:
     expose:
       - 5672
     ports:
-      - 127.0.0.1:15672:15672
+      - 127.0.0.1:25673:15672
     env_file:
       - db/queue/.env.default # For RabbitMQ connection settings
     volumes:
@@ -193,7 +192,7 @@ services:
     expose:
       - 27017
     ports:
-      - 127.0.0.1:27017:27017
+      - 127.0.0.1:27037:27017
     env_file:
       - db/mongo/.env.default # For MongoDB connection settings
     volumes:
@@ -232,7 +231,7 @@ services:
     image: node:19
     restart: unless-stopped
     ports:
-      - "3060:3060"
+      - 127.0.0.1:23060:3060
     env_file:
       - secure_download/.env.default # For all default settings
     volumes:
@@ -299,7 +298,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:25173:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh
@@ -311,7 +310,7 @@ services:
   jupyter_ijs:
     image: darkbluestudios/jupyter-ijavascript-utils:latest
     ports:
-      - "8888:8888"
+      - 127.0.0.1:28888:8888
     volumes:
       - ./api/notebooks:/home/jovyan/work/notebooks
       - ./api/node_modules:/home/jovyan/work/node_modules
@@ -352,7 +351,7 @@ services:
       - ./metrics/grafana/config:/etc/grafana           # Mount for custom Grafana configuration
       - ./api/keys/auth.pub:/etc/grafana/auth.pub
     ports:
-      - "3000:3000"
+      - 127.0.0.1:23000:3000
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -367,6 +366,9 @@ services:
 
   e2e:
     build: tests
+    environment:
+      - TEST_BASE_URL=https://localhost:24443
+      - API_BASE_URL=https://localhost:24443/api
     restart: "no"
     profiles:
       - e2e-runner
@@ -379,9 +381,13 @@ services:
     # the command, e.g.:
     #   docker compose run --rm e2e test --project=admin_import
     entrypoint:
-      - /opt/sca/app/node_modules/.bin/playwright
-    command:
-      - test
+      - sh
+      - -c
+      - |
+        echo "Waiting 60s for Vite to complete dependency optimization..."
+        sleep 60
+        echo "Starting Playwright tests."
+        /opt/sca/app/node_modules/.bin/playwright test --project=operator_duplication
     depends_on:
       api:
         condition: service_healthy
@@ -389,6 +395,7 @@ services:
         condition: service_healthy
       init_test_data:
         condition: service_completed_successfully
+    network_mode: "host"
 
 volumes:
   grafana_data:
@@ -412,4 +419,8 @@ volumes:
   secure_download_node_modules:
     external: false
   test_modules:
+    external: false
+  e2e_postgres_data:
+    external: false
+  e2e_mongo_data:
     external: false

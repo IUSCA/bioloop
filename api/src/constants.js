@@ -59,13 +59,6 @@ const INCLUDE_AUDIT_LOGS = {
           },
         },
       },
-      upload: {
-        select: {
-          id: true,
-          files: true,
-          status: true,
-        },
-      },
     },
     orderBy: {
       timestamp: 'desc',
@@ -215,9 +208,15 @@ const ALERT_TYPES = {
 };
 
 const NOTIFICATION_TYPES = {
+  /** Dataset created. */
   DATASET_CREATED: 'DATASET_CREATED',
-  /** Duplicate candidate registered; operators review on the duplicate dataset page. */
+  /** Duplicate candidate registered; admins/operators review on the duplicate dataset page. */
   INCOMING_DUPLICATE_DATASET: 'INCOMING_DUPLICATE_DATASET',
+};
+
+const NOTIFICATIONS_TYPES_ROLE_MAP = {
+  [NOTIFICATION_TYPES.DATASET_CREATED]: ['admin', 'operator'],
+  [NOTIFICATION_TYPES.INCOMING_DUPLICATE_DATASET]: ['admin', 'operator'],
 };
 
 module.exports = {
@@ -239,4 +238,5 @@ module.exports = {
   INGESTION_CHECK_TYPES,
   INCLUDE_PROJECTS,
   NOTIFICATION_TYPES,
+  NOTIFICATIONS_TYPES_ROLE_MAP,
 };

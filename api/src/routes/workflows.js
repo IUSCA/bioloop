@@ -220,12 +220,13 @@ router.post(
         const {
           timestamp, message, level,
         } = log;
+        const sanitizedTimestamp = sanitize_timestamp(timestamp);
 
         return {
-          timestamp: sanitize_timestamp(timestamp),
           message,
           level,
           worker_process_id: req.params.process_id,
+          ...(sanitizedTimestamp ? { timestamp: sanitizedTimestamp } : {}),
         };
       });
 

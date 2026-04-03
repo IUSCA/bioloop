@@ -185,10 +185,6 @@ export const useAuthStore = defineStore("auth", () => {
     return utils.isFeatureEnabled({ featureKey, hasRole });
   };
 
-  const isFeatureEnabled = (featureKey) => {
-    return utils.isFeatureEnabled({ featureKey, hasRole });
-  };
-
   return {
     user,
     loggedIn,

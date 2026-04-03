@@ -55,7 +55,10 @@ def compare_datasets(celery_task, duplicate_dataset_id: int, original_dataset_id
             'pid': os.getpid(),
             'task_id': task_id,
             'step': 'compare_duplicate_datasets',
-            'workflow_id': task_id,
+            # This is a standalone Celery task, not a workflow row in Postgres.
+            # Passing task_id as workflow_id causes a FK conflict and prevents
+            # worker_process/log registration.
+            'workflow_id': None,
             'tags': {
                 'duplicate_dataset_id': duplicate_dataset_id,
                 'original_dataset_id': original_dataset_id,

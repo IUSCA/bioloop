@@ -11,10 +11,12 @@
           <div>
             This dataset has been duplicated from
             <a
-              :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
+              v-if="duplicatedFromId"
+              :href="`/datasets/${duplicatedFromId}`"
             >
-              {{ props.dataset.duplicated_from?.original_dataset?.name }}
+              {{ duplicatedFromName }}
             </a>
+            <span v-else>{{ duplicatedFromName }}</span>
           </div>
         </div>
 
@@ -39,9 +41,10 @@
       data-testid="duplication-alert-overwritten"
     >
       This dataset has been overwritten by duplicate
-      <a :href="`/datasets/${_overwrittenByDataset?.id}`">
-        {{ _overwrittenByDataset?.name }}
+      <a v-if="_overwrittenByDataset?.id" :href="`/datasets/${_overwrittenByDataset?.id}`">
+        {{ overwrittenByName }}
       </a>
+      <span v-else>{{ overwrittenByName }}</span>
     </va-alert>
 
     <!-- The current dataset is a rejected duplicate of another.
@@ -53,10 +56,12 @@
     >
       This dataset is a rejected duplicate of
       <a
-        :href="`/datasets/${props.dataset.duplicated_from?.original_dataset_id}`"
+        v-if="duplicatedFromId"
+        :href="`/datasets/${duplicatedFromId}`"
       >
-        {{ props.dataset.duplicated_from?.original_dataset?.name }}
+        {{ duplicatedFromName }}
       </a>
+      <span v-else>{{ duplicatedFromName }}</span>
     </va-alert>
 
     <!-- The current dataset has been (soft-) deleted.
@@ -98,6 +103,18 @@ const _overwrittenByDataset = computed(() =>
 );
 
 const datasetState = computed(() => datasetCurrentState(props.dataset));
+
+const duplicatedFromId = computed(() => props.dataset.duplicated_from?.original_dataset_id);
+
+const duplicatedFromName = computed(() =>
+  props.dataset.duplicated_from?.original_dataset?.name ||
+  (duplicatedFromId.value ? `dataset ${duplicatedFromId.value}` : 'the original dataset'),
+);
+
+const overwrittenByName = computed(() =>
+  _overwrittenByDataset.value?.name ||
+  (_overwrittenByDataset.value?.id ? `dataset ${_overwrittenByDataset.value.id}` : 'another dataset'),
+);
 
 // whether this dataset is an active (not deleted) duplicate of another, whose
 // acceptance or rejection has not yet been initiated.

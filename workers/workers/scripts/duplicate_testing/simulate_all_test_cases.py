@@ -1,9 +1,9 @@
 """
 Runner for duplicate-detection manual test cases.
 
-Cases run concurrently by default (each in its own thread) because they are
-independent and I/O-bound. Pass --sequential to run them one at a time (useful
-when debugging a single case without interleaved log output).
+Cases run concurrently by default (bounded worker pool) to keep total runtime
+reasonable without overloading the local Celery worker. Pass --sequential to
+run them one at a time.
 
 Usage (inside the celery_worker container):
 
@@ -13,7 +13,7 @@ Usage (inside the celery_worker container):
     # Run specific cases concurrently
     python -m workers.scripts.duplicate_testing.simulate_all_test_cases 1 5 9
 
-    # Run all cases sequentially (for clean, non-interleaved logs)
+    # Run all cases sequentially
     python -m workers.scripts.duplicate_testing.simulate_all_test_cases --sequential
 
     # Run a single case
@@ -49,7 +49,7 @@ import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from workers.scripts.duplicate_testing._common import setup_logging
+from workers.scripts.duplicate_testing._common import purge_duplicate_testing_artifacts, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ def run_case(number: int) -> bool:
 def run_cases_concurrent(selected: list[int]) -> dict[int, bool]:
     """Run selected cases in parallel threads; return {case_number: success}."""
     results: dict[int, bool] = {}
-    with ThreadPoolExecutor(max_workers=len(selected)) as executor:
+    max_workers = min(3, len(selected))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_case = {
             executor.submit(run_case, number): number
             for number in selected
@@ -133,21 +134,26 @@ def main() -> None:
     parser.add_argument(
         '--sequential',
         action='store_true',
-        help='Run cases one at a time instead of concurrently (cleaner logs).',
+        help='Run cases one at a time instead of using the bounded concurrent pool.',
     )
     args = parser.parse_args()
 
     selected = args.cases if args.cases else sorted(CASES.keys())
 
+    # Full-suite runs should start from a clean duplicate-testing state.
+    if not args.cases:
+        logger.info('Cleaning prior duplicate-testing artifacts before full run...')
+        purge_duplicate_testing_artifacts()
+
     invalid = [n for n in selected if n not in CASES]
     if invalid:
         parser.error(f'Invalid case number(s): {invalid}. Valid: {sorted(CASES)}')
 
-    if args.sequential or len(selected) == 1:
-        results = run_cases_sequential(selected)
-    else:
+    if not args.sequential and len(selected) > 1:
         logger.info(f'Running {len(selected)} cases concurrently: {selected}')
         results = run_cases_concurrent(selected)
+    else:
+        results = run_cases_sequential(selected)
 
     logger.info('')
     logger.info('=' * 70)

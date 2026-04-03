@@ -3,6 +3,7 @@ const config = require('config');
 const prisma = require('@/db');
 const CONSTANTS = require('@/constants');
 const datasetService = require('./dataset');
+const { createNotificationForType } = require('./notifications/typeService');
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -188,10 +189,17 @@ async function register_duplicate({ duplicate_dataset_id, original_dataset_id, c
           dataset_id: duplicate_dataset_id,
         },
       });
-    }
 
-    // NOTIFICATION_PLACEHOLDER: notify admins/operators of incoming duplicate dataset
-    // await notify_duplicate_registered({ tx, duplicate_dataset_id, original_dataset_id });
+      await createNotificationForType({
+        tx,
+        type: CONSTANTS.NOTIFICATION_TYPES.INCOMING_DUPLICATE_DATASET,
+        context: {
+          duplicate_dataset: duplication.duplicate_dataset,
+          original_dataset: duplication.original_dataset,
+        },
+        created_by_id: null,
+      });
+    }
 
     return duplication;
   });

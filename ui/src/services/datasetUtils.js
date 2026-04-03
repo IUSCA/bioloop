@@ -14,13 +14,14 @@ function datasetHasActiveDuplicates(dataset) {
 function isActiveDatasetWithIncomingDuplicates(dataset) {
   const datasetState = datasetCurrentState(dataset);
   return (
-    !dataset.is_duplicate &&
     !dataset.is_deleted &&
     datasetHasActiveDuplicates(dataset) &&
     [
       config.DATASET_STATES.REGISTERED,
       config.DATASET_STATES.READY,
       config.DATASET_STATES.INSPECTED,
+      config.DATASET_STATES.DUPLICATE_REGISTERED,
+      config.DATASET_STATES.DUPLICATE_READY,
       config.DATASET_STATES.ARCHIVED,
       config.DATASET_STATES.FETCHED,
       config.DATASET_STATES.STAGED,

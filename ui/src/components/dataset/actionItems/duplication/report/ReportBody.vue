@@ -73,11 +73,13 @@
                counts typical in duplicate detection (<1 000 files) standard
                rendering inside a scrollable max-height container is sufficient. -->
           <div class="px-4 pb-4">
-            <div class="rounded border border-[var(--va-background-border)] overflow-hidden">
+            <div
+              class="rounded border border-[var(--va-background-border)] overflow-auto max-h-80"
+              data-testid="check-file-list-scroll"
+            >
               <va-data-table
                 :items="fileRows(check)"
                 :columns="columnsForType(check.type)"
-                :max-height="320"
                 class="text-xs"
               >
                 <template #cell(path)="{ value }">
