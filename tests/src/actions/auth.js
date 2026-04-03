@@ -14,12 +14,10 @@ const { expect } = require('../fixtures');
 async function loginAndNavigate({
   page, ticket, path: targetPath, waitForTestId,
 }) {
-  await page.goto(`${config.baseURL}/auth/iucas?ticket=${ticket}`);
-  await page.waitForLoadState('networkidle');
+  await page.goto(`${config.baseURL}/auth/iucas?ticket=${ticket}`, { waitUntil: 'domcontentloaded' });
 
   if (targetPath) {
-    await page.goto(targetPath);
-    await page.waitForLoadState('networkidle');
+    await page.goto(targetPath, { waitUntil: 'domcontentloaded' });
   }
 
   if (waitForTestId) {

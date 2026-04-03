@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 const { test, expect } = require('@playwright/test');
-const config = require('config');
+const { buildFeatureEnabledRolesFromEnv } = require('../../../../utils/feature');
 const {
   createDirectNotification,
   ensureNotificationsMenuOpen,
@@ -10,7 +10,7 @@ const {
   waitForNotificationMenuListIdle,
 } = require('./helpers');
 
-const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
+const featureEnabled = buildFeatureEnabledRolesFromEnv().notifications.length > 0;
 
 const resolveCssVarColor = async (page, cssVarName) => page.evaluate((name) => {
   const probe = document.createElement('div');

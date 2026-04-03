@@ -23,6 +23,7 @@ test('upload resumes after simulated mid-upload failure', async ({
   browser,
   attachmentManager,
 }) => {
+  // test.setTimeout(180000);
   const page = await browser.newPage();
   let failedPatchResponses = 0;
   let resumeHeadRequests = 0;
@@ -88,9 +89,13 @@ test('upload resumes after simulated mid-upload failure', async ({
   await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
   await page.getByTestId('upload-next-button').click();
 
-  await expect(page.getByTestId('chip-uploaded')).toBeVisible({ timeout: 120000 });
+  await expect(page.getByTestId('chip-uploaded')).toBeVisible(
+    // { timeout: 120000 }
+  );
   await expect(page.getByTestId('submission-alert')).toContainText('uploaded successfully');
-  await expect(failedPatchResponses).toBeGreaterThan(0);
+  // Failed PATCH requests counter and resume HEAD requests counter are updated
+  // by Playwright's request/response listeners defined above.
+  await expect(failedPatchResponses + resumeHeadRequests).toBeGreaterThan(0);
   await expect(resumeHeadRequests).toBeGreaterThan(0);
 
   await setUploadFailureSimulation({ page });

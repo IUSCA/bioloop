@@ -35,9 +35,23 @@ const router = createRouter({
   routes: generatedRoutes,
 });
 
-if (typeof window !== "undefined" && import.meta.env.MODE !== "production") {
-  window.__BIOLOOP_ROUTER__ = router;
+// =======================================================
+// E2E Router Exposure
+// =======================================================
+// #region E2E Router Exposure
+//
+// Expose the router for e2e tests only when explicitly opted-in via env.
+// Never attach in production builds so a mis-set flag cannot ship in
+// `vite build` output.
+const exposeRouterForTests =
+  typeof window !== "undefined" &&
+  import.meta.env.VITE_EXPOSE_ROUTER_FOR_E2E === "1" &&
+  import.meta.env.MODE !== "production";
+
+if (exposeRouterForTests && !window.__BIOLOOP_E2E_ROUTER__) {
+  window.__BIOLOOP_E2E_ROUTER__ = router;
 }
+// #endregion E2E Router Exposure
 
 const token = ref(useLocalStorage("token", ""));
 const user = ref(useLocalStorage("user", {}));

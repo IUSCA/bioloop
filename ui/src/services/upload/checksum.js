@@ -144,7 +144,7 @@ export async function computeManifestHash(files, progressCallback = null) {
 
   // Guard: callers should check _isChecksumVerificationEnabled() first,
   // but this provides a safe fallback if called directly.
-  if (!config.enabledFeatures.upload_verify_checksums) {
+  if (!config.upload_verify_checksums) {
     console.log("[manifest-hash.js] Feature disabled via config");
     return null;
   }
@@ -251,7 +251,7 @@ export async function computeManifestHash(files, progressCallback = null) {
  * @returns {boolean} True if feature is enabled
  */
 export function isChecksumVerificationEnabled() {
-  return Boolean(config.enabledFeatures.upload_verify_checksums);
+  return Boolean(config.upload_verify_checksums);
 }
 
 export default {

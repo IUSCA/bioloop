@@ -2,18 +2,19 @@ import {
   clearAutoComplete,
   selectAutocompleteResult,
   selectDropdownOption,
-} from '../../../actions';
+} from '../../../../actions';
 import {
   selectFiles,
-} from '../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../actions/stepper';
-import { expect, test } from '../../../fixtures';
+} from '../../../../actions/datasetUpload';
+import { navigateToNextStep } from '../../../../actions/stepper';
+import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 1 }, (_, i) => ({ name: `file_${i + 1}` }));
 
 test.use({ attachments });
 
 test.describe.serial('Dataset Upload Process', () => {
+  test.describe.configure({ timeout: 120000 });
   let page; // Playwright page instance
 
   test.beforeAll(async ({ browser }) => {
@@ -75,7 +76,8 @@ test('should show the Previous button as disabled and Next button as enabled on 
   });
 
   test.describe('should show the Next button as enabled after General-Info step\'s form fields are filled', async () => {
-    test.beforeAll(async () => {
+    test.beforeAll(async ({}, testInfo) => {
+      testInfo.setTimeout(120000);
       // Wait for the General Info step to load
       await page.waitForSelector('[data-testid="upload-metadata-dataset-type-select"]');
 

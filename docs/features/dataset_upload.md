@@ -320,6 +320,59 @@ python -m workers.scripts.setup_dirs --create # create missing dirs
 }
 ```
 
+### Nginx Configuration
+
+The TUS upload endpoint (`/api/uploads/files`) requires a dedicated `location`
+block that overrides nginx defaults. Without it, uploads larger than a few
+megabytes fail for two compounding reasons:
+
+1. **`proxy_request_buffering on` (default)** — nginx buffers the entire PATCH
+   body in memory/disk before forwarding it to the Node.js upstream. TUS PATCH
+   requests carry file content (the default `chunkSize` in `tus-js-client` v4 is
+   `Infinity`, so the whole file is sent as one request). For anything larger than
+   a few MB, this buffering blocks TUS from streaming data through to disk, breaks
+   resumability, and can exhaust nginx's temp-file budget.
+
+2. **`client_max_body_size 100M` (current server-level default)** — nginx rejects
+   any PATCH whose body exceeds 100 MB with a `413 Request Entity Too Large`
+   before the TUS server ever sees it. The TUS server already enforces its own
+   `maxSize` limit in application code; the nginx cap is redundant and harmful.
+
+#### Required changes to `nginx/conf/app.conf`
+
+Add a more-specific location for the TUS file endpoint **inside** the `server`
+block, **before** the catch-all `/api/` location so nginx matches it first:
+
+```nginx
+# TUS resumable upload endpoint — must appear before the generic /api/ block.
+#
+# proxy_request_buffering off:
+#   Stream PATCH bodies directly to the upstream without buffering in nginx.
+#   Required for TUS — buffering breaks resumability and causes failures for
+#   files larger than a few MB.
+#
+# client_max_body_size 0:
+#   Remove nginx's body-size cap for this location.  The TUS server enforces
+#   its own per-upload limit (upload.max_file_size_bytes / UPLOAD_MAX_FILE_SIZE_BYTES).
+#
+# proxy_read_timeout / proxy_send_timeout 3600s:
+#   Allow up to 1 hour between successive read/write operations.  Without this,
+#   nginx uses the 60 s default and kills slow or large uploads mid-transfer.
+location /api/uploads/files {
+    proxy_pass http://host.docker.internal:3030/uploads/files;
+    proxy_http_version 1.1;
+    proxy_request_buffering  off;
+    proxy_buffering          off;
+    client_max_body_size     0;
+    proxy_read_timeout       3600s;
+    proxy_send_timeout       3600s;
+}
+```
+
+> **Note:** The existing `/api/` location (with `client_max_body_size 100M`)
+> continues to apply to all other API routes. Only the TUS file upload path
+> gets the relaxed settings above.
+
 ### Post-Deploy Smoke Test
 
 1. Log in to the UI and initiate a small test upload.

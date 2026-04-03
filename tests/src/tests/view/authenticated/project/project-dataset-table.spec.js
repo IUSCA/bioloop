@@ -1,69 +1,80 @@
 const { test, expect } = require('@playwright/test');
 
-const { editProjectDatasets } = require('../../../../api/project');
-const { getDatasets } = require('../../../../api/dataset');
+const { createDataset } = require('../../../../api/dataset');
+const { createProject, editProjectDatasets } = require('../../../../api/project');
+const { getTokenByRole } = require('../../../../fixtures/auth');
 
-const PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
-const DATASET_TO_ADD_ID = 1;
+let projectId;
+let adminToken;
+const datasets = [];
 
 test.describe.serial('Project-datasets table', () => {
+  test.describe.configure({ timeout: 120000 });
+
+  test.beforeAll(async ({ request }, testInfo) => {
+    testInfo.setTimeout(120000);
+    adminToken = await getTokenByRole({ role: 'admin' });
+    const project = await createProject({
+      requestContext: request,
+      token: adminToken,
+    });
+    projectId = project.id;
+
+    for (let i = 0; i < 12; i += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      const dataset = await createDataset({
+        requestContext: request,
+        token: adminToken,
+        data: { type: 'RAW_DATA' },
+      });
+      datasets.push(dataset);
+    }
+  });
+
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/projects/${PROJECT_ID}`);
+    await page.goto(`/projects/${projectId}`);
   });
 
   test('Pagination', async ({ page }) => {
     // Playwright API context for making network requests
     const apiRequestContext = page.request;
 
-    const token = await page.evaluate(() => localStorage.getItem('token'));
-
-    const appDatasetsQueryResponse = await getDatasets({
-      requestContext: apiRequestContext,
-      token,
-    });
-    const appDatasetsQueryResults = await appDatasetsQueryResponse.json();
-    const appDatasets = appDatasetsQueryResults.datasets;
-
     // remove all datasets from the project
     await editProjectDatasets({
       requestContext: apiRequestContext,
-      id: PROJECT_ID,
+      id: projectId,
       data: {
-        remove_dataset_ids: appDatasets.map((ds) => ds.id),
+        remove_dataset_ids: datasets.map((dataset) => dataset.id),
       },
-      token,
+      token: adminToken,
     });
     await page.reload();
     await expect(page.locator('[data-testid=project-datasets-pagination]')).not.toBeVisible();
 
     // add one dataset to verify that the count / results-per-page options are
     // visible
-    let datasetsToAdd = [DATASET_TO_ADD_ID];
     await editProjectDatasets({
       requestContext: apiRequestContext,
-      id: PROJECT_ID,
+      id: projectId,
       data: {
-        add_dataset_ids: datasetsToAdd,
+        add_dataset_ids: [datasets[0].id],
       },
-      token,
+      token: adminToken,
     });
     await page.reload();
-    await expect(page.locator('[data-testid=project-datasets-pagination]')).toBeVisible();
-    await expect(page.locator('[data-testid=project-datasets-pagination] .va-pagination')).not.toBeVisible();
+    await expect(page.locator('[data-testid=project-datasets-table] tbody tr')).toHaveCount(1);
+    await expect(page.locator('[data-testid=project-datasets-pagination] .va-pagination')).toHaveCount(0);
 
-    // find datasets that are not part of this project
-    datasetsToAdd = appDatasets
-      .map((ds) => ds.id).filter((id) => (!datasetsToAdd.includes(id)));
-    // add these datasets to the project
+    // add enough datasets to require pagination controls
     await editProjectDatasets({
       requestContext: apiRequestContext,
-      id: PROJECT_ID,
+      id: projectId,
       data: {
-        add_dataset_ids: datasetsToAdd,
+        add_dataset_ids: datasets.slice(1).map((dataset) => dataset.id),
       },
-      token,
+      token: adminToken,
     });
     await page.reload();
-    await expect(page.locator('[data-testid=project-datasets-pagination] .va-pagination')).toBeVisible();
+    await expect(page.locator('[data-testid=project-datasets-pagination] .va-pagination')).toBeVisible({ timeout: 15000 });
   });
 });

@@ -82,3 +82,7 @@ signet/signet
 # .cursorrules
 # .cursor/
 # .ai/
+
+tmp_trace/
+tmp_trace_dataset/
+

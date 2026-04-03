@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 const { test, expect } = require('@playwright/test');
-const config = require('config');
+const { buildFeatureEnabledRolesFromEnv } = require('../../../../utils/feature');
 const { get } = require('../../../../api');
 const {
   createDirectNotification,
@@ -12,7 +12,7 @@ const {
   labelById,
   loadStandardViewerProfiles,
   loginAsTicket,
-  openNotificationsMenu,
+  // openNotificationsMenu,
   patchMarkAllRead,
   patchNotificationBookmarkState,
   patchNotificationReadState,
@@ -21,7 +21,7 @@ const {
   waitForNotificationMenuListIdle,
 } = require('./helpers');
 
-const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
+const featureEnabled = buildFeatureEnabledRolesFromEnv().notifications.length > 0;
 
 /** Prisma role ids: admin=1, operator=2, user=3 (E2E seed). */
 const ROLE_IDS_ALL = [1, 2, 3];
@@ -251,7 +251,6 @@ test.describe('Notification cross-user state (API)', () => {
       expect(row.state.is_read).toBe(false);
     }
   });
-
 });
 
 test.describe('Notification cross-user state (UI)', () => {

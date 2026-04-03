@@ -96,23 +96,23 @@ Runs under **`admin_project`** and **`operator_project`** (seeded project id in 
 
 ## Dataset upload (`/datasetUpload/...`)
 
-Specs live under **`src/tests/features/upload/`**. **`admin_upload`** runs most files; **`{admin,operator}_upload_project_association_non_user_roles`** runs `project_association/non_user_roles/*` only; **`user_upload_project_association`** runs user CAS flow when uploads allow user; **`{role}_upload_project_dataset_access`** runs autocomplete scoping tests per role.
+Specs live under **`src/tests/view/authenticated/upload/`**. **`admin_upload`** runs most files; **`{admin,operator}_upload_project_association_non_user_roles`** runs `project_association/non_user_roles/*` only; **`user_upload_project_association`** runs user CAS flow when uploads allow user; **`{role}_upload_project_dataset_access`** runs autocomplete scoping tests per role.
 
 | File | Tests | What they do |
 |------|--------|----------------|
-| `features/upload/navigation.spec.js` | `should navigate to upload page` | Reach new upload flow. |
-| `features/upload/file_selection_step.spec.js` | four tests | Select files, table count, delete files, hide table when empty. |
-| `features/upload/general_info_step.spec.js` | seven tests | General Info defaults, select/clear fields, disable+clear linked fields when dataset type / checkboxes change. |
-| `features/upload/next_previous_buttons.spec.js` | five tests | Stepper Prev/Next states across file selection and General Info; Next disabled if required associations cleared. |
-| `features/upload/steps.spec.js` | five tests | Step sidebar labels and which steps are enabled per phase (files → general → upload details). |
-| `features/upload/initiate_upload.spec.js` | three tests | After upload click: Processing → Uploading → per-file progress to 100%. |
-| `features/upload/upload_details_step/with_metadata.spec.js` | four tests | Table visible; fill general info; Upload Details shows chosen metadata + file list. |
-| `features/upload/upload_details_step/without_metadata.spec.js` | three tests | Same flow with optional metadata path trimmed (details show fields without full metadata branch). |
-| `features/upload/project_association/non_user_roles/association.spec.js` | one main test | Full flow with project selected: upload completes; dataset links to chosen project. |
-| `features/upload/project_association/non_user_roles/no_association.spec.js` | one main test | Upload without assigning project; dataset not tied to a project. |
-| `features/upload/project_association/user_role/association.spec.js` | `should create a new Project` | **Synthetic user** (API): upload without project assignment; UI creates project; new tab project page lists dataset. |
-| `features/upload/project_association/user_role/project_required_when_available.spec.js` | `user with available projects must pick...` | **Synthetic user with assigned project**: Project checkbox becomes enforced and Next stays disabled until a project is selected. |
-| `features/upload/project_dataset_access.spec.js` | **User role** block (2 tests) | Source Raw Data autocomplete **only** datasets on assigned project; Project autocomplete **only** that project. |
+| `view/authenticated/upload/navigation.spec.js` | `should navigate to upload page` | Reach new upload flow. |
+| `view/authenticated/upload/file_selection_step.spec.js` | four tests | Select files, table count, delete files, hide table when empty. |
+| `view/authenticated/upload/general_info_step.spec.js` | seven tests | General Info defaults, select/clear fields, disable+clear linked fields when dataset type / checkboxes change. |
+| `view/authenticated/upload/next_previous_buttons.spec.js` | five tests | Stepper Prev/Next states across file selection and General Info; Next disabled if required associations cleared. |
+| `view/authenticated/upload/steps.spec.js` | five tests | Step sidebar labels and which steps are enabled per phase (files → general → upload details). |
+| `view/authenticated/upload/initiate_upload.spec.js` | three tests | After upload click: Processing → Uploading → per-file progress to 100%. |
+| `view/authenticated/upload/upload_details_step/with_metadata.spec.js` | four tests | Table visible; fill general info; Upload Details shows chosen metadata + file list. |
+| `view/authenticated/upload/upload_details_step/without_metadata.spec.js` | three tests | Same flow with optional metadata path trimmed (details show fields without full metadata branch). |
+| `view/authenticated/upload/project_association/non_user_roles/association.spec.js` | one main test | Full flow with project selected: upload completes; dataset links to chosen project. |
+| `view/authenticated/upload/project_association/non_user_roles/no_association.spec.js` | one main test | Upload without assigning project; dataset not tied to a project. |
+| `view/authenticated/upload/project_association/user_role/association.spec.js` | `should create a new Project` | **Synthetic user** (API): upload without project assignment; UI creates project; new tab project page lists dataset. |
+| `view/authenticated/upload/project_association/user_role/project_required_when_available.spec.js` | `user with available projects must pick...` | **Synthetic user with assigned project**: Project checkbox becomes enforced and Next stays disabled until a project is selected. |
+| `view/authenticated/upload/project_dataset_access.spec.js` | **User role** block (2 tests) | Source Raw Data autocomplete **only** datasets on assigned project; Project autocomplete **only** that project. |
 | | **Admin or operator** block (2 tests) | Autocomplete includes datasets **outside** test project; project list includes **multiple** projects. *(Per project, one block is skipped.)* |
 
 ---

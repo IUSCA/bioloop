@@ -1,13 +1,29 @@
 const { expect } = require('@playwright/test');
 
+/** @param {string} testId @returns {string} `[data-testid=...]` selector. */
 const testIdSelector = (testId) => `[data-testid=${testId}]`;
 
+/**
+ * Builds a selector scoped by HTML element type and `data-testid`.
+ * @param {{elementType?: string|null, testId: string}} params
+ * @returns {string}
+ */
 const elementTestIdSelector = ({ elementType = null, testId }) => (elementType ? `${elementType}${testIdSelector(testId)}` : `div${testIdSelector(testId)}`);
 
+/**
+ * Fills a locator with text.
+ * @param {{locator: import('@playwright/test').Locator, text: string}} params
+ * @returns {Promise<void>}
+ */
 const fillText = async ({ locator, text }) => {
   await locator.fill(text);
 };
 
+/**
+ * Fills a locator and asserts the resulting input value.
+ * @param {{locator: import('@playwright/test').Locator, text: string}} params
+ * @returns {Promise<void>}
+ */
 const fillAndAssertText = async ({
   locator, text,
 }) => {
@@ -30,12 +46,24 @@ function cleanDropdownOptionText(text) {
     .trim();
 }
 
+/**
+ * Converts base64url encoding into standard base64 encoding.
+ * @param {string} value
+ * @returns {string}
+ */
 const base64UrlToBase64 = (value) => {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
   const paddingLength = (4 - (normalized.length % 4)) % 4;
   return normalized.padEnd(normalized.length + paddingLength, '=');
 };
 
+/**
+ * Parses the payload section of a JWT token.
+ * Returns `null` for missing/invalid tokens.
+ *
+ * @param {string|null|undefined} token
+ * @returns {Record<string, any>|null}
+ */
 const extractTokenPayload = (token) => {
   if (!token) {
     return null;

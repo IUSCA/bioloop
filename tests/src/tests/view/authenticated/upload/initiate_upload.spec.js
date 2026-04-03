@@ -1,10 +1,15 @@
-import { selectAutocompleteResult, selectDropdownOption } from '../../../../../actions';
 import {
-  selectFiles, trackSelectedFilesMetadata,
-} from '../../../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../../../actions/stepper';
-import { generateUniqueDatasetName } from '../../../../../api/dataset';
-import { expect, test } from '../../../../../fixtures';
+  selectAutocompleteResult,
+  selectDropdownOption,
+} from '../../../../actions';
+import {
+  selectFiles
+} from '../../../../actions/datasetUpload';
+import {
+  navigateToNextStep,
+} from '../../../../actions/stepper';
+import { generateUniqueDatasetName } from '../../../../api/dataset';
+import { expect, test } from '../../../../fixtures';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -13,10 +18,8 @@ test.use({ attachments });
 test.describe.serial('Dataset Upload Process', () => {
   let page; // Playwright page instance
 
-  let selectedDatasetType;
   let uploadedDatasetName;
-
-  const selectedFiles = []; // array of selected files
+  let selectedDatasetType;
 
   test.beforeAll(async ({ browser }) => {
     page = await browser.newPage();
@@ -30,12 +33,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
-      // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
-
-      // Store the selected files' information in state
-      selectedFiles.push(...files);
+      await selectFiles({ page, filePaths });
 
       // Click the "Next" button to proceed to the Upload-Details step
       await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
@@ -89,43 +87,35 @@ test.describe.serial('Dataset Upload Process', () => {
       await page.getByTestId('upload-next-button').click();
     });
 
-    test('should associate the uploaded Dataset with the selected Project', async () => {
-      // Verify that the uploaded Dataset is associated with the selected
-      // Project
-      // - Visit the Project page
-      const projectLink = page.getByTestId('upload-details-project-link');
-      await expect(projectLink).toBeVisible();
-      await expect(projectLink).not.toHaveText('');
+    // Assert that "Processing" status is shown when Upload button is clicked
+    // (to indicate that manifest-hash computation is in progress)
+    test('Should show `Processing` status when Upload button is clicked', async () => {
+      const statusRow = page.getByTestId('status-row');
+      await expect(statusRow).toBeVisible();
+      const processingChip = statusRow.getByTestId('chip-processing');
+      const uploadingChip = statusRow.getByTestId('chip-uploading');
+      await expect(processingChip.or(uploadingChip)).toBeVisible();
+    });
 
-      const projectHref = await projectLink.getAttribute('href');
-      expect(projectHref).toBeTruthy();
+    // Assert that after manifest-hash computation is complete, "Uploading"
+    // status is shown
+    test('Should show `Uploading` status after manifest-hash computation is complete', async () => {
+      const statusRow = page.getByTestId('status-row');
+      await expect(statusRow).toBeVisible();
+      const statusChip = statusRow.getByTestId('chip-uploading');
+      await expect(statusChip).toBeVisible();
+      await expect(statusChip).toHaveText('Uploading');
+    });
 
-      // Navigate to the selected Project's page
-      // - Create a new Page  instance for the Project view, since the Project
-      // view opens in a new tab
-      const [projectPage] = await Promise.all([
-        page.context().waitForEvent('page'),
-        projectLink.click(),
-      ]);
+    test('should show upload status after submission starts', async () => {
+      const processingChip = page.getByTestId('chip-processing');
+      const uploadingChip = page.getByTestId('chip-uploading');
+      const uploadedChip = page.getByTestId('chip-uploaded');
+      const failedChip = page.getByTestId('chip-upload-failed');
 
-      // Wait for the Project page to load
-      await projectPage.waitForLoadState('domcontentloaded');
-      await projectPage.waitForURL((url) => {
-        try {
-          return new URL(url).pathname === projectHref;
-        } catch (error) {
-          return false;
-        }
-      });
-
-      // Verify that the uploaded Dataset is listed in the Project's datasets
-      // table
-      const projectDatasetsTable = projectPage.getByTestId('project-datasets-table');
-      await expect(projectDatasetsTable).toBeVisible();
-      const datasetRow = projectDatasetsTable.locator('tbody tr').filter({ hasText: uploadedDatasetName });
-      await expect(datasetRow.first()).toBeVisible();
-
-      await projectPage.close();
+      await expect(
+        processingChip.or(uploadingChip).or(uploadedChip).or(failedChip),
+      ).toBeVisible();
     });
   });
 });

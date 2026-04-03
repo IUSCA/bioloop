@@ -1,6 +1,11 @@
 const { randomUUID } = require('node:crypto');
 const { post, get } = require('./index');
 
+/**
+ * Creates a role-specific test user, auto-filling required fields when omitted.
+ * @param {{requestContext?: import('@playwright/test').APIRequestContext, token: string, role: 'admin'|'operator'|'user', data?: Record<string, any>}=} params
+ * @returns {Promise<Record<string, any>>}
+ */
 const createTestUser = async ({
   requestContext,
   token,
@@ -28,6 +33,12 @@ const createTestUser = async ({
   return body;
 };
 
+/**
+ * Generates a unique username by probing `/users/:username`.
+ * @param {{requestContext?: import('@playwright/test').APIRequestContext, token: string, baseUsername?: string}} params
+ * @returns {Promise<string>}
+ * @throws {Error} When generated username already exists.
+ */
 const generateUniqueUsername = async ({
   requestContext,
   token,

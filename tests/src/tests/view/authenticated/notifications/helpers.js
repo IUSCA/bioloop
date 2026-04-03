@@ -15,9 +15,13 @@ const { get, patch, post } = require('../../../../api');
 
 /** @returns {string} data-testid for a notification's label element */
 const labelById = (id) => `notification-${id}-label`;
+/** @returns {string} data-testid for toggle-read button. */
 const toggleReadById = (id) => `notification-${id}-toggle-read`;
+/** @returns {string} data-testid for toggle-bookmark button. */
 const toggleBookmarkById = (id) => `notification-${id}-toggle-bookmark`;
+/** @returns {RegExp} Regex matching an integer as a standalone word. */
 const countContains = (count) => new RegExp(`\\b${count}\\b`);
+/** @returns {'admin'|'operator'} Role inferred from project name. */
 const currentRole = (projectName) => (projectName.includes('operator') ? 'operator' : 'admin');
 
 /** Locator for the "Showing N of M" text inside the open notification menu. */
@@ -37,6 +41,7 @@ const notificationOpenButtonCount = (page) =>
 const visibleNotificationMenu = (page) =>
   page.locator('.notification-dropdown-root [data-testid="notification-menu-items"]').first();
 
+/** Locator for the notification search input inside the visible menu panel. */
 const searchInput = (page) =>
   visibleNotificationMenu(page).getByPlaceholder('Search notifications').first();
 
@@ -95,9 +100,16 @@ const locatorContainsActiveElement = async (locator) =>
     return Boolean(active && (el === active || el.contains(active)));
   });
 
+/** Decodes JWT payload and returns `profile` object. */
 const parseTokenProfile = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8')).profile;
+/** Reads the current auth token from localStorage. */
 const getToken = async (page) => page.evaluate(() => localStorage.getItem('token'));
 
+/**
+ * Opens the notification menu (if closed) and waits for idle list state.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<import('@playwright/test').Locator>}
+ */
 const openNotificationsMenu = async (page) => {
   const menu = visibleNotificationMenu(page);
   if ((await menu.count()) > 0) {
@@ -155,6 +167,10 @@ const ensureNotificationOpenButtonVisible = async (page) => {
   await expect(notificationOpenButton).toBeVisible({ timeout: 15000 });
 };
 
+/**
+ * Reloads the page and reopens notifications menu in an attached/ready state.
+ * @param {import('@playwright/test').Page} page
+ */
 const refreshNotificationView = async (page) => {
   await page.reload({ waitUntil: 'domcontentloaded' });
   await ensureNotificationOpenButtonVisible(page);
@@ -162,6 +178,11 @@ const refreshNotificationView = async (page) => {
   await expect(visibleNotificationMenu(page)).toBeAttached({ timeout: 15000 });
 };
 
+/**
+ * Returns token + normalized profile fields for the current session.
+ * @param {{page: import('@playwright/test').Page, role?: string|null}} params
+ * @returns {Promise<{token: string, username: string, userId: number, role: string|null}>}
+ */
 const fetchCurrentUser = async ({ page, role = null }) => {
   const token = await getToken(page);
   const profile = parseTokenProfile(token);
@@ -173,6 +194,11 @@ const fetchCurrentUser = async ({ page, role = null }) => {
   };
 };
 
+/**
+ * Exchanges CAS ticket for JWT using API endpoint.
+ * @param {{page: import('@playwright/test').Page, ticket: string}} params
+ * @returns {Promise<string>}
+ */
 const getTokenByTicket = async ({ page, ticket }) => {
   const response = await page.request.post(`${config.apiBaseURL}/auth/cas/verify`, {
     data: { ticket },
@@ -182,6 +208,11 @@ const getTokenByTicket = async ({ page, ticket }) => {
   return body.token;
 };
 
+/**
+ * Resolves user identity for a CAS ticket.
+ * @param {{page: import('@playwright/test').Page, ticket: string}} params
+ * @returns {Promise<{token: string, id: number, username: string}>}
+ */
 const fetchUserByTicket = async ({ page, ticket }) => {
   const token = await getTokenByTicket({ page, ticket });
   const profile = parseTokenProfile(token);
@@ -225,12 +256,23 @@ const loadStandardViewerProfiles = async (page) => {
   };
 };
 
+/**
+ * Finds one notification item by id from either array payload or `{items}`.
+ * @param {any[]|{items?: any[]}} body
+ * @param {number|string} notificationId
+ * @returns {any|undefined}
+ */
 const findNotificationInListPayload = (body, notificationId) => {
   const items = Array.isArray(body) ? body : body?.items;
   if (!Array.isArray(items)) return undefined;
   return items.find((n) => Number(n.id) === Number(notificationId));
 };
 
+/**
+ * Fetches unread notifications using role-appropriate endpoint.
+ * @param {{page: import('@playwright/test').Page, token: string, privileged: boolean, username: string}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const fetchDefaultUnreadNotifications = async ({
   page,
   token,
@@ -258,6 +300,11 @@ const fetchDefaultUnreadNotifications = async ({
   });
 };
 
+/**
+ * Patches read/unread state for a notification.
+ * @param {{page: import('@playwright/test').Page, token: string, privileged: boolean, username: string, notificationId: number|string, isRead: boolean}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const patchNotificationReadState = async ({
   page,
   token,
@@ -277,6 +324,11 @@ const patchNotificationReadState = async ({
   });
 };
 
+/**
+ * Patches bookmark state for a notification.
+ * @param {{page: import('@playwright/test').Page, token: string, privileged: boolean, username: string, notificationId: number|string, isBookmarked: boolean}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const patchNotificationBookmarkState = async ({
   page,
   token,
@@ -296,6 +348,11 @@ const patchNotificationBookmarkState = async ({
   });
 };
 
+/**
+ * Marks all notifications as read for the current user context.
+ * @param {{page: import('@playwright/test').Page, token: string, privileged: boolean, username: string}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const patchMarkAllRead = async ({ page, token, privileged, username }) => {
   const url = privileged
     ? '/notifications/mark-all-read'
@@ -308,6 +365,7 @@ const patchMarkAllRead = async ({ page, token, privileged, username }) => {
   });
 };
 
+/** Convenience helper to fetch admin JWT from the CAS stub. */
 const getAdminToken = async (page) => getTokenByTicket({ page, ticket: 'admin' });
 
 /**
@@ -402,6 +460,10 @@ const createDirectNotificationForUser = async ({ page, label, text, metadata = {
   });
 };
 
+/**
+ * Asserts that notification header controls are disabled.
+ * @param {import('@playwright/test').Page} page
+ */
 const expectHeaderControlsDisabled = async (page) => {
   await expect(page.getByTestId('filter-unread')).toBeDisabled();
   await expect(page.getByTestId('filter-read')).toBeDisabled();
@@ -414,6 +476,10 @@ const expectHeaderControlsDisabled = async (page) => {
   }
 };
 
+/**
+ * Asserts that notification header controls are enabled.
+ * @param {import('@playwright/test').Page} page
+ */
 const expectHeaderControlsEnabled = async (page) => {
   await expect(page.getByTestId('filter-unread')).toBeEnabled();
   await expect(page.getByTestId('filter-read')).toBeEnabled();
@@ -426,6 +492,10 @@ const expectHeaderControlsEnabled = async (page) => {
   }
 };
 
+/**
+ * Logs in via CAS ticket and verifies username in header.
+ * @param {{page: import('@playwright/test').Page, ticket: string, expectedUsername: string}} params
+ */
 const loginAsTicket = async ({ page, ticket, expectedUsername }) => {
   await page.goto(`${config.baseURL}/auth/iucas?ticket=${ticket}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('header-username')).toContainText(expectedUsername);

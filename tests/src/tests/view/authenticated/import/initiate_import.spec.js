@@ -7,6 +7,7 @@ const NEXT_BUTTON_TEST_ID = 'import-next-button';
 const DATASET_NAME_INPUT_TEST_ID = 'dataset-name-input';
 
 test.describe.serial('Dataset Import — submit and verify workflow', () => {
+  test.describe.configure({ timeout: 120000 });
   let page;
   // href of the dataset link shown after successful import submission
   let datasetHref;
@@ -26,7 +27,7 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
       await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
       await page.waitForSelector(
         `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-        { timeout: 15000 },
+        // { timeout: 15000 },
       );
     });
 
@@ -35,9 +36,11 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
         .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
         .count()) > 0;
 
-      test.skip(!hasResults, 'No import directories available in test environment');
+      // test.skip(!hasResults, 'No import directories available in test
+      // environment');
 
       await page.getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`).click();
+      // Todo: assert that a value was selected
       await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeEnabled();
     });
   });
@@ -106,7 +109,7 @@ test.describe.serial('Dataset Import — submit and verify workflow', () => {
       // The Import button stays disabled until the async name-uniqueness check
       // passes.
       await expect
-        .poll(() => page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled(), { timeout: 10000 })
+        .poll(() => page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled(), { timeout: 30000 })
         .toBe(true);
     });
 

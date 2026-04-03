@@ -6,11 +6,18 @@ import { OPERATOR_STORAGE_STATE } from '../../../playwright.paths';
 const config = require('config');
 
 setup('login', async ({ page }) => {
-  await page.goto(`${config.baseURL}/auth/iucas?ticket=operator`);
+  await page.goto(`${config.baseURL}/auth/iucas?ticket=operator`, { waitUntil: 'domcontentloaded' });
+  await expect.poll(async () => page.url(),
+  // { timeout: 90000 }
+  ).not.toContain('/auth/iucas');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-  // do a test that page is finished loading - checking for username is good
-  // enough
-  await expect(page.getByTestId('header-username')).toContainText(config.e2e.users.operator.username, { timeout: 60000 });
+  const state = await page.context().storageState();
+  const localStorageEntries = state.origins.flatMap((origin) => origin.localStorage || []);
+  const tokenEntry = localStorageEntries.find(({ name }) => name === 'token');
+  const userEntry = localStorageEntries.find(({ name }) => name === 'user');
+  expect(tokenEntry?.value).toBeTruthy();
+  expect(userEntry?.value).toContain(config.e2e.users.operator.username);
 
   await page.context().storageState({ path: OPERATOR_STORAGE_STATE });
 });

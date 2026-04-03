@@ -39,14 +39,30 @@ import socket
 import sys
 
 port = int(sys.argv[1])
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# Bind on wildcard IPv4 so we catch conflicts with listeners bound to
+# 0.0.0.0/127.0.0.1 alike (Docker publishes on wildcard).
+sock_v4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 try:
-    sock.bind(("127.0.0.1", port))
+    sock_v4.bind(("0.0.0.0", port))
 except OSError:
     sys.exit(1)
 finally:
-    sock.close()
+    sock_v4.close()
+
+# Try IPv6 wildcard too when available; if it fails due no IPv6 support,
+# ignore it. Any other bind conflict means the port is not free.
+try:
+    sock_v6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    try:
+        sock_v6.bind(("::", port))
+    except OSError:
+        sys.exit(1)
+    finally:
+        sock_v6.close()
+except OSError:
+    pass
+
 sys.exit(0)
 PY
 }
@@ -121,7 +137,7 @@ assign_ports_for_stack() {
   select_port "docs (vitepress)" 5173 DOCS_PORT
   select_port "jupyter_ijs" 8888 JUPYTER_PORT
   select_port "grafana" 3000 GRAFANA_PORT
-  if [[ "${stack}" == "main" ]]; then
+  if [[ "${stack}" == "main" || "${stack}" == "e2e" ]]; then
     select_port "secure_download" 3060 SECURE_DOWNLOAD_PORT
   else
     SECURE_DOWNLOAD_PORT=""
@@ -171,7 +187,7 @@ compose_text = replace_line_pattern(compose_text, r'^(\s*-\s*)127\.0\.0\.1:\d+:2
 compose_text = replace_line_pattern(compose_text, r'^(\s*-\s*)127\.0\.0\.1:\d+:5173(\s*(?:#.*)?)$', rf'\g<1>127.0.0.1:{docs_port}:5173\g<2>')
 compose_text = replace_line_pattern(compose_text, r'^(\s*-\s*)"?\d+:8888"?(\s*(?:#.*)?)$', rf'\g<1>"{jupyter_port}:8888"\g<2>')
 compose_text = replace_line_pattern(compose_text, r'^(\s*-\s*)"?\d+:3000"?(\s*(?:#.*)?)$', rf'\g<1>"{grafana_port}:3000"\g<2>')
-if stack == "main" and secure_download_port:
+if stack in {"main", "e2e"} and secure_download_port:
     compose_text = replace_line_pattern(compose_text, r'^(\s*-\s*)"?\d+:3060"?(\s*(?:#.*)?)$', rf'\g<1>"{secure_download_port}:3060"\g<2>')
 compose_file.write_text(compose_text)
 
@@ -181,11 +197,11 @@ ui_env_text = replace_line_pattern(ui_env_text, r'^VITE_CAS_RETURN=.*$', f'VITE_
 ui_env_text = replace_line_pattern(ui_env_text, r'^VITE_GOOGLE_RETURN=.*$', f'VITE_GOOGLE_RETURN=https://localhost:{ui_port}/auth/google')
 ui_env_text = replace_line_pattern(ui_env_text, r'^VITE_CILOGON_RETURN=.*$', f'VITE_CILOGON_RETURN=https://localhost:{ui_port}/auth/cil')
 ui_env_text = replace_line_pattern(ui_env_text, r'^VITE_MICROSOFT_RETURN=.*$', f'VITE_MICROSOFT_RETURN=https://localhost:{ui_port}/auth/microsoft')
-if stack == "main" and secure_download_port:
+if stack in {"main", "e2e"} and secure_download_port:
     ui_env_text = replace_line_pattern(ui_env_text, r'^VITE_UPLOAD_API_BASE_PATH=.*$', f'VITE_UPLOAD_API_BASE_PATH=http://localhost:{secure_download_port} # for if it\'s the same host as in dev')
 ui_env_file.write_text(ui_env_text)
 
-if stack == "main" and secure_download_port:
+if stack in {"main", "e2e"} and secure_download_port:
     api_env_file = repo_root / "api/.env.default"
     api_env_text = api_env_file.read_text()
     api_env_text = replace_line_pattern(api_env_text, r'^DOWNLOAD_SERVER_BASE_URL=.*$', f'DOWNLOAD_SERVER_BASE_URL=http://localhost:{secure_download_port}')

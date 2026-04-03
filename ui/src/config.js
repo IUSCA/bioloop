@@ -73,6 +73,7 @@ const exports = {
     },
   },
   alertForEnvironments: ["ci"],
+  upload_verify_checksums: true,
   enabledFeatures: resolveEnabledFeatures({
     genomeBrowser: true,
     notifications: { defaultRoles: [] },
@@ -82,8 +83,6 @@ const exports = {
     uploads: { defaultRoles: ["admin"] },
     auto_create_project_on_dataset_creation: { defaultRoles: ["user"] },
     alerts: true,
-    // TODO: `upload_verify_checksums` should not be part of the enabledFeatures object
-    upload_verify_checksums: true,
   }),
   notifications: {
     pollingInterval: 5000, // milliseconds

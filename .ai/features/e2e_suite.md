@@ -64,7 +64,7 @@ Not exhaustive: `import`, `uploads`, `notifications` use `enabledForRoles`; `ale
 | Area | Spec files (`tests/src/tests/`) | Notes |
 |------|----------------------------------|-------|
 | Import | `view/authenticated/import/**` | Stable reference implementation; **excluded** from new scenario doc |
-| Upload | `features/upload/**` | **excluded** from scenario doc (specs live under `tests/src/tests/features/upload/`) |
+| Upload | `view/authenticated/upload/**` | **excluded** from scenario doc (specs live under `tests/src/tests/view/authenticated/upload/`) |
 | Notifications | `view/authenticated/notifications/**` | **excluded** |
 | Sidebar | `sidebar/user_role_sidebar_view.spec.js`, `sidebar/non_user_role_sidebar_view.spec.js` | Minimal visibility only |
 | User management | `userManagement/user_management.spec.js` | Create-user modal serial tests |
@@ -384,7 +384,7 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 
 ### Upload e2e layout & project ownership
 
-- **Spec root:** `tests/src/tests/features/upload/` (feature-first; route under test is still `/datasetUpload/...`).
+- **Spec root:** `tests/src/tests/view/authenticated/upload/` (aligned with `import`; route under test is still `/datasetUpload/...`).
 - **`admin_upload`** runs the bulk of upload specs but **ignores**:
   - `project_association/user_role/association.spec.js` (user-only project),
   - `project_dataset_access.spec.js` (per-role projects),
@@ -393,7 +393,7 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 - **`user_upload_project_association`** — user-ticket login flow.
 - **`{role}_upload_project_dataset_access`** — role matrix for autocomplete scoping; spec uses nested `describe` blocks (user vs admin/operator expectations).
 
-**CI / pipeline:** align `VITE_FEATURE_ROLE_OVERRIDES` (and related `VITE_*` on ui + e2e) with `E2E_TARGET_ROLES` so `buildFeatureEnabledRolesFromEnv()` and the UI bundle agree; slice runs with `playwright test --project=...` or path `features/upload/...` as needed.
+**CI / pipeline:** align `VITE_FEATURE_ROLE_OVERRIDES` (and related `VITE_*` on ui + e2e) with `E2E_TARGET_ROLES` so `buildFeatureEnabledRolesFromEnv()` and the UI bundle agree; slice runs with `playwright test --project=...` or path `view/authenticated/upload/...` as needed.
 
 ---
 
@@ -427,7 +427,14 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 | F12 | **Deferred by branch ownership:** Upload/Import/Notifications specs should be migrated to the new metadata-driven unauthorized-route and sidebar-role matrix style in their own feature branches; do not refactor those suites in this branch beyond compatibility fixes. |
 | F13 | **Post-merge follow-up (`origin/uploads-rewrite`)**: upload registration path in rewritten route still assumes `datasetService.create()` always returns a dataset object; after uploads-rewrite is merged, add null-safe handling for duplicate/create-conflict path before dereferencing `createdDataset.id` (return explicit 409 or equivalent contract). |
 | F14 | **E2E failure follow-up bucket (from full docker run on 2026-03-27, excluding nav-guard + non_user no-association which were prioritized first):** `user_management.spec.js` cancel-modal (admin/operator), `project-dataset-table.spec.js` pagination (admin/operator), `project-merge-modal.spec.js` merge (admin/operator), `upload/file_selection_step.spec.js` hide-table-after-delete, `upload/initiate_upload.spec.js` progress-to-100, `upload/project_dataset_access.spec.js` user scoped raw-data list. |
-| F15 | **Still-unfixed from latest targeted reruns (2026-03-27):** `features/upload/project_association/non_user_roles/no_association.spec.js` (`upload-selected-files-table` not visible before metadata tracking), `features/upload/project_association/user_role/association.spec.js` (`beforeAll` timeout while preparing upload flow), `features/upload/project_association/user_role/project_required_when_available.spec.js` (`beforeAll` timeout while preparing upload flow). |
+| F15 | **Still-unfixed from latest targeted reruns (2026-03-27):** `view/authenticated/upload/project_association/non_user_roles/no_association.spec.js` (`upload-selected-files-table` not visible before metadata tracking), `view/authenticated/upload/project_association/user_role/association.spec.js` (`beforeAll` timeout while preparing upload flow), `view/authenticated/upload/project_association/user_role/project_required_when_available.spec.js` (`beforeAll` timeout while preparing upload flow). |
+| F16 | **Docs (`docs/features/`)**: add a dedicated auto-create-project-on-dataset-creation feature document that captures full intended behavior, role gating, upload/import parity rules, server-side validation expectations, and edge cases (using current branch behavior and AI memory as source of truth). |
+| F17 | **Playwright docs update**: mention and standardize `bin/run_containerized_e2e.sh` usage in the app’s Playwright testing docs at the primary execution section (avoid direct `npx playwright test` guidance for containerized runs). |
+| F18 | **Containerized startup docs**: document the containerized startup lifecycle (deploy/reset/run scripts, dynamic host-port rewrites, role-env sync expectations) in the appropriate docs location tied to compose-defined test services. |
+| F19 | **Test documentation debt**: expand docs describing test organization, role/project routing, and scenario inventory (what each suite covers and why), including notification/upload/project/sidebar/dataset role-specific structure. |
+| F20 | **Attachment tracking strategy**: design and implement a better policy for generated E2E attachments/artifacts than broad `attachment*` gitignore patterns (targeted paths, retention policy, and deterministic cleanup). |
+| F21 | **E2E JS JSDoc pass**: add concise JSDoc to shared E2E JavaScript helpers/utilities and high-reuse action APIs to improve readability/contracts without adding noise to trivial test bodies. |
+| F22 | **Refactor**: move `gotoWithRetry` into a shared E2E helper module and update role-sidebar specs (and any future consumers) to import it instead of duplicating logic. |
 
 ---
 
@@ -447,5 +454,8 @@ Pure composition of chart components; no local `useQueryPersistence`. E2E: rende
 | 2026-03-20 | Playwright: deduplicated role-scoped projects via loops (`${role}_project`, `${role}_notifications`, `${role}_user_management`, `${role}_sidebar_non_user`); `makeRoleProject` sets `metadata.e2eRole`; renamed `project`→`admin_project`, `upload`→`admin_upload`, user association project→`user_upload_project_association` with normal login deps; `project_dataset_access` resolves role from metadata. |
 | 2026-03-20 | Storage paths moved to `tests/playwright.paths.js`; feature-role lists for Playwright from **`buildFeatureEnabledRolesFromEnv()`** (`tests/src/utils/feature.js`, same `VITE_*` env as UI). §4 “Feature roles in Playwright” explains why config does not HTTP-fetch the running UI; **F11** = reconcile tests vs merge order before landing branch. |
 | 2026-03-21 | Upload e2e moved to **`tests/src/tests/features/upload/`**; `admin_upload` no longer includes `non_user_roles` (owned by `{admin,operator}_upload_project_association_non_user_roles`); `project_dataset_access.spec.js` split into nested describes (user vs admin/operator). §4 “Upload e2e layout & project ownership” documents pipeline alignment. |
+| 2026-03-20 | Upload e2e specs moved to **`tests/src/tests/view/authenticated/upload/`** so upload and import share the same authenticated view-level hierarchy. Playwright `testMatch` paths were updated to `/view/authenticated/upload/...`, and relative imports in moved specs were adjusted accordingly. |
 | 2026-03-21 | Added metadata-driven route coverage foundation: unauthenticated nav-guard spec now iterates router-derived protected views, duplicate `view/unauthenticated/project.spec.js` removed, sidebar specs expanded to visibility + route visit + direct-URL unauthorized checks, and default layout now shows a shared authorization alert (`data-testid=role-authorization-alert`) instead of blank role-denied pages. Unauthenticated project runs now fan out as `${role}_unauthenticated` to keep role-matrix parity. |
 | 2026-03-21 | Auto-project behavior tightened for dataset creation: user-role clients must pick an existing Project when one is available (upload+import steppers), API now enforces that same user-only rule server-side, and API auto-create eligibility is now configurable via `auto_create_project_on_dataset_creation_roles` (default `["user"]`) instead of hardcoded role checks. Added upload/import e2e coverage for required-project and import auto-create flows under user role projects. |
+| 2026-03-28 | Added new documentation/refactor backlog entries (**F16–F22**) covering auto-create feature docs, Playwright runner docs (`bin/run_containerized_e2e.sh`), containerized startup docs, scenario/test-organization docs, attachment-tracking redesign, JSDoc coverage for shared E2E JS utilities, and shared `gotoWithRetry` helper extraction. |
+| 2026-03-28 | Full containerized suite revalidated after merge-reconciliation and flaky-hook hardening. Latest stable run used `bin/run_containerized_e2e.sh -- --workers=1` with **129 passed / 10 skipped / 0 failed**. Skips were runtime-conditional (role-gated branch skips in `project_dataset_access.spec.js`, plus import-directory availability skips in select-directory/next-previous flows), not assertion failures. |

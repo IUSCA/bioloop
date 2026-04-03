@@ -6,12 +6,14 @@ services:
   ui:
     image: node:21
     ports:
-      - 127.0.0.1:1024:443
+      - 127.0.0.1:444:443
     env_file:
       - ui/.env.default
     environment:
       - VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1
       - VITE_FEATURE_ROLE_OVERRIDES=${VITE_FEATURE_ROLE_OVERRIDES:-{}}
+      # Playwright reads `window.__BIOLOOP_E2E_ROUTER__` for route lists (see `tests/src/utils/routes.js`).
+      - VITE_EXPOSE_ROUTER_FOR_E2E=1
     # environment:
       # If this stack's UI port is remapped to something other than :443,
       # override these so CAS/OAuth callbacks and upload API calls land on the
@@ -303,7 +305,7 @@ services:
       - ./docs/:/opt/sca/app/docs
       - docs_modules:/opt/sca/app/node_modules
     ports:
-      - 127.0.0.1:5173:5173
+      - 127.0.0.1:5174:5173
     working_dir: /opt/sca/app
     entrypoint:
       - sh

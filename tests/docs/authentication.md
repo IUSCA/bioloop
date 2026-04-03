@@ -57,6 +57,7 @@ Projects that are not dependent on a login-setup project will be executed in an 
 - `E2E_SKIP_UNAUTHENTICATED=1` to exclude unauthenticated projects
 - `VITE_ALLOW_FEATURE_ROLE_OVERRIDES=1` to activate role override behavior
 - `VITE_FEATURE_ROLE_OVERRIDES` to define role-gated feature policy used by both UI and Playwright routing
+- `VITE_EXPOSE_ROUTER_FOR_E2E=1` on the **UI** dev server so `window.__BIOLOOP_E2E_ROUTER__` exists for specs that enumerate routes (`tests/src/utils/routes.js`). The containerized e2e compose sets this for the `ui` service; for local `npm run dev` + Playwright, export the same before starting Vite.
 
 Typical CI matrix pattern (one job per role):
 

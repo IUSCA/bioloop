@@ -7,6 +7,11 @@
  * @module services/features
  */
 
+/**
+ * Valid roles for role-gated features.
+ *
+ * @type {string[]}
+ */
 const VALID_ROLES = ["admin", "operator", "user"];
 
 /**
@@ -65,8 +70,11 @@ function parseFeatureRoleOverrides() {
 /**
  * Resolves which roles may use a role-gated feature at build time.
  *
- * Precedence: JSON override entry for `featureKey` (when allow-flag is on),
- * then comma-separated env from {@link ROLES_LIST_ENV_BY_FEATURE}, then `defaultRoles`.
+ * Precedence (highest to lowest):
+ * - JSON override entry for `featureKey` (when allow-flag is on),
+ * - comma-separated env from {@link ROLES_LIST_ENV_BY_FEATURE},
+ * - `defaultRoles`.
+ *
  * Unknown roles in env/JSON are dropped.
  *
  * @param {string} featureKey - Key matching config spec and override JSON keys.

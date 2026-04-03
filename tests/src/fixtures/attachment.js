@@ -2,6 +2,16 @@ import path from 'path';
 
 const { AttachmentManager } = require('../utils/attachments/manager');
 
+/**
+ * Defines attachment-related Playwright fixtures:
+ * - `attachments`: requested files to create before each test
+ * - `attachmentManager`: helper with filesystem operations scoped to test dir
+ *
+ * @returns {{
+ *   attachments: [any[], { option: boolean }],
+ *   attachmentManager: Function
+ * }}
+ */
 function attachmentFixture() {
   return {
     attachments: [[], { option: true }],

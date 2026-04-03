@@ -1,8 +1,36 @@
 const { test, expect } = require('@playwright/test');
+const { createDataset } = require('../../../../api/dataset');
+const { createProject, editProjectDatasets } = require('../../../../api/project');
+const { getTokenByRole } = require('../../../../fixtures/auth');
 
-const PROJECT_ID = '98045a35-723c-4e1b-88e6-9462c1aff4c1';
+let projectId;
 
 test.describe('Project navigation and page shell', () => {
+  test.describe.configure({ timeout: 120000 });
+
+  test.beforeAll(async ({ request }, testInfo) => {
+    testInfo.setTimeout(120000);
+    const adminToken = await getTokenByRole({ role: 'admin' });
+    const project = await createProject({
+      requestContext: request,
+      token: adminToken,
+    });
+    projectId = project.id;
+
+    const dataset = await createDataset({
+      requestContext: request,
+      token: adminToken,
+      data: { type: 'RAW_DATA' },
+    });
+
+    await editProjectDatasets({
+      requestContext: request,
+      token: adminToken,
+      id: projectId,
+      data: { add_dataset_ids: [dataset.id] },
+    });
+  });
+
   test('projects index can navigate to create-project flow', async ({ page }) => {
     await page.goto('/projects');
 
@@ -17,7 +45,7 @@ test.describe('Project navigation and page shell', () => {
   });
 
   test('project details renders key sections and merge modal', async ({ page }) => {
-    await page.goto(`/projects/${PROJECT_ID}`);
+    await page.goto(`/projects/${projectId}`);
 
     await expect(page.getByText('General Info', { exact: true })).toBeVisible();
     await expect(
@@ -33,7 +61,7 @@ test.describe('Project navigation and page shell', () => {
   });
 
   test('project datasets table links to nested dataset route', async ({ page }) => {
-    await page.goto(`/projects/${PROJECT_ID}`);
+    await page.goto(`/projects/${projectId}`);
 
     const datasetLinks = page.locator('[data-testid=project-datasets-table] a.va-link');
     const datasetLinkCount = await datasetLinks.count();

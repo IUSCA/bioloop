@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const config = require('config');
+const { buildFeatureEnabledRolesFromEnv } = require('../../../../utils/feature');
 const {
   ensureNotificationsMenuOpen,
   ensureNotificationOpenButtonVisible,
@@ -8,7 +8,7 @@ const {
   waitForNotificationMenuListIdle,
 } = require('./helpers');
 
-const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.length > 0;
+const featureEnabled = buildFeatureEnabledRolesFromEnv().notifications.length > 0;
 
 test.describe('Notification search input', () => {
   test.describe.configure({ timeout: 180000 });

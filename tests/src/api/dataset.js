@@ -3,6 +3,17 @@ const { randomUUID } = require('crypto');
 const { get, post } = require('./index');
 const { extractTokenPayload } = require('../utils');
 
+/**
+ * Creates a dataset using API defaults when core fields are omitted.
+ *
+ * Defaults applied:
+ * - `name`: generated unique name
+ * - `type`: `DATA_PRODUCT`
+ * - `origin_path`: `/path/to/<name>`
+ *
+ * @param {{requestContext?: import('@playwright/test').APIRequestContext, token: string, data?: Record<string, any>}=} params
+ * @returns {Promise<Record<string, any>>} Created dataset payload.
+ */
 const createDataset = async ({
   requestContext, token, data = {},
 } = {}) => {
@@ -29,6 +40,15 @@ const createDataset = async ({
   return body;
 };
 
+/**
+ * Fetches datasets for the authenticated role.
+ *
+ * Admin/operator uses `/datasets`; user uses ownership-scoped
+ * `/datasets/:username/all`.
+ *
+ * @param {{requestContext?: import('@playwright/test').APIRequestContext, token: string, params?: Record<string, any>}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const getDatasets = async ({
   requestContext, token, params,
 }) => {
@@ -44,6 +64,11 @@ const getDatasets = async ({
   });
 };
 
+/**
+ * Checks whether a dataset name already exists for a given dataset type.
+ * @param {{requestContext?: import('@playwright/test').APIRequestContext, token: string, params: {type: string, name: string}}} params
+ * @returns {Promise<import('@playwright/test').APIResponse>}
+ */
 const datasetExists = async ({
   requestContext, token, params,
 }) => {
@@ -55,6 +80,17 @@ const datasetExists = async ({
   });
 };
 
+/**
+ * Generates a unique dataset name by probing the exists endpoint once.
+ *
+ * @param {Object} params
+ * @param {import('@playwright/test').APIRequestContext=} params.requestContext
+ * @param {string} params.token
+ * @param {string=} params.baseName
+ * @param {'Raw Data'|'Data Product'|'RAW_DATA'|'DATA_PRODUCT'} params.type
+ * @returns {Promise<string>}
+ * @throws {Error} When type is invalid or generated name already exists.
+ */
 const generateUniqueDatasetName = async ({
   requestContext,
   token,

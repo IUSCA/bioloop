@@ -3,10 +3,10 @@ import {
   selectDropdownOption,
 } from '../../../../actions';
 import { navigateToNextStep } from '../../../../actions/stepper';
-import { generateUniqueDatasetName } from '../../../../api/dataset';
 import { expect, test } from '../../../../fixtures';
 
 const config = require('config');
+const { randomUUID } = require('crypto');
 
 const attachments = [
   { name: 'tiny-upload.txt', content: 'tiny upload payload' },
@@ -18,6 +18,7 @@ test('finished upload navigates to details page with correct info', async ({
   browser,
   attachmentManager,
 }) => {
+  test.setTimeout(90000);
   const page = await browser.newPage();
 
   // Login as admin (required for /datasets/uploads/:id access)
@@ -52,12 +53,7 @@ test('finished upload navigates to details page with correct info', async ({
   });
   await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
-  const token = await page.evaluate(() => localStorage.getItem('token'));
-  const datasetName = await generateUniqueDatasetName({
-    requestContext: page.request,
-    token,
-    type: 'DATA_PRODUCT',
-  });
+  const datasetName = `TestDataset-${randomUUID()}`;
   await page.getByTestId('upload-details-dataset-name-input').fill(datasetName);
   await page.getByTestId('upload-next-button').click();
 

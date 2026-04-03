@@ -1,11 +1,11 @@
-import { getAutoCompleteResults } from '../../../actions';
-import { selectFiles } from '../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../actions/stepper';
-import { createDataset } from '../../../api/dataset';
-import { createProject, editProjectDatasets, editProjectUsers } from '../../../api/project';
-import { createTestUser } from '../../../api/user';
-import { expect, test } from '../../../fixtures';
-import { getTokenByRole } from '../../../fixtures/auth';
+import { getAutoCompleteResults } from '../../../../actions';
+import { selectFiles } from '../../../../actions/datasetUpload';
+import { navigateToNextStep } from '../../../../actions/stepper';
+import { createDataset } from '../../../../api/dataset';
+import { createProject, editProjectDatasets, editProjectUsers } from '../../../../api/project';
+import { createTestUser } from '../../../../api/user';
+import { expect, test } from '../../../../fixtures';
+import { getTokenByRole } from '../../../../fixtures/auth';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -88,7 +88,7 @@ test.describe.serial('Dataset Upload Process', () => {
 
       testPage = await browser.newPage();
       await testPage.goto(`/auth/iucas?ticket=${roleUser.username}`);
-      await testPage.goto('/datasetUpload/new');
+      await testPage.goto('/datasets/uploads/new');
 
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
       await selectFiles({ page: testPage, filePaths, fileSelectTestId: 'upload-file-select' });

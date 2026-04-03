@@ -55,7 +55,8 @@ apply_stack_port_rewrites \
   "${MONGO_PORT}" \
   "${DOCS_PORT}" \
   "${JUPYTER_PORT}" \
-  "${GRAFANA_PORT}"
+  "${GRAFANA_PORT}" \
+  "${SECURE_DOWNLOAD_PORT}"
 
 if $FRESH; then
   info "--fresh: resetting E2E Docker environment before startup..."

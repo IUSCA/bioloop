@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { gotoWithRetry } = require('../../../../actions/navigation');
 const { getAppViews, getUnauthorizedViewsForRole } = require('../../../../utils/routes');
 const {
   inferRoleFromProjectName,
@@ -6,6 +7,11 @@ const {
 } = require('../../../../utils/sidebar');
 
 test.describe('sidebar (admin/operator roles)', () => {
+  test('root route redirects non-user role to dashboard', async ({ page }) => {
+    await page.goto('/');
+    await expect(page).toHaveURL(/\/dashboard$/);
+  });
+
   test('shows expected sidebar visibility for non-user role', async ({ page }, testInfo) => {
     const role = inferRoleFromProjectName(testInfo.project.name);
     const expectations = getSidebarExpectationsForRole(role);
@@ -20,14 +26,14 @@ test.describe('sidebar (admin/operator roles)', () => {
   });
 
   test('can visit each visible sidebar route and see basic page UI', async ({ page }, testInfo) => {
+    test.setTimeout(120000);
     const role = inferRoleFromProjectName(testInfo.project.name);
     const expectations = getSidebarExpectationsForRole(role);
     const appViews = await getAppViews(page);
     const titleByRoute = new Map(appViews.map((view) => [view.routePath, view.title]));
 
     for (const routePath of expectations.navigableRoutes) {
-      await page.goto(routePath);
-      await page.waitForLoadState('domcontentloaded');
+      await gotoWithRetry(page, routePath);
       await expect(page.getByTestId('role-authorization-alert')).not.toBeVisible();
       await expect(page).toHaveURL(new RegExp(`^.*${routePath.replace(/\//g, '\\/')}`));
       const expectedTitle = titleByRoute.get(routePath);
@@ -45,8 +51,7 @@ test.describe('sidebar (admin/operator roles)', () => {
 
     for (const view of unauthorizedViews) {
       const routePath = `${view.concretePath}?from=sidebar_unauthorized`;
-      await page.goto(routePath);
-      await page.waitForLoadState('domcontentloaded');
+      await gotoWithRetry(page, routePath);
       const currentPath = new URL(page.url()).pathname;
       expect(currentPath).toBe(originalPath);
     }

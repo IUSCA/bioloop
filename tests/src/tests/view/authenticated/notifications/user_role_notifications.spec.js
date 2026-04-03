@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
-const config = require('config');
 const { randomUUID } = require('node:crypto');
+const { buildFeatureEnabledRolesFromEnv } = require('../../../../utils/feature');
 const { get } = require('../../../../api');
 const {
   createDirectNotification,
@@ -17,7 +17,7 @@ const {
   waitForNotificationMenuListIdle,
 } = require('./helpers');
 
-const featureEnabled = config.enabledFeatures.notifications.enabledForRoles.includes('user');
+const featureEnabled = buildFeatureEnabledRolesFromEnv().notifications.includes('user');
 
 test.describe('Notifications', () => {
   test.describe.configure({ timeout: 180000 });
