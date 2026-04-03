@@ -444,6 +444,23 @@ async function listMyGrants({
   });
 }
 
+/**
+ * Count the number of grants for a resource (dataset or collection) with optional filtering by active status
+ * @param {Object} params
+ * @param {string} params.resource_id - UUID of the dataset or collection
+ * @param {boolean} [params.active] - If true, only count active grants; if false, only count inactive grants; if omitted, count all grants; default is true (only count active grants)
+ * @returns {Promise<number>} Count of grants matching the criteria
+ */
+function countGrantsForResource({ resource_id, is_active = true }) {
+  const where = {
+    resource_id,
+  };
+  Object.assign(where, getPrismaGrantValidityFilter(is_active)); // only count active grants
+  return prisma.grant.count({
+    where,
+  });
+}
+
 module.exports = {
   getGrantById,
   listGrantsForSubject,
@@ -456,4 +473,5 @@ module.exports = {
   listExpiringGrantsForAdmin,
   getPrismaGrantValidityFilter,
   listMyGrants,
+  countGrantsForResource,
 };

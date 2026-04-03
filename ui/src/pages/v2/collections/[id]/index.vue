@@ -257,11 +257,8 @@ async function fetchGrantsCount() {
   }
 
   try {
-    const { data } = await GrantService.listGrantsForCollection(props.id, {
-      active: true,
-      limit: 0,
-    });
-    counts.value.grants = data.metadata?.total ?? null;
+    const { data } = await GrantService.countGrantsForCollection(props.id);
+    counts.value.grants = data?.count ?? null;
   } catch {
     counts.value.grants = null;
   }

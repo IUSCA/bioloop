@@ -12,6 +12,10 @@ function listGrantsForResource(resource_type, resource_id, params = {}) {
   });
 }
 
+function countGrantsForResource(resource_type, resource_id) {
+  return api.get(`/grants/resource/${resource_type}/${resource_id}/count`);
+}
+
 export default {
   listGrantsForSubject,
   listGrantsForResource,
@@ -36,6 +40,9 @@ export default {
   },
   listGrantsForUser(subject_id, params = {}) {
     return listGrantsForSubject("USER", subject_id, params);
+  },
+  countGrantsForCollection(resource_id) {
+    return countGrantsForResource("COLLECTION", resource_id);
   },
 
   /**

@@ -317,6 +317,34 @@ router.get(
   }),
 );
 
+// count grants for a resource
+router.get(
+  '/resource/:resource_type/:resource_id/count',
+  validate([
+    param('resource_type').isIn(['DATASET', 'COLLECTION']),
+    param('resource_id').isUUID(),
+  ]),
+  authorize('grant', 'list_for_resource', {
+    resourceIdFn: (req) => req.params.resource_id,
+    preFetchedResourceFn: (req) => ({
+      resource_id: req.params.resource_id,
+      resource_type: req.params.resource_type,
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Count grants for a resource'
+
+    const { resource_id } = req.params;
+
+    const count = await grantService.countGrantsForResource({
+      resource_id,
+    });
+
+    res.json({ count });
+  }),
+);
+
 // list expiring grants - scoped by caller's authority
 router.get(
   '/expiring-soon',
