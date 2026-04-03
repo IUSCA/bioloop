@@ -92,4 +92,26 @@ export default {
   computeEffectiveGrants(data) {
     return api.post("/grants/compute-effective-grants", data);
   },
+
+  /**
+   * Get all grants for a specific subject on a specific resource (expanded detail).
+   * Maps to GET /grants/:subject_type/:subject_id/:resource_type/:resource_id
+   * @param {'USER'|'GROUP'} subject_type
+   * @param {string} subject_id
+   * @param {'DATASET'|'COLLECTION'} resource_type
+   * @param {string} resource_id
+   * @param {{ is_active?: boolean }} [params]
+   */
+  getGrantsForSubject(
+    subject_type,
+    subject_id,
+    resource_type,
+    resource_id,
+    params = {},
+  ) {
+    return api.get(
+      `/grants/${subject_type}/${subject_id}/${resource_type}/${resource_id}`,
+      { params },
+    );
+  },
 };

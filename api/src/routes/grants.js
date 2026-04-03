@@ -255,7 +255,7 @@ router.post(
   }),
 );
 
-// List grants for a subject - admins
+// List grants for a subject
 router.get(
   '/subject/:subject_type/:subject_id',
   validate([
@@ -424,6 +424,39 @@ router.get(
   }),
 );
 
-// list my expiring grants
+// Get grants for a specific subject-resource pair
+router.get(
+  '/:subject_type/:subject_id/:resource_type/:resource_id',
+  validate([
+    param('subject_type').isIn(['USER', 'GROUP']),
+    param('subject_id').isUUID(),
+    param('resource_type').isIn(Object.values(RESOURCE_TYPE)),
+    param('resource_id').isUUID(),
+    query('is_active').optional().isBoolean().toBoolean(),
+  ]),
+  authorize('grant', 'list_for_resource', {
+    resourceIdFn: (req) => req.params.resource_id,
+    preFetchedResourceFn: (req) => ({
+      resource_id: req.params.resource_id,
+      resource_type: req.params.resource_type,
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Get all grants for a subject on a resource'
+
+    const { subject_id, resource_id } = req.params;
+    const { is_active } = req.query;
+
+    const grants = await grantService.getGrantsForSubjectAndResource({
+      subject_id,
+      resource_id,
+      active: is_active,
+    });
+
+    const filteredGrants = grants.map((g) => req.permission.filter(g));
+    res.json(filteredGrants);
+  }),
+);
 
 module.exports = router;

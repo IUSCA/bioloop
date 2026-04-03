@@ -15,9 +15,7 @@ const user_attributes = [
 ];
 
 const grant_attributes = [
-  'id', 'subject_id', 'resource_id', 'access_type_id', 'access_type',
-  'valid_from', 'valid_until', 'created_at', 'granted_by', 'justification', 'revoked_at', 'creation_type',
-  'revoked_by', 'revocation_reason',
+  '*',
 ]
   .concat( // include resource attributes with 'resource.' prefix
     collection_attributes.map((attr) => `resource.collection.${attr}`),

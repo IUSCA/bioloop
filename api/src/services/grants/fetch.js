@@ -6,6 +6,7 @@ const {
 
 const prisma = require('@/db');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const Expiry = require('@/utils/expiry');
 
 const GRANT_INCLUDES = {
   resource: {
@@ -23,7 +24,32 @@ const GRANT_INCLUDES = {
   access_type: true,
   grantor: true,
   revoker: true,
+  issuing_authority: { select: { id: true, name: true } },
+  revoking_authority: { select: { id: true, name: true } },
+  source_preset: { select: { id: true, name: true } },
+  source_access_request: {
+    select: {
+      id: true,
+      purpose: true,
+      reviewed_at: true,
+      decision_reason: true,
+      requester: { select: { name: true, email: true } },
+    },
+  },
 };
+
+/**
+ * Post-processes an array of grants from a raw SQL result to add the Expiry
+ * computed field (mirrors the db.js Prisma client extension for ORM queries).
+ * @param {Array} grants
+ * @returns {Array}
+ */
+function addExpiryToGrants(grants) {
+  return grants.map((g) => ({
+    ...g,
+    expiry: Expiry.fromValue(g.valid_until).toJSON(),
+  }));
+}
 
 /**
  * Get a grant by ID
@@ -120,6 +146,8 @@ async function listGrantsForSubjectGrouped({
         'id', g.id,
         'access_type_id', g.access_type_id,
         'access_type_name', gat.name,
+        'creation_type', g.creation_type,
+        'source_preset_id', g.source_preset_id,
         'valid_from', g.valid_from,
         'valid_until', g.valid_until,
         'revoked_at', g.revoked_at
@@ -148,7 +176,7 @@ async function listGrantsForSubjectGrouped({
     const resource = resourcesById.get(row.resource_id);
     return {
       resource,
-      grants: row.grants,
+      grants: addExpiryToGrants(row.grants),
     };
   });
   return grantsGrouped;
@@ -255,6 +283,8 @@ async function listGrantsForResourceGrouped({
       json_agg(json_build_object(
         'id', g.id,
         'access_type_id', g.access_type_id,
+        'creation_type', g.creation_type,
+        'source_preset_id', g.source_preset_id,
         'valid_from', g.valid_from,
         'valid_until', g.valid_until,
         'revoked_at', g.revoked_at
@@ -285,7 +315,7 @@ async function listGrantsForResourceGrouped({
     const subject = subjectsById.get(row.subject_id);
     return {
       subject,
-      grants: row.grants,
+      grants: addExpiryToGrants(row.grants),
     };
   });
   return grantsGrouped;
@@ -512,6 +542,34 @@ function countGrantsForResource({ resource_id, is_active = true }) {
   });
 }
 
+/**
+ * Get all grants for a specific subject-resource pair
+ * @param {Object} params
+ * @param {string} params.subject_id - UUID of the subject (user or group)
+ * @param {string} params.resource_id - UUID of the resource (dataset or collection)
+ * @param {boolean} [params.active] - If true, only return active grants; if false, only return inactive grants; if omitted, return all grants
+ * @returns {Promise<Array>} Array of grants for the subject-resource pair
+ */
+async function getGrantsForSubjectAndResource({
+  subject_id,
+  resource_id,
+  active,
+}) {
+  const where = {
+    subject_id,
+    resource_id,
+  };
+  Object.assign(where, getPrismaGrantValidityFilter(active));
+
+  return prisma.grant.findMany({
+    where,
+    include: GRANT_INCLUDES,
+    orderBy: {
+      created_at: 'asc',
+    },
+  });
+}
+
 module.exports = {
   getGrantById,
   listGrantsForSubject,
@@ -525,4 +583,5 @@ module.exports = {
   getPrismaGrantValidityFilter,
   listMyGrants,
   countGrantsForResource,
+  getGrantsForSubjectAndResource,
 };
