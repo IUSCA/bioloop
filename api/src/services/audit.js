@@ -33,6 +33,10 @@ async function getAuditRecords({
   // Build where clause
   const where = {};
 
+  // if end_date is not provided, default to current date to prevent postgres from searching partitions with future dates
+  const effectiveEndDate = end_date || new Date().toISOString();
+  where.timestamp = { lte: new Date(effectiveEndDate) };
+
   // Event type filter (comma-separated list)
   if (filter.event_type) {
     const eventTypes = filter.event_type.split(',').map((t) => t.trim());
@@ -75,14 +79,8 @@ async function getAuditRecords({
   }
 
   // Date range filter
-  if (start_date || end_date) {
-    where.timestamp = {};
-    if (start_date) {
-      where.timestamp.gte = new Date(start_date);
-    }
-    if (end_date) {
-      where.timestamp.lte = new Date(end_date);
-    }
+  if (start_date) {
+    where.timestamp.gte = new Date(start_date);
   }
 
   // Build order by clause

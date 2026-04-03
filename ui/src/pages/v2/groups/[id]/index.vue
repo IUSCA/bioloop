@@ -90,7 +90,9 @@
             </span>
           </VaTab>
 
-          <VaTab v-if="showAuditLogs" name="audit-log">Audit Log</VaTab>
+          <VaTab v-if="can('view_audit_logs')" name="audit-log">
+            Audit Log
+          </VaTab>
         </template>
       </VaTabs>
 
@@ -138,18 +140,10 @@
           @count-changed="handleCollectionsUpdate"
         />
 
-        <VaCard v-else-if="activeTab === 'audit-log'">
-          <VaCardContent>
-            <div class="flex flex-col items-center py-10 gap-2 text-center">
-              <i-mdi-history
-                class="text-4xl text-gray-300 dark:text-gray-600"
-              />
-              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Audit log coming soon.
-              </p>
-            </div>
-          </VaCardContent>
-        </VaCard>
+        <GroupAuditTab
+          v-else-if="activeTab === 'audit-log'"
+          :group-id="props.id"
+        />
       </div>
 
       <!-- Archive confirm modal -->
@@ -210,7 +204,6 @@ function can(action) {
 
 const showMembers = computed(() => can("view_members"));
 const showDescendants = computed(() => can("view_descendants"));
-const showAuditLogs = computed(() => can("view_audit_logs"));
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

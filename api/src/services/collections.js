@@ -8,9 +8,8 @@ const { generate_slug } = require('@/utils/slug');
 const audit = require('@/authorization/builtin/audit');
 
 const {
-  AUTH_EVENT_TYPE, TARGET_TYPE, SUBJECT_TYPE, AuditBuilder,
+  AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder,
 } = audit;
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const grantService = require('@/services/grants');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const { RESOURCE_SCOPES } = require('./resources');
@@ -294,24 +293,13 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     // Create audit records for each added dataset
     if (createdRecords.length > 0) {
       const builder = new AuditBuilder(tx, { actor_id });
-      await builder
-        .setTarget(TARGET_TYPE.COLLECTION, collection_id)
-        .resolveTargetName();
-
-      // Resolve subject names in batch
-      const datasetNames = new Map();
-      for (const record of createdRecords) {
-        const datasetName = await resolveEntityName(tx, 'dataset', record.dataset_id);
-        datasetNames.set(record.dataset_id, datasetName);
-      }
+      builder.setTarget(TARGET_TYPE.COLLECTION, collection_id);
 
       await builder.createBatch(
         tx,
         AUTH_EVENT_TYPE.COLLECTION_DATASET_ADDED,
         createdRecords.map(({ dataset_id }) => ({
-          subject_id: dataset_id,
-          subject_type: SUBJECT_TYPE.DATASET,
-          subject_name: datasetNames.get(dataset_id),
+          resource_id: dataset_id,
           metadata: { dataset_id },
         })),
       );
@@ -357,24 +345,13 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     // Create audit records for each removed dataset
     if (removedRecords.length > 0) {
       const builder = new AuditBuilder(tx, { actor_id });
-      await builder
-        .setTarget(TARGET_TYPE.COLLECTION, collection_id)
-        .resolveTargetName();
-
-      // Resolve subject names in batch
-      const datasetNames = new Map();
-      for (const record of removedRecords) {
-        const datasetName = await resolveEntityName(tx, 'dataset', record.dataset_id);
-        datasetNames.set(record.dataset_id, datasetName);
-      }
+      builder.setTarget(TARGET_TYPE.COLLECTION, collection_id);
 
       await builder.createBatch(
         tx,
         AUTH_EVENT_TYPE.COLLECTION_DATASET_REMOVED,
         removedRecords.map(({ dataset_id }) => ({
-          subject_id: dataset_id,
-          subject_type: SUBJECT_TYPE.DATASET,
-          subject_name: datasetNames.get(dataset_id),
+          resource_id: dataset_id,
           metadata: { dataset_id },
         })),
       );

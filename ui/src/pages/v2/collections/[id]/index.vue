@@ -99,7 +99,9 @@
               </span>
             </span>
           </VaTab>
-          <VaTab name="audit-log" v-if="can('list_grants')">Audit Log</VaTab>
+          <VaTab name="audit-log" v-if="can('view_audit_logs')">
+            Audit Log
+          </VaTab>
         </template>
       </VaTabs>
 

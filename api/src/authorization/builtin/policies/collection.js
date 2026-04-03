@@ -96,6 +96,7 @@ collectionPolicies
     list_grants: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
     manage_grants: Policy.or([isPlatformAdmin, isCollectionAdmin]),
     review_requests: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+    view_audit_logs: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
   })
   .roles([
     { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },

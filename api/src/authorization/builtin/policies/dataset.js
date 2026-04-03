@@ -99,7 +99,7 @@ const datasetPolicies = new PolicyContainer({
 const PUBLIC_ATTRIBUTES = Object.freeze([
   'id', 'name', 'type', 'description', 'size', 'bundle_size',
   'is_deleted',
-  'created_at', 'updated_at', 'owner_group_id',
+  'created_at', 'updated_at', 'owner_group_id', 'resource_id',
   // metadata is excluded unless a more specific rule is known, ex: metadata.type
   // num_directories, num_files, is_staged are excluded as internal accounting details that are not relevant to all users
   // src_instrument_id needs a valid reason to be exposed, so excluded by default

@@ -95,6 +95,7 @@ groupPolicies
     list: Policy.always, // database query will contains filters based on user's access, so no policy needed here
     view_hierarchy: isPlatformAdmin,
     list_invalid: isPlatformAdmin,
+    view_audit_logs: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
 
     view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
     view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
