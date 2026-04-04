@@ -255,6 +255,40 @@ router.post(
   }),
 );
 
+// Revoke all active grants for a subject on a resource
+router.post(
+  '/:subject_type/:subject_id/:resource_type/:resource_id/revoke-all',
+  validate([
+    param('subject_type').isIn(Object.values(SUBJECT_TYPE)),
+    param('subject_id').isUUID(),
+    param('resource_type').isIn(Object.values(RESOURCE_TYPE)),
+    param('resource_id').isUUID(),
+    body('reason').optional().isString(),
+  ]),
+  authorize('grant', 'revoke', {
+    resourceIdFn: (req) => req.params.resource_id,
+    preFetchedResourceFn: (req) => ({
+      resource_id: req.params.resource_id,
+      resource_type: req.params.resource_type,
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Revoke all active grants for a subject on a resource'
+
+    const { subject_id, resource_id } = req.params;
+    const { reason } = req.body;
+
+    const revokedGrants = await grantService.revokeAllGrants(
+      subject_id,
+      resource_id,
+      { actor_id: req.user.subject_id, reason },
+    );
+
+    res.status(200).json({ revoked: revokedGrants.length });
+  }),
+);
+
 // List grants for a subject
 router.get(
   '/subject/:subject_type/:subject_id',

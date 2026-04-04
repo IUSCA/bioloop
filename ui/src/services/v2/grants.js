@@ -71,6 +71,21 @@ export default {
     return api.post(`/grants/${id}/revoke`, { reason });
   },
 
+  /**
+   * Revoke all active grants for a subject on a resource in a single transaction.
+   * @param {'USER'|'GROUP'} subject_type
+   * @param {string} subject_id
+   * @param {'DATASET'|'COLLECTION'} resource_type
+   * @param {string} resource_id
+   * @param {string} [reason]
+   */
+  revokeAll(subject_type, subject_id, resource_type, resource_id, reason) {
+    return api.post(
+      `/grants/${subject_type}/${subject_id}/${resource_type}/${resource_id}/revoke-all`,
+      { reason },
+    );
+  },
+
   /** List available access types (lookup table). */
   listAccessTypes(resourceType) {
     return api.get("/grants/access-types", {

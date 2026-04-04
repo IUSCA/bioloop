@@ -44,9 +44,32 @@
           :access-type-map="props.accessTypeMap"
           :can-revoke="props.canRevoke"
           :can-navigate-to-request="true"
-          @revoke="emit('revoke', $event)"
+          @revoke="emit('revoke', { grant: $event, subject: props.subject })"
           @navigate-to-request="emit('navigate-to-request', $event)"
         />
+
+        <!-- Revoke All -->
+        <div
+          v-if="props.canRevoke && activeExpandedGrants.length > 1"
+          class="flex justify-end pt-1"
+        >
+          <va-button
+            color="danger"
+            preset="plain"
+            size="small"
+            icon="remove_circle_outline"
+            @click="
+              emit('revoke-all', {
+                grants: activeExpandedGrants,
+                subject: props.subject,
+                resourceType: props.resourceType,
+                resourceId: props.resourceId,
+              })
+            "
+          >
+            Revoke All
+          </va-button>
+        </div>
       </template>
     </div>
   </ModernCollapsible>
@@ -92,7 +115,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["revoke", "navigate-to-request"]);
+const emit = defineEmits(["revoke", "revoke-all", "navigate-to-request"]);
 
 // ── Internal state ──────────────────────────────────────────────────────────
 
@@ -103,11 +126,16 @@ const expandedError = ref(null);
 
 // ── Expanded grants (sorted: active first, revoked last) ─────────────────────
 
+const activeExpandedGrants = computed(() =>
+  expandedGrants.value
+    ? expandedGrants.value.filter((g) => g.revoked_at === null)
+    : [],
+);
+
 const sortedExpandedGrants = computed(() => {
   if (!expandedGrants.value) return [];
-  const active = expandedGrants.value.filter((g) => g.revoked_at === null);
   const revoked = expandedGrants.value.filter((g) => g.revoked_at !== null);
-  return [...active, ...revoked];
+  return [...activeExpandedGrants.value, ...revoked];
 });
 
 // ── Data fetching ─────────────────────────────────────────────────────────────

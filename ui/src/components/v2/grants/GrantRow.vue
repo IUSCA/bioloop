@@ -87,7 +87,7 @@
       v-if="props.canRevoke && props.grant.revoked_at === null"
       type="button"
       class="mt-1 self-start text-xs px-3 py-1.5 rounded-md border border-solid text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-      @click.stop="emit('revoke', props.grant.id)"
+      @click.stop="emit('revoke', props.grant)"
     >
       Revoke
     </button>

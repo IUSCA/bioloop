@@ -115,6 +115,7 @@
                   :resource-id="props.collection.id"
                   :can-revoke="canRevoke"
                   @revoke="onRevokeGrant"
+                  @revoke-all="onRevokeAllGrants"
                 />
               </div>
             </div>
@@ -140,11 +141,24 @@
     @update="onGrantCreated"
     :resource="collectionResource"
   />
+
+  <RevokeGrantModal
+    ref="revokeGrantModal"
+    :access-type-map="accessTypeMap"
+    @update="fetchGrants"
+  />
+
+  <RevokeAllGrantsModal
+    ref="revokeAllGrantsModal"
+    :access-type-map="accessTypeMap"
+    @update="fetchGrants"
+  />
 </template>
 
 <script setup>
 import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
-import toast from "@/services/toast";
+import RevokeAllGrantsModal from "@/components/v2/grants/RevokeAllGrantsModal.vue";
+import RevokeGrantModal from "@/components/v2/grants/RevokeGrantModal.vue";
 import GrantService from "@/services/v2/grants";
 
 const props = defineProps({
@@ -194,6 +208,8 @@ const subjectTypeOptions = [
 ];
 
 const issueGrantModal = ref(null);
+const revokeGrantModal = ref(null);
+const revokeAllGrantsModal = ref(null);
 
 // Pagination: detect if there's a next page by checking if we got fewer results than requested
 const hasNextPage = computed(
@@ -248,15 +264,28 @@ async function fetchGrants() {
   }
 }
 
-async function onRevokeGrant(grant) {
-  try {
-    await GrantService.revoke(grant.id);
-    toast.success("Grant revoked.");
-    fetchGrants();
-  } catch (err) {
-    console.error("Failed to revoke grant:", err);
-    toast.error(err?.response?.data?.message ?? "Failed to revoke grant.");
-  }
+// async function onRevokeGrant(grant) {
+//   try {
+//     await GrantService.revoke(grant.id);
+//     toast.success("Grant revoked.");
+//     fetchGrants();
+//   } catch (err) {
+//     console.error("Failed to revoke grant:", err);
+//     toast.error(err?.response?.data?.message ?? "Failed to revoke grant.");
+//   }
+// }
+
+function onRevokeGrant({ grant, subject }) {
+  revokeGrantModal.value?.show({ grant, subject });
+}
+
+function onRevokeAllGrants({ grants, subject, resourceType, resourceId }) {
+  revokeAllGrantsModal.value?.show({
+    grants,
+    subject,
+    resourceType,
+    resourceId,
+  });
 }
 
 function openIssueGrantModal() {
