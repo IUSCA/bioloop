@@ -40,6 +40,10 @@ This document defines coding standards for the Bioloop UI project. These standar
 - Use the `dark:` prefix to specify dark mode colors.
 - Choose colors that maintain good contrast and readability in both light and dark modes.
 
+### Tailwind truncate utility
+- Use the `truncate` utility for one-line text overflow. It already includes `overflow-hidden`, `whitespace-nowrap`, and `text-overflow: ellipsis`.
+- Avoid repeating `overflow-hidden whitespace-nowrap` when `truncate` is already present.
+
 **Examples:**
 ```vue
 <!-- ✅ GOOD: Light and dark colors -->

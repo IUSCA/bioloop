@@ -57,6 +57,12 @@ const exports = {
         test_id: "sidebar-v2-collections",
       },
       {
+        icon: `${icons.dataset}-outline`,
+        title: "Datasets",
+        path: "/v2/datasets",
+        test_id: "sidebar-v2-datasets",
+      },
+      {
         icon: `${icons.access_request}-outline`,
         title: "Access Requests",
         path: "/v2/access-requests",

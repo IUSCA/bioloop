@@ -1,17 +1,17 @@
 const express = require('express');
 const {
-  // param,
+  param,
   query,
-  // body,
+  body,
   // checkSchema,
 } = require('express-validator');
-// const createError = require('http-errors');
+const createError = require('http-errors');
 const config = require('config');
 const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
@@ -89,6 +89,86 @@ router.get(
   }),
 );
 
+// ── Get by ID ────────────────────────────────────────────────────────────────
+
+router.get(
+  '/:id',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('dataset', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get a dataset by ID'
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) {
+      return res.status(404).json({ message: 'Dataset not found' });
+    }
+    res.json({
+      ...req.permission.filter(dataset),
+      _meta: {
+        caller_role: req.permission.callerRole,
+        capabilities: toCapabilitiesArray(req.permission.capabilities),
+      },
+    });
+  }),
+);
+
+// ── Create ───────────────────────────────────────────────────────────────────
+
+// router.post(
+//   '/',
+//   ...
+// );
+
+// ── Patch (metadata) ─────────────────────────────────────────────────────────
+
+router.patch(
+  '/:id',
+  validate([
+    param('id').isUUID(),
+    body('name').optional().isString().notEmpty(),
+    body('description').optional().isString(),
+  ]),
+  authorize('dataset', 'edit_metadata'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Update dataset metadata (name, description)'
+
+    // Fetch dataset to get integer id and verify it exists
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) {
+      return next(createError(404, 'Dataset not found'));
+    }
+
+    // Perform update with integer id
+    const updated = await datasetService.patchDataset(dataset.id, req.body);
+    res.json(req.permission.filter(updated));
+  }),
+);
+
+// ── Archive ──────────────────────────────────────────────────────────────────
+
+router.post(
+  '/:id/archive',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('dataset', 'archive'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Archive (soft-delete) a dataset'
+
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) {
+      return next(createError(404, 'Dataset not found'));
+    }
+
+    await datasetService.softDelete(dataset.id, req.user.id);
+    res.sendStatus(204);
+  }),
+);
+
 // ── Create ───────────────────────────────────────────────────────────────────
 
 // // ── Patch ────────────────────────────────────────────────────────────────────
@@ -149,16 +229,14 @@ router.get(
 
 // // ── Sub-routers ──────────────────────────────────────────────────────────────
 
-// router.use(
-//   '/:dataset_id/files',
-//   validate([param('dataset_id').isInt().toInt()]),
-//   require('./files'),
-// );
+router.use(
+  '/:dataset_id/files',
+  require('./files'),
+);
 
-// router.use(
-//   '/:dataset_id/workflows',
-//   validate([param('dataset_id').isInt().toInt()]),
-//   require('./workflows'),
-// );
+router.use(
+  '/:dataset_id/workflows',
+  require('./workflows'),
+);
 
 module.exports = router;
