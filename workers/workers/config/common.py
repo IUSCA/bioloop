@@ -50,7 +50,7 @@ config = {
             'qc': '/path/to/qc'
         },
         'DATA_PRODUCT': {
-            'upload': '/path/to/uploads/data_product',
+            'upload': '/path/to/uploads/data_products',
             'archive': f'development/{YEAR}/data_products',
             'stage': '/path/to/staged/data_products',
             'bundle': {

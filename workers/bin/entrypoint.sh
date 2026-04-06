@@ -59,6 +59,9 @@ elif [ $WORKER_TYPE == "purge_staged_datasets" ]; then
 elif [ $WORKER_TYPE == "purge_stale_workflows" ]; then
   echo "Starting Purge Stale Workflows Worker"
   python -m workers.scripts.purge_stale_workflows
+elif [ $WORKER_TYPE == "purge_stale_uploaded" ]; then
+  echo "Starting Purge Upload Staging Worker"
+  python -m workers.scripts.purge_stale_uploaded --ttl-days=14 --stale-uploading-days=14
 else
   echo "ERROR: Invalid WORKER_TYPE='${WORKER_TYPE}'"
   exit 1

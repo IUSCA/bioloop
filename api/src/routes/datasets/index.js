@@ -17,6 +17,7 @@ const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
 const datasetService = require('@/services/dataset');
 const authService = require('@/services/auth');
+const wfService = require('@/services/workflow');
 const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 
@@ -165,6 +166,197 @@ router.post(
       data: req.body,
     });
     res.sendStatus(200);
+  }),
+);
+
+async function enrichImportLogsWithWorkflows(importLogs) {
+  return Promise.all(
+    importLogs.map(async (log) => {
+      const { dataset } = log;
+      if (dataset.workflows && dataset.workflows.length > 0) {
+        try {
+          const workflow_ids = dataset.workflows.map((workflow) => workflow.id);
+          const wf_res = await wfService.getAll({ workflow_ids });
+          dataset.workflows = wf_res.data.results || [];
+        } catch (error) {
+          logger.warn(`Failed to fetch workflow details for dataset ${dataset.id}: ${error.message}`);
+          dataset.workflows = [];
+        }
+      }
+      return log;
+    }),
+  );
+}
+
+router.get(
+  '/imports',
+  validate([
+    query('dataset_name').optional().trim().isLength({ min: 1 }),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+  ]),
+  isPermittedTo('read'),
+  asyncHandler(async (req, res) => {
+    const {
+      dataset_name, offset, limit, sort_by = 'created_at', sort_order = 'desc',
+    } = req.query;
+
+    const whereClause = {};
+    if (dataset_name) {
+      whereClause.dataset = {
+        name: {
+          contains: dataset_name,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const orderBy = {
+      [sort_by]: sort_order,
+    };
+
+    const filterQuery = {
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
+      where: whereClause,
+      orderBy,
+    };
+
+    const [importLogs, count] = await prisma.$transaction([
+      prisma.dataset_import_log.findMany({
+        ...filterQuery,
+        include: {
+          dataset: {
+            include: {
+              source_datasets: {
+                include: {
+                  source_dataset: true,
+                },
+              },
+              workflows: {
+                select: {
+                  id: true,
+                },
+              },
+              audit_logs: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+                where: {
+                  action: 'create',
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.dataset_import_log.count({ where: whereClause }),
+    ]);
+
+    const enrichedImportLogs = await enrichImportLogsWithWorkflows(importLogs);
+
+    res.json({
+      imports: enrichedImportLogs,
+      metadata: { count },
+    });
+  }),
+);
+
+router.get(
+  '/:username/imports',
+  validate([
+    query('dataset_name').optional().trim().isLength({ min: 1 }),
+    query('limit').isInt({ min: 1 }).toInt().optional(),
+    query('offset').isInt({ min: 0 }).toInt().optional(),
+    param('username').trim().notEmpty(),
+  ]),
+  isPermittedTo('read', { checkOwnership: true }),
+  asyncHandler(async (req, res) => {
+    const {
+      dataset_name, offset, limit, sort_by = 'created_at', sort_order = 'desc',
+    } = req.query;
+
+    const whereClause = {
+      dataset: {
+        ...(dataset_name && {
+          name: {
+            contains: dataset_name,
+            mode: 'insensitive',
+          },
+        }),
+        audit_logs: {
+          some: {
+            action: 'create',
+            user: {
+              username: req.params.username,
+            },
+          },
+        },
+      },
+    };
+
+    const orderBy = {
+      [sort_by]: sort_order,
+    };
+
+    const filterQuery = {
+      skip: offset ?? Prisma.skip,
+      take: limit ?? Prisma.skip,
+      where: whereClause,
+      orderBy,
+    };
+
+    const [importLogs, count] = await prisma.$transaction([
+      prisma.dataset_import_log.findMany({
+        ...filterQuery,
+        include: {
+          dataset: {
+            include: {
+              source_datasets: {
+                include: {
+                  source_dataset: true,
+                },
+              },
+              workflows: {
+                select: {
+                  id: true,
+                },
+              },
+              audit_logs: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      username: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
+                where: {
+                  action: 'create',
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.dataset_import_log.count({ where: whereClause }),
+    ]);
+
+    const enrichedImportLogs = await enrichImportLogsWithWorkflows(importLogs);
+
+    res.json({
+      imports: enrichedImportLogs,
+      metadata: { count },
+    });
   }),
 );
 

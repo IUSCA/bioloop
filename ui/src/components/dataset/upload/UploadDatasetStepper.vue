@@ -686,6 +686,12 @@ const uploadProgress = ref(0);
 const filesUploaded = ref(0);
 const totalFiles = ref(0);
 const lastUploadProcessId = ref(null); // A TUS process_id from this batch — sent to /complete as audit reference only
+// Limit concurrent TUS uploads to avoid exhausting browser/network resources
+// when a directory contains many files.
+const MAX_CONCURRENT_TUS_UPLOADS = Math.max(
+  1,
+  parseInt(config.upload.max_concurrent_files, 10) || 4,
+);
 
 // Per-file failure tracking — populated after upload; each entry:
 // { name: string, relativePath: string, message: string }
@@ -1214,14 +1220,58 @@ const createOrUpdateUploadLog = (data) => {
 
 // TUS upload logic
 const uploadFilesWithTus = async (files, endpoint) => {
+  const safeStorageGet = (storage, key) => {
+    try {
+      return storage?.getItem?.(key) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const getTestSetting = (storageKey) =>
+    safeStorageGet(window?.localStorage, storageKey);
+  const normalizeToken = (rawToken) => {
+    if (!rawToken) {
+      return null;
+    }
+    let token = String(rawToken).trim();
+    if (!token) {
+      return null;
+    }
+    if (token.startsWith("Bearer ")) {
+      token = token.slice("Bearer ".length).trim();
+    }
+    // localStorage may contain a JSON-serialized string token: "\"eyJ...\""
+    if (
+      (token.startsWith('"') && token.endsWith('"')) ||
+      (token.startsWith("'") && token.endsWith("'"))
+    ) {
+      try {
+        const parsed = JSON.parse(token);
+        if (typeof parsed === "string") {
+          token = parsed.trim();
+        } else {
+          token = token.slice(1, -1).trim();
+        }
+      } catch {
+        token = token.slice(1, -1).trim();
+      }
+    }
+    return token || null;
+  };
+  const getAuthToken = () => {
+    // Upload auth: in-memory auth store token.
+    // This avoids stale-token behavior when browser storage is quota-constrained.
+    return normalizeToken(auth?.token);
+  };
+
   // Safety check: ensure upload log exists
   if (!datasetUploadLog.value || !datasetUploadLog.value.dataset) {
     console.error("Dataset upload log not initialized");
     throw new Error("Dataset upload log not initialized");
   }
 
-  // Get token directly from localStorage (more reliable than Pinia store in this context)
-  const userToken = localStorage.getItem("token");
+  // TUS uploads are long-lived, so onBeforeRequest re-reads auth token per request.
+  const userToken = getAuthToken();
   if (!userToken) {
     throw new Error("Authentication token not found");
   }
@@ -1229,23 +1279,27 @@ const uploadFilesWithTus = async (files, endpoint) => {
   let uploadedCount = 0;
   let totalBytes = 0;
   let uploadedBytes = 0;
+  const failureStatusHistogram = {};
+  const failureMessageHistogram = {};
+
+  const bumpCounter = (counter, key) => {
+    const normalizedKey = String(key ?? "unknown");
+    counter[normalizedKey] = (counter[normalizedKey] || 0) + 1;
+  };
 
   // Calculate total size
   files.forEach((file) => {
     totalBytes += file.size;
   });
 
-  // TEST ONLY: Check if we should simulate mid-upload failure
-  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload') to enable
-  // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times
-  const simulateFailure = localStorage.getItem("SIMULATE_UPLOAD_FAILURE");
-  const uploadPromises = files.map((file) => {
+  // TEST ONLY: Check if we should simulate mid-upload failure.
+  // Example: window.localStorage.setItem('SIMULATE_UPLOAD_FAILURE', 'mid-upload')
+  // Example: window.localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5')
+  const simulateFailure = getTestSetting("SIMULATE_UPLOAD_FAILURE");
+  const uploadSingleFileWithTus = (file) => {
     return new Promise((resolve, reject) => {
-      // TEST ONLY: Check for failure count configuration
-      // Set localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', '5') to fail 5 times (exhausts retries)
-      const simulateFailureCount = localStorage.getItem(
-        "SIMULATE_UPLOAD_FAILURE_COUNT",
-      );
+      // TEST ONLY: Check for failure count configuration.
+      const simulateFailureCount = getTestSetting("SIMULATE_UPLOAD_FAILURE_COUNT");
 
       let upload = null;
 
@@ -1255,13 +1309,32 @@ const uploadFilesWithTus = async (files, endpoint) => {
       // point the upload is considered permanently failed.
       upload = new tus.Upload(file, {
         endpoint,
+        // Do not persist per-file resume fingerprints in localStorage.
+        // Large upload sessions can exceed browser storage quota and abort
+        // uploads with QuotaExceededError before PATCH begins. 
+        // ** NOTE: **
+        // Setting storeFingerprintForResuming: false affects 
+        // *persistent* resume (the feature that survives page reload/browser 
+        // restart), because tus-js no longer stores fingerprint→upload URL 
+        // in localStorage.
+        storeFingerprintForResuming: false,
+        // Send each file as bounded PATCH chunks so upstream proxies with
+        // request-size limits (e.g. 100M) do not reject larger files with 413.
+        chunkSize: config.upload.tus_chunk_size_bytes,
         // Fibonacci-progression retry delays (~16 min of cumulative back-off).
-        // tus-js-client retries automatically on network errors; onError is called
-        // only once the final delay has elapsed without a successful reconnect.
+        // Start above 0 ms so a retried PATCH does not immediately race a lock
+        // held by the prior in-flight request on the same upload resource.
+        // tus-js-client retries automatically on retryable errors; onError is
+        // called only once all retries are exhausted.
         retryDelays: [
-          0, 1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
+          1000, 2000, 3000, 5000, 8000, 13000, 21000, 34000, 55000, 89000,
           144000, 233000, 377000,
         ],
+        // onShouldRetry: (err, retryAttempt, options) => {
+        //   // Optional hook for debugging into retry attempts.
+        //   // Preserve tus-js-client default retry behavior after logging.
+        // return tus.defaultOptions.onShouldRetry(err, retryAttempt, options);
+        // },
         metadata: {
           dataset_id: String(datasetUploadLog.value.dataset.id),
           filename: file.name,
@@ -1277,7 +1350,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
               : "",
         },
         headers: {
-          Authorization: `Bearer ${userToken}`,
           ...(simulateFailure
             ? {
                 "X-Simulate-Failure": simulateFailure,
@@ -1287,7 +1359,26 @@ const uploadFilesWithTus = async (files, endpoint) => {
               }
             : {}),
         },
+        onBeforeRequest: (req) => {
+          try {
+            // Read token at request time, so that long-lasting uploads keep 
+            // using unexpired JWTs.
+            const latestToken = getAuthToken();
+            if (latestToken && req?.setHeader) {
+              req.setHeader("Authorization", `Bearer ${latestToken}`);
+            }
+          } catch (hookErr) {
+            console.error("[TUS-CLIENT] onBeforeRequest hook error", {
+              file_name: file.name,
+              error: hookErr?.message,
+            });
+          }
+        },
         onError: (error) => {
+          const statusCode = error.originalResponse?.getStatus?.() ?? "unknown";
+          const statusText = error.originalResponse?.getBody?.() || error.message || "unknown";
+          bumpCounter(failureStatusHistogram, statusCode);
+          bumpCounter(failureMessageHistogram, statusText);
           console.error(`[TUS-CLIENT] Upload FAILED for ${file.name}:`, {
             error_message: error.message,
             error_type: error.constructor.name,
@@ -1331,12 +1422,28 @@ const uploadFilesWithTus = async (files, endpoint) => {
 
       upload.start();
     });
+  };
+
+  // Run uploads with a bounded pool instead of launching every file at once.
+  // This prevents browser-level socket/request exhaustion on large directories.
+  const workerCount = Math.min(MAX_CONCURRENT_TUS_UPLOADS, files.length);
+  const results = new Array(files.length);
+  let nextFileIndex = 0;
+
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextFileIndex < files.length) {
+      const fileIndex = nextFileIndex++;
+      const file = files[fileIndex];
+      try {
+        await uploadSingleFileWithTus(file);
+        results[fileIndex] = { status: "fulfilled" };
+      } catch (error) {
+        results[fileIndex] = { status: "rejected", reason: error };
+      }
+    }
   });
 
-  // allSettled lets every file run to success or exhausted-retries before we
-  // evaluate the outcome — we get the full failure list rather than stopping
-  // at the first rejection.
-  const results = await Promise.allSettled(uploadPromises);
+  await Promise.all(workers);
 
   const rejections = results
     .map((r, i) => ({ result: r, file: files[i] }))
@@ -1353,6 +1460,12 @@ const uploadFilesWithTus = async (files, endpoint) => {
       failed_count: rejections.length,
       uploaded_count: uploadedCount,
       failed_files: fileUploadErrors.value.map((e) => e.relativePath),
+    });
+    console.error("[TUS-CLIENT] Failure summary (status/message histogram):", {
+      status_histogram: failureStatusHistogram,
+      top_messages: Object.entries(failureMessageHistogram)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10),
     });
     return false;
   }

@@ -1305,6 +1305,14 @@ const buildDatasetCreateQuery = (data) => {
     ],
   };
 
+  if (create_method === CONSTANTS.DATASET_CREATE_METHODS.IMPORT) {
+    create_query.import_logs = {
+      create: [{
+        source_run: src_dataset_id ? String(src_dataset_id) : null,
+      }],
+    };
+  }
+
   return create_query;
 };
 

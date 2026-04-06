@@ -11,21 +11,64 @@ The Dataset Import feature lets authorized users browse configured filesystem
 paths, select a directory, and initiate a dataset import workflow through a
 guided stepper UI.
 
+The UI now has two import routes:
+
+- `/datasets/imports` - import history table
+- `/datasets/imports/new` - import stepper for creating a new import
+
 Import sources are the filesystem locations the UI is allowed to browse. They
-are stored in the database and managed by an administrator — the UI dynamically
+are stored in the database and managed by an administrator. The UI dynamically
 fetches the list of sources and presents them in a dropdown, so no application
-code or config changes are needed when a new source is added or an existing one
-is changed.
+code or static filesystem config changes are needed when a source is added or
+updated.
 
 ---
 
-## 2. Configuring Import Sources in Production
+## 2. Database
 
-### 2.1 Create `import_sources.json`
+Each Import Source lives in the `import_source` table. Fields of the table are described below.
+
+### Import Sources table
+
+#### Field reference
+
+| Field | Required | Description |
+|---|---|---|
+| `path` | **Yes** | Absolute path as shown in the UI.  Must be unique across all sources.  The API enforces this as an allowlist — only paths under a registered source can be browsed. |
+| `label` | No | Human-readable name shown in the UI dropdown.  Defaults to the path if omitted. |
+| `description` | No | Longer description of this source (not currently shown in the UI, reserved for future use). |
+| `sort_order` | No | Integer; lower values appear first in the dropdown.  Sources with no sort order sort after those with one, then alphabetically by label. |
+| `mounted_path` | No | The path at which this source is mounted **inside the API container**.  Only needed when the container mount point differs from `path`.  When omitted (or `null`), the API reads files directly from `path`.  See section 2.3 for examples of both cases. |
+
+### Import history table
+
+The Imports history page (`/datasets/imports`) is backed by the
+`dataset_import_log` table.
+
+Each import-log row references a dataset via `dataset_id` and stores
+import-specific metadata (for example, `source_run`, `notes`, and `metadata`).
+
+---
+
+## 3. Configuring Import Sources in Production
+
+### 3.1 Database-migrations
+
+When moving this feature to Production, a database-migration will need to be done, which will create the `import_source` table in the database.
+
+#### Run Prisma migrations for `import_source` table to be created.
+
+```
+npx prisma migrate deploy
+```
+
+💡 **Note:** Restart of the API will be needed after Prisma migration.
+
+### 3.2 Create `import_sources.json`
 
 In the `api/` directory, create a file named `import_sources.json` containing
-a JSON array of import source objects.  The file is read by the seed script and
-can be re-run at any time to add or update sources.
+a JSON array of import source objects. The file is read by the production init
+script and can be re-run at any time to add or update sources.
 
 ```json
 [
@@ -44,21 +87,12 @@ can be re-run at any time to add or update sources.
 ]
 ```
 
-#### Field reference
-
-| Field | Required | Description |
-|---|---|---|
-| `path` | **Yes** | Absolute path as shown in the UI.  Must be unique across all sources.  The API enforces this as an allowlist — only paths under a registered source can be browsed. |
-| `label` | No | Human-readable name shown in the UI dropdown.  Defaults to the path if omitted. |
-| `description` | No | Longer description of this source (not currently shown in the UI, reserved for future use). |
-| `sort_order` | No | Integer; lower values appear first in the dropdown.  Sources with no sort order sort after those with one, then alphabetically by label. |
-| `mounted_path` | No | The path at which this source is mounted **inside the API container**.  Only needed when the container mount point differs from `path`.  When omitted (or `null`), the API reads files directly from `path`.  See section 2.3 for examples of both cases. |
-
-### 2.2 Run the seed script
+### 3.3 Run the initialization script
 
 From the `api/` directory:
 
 ```bash
+# You can alternatively also run the `src/scripts/init_prod_data.js` script.
 node src/scripts/init_prod_import_sources.js
 ```
 
@@ -67,7 +101,9 @@ is safe.  Existing sources with matching `path` values will have their label,
 description, and sort order updated.  Sources not present in the file are left
 untouched.
 
-### 2.3 Make the paths accessible to the API container
+### 3.4 Make the paths accessible to the API container
+
+💡 **Note:** The application (at least the API container) will have to be restarted, if a volume is added as described below.
 
 The API container must be able to read the directories listed in
 `import_sources.json`.  In `docker-compose-prod.yml`, add a volume mount for
@@ -119,7 +155,7 @@ environment variables are required for this translation.
 
 ---
 
-## 3. Access Control
+## 4. Access Control
 
 The import feature is role-gated.  The roles that can access it are configured
 in `ui/src/config.js` under `enabledFeatures.import.enabledForRoles`.  Users
@@ -133,7 +169,7 @@ with `403 Forbidden`.
 
 ---
 
-## 4. How the File Typeahead Works
+## 5. How the File Typeahead Works
 
 When a user types in the Dataset Path field:
 

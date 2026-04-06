@@ -6,7 +6,7 @@
  * Configuration (api/config/default.json → upload.*)
  * ---------------------------------------------------
  *   upload.path               — filesystem directory where TUS stores in-progress
- *                               uploads.  Overridable via UPLOAD_HOST_DIR env var.
+ *                               uploads.
  *   upload.max_file_size_bytes — hard per-file size cap enforced by TUS before any
  *                               data is written.  Overridable via
  *                               UPLOAD_MAX_FILE_SIZE_BYTES env var.
@@ -59,6 +59,7 @@ const prisma = require('@/db');
 const CONSTANTS = require('@/constants');
 const datasetService = require('@/services/dataset');
 const { readTusFileInfo, moveTusFileToDestination } = require('./tusUtils');
+const { relocateSidecarForUpload } = require('./sidecarUtils');
 
 // TestableFileStore is only loaded in non-production environments.
 // In production a plain FileStore is used — no simulation code is loaded or
@@ -84,13 +85,35 @@ function tusError(statusCode, body) {
   return Object.assign(new Error(body), { status_code: statusCode, body });
 }
 
+function isLockAcquiredError(err) {
+  const msg = String(err?.message || err?.body || '').toLowerCase();
+  return msg.includes('lock acquired');
+}
+
+/**
+ * Convert a host-visible dataset origin path to the equivalent container path
+ * used by this API process for local filesystem writes.
+ */
+function resolveWritableOriginPath(originPath, uploadHostPath, uploadPath) {
+  if (!uploadHostPath) return originPath;
+
+  const rel = path.relative(uploadHostPath, originPath);
+  const isInsideHostBase = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+
+  if (!isInsideHostBase) return originPath;
+  if (!rel) return uploadPath;
+  return path.join(uploadPath, rel);
+}
+
 class UploadService {
   constructor() {
     const uploadPath = config.get('upload.path');
+    const uploadHostPath = config.get('upload.host_path');
     const maxFileSizeBytes = config.get('upload.max_file_size_bytes');
 
     logger.info('Initializing TUS UploadService', {
       uploadPath,
+      uploadHostPath,
       maxFileSizeBytes,
       expiryMs: UPLOAD_EXPIRY_MS,
     });
@@ -174,22 +197,25 @@ class UploadService {
           }
         }
 
-        logger.info('[TUS] onUploadCreate: authorized', {
-          dataset_id: datasetId,
-          user: req.user?.username,
-          privileged: isPrivileged,
-        });
-
         return res;
       },
 
       /**
        * Fires once TUS has received all bytes for a single file upload.
        *
-       * Moves the staged TUS file to its final location under the dataset's
-       * origin_path.  The UI sends all routing metadata (selection_mode,
-       * relative_path, directory_name) as TUS upload metadata on the initial
-       * POST /uploads/files request, so everything needed is available here.
+       * TUS stores two staging artifacts per upload ID:
+       *   1) payload file:  <upload.path>/<process_id>
+       *   2) sidecar JSON:  <upload.path>/<process_id>.json
+       *
+       * The sidecar carries upload metadata (dataset_id, filename,
+       * selection_mode, relative_path, etc). We read it first, then:
+       *   - mirror sidecar JSON into uploaded_data/<dataset_id>/ for cleanup
+       *     organization (source sidecar is kept for TUS internals)
+       *   - move the payload file to the dataset's final origin_path
+       *
+       * The UI sends routing metadata on the initial POST /uploads/files
+       * request, so everything needed for the destination path is available
+       * here during onUploadFinish.
        *
        * Throwing tusError() here aborts the TUS response with an HTTP error,
        * which the tus-js-client surfaces as an upload failure and may retry.
@@ -200,14 +226,6 @@ class UploadService {
         const relative_path = upload.metadata?.relative_path;
         const directory_name = upload.metadata?.directory_name;
         const process_id = upload.id;
-
-        logger.info('[TUS] onUploadFinish: moving file to origin_path', {
-          dataset_id: datasetId,
-          process_id,
-          selection_mode,
-          relative_path,
-          directory_name,
-        });
 
         const uploadLog = await prisma.dataset_upload_log.findUnique({
           where: { dataset_id: datasetId },
@@ -224,10 +242,29 @@ class UploadService {
         const tusInfoPath = `${tusFilePath}.json`;
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
+        
+        // Mirror this sidecar metadata file into a dataset-specific folder
+        // for cleanup organization while keeping the source sidecar in place.
+        // - Canonical path where metadata file is stored by TUS:
+        //    <uploadDir>/<processId>.json
+        // - Additional dataset-scoped copy:
+        //    <uploadDir>/uploaded_data/<datasetId>/<processId>.json
+        relocateSidecarForUpload({
+          uploadDir,
+          datasetId,
+          processId: process_id,
+        });
+
+        // locate the containerized path (as opposed to the host path) for the uploaded file
+        const writableOriginPath = resolveWritableOriginPath(
+          uploadLog.dataset.origin_path,
+          uploadHostPath,
+          uploadPath,
+        );
 
         moveTusFileToDestination({
           tusFilePath,
-          dataset: uploadLog.dataset,
+          dataset: { ...uploadLog.dataset, origin_path: writableOriginPath },
           selection_mode,
           directory_name,
           relative_path,
@@ -236,26 +273,24 @@ class UploadService {
           process_id,
         });
 
-        logger.info('[TUS] onUploadFinish: file moved', {
-          dataset_id: datasetId,
-          process_id,
-          origin_path: uploadLog.dataset.origin_path,
-        });
-
         return res;
       },
 
       onResponseError: (req, res, err) => {
         // TUS-internal errors (ResponseError) carry `status_code` and `body`
         // rather than `message`, so log both to make diagnosis straightforward.
-        logger.error(
+        const statusCode = err.status_code || 500;
+        const lockContention = statusCode === 423 || isLockAcquiredError(err);
+        const level = lockContention ? 'warn' : 'error';
+        logger[level](
           `[TUS] Response error on ${req.method} ${req.url}: ${err.message ?? err.body ?? err}`,
           {
             method: req.method,
             url: req.url,
             error_message: err.message,
             error_body: err.body,
-            status_code: err.status_code || 500,
+            status_code: statusCode,
+            lock_contention: lockContention,
           },
         );
       },

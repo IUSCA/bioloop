@@ -18,6 +18,13 @@ const prisma = require('@/db');
 
 const isPermittedTo = accessControl('datasets');
 
+// The subdirectory name for the upload type in the upload directory.
+// This is used to build the origin_path for the dataset.
+const UPLOAD_SUBDIR_BY_TYPE = {
+  RAW_DATA: 'raw_data',
+  DATA_PRODUCT: 'data_products',
+};
+
 const router = express.Router();
 
 // ============================================================================
@@ -244,7 +251,8 @@ router.get(
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get uploads by status'
 
-    const { statuses = [] } = req.query;
+    const raw = req.query.statuses;
+    const statuses = raw === undefined ? [] : (Array.isArray(raw) ? raw : [raw]);
 
     const uploads = await prisma.dataset_upload_log.findMany({
       where: {
@@ -500,11 +508,14 @@ router.post(
         // This is deterministic and doesn't depend on the upload having been marked as
         // finished and/or the post-upload processing having been triggered.
         //
-        // Format: /uploads/{type}/{id}/{name}
-        const uploadBasePath = config.get('upload.path');
+        // Format: /uploads/{raw_data|data_products}/{id}/{name}
+        // Persist host-visible path in DB when provided (UPLOAD_HOST_DIR),
+        // otherwise fall back to container upload path.
+        const uploadBasePath = config.get('upload.host_path') || config.get('upload.path');
+        const uploadTypeSubdir = UPLOAD_SUBDIR_BY_TYPE[type];
         const datasetOriginPath = path.join(
           uploadBasePath,
-          type.toLowerCase(),
+          uploadTypeSubdir,
           `${createdDataset.id}`,
           createdDataset.name,
         );
