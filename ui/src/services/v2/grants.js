@@ -44,6 +44,9 @@ export default {
   countGrantsForCollection(resource_id) {
     return countGrantsForResource("COLLECTION", resource_id);
   },
+  countGrantsForDataset(resource_id) {
+    return countGrantsForResource("DATASET", resource_id);
+  },
 
   /**
    * Create a new grant (group admin authority required).

@@ -19,40 +19,50 @@
     <!-- Loaded -->
     <div v-else-if="dataset">
       <!-- Page header -->
-      <div class="flex items-center justify-start flex-wrap gap-3 mt-3">
-        <div class="flex items-center gap-3">
-          <i-mdi-database
-            class="text-2xl shrink-0"
-            style="color: var(--va-primary)"
-          />
-          <div>
-            <h1 class="text-xl font-semibold">{{ dataset.name }}</h1>
-            <p class="text-sm va-text-secondary">{{ dataset.type }}</p>
+      <div class="space-y-3 mt-3">
+        <VaAlert v-if="dataset.is_deleted" color="warning" class="!mb-0">
+          <p class="text-sm">
+            This dataset has been deleted and is now read-only.
+          </p>
+        </VaAlert>
+
+        <div class="flex items-center justify-start flex-wrap gap-3 lg:gap-5">
+          <!-- Icon, Name, Type -->
+          <div class="flex items-center gap-3">
+            <Icon
+              :icon="constants.icons.dataset"
+              class="text-2xl shrink-0"
+              style="color: var(--va-primary)"
+            />
+            <div class="min-w-0">
+              <h1 class="text-xl font-semibold">{{ dataset.name }}</h1>
+              <DatasetType
+                :type="dataset.type"
+                class="text-sm text-gray-600 dark:text-gray-400"
+              />
+            </div>
+            <!-- <ModernChip v-if="dataset.is_deleted" color="accent" class="ml-2">
+            Deleted
+          </ModernChip> -->
           </div>
-          <ModernChip v-if="dataset.is_deleted" color="accent" class="ml-2">
-            Archived
-          </ModernChip>
-        </div>
 
-        <div
-          class="flex items-center gap-1 shrink-0 text-sm va-text-secondary ml-auto"
-        >
-          <span>Owned by</span>
-          <RouterLink
-            v-if="dataset.owner_group?.name"
-            class="max-w-md truncate font-medium"
-            :to="`/v2/groups/${dataset.owner_group.id}`"
-          >
-            {{ dataset.owner_group.name }}
-          </RouterLink>
-        </div>
+          <!-- Owner Group -->
+          <div class="flex items-center gap-1 text-sm va-text-secondary">
+            <span>Owned by</span>
+            <RouterLink
+              v-if="dataset.owner_group?.name"
+              class="max-w-md truncate font-medium"
+              :to="`/v2/groups/${dataset.owner_group.id}`"
+            >
+              {{ dataset.owner_group.name }}
+            </RouterLink>
+            <span v-else> — </span>
+          </div>
 
-        <div class="ml-auto">
-          <ResourceRoleBadge
-            v-if="callerRole"
-            :role-name="callerRole"
-            size="base"
-          />
+          <!-- Caller Role -->
+          <div class="ml-auto" v-if="callerRole">
+            <ResourceRoleBadge :role-name="callerRole" size="base" />
+          </div>
         </div>
       </div>
 
@@ -117,8 +127,11 @@
           :counts="counts"
           :can-edit="can('edit_metadata')"
           :can-archive="can('archive')"
+          :can-issue-grants="can('manage_grants')"
+          :can-download="can('download')"
           @update="fetchDatasetData"
-          @toggle-archive="openArchiveModal"
+          @delete="openDeleteModal"
+          @action-requested="handleActionRequested"
         />
 
         <DatasetFilesTab
@@ -160,7 +173,7 @@
 
       <!-- Archive confirm modal -->
       <DatasetArchiveConfirmModal
-        ref="archiveModal"
+        ref="deleteModal"
         :dataset-id="dataset.resource_id"
         :dataset-name="dataset.name"
         :dataset-type="dataset.type"
@@ -171,6 +184,8 @@
 </template>
 
 <script setup>
+import DatasetType from "@/components/dataset/DatasetType.vue";
+import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
@@ -206,9 +221,9 @@ function can(action) {
   return capabilities.value.has(action);
 }
 
-function setNavBreadcrumbs(d) {
+function setNavBreadcrumbs(dataset) {
   const items = [{ label: "Datasets", to: "/v2/datasets" }];
-  items.push({ label: d.name });
+  items.push({ label: dataset.name });
   nav.setNavItems(items);
 }
 
@@ -240,10 +255,7 @@ async function fetchCounts() {
 async function fetchGrantsCount() {
   if (!can("manage_grants")) return;
   try {
-    const { data } = await GrantService.countGrantsForResource(
-      "DATASET",
-      props.id,
-    );
+    const { data } = await GrantService.countGrantsForDataset(props.id);
     counts.value.grants = data?.count ?? null;
   } catch {
     counts.value.grants = null;
@@ -280,10 +292,18 @@ onMounted(() => {
   fetchDatasetData();
 });
 
-const archiveModal = ref(null);
+const deleteModal = ref(null);
 
-function openArchiveModal() {
-  archiveModal.value?.show();
+function openDeleteModal() {
+  deleteModal.value?.show();
+}
+
+function handleActionRequested(payload) {
+  if (payload.actionName === "grant-access") {
+    activeTab.value = "grants";
+  } else if (payload.actionName === "download") {
+    activeTab.value = "files";
+  }
 }
 </script>
 

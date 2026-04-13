@@ -231,6 +231,9 @@ router.post(
 
 router.use(
   '/:dataset_id/files',
+  validate([
+    param('dataset_id').isUUID(),
+  ]),
   require('./files'),
 );
 

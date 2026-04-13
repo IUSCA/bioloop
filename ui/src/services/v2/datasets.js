@@ -38,8 +38,10 @@ export default {
    * List files in a dataset directory.
    * @param {{ id: string, basepath?: string }}
    */
-  listFiles({ id, basepath = "" } = {}) {
-    return api.get(`/v2/datasets/${id}/files`, { params: { basepath } });
+  listFiles({ resource_id, basepath = "" } = {}) {
+    return api.get(`/v2/datasets/${resource_id}/files`, {
+      params: { basepath },
+    });
   },
 
   /**

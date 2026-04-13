@@ -21,7 +21,8 @@
       <!-- Page header -->
       <div class="flex items-center justify-start flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
-          <i-mdi-folder-multiple
+          <Icon
+            :icon="constants.icons.collection"
             class="text-2xl shrink-0"
             style="color: var(--va-primary)"
           />
@@ -56,6 +57,7 @@
           >
             {{ collection.owner_group.name }}
           </RouterLink>
+          <span v-else> — </span>
         </div>
 
         <!-- resource role badge -->
@@ -166,6 +168,7 @@
 </template>
 
 <script setup>
+import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";

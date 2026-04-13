@@ -5,16 +5,8 @@
     size="medium"
     @ok="onConfirm"
   >
-    <VaForm ref="formRef">
-      <div class="space-y-4">
-        <VaInput
-          v-model="formData.name"
-          label="Name"
-          required
-          name="name"
-          rules="required"
-        />
-
+    <VaForm ref="formRef" class="mb-5">
+      <div class="flex flex-col gap-4">
         <VaTextarea
           v-model="formData.description"
           label="Description"
