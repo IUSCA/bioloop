@@ -1,15 +1,17 @@
 <template>
   <VaModal
     v-model="visible"
-    title="Archive Dataset"
+    title="Delete Dataset"
     hide-default-actions
     @cancel="reset"
   >
     <VaInnerLoading :loading="loading">
       <div class="space-y-4">
         <VaAlert color="warning">
-          <template #title>Archiving will freeze this dataset</template>
-          <div class="text-sm">All changes will be blocked until archived.</div>
+          <template #title>Deleting will freeze this dataset</template>
+          <div class="text-sm">
+            This dataset will be deleted and preserved only as metadata.
+          </div>
         </VaAlert>
 
         <div class="text-sm space-y-2">
@@ -37,7 +39,7 @@
           :loading="loading"
           @click="onConfirm"
         >
-          Archive Dataset
+          Delete Dataset
         </VaButton>
       </div>
     </template>
@@ -64,12 +66,12 @@ async function onConfirm() {
   loading.value = true;
   try {
     await DatasetService.archive(props.datasetId);
-    toast.success("Dataset archived successfully.");
+    toast.success("Dataset deleted successfully.");
     reset();
     visible.value = false;
     emit("update");
   } catch (err) {
-    toast.error("Failed to archive dataset.");
+    toast.error("Failed to delete dataset.");
     console.error(err);
   } finally {
     loading.value = false;

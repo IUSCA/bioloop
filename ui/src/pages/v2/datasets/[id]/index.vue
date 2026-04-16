@@ -81,6 +81,31 @@
               </span>
             </span>
           </VaTab>
+
+          <VaTab name="source-datasets" v-if="can('view_source_datasets')">
+            <span class="flex items-center gap-1.5">
+              Sources
+              <span
+                v-if="counts.sourceDatasets !== null"
+                class="tab-count-badge"
+              >
+                {{ counts.sourceDatasets }}
+              </span>
+            </span>
+          </VaTab>
+
+          <VaTab name="derived-datasets" v-if="can('view_derived_datasets')">
+            <span class="flex items-center gap-1.5">
+              Derived
+              <span
+                v-if="counts.derivedDatasets !== null"
+                class="tab-count-badge"
+              >
+                {{ counts.derivedDatasets }}
+              </span>
+            </span>
+          </VaTab>
+
           <VaTab name="collections" v-if="can('view_collections')">
             <span class="flex items-center gap-1.5">
               Collections
@@ -138,6 +163,21 @@
           v-else-if="activeTab === 'files'"
           :dataset="dataset"
           :can-download="can('download')"
+          :has-files="hasFiles"
+        />
+
+        <DatasetAssociatedDatasetsTab
+          v-else-if="activeTab === 'source-datasets'"
+          type="source"
+          :dataset="dataset"
+          :can-list="can('view_source_datasets')"
+        />
+
+        <DatasetAssociatedDatasetsTab
+          v-else-if="activeTab === 'derived-datasets'"
+          type="derived"
+          :dataset="dataset"
+          :can-list="can('view_derived_datasets')"
         />
 
         <DatasetCollectionsTab
@@ -146,8 +186,9 @@
         />
 
         <DatasetGrantsTab
+          ref="grantsTabRef"
           v-else-if="activeTab === 'grants'"
-          :dataset-id="dataset.resource_id"
+          :dataset="dataset"
           :can-manage-grants="can('manage_grants')"
           @count-changed="fetchGrantsCount"
         />
@@ -210,20 +251,26 @@ const counts = ref({
   requests: null,
   collections: null,
   workflows: null,
+  sourceDatasets: null,
+  derivedDatasets: null,
 });
+
+const grantsTabRef = ref(null);
 
 const capabilities = computed(
   () => new Set(dataset.value?._meta?.capabilities ?? []),
 );
 const callerRole = computed(() => dataset.value?._meta?.caller_role);
 
+const hasFiles = computed(() => (counts.value?.files || 0) > 0);
+
 function can(action) {
   return capabilities.value.has(action);
 }
 
-function setNavBreadcrumbs(dataset) {
+function setNavBreadcrumbs() {
   const items = [{ label: "Datasets", to: "/v2/datasets" }];
-  items.push({ label: dataset.name });
+  items.push({ label: "..." });
   nav.setNavItems(items);
 }
 
@@ -249,6 +296,12 @@ async function fetchCounts() {
     can("manage_grants") ? fetchGrantsCount() : Promise.resolve(),
     fetchRequestCount(),
     can("view_collections") ? fetchCollectionsCount() : Promise.resolve(),
+    can("view_source_datasets")
+      ? fetchSourceDatasetsCount()
+      : Promise.resolve(),
+    can("view_derived_datasets")
+      ? fetchDerivedDatasetsCount()
+      : Promise.resolve(),
   ]);
 }
 
@@ -288,6 +341,30 @@ async function fetchCollectionsCount() {
   }
 }
 
+async function fetchSourceDatasetsCount() {
+  if (!can("view_source_datasets")) return;
+  try {
+    const { data } = await DatasetService.getSourceDatasets(props.id, {
+      limit: 0,
+    });
+    counts.value.sourceDatasets = data.metadata?.total ?? null;
+  } catch {
+    counts.value.sourceDatasets = null;
+  }
+}
+
+async function fetchDerivedDatasetsCount() {
+  if (!can("view_derived_datasets")) return;
+  try {
+    const { data } = await DatasetService.getDerivedDatasets(props.id, {
+      limit: 0,
+    });
+    counts.value.derivedDatasets = data.metadata?.total ?? null;
+  } catch {
+    counts.value.derivedDatasets = null;
+  }
+}
+
 onMounted(() => {
   fetchDatasetData();
 });
@@ -299,11 +376,15 @@ function openDeleteModal() {
 }
 
 function handleActionRequested(payload) {
-  if (payload.actionName === "grant-access") {
-    activeTab.value = "grants";
-  } else if (payload.actionName === "download") {
-    activeTab.value = "files";
-  }
+  // Switch to the requested tab
+  activeTab.value = payload.tabName;
+
+  // Open the modal after DOM has rendered the new tab
+  nextTick(() => {
+    if (payload.modalName === "issue-grants" && grantsTabRef.value) {
+      grantsTabRef.value?.openIssueGrantModal?.();
+    }
+  });
 }
 </script>
 

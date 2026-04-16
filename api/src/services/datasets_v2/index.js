@@ -224,6 +224,92 @@ async function explainDatasetAccess({ user_id, dataset_id, access_types }) {
   };
 }
 
+/**
+ * Fetches source datasets (datasets this dataset was derived from).
+ * Returns paginated results with optional filtering.
+ * @param {string} dataset_id - UUID of the dataset
+ * @param {Object} options - Pagination and filtering options
+ * @returns {Promise<Object>} { data: Dataset[], metadata: { total, offset, limit } }
+ */
+async function getSourceDatasets(dataset_id, options = {}) {
+  const {
+    limit = 50,
+    offset = 0,
+  } = options;
+
+  const [data, total] = await Promise.all([
+    prisma.dataset.findMany({
+      where: {
+        derived_datasets: {
+          some: {
+            derived_id: dataset_id,
+          },
+        },
+      },
+      skip: offset,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.dataset.count({
+      where: {
+        derived_datasets: {
+          some: {
+            derived_id: dataset_id,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    data,
+    metadata: { total, offset, limit },
+  };
+}
+
+/**
+ * Fetches derived datasets (datasets derived from this dataset).
+ * Returns paginated results with optional filtering.
+ * @param {string} dataset_id - UUID of the dataset
+ * @param {Object} options - Pagination and filtering options
+ * @returns {Promise<Object>} { data: Dataset[], metadata: { total, offset, limit } }
+ */
+async function getDerivedDatasets(dataset_id, options = {}) {
+  const {
+    limit = 50,
+    offset = 0,
+  } = options;
+
+  const [data, total] = await Promise.all([
+    prisma.dataset.findMany({
+      where: {
+        source_datasets: {
+          some: {
+            source_id: dataset_id,
+          },
+        },
+      },
+      skip: offset,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+    }),
+    prisma.dataset.count({
+      where: {
+        source_datasets: {
+          some: {
+            source_id: dataset_id,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    data,
+    metadata: { total, offset, limit },
+  };
+}
+
 // ── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -233,6 +319,8 @@ module.exports = {
   softDelete,
   userHasGrant,
   explainDatasetAccess,
+  getSourceDatasets,
+  getDerivedDatasets,
   ...fetchModule,
   ...createModule,
 };

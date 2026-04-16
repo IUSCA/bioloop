@@ -1,103 +1,307 @@
 <template>
-  <VaCard>
-    <VaCardContent>
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-semibold">Access Grants</h3>
-        <VaButton
-          v-if="props.canManageGrants"
-          size="small"
-          icon="add"
-          @click="openIssueGrantModal"
-        >
-          Issue Grant
-        </VaButton>
-      </div>
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <!-- Header row -->
+    <VaCard class="header card">
+      <VaCardContent>
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex flex-col gap-2 flex-1">
+            <div class="flex items-center justify-between gap-3">
+              <!-- subject type selector -->
+              <ModernButtonToggle
+                v-model="subjectType"
+                :options="subjectTypeOptions"
+                value-by="value"
+              />
 
-      <div
-        v-if="loading"
-        class="text-center py-8 text-sm text-gray-500 dark:text-gray-400"
-      >
-        Loading grants...
-      </div>
+              <!-- Search input -->
+              <div class="flex-1">
+                <Searchbar
+                  v-model="subjectSearchTerm"
+                  placeholder="Search grants by user or group name"
+                />
+              </div>
+            </div>
 
-      <div v-else-if="grants.length === 0" class="text-center py-8">
-        <EmptyState
-          title="No grants"
-          message="No active grants for this dataset."
-        />
-      </div>
+            <!-- Implement later -->
+            <!-- Access Type Dropdown and multiselect -->
+            <!-- <div class="flex items-center gap-3">
+              <div class="max-w-[256rem] text-sm">
+                <VaSelect
+                  v-model="selectedAccessTypes"
+                  :options="accessTypes"
+                  text-by="description"
+                  value-by="id"
+                  selected-top-shown
+                  :max-visible-options="1"
+                  :loading="accessTypesLoading"
+                  :disabled="accessTypesError"
+                  placeholder="Filter by Access Type"
+                />
+              </div>
 
-      <div v-else class="space-y-3">
-        <div
-          v-for="grant in grants"
-          :key="grant.id"
-          class="border-b border-gray-200 dark:border-gray-700 pb-2 last:border-b-0"
-        >
-          <div class="text-sm font-medium">
-            {{ grant.subject?.user?.name || grant.subject?.group?.name }}
+              <div class="flex items-center gap-2 overflow-clip">
+                <VaChip
+                  v-for="at in accessTypes.filter((at) =>
+                    selectedAccessTypes.includes(at.id),
+                  )"
+                  :key="at.id"
+                  :label="at.description"
+                  removable
+                  @remove="
+                    selectedAccessTypes = selectedAccessTypes.filter(
+                      (id) => id !== at.id,
+                    )
+                  "
+                />
+              </div>
+            </div> -->
           </div>
-          <div class="text-xs text-gray-600 dark:text-gray-400">
-            {{ grant.access_type_id }} • {{ grant.valid_from }} to
-            {{ grant.valid_to }}
-          </div>
+
+          <VaButton
+            v-if="props.canManageGrants"
+            color="success"
+            icon="add"
+            @click="openIssueGrantModal"
+          >
+            Issue Grants
+          </VaButton>
         </div>
-      </div>
+      </VaCardContent>
+    </VaCard>
 
-      <div v-if="error" class="mt-4">
-        <ErrorState :message="error" @retry="fetchGrants" />
-      </div>
-    </VaCardContent>
-  </VaCard>
+    <!-- keeps layout stable when swapping views -->
+    <VaCard class="min-h-[360px]">
+      <VaCardContent>
+        <Transition name="fade-slide" mode="out-in">
+          <div v-if="error" key="error" class="py-12 px-6">
+            <ErrorState
+              title="Failed to load grants"
+              :message="error?.message"
+              @retry="fetchGrants"
+            />
+          </div>
+
+          <div
+            v-else-if="!loading && grantGroups.length === 0"
+            key="empty"
+            class="py-12 px-6"
+          >
+            <EmptyState
+              title="No grants found"
+              message="This dataset currently has no active grants. Issue a grant to give access."
+              @reset="fetchGrants"
+            />
+          </div>
+
+          <div v-else key="table">
+            <div class="flex flex-col gap-3">
+              <div
+                v-for="group in grantGroups"
+                :key="group.subject.id"
+                class="flex items-center w-full"
+              >
+                <GrantsBySubjectPanel
+                  :subject="group.subject"
+                  :grants="group.grants"
+                  :access-type-map="accessTypeMap"
+                  resource-type="DATASET"
+                  :resource-id="props.dataset.resource_id"
+                  :can-revoke="canRevoke"
+                  @revoke="onRevokeGrant"
+                  @revoke-all="onRevokeAllGrants"
+                />
+              </div>
+            </div>
+            <!-- Pagination controls -->
+            <div v-if="showPagination" class="mt-6 flex justify-center">
+              <VaPagination
+                v-model="currentPage"
+                :pages="pages"
+                :direction-links="true"
+                :boundary-links="false"
+                :direction-icon-left="'va-arrow-left'"
+                :direction-icon-right="'va-arrow-right'"
+              />
+            </div>
+          </div>
+        </Transition>
+      </VaCardContent>
+    </VaCard>
+  </div>
 
   <IssueGrantModal
     ref="issueGrantModal"
     @update="onGrantCreated"
-    :resource="{ id: props.datasetId, type: 'DATASET' }"
+    :resource="datasetResource"
+  />
+
+  <RevokeGrantModal
+    ref="revokeGrantModal"
+    :access-type-map="accessTypeMap"
+    @update="onGrantRevoked"
+  />
+
+  <RevokeAllGrantsModal
+    ref="revokeAllGrantsModal"
+    :access-type-map="accessTypeMap"
+    @update="onGrantRevoked"
   />
 </template>
 
 <script setup>
+import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
+import RevokeAllGrantsModal from "@/components/v2/grants/RevokeAllGrantsModal.vue";
+import RevokeGrantModal from "@/components/v2/grants/RevokeGrantModal.vue";
 import GrantService from "@/services/v2/grants";
 
 const props = defineProps({
-  datasetId: { type: String, required: true },
+  dataset: { type: Object, required: true },
   canManageGrants: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["count-changed"]);
 
-const grants = ref([]);
-const loading = ref(false);
+const loading = ref(true);
 const error = ref(null);
+const grantGroups = ref([]);
+const total = ref(0);
+
+const currentPage = ref(1);
+const itemsPerPage = ref(10);
+const sortBy = ref("created_at");
+const sortOrder = ref("desc");
+
+const subjectSearchTerm = ref("");
+const subjectType = ref("");
+const selectedAccessTypes = ref([]);
+
+const {
+  accessTypes,
+  // loading: accessTypesLoading,
+  // error: accessTypesError,
+  // refresh: refreshAccessTypes,
+} = useAccessTypes("DATASET");
+
+const canRevoke = computed(() => props.canManageGrants);
+const datasetResource = computed(() => ({
+  type: "DATASET",
+  id: props.dataset.resource_id,
+  dataset: props.dataset,
+}));
+const accessTypeMap = computed(() => {
+  const map = {};
+  accessTypes.value.forEach((at) => (map[at.id] = at));
+  return map;
+});
+
+const subjectTypeOptions = [
+  { label: "Any", value: "" },
+  { label: "User", value: "USER" },
+  { label: "Group", value: "GROUP" },
+];
+
 const issueGrantModal = ref(null);
+const revokeGrantModal = ref(null);
+const revokeAllGrantsModal = ref(null);
+
+// Pagination: detect if there's a next page by checking if we got fewer results than requested
+const hasNextPage = computed(
+  () => grantGroups.value.length === itemsPerPage.value,
+);
+const pages = computed(() => {
+  // If we're on page 1 and have results equal to page size, there might be a next page
+  // If we got fewer results than page size, we're on the last page
+  return hasNextPage.value ? currentPage.value + 1 : currentPage.value;
+});
+const showPagination = computed(
+  () => currentPage.value > 1 || hasNextPage.value,
+);
 
 async function fetchGrants() {
   loading.value = true;
   error.value = null;
 
   try {
-    const { data } = await GrantService.listGrantsForDataset(props.datasetId);
-    grants.value = data || [];
-    emit("count-changed", grants.value.length);
+    const offset = (currentPage.value - 1) * itemsPerPage.value;
+
+    const params = {
+      limit: itemsPerPage.value,
+      offset,
+
+      // sort_by: sortBy.value,
+      // sort_order: sortOrder.value,
+    };
+    if (subjectSearchTerm.value && subjectSearchTerm.value.trim() !== "") {
+      params.subject_search_term = subjectSearchTerm.value;
+    }
+    if (subjectType.value) {
+      params.subject_type = subjectType.value;
+    }
+    if (selectedAccessTypes.value.length > 0) {
+      params.access_type_ids = selectedAccessTypes.value;
+    }
+
+    const res = await GrantService.listGrantsForDataset(
+      props.dataset.resource_id,
+      params,
+    );
+
+    grantGroups.value = res.data || [];
+    total.value = res.data?.metadata?.total ?? 0;
   } catch (err) {
-    error.value = "Failed to load grants.";
-    console.error(err);
+    console.error("Failed to load grants:", err);
+    error.value = err;
   } finally {
     loading.value = false;
   }
 }
 
+// async function onRevokeGrant(grant) {
+//   try {
+//     await GrantService.revoke(grant.id);
+//     toast.success("Grant revoked.");
+//     fetchGrants();
+//   } catch (err) {
+//     console.error("Failed to revoke grant:", err);
+//     toast.error(err?.response?.data?.message ?? "Failed to revoke grant.");
+//   }
+// }
+
+function onRevokeGrant({ grant, subject }) {
+  revokeGrantModal.value?.show({ grant, subject });
+}
+
+function onRevokeAllGrants({ grants, subject, resourceType, resourceId }) {
+  revokeAllGrantsModal.value?.show({
+    grants,
+    subject,
+    resourceType,
+    resourceId,
+  });
+}
+
 function openIssueGrantModal() {
-  issueGrantModal.value?.show();
+  issueGrantModal.value?.show?.();
 }
 
 function onGrantCreated() {
   fetchGrants();
+  emit("count-changed");
 }
 
-onMounted(() => {
+function onGrantRevoked() {
+  fetchGrants();
+  emit("count-changed");
+}
+
+watch([subjectSearchTerm, subjectType, selectedAccessTypes], () => {
+  currentPage.value = 1; // Reset to first page on filter change
   fetchGrants();
 });
 
-watch(() => props.datasetId, fetchGrants);
+watch([currentPage, itemsPerPage, sortBy, sortOrder], fetchGrants);
+
+onMounted(() => fetchGrants());
+
+defineExpose({ openIssueGrantModal });
 </script>

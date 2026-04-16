@@ -145,13 +145,13 @@
   <RevokeGrantModal
     ref="revokeGrantModal"
     :access-type-map="accessTypeMap"
-    @update="fetchGrants"
+    @update="onGrantRevoked"
   />
 
   <RevokeAllGrantsModal
     ref="revokeAllGrantsModal"
     :access-type-map="accessTypeMap"
-    @update="fetchGrants"
+    @update="onGrantRevoked"
   />
 </template>
 
@@ -166,7 +166,7 @@ const props = defineProps({
   canManageGrants: { type: Boolean, default: false },
 });
 
-// const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed"]);
 
 const loading = ref(true);
 const error = ref(null);
@@ -255,7 +255,6 @@ async function fetchGrants() {
 
     grantGroups.value = res.data || [];
     total.value = res.data?.metadata?.total ?? 0;
-    // emit("count-changed", total.value);
   } catch (err) {
     console.error("Failed to load grants:", err);
     error.value = err;
@@ -294,6 +293,12 @@ function openIssueGrantModal() {
 
 function onGrantCreated() {
   fetchGrants();
+  emit("count-changed");
+}
+
+function onGrantRevoked() {
+  fetchGrants();
+  emit("count-changed");
 }
 
 watch([subjectSearchTerm, subjectType, selectedAccessTypes], () => {

@@ -9,8 +9,9 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const datasetFileService = require('@/services/datasets_v2/files');
+const prisma = require('@/db');
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 // All routes in this sub-router authorize against the parent dataset.
 // Because req.params.id is not set in sub-routers, we supply dataset_id explicitly.
@@ -54,12 +55,18 @@ router.get(
   validate([
     query('basepath').default(''),
   ]),
-  authorize('dataset', 'list_files', byDatasetId),
+  authorize('dataset', 'list_files', { resourceIdFn: (req) => req.params.dataset_id }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
+
+    const dataset = await prisma.dataset.findUnique({
+      where: { resource_id: req.params.dataset_id },
+      select: { id: true, resource_id: true },
+    });
+
     const files = await datasetFileService.listFiles({
-      dataset_id: req.params.dataset_id,
+      dataset_id: dataset.id,
       base: req.query.basepath,
     });
 
@@ -101,8 +108,14 @@ router.get(
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Search files in a dataset
+
+    const dataset = await prisma.dataset.findUnique({
+      where: { resource_id: req.params.dataset_id },
+      select: { id: true, resource_id: true },
+    });
+
     const files = await datasetFileService.searchFiles({
-      dataset_id: req.params.dataset_id,
+      dataset_id: dataset.id,
       base: req.query.basepath,
       ..._.omitBy(_.isUndefined)(req.query),
     });

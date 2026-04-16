@@ -53,6 +53,9 @@ function createPrismaInclude(includes) {
       },
     };
   }
+  if (includes.owner_group) {
+    result.owner_group = true;
+  }
   return result;
 }
 

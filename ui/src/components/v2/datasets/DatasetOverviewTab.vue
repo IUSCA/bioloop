@@ -159,6 +159,18 @@
           :value="props.counts.requests"
           :loading="props.counts.requests === null"
         />
+        <MetricCard
+          label="Sources"
+          icon="mdi-source-branch"
+          :value="props.counts.sourceDatasets"
+          :loading="props.counts.sourceDatasets === null"
+        />
+        <MetricCard
+          label="Derived"
+          icon="mdi-source-merge"
+          :value="props.counts.derivedDatasets"
+          :loading="props.counts.derivedDatasets === null"
+        />
       </div>
 
       <!-- Quick Actions -->

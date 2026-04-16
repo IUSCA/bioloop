@@ -100,7 +100,11 @@ router.get(
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get a dataset by ID'
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.id, {
+      includes: {
+        owner_group: true,
+      },
+    });
     if (!dataset) {
       return res.status(404).json({ message: 'Dataset not found' });
     }
@@ -169,6 +173,64 @@ router.post(
   }),
 );
 
+// ── Source Datasets ──────────────────────────────────────────────────────────
+
+router.get(
+  '/:id/source-datasets',
+  validate([
+    param('id').isUUID(),
+    query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('dataset', 'view_source_datasets'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get source datasets that this dataset was derived from'
+
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) {
+      return next(createError(404, 'Dataset not found'));
+    }
+
+    const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
+    const { data, metadata } = await datasetService.getSourceDatasets(dataset.id, { limit, offset });
+
+    // Filter each source dataset through permission filters
+    const filteredData = data.map((sourceDataset) => req.permission.filter(sourceDataset));
+
+    res.json({ metadata, data: filteredData });
+  }),
+);
+
+// ── Derived Datasets ─────────────────────────────────────────────────────────
+
+router.get(
+  '/:id/derived-datasets',
+  validate([
+    param('id').isUUID(),
+    query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('dataset', 'view_derived_datasets'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Get datasets derived from this dataset'
+
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) {
+      return next(createError(404, 'Dataset not found'));
+    }
+
+    const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
+    const { data, metadata } = await datasetService.getDerivedDatasets(dataset.id, { limit, offset });
+
+    // Filter each derived dataset through permission filters
+    const filteredData = data.map((derivedDataset) => req.permission.filter(derivedDataset));
+
+    res.json({ metadata, data: filteredData });
+  }),
+);
+
 // ── Create ───────────────────────────────────────────────────────────────────
 
 // // ── Patch ────────────────────────────────────────────────────────────────────
@@ -231,9 +293,9 @@ router.post(
 
 router.use(
   '/:dataset_id/files',
-  validate([
-    param('dataset_id').isUUID(),
-  ]),
+  // validate([
+  //   param('dataset_id').isUUID(),
+  // ]),
   require('./files'),
 );
 

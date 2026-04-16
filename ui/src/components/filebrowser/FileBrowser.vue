@@ -16,7 +16,7 @@
         </div>
 
         <!-- filters -->
-        <div class="mt-2">
+        <div class="my-2">
           <FileBrowserSearchBar @advanced-search="openModal" />
           <!-- {{ filterStatus }} -->
         </div>
@@ -47,6 +47,14 @@ const { pwd, filters, isInSearchMode, filterStatus } = storeToRefs(store);
 const props = defineProps({
   datasetId: String,
   showDownload: Boolean,
+  listFiles: {
+    type: Function,
+    default: datasetService.list_files,
+  },
+  searchFiles: {
+    type: Function,
+    default: datasetService.search_files,
+  },
 });
 
 const data_loading = ref(false);
@@ -58,8 +66,8 @@ const files = computed(() => {
 
 function get_file_list(path) {
   data_loading.value = true;
-  datasetService
-    .list_files({ id: props.datasetId, basepath: path })
+  props
+    .listFiles({ id: props.datasetId, basepath: path })
     .then((res) => {
       fileList.value = res.data;
     })
@@ -86,8 +94,8 @@ function search_files({ sortBy = null, sortingOrder = null } = {}) {
   data_loading.value = true;
   const p = payload();
   // console.log("payload", p);
-  datasetService
-    .search_files({
+  props
+    .searchFiles({
       id: props.datasetId,
       ...p,
       sortBy,

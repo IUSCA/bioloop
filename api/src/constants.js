@@ -248,6 +248,12 @@ const GRANT_ACCESS_TYPES = [
     description: 'View derived datasets',
     long_description: 'View derived datasets and their metadata that reference this dataset as a source',
   },
+  {
+    id: 12,
+    name: 'DATASET:LIST_SOURCE_DATASETS',
+    description: 'View source datasets',
+    long_description: 'View source datasets and their metadata that reference this dataset as a derived dataset',
+  },
 ];
 
 const GRANT_PRESETS = [
