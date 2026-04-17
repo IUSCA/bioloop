@@ -33,7 +33,7 @@ function getFileStream(filePath) {
 }
 
 router.get(
-  '/:file_path',
+  '/:file_path(*)',
   validate([
     param('file_path').escape().notEmpty(),
   ]),
