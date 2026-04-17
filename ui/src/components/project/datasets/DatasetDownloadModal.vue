@@ -68,7 +68,7 @@
               <span class="px-1"> - </span>
               <span class="">
                 Transfer of file will use
-                {{ formatBytes(props.dataset.bundle.size) }} of bandwidth
+                {{ formatBytes(props.dataset?.bundle?.size) }} of bandwidth
               </span>
             </va-list-item-label>
           </va-list-item-section>

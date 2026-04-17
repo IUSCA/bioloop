@@ -21,9 +21,7 @@
       <!-- Error State -->
       <ErrorState
         v-else-if="expandedError"
-        title="Failed to load grant details"
-        :message="expandedError?.message"
-        @retry="fetchExpandedGrants"
+        title="Failed to load access details"
       />
 
       <template v-else-if="expandedGrants">
@@ -48,7 +46,7 @@
           @navigate-to-request="emit('navigate-to-request', $event)"
         />
 
-        <!-- Revoke All -->
+        <!-- Remove All Access -->
         <div
           v-if="props.canRevoke && activeExpandedGrants.length > 1"
           class="flex justify-end pt-1"
@@ -67,7 +65,7 @@
               })
             "
           >
-            Revoke All
+            Remove All Access
           </va-button>
         </div>
       </template>

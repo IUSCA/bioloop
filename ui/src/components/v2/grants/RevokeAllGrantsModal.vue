@@ -20,7 +20,7 @@
           <h2
             class="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100"
           >
-            Revoke All Active Grants
+            Remove All Access
           </h2>
         </div>
       </div>
@@ -41,16 +41,16 @@
             <p
               class="text-sm font-medium text-amber-800 dark:text-amber-300 leading-5"
             >
-              Bulk access revocation
+              Remove all access immediately
             </p>
             <p
               class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
             >
               All
               <strong class="font-semibold">{{ grants.length }}</strong>
-              active grant{{ grants.length === 1 ? "" : "s" }} for this subject
-              will be permanently revoked immediately. This action cannot be
-              undone and each revocation is recorded in the audit log.
+              active access permission{{ grants.length === 1 ? "" : "s" }} for
+              this subject will be permanently removed immediately. This action
+              cannot be undone and each removal is recorded in the audit log.
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@
           @click="revokeAll"
         >
           <Icon icon="mdi-shield-off-outline" class="mr-1 text-base" />
-          Revoke All Grants
+          Remove All Access
         </VaButton>
       </div>
     </template>
@@ -234,13 +234,13 @@ async function revokeAll() {
     );
     const count = res.data?.revoked ?? grants.value.length;
     toast.success(
-      `${count} grant${count === 1 ? "" : "s"} revoked successfully.`,
+      `${count} access permission${count === 1 ? "" : "s"} removed successfully.`,
     );
     emit("update");
     hide();
   } catch (err) {
     console.error("Failed to revoke all grants:", err);
-    toast.error(err?.response?.data?.message ?? "Failed to revoke grants.");
+    toast.error(err?.response?.data?.message ?? "Failed to remove access.");
   } finally {
     loading.value = false;
   }

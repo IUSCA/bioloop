@@ -98,7 +98,8 @@
             />
             <span>
               Subjects whose access derives <em>exclusively</em> from this
-              collection's grants will lose access to this dataset immediately.
+              collection's access permissions will lose access to this dataset
+              immediately.
             </span>
           </li>
           <li

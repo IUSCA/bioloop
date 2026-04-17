@@ -50,7 +50,7 @@
         v-if="props.grant.revoked_at !== null"
         class="text-xs font-medium px-2 py-0.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500"
       >
-        Revoked
+        Removed
       </span>
       <span
         v-if="props.grant.source_preset"

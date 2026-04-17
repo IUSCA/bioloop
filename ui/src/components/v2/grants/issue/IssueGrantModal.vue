@@ -18,7 +18,7 @@
           <div>
             <h2 class="text-xl font-semibold">Grant Access</h2>
             <span class="text-sm text-gray-600 dark:text-gray-400">
-              Issue access grants to a user or group
+              Grant access to a user or group
             </span>
           </div>
         </div>

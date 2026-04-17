@@ -17,7 +17,7 @@
               <div class="flex-1">
                 <Searchbar
                   v-model="subjectSearchTerm"
-                  placeholder="Search grants by user or group name"
+                  placeholder="Search access by user or group name"
                 />
               </div>
             </div>
@@ -63,7 +63,7 @@
             icon="add"
             @click="openIssueGrantModal"
           >
-            Issue Grants
+            Grant Access
           </VaButton>
         </div>
       </VaCardContent>
@@ -75,7 +75,7 @@
         <Transition name="fade-slide" mode="out-in">
           <div v-if="error" key="error" class="py-12 px-6">
             <ErrorState
-              title="Failed to load grants"
+              title="Failed to load access permissions"
               :message="error?.message"
               @retry="fetchGrants"
             />
@@ -87,9 +87,10 @@
             class="py-12 px-6"
           >
             <EmptyState
-              title="No grants found"
-              message="This dataset currently has no active grants. Issue a grant to give access."
+              title="No access configured"
+              message="Grant access to specific users or groups to give them permission to use this dataset."
               @reset="fetchGrants"
+              :showClearFilters="false"
             />
           </div>
 

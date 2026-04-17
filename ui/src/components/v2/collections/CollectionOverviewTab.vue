@@ -157,7 +157,7 @@
         />
 
         <MetricCard
-          label="Grants"
+          label="Access"
           :icon="getIcon('grant', { outlined: true })"
           color="warning"
           :value="props.counts.grants"
@@ -176,7 +176,7 @@
             icon="mdi-key"
             icon-color="text-amber-500"
             title="Grant Access"
-            description="Issue a grant"
+            description="Grant access to users or groups"
             hover-theme="blue"
             @click="emitAction('grant-access', 'grants', 'issue-grants')"
           />

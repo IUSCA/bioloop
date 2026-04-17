@@ -124,6 +124,7 @@
     "utils",
     "uuidv",
     "uvicorn",
+    "varchar",
     "vhost",
     "viewports",
     "Virtuals",

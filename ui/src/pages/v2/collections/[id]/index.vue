@@ -95,7 +95,7 @@
           </VaTab>
           <VaTab name="grants" v-if="can('list_grants')">
             <span class="flex items-center gap-1.5">
-              Grants
+              Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
                 {{ counts.grants }}
               </span>

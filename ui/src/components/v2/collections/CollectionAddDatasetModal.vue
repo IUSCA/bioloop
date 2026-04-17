@@ -24,8 +24,8 @@
           </h2>
           <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400 leading-5">
             Only datasets owned by the same group as this collection can be
-            added. Each addition immediately extends access to all existing
-            grant holders.
+            added. Each addition immediately extends access to all subjects who
+            have access to this collection.
           </p>
         </div>
       </div>

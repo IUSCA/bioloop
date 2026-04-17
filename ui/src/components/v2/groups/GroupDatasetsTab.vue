@@ -64,7 +64,7 @@
               >
                 <template #cell(name)="{ row }">
                   <RouterLink
-                    :to="`/v2/datasets/${row.rowData.id}`"
+                    :to="`/v2/datasets/${row.rowData.resource_id}`"
                     class="text-sm font-medium hover:underline"
                     style="color: var(--va-primary)"
                   >

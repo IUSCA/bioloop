@@ -96,7 +96,7 @@
 
           <VaTab name="derived-datasets" v-if="can('view_derived_datasets')">
             <span class="flex items-center gap-1.5">
-              Derived
+              Derivatives
               <span
                 v-if="counts.derivedDatasets !== null"
                 class="tab-count-badge"
@@ -116,7 +116,7 @@
           </VaTab>
           <VaTab name="grants" v-if="can('manage_grants')">
             <span class="flex items-center gap-1.5">
-              Grants
+              Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
                 {{ counts.grants }}
               </span>
@@ -157,6 +157,7 @@
           @update="fetchDatasetData"
           @delete="openDeleteModal"
           @action-requested="handleActionRequested"
+          @navigate-to-files="activeTab = 'files'"
         />
 
         <DatasetFilesTab
@@ -194,8 +195,9 @@
         />
 
         <DatasetRequestsTab
+          ref="requestTabRef"
           v-else-if="activeTab === 'requests'"
-          :dataset-id="dataset.resource_id"
+          :dataset="dataset"
           :can-review="can('review_access_requests')"
           @count-changed="fetchRequestCount"
         />
@@ -256,6 +258,7 @@ const counts = ref({
 });
 
 const grantsTabRef = ref(null);
+const requestTabRef = ref(null);
 
 const capabilities = computed(
   () => new Set(dataset.value?._meta?.capabilities ?? []),
@@ -383,6 +386,8 @@ function handleActionRequested(payload) {
   nextTick(() => {
     if (payload.modalName === "issue-grants" && grantsTabRef.value) {
       grantsTabRef.value?.openIssueGrantModal?.();
+    } else if (payload.modalName === "request-access" && requestTabRef.value) {
+      requestTabRef.value?.openRequestAccessModal?.();
     }
   });
 }

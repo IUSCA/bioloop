@@ -142,7 +142,7 @@
           :loading="false"
         />
         <MetricCard
-          label="Grants"
+          label="Access"
           icon="mdi-key"
           :value="props.counts.grants"
           :loading="props.canIssueGrants && props.counts.grants === null"
@@ -166,7 +166,7 @@
           :loading="props.counts.sourceDatasets === null"
         />
         <MetricCard
-          label="Derived"
+          label="Derivatives"
           icon="mdi-source-merge"
           :value="props.counts.derivedDatasets"
           :loading="props.counts.derivedDatasets === null"
@@ -184,10 +184,20 @@
             icon="mdi-key"
             icon-color="text-amber-500"
             title="Grant Access"
-            description="Issue a grant"
+            description="Grant access to users or groups"
             hover-theme="blue"
             @click="emitAction('grant-access', 'grants', 'issue-grants')"
           />
+
+          <!-- request access -->
+          <!-- <ActionButton
+            icon="mdi-hand-okay"
+            icon-color="text-emerald-500"
+            title="Request Access"
+            description="Submit access request"
+            hover-theme="emerald"
+            @click="handleNewRequest"
+          /> -->
 
           <!-- emitAction('download', 'files', 'download') -->
           <ActionButton
@@ -232,6 +242,13 @@
     :description="props.dataset.description"
     @update="emit('update')"
   />
+
+  <!-- Download Modal -->
+  <DatasetDownloadModalV2
+    ref="downloadModalRef"
+    :dataset="props.dataset"
+    @navigate-to-files="handleNavigateToFiles"
+  />
 </template>
 
 <script setup>
@@ -252,7 +269,12 @@ const props = defineProps({
   canDownload: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["update", "delete", "action-requested"]);
+const emit = defineEmits([
+  "update",
+  "delete",
+  "action-requested",
+  "navigate-to-files",
+]);
 
 const editModalRef = ref(null);
 
@@ -280,4 +302,16 @@ function openDownloadModal() {
 function handleStageRequest() {
   console.log("Stage request clicked");
 }
+
+function handleNavigateToFiles() {
+  emit("navigate-to-files");
+}
+
+// function handleNewRequest() {
+//   emit("action-requested", {
+//     actionName: "request-access",
+//     tabName: "requests",
+//     modalName: "request-access",
+//   });
+// }
 </script>

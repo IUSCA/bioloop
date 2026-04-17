@@ -20,7 +20,7 @@
           <h2
             class="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100"
           >
-            Revoke Access Grant
+            Remove Access
           </h2>
         </div>
       </div>
@@ -41,14 +41,13 @@
             <p
               class="text-sm font-medium text-amber-800 dark:text-amber-300 leading-5"
             >
-              Immediate access revocation
+              Access will be removed immediately
             </p>
             <p
               class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
             >
-              This grant will be permanently revoked and access will be removed
-              immediately. This action cannot be undone and is recorded in the
-              audit log.
+              This access will be permanently removed and cannot be undone. This
+              action is recorded in the audit log.
             </p>
           </div>
         </div>
@@ -158,7 +157,7 @@
           @click="revokeGrant"
         >
           <Icon icon="mdi-shield-off-outline" class="mr-1 text-base" />
-          Revoke Grant
+          Remove Access
         </VaButton>
       </div>
     </template>
@@ -226,12 +225,12 @@ async function revokeGrant() {
   loading.value = true;
   try {
     await GrantService.revoke(grant.value.id);
-    toast.success("Grant revoked successfully.");
+    toast.success("Access removed successfully.");
     emit("update");
     hide();
   } catch (err) {
     console.error("Failed to revoke grant:", err);
-    toast.error(err?.response?.data?.message ?? "Failed to revoke grant.");
+    toast.error(err?.response?.data?.message ?? "Failed to remove access.");
   } finally {
     loading.value = false;
   }
