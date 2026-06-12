@@ -100,6 +100,60 @@ Use Material Icons only when needed for Vuestic UI components via the `icon` pro
 
 ## Components
 
+### Component Documentation (Required)
+
+Every Vue component **must include a top-of-file documentation block** inside the `<script setup>` section. This is the primary way to communicate intent, not just usage.
+
+The goal is to answer:
+
+* What is this component for?
+* Why does it exist?
+* What problem does it solve that isn’t obvious from the name?
+
+**Required Structure:**
+
+```vue
+<script setup lang="ts">
+/**
+ * ComponentName
+ *
+ * Purpose:
+ * Clear, concise description of what the component does.
+ *
+ * Why it exists:
+ * Explain why this component exists instead of duplicating logic elsewhere.
+ * Focus on architectural intent, not implementation details.
+ *
+ * Responsibilities:
+ * - What this component handles
+ *
+ * Not responsible for:
+ * - What it explicitly does NOT handle (prevents misuse)
+ *
+ * Props:
+ * - Document non-obvious props or constraints
+ *
+ * Emits:
+ * - Document emitted events and when they fire
+ *
+ * Notes:
+ * - Edge cases, caveats, or related components
+ */
+```
+
+**Guidelines:**
+
+* Prioritize **"Why it exists"** over restating what the code already shows
+* Keep it concise but meaningful (avoid boilerplate filler)
+* Do not rely solely on inline comments for understanding component intent
+* Update this block when behavior or purpose changes
+
+**Rationale:**
+
+* Prevents duplication of logic across the codebase
+* Makes components understandable at a glance without reading implementation
+* Reduces onboarding time and misuse of components
+
 ### Use Vuestic UI Components
 The project uses **Vuestic UI** for consistent, accessible UI patterns. Use Vuestic components wherever applicable instead of building custom replacements.
 
