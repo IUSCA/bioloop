@@ -180,8 +180,8 @@ const {
   accessTypes,
   // loading: accessTypesLoading,
   // error: accessTypesError,
-  // refresh: refreshAccessTypes,
-} = useAccessTypes("DATASET");
+  // fetch: fetchAccessTypes,
+} = useAccessTypes(computed(() => "DATASET"));
 
 const canRevoke = computed(() => props.canManageGrants);
 const datasetResource = computed(() => ({

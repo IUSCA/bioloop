@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API Debug (Nodemon)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/api/node_modules/.bin/nodemon",
+      "args": ["--inspect=9229", "--ignore", "tests/**/*.js", "src/index.js"],
+      "restart": true,
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/api",
+      "skipFiles": ["<node_internals>/**"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  ]
+}

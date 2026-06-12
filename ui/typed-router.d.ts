@@ -46,11 +46,17 @@ declare module 'vue-router/auto-routes' {
     '/projects/new': RouteRecordInfo<'/projects/new', '/projects/new', Record<never, never>, Record<never, never>>,
     '/rawdata/': RouteRecordInfo<'/rawdata/', '/rawdata', Record<never, never>, Record<never, never>>,
     '/stats': RouteRecordInfo<'/stats', '/stats', Record<never, never>, Record<never, never>>,
+    '/test': RouteRecordInfo<'/test', '/test', Record<never, never>, Record<never, never>>,
     '/users': RouteRecordInfo<'/users', '/users', Record<never, never>, Record<never, never>>,
+    '/v2/access-requests/': RouteRecordInfo<'/v2/access-requests/', '/v2/access-requests', Record<never, never>, Record<never, never>>,
     '/v2/audit-logs': RouteRecordInfo<'/v2/audit-logs', '/v2/audit-logs', Record<never, never>, Record<never, never>>,
+    '/v2/collections/': RouteRecordInfo<'/v2/collections/', '/v2/collections', Record<never, never>, Record<never, never>>,
     '/v2/collections/[id]/': RouteRecordInfo<'/v2/collections/[id]/', '/v2/collections/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/v2/datasets/': RouteRecordInfo<'/v2/datasets/', '/v2/datasets', Record<never, never>, Record<never, never>>,
+    '/v2/datasets/[id]/': RouteRecordInfo<'/v2/datasets/[id]/', '/v2/datasets/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/v2/groups/': RouteRecordInfo<'/v2/groups/', '/v2/groups', Record<never, never>, Record<never, never>>,
     '/v2/groups/[id]/': RouteRecordInfo<'/v2/groups/[id]/', '/v2/groups/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/v2/home': RouteRecordInfo<'/v2/home', '/v2/home', Record<never, never>, Record<never, never>>,
     '/workflows/': RouteRecordInfo<'/workflows/', '/workflows', Record<never, never>, Record<never, never>>,
   }
 }

@@ -187,8 +187,8 @@ const {
   accessTypes,
   // loading: accessTypesLoading,
   // error: accessTypesError,
-  // refresh: refreshAccessTypes,
-} = useAccessTypes("COLLECTION");
+  // fetch: fetchAccessTypes,
+} = useAccessTypes(computed(() => "COLLECTION"));
 
 const canRevoke = computed(() => props.canManageGrants);
 const collectionResource = computed(() => ({

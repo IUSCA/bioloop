@@ -392,7 +392,7 @@ function buildAccessibleCollectionIdsCte(user_id, scope) {
   const parts = [];
 
   if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id)})`);
+    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id, ['COLLECTION:VIEW_METADATA'])})`);
   }
 
   if (includeAll || scope === RESOURCE_SCOPES.OWNED) {

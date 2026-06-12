@@ -21,28 +21,8 @@
     "consistent-return": 0,
     "camelcase": 0,
     "no-console": ["error", { "allow": ["warn", "error"] }],
-    "comment-length/limit-multi-line-comments": [
-      "warn",
-      {
-        "mode": "overflow-only",
-        "maxLength": 120,
-        "logicalWrap": true,
-        "ignoreUrls": true,
-        "ignoreCommentsWithCode": true,
-        "tabSize": 2
-      }
-    ],
-    "comment-length/limit-single-line-comments": [
-      "warn",
-      {
-        "mode": "overflow-only",
-        "maxLength": 120,
-        "logicalWrap": true,
-        "ignoreUrls": true,
-        "ignoreCommentsWithCode": true,
-        "tabSize": 2
-      }
-    ],
+    "comment-length/limit-multi-line-comments": "off",
+    "comment-length/limit-single-line-comments": "off",
     "max-len": ["error", { "ignoreComments": true, "code": 120 }],
     "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
     "local-rules/no-original-prisma-inside-tx": "error",

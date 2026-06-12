@@ -142,7 +142,8 @@
 
         <CollectionRequestsTab
           v-else-if="activeTab === 'requests'"
-          :collection-id="props.id"
+          ref="requestsTabRef"
+          :collection="collection"
           :can-review="can('review_requests')"
           @count-changed="fetchRequestCount"
         />
@@ -188,6 +189,7 @@ const counts = ref({ datasets: null, grants: null, requests: null });
 
 const grantsTabRef = ref(null);
 const datasetsTabRef = ref(null);
+const requestsTabRef = ref(null);
 
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
@@ -222,7 +224,6 @@ async function fetchCollectionData() {
     setNavBreadcrumbs(data);
 
     await fetchCounts();
-    // await Promise.allSettled([fetchDatasetCount(), fetchGrantsCount()]);
   } catch (err) {
     error.value = err?.response?.data?.message ?? "Failed to load collection.";
   } finally {
@@ -311,6 +312,8 @@ function handleActionRequested(payload) {
       grantsTabRef.value?.openIssueGrantModal?.();
     } else if (payload.modalName === "add-dataset" && datasetsTabRef.value) {
       datasetsTabRef.value?.openAddDatasetModal?.();
+    } else if (payload.modalName === "request-access") {
+      requestsTabRef.value?.openRequestModal?.();
     }
   });
 }

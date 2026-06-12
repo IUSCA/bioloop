@@ -149,7 +149,7 @@
         />
 
         <MetricCard
-          label="Requests"
+          :label="props.canReview ? 'Pending Requests' : 'My Requests'"
           :icon="getIcon('request', { outlined: true })"
           color="info"
           :value="props.counts.requests"
@@ -157,7 +157,7 @@
         />
 
         <MetricCard
-          label="Access"
+          :label="props.canIssueGrants ? 'Access' : 'My Access'"
           :icon="getIcon('grant', { outlined: true })"
           color="warning"
           :value="props.counts.grants"
@@ -182,6 +182,7 @@
           />
 
           <ActionButton
+            v-if="props.canEdit"
             icon="mdi-pencil"
             icon-color="text-blue-500"
             title="Edit Details"
@@ -191,6 +192,7 @@
           />
 
           <ActionButton
+            v-if="props.canAddDataset"
             :icon="getIcon('dataset', { outlined: true })"
             icon-color="text-emerald-500"
             title="Add Dataset"
@@ -198,12 +200,22 @@
             hover-theme="blue"
             @click="emitAction('add-dataset', 'datasets', 'add-dataset')"
           />
+
+          <ActionButton
+            icon="mdi-account-question"
+            icon-color="text-indigo-500"
+            title="Request Access"
+            description="Submit a request to access this collection"
+            hover-theme="blue"
+            @click="emitAction('request-access', 'requests', 'request-access')"
+          />
         </div>
       </div>
     </div>
   </div>
 
   <CollectionEditMetadataModal
+    v-if="props.canEdit"
     ref="editModalRef"
     :collection-id="props.collection.id"
     :name="props.collection.name"
@@ -214,8 +226,6 @@
 </template>
 
 <script setup>
-import CollectionEditMetadataModal from "@/components/v2/collections/CollectionEditMetadataModal.vue";
-
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
@@ -230,6 +240,7 @@ const props = defineProps({
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
+  canAddDataset: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["update", "toggle-archive", "action-requested"]);

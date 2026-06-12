@@ -6,7 +6,7 @@
       class="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 transition-colors"
       :class="{
         'cursor-default opacity-50': props.presetCoveredIds.has(type.id),
-        'bg-blue-50 dark:bg-blue-950': props.modelValue.has(type.id),
+        'bg-blue-50 dark:bg-blue-950': model?.has(type.id),
       }"
       :aria-disabled="props.presetCoveredIds.has(type.id)"
       @click="toggle(type.id)"
@@ -17,7 +17,7 @@
     >
       <VaCheckbox
         :model-value="
-          props.modelValue.has(type.id) || props.presetCoveredIds.has(type.id)
+          model?.has(type.id) || props.presetCoveredIds.has(type.id)
         "
         :disabled="props.presetCoveredIds.has(type.id)"
         class="mt-0.5 shrink-0 pointer-events-none"
@@ -28,7 +28,7 @@
           <span
             class="text-sm font-medium"
             :class="
-              props.modelValue.has(type.id)
+              model?.has(type.id)
                 ? 'text-blue-700 dark:text-blue-300'
                 : 'text-gray-800 dark:text-gray-200'
             "
@@ -51,6 +51,7 @@
 </template>
 
 <script setup>
+// Model holds the set of access type IDs selected by the user in this component
 const model = defineModel();
 
 const props = defineProps({

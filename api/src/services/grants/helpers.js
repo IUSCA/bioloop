@@ -108,8 +108,13 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
  * @param {string} user_id - UUID of the user
  * @returns {Prisma.sql} SQL query to fetch all valid grants for the user
  */
-function userValidGrantsQuery(user_id) {
+function userValidGrantsQuery(user_id, access_types = []) {
   // helper to find all valid grants for a user, including via group membership
+  const access_type_filter = access_types.length > 0
+    ? Prisma.sql`gat.name IN (${Prisma.join(access_types)})`
+    : Prisma.empty;
+  const whereClause = access_type_filter !== Prisma.empty ? Prisma.sql`WHERE ${access_type_filter}` : Prisma.empty;
+
   return Prisma.sql`
     WITH subjects AS (
       SELECT ${user_id} AS subject_id
@@ -123,6 +128,8 @@ function userValidGrantsQuery(user_id) {
     SELECT g.*
     FROM valid_grants g
     JOIN subjects s ON g.subject_id = s.subject_id
+    JOIN grant_access_type gat ON g.access_type_id = gat.id
+    ${whereClause}
   `;
 }
 
@@ -157,11 +164,11 @@ function ownerGroupIdsOfResourcesAccessibleByUserQuery(user_id) {
  * @param {string} user_id - UUID of the user
  * @returns {Prisma.sql} SQL query to fetch collections accessible by the user via grants
  */
-function accessibleCollectionsByGrantsQuery(user_id) {
+function accessibleCollectionsByGrantsQuery(user_id, access_types = []) {
   // helper to find collections that are accessible by a user via grants (directly or via group membership)
   return Prisma.sql`
     SELECT DISTINCT c.id
-    FROM (${userValidGrantsQuery(user_id)}) g
+    FROM (${userValidGrantsQuery(user_id, access_types)}) g
     JOIN collection c ON g.resource_id = c.id
   `;
 }

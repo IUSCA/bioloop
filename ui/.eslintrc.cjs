@@ -54,5 +54,7 @@ module.exports = {
         "invalid-first-character-of-tag-name": false,
       },
     ],
+    // Ignore unknown at-rules in CSS (e.g., @apply for Tailwind)
+    "vue/no-unknown-css-at-rules": "off",
   },
 };

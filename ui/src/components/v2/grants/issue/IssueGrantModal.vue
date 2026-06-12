@@ -52,8 +52,8 @@
         v-if="accessTypesError || presetsError"
         :message="accessTypesError || presetsError"
         @retry="
-          refreshAccessTypes();
-          refreshPresets();
+          fetchAccessTypes();
+          fetchPresets();
         "
       />
 
@@ -213,15 +213,15 @@ const {
   accessTypes,
   loading: accessTypesLoading,
   error: accessTypesError,
-  refresh: refreshAccessTypes,
-} = useAccessTypes(props.resource?.type); // TODO: handle dynamic resource changes
+  fetch: fetchAccessTypes,
+} = useAccessTypes(computed(() => props.resource?.type));
 
 const {
   presets,
   loading: presetsLoading,
   error: presetsError,
-  refresh: refreshPresets,
-} = useGrantPresets(props.resource?.type);
+  fetch: fetchPresets,
+} = useGrantPresets(computed(() => props.resource?.type));
 
 // form state
 const subject = ref({});

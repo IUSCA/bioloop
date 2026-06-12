@@ -99,7 +99,7 @@ async function createAccessRequest(data, requester_id) {
       });
     }
 
-    // Use AuditBuilder
+    // create audit log
     const builder = new AuditBuilder(tx, { actor_id: requester_id });
     await builder
       .setTarget('ACCESS_REQUEST', accessRequest.id)

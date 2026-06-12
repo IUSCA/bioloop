@@ -76,16 +76,22 @@
       </div>
     </VaCardContent>
   </VaCard>
+
+  <RequestAccessModalWithoutDrafts
+    ref="requestAccessModalRef"
+    :resource="collectionResource"
+    @submitted="onRequestSubmitted"
+  />
 </template>
 
 <script setup>
 import AccessRequestService from "@/services/v2/access-requests";
 
 const props = defineProps({
-  collectionId: { type: String, required: false },
+  collection: { type: Object, required: true },
   canReview: { type: Boolean, default: false },
 });
-// const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed"]);
 
 const requests = ref([]);
 const loading = ref(true);
@@ -95,6 +101,12 @@ const page = ref(1);
 const pageSize = ref(10);
 const totalRequests = ref(0);
 // const ITEMS_PER_PAGE = 10;
+
+const collectionResource = computed(() => ({
+  type: "COLLECTION",
+  id: props.collection.id,
+  collection: props.collection,
+}));
 
 const headerTitle = computed(() =>
   props.canReview ? "Pending Review" : "Your Requests",
@@ -152,11 +164,18 @@ function fetchRequests() {
     });
 }
 
+const requestAccessModalRef = ref(null);
 function openRequestModal() {
-  // TODO: open modal to request access
+  requestAccessModalRef.value?.show();
+}
+
+function onRequestSubmitted() {
+  emit("count-changed");
 }
 
 onMounted(() => {
   fetchRequests();
 });
+
+defineExpose({ openRequestModal });
 </script>

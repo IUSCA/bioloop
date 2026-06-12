@@ -76,7 +76,8 @@ collectionPolicies
       isPlatformAdmin,
       isCollectionAdmin,
       hasCollectionOversight,
-      userHasGrant('COLLECTION:VIEW_METADATA')]),
+      userHasGrant('COLLECTION:VIEW_METADATA'),
+    ]),
 
     list: Policy.always, // anyone can list collections, but the results will be filtered based on their permissions
     list_datasets: Policy.or([
