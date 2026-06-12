@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- cSpell: disable -->
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +21,20 @@
       --btn-active-bg: #2563eb;
       --border: #e2e8f0;
       --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+
+    :root.dark {
+      --bg-sidebar: #1f2937;
+      --bg-topbar: #1f2937;
+      --bg-main: #111827;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --text-sidebar: #9ca3af;
+      --text-active: #ffffff;
+      --btn-active-bg: #3b82f6;
+      --border: #374151;
+      --topbar-text: #d1d5db;
+      --main-placeholder: #4b5563;
     }
 
     html, body { height: 100%; overflow: hidden; font-family: var(--font); }
@@ -54,12 +69,14 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
+    :root.dark #sidebar-header h1 { color: #6b7280; }
 
     #sidebar-header p {
       font-size: 11px;
       color: #4d6a96;
       margin-top: 3px;
     }
+    :root.dark #sidebar-header p { color: #4b5563; }
 
     #template-list {
       flex: 1;
@@ -108,6 +125,7 @@
       color: #4d6a96;
       flex-shrink: 0;
     }
+    :root.dark #sidebar-footer { border-top-color: #374151; color: #4b5563; }
 
     /* ── Top bar ─────────────────────────────────────── */
     #topbar {
@@ -134,6 +152,7 @@
       font-weight: 600;
       color: #1e293b;
     }
+    :root.dark #template-name { color: var(--topbar-text); }
 
     #compile-status {
       font-size: 11px;
@@ -143,8 +162,11 @@
       border-radius: 9999px;
       transition: opacity 0.25s;
     }
+    :root.dark #compile-status { color: #9ca3af; background: #374151; }
     #compile-status.loading { color: #2563eb; background: #eff6ff; }
+    :root.dark #compile-status.loading { color: #60a5fa; background: #1e2937; }
     #compile-status.error   { color: #dc2626; background: #fef2f2; }
+    :root.dark #compile-status.error   { color: #f87171; background: #450a0a; }
 
     #topbar-right {
       display: flex;
@@ -168,11 +190,14 @@
       transition: background 0.12s, color 0.12s, border-color 0.12s;
     }
     .view-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+    :root.dark .view-btn:hover { background: #374151; border-color: #6b7280; }
     .view-btn.active {
       background: #1e293b;
       color: #ffffff;
       border-color: #1e293b;
     }
+    :root.dark .view-btn { color: #9ca3af; border-color: #374151; }
+    :root.dark .view-btn.active { background: #4b5563; color: #ffffff; border-color: #4b5563; }
 
     /* ── Main / iframe area ──────────────────────────── */
     #main {
@@ -215,6 +240,7 @@
       gap: 12px;
       width: 100%;
     }
+    :root.dark #placeholder { color: var(--main-placeholder); }
     #placeholder svg { opacity: 0.3; }
     #placeholder p { font-size: 14px; }
   </style>
@@ -242,6 +268,10 @@
         <span id="compile-status" style="display:none"></span>
       </div>
       <div id="topbar-right">
+        <button class="view-btn" id="btn-theme" title="Toggle dark mode">
+          <svg id="theme-icon-light" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg id="theme-icon-dark" style="display:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
         <button class="view-btn active" id="btn-desktop" title="Desktop width">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           Desktop
@@ -279,6 +309,9 @@
     const placeholder = document.getElementById('placeholder');
     const btnDesktop = document.getElementById('btn-desktop');
     const btnMobile  = document.getElementById('btn-mobile');
+    const btnTheme   = document.getElementById('btn-theme');
+    const themeIconLight = document.getElementById('theme-icon-light');
+    const themeIconDark  = document.getElementById('theme-icon-dark');
 
     // ── Template icons ───────────────────────────────────────────────────────
     const ICONS = {
@@ -321,7 +354,7 @@
       });
 
       nameEl.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-      nameEl.style.color = '#1e293b';
+      nameEl.style.color = '';
       showStatus('loading', 'Compiling…');
 
       placeholder.style.display = 'none';
@@ -383,6 +416,26 @@
       btnDesktop.classList.remove('active');
     });
 
+    // ── Dark mode toggle ────────────────────────────────────────────────────
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        themeIconLight.style.display = 'none';
+        themeIconDark.style.display = 'inline';
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIconLight.style.display = 'inline';
+        themeIconDark.style.display = 'none';
+      }
+    }
+
+    btnTheme.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('email-preview-theme', newTheme);
+    });
+
     // ── Vite HMR – refresh only the active iframe on template changes ────────
     if (import.meta.hot) {
       import.meta.hot.on('email-update', ({ name }) => {
@@ -393,6 +446,11 @@
     }
 
     // ── Boot ─────────────────────────────────────────────────────────────────
+    // Set initial theme
+    const savedTheme = localStorage.getItem('email-preview-theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(savedTheme ?? (systemPrefersDark ? 'dark' : 'light'));
+
     loadTemplateList();
   </script>
 </body>
