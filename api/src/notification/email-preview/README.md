@@ -46,45 +46,58 @@ src/notification/
 |---|---|
 | **Sidebar** | Lists all available templates. Click one to render it. |
 | **Top bar – template name** | Shows the active template and a "Compiled HH:MM:SS" timestamp. Turns red on a compile error. |
+| **Fixture selector** | Appears after selecting a template. Switches between named fixture data cases for that template. |
 | **Desktop / Mobile toggle** | Switches the preview iframe between full-width (≤ 680 px) and mobile-width (390 px). |
 | **⚡ HMR active** | Confirms the WebSocket connection to the Vite dev server is alive. |
 | **iframe** | Renders the compiled email HTML in an isolated document, exactly as an email client would. |
 
-When a template or fixture file is saved, the active template re-renders automatically. No manual refresh needed.
+When a template or fixture file is saved, the active template re-renders automatically with the selected fixture. No manual refresh needed.
 
 ---
 
 ## Fixture files
 
-Each template has a corresponding JSON file in `fixtures/` that supplies the Handlebars variables used during the preview compile. The fixture data is **never** used in production — it is only consumed by the dev server.
+Each template has a corresponding JSON file in `fixtures/` that supplies named Handlebars data cases used during the preview compile. The fixture data is **never** used in production — it is only consumed by the dev server.
 
 ### Structure
 
-A fixture must supply every variable that the template and `base.mjml.hbs` reference. At minimum it needs the base-layout fields:
+Each fixture file is a mapping from fixture name to fixture data:
 
 ```json
 {
-  "subject":  "Email subject line",
-  "preview":  "Short preview text shown by email clients",
-  "_meta": {
-    "type":        "Alert",
-    "generatedAt": "2026-03-06T14:22:00Z"
+  "approved": {
+    "subject": "Email subject line",
+    "preview": "Short preview text shown by email clients",
+    "_meta": {
+      "type": "Workspace upload",
+      "generatedAt": "2026-03-06T14:22:00Z"
+    }
+  },
+  "rejected": {
+    "subject": "Different subject line",
+    "preview": "Different preview text shown by email clients",
+    "_meta": {
+      "type": "Workspace upload",
+      "generatedAt": "2026-03-06T14:22:00Z"
+    }
   }
 }
 ```
 
-Then add whichever fields the body template uses. Example for `alert`:
+Each fixture data object must supply every variable that the template and `base.mjml.hbs` reference. Then add whichever fields the body template uses. Example for `alert`:
 
 ```json
 {
-  "subject":    "Critical: Storage quota exceeded",
-  "preview":    "Your storage quota has been exceeded.",
-  "severity":   "critical",
-  "alertTitle": "Storage Quota Exceeded",
-  "alertBody":  "The primary data volume has reached 98% capacity.",
-  "actionUrl":  "https://bioloop.example.edu/datasets",
-  "actionLabel":"Manage Storage",
-  "_meta": { "type": "Alert", "generatedAt": "2026-03-06T14:22:00Z" }
+  "critical": {
+    "subject": "Critical: Storage quota exceeded",
+    "preview": "Your storage quota has been exceeded.",
+    "severity": "critical",
+    "alertTitle": "Storage Quota Exceeded",
+    "alertBody": "The primary data volume has reached 98% capacity.",
+    "actionUrl": "https://bioloop.example.edu/datasets",
+    "actionLabel": "Manage Storage",
+    "_meta": { "type": "Alert", "generatedAt": "2026-03-06T14:22:00Z" }
+  }
 }
 ```
 
@@ -109,25 +122,19 @@ Both helpers mirror the definitions in `templateRenderer.js` so the preview outp
 
    The file contains raw MJML Handlebars markup (no `<mjml>` wrapper — that comes from `base.mjml.hbs`). Look at `alert.mjml.hbs` for a minimal example.
 
-2. **Register the name** in `vite.config.js`:
-
-   ```js
-   const TEMPLATE_NAMES = ['alert', 'workflow', 'request', 'digest', 'system', 'my-new-type'];
-   ```
-
-3. **Create a fixture file**:
+2. **Create a fixture file**:
 
    ```
    src/notification/email-preview/fixtures/my-new-type.json
    ```
 
-4. **Register the name** in `templateRenderer.js` so it is preloaded at worker startup:
+3. **Register the name** in `templateRenderer.js` so it is preloaded at worker startup:
 
    ```js
    const names = ['base', 'alert', 'workflow', 'request', 'digest', 'system', 'my-new-type'];
    ```
 
-The new template now appears in the sidebar automatically when the dev server restarts (or is already running).
+The new template appears in the sidebar after clicking the refresh button, or automatically the next time the preview UI loads.
 
 ---
 
@@ -136,16 +143,22 @@ The new template now appears in the sidebar automatically when the dev server re
 ```
 Browser                     Vite dev server (Node)
   │                               │
-  │── GET /api/templates ─────────▶ middleware lists TEMPLATE_NAMES whose
-  │                               │  .mjml.hbs file exists on disk
+  │── GET /api/templates ─────────▶ middleware scans templates/ for
+  │                               │  *.mjml.hbs files, excluding base.mjml.hbs
   │◀─ ["alert","workflow",…] ─────│
   │                               │
-  │── GET /preview/alert ─────────▶ compileTemplate("alert"):
+  │── GET /api/fixtures/alert ────▶ middleware reads fixtures/alert.json
+  │◀─ ["critical","warning"] ──────│
+  │                               │
+  │── GET /preview/alert?fixture=critical
+  │                               │
+  │                               ▶ compileTemplate("alert", "critical"):
   │                               │  1. Read fixtures/alert.json
-  │                               │  2. Read base.mjml.hbs + alert.mjml.hbs
-  │                               │  3. Handlebars.compile(body)(data) → bodyMjml
-  │                               │  4. Handlebars.compile(base)({…, body}) → fullMjml
-  │                               │  5. mjml2html(fullMjml) → { html, errors }
+  │                               │  2. Select the named fixture data
+  │                               │  3. Read base.mjml.hbs + alert.mjml.hbs
+  │                               │  4. Handlebars.compile(body)(data) → bodyMjml
+  │                               │  5. Handlebars.compile(base)({…, body}) → fullMjml
+  │                               │  6. mjml2html(fullMjml) → { html, errors }
   │◀─ 200 text/html ──────────────│
   │  (written into iframe)        │
   │                               │
@@ -158,7 +171,7 @@ Browser                     Vite dev server (Node)
   │                               │  })
   │  import.meta.hot.on(          │
   │    'email-update', …)         │
-  │  → re-fetch /preview/alert    │
+  │  → re-fetch /preview/alert?fixture=critical
   │  → rewrite iframe             │
 ```
 
@@ -177,7 +190,7 @@ Browser                     Vite dev server (Node)
 | Symptom | Fix |
 |---|---|
 | Port already in use | Vite auto-increments. Check the terminal for the actual URL. Set `server.port` in `vite.config.js` to pin one. |
-| Template not in sidebar | Check that the name is listed in `TEMPLATE_NAMES` in `vite.config.js` and the `.mjml.hbs` file exists. |
-| Variables rendering as empty strings | The fixture JSON key does not match the Handlebars `{{variable}}` name. Both are case-sensitive. |
-| `Fixture not found` error in iframe | Create `fixtures/<name>.json` with at least `subject`, `preview`, and `_meta`. |
+| Template not in sidebar | Check that the `.mjml.hbs` file exists in `templates/`, then click the sidebar refresh button. |
+| Variables rendering as empty strings | The selected fixture data key does not match the Handlebars `{{variable}}` name. Both are case-sensitive. |
+| `Fixture not found` error in iframe | Create `fixtures/<name>.json` as a named fixture map, e.g. `{ "default": { "subject": "...", "preview": "...", "_meta": { ... } } }`. |
 | Changes not triggering HMR | The watcher only covers files inside `templates/` and `fixtures/`. Check the file path and extension. |

@@ -74,9 +74,49 @@
     #sidebar-header p {
       font-size: 11px;
       color: #4d6a96;
-      margin-top: 3px;
     }
     :root.dark #sidebar-header p { color: #4b5563; }
+
+    #template-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 3px;
+    }
+
+    #refresh-templates {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: #8fa3c8;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+    #refresh-templates:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.1);
+      color: #ffffff;
+    }
+    #refresh-templates:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+    #refresh-templates svg {
+      width: 14px;
+      height: 14px;
+    }
+    #refresh-templates.loading svg { animation: refresh-spin 0.8s linear infinite; }
+
+    @keyframes refresh-spin {
+      to { transform: rotate(360deg); }
+    }
 
     #template-list {
       flex: 1;
@@ -145,14 +185,58 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex: 1;
+      min-width: 0;
     }
 
     #template-name {
       font-size: 14px;
       font-weight: 600;
       color: #1e293b;
+      flex-shrink: 0;
     }
     :root.dark #template-name { color: var(--topbar-text); }
+
+    #fixture-control {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    #fixture-control.visible { display: flex; }
+
+    #fixture-control label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    :root.dark #fixture-control label { color: #9ca3af; }
+
+    #fixture-select {
+      height: 28px;
+      max-width: 190px;
+      min-width: 120px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1e293b;
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 0 28px 0 9px;
+      cursor: pointer;
+    }
+    #fixture-select:disabled {
+      cursor: default;
+      opacity: 0.75;
+    }
+    :root.dark #fixture-select {
+      background: #111827;
+      color: #d1d5db;
+      border-color: #374151;
+    }
 
     #compile-status {
       font-size: 11px;
@@ -172,6 +256,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-shrink: 0;
     }
 
     .view-btn {
@@ -251,7 +336,15 @@
     <aside id="sidebar">
       <div id="sidebar-header">
         <h1>Email Preview</h1>
-        <p>Select a template</p>
+        <div id="template-section-title">
+          <p>Select a template</p>
+          <button id="refresh-templates" type="button" title="Refresh templates" aria-label="Refresh templates">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+              <path d="M21 3v6h-6"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <nav id="template-list">
         <p style="font-size:12px;color:#4d6a96;padding:6px 10px">Loading…</p>
@@ -265,6 +358,10 @@
     <header id="topbar">
       <div id="topbar-left">
         <span id="template-name" style="color:#94a3b8">No template selected</span>
+        <div id="fixture-control">
+          <label for="fixture-select">Fixture</label>
+          <select id="fixture-select" disabled></select>
+        </div>
         <span id="compile-status" style="display:none"></span>
       </div>
       <div id="topbar-right">
@@ -300,6 +397,8 @@
   <script type="module">
     // ── State ───────────────────────────────────────────────────────────────
     let activeTemplate = null;
+    let activeFixture = null;
+    let templatesLoading = false;
 
     const listEl     = document.getElementById('template-list');
     const nameEl     = document.getElementById('template-name');
@@ -307,63 +406,157 @@
     const frame      = document.getElementById('preview-frame');
     const frameWrap  = document.getElementById('frame-wrap');
     const placeholder = document.getElementById('placeholder');
+    const fixtureControl = document.getElementById('fixture-control');
+    const fixtureSelect = document.getElementById('fixture-select');
     const btnDesktop = document.getElementById('btn-desktop');
     const btnMobile  = document.getElementById('btn-mobile');
     const btnTheme   = document.getElementById('btn-theme');
+    const btnRefresh = document.getElementById('refresh-templates');
     const themeIconLight = document.getElementById('theme-icon-light');
     const themeIconDark  = document.getElementById('theme-icon-dark');
 
-    // ── Template icons ───────────────────────────────────────────────────────
-    const ICONS = {
-      alert:    '🔔',
-      workflow: '⚙️',
-      request:  '📋',
-      digest:   '📰',
-      system:   '🛠️',
-    };
+    function formatTemplateName(name) {
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    function formatFixtureName(name) {
+      return name
+        .replace(/[-_]+/g, ' ')
+        .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+    }
+
+    function clearSelectedTemplate() {
+      activeTemplate = null;
+      activeFixture = null;
+      nameEl.textContent = 'No template selected';
+      nameEl.style.color = '#94a3b8';
+      statusEl.style.display = 'none';
+      fixtureControl.classList.remove('visible');
+      fixtureSelect.innerHTML = '';
+      fixtureSelect.disabled = true;
+      frameWrap.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
 
     // ── Sidebar template buttons ─────────────────────────────────────────────
     async function loadTemplateList() {
+      if (templatesLoading) return;
+      templatesLoading = true;
+      btnRefresh.disabled = true;
+      btnRefresh.classList.add('loading');
+
       try {
-        const res = await fetch('/api/templates');
+        const res = await fetch('/api/templates', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to load templates: ${res.status}`);
+
         const names = await res.json();
         listEl.innerHTML = '';
+
+        if (activeTemplate && !names.includes(activeTemplate)) {
+          clearSelectedTemplate();
+        }
+
+        if (!names.length) {
+          listEl.innerHTML = '<p style="font-size:12px;color:#4d6a96;padding:6px 10px">No templates found</p>';
+          return;
+        }
+
         for (const name of names) {
           const btn = document.createElement('button');
           btn.className = 'tpl-btn';
+          btn.classList.toggle('active', name === activeTemplate);
           btn.dataset.name = name;
           btn.innerHTML = `
-            <span class="tpl-icon">${ICONS[name] ?? '✉️'}</span>
-            <span>${name.charAt(0).toUpperCase() + name.slice(1)}</span>
+            <span class="tpl-icon">✉️</span>
+            <span>${formatTemplateName(name)}</span>
           `;
           btn.addEventListener('click', () => selectTemplate(name));
           listEl.appendChild(btn);
         }
       } catch {
         listEl.innerHTML = '<p style="font-size:12px;color:#dc2626;padding:6px 10px">Failed to load templates</p>';
+      } finally {
+        templatesLoading = false;
+        btnRefresh.disabled = false;
+        btnRefresh.classList.remove('loading');
+      }
+    }
+
+    async function loadFixtureList(name, preferredFixture = null) {
+      fixtureControl.classList.add('visible');
+      fixtureSelect.disabled = true;
+      fixtureSelect.innerHTML = '<option>Loading...</option>';
+
+      try {
+        const res = await fetch(`/api/fixtures/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to load fixtures: ${res.status}`);
+
+        const fixtureNames = await res.json();
+        if (activeTemplate !== name) return null;
+        if (!fixtureNames.length) throw new Error(`No fixtures found for ${name}`);
+
+        const selectedFixture = fixtureNames.includes(preferredFixture)
+          ? preferredFixture
+          : fixtureNames[0];
+
+        fixtureSelect.innerHTML = '';
+        for (const fixtureName of fixtureNames) {
+          const option = document.createElement('option');
+          option.value = fixtureName;
+          option.textContent = formatFixtureName(fixtureName);
+          fixtureSelect.appendChild(option);
+        }
+
+        fixtureSelect.value = selectedFixture;
+        fixtureSelect.disabled = fixtureNames.length < 2;
+        activeFixture = selectedFixture;
+        return selectedFixture;
+      } catch {
+        if (activeTemplate === name) {
+          activeFixture = null;
+          fixtureSelect.innerHTML = '<option>Unavailable</option>';
+          fixtureSelect.disabled = true;
+          showStatus('error', 'Fixture error');
+        }
+        return null;
       }
     }
 
     // ── Render template into iframe ──────────────────────────────────────────
-    async function selectTemplate(name) {
+    async function selectTemplate(name, preferredFixture = activeTemplate === name ? activeFixture : null) {
       activeTemplate = name;
+      activeFixture = preferredFixture;
 
       // Update sidebar active state
       document.querySelectorAll('.tpl-btn').forEach((b) => {
         b.classList.toggle('active', b.dataset.name === name);
       });
 
-      nameEl.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+      nameEl.textContent = formatTemplateName(name);
       nameEl.style.color = '';
-      showStatus('loading', 'Compiling…');
+      showStatus('loading', 'Loading fixtures…');
 
       placeholder.style.display = 'none';
       frameWrap.style.display = 'block';
 
+      const fixtureName = await loadFixtureList(name, preferredFixture);
+      if (activeTemplate !== name || !fixtureName) return;
+
+      renderTemplate(name, fixtureName);
+    }
+
+    async function renderTemplate(name, fixtureName) {
+      activeFixture = fixtureName;
+      fixtureSelect.value = fixtureName;
+      showStatus('loading', 'Compiling…');
+
       try {
         // Fetch the rendered HTML from the Vite plugin middleware
-        const res = await fetch(`/preview/${name}`, { cache: 'no-store' });
+        const previewUrl = `/preview/${encodeURIComponent(name)}?fixture=${encodeURIComponent(fixtureName)}`;
+        const res = await fetch(previewUrl, { cache: 'no-store' });
         const html = await res.text();
+
+        if (activeTemplate !== name || activeFixture !== fixtureName) return;
 
         if (!res.ok) {
           showStatus('error', 'Compile error');
@@ -374,8 +567,10 @@
         showStatus('ok', `Compiled ${new Date().toLocaleTimeString()}`);
         writeToFrame(html);
         resizeFrameToContent();
-      } catch (err) {
-        showStatus('error', 'Network error');
+      } catch {
+        if (activeTemplate === name && activeFixture === fixtureName) {
+          showStatus('error', 'Network error');
+        }
       }
     }
 
@@ -436,11 +631,21 @@
       localStorage.setItem('email-preview-theme', newTheme);
     });
 
+    btnRefresh.addEventListener('click', () => {
+      loadTemplateList();
+    });
+
+    fixtureSelect.addEventListener('change', () => {
+      if (activeTemplate && fixtureSelect.value) {
+        renderTemplate(activeTemplate, fixtureSelect.value);
+      }
+    });
+
     // ── Vite HMR – refresh only the active iframe on template changes ────────
     if (import.meta.hot) {
       import.meta.hot.on('email-update', ({ name }) => {
         if (name === activeTemplate) {
-          selectTemplate(name);
+          selectTemplate(name, activeFixture);
         }
       });
     }
