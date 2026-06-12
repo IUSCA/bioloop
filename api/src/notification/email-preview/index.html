@@ -416,7 +416,11 @@
     const themeIconDark  = document.getElementById('theme-icon-dark');
 
     function formatTemplateName(name) {
-      return name.charAt(0).toUpperCase() + name.slice(1);
+      const parts = name.split('_');
+      if (parts.length > 0) {
+        parts[0] = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      }
+      return parts.join(' ');
     }
 
     function formatFixtureName(name) {
