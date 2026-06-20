@@ -1,0 +1,13 @@
+hub/.env
+.ipynb_checkpoints/
+
+/logs/jupyterhub/*
+!/logs/jupyterhub/.gitkeep
+
+/data/users/*
+!/data/users/.gitkeep
+
+/data/shared/*
+!/data/shared/.gitkeep
+
+/notebooks

@@ -34,7 +34,7 @@ tests/videos
 tests/screenshots
 tests/*.png
 
-logs
+logs/*
 log
 tmp
 temp

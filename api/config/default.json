@@ -218,5 +218,11 @@
     "worker": {
       "concurrency": 5
     }
+  },
+  "jupyterhub": {
+    "base_url": "",
+    "api_url": "",
+    "auth_token": "",
+    "ticket_secret": ""
   }
 }

@@ -76,5 +76,11 @@
       "user": "SMTP_AUTH_USER",
       "pass": "SMTP_AUTH_PASS"
     }
+  },
+  "jupyterhub": {
+    "base_url": "HUB_BASE_URL",
+    "api_url": "HUB_API_URL",
+    "auth_token": "HUB_AUTH_TOKEN",
+    "ticket_secret": "HUB_TICKET_SECRET"
   }
 }
