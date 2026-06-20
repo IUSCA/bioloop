@@ -72,6 +72,8 @@ class AuthService {
   }
 
   signup(data) {
+    // not using api helper since we need to send the signup token in the Authorization header instead of the access
+    // token, and the api helper is set up to send the access token in the Authorization header
     const axiosInstance = axios.create({
       baseURL: config.apiBasePath,
     });
@@ -82,6 +84,10 @@ class AuthService {
         Authorization: `Bearer ${signupToken.value}`,
       },
     });
+  }
+
+  logout() {
+    return api.post("/auth/logout");
   }
 }
 

@@ -25,7 +25,7 @@ const app = express();
 app.disable('x-powered-by');
 
 // request logger - https://github.com/expressjs/morgan
-if (config.get('mode') === 'production') {
+if (config.get('env') === 'production') {
   app.use(requestLogger('combined', { skip: (req, res) => res.statusCode < 400 }));
 } else {
   app.use(requestLogger('dev'));
@@ -44,7 +44,7 @@ app.use(cookieParser());
 // compress all responses
 app.use(compression());
 
-if (!['production', 'test'].includes(config.get('mode'))) {
+if (!['production', 'test'].includes(config.get('env'))) {
   // mount swagger ui
   try {
     const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));

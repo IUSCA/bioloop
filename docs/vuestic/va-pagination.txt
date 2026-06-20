@@ -1,0 +1,176 @@
+Title: Vuestic UI — Vue.js 3.0 UI Framework
+
+URL Source: https://ui.vuestic.dev/ui-elements/pagination
+
+Markdown Content:
+## Pagination
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#pagination)
+
+The pagination component is used to split big data sets into chunks so that it's simpler for users to use provided information.
+
+## Examples
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#examples)
+
+### Default
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#default)
+
+By default the component is displayed as a list of pages with length equal to `pages` prop value.
+
+### Limiting the length
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#limiting-the-length)
+
+By using `visible-pages` prop you can set the amount of pages visible on screen.
+
+### Presets
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#presets)
+
+We provide several built-in style presets: `default`, `primary`, `secondary` (inherited from [VaButton](https://ui.vuestic.dev/ui-elements/button)). You can switch between them via `buttons-preset` prop.
+
+### Color
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#color)
+
+Set different colors using `color` prop. You can either user theme string HEX color value.
+
+### Gaps
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#gaps)
+
+`gapped` prop allows you to add distance between pagination items.
+
+### Size
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#size)
+
+Utilize `size` prop in order to make component fit your needs. Refer to API section for more in-depth explanation of how to use `size` prop.
+
+### Borders
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#borders)
+
+Specifying `border-color` prop will add borders to the pagination items.
+
+### Rounded
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#rounded)
+
+`rounded` prop makes your pagination items rounded.
+
+### Active pagination button color
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#active-pagination-button-color)
+
+You can specify color of the current pagination item via `active-page-color` prop.
+
+### Custom icons
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#custom-icons)
+
+Feeling the need to change icons for arrows? We have 4 props to enable full customization of `va-pagination` component.
+
+### Using HTML input instead of pages
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#using-html-input-instead-of-pages)
+
+With `input` prop you can have input with arrow buttons instead of default pagination.
+
+### Using `total` and `page-size`
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#using-total-and-page-size)
+
+You can provide `total` and `page-size` props to `va-pagination` component and let it calculate the length of pagination itself. The value of the component in this case would be equal to the number of the first item at the selected page.
+
+Items from 11 to 20
+
+### Custom links instead of icons
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#custom-links-instead-of-icons)
+
+The `prevPageLink` and `nextPageLink` slots allow you to set a different look to the buttons to go to the previous/next page.
+
+Items from 3 to 12
+
+## API
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#api)
+
+| Name | Description | Types | Default |
+| --- | --- | --- | --- |
+| **activeButtonProps** |  | `Object` | `{}` |
+| **activePageColor** | Specifies color of the currently active page button. | `String` | `""` |
+| **ariaGoToLastPageLabel** | The aria-label of the "go to last page" button | `String` | `"$t:goLastPage"` |
+| **ariaGoToNextPageLabel** | The aria-label of the "go to next page" button | `String` | `"$t:goNextPage"` |
+| **ariaGoToPreviousPageLabel** | The aria-label of the "go to previous page" button | `String` | `"$t:goToPreviousPage"` |
+| **ariaGoToSpecificPageInputLabel** | The aria-label of the "go to specific page" input | `String` | `"$t:goToSpecificPageInput"` |
+| **ariaGoToSpecificPageLabel** | The aria-label of the "go to specific page" button | `String` | `"$t:goToSpecificPage"` |
+| **ariaGoToTheFirstPageLabel** | The aria-label of the "go to the first page" button | `String` | `"$t:goToTheFirstPage"` |
+| **ariaLabel** | The aria-label of the component | `String` | `"$t:pagination"` |
+| **borderColor** | Color CSS style `border` (theme supported options or `HEX`). | `String` | `""` |
+| **boundaryIconLeft** | Set the icon name for left boundary icon. | `String` | `"va-arrow-first"` |
+| **boundaryIconRight** | Set the icon name for right boundary icon. | `String` | `"va-arrow-last"` |
+| **boundaryLinks** | Show controls to move to first and last page. | `Boolean` | `true` |
+| **boundaryNumbers** | Always show first and last page (will replace `boundary-links` if both used). | `Boolean` | `false` |
+| **buttonProps** |  | `Object` | `{}` |
+| **buttonsPreset** | Value of the `preset` prop for passing it to the `VaButton` component ([read more](https://ui.vuestic.dev/ui-elements/button)). | `String` | `"primary"` |
+| **color** | Color of the component (theme string or `HEX` string). | `String` | `"primary"` |
+| **directionIconLeft** | Set the icon name for left direction icon. | `String` | `"va-arrow-left"` |
+| **directionIconRight** | Set the icon name for right direction icon. | `String` | `"va-arrow-right"` |
+| **directionLinks** | Show buttons to move forward and backward. | `Boolean` | `true` |
+| **disabled** | Applies `disabled` style and removes all user interaction effects. | `Boolean` | `false` |
+| **gapped** | Enables gaps between page buttons. | `Boolean` | `false` |
+| **hideOnSinglePage** | Component won't be displayed if only 1 page is available. | `Boolean` | `false` |
+| **input** | Use HTML Input instead of buttons to control `va-pagination` state. | `Boolean` | `false` |
+| **modelValue** | The value of the `v-model` bindings. | `Number` | `1` |
+| **pages** | The amount of pages. | `Number | String` | `0` |
+| **pageSize** | Set the amount of data to be displayed at 1 page. Used to calculate the length of pagination. This prop should not be used with `pages` prop. | `Number | String` | `null` |
+| **preset** | Named preset combination of component props. | `String | Array` | - |
+| **rounded** | Adds rounded corners. | `Boolean` | `false` |
+| **size** | Specify size for component. `small`, `medium`, `large` sizes are available. | `String` | `"medium"` |
+| **stateful** | Add possibility to work with component without setting `v-model`. | `Boolean` | `false` |
+| **total** | Set the amount of data pagination should iterate through. This prop should not be used with `pages` prop. | `Number | String` | `null` |
+| **visiblePages** | The amount of displayed pages (when set to 0 all pages are displayed). | `Number | String` | `0` |
+
+| Name | Description |
+| --- | --- |
+| update:modelValue | The event is triggered when the component needs to change the model. Is also used by `v-model` and must be listed after the `v-model` |
+
+| Name | Description |
+| --- | --- |
+| firstPageLink | For the first page link content |
+| lastPageLink | For the last page link content |
+| nextPageLink | For the next page link content |
+| prevPageLink | For the prev page link content |
+
+| Name | Default Value |
+| --- | --- |
+| **--va-pagination-gap** | 0.5rem |
+| **--va-pagination-input-background** | var(--va-background-primary) |
+| **--va-pagination-input-border-style** | solid |
+| **--va-pagination-input-border-width** | 1px 0 |
+| **--va-pagination-input-text-align** | center |
+| **--va-pagination-input-font-size** | 1rem |
+| **--va-pagination-button-content-width** | 0.5rem |
+| **--va-pagination-button-sm-size** | var(--va-button-sm-size) |
+| **--va-pagination-button-size** | var(--va-button-size) |
+| **--va-pagination-button-lg-size** | var(--va-button-lg-ze) |
+
+## FAQ
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#faq)
+
+### What will happen if both `pages` and `total` props are set?
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#what-will-happen-if-both-pages-and-total-props-are-set)
+
+The error will be thrown into the console. Component is meant to be used only in one of these modes.
+
+### Can I use `total` and `input` props together?
+
+[#](https://ui.vuestic.dev/ui-elements/pagination#can-i-use-total-and-input-props-together)
+
+Yep. In v-model you'll get item number instead of page number.

@@ -1,5 +1,5 @@
 {
-  "mode": "default",
+  "env": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
     "port": 3030,
@@ -147,7 +147,6 @@
         }
       ]
     }
-
   },
   "dataset_types": [
     "RAW_DATA",
@@ -196,5 +195,28 @@
     "Internal Academic",
     "Non-profit",
     "Other"
-  ]
+  ],
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": ""
+  },
+  "smtp": {
+    "host": "localhost",
+    "port": 1025,
+    "secure": false,
+    "auth": {
+      "user": "",
+      "pass": ""
+    },
+    "from": {
+      "name": "Bioloop Notifications",
+      "address": "notifications@bioloop.sca.iu.edu"
+    }
+  },
+  "notify": {
+    "worker": {
+      "concurrency": 5
+    }
+  }
 }

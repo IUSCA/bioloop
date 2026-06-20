@@ -1,0 +1,236 @@
+Title: Vuestic UI — Vue.js 3.0 UI Framework
+
+URL Source: https://ui.vuestic.dev/ui-elements/input
+
+Markdown Content:
+Input
+
+[#](https://ui.vuestic.dev/ui-elements/input#input)
+----------------------------------------------------------
+
+The `va-input` component is intended to be used instead of the standard HTMl input or textarea.
+
+Examples
+
+[#](https://ui.vuestic.dev/ui-elements/input#examples)
+----------------------------------------------------------------
+
+### Basic usage
+
+[#](https://ui.vuestic.dev/ui-elements/input#basic-usage)
+
+By default `va-input` doesn’t have attributes, but can be combined with a placeholder and/or label.
+
+### Styles
+
+[#](https://ui.vuestic.dev/ui-elements/input#styles)
+
+There are tree styles for input: Default (outlined), solid, bordered.
+
+### Hint messages
+
+[#](https://ui.vuestic.dev/ui-elements/input#hint-messages)
+
+Support single/multi line messages to give some hint for improve UX
+
+### Counter
+
+[#](https://ui.vuestic.dev/ui-elements/input#counter)
+
+### Validation and error/success state
+
+[#](https://ui.vuestic.dev/ui-elements/input#validation-and-error-success-state)
+
+Support a simple validation using the rules prop. The prop accepts an array of callbacks. While validating rules, the current v-model value will be passed to the callback. This callback should return either true or a String, the error message. Also you can manually pass error/success prop to manage input state. Notice that we use `immediate-validation` props to show error message without requiring user interaction.
+
+### Slots
+
+[#](https://ui.vuestic.dev/ui-elements/input#slots)
+
+You can use slots for pass custom elements to input (inner or outer), such as icons or buttons etc.
+
+### Strict v-model bind
+
+[#](https://ui.vuestic.dev/ui-elements/input#strict-v-model-bind)
+
+In case you want to strictly bind v-model to input value. This will prevent user from typing anything that doesn't match provided model-value. Can be used for validation or making masks.
+
+### Input Class
+
+[#](https://ui.vuestic.dev/ui-elements/input#input-class)
+
+To assign a class directly to input, rather than its wrapper, use the `input-class` property. For example, you can use the build-in component class (or any other class you've created) to align the input text — `va-text-center` and `va-text-right` to align the center or right.
+
+### Customizable
+
+[#](https://ui.vuestic.dev/ui-elements/input#customizable)
+
+You can create `preset` for your input components, but sometimes requirements can be out of boundaries of pre-defined `presets`. To solve this problem component allows to customize it with `slots` and its `props`.
+
+€
+
+EUR
+
+$
+
+USD
+
+### Supported HTML attributes
+
+[#](https://ui.vuestic.dev/ui-elements/input#supported-html-attributes)
+
+Be default we support these HTML Input attributes: `type`, `disabled`, `readonly`, `placeholder`, `pattern`, `inputmode`, `minlength`, `maxlength`. Read more on the [MDN](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input).
+
+### Input types
+
+[#](https://ui.vuestic.dev/ui-elements/input#input-types)
+
+With a `type` property you can set the type of the input which will render native `<input type="text/password/search/etc" />`.
+
+Watch available types [here](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types) (some types aren't supported or have implemented as a Vuestic UI component).
+
+API
+
+[#](https://ui.vuestic.dev/ui-elements/input#api)
+------------------------------------------------------
+
+| Name | Description | Types | Default |
+| --- | --- | --- | --- |
+| **ariaResetLabel** | The aria-label of the "reset" button | `String` | `"$t:reset"` |
+| **autocomplete** |  | `String` | - |
+| **autofocus** |  | `Boolean` | `false` |
+| **background** | The color name of the background color | `String` | - |
+| **clearable** | Specifies whether the input should be clearable. | `Boolean` | `false` |
+| **clearableIcon** | Sets the cleaning button icon. | `String` | `"va-clear"` |
+| **clearValue** | Value which will be set after clear. | `String` | `""` |
+| **color** | Color of the component (theme string or `HEX` string). | `String` | `"primary"` |
+| **counter** | Specifies whether the input should have a counter at the bottom. | `Boolean` | `false` |
+| **dirty** | Sets the dirty state of the component | `Boolean` | `false` |
+| **disabled** | Applies `disabled` style and removes all user interaction effects. | `Boolean` | `false` |
+| **error** | Show component in error state. | `Boolean` | `false` |
+| **errorCount** | Number of error messages displayed. | `String | Number` | `1` |
+| **errorMessages** | Error messages for the component. | `Array | String` | `[]` |
+| **immediateValidation** | Sets the validation to be performed when the component is mounted | `Boolean` | `false` |
+| **innerLabel** | If true label will be inside the input. | `Boolean` | `false` |
+| **inputAriaDescribedby** |  | `String` | - |
+| **inputAriaLabel** |  | `String` | `"$t:inputField"` |
+| **inputAriaLabelledby** |  | `String` | - |
+| **inputClass** | Class to be applied directly to the input element. | `String` | `""` |
+| **inputmode** | The inputmode global attribute is an enumerated attribute that specifies what kind of input mechanism would be most helpful for users entering content into the form control. | `String` | `"text"` |
+| **label** | Same as native `label`. | `String` | `""` |
+| **loading** | Indicates that something is loading (spinner icon). | `Boolean` | `false` |
+| **maxLength** | Maximum length of input. | `String | Number` | - |
+| **messages** | Description messages for the component. | `Array | String` | `[]` |
+| **modelValue** | The value of the `v-model` bindings. | `Number | String |` | `""` |
+| **name** | Applies `name` to internal input component. Useful for native forms. | `String` | - |
+| **pattern** | Pattern for input in case you want to use native validation. | `String` | - |
+| **placeholder** | Placeholder text. | `String` | `""` |
+| **preset** | Named preset combination of component props. | `String | Array` | - |
+| **readonly** | Doesn't look disabled, but acts like one. Mostly useful for wrapper components. | `Boolean` | `false` |
+| **requiredMark** | Adds required mark to the label | `Boolean` | `false` |
+| **rules** | Validation rules . | `Array` | `[]` |
+| **stateful** | Add possibility to work with component without setting `v-model`. | `Boolean` | `false` |
+| **strictBindInputValue** | In case you want to strictly bind v-model to input value. This will prevent user from typing anything that doesn't match your custom the mask. | `Boolean` | `false` |
+| **success** | Show component in success state. | `Boolean` | `false` |
+| **tabindex** | Sets the custom `tabindex`. | `String | Number` | `0` |
+| **type** | Will be used as value for html `type` attribute. | `String` | `"text"` |
+
+| Name | Description |
+| --- | --- |
+| blur | On blur.. The event argument is: `FocusEvent` |
+| change | . The event argument is: `any` |
+| clear | Emitted when the clear button is clicked. |
+| click | On click.. The event argument is: `Event` |
+| clickAppend | The event is triggered by clicking on the `append` slot. The event argument is: `Event` |
+| clickAppendInner | The event is triggered by clicking on the `appendInner` slot. The event argument is: `Event` |
+| clickIcon | . The event argument is: `Event` |
+| clickPrepend | The event is triggered by clicking on the `prepend` slot. The event argument is: `Event` |
+| clickPrependInner | The event is triggered by clicking on the `prependInner` slot. The event argument is: `Event` |
+| focus | On focus.. The event argument is: `FocusEvent` |
+| input | On value change. |
+| keydown | . The event argument is: `Event` |
+| keypress |  |
+| keyup | . The event argument is: `Event` |
+| update:dirty | Fires when the dirty state changes |
+| update:error | Fires when the error state changes |
+| update:errorMessages | Fires when the error messages change |
+| update:loading |  |
+| update:modelValue | The event is triggered when the component needs to change the model. Is also used by `v-model` and must be listed after the `v-model` |
+| updateError | Fires when the error state changes. The event argument is: `() => boolean` |
+| updateErrorMessages | Fires when the error messages change. The event argument is: `() => string[] | string` |
+
+| Name | Description |
+| --- | --- |
+| append | Slot for append content. It will be placed after input component. |
+| appendInner | Slot for append content. It will be placed inside input. |
+| prepend | Slot for prepend content. It will be placed before input component. |
+| prependInner | Slot for prepend content. It will be placed inside input. |
+
+| Name | Description |
+| --- | --- |
+| blur | Removes focus from input. |
+| focus | Sets focus on input. |
+| reset | Resets input value. |
+
+| Name | Default Value |
+| --- | --- |
+| **--va-input-line-height** | 20px |
+| **--va-input-font-size** | 1rem |
+| **--va-input-font-weight** | normal |
+| **--va-input-font-style** | normal |
+| **--va-input-font-stretch** | normal |
+| **--va-input-letter-spacing** | normal |
+| **--va-input-disabled-opacity** | 0.4 |
+
+*   Remove cleave.js and reduced bundle size
+
+*   Remove `mask` prop. Prefer useInputMask composable
+
+*   Fix style issues without vuestic/css or in web-components build
+
+*   Fix empty value when model value initially set
+
+*   Fix issue when user unable to remove spec symbols when mask is used
+
+*   Inputs have outlined style by default
+
+*   `solid` and `bordered` props moved to `preset="solid"` and `preset="bordered"`
+
+*   All `--va-input-*` css variables renamed to `--va-input-wrapper-*`
+
+*   For outlined style `currentColor` is used for text color, without background color detection
+
+*   `type="textarea"` is removed, use VaTextarea component instead
+
+VaInputWrapper:
+
+```
+:root,
+:host {
+  --va-input-wrapper-width: var(--va-form-element-default-width);
+  --va-input-wrapper-color: var(--va-primary);
+  --va-input-wrapper-background: var(--va-background-element, #f5f9fb);
+  --va-input-wrapper-background-opacity: 1;
+  --va-input-wrapper-border-width: var(--va-form-element-border-width);
+  --va-input-wrapper-border-color: var(--va-background-border);
+  --va-input-wrapper-border-radius: var(--va-form-element-border-radius);
+  --va-input-wrapper-min-width: var(--va-form-element-min-width);
+  --va-input-wrapper-display: inline-block;
+  --va-input-wrapper-cursor: text;
+  --va-input-wrapper-min-height: 36px;
+  --va-input-wrapper-validation-background-opacity: 0.1;
+
+  /* Counter container */
+  --va-input-wrapper-counter-line-height: 1.5;
+  --va-input-wrapper-counter-font-size: 0.8rem;
+  --va-input-wrapper-counter-color: var(--va-secondary);
+
+  /* Content Wrapper */
+  --va-input-wrapper-horizontal-padding: 0.5rem;
+  --va-input-wrapper-items-gap: 0.5rem;
+
+  /* Validation */
+  --va-input-wrapper-success-background: var(--va-input-success-color);
+  --va-input-wrapper-error-background: var(--va-input-error-color);
+}
+```

@@ -1,0 +1,50 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{subject}}</mj-title>
+    <mj-preview>{{preview}}</mj-preview>
+    <mj-attributes>
+      <!-- Zero out defaults so every template controls spacing explicitly -->
+      <mj-all font-family="Arial, sans-serif" />
+      <mj-section padding="0" />
+      <mj-text font-size="14px" color="#2d3748" line-height="1.6" padding="0" />
+      <mj-button font-size="13px" font-weight="600" border-radius="6px"
+                 background-color="#2563eb" color="#ffffff"
+                 inner-padding="12px 28px" padding="0" align="left" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body background-color="#f4f6f9">
+
+    <!-- ── HEADER ── -->
+    <mj-section background-color="#1a2744" padding="22px 24px">
+      <mj-column>
+        <mj-text font-size="17px" font-weight="700" color="#ffffff" line-height="1.3">
+          University System
+        </mj-text>
+        <mj-text font-size="12px" color="#8fa3c8" line-height="1" padding="4px 0 0 0">
+          {{_meta.type}} &middot; {{formatDate _meta.generatedAt}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <!-- ── BODY (injected by child templates) ── -->
+    {{{body}}}
+
+    <!-- ── DIVIDER ── -->
+    <mj-section background-color="#ffffff" padding="0 24px">
+      <mj-column>
+        <mj-divider border-color="#e2e8f0" border-width="1px" padding="0" />
+      </mj-column>
+    </mj-section>
+
+    <!-- ── FOOTER ── -->
+    <mj-section background-color="#f8fafc" padding="18px 24px">
+      <mj-column>
+        <mj-text font-size="11px" color="#94a3b8" align="center" line-height="1.6">
+          This is an automated message. Please do not reply to this email.<br />
+          &copy; {{year}} University. All rights reserved.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+  </mj-body>
+</mjml>
