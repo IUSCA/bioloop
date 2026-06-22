@@ -27,7 +27,7 @@ This guide covers the installation and configuration of all these components in 
 
 ```bash
 cd api/
-cp .env.example .env
+cp .env.default .env
 
 cd keys
 ./genkeys.sh
@@ -76,7 +76,7 @@ Start the server: `npm run start`
 
 ```bash
 cd ui/
-cp .env.example .env
+cp .env.default .env
 
 mkdir .cert
 openssl req -subj '/CN=localhost' -x509 -newkey rsa:4096 -nodes -keyout ./.cert/key.pem -out ./.cert/cert.pem
@@ -117,7 +117,7 @@ Steps:
 - Create .env
 ```bash
 cd workers
-cp .env.example .env
+cp .env.default .env
 ```
 
 - Generate an auth token to access the app api and add it to .env against `AUTH_TOKEN`.

@@ -6,9 +6,9 @@ order: 0
 # UI Overview
 
 ## Getting Started
-Create a `.env` file from the template `.env.example`: 
+Create a `.env` file from the template `.env.default`: 
 ```bash
-cp .env.example .env
+cp .env.default .env
 ``` 
 and populate the config values to all the keys.
 
