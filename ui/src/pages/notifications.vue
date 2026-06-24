@@ -185,4 +185,5 @@ onMounted(async () => {
 meta:
   requiresAuth: true
   title: "Notifications"
+  nav: [{ label: "Notifications" }]
 </route>
