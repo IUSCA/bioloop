@@ -57,7 +57,7 @@ To load environment variables, the following code is used:
 require('dotenv-safe').config();
 ```
 
-Ensure that a `.env.example` file exists to document required variables and their expected format.
+Ensure that a `.env.default` file exists to document required variables and their expected format.
 
 ## Step-by-Step Instructions for Usage
 

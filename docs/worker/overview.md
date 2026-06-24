@@ -89,7 +89,7 @@ Worker automatically run with updated code except for the code in
 ## Deployment
 
 - Add `module load python/3.10.5` to ~/.modules
-- Update `.env` (make a copy of `.env.example` and add values)
+- Update `.env` (make a copy of `.env.default and add values)
 - Install dependencies
 
 ```bash
