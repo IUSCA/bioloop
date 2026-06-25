@@ -47,7 +47,7 @@ Generate an access token to connect to the [Rhythm API](https://github.com/IUSCA
 
 Make these changes to the api/.env file:
 - set NODE_ENV to default (TODO: WARNING: NODE_ENV value of 'default' is ambiguous. WARNING: See https://github.com/node-config/node-config/wiki/Strict-Mode)
-- Change the hostname in DATABASE_URL to localhost
+- Change the hostname in DATABASE_URL to localhost (use port 5433 if the DB is the Postgres container)
 ```bash
 NODE_ENV=default
 WORKFLOW_AUTH_TOKEN=<token>

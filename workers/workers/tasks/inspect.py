@@ -67,7 +67,15 @@ def generate_metadata(celery_task, source: Path):
 
 def inspect_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
+
+    if dataset.get('is_deleted'):
+        raise exc.InspectionFailed(f'Dataset {dataset_id} is already deleted; nothing to inspect.')
+
     source = Path(dataset['origin_path']).resolve()
+
+    if not source.exists():
+        raise exc.InspectionFailed(f'origin_path does not exist: {source}')
+
     du_size = cmd.total_size(source)
     num_files, num_directories, size, num_genome_files, metadata = generate_metadata(celery_task, source)
 
