@@ -49,7 +49,7 @@ def get(sda_file: str, local_file: str, verify_checksum=True):
 def get_hash(sda_path: str, missing_ok: bool = False) -> str | None:
     command = ['hsi', '-P', f'hashlist {sda_path}']
     try:
-        stdout, stderr = cmd.execute(command)
+        stdout, stderr = cmd.execute(command, encoding_errors='ignore')
         checksum = stdout.strip().split()[0]
         if checksum == '(none)':
             return None
