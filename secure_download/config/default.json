@@ -11,5 +11,6 @@
     "jwks_uri": "http://127.0.0.1:5050/oauth/jwks"
   },
   "scope_prefix": "download_file:",
-  "upload_scope": "upload_file"
+  "upload_scope": "upload_file",
+  "download_path": "/opt/sca/data/downloads"
 }

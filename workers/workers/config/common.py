@@ -27,6 +27,7 @@ ONE_GIGABYTE = 1024 * 1024 * 1024
 FIVE_MINUTES = 5 * 60
 
 config = {
+    'mode': 'default',
     'app_id': 'bioloop-dev.sca.iu.edu',
     # cspell: disable-next-line
     'genome_file_types': ['.cbcl', '.bcl', '.bcl.gz', '.bgzf', '.fastq.gz', '.bam', '.bam.bai', '.vcf.gz',
