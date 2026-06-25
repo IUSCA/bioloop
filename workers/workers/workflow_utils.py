@@ -13,7 +13,7 @@ from sca_rhythm import WorkflowTask
 from sca_rhythm.progress import Progress
 
 from workers import sda, utils
-from workers.config import config
+from workers.config import app_env, config
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +37,11 @@ def get_archive_dir(dataset_type: str) -> str:
     dataset_type_archive_dir = config["paths"][dataset_type]["archive"]
     
     # create the directory if it does not exist
-    if config.get('mode') != 'production':
-      _dataset_type_archive_dir = Path(dataset_type_archive_dir)
-      _dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
+    if app_env == 'docker':
+        _dataset_type_archive_dir = Path(dataset_type_archive_dir)
+        _dataset_type_archive_dir.mkdir(parents=True, exist_ok=True)
     else:
-      sda.ensure_directory(dataset_type_archive_dir)
+        sda.ensure_directory(dataset_type_archive_dir)
 
     return dataset_type_archive_dir
 
@@ -175,7 +175,7 @@ def archive(local_file_path: Path, archive_path: str, *, celery_task: WorkflowTa
     @param celery_task: Celery task for progress tracking
     @return: The final archive path where the Dataset was stored
     """
-    if config.get('mode') != 'production':
+    if app_env == 'docker':
         archive_file_path = Path(archive_path)
         archive_file_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(local_file_path, archive_file_path)
@@ -196,8 +196,8 @@ def stage(archive_path: str, local_file_path: Path, *, celery_task: WorkflowTask
     @param celery_task: Celery task for progress tracking
     """
 
-    if config.get('mode') != 'production':
-        archive_file_path = Path(archive_path)        
+    if app_env == 'docker':
+        archive_file_path = Path(archive_path)
         local_file_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(archive_file_path, local_file_path)
     else:
