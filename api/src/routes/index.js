@@ -3,6 +3,7 @@ const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const featureService = require('../services/features');
 const uploadRouter = require('./datasets/uploads');
+const importRouter = require('./datasets/imports');
 const fsRouter = require('./fs');
 
 const router = express.Router();
@@ -19,12 +20,14 @@ router.use('/env', require('./env'));
 router.use(authenticate);
 
 /**
- * Note: The `/datasets/uploads` route needs to be registered before the `/datasets` route.
- * If the `/datasets` route is registered first, Express interprets the path `/datasets/uploads`
- * as a call to the `/datasets/:datasetId` API.
+ * Sub-routes under /datasets must be registered before /datasets itself,
+ * otherwise Express interprets /datasets/anything as /datasets/:datasetId.
  */
 if (featureService.isFeatureEnabled({ key: 'upload' })) {
   router.use('/datasets/uploads', uploadRouter);
+}
+if (featureService.isFeatureEnabled({ key: 'import' })) {
+  router.use('/datasets/imports', importRouter /* #swagger.security = [{"BearerAuth": []}] */);
 }
 
 router.use('/v2/datasets', require('./datasets_v2'));

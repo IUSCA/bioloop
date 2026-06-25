@@ -33,7 +33,10 @@ set -e
 #   ├── qc/                       # Quality control files and reports
 #   │   └── raw_data/
 #   ├── downloads/                # User-accessible download area
-#   └── scratch/                  # Temporary files and working directories
+#   ├── scratch/                  # Temporary files and working directories
+#   └── imports/                  # Drop locations where lab instruments deposit raw output
+#       ├── genomics_lab_instrument_drop/
+#       └── proteomics_lab_instrument_drop/
 #
 # =============================================================================
 
@@ -82,5 +85,10 @@ create_dir "/opt/sca/data/downloads"              # User-accessible download are
 create_dir "/opt/sca/data/uploads"                # Temporary upload directory
 
 create_dir "/opt/sca/data/scratch"                # Temporary files and working directories
+
+# Instrument drop directories - network locations where lab instruments deposit
+# raw output for researchers to browse and import into Bioloop.
+create_dir "/opt/sca/data/imports/genomics_lab_instrument_drop"
+create_dir "/opt/sca/data/imports/proteomics_lab_instrument_drop"
 
 echo "Directory structure initialization completed!"

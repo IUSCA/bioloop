@@ -71,6 +71,9 @@ const grantsObject = {
     fs: {
       'read:any': ['*'],
     },
+    import_sources: {
+      'read:any': ['*'],
+    },
     upload: {
       'create:any': ['*'],
     },
@@ -199,6 +202,9 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     fs: {
+      'read:any': ['*'],
+    },
+    import_sources: {
       'read:any': ['*'],
     },
     upload: {

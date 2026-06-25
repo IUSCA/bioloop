@@ -37,7 +37,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
     });
 
     test('should show the Next button as enabled', async () => {
@@ -57,7 +57,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('should show the Previous button enabled and Next button disabled on the `General Info` step', async () => {
     test.beforeAll(async () => {
       // Click the Next button to move to the General-Info step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show the Previous button as enabled and Next button disabled', async () => {

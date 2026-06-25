@@ -1,4 +1,5 @@
 {
+  "baseURL": "TEST_BASE_URL",
   "e2e": {
     "users": {
       "admin": {

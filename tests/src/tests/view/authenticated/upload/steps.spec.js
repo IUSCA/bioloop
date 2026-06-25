@@ -26,7 +26,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.beforeAll(async ({ attachmentManager }) => {
     // Select files
     const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-    await selectFiles({ page, filePaths });
+    await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
   });
 
   test('should show all steps\' buttons with the correct labels', async () => {
@@ -56,7 +56,7 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
     });
 
     test('should show only the \'Select Files\' step\'s buttons as enabled', async () => {
@@ -74,7 +74,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('General-Info step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the General-Info step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show the \'Select Files\' and the \'General Info\' step\'s buttons as enabled', async () => {
@@ -106,7 +106,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload-details step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show all steps\' buttons as enabled', async () => {

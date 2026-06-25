@@ -1,4 +1,5 @@
-{  
+{
+  "ignorePatterns": ["workers/ecosystem.config.js"],
   "plugins": ["eslint-plugin-local-rules"],
   "settings": {
     "import/resolver": {

@@ -126,10 +126,10 @@ test.describe.serial('Dataset Upload Process', () => {
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: userPage, filePaths });
+        await selectFiles({ page: userPage, filePaths, fileSelectTestId: 'upload-file-select' });
 
         // click Next button
-        await navigateToNextStep({ page: userPage });
+        await navigateToNextStep({ page: userPage, nextButtonTestId: 'upload-next-button' });
       });
 
       test('`user` role should only be able to choose Source Raw Data from Datasets that are associated with Projects that the User is associated with', async () => {
@@ -181,10 +181,10 @@ test.describe.serial('Dataset Upload Process', () => {
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: operatorPage, filePaths });
+        await selectFiles({ page: operatorPage, filePaths, fileSelectTestId: 'upload-file-select' });
 
         // click Next button
-        await navigateToNextStep({ page: operatorPage });
+        await navigateToNextStep({ page: operatorPage, nextButtonTestId: 'upload-next-button' });
       });
 
       test('`operator` role should be able to choose Source Raw Data from any Datasets, regardless of what Projects they are associated with', async () => {
@@ -239,10 +239,10 @@ test.describe.serial('Dataset Upload Process', () => {
 
         // - Select files to upload
         const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: adminPage, filePaths });
+        await selectFiles({ page: adminPage, filePaths, fileSelectTestId: 'upload-file-select' });
 
         // click Next button
-        await navigateToNextStep({ page: adminPage });
+        await navigateToNextStep({ page: adminPage, nextButtonTestId: 'upload-next-button' });
       });
 
       test('`admin` role should be able to choose Source Raw Data from any Datasets, regardless of what Projects they are associated with', async () => {

@@ -96,4 +96,3 @@ The following example will run the `admin_login` project first, which will login
 
 ### Isolation
 Each setup project and its dependent projects are run in an isolated browser context, so tests that require logging in as different roles can be executed in parallel.
-

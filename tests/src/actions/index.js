@@ -120,16 +120,14 @@ export async function selectAutocompleteResult({
   resultText,
   verify = false,
 } = {}) {
-  let _resultIndex;
   // Validate that exactly one selection method is provided
-  if ((resultIndex != null && resultText != null)) {
+  if (resultIndex != null && resultText != null) {
     throw new Error('Must not provide both resultIndex and resultText');
   }
 
-  // If no selection method is provided, default to the first result
-  if (resultIndex == null && resultText == null) {
-    _resultIndex = 0;
-  }
+  // Determine the index to use: explicit resultIndex takes priority, default to 0
+  // when neither is provided (text-based search uses resultText instead)
+  let _resultIndex = resultIndex != null ? resultIndex : (resultText == null ? 0 : null);
 
   const searchInput = page.getByTestId(testId);
   await expect(searchInput).toBeVisible();

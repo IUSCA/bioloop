@@ -31,15 +31,15 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
       // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
 
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       const datasetTypeSelect = page.getByTestId('upload-metadata-dataset-type-select');
       await expect(datasetTypeSelect).toBeVisible();
@@ -68,7 +68,7 @@ test.describe.serial('Dataset Upload Process', () => {
       });
 
       // Navigate to next step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
 
       // Set the name of the dataset being uploaded
       const token = await page.evaluate(() => localStorage.getItem('token'));

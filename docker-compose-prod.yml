@@ -24,8 +24,20 @@ services:
     volumes:
       - ./api/:/opt/sca/app
       - api_modules:/opt/sca/app/node_modules
-      - ${FILESYSTEM_BASE_DIR_SCRATCH}:${FILESYSTEM_MOUNT_DIR_SCRATCH}
-      - ${FILESYSTEM_BASE_DIR_PROJECT}:${FILESYSTEM_MOUNT_DIR_PROJECT}
+      # Import-Sources:
+      # - The following instructions are for making the Import feature work in Production.
+      #  This is not needed if the Import feature is not enabled.
+      # 
+      # - Mount each Import-Source directory into the API container, so
+      #   the API can read the files in the Import-Source.
+      # - Add one volume per Import-Source, using the canonical-path as the
+      #   source and the mount-point as the target.
+      #   - /canonical/path:/mount/point:ro
+      # Examples:
+      #   - /data/bioloop/genomics:/opt/sca/imports/genomics:ro
+      #   - /data/bioloop/proteomics:/opt/sca/imports/proteomics:ro
+      # Note: The canonical-path and mount-point will also need to be populated in the
+      #  database. See api/src/scripts/init_prod_import_sources.js for more details.
     expose:
       - 3030
     # entrypoint: [ "tail", "-f", "/dev/null" ]

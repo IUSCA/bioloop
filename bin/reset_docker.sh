@@ -12,9 +12,9 @@
 # SAFETY:
 #   - Requires Docker to be running (aborts otherwise).
 #   - Verifies this is a Docker-mode Bioloop project before proceeding.
-#   - All Docker operations are scoped to the compose project (name: bioloop).
-#     Only containers and volumes labelled com.docker.compose.project=bioloop
-#     are removed — volumes from other projects are never touched.
+#   - The compose project name is read dynamically from the 'name:' field in
+#     docker-compose.yml. All Docker operations are scoped to that project;
+#     containers and volumes from other projects are never touched.
 #   - You are prompted for confirmation before each destructive step.
 #
 # USAGE:
@@ -64,21 +64,25 @@ if [[ ! -f "${REPO_ROOT}/docker-compose.yml" ]]; then
   abort "docker-compose.yml not found at ${REPO_ROOT}. Run this script from the repo root."
 fi
 
-if ! grep -q '^name: bioloop' "${REPO_ROOT}/docker-compose.yml"; then
-  abort "docker-compose.yml does not declare 'name: bioloop'. Wrong repo or wrong branch?"
+# Read the compose project name directly from the file so this script stays
+# in sync with docker-compose.yml without requiring manual updates.
+COMPOSE_PROJECT=$(awk '/^name:/{print $2; exit}' "${REPO_ROOT}/docker-compose.yml")
+if [[ -z "${COMPOSE_PROJECT}" ]]; then
+  abort "docker-compose.yml does not declare a 'name:' field. Wrong repo or wrong branch?"
 fi
 
-# ── guard: verify this is a Docker-mode project ──────────────────────────────
-# Confirm that the compose file configures services with APP_ENV=docker,
-# meaning this is the Docker-based development/CI environment — not a
+# ── guard: verify this is a containerized project ────────────────────────────
+# Confirm that the compose file configures services with APP_ENV=docker or
+# APP_ENV=ci, meaning this is the Docker-based development/CI environment — not a
 # bare-metal or VM-based deployment.
 
-if ! grep -q 'APP_ENV=docker' "${REPO_ROOT}/docker-compose.yml"; then
-  abort "APP_ENV=docker not found in docker-compose.yml. This does not appear to be a Docker-mode environment."
+if ! grep -Eq 'APP_ENV=(docker|ci)' "${REPO_ROOT}/docker-compose.yml"; then
+  abort "APP_ENV=docker or APP_ENV=ci not found in docker-compose.yml. This does not appear to be a containerized environment."
 fi
 
 cd "${REPO_ROOT}"
 info "Working directory: ${REPO_ROOT}"
+info "Compose project:   ${COMPOSE_PROJECT}"
 
 # ── guard: refuse on production instances ────────────────────────────────────
 
@@ -98,14 +102,14 @@ confirm "Proceed with Docker environment reset?" || abort "Cancelled by user."
 # ─────────────────────────────────────────────────────────────────────────────
 # STEP 1 — Stop and remove containers (this project only).
 #
-# `docker compose down` is scoped to the project in the current directory
-# (name: bioloop) and will not affect containers from other projects.
+# `docker compose down` is scoped to the compose project read from docker-compose.yml
+# and will not affect containers from other projects.
 # --remove-orphans cleans up containers whose service definitions were removed.
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-info "STEP 1 — Stop and remove containers (project: bioloop)"
+info "STEP 1 — Stop and remove containers (project: ${COMPOSE_PROJECT})"
 
-if confirm "Stop all bioloop containers?"; then
+if confirm "Stop all ${COMPOSE_PROJECT} containers?"; then
   docker compose down --remove-orphans
   success "Containers stopped and removed."
 else
@@ -116,30 +120,30 @@ fi
 # STEP 2 — Remove Docker named volumes (this project only).
 #
 # Volumes are identified strictly by the compose project label so only volumes
-# owned by this bioloop instance are removed.  `docker volume prune` is NOT
-# used because it would affect every Docker project on the machine.
+# owned by this project are removed.  `docker volume prune` is NOT used
+# because it would affect every Docker project on the machine.
 #
-# Volumes removed (when present):
-#   bioloop_rhythm_keys               — RSA signing keys for Rhythm JWT service
-#   bioloop_signet_db                 — PostgreSQL data for Signet OAuth service
-#   bioloop_queue_volume              — RabbitMQ message queue state
-#   bioloop_landing_volume            — shared file-storage area
-#   bioloop_docs_modules              — node_modules cache for docs service
-#   bioloop_grafana_data              — Grafana dashboards (metrics profile)
-#   bioloop_prometheus_data           — Prometheus time-series data (metrics profile)
-#   bioloop_api_node_modules          — cached npm packages for api
-#   bioloop_ui_node_modules           — cached npm packages for ui
-#   bioloop_secure_download_node_modules — cached npm packages for secure_download
+# Volumes removed (when present, prefixed by the compose project name):
+#   *_rhythm_keys               — RSA signing keys for Rhythm JWT service
+#   *_signet_db                 — PostgreSQL data for Signet OAuth service
+#   *_queue_volume              — RabbitMQ message queue state
+#   *_landing_volume            — shared file-storage area
+#   *_docs_modules              — node_modules cache for docs service
+#   *_grafana_data              — Grafana dashboards (metrics profile)
+#   *_prometheus_data           — Prometheus time-series data (metrics profile)
+#   *_api_node_modules          — cached npm packages for api
+#   *_ui_node_modules           — cached npm packages for ui
+#   *_secure_download_node_modules — cached npm packages for secure_download
 # ─────────────────────────────────────────────────────────────────────────────
 echo ""
-info "STEP 2 — Remove Docker named volumes (project: bioloop)"
+info "STEP 2 — Remove Docker named volumes (project: ${COMPOSE_PROJECT})"
 
 VOLUMES=$(docker volume ls \
-  --filter "label=com.docker.compose.project=bioloop" \
+  --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" \
   --quiet)
 
 if [[ -z "${VOLUMES}" ]]; then
-  info "No named volumes found for project 'bioloop'. Nothing to remove."
+  info "No named volumes found for project '${COMPOSE_PROJECT}'. Nothing to remove."
 else
   echo "  Volumes to be removed:"
   echo "${VOLUMES}" | sed 's/^/    /'
@@ -231,7 +235,7 @@ done
 #   api/keys/auth.key, api/keys/auth.pub
 #     RSA key pair used by the API to sign and verify JWTs.
 #     Bind-mounted from api/keys/ — removing forces regeneration on next start.
-#     Rhythm keys are in the bioloop_rhythm_keys named volume (removed in step 2).
+#     Rhythm keys are in the *_rhythm_keys named volume (removed in step 2).
 #
 #   ui/.cert/cert.pem, ui/.cert/key.pem
 #     Self-signed TLS cert for the Nuxt dev server on port 443.

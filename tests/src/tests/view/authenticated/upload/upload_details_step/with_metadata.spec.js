@@ -36,12 +36,12 @@ test.describe.serial('Dataset Upload Process', () => {
     test.beforeAll(async ({ attachmentManager }) => {
       // Select files
       const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-      await selectFiles({ page, filePaths });
+      await selectFiles({ page, filePaths, fileSelectTestId: 'upload-file-select' });
     });
 
     test('Wait for the file upload table to be visible', async () => {
       // Track selected files metadata
-      const files = await trackSelectedFilesMetadata({ page });
+      const files = await trackSelectedFilesMetadata({ page, tableTestId: 'upload-selected-files-table' });
 
       // Store the selected files' information in state
       selectedFiles.push(...files);
@@ -51,7 +51,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('General-Info selection step', async () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should allow selecting values in the General-Info form\'s fields', async () => {
@@ -93,7 +93,7 @@ test.describe.serial('Dataset Upload Process', () => {
   test.describe('Upload-Details step', () => {
     test.beforeAll(async () => {
       // Click the "Next" button to proceed to the Upload-Details step
-      await navigateToNextStep({ page });
+      await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
     });
 
     test('should show all the selected General-Info form\'s fields', async () => {
