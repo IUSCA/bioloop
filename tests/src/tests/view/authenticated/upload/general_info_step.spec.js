@@ -31,7 +31,7 @@ test.describe.serial('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload/new');
+    await page.goto('/datasets/uploads/new');
   });
 
   test.describe('General Info step', async () => {

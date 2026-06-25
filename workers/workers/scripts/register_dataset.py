@@ -25,6 +25,7 @@ class Registration:
             'type': self.dataset_type,
             'workflow_id': wf.workflow['_id'],
             'origin_path': dataset_path,
+            'create_method': 'ON_DEMAND',
         }
 
         # HTTP POST

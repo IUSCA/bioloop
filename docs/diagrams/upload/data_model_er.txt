@@ -1,0 +1,23 @@
+erDiagram
+    dataset ||--o| dataset_upload_log : "dataset.id = dataset_upload_log.dataset_id"
+
+    dataset {
+      int id PK
+      string name
+      string type
+      string create_method
+      string origin_path
+      bool is_deleted
+      datetime created_at
+      datetime updated_at
+    }
+
+    dataset_upload_log {
+      int id PK
+      int dataset_id FK
+      string status
+      string process_id
+      int retry_count
+      json metadata
+      datetime updated_at
+    }

@@ -30,7 +30,7 @@ const auth = useAuthStore();
 nav.setNavItems([
   {
     label: "Dataset Uploads",
-    to: "/datasetUpload",
+    to: "/datasets/uploads",
   },
   {
     label: "Upload New",

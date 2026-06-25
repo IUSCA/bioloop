@@ -1,0 +1,24 @@
+flowchart LR
+    U[Browser UI\nUploadDatasetStepper]
+    A[API\n/datasets/uploads + /api/uploads/files]
+    T[TUS Server\nUploadService + tus middleware]
+    DB[(PostgreSQL\nDataset + Upload Log)]
+    FS[(Filesystem\nupload.path + origin_path)]
+    C[Worker Cron\nmanage_upload_workflows.py]
+    V[Celery Task\nverify_upload_integrity]
+    W[Integrated Workflow]
+
+    U -->|POST /datasets/uploads| A
+    A --> DB
+    U -->|POST/PATCH /api/uploads/files| T
+    T --> DB
+    T --> FS
+    U -->|POST /datasets/uploads/:id/complete| A
+    A --> DB
+    C -->|poll stalled / uploaded logs| A
+    C -->|status transitions| DB
+    C -->|enqueue| V
+    V --> FS
+    V --> DB
+    C -->|trigger after VERIFIED| W
+    W --> DB

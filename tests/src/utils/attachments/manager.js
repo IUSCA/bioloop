@@ -20,6 +20,7 @@ class AttachmentManager {
 
   async createFile(fileName, content) {
     const filePath = path.join(this.testAttachmentsDir, fileName);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, content);
     return filePath;
   }

@@ -81,3 +81,5 @@ signet/signet
 
 /plans
 .ai/
+.cursor/
+.cursorrules

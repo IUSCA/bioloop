@@ -41,7 +41,7 @@ router.use('/projects', require('./projects'));
 router.use('/statistics', require('./statistics'));
 router.use('/notifications', require('./notifications'));
 router.use('/instruments', require('./instruments'));
-router.use('/uploads', require('./uploads'));
+router.use('/uploads', require('./datasets/uploads'));
 router.use('/alerts', require('./alerts'));
 router.use('/groups', require('./groups'));
 router.use('/collections', require('./collections'));

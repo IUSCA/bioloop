@@ -7,17 +7,15 @@ test.describe('Dataset Upload Process', () => {
     page = await browser.newPage();
 
     // Visit the dataset uploads page
-    await page.goto('/datasetUpload');
+    await page.goto('/datasets/uploads');
   });
 
-  test('should navigate to upload page', async () => {
-    // Verify that the upload button is visible
-    await expect(page.locator('[data-testid="upload-dataset-button"]')).toBeVisible();
-
-    // Click the "Upload Dataset" button
-    await page.click('[data-testid="upload-dataset-button"]');
-
-    // Verify that we're on the new upload page
-    await expect(page).toHaveURL('/datasetUpload/new');
+  test('should navigate from uploads list to new upload page', async () => {
+    await Promise.all([
+      page.waitForURL('**/datasets/uploads/new'),
+      page.getByRole('button', { name: 'Upload Dataset' }).click(),
+    ]);
+    await expect(page).toHaveURL('/datasets/uploads/new');
+    await expect(page.getByTestId('upload-dataset-stepper')).toBeVisible();
   });
 });

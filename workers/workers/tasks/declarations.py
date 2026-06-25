@@ -122,19 +122,14 @@ def delete_dataset(celery_task, dataset_id, **kwargs):
     return task_body(celery_task, dataset_id, **kwargs)
 
 
-@app.task(base=WorkflowTask, bind=True, name='process_dataset_upload',
-          autoretry_for=(exc.RetryableException,),
+# NOT a WorkflowTask — upload verification runs outside the workflow engine
+# so that it can be dispatched directly via .delay() without a workflow wrapper.
+@app.task(bind=True, name='verify_upload_integrity',
+          autoretry_for=(Exception,),
           max_retries=3,
-          default_retry_delay=5)
-def process_dataset_upload(celery_task, dataset_id, **kwargs):
-    from workers.tasks.process_dataset_upload import process as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
-
-
-@app.task(base=WorkflowTask, bind=True, name='cancel_dataset_upload',
-          autoretry_for=(exc.RetryableException,),
-          max_retries=3,
-          default_retry_delay=5)
-def cancel_dataset_upload(celery_task, dataset_id, **kwargs):
-    from workers.tasks.cancel_dataset_upload import purge_uploaded_resources as task_body
-    return task_body(celery_task, dataset_id, **kwargs)
+          default_retry_delay=60,
+          time_limit=86400,
+          soft_time_limit=43200)
+def verify_upload_integrity(celery_task, dataset_id, **kwargs):
+    from workers.tasks.verify_upload import verify_upload_integrity as task_body
+    return task_body(celery_task, dataset_id)

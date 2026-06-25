@@ -1,8 +1,6 @@
 WORKFLOWS = {
     'INTEGRATED': 'integrated',
     'STAGE': 'stage',
-    'PROCESS_DATASET_UPLOAD': 'process_dataset_upload',
-    'CANCEL_DATASET_UPLOAD': 'cancel_dataset_upload'
 }
 
 WORKFLOW_FINISHED_STATUSES = {

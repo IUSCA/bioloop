@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> UPLOADING
+    UPLOADING --> UPLOADED: /complete succeeds
+    UPLOADING --> UPLOAD_FAILED: complete/file-move/stale timeout failure
+
+    UPLOADED --> VERIFYING: cron enqueues verification task
+    VERIFYING --> VERIFIED: verification passes
+    VERIFYING --> VERIFICATION_FAILED: manifest-hash mismatch or timeout/task failure
+
+    VERIFIED --> PROCESSING: workflow trigger started
+    PROCESSING --> COMPLETE: workflow registration succeeds
+    PROCESSING --> PROCESSING_FAILED: workflow launch/registration failure
+    PROCESSING_FAILED --> PROCESSING: retry within retry limit
+    PROCESSING_FAILED --> PERMANENTLY_FAILED: retries exhausted
