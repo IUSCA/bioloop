@@ -24,9 +24,9 @@ cd bioloop
 
 2. Set up environment files
 ```bash
-cp ui/.env.example ui/.env
-cp api/.env.example api/.env
-cp workers/.env.example workers/.env
+cp ui/.env.default ui/.env
+cp api/.env.default api/.env
+cp workers/.env.default workers/.env
 ```
 
 3. Generate required certificates
@@ -67,7 +67,7 @@ Each component requires specific environment variables to be set:
 - **API**: Database connection, JWT secrets
 - **Workers**: Queue settings, processing parameters
 
-See the `.env.example` files in each directory for required variables.
+See the `.env.default` files in each directory for required variables.
 
 ### Docker Configuration
 

@@ -10,7 +10,7 @@ const path = require('path');
 // has the same value when used in any JS file in this project
 global.__basedir = path.join(__dirname, '..');
 
-// Load environment variables and validate against .env.example
+// Load environment variables and validate against .env.default
 require('dotenv-safe').config({ example: '.env.default' });
 
 require('./db');
