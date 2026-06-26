@@ -93,6 +93,20 @@ module.exports = {
       autorestart: false,
       exp_backoff_restart_delay: 100,
       max_restarts: 3,
-    }
+    },
+    {
+      name: 'purge_stale_uploaded',
+      script: 'python',
+      args: '-u -m workers.scripts.purge_stale_uploaded --ttl-days=14',
+      watch: false,
+      interpreter: '',
+      log_date_format: 'YYYY-MM-DD HH:mm Z',
+      error_file: '../logs/workers/purge_stale_uploaded.err',
+      out_file: '../logs/workers/purge_stale_uploaded.log',
+      cron_restart: '15 07 * * *', // Once a day, at 7:15 AM
+      autorestart: false,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 3,
+    },
   ]
 }

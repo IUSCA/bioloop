@@ -128,11 +128,6 @@ export const useAuthStore = defineStore("auth", () => {
           // token is still alive
           const delay =
             expiresAt - now - config.refreshTokenTMinusSeconds.appToken * 1000;
-          console.log(
-            "auth store: refreshTokenBeforeExpiry: triggering refreshToken in ",
-            delay / 1000,
-            "seconds",
-          );
           refreshTokenTimer = setTimeout(refreshToken, delay);
         }
         // else - do nothing, navigation guard will redirect to /auth
@@ -192,6 +187,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     user,
+    token,
     loggedIn,
     initialize,
     logout,

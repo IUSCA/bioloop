@@ -88,15 +88,6 @@ function createTusMiddleware(tusServer) {
     const isNewUpload = req.method === 'POST';
     const uploadId = isNewUpload ? null : req.path.split('/').pop();
 
-    logger.info(`[TUS] ${req.method} ${req.path}`, {
-      uploadId,
-      contentLength: req.headers['content-length'],
-      contentType: req.headers['content-type'],
-      uploadOffset: req.headers['upload-offset'],
-      uploadLength: req.headers['upload-length'],
-      tusResumable: req.headers['tus-resumable'],
-    });
-
     authenticate(req, res, (err) => {
       if (err) {
         logger.error(`[TUS] Authentication failed for ${req.method} ${req.path}:`, {
@@ -105,8 +96,6 @@ function createTusMiddleware(tusServer) {
         });
         return next(err);
       }
-
-      logger.info(`[TUS] Authentication successful for user: ${req.user?.username || 'unknown'}`);
 
       // No-op in production. In non-production environments, an authenticated
       // client can set X-Simulate-Failure: mid-upload to trigger server-side
@@ -119,33 +108,6 @@ function createTusMiddleware(tusServer) {
       if (!req.url.startsWith('/api/uploads/files')) {
         req.url = `/api${req.url}`;
       }
-
-      // Intercept res.end and res.writeHead to log the outcome after TUS sends its response.
-      // A normal 'finish' event listener won't work here because TUS bypasses Express's response
-      // pipeline and writes directly to the socket via these two methods. The originals are saved
-      // so the wrappers can call through to them and the actual response is still sent.
-      const originalEnd = res.end;
-      const originalWriteHead = res.writeHead;
-      let statusCode = 200;
-
-      res.writeHead = function writeHead(...args) {
-        [statusCode] = args;
-        return originalWriteHead.apply(this, args);
-      };
-
-      res.end = function end(...args) {
-        const isSuccess = statusCode >= 200 && statusCode < 300;
-        const logLevel = isSuccess ? 'info' : 'error';
-
-        logger[logLevel](`[TUS] ${req.method} ${req.path} completed`, {
-          statusCode,
-          uploadId,
-          user: req.user?.username,
-          success: isSuccess,
-        });
-
-        return originalEnd.apply(this, args);
-      };
 
       return tusServer.handle(req, res);
     });

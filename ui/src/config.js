@@ -105,6 +105,15 @@ const exports = {
     // mid-upload rejection.
     max_file_size_bytes:
       parseInt(import.meta.env.VITE_UPLOAD_MAX_FILE_SIZE_BYTES) || 107374182400, // 100 GB default
+    // Cap concurrent file uploads to prevent browser resource exhaustion when
+    // uploading directories with many files.
+    max_concurrent_files:
+      parseInt(import.meta.env.VITE_UPLOAD_MAX_CONCURRENT_UPLOADS) || 4,
+    // TUS PATCH chunk size (bytes). Keeping this below proxy body-size limits
+    // prevents 413 errors on larger individual files.
+    tus_chunk_size_bytes:
+      parseInt(import.meta.env.VITE_UPLOAD_TUS_CHUNK_SIZE_BYTES) ||
+      25 * 1024 * 1024, // 25 MB
   },
 };
 

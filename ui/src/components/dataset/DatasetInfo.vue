@@ -79,15 +79,19 @@
                 :failure-reason="uploadLogFailureReason"
               />
               <!-- Admin: link to upload details page -->
-              <router-link
+              <va-popover
                 v-if="isUpload && auth.canAdmin"
-                :to="`/datasets/uploads/${props.dataset.id}`"
-                target="_blank"
-                class="va-link"
-                title="View upload details"
+                message="View upload details"
               >
-                <va-icon name="open_in_new" size="small" />
-              </router-link>
+                <router-link
+                  :to="`/datasets/uploads/${props.dataset.id}`"
+                  target="_blank"
+                  class="va-link"
+                  title="View upload details"
+                >
+                  <va-icon name="open_in_new" size="small" />
+                </router-link>
+              </va-popover>
             </div>
           </td>
         </tr>
@@ -105,15 +109,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import * as datetime from "@/services/datetime";
-import { formatBytes } from "@/services/utils";
-import { useAuthStore } from "@/stores/auth";
-import constants from "@/constants";
 import DatasetCreateMethod from "@/components/dataset/DatasetCreateMethod.vue";
 import UploadStatusBadge from "@/components/dataset/upload/UploadStatusBadge.vue";
+import constants from "@/constants";
 import datasetService from "@/services/dataset";
+import * as datetime from "@/services/datetime";
+import { formatBytes } from "@/services/utils";
 import wfService from "@/services/workflow";
+import { useAuthStore } from "@/stores/auth";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({ dataset: Object });
 

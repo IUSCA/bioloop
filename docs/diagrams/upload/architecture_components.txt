@@ -5,6 +5,7 @@ flowchart LR
     DB[(PostgreSQL\nDataset + Upload Log)]
     FS[(Filesystem\nupload.path + origin_path)]
     C[Worker Cron\nmanage_upload_workflows.py]
+    P[Worker Cron\npurge_stale_uploaded.py]
     V[Celery Task\nverify_upload_integrity]
     W[Integrated Workflow]
 
@@ -18,6 +19,7 @@ flowchart LR
     C -->|poll stalled / uploaded logs| A
     C -->|status transitions| DB
     C -->|enqueue| V
+    P -->|daily TTL cleanup| FS
     V --> FS
     V --> DB
     C -->|trigger after VERIFIED| W
