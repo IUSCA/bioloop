@@ -27,7 +27,7 @@ const exports = {
             feature_key: "import",
             icon: "mdi-file-import-outline",
             title: "Import",
-            path: "/datasets/import",
+            path: "/datasets/imports",
           },
           {
             feature_key: "uploads",

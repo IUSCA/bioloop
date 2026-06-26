@@ -211,6 +211,25 @@ class DatasetService {
       },
     });
   }
+
+  getDatasetImportLogs({
+    forSelf = true,
+    dataset_name = null,
+    limit = null,
+    offset = null,
+    username = null,
+  } = {}) {
+    const path = forSelf
+      ? `/datasets/${username}/imports`
+      : "/datasets/imports";
+    return api.get(path, {
+      params: {
+        dataset_name,
+        offset,
+        limit,
+      },
+    });
+  }
 }
 
 export default new DatasetService();
