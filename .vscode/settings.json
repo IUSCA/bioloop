@@ -45,5 +45,9 @@
   },
   "chat.tools.terminal.autoApprove": {
     "npx jest": true
+  },
+  "playwright.configFile": "tests/playwright.config.js",
+  "playwright.env": {
+    "NODE_CONFIG_DIR": "${workspaceFolder}/tests/config"
   }
 }

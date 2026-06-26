@@ -8,7 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-.DS_Store
 dist
 dist-ssr
 coverage
@@ -22,8 +21,6 @@ coverage
 !.vscode/extensions.json
 .idea
 *.suo
-*.ntvs*
-*.njsproj
 *.sln
 *.sw?
 .cert
@@ -33,7 +30,7 @@ components.d.ts
 
 src/pages/test.vue
 
-# rollup visualizer output
+# Visualizer output
 stats.html
 
 .vite

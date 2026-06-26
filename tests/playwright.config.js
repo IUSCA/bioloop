@@ -2,6 +2,7 @@ const path = require('path');
 require('dotenv').config();
 
 const { defineConfig, devices } = require('@playwright/test');
+const testRuntimeConfig = require('config');
 
 const USER_STORAGE_STATE = path.join(__dirname, '/.auth/user_storage_state.json');
 const OPERATOR_STORAGE_STATE = path.join(__dirname, '/.auth/operator_storage_state.json');
@@ -37,7 +38,7 @@ module.exports = {
     use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
       // baseURL: 'https://localhost',
-      baseURL: process.env.TEST_BASE_URL || 'https://localhost',
+      baseURL: process.env.TEST_BASE_URL || testRuntimeConfig.baseURL || 'https://localhost',
 
       /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
       trace: 'on-first-retry',
@@ -110,19 +111,37 @@ module.exports = {
         name: 'admin_notifications',
         use: { ...devices['Desktop Chrome'], storageState: ADMIN_STORAGE_STATE },
         dependencies: ['admin_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
+        ],
       },
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['admin_notifications', 'operator_login'],
-        testMatch: '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/non_user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_theme_colors.spec.js',
+          '/view/authenticated/notifications/notification_keyboard_a11y.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+          '/view/authenticated/notifications/notification_responsive_layout.spec.js',
+        ],
       },
       {
         name: 'user_notifications',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
-        testMatch: '/view/authenticated/notifications/user_role_notifications.spec.js',
+        testMatch: [
+          '/view/authenticated/notifications/user_role_notifications.spec.js',
+          '/view/authenticated/notifications/notification_cross_user_state.spec.js',
+          '/view/authenticated/notifications/notification_search_focus.spec.js',
+        ],
       },
       /** User-management tests */
       {
