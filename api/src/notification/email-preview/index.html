@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- cSpell: disable -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Template Preview</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sidebar-w: 220px;
+      --topbar-h: 52px;
+      --bg-sidebar: #1a2744;
+      --bg-topbar: #ffffff;
+      --bg-main: #e5e7eb;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --text-sidebar: #c7d6f0;
+      --text-active: #ffffff;
+      --btn-active-bg: #2563eb;
+      --border: #e2e8f0;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+    }
+
+    :root.dark {
+      --bg-sidebar: #1f2937;
+      --bg-topbar: #1f2937;
+      --bg-main: #111827;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --text-sidebar: #9ca3af;
+      --text-active: #ffffff;
+      --btn-active-bg: #3b82f6;
+      --border: #374151;
+      --topbar-text: #d1d5db;
+      --main-placeholder: #4b5563;
+    }
+
+    html, body { height: 100%; overflow: hidden; font-family: var(--font); }
+
+    /* ── Layout ─────────────────────────────────────── */
+    #app {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: var(--topbar-h) 1fr;
+      height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    #sidebar {
+      grid-row: 1 / 3;
+      background: var(--bg-sidebar);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+
+    #sidebar-header h1 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #8fa3c8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    :root.dark #sidebar-header h1 { color: #6b7280; }
+
+    #sidebar-header p {
+      font-size: 11px;
+      color: #4d6a96;
+    }
+    :root.dark #sidebar-header p { color: #4b5563; }
+
+    #template-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 3px;
+    }
+
+    #refresh-templates {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: #8fa3c8;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+    #refresh-templates:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.1);
+      color: #ffffff;
+    }
+    #refresh-templates:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+    #refresh-templates svg {
+      width: 14px;
+      height: 14px;
+    }
+    #refresh-templates.loading svg { animation: refresh-spin 0.8s linear infinite; }
+
+    @keyframes refresh-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #template-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 8px;
+    }
+
+    .tpl-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 9px 10px;
+      margin-bottom: 2px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      color: var(--text-sidebar);
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tpl-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-active); }
+    .tpl-btn.active { background: var(--btn-active-bg); color: var(--text-active); }
+
+    .tpl-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .tpl-btn.active .tpl-icon { background: rgba(255,255,255,0.2); }
+
+    #sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 11px;
+      color: #4d6a96;
+      flex-shrink: 0;
+    }
+    :root.dark #sidebar-footer { border-top-color: #374151; color: #4b5563; }
+
+    /* ── Top bar ─────────────────────────────────────── */
+    #topbar {
+      grid-column: 2;
+      background: var(--bg-topbar);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 12px;
+      height: var(--topbar-h);
+      z-index: 10;
+    }
+
+    #topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    #template-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      flex-shrink: 0;
+    }
+    :root.dark #template-name { color: var(--topbar-text); }
+
+    #fixture-control {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    #fixture-control.visible { display: flex; }
+
+    #fixture-control label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+    :root.dark #fixture-control label { color: #9ca3af; }
+
+    #fixture-select {
+      height: 28px;
+      max-width: 190px;
+      min-width: 120px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1e293b;
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 0 28px 0 9px;
+      cursor: pointer;
+    }
+    #fixture-select:disabled {
+      cursor: default;
+      opacity: 0.75;
+    }
+    :root.dark #fixture-select {
+      background: #111827;
+      color: #d1d5db;
+      border-color: #374151;
+    }
+
+    #compile-status {
+      font-size: 11px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      transition: opacity 0.25s;
+    }
+    :root.dark #compile-status { color: #9ca3af; background: #374151; }
+    #compile-status.loading { color: #2563eb; background: #eff6ff; }
+    :root.dark #compile-status.loading { color: #60a5fa; background: #1e2937; }
+    #compile-status.error   { color: #dc2626; background: #fef2f2; }
+    :root.dark #compile-status.error   { color: #f87171; background: #450a0a; }
+
+    #topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .view-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 500;
+      color: #475569;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .view-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+    :root.dark .view-btn:hover { background: #374151; border-color: #6b7280; }
+    .view-btn.active {
+      background: #1e293b;
+      color: #ffffff;
+      border-color: #1e293b;
+    }
+    :root.dark .view-btn { color: #9ca3af; border-color: #374151; }
+    :root.dark .view-btn.active { background: #4b5563; color: #ffffff; border-color: #4b5563; }
+
+    /* ── Main / iframe area ──────────────────────────── */
+    #main {
+      grid-column: 2;
+      background: var(--bg-main);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    #frame-wrap {
+      background: #ffffff;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+      border-radius: 6px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 680px;
+      transition: max-width 0.25s ease;
+      flex-shrink: 0;
+    }
+    #frame-wrap.mobile { max-width: 390px; }
+
+    iframe#preview-frame {
+      display: block;
+      width: 100%;
+      border: none;
+      min-height: 500px;
+    }
+
+    /* ── Empty/loading states ────────────────────────── */
+    #placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      color: #94a3b8;
+      gap: 12px;
+      width: 100%;
+    }
+    :root.dark #placeholder { color: var(--main-placeholder); }
+    #placeholder svg { opacity: 0.3; }
+    #placeholder p { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- ── Sidebar ── -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <h1>Email Preview</h1>
+        <div id="template-section-title">
+          <p>Select a template</p>
+          <button id="refresh-templates" type="button" title="Refresh templates" aria-label="Refresh templates">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
+              <path d="M21 3v6h-6"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <nav id="template-list">
+        <p style="font-size:12px;color:#4d6a96;padding:6px 10px">Loading…</p>
+      </nav>
+      <div id="sidebar-footer">
+        <span id="hmr-indicator">⚡ HMR active</span>
+      </div>
+    </aside>
+
+    <!-- ── Top bar ── -->
+    <header id="topbar">
+      <div id="topbar-left">
+        <span id="template-name" style="color:#94a3b8">No template selected</span>
+        <div id="fixture-control">
+          <label for="fixture-select">Fixture</label>
+          <select id="fixture-select" disabled></select>
+        </div>
+        <span id="compile-status" style="display:none"></span>
+      </div>
+      <div id="topbar-right">
+        <button class="view-btn" id="btn-theme" title="Toggle dark mode">
+          <svg id="theme-icon-light" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <svg id="theme-icon-dark" style="display:none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        </button>
+        <button class="view-btn active" id="btn-desktop" title="Desktop width">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Desktop
+        </button>
+        <button class="view-btn" id="btn-mobile" title="Mobile width (390 px)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><circle cx="12" cy="18" r="1" fill="currentColor"/></svg>
+          Mobile
+        </button>
+      </div>
+    </header>
+
+    <!-- ── Main preview area ── -->
+    <main id="main">
+      <div id="placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <p>Select a template from the sidebar to preview it</p>
+      </div>
+      <div id="frame-wrap" style="display:none">
+        <iframe id="preview-frame" title="Email template preview"></iframe>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    // ── State ───────────────────────────────────────────────────────────────
+    let activeTemplate = null;
+    let activeFixture = null;
+    let templatesLoading = false;
+
+    const listEl     = document.getElementById('template-list');
+    const nameEl     = document.getElementById('template-name');
+    const statusEl   = document.getElementById('compile-status');
+    const frame      = document.getElementById('preview-frame');
+    const frameWrap  = document.getElementById('frame-wrap');
+    const placeholder = document.getElementById('placeholder');
+    const fixtureControl = document.getElementById('fixture-control');
+    const fixtureSelect = document.getElementById('fixture-select');
+    const btnDesktop = document.getElementById('btn-desktop');
+    const btnMobile  = document.getElementById('btn-mobile');
+    const btnTheme   = document.getElementById('btn-theme');
+    const btnRefresh = document.getElementById('refresh-templates');
+    const themeIconLight = document.getElementById('theme-icon-light');
+    const themeIconDark  = document.getElementById('theme-icon-dark');
+
+    function formatTemplateName(name) {
+      const parts = name.split('_');
+      if (parts.length > 0) {
+        parts[0] = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+      }
+      return parts.join(' ');
+    }
+
+    function formatFixtureName(name) {
+      return name
+        .replace(/[-_]+/g, ' ')
+        .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1));
+    }
+
+    function clearSelectedTemplate() {
+      activeTemplate = null;
+      activeFixture = null;
+      nameEl.textContent = 'No template selected';
+      nameEl.style.color = '#94a3b8';
+      statusEl.style.display = 'none';
+      fixtureControl.classList.remove('visible');
+      fixtureSelect.innerHTML = '';
+      fixtureSelect.disabled = true;
+      frameWrap.style.display = 'none';
+      placeholder.style.display = 'flex';
+    }
+
+    // ── Sidebar template buttons ─────────────────────────────────────────────
+    async function loadTemplateList() {
+      if (templatesLoading) return;
+      templatesLoading = true;
+      btnRefresh.disabled = true;
+      btnRefresh.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/templates', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to load templates: ${res.status}`);
+
+        const names = await res.json();
+        listEl.innerHTML = '';
+
+        if (activeTemplate && !names.includes(activeTemplate)) {
+          clearSelectedTemplate();
+        }
+
+        if (!names.length) {
+          listEl.innerHTML = '<p style="font-size:12px;color:#4d6a96;padding:6px 10px">No templates found</p>';
+          return;
+        }
+
+        for (const name of names) {
+          const btn = document.createElement('button');
+          btn.className = 'tpl-btn';
+          btn.classList.toggle('active', name === activeTemplate);
+          btn.dataset.name = name;
+          btn.innerHTML = `
+            <span class="tpl-icon">✉️</span>
+            <span>${formatTemplateName(name)}</span>
+          `;
+          btn.addEventListener('click', () => selectTemplate(name));
+          listEl.appendChild(btn);
+        }
+      } catch {
+        listEl.innerHTML = '<p style="font-size:12px;color:#dc2626;padding:6px 10px">Failed to load templates</p>';
+      } finally {
+        templatesLoading = false;
+        btnRefresh.disabled = false;
+        btnRefresh.classList.remove('loading');
+      }
+    }
+
+    async function loadFixtureList(name, preferredFixture = null) {
+      fixtureControl.classList.add('visible');
+      fixtureSelect.disabled = true;
+      fixtureSelect.innerHTML = '<option>Loading...</option>';
+
+      try {
+        const res = await fetch(`/api/fixtures/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to load fixtures: ${res.status}`);
+
+        const fixtureNames = await res.json();
+        if (activeTemplate !== name) return null;
+        if (!fixtureNames.length) throw new Error(`No fixtures found for ${name}`);
+
+        const selectedFixture = fixtureNames.includes(preferredFixture)
+          ? preferredFixture
+          : fixtureNames[0];
+
+        fixtureSelect.innerHTML = '';
+        for (const fixtureName of fixtureNames) {
+          const option = document.createElement('option');
+          option.value = fixtureName;
+          option.textContent = formatFixtureName(fixtureName);
+          fixtureSelect.appendChild(option);
+        }
+
+        fixtureSelect.value = selectedFixture;
+        fixtureSelect.disabled = fixtureNames.length < 2;
+        activeFixture = selectedFixture;
+        return selectedFixture;
+      } catch {
+        if (activeTemplate === name) {
+          activeFixture = null;
+          fixtureSelect.innerHTML = '<option>Unavailable</option>';
+          fixtureSelect.disabled = true;
+          showStatus('error', 'Fixture error');
+        }
+        return null;
+      }
+    }
+
+    // ── Render template into iframe ──────────────────────────────────────────
+    async function selectTemplate(name, preferredFixture = activeTemplate === name ? activeFixture : null) {
+      activeTemplate = name;
+      activeFixture = preferredFixture;
+
+      // Update sidebar active state
+      document.querySelectorAll('.tpl-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.name === name);
+      });
+
+      nameEl.textContent = formatTemplateName(name);
+      nameEl.style.color = '';
+      showStatus('loading', 'Loading fixtures…');
+
+      placeholder.style.display = 'none';
+      frameWrap.style.display = 'block';
+
+      const fixtureName = await loadFixtureList(name, preferredFixture);
+      if (activeTemplate !== name || !fixtureName) return;
+
+      renderTemplate(name, fixtureName);
+    }
+
+    async function renderTemplate(name, fixtureName) {
+      activeFixture = fixtureName;
+      fixtureSelect.value = fixtureName;
+      showStatus('loading', 'Compiling…');
+
+      try {
+        // Fetch the rendered HTML from the Vite plugin middleware
+        const previewUrl = `/preview/${encodeURIComponent(name)}?fixture=${encodeURIComponent(fixtureName)}`;
+        const res = await fetch(previewUrl, { cache: 'no-store' });
+        const html = await res.text();
+
+        if (activeTemplate !== name || activeFixture !== fixtureName) return;
+
+        if (!res.ok) {
+          showStatus('error', 'Compile error');
+          writeToFrame(html);
+          return;
+        }
+
+        showStatus('ok', `Compiled ${new Date().toLocaleTimeString()}`);
+        writeToFrame(html);
+        resizeFrameToContent();
+      } catch {
+        if (activeTemplate === name && activeFixture === fixtureName) {
+          showStatus('error', 'Network error');
+        }
+      }
+    }
+
+    function writeToFrame(html) {
+      const doc = frame.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+    }
+
+    function resizeFrameToContent() {
+      // Resize iframe to its content height after a short settle delay
+      clearTimeout(frame._resizeTimer);
+      frame._resizeTimer = setTimeout(() => {
+        try {
+          const h = frame.contentWindow.document.documentElement.scrollHeight;
+          if (h > 0) frame.style.height = h + 'px';
+        } catch { /* cross-origin guard */ }
+      }, 80);
+    }
+
+    function showStatus(type, msg) {
+      statusEl.style.display = '';
+      statusEl.className = type === 'loading' ? 'loading' : type === 'error' ? 'error' : '';
+      statusEl.textContent = msg;
+    }
+
+    // ── Desktop / mobile width toggle ───────────────────────────────────────
+    btnDesktop.addEventListener('click', () => {
+      frameWrap.classList.remove('mobile');
+      btnDesktop.classList.add('active');
+      btnMobile.classList.remove('active');
+    });
+
+    btnMobile.addEventListener('click', () => {
+      frameWrap.classList.add('mobile');
+      btnMobile.classList.add('active');
+      btnDesktop.classList.remove('active');
+    });
+
+    // ── Dark mode toggle ────────────────────────────────────────────────────
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        themeIconLight.style.display = 'none';
+        themeIconDark.style.display = 'inline';
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIconLight.style.display = 'inline';
+        themeIconDark.style.display = 'none';
+      }
+    }
+
+    btnTheme.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('email-preview-theme', newTheme);
+    });
+
+    btnRefresh.addEventListener('click', () => {
+      loadTemplateList();
+    });
+
+    fixtureSelect.addEventListener('change', () => {
+      if (activeTemplate && fixtureSelect.value) {
+        renderTemplate(activeTemplate, fixtureSelect.value);
+      }
+    });
+
+    // ── Vite HMR – refresh only the active iframe on template changes ────────
+    if (import.meta.hot) {
+      import.meta.hot.on('email-update', ({ name }) => {
+        if (name === activeTemplate) {
+          selectTemplate(name, activeFixture);
+        }
+      });
+    }
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    // Set initial theme
+    const savedTheme = localStorage.getItem('email-preview-theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(savedTheme ?? (systemPrefersDark ? 'dark' : 'light'));
+
+    loadTemplateList();
+  </script>
+</body>
+</html>

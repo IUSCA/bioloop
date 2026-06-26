@@ -1,5 +1,5 @@
 {
-  "mode": "default",
+  "env": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
     "port": 3030,
@@ -157,8 +157,7 @@
     "fs": true,
     "downloads": true,
     "signup": true,
-    "auto_create_project_on_dataset_creation": true,
-    "notifications": true
+    "auto_create_project_on_dataset_creation": true
   },
   "institution_types": [
     "Commercial",
@@ -166,5 +165,34 @@
     "Internal Academic",
     "Non-profit",
     "Other"
-  ]
+  ],
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": ""
+  },
+  "smtp": {
+    "host": "localhost",
+    "port": 1025,
+    "secure": false,
+    "auth": {
+      "user": "",
+      "pass": ""
+    },
+    "from": {
+      "name": "Bioloop Notifications",
+      "address": "notifications@bioloop.sca.iu.edu"
+    }
+  },
+  "notify": {
+    "worker": {
+      "concurrency": 5
+    }
+  },
+  "jupyterhub": {
+    "base_url": "",
+    "api_url": "",
+    "auth_token": "",
+    "ticket_secret": ""
+  }
 }

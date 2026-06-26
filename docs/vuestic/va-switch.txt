@@ -1,0 +1,200 @@
+Title: Vuestic UI — Vue.js 3.0 UI Framework
+
+URL Source: https://ui.vuestic.dev/ui-elements/switch
+
+Markdown Content:
+Switch
+
+[#](https://ui.vuestic.dev/ui-elements/switch#switch)
+-------------------------------------------------------------
+
+Switch component turns on or off the state of your custom option
+
+Examples
+
+[#](https://ui.vuestic.dev/ui-elements/switch#examples)
+-----------------------------------------------------------------
+
+### Default
+
+[#](https://ui.vuestic.dev/ui-elements/switch#default)
+
+This is basic usage of switch component.
+
+### Color
+
+[#](https://ui.vuestic.dev/ui-elements/switch#color)
+
+You can customize color.
+
+### Label
+
+[#](https://ui.vuestic.dev/ui-elements/switch#label)
+
+Switch can be labeled on the left or on the right.
+
+left
+
+right
+
+right labeled by slot
+
+left labeled by slot
+
+### Custom Label
+
+[#](https://ui.vuestic.dev/ui-elements/switch#custom-label)
+
+You can label any state of switch.
+
+Agree
+
+### Inner Label
+
+[#](https://ui.vuestic.dev/ui-elements/switch#inner-label)
+
+You may put a label inside of a switch.
+
+### Size
+
+[#](https://ui.vuestic.dev/ui-elements/switch#size)
+
+Switches have 3 different sizes.
+
+small
+
+default
+
+large
+
+### State
+
+[#](https://ui.vuestic.dev/ui-elements/switch#state)
+
+Switch can be in disabled or readonly state.
+
+States enabled
+
+### Loading
+
+[#](https://ui.vuestic.dev/ui-elements/switch#loading)
+
+You can mark a pending state of switch.
+
+### Custom Values
+
+[#](https://ui.vuestic.dev/ui-elements/switch#custom-values)
+
+You can set custom values for true and false state of the component.
+
+Right
+
+### Indeterminate
+
+[#](https://ui.vuestic.dev/ui-elements/switch#indeterminate)
+
+true
+
+true
+
+### Error
+
+[#](https://ui.vuestic.dev/ui-elements/switch#error)
+
+Switch has an error style.
+
+API
+
+[#](https://ui.vuestic.dev/ui-elements/switch#api)
+-------------------------------------------------------
+
+| Name | Description | Types | Default |
+| --- | --- | --- | --- |
+| **ariaLabel** | The aria-label of the component | `String` | `"$t:switch"` |
+| **arrayValue** | Takes the value of a switch in an array of switches | `String | Boolean | Object | Number` | `null` |
+| **color** | Color of switch | `String` | `"primary"` |
+| **dirty** | Sets the dirty state of the component | `Boolean` | `false` |
+| **disabled** | Applies `disabled` style and removes all user interaction effects. | `Boolean` | `false` |
+| **error** | Show component in error state. | `Boolean` | `false` |
+| **errorCount** | Number of error messages displayed. | `String | Number` | `1` |
+| **errorMessages** | Error messages for the component. | `Array | String` | `[]` |
+| **falseInnerLabel** | Inner label when unchecked | `String` | `null` |
+| **falseLabel** | Label when unchecked | `String` | `null` |
+| **falseValue** | Value when unchecked | `any` | `false` |
+| **id** | Applies `id` to internal input component. Useful for native forms. | `String` | `""` |
+| **immediateValidation** | Sets the validation to be performed when the component is mounted | `Boolean` | `false` |
+| **indeterminate** | Same as native `indeterminate` - a state in which it's impossible to say whether the item is toggled `on` or `off` | `Boolean` | `false` |
+| **indeterminateValue** | Overrides a state value that is not set. | `any` | `null` |
+| **label** | Switch label | `String` | `""` |
+| **leftLabel** | Moves label to the left | `Boolean` | `false` |
+| **loading** | Indicates that something is loading (spinner icon). | `Boolean` | `false` |
+| **messages** | Description messages for the component. | `Array | String` | `[]` |
+| **modelValue** | The value of the `v-model` bindings. | `Number | Boolean | Array | String | Object` | `false` |
+| **name** | Applies `name` to internal input component. Useful for native forms. | `String` | `""` |
+| **offColor** | The background color when switch is off | `String` | `"background-element"` |
+| **preset** | Named preset combination of component props. | `String | Array` | - |
+| **readonly** | Makes switch read only | `Boolean` | `false` |
+| **rules** | Validation rules . | `Array` | `[]` |
+| **size** | Specify size for component. `"small"`, `"medium"`, `"large"` sizes are available | `String` | `"medium"` |
+| **stateful** | Add possibility to work with component without setting `v-model`. | `Boolean` | `false` |
+| **success** | Show component in success state. | `Boolean` | `false` |
+| **trueInnerLabel** | Inner label when checked | `String` | `null` |
+| **trueLabel** | Label when checked | `String` | `null` |
+| **trueValue** | Value when checked | `any` | `true` |
+
+| Name | Description |
+| --- | --- |
+| blur | On blur.. The event argument is: `FocusEvent` |
+| focus | On focus.. The event argument is: `FocusEvent` |
+| input | On value change.. The event argument is: `any` |
+| update:dirty | Fires when the dirty state changes |
+| update:error | Fires when the error state changes |
+| update:errorMessages | Fires when the error messages change |
+| update:loading |  |
+| update:modelValue | The event is triggered when the component needs to change the model. Is also used by `v-model` and must be listed after the `v-model` |
+
+| Name | Description |
+| --- | --- |
+| default | Slot for label. |
+| innerLabel | Slot for inner label. |
+
+| Name | Default Value |
+| --- | --- |
+| **--va-switch-display** | inline-block |
+| **--va-switch-checker-margin** | auto |
+| **--va-switch-checker-transform** | translateX(0.3rem) |
+| **--va-switch-checker-height** | 1.5rem |
+| **--va-switch-checker-width** | 1.5rem |
+| **--va-switch-checker-active-background-color** | #ffffff |
+| **--va-switch-checker-background-color** | var(--va-secondary) |
+| **--va-switch-checker-border-radius** | 50% |
+| **--va-switch-checker-box-shadow** | 0 0 0 var(--va-background-border) |
+| **--va-switch-checker-transition** | all 0.2s ease |
+| **--va-switch-checker-wrapper-transform** | translateX(0) |
+| **--va-switch-checker-wrapper-top** | 0 |
+| **--va-switch-checker-wrapper-left** | 0 |
+| **--va-switch-checker-wrapper-bottom** | 0 |
+| **--va-switch-checker-wrapper-right** | 0 |
+| **--va-switch-checker-wrapper-width** | 100% |
+| **--va-switch-checker-wrapper-height** | 100% |
+| **--va-switch-checker-wrapper-transition** | all 0.2s ease |
+| **--va-switch-checker-wrapper-pointer-events** | none |
+| **--va-switch-label-left-padding** | 0.3rem |
+| **--va-switch-label-right-padding** | 0.3rem |
+| **--va-switch-track-border-radius** | 1rem |
+| **--va-switch-track-height** | 100% |
+| **--va-switch-track-width** | 100% |
+| **--va-switch-track-background** | var(--va-background-element) |
+| **--va-switch-track-box-shadow** | inset 0 0 0 var(--va-shadow) |
+| **--va-switch-track-transition** | background-color 0.2s ease |
+| **--va-switch-inner-cursor** | pointer |
+| **--va-switch-inner-height** | 2rem |
+| **--va-switch-inner-width** | auto |
+| **--va-switch-inner-min-width** | 4rem |
+| **--va-switch-inner-border-radius** | 1rem |
+| **--va-switch-sm-inner-height** | 1.5rem |
+| **--va-switch-sm-inner-width** | auto |
+| **--va-switch-sm-inner-min-width** | 3rem |
+| **--va-switch-lg-inner-height** | 2.5rem |
+| **--va-switch-lg-inner-width** | auto |
+| **--va-switch-lg-inner-min-width** | 5rem |

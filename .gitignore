@@ -37,7 +37,7 @@ tests/videos
 tests/screenshots
 tests/*.png
 
-logs
+logs/*
 log
 tmp
 temp
@@ -79,6 +79,9 @@ rhythm/rhythm_api
 
 signet/signet
 
+.cursorrules
+
+/plans
 .ai/
 .cursor/
 .cursorrules

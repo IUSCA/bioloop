@@ -2,7 +2,6 @@ import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
 import * as utils from "@/services/utils";
-import { useNotificationStore } from "@/stores/notification";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
 import { ref } from "vue";
@@ -33,15 +32,21 @@ export const useAuthStore = defineStore("auth", () => {
     user.value = data.profile;
     token.value = data.token;
     loggedIn.value = true;
-    useNotificationStore().resetSession();
     refreshTokenBeforeExpiry();
   }
 
   function onLogout() {
-    loggedIn.value = false;
-    user.value = {};
-    token.value = "";
-    useNotificationStore().resetSession();
+    // call logout API to clear cookie on backend
+    authService
+      .logout()
+      .catch((err) => {
+        console.error("Error calling logout API", err);
+      })
+      .finally(() => {
+        loggedIn.value = false;
+        user.value = {};
+        token.value = "";
+      });
   }
 
   /**

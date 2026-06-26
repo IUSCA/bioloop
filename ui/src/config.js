@@ -73,7 +73,9 @@ const exports = {
   alertForEnvironments: ["ci"],
   enabledFeatures: {
     genomeBrowser: true,
-    notifications: false,
+    notifications: {
+      enabledForRoles: ["user", "operator", "admin"],
+    },
     import: {
       enabledForRoles: ["admin"],
     },

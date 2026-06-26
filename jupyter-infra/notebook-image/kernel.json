@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "python",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}"
+  ],
+  "display_name": "Python 3 (restricted)",
+  "language": "python",
+  "metadata": {
+    "description": "Restricted kernel: shell magics and unsafe subprocess usage should be disabled via startup hooks.",
+    "restricted": true
+  }
+}

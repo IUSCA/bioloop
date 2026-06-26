@@ -592,8 +592,8 @@ const validateIfExists = (value) => {
         .then((res) => {
           resolve(res.data.exists);
         })
-        .catch((_e) => {
-          // console.error(_e);
+        .catch((e) => {
+          console.error(e);
           reject();
         });
     }

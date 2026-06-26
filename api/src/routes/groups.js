@@ -1,0 +1,547 @@
+const express = require('express');
+const { param, query, body } = require('express-validator');
+const createError = require('http-errors');
+const _ = require('lodash/fp');
+const assert = require('assert');
+const { isUUID } = require('validator');
+const { GROUP_MEMBER_ROLE } = require('@prisma/client');
+
+const asyncHandler = require('@/middleware/asyncHandler');
+const { validate } = require('@/middleware/validators');
+const groupService = require('@/services/groups');
+const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
+const { pickNonNil } = require('@/utils');
+const prisma = require('@/db');
+const { isPlatformAdmin } = require('@/services/auth');
+// const collectionService = require('@/services/collections');
+// const datasetService = require('@/services/datasets_v2');
+
+const router = express.Router();
+
+/**
+ * Helper function to ensure that a user is not removing the last admin from a group
+ *
+ * @param {string} group_id - UUID of group
+ * @param {string} user_id - UUID of user
+ */
+async function ensureNotRemovingLastAdmin(group_id, user_id) {
+  // reject if this removal leads to zero admins in the group
+  // This allows platform admins to remove use that leads to zero admins
+  // but prevents group admins from removing the only admin (themselves) and leaving the group without any admins,
+  // which would make it impossible to manage the group going forward
+  const groupAdmins = await prisma.group_user.findMany({
+    where: { group_id, role: GROUP_MEMBER_ROLE.ADMIN },
+  });
+  const message = 'Cannot remove the only admin from the group.'
+        + ' Please promote another member to admin before removing this member.';
+  if (groupAdmins.length === 1 && groupAdmins[0].user_id === user_id) {
+    assert.fail(message);
+  }
+}
+
+// Search groups by name or description
+router.post(
+  '/search',
+  validate([
+    body('search_term').isString().optional(),
+    body('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
+    body('offset').default(0).isInt({ min: 0 }).toInt(),
+    body('sort_by').default('depth').isIn(['name', 'created_at', 'updated_at', 'depth']),
+    body('sort_order').default('asc').isIn(['asc', 'desc']),
+    body('is_archived').optional().isBoolean(),
+    body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
+  ]),
+  authorize('group', 'list'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Search groups by name or description'
+
+    const params = _.pick([
+      'search_term', 'limit', 'offset', 'sort_by', 'sort_order',
+      'is_archived', 'scope',
+    ])(req.body);
+
+    // check if search term is a valid UUID, if so, search by id instead of name/description
+    if (params.search_term && isUUID(params.search_term)) {
+      params.group_id = params.search_term;
+      delete params.search_term;
+    }
+
+    // if user is platform admin, search all groups, otherwise search only groups the user has access to
+    let promise;
+    if (isPlatformAdmin(req)) {
+      promise = groupService.searchAllGroups({
+        ...params, user_id: req.user.subject_id,
+      });
+    } else {
+      promise = groupService.searchGroupsForUser({
+        ...params, user_id: req.user.subject_id,
+      });
+    }
+    const { metadata, data } = await promise;
+    const filteredGroups = data.map((g) => req.permission.filter(g));
+    res.json({ metadata, data: filteredGroups });
+  }),
+);
+
+// For platform admin use - get groups that do not have an active admin (e.g. for cleanup purposes)
+router.get(
+  '/without-active-admin',
+  authorize('group', 'list_invalid'),
+  asyncHandler(async (req, res) => {
+  // #swagger.tags = ['Groups']
+  // #swagger.summary = 'Get groups without an active admin'
+
+    const groups = await groupService.getGroupsWithoutActiveAdmin();
+    const filteredGroups = groups.map((g) => req.permission.filter(g));
+    res.json(filteredGroups);
+  }),
+);
+
+// Create a new root group
+router.post(
+  '/',
+  authorize('group', 'create'),
+  validate([
+    body('name').isString().notEmpty(),
+    body('description').optional().isString().notEmpty(),
+    body('allow_user_contributions').optional().isBoolean().toBoolean(),
+    body('members').optional().isArray(),
+    body('members.*').isUUID(),
+    body('admins').optional().isArray(),
+    body('admins.*').isUUID(),
+  ]),
+  asyncHandler(async (req, res) => {
+  // #swagger.tags = ['Groups']
+  // #swagger.summary = 'Create a new root group'
+
+    const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
+    const { members = [], admins = [] } = req.body;
+    const group = await groupService.createGroup({
+      data,
+      actor_id: req.user.subject_id,
+      members,
+      admins,
+    });
+
+    res.status(201).json(req.permission.filter(group));
+  }),
+);
+
+// get hierarchical listing of groups with optional filters
+router.post(
+  '/hierarchy',
+  validate([
+    body('is_archived').optional().isBoolean().toBoolean(),
+    body('search_term').optional().isString(),
+    body('root_limit').default(10).isInt({ min: 1, max: 100 }).toInt(),
+    body('root_offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('group', 'view_hierarchy'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Get hierarchical listing of groups with optional filters'
+
+    const params = _.pick(['is_archived', 'search_term', 'root_limit', 'root_offset'])(req.body);
+
+    // results: [{ group info, _children: [{ group info, _children: [...] }, ...] }, ...]
+    const results = await groupService.getGroupHierarchy(params);
+
+    const filterHierarchy = (group) => {
+      const filtered = req.permission.filter(_.omit(['_children'], group));
+      if (Array.isArray(group._children) && group._children.length > 0) {
+        filtered._children = group._children.map(filterHierarchy);
+      }
+      return filtered;
+    };
+
+    const filteredResults = results.map(filterHierarchy);
+    res.json(filteredResults);
+  }),
+);
+
+// Create a new child group under a parent group
+router.post(
+  '/:id/children',
+  validate([
+    param('id').isUUID(),
+    body('name').isString().notEmpty(),
+    body('description').optional().isString().notEmpty(),
+    body('allow_user_contributions').optional().isBoolean().toBoolean(),
+    body('members').optional().isArray(),
+    body('members.*').isUUID(),
+    body('admins').optional().isArray(),
+    body('admins.*').isUUID(),
+  ]),
+  authorize('group', 'create_child'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Create a new child group under a parent group'
+
+    const { id } = req.params;
+    const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
+    const { members = [], admins = [] } = req.body;
+
+    // if not platform admin, add user as admin of the child group by default to ensure they have access to manage the child group they created
+    if (!isPlatformAdmin(req) && !admins.includes(req.user.subject_id)) {
+      admins.push(req.user.subject_id);
+    }
+
+    const childGroup = await groupService.createGroup({
+      data,
+      actor_id: req.user.subject_id,
+      parent_id: id,
+      members,
+      admins,
+    });
+
+    res.status(201).json(req.permission.filter(childGroup));
+  }),
+);
+
+// Get group details
+router.get(
+  '/:id',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('group', 'view_metadata', { shouldDeriveCallerRole: true, shouldDeriveCapabilities: true }),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Get group details by ID'
+
+    const { id } = req.params;
+    const group = await groupService.getGroupById(id);
+    res.json({
+      ...req.permission.filter(group),
+      // ...group,
+      _meta: {
+        caller_role: req.permission.callerRole,
+        capabilities: toCapabilitiesArray(req.permission.capabilities),
+      },
+    });
+  }),
+);
+
+// get group by slug
+router.get(
+  '/slug/:slug',
+  asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Groups']
+  // #swagger.summary = 'Get group details by slug'
+
+    const { slug } = req.params;
+    const group = await groupService.getGroupBySlug(slug);
+
+    const permission = await authorizeAction('group', 'view_metadata', {
+      identifiers: { group_id: group.id },
+      policyExecutionContext: req.policyExecutionContext,
+      preFetched: { resource: group },
+      shouldDeriveCallerRole: true,
+      shouldDeriveCapabilities: true,
+    });
+
+    if (!permission.granted) {
+      return next(createError(403, 'Forbidden'));
+    }
+
+    res.json({
+      ...permission.filter(group),
+      _meta: {
+        caller_role: permission.callerRole,
+        capabilities: toCapabilitiesArray(permission.capabilities),
+      },
+    });
+  }),
+);
+
+//  Update group metadata
+router.patch(
+  '/:id',
+  validate([
+    param('id').isUUID(),
+    body('version').isInt({ min: 1 }).toInt(), // for optimistic concurrency control
+    body('name').optional().isString().notEmpty(),
+    body('description').optional().isString().notEmpty(),
+    body('allow_user_contributions').optional().isBoolean().toBoolean(),
+  ]),
+  authorize('group', 'edit_metadata'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Update group metadata'
+
+    const { id } = req.params;
+
+    const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
+    if (_.isEmpty(data)) {
+      return next(createError(400, 'At least one metadata field must be provided for update'));
+    }
+
+    const updatedGroup = await groupService.updateGroupMetadata(
+      id,
+      {
+        data,
+        actor_id: req.user.subject_id,
+        expected_version: req.body.version,
+      },
+    );
+    res.json(req.permission.filter(updatedGroup));
+  }),
+);
+
+// Archive a group
+router.post(
+  '/:id/archive',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('group', 'archive'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Archive a group (soft delete)'
+
+    const { id } = req.params;
+
+    const archivedGroup = await groupService.archiveGroup(id, req.user.subject_id);
+    res.json(req.permission.filter(archivedGroup));
+  }),
+);
+
+// Unarchive a group
+router.post(
+  '/:id/unarchive',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('group', 'archive'), // same policy as archiving, since both actions are about changing the archived status
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Unarchive a group'
+
+    const { id } = req.params;
+
+    const unarchivedGroup = await groupService.unarchiveGroup(id, req.user.subject_id);
+    res.json(req.permission.filter(unarchivedGroup));
+  }),
+);
+
+// List group members
+router.get(
+  '/:id/members',
+  validate([
+    param('id').isUUID(),
+    query('membership_type').default('all').isIn(['all', 'direct', 'transitive']),
+    query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+    query('only_enabled_users').default(false).isBoolean().toBoolean(),
+  ]),
+  authorize('group', 'view_members'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'List direct members of a group'
+
+    const { id } = req.params;
+    const {
+      limit, offset, only_enabled_users, membership_type, search_term,
+    } = req.query;
+
+    const { metadata, data } = await groupService.listGroupMembers(id, {
+      limit, offset, only_enabled_users, membership_type, search_term,
+    });
+    const filteredMembers = data.map((m) => req.permission.filter(m));
+    res.json({
+      metadata,
+      data: filteredMembers,
+    });
+  }),
+);
+
+// Add member to group
+router.put(
+  '/:id/members/:userId',
+  validate([
+    param('id').isUUID(),
+    param('userId').isUUID(),
+  ]),
+  authorize('group', 'add_member'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Add a member to the group'
+
+    const { id, userId } = req.params;
+
+    await groupService.addGroupMembers(id, { user_ids: [userId], actor_id: req.user.subject_id });
+    res.status(204).send();
+  }),
+);
+
+// Remove member from group
+router.delete(
+  '/:id/members/:userId',
+  validate([
+    param('id').isUUID(),
+    param('userId').isUUID(),
+  ]),
+  authorize('group', 'remove_member'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Remove a member from the group'
+
+    const { id, userId } = req.params;
+
+    await ensureNotRemovingLastAdmin(id, userId);
+
+    const deletedUserIds = await groupService.removeGroupMembers(
+      id,
+      { user_ids: [userId], actor_id: req.user.subject_id },
+    );
+    if (deletedUserIds.length === 0) {
+      throw createError.NotFound('User is not a member of the group');
+    }
+    res.status(204).send();
+  }),
+);
+
+// bulk add members to group
+router.post(
+  '/:id/members',
+  validate([
+    param('id').isUUID(),
+    body('members').isArray({ min: 1 }),
+    body('members.*.user_id').isUUID(),
+  ]),
+  authorize('group', 'add_member'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Bulk add members to the group'
+
+    const { id } = req.params;
+    const { members } = req.body; // array of { user_id, role }
+
+    await groupService.addGroupMembers(id, {
+      actor_id: req.user.subject_id,
+      user_ids: members.map((m) => m.user_id),
+    });
+    res.status(204).send();
+  }),
+);
+
+// Promote member to admin
+router.put(
+  '/:id/admins/:userId',
+  validate([
+    param('id').isUUID(),
+    param('userId').isUUID(),
+  ]),
+  authorize('group', 'edit_member_role'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Promote a member to admin of the group'
+
+    const { id, userId } = req.params;
+
+    await groupService.promoteGroupMemberToAdmin(id, { user_id: userId, actor_id: req.user.subject_id });
+    res.status(204).send();
+  }),
+);
+
+// Remove admin from group
+router.delete(
+  '/:id/admins/:userId',
+  validate([
+    param('id').isUUID(),
+    param('userId').isUUID(),
+  ]),
+  authorize('group', 'edit_member_role'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Demote an admin to a member of the group'
+
+    const { id, userId } = req.params;
+
+    await ensureNotRemovingLastAdmin(id, userId);
+
+    await groupService.demoteAdminToMember(id, { user_id: userId, actor_id: req.user.subject_id });
+    res.status(204).send();
+  }),
+);
+
+// bulk remove members from group
+router.delete(
+  '/:id/members',
+  validate([
+    param('id').isUUID(),
+    body('user_ids').isArray({ min: 1 }),
+    body('user_ids.*').isUUID(),
+  ]),
+  authorize('group', 'remove_member'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Bulk remove members from the group'
+
+    const { id } = req.params;
+    const { user_ids } = req.body;
+
+    // check if any of the removals would lead to zero admins in the group
+    await Promise.all(user_ids.map((user_id) => ensureNotRemovingLastAdmin(id, user_id)));
+
+    await groupService.removeGroupMembers(id, { user_ids, actor_id: req.user.subject_id });
+    res.status(204).send();
+  }),
+);
+
+// Get ancestor groups (hierarchy upward)
+router.get(
+  '/:id/ancestors',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('group', 'view_ancestors'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Get ancestor groups (hierarchy upward)'
+
+    const { id } = req.params;
+    const ancestors = await groupService.getGroupAncestors(id);
+    const filteredAncestors = ancestors.map((a) => req.permission.filter(a));
+    res.json(filteredAncestors);
+  }),
+);
+
+// Get descendant groups (hierarchy downward)
+router.get(
+  '/:id/descendants',
+  validate([
+    param('id').isUUID(),
+    query('is_archived').optional().isBoolean().toBoolean(),
+    query('max_depth').optional().isInt({ min: 1 }).toInt(),
+  ]),
+  authorize('group', 'view_descendants'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Get descendant groups (hierarchy downward)'
+
+    const { id } = req.params;
+    const { is_archived, max_depth, search_term } = req.query;
+    const descendants = await groupService.getGroupDescendants(id, {
+      is_archived,
+      max_depth,
+      search_term: search_term?.trim(),
+    });
+    const filteredDescendants = descendants.map((d) => req.permission.filter(d));
+    res.json(filteredDescendants);
+  }),
+);
+
+// POST /api/groups/:id/reparent
+// Move group to new parent
+// router.post('/:id/reparent', asyncHandler(async (req, res) => {})) - Don't implement until we have a use case for it,
+// as it's complex and not currently needed
+
+// List collections owned by group
+// use search collections endpoint with owner_group_id filter instead of implementing a separate endpoint for this, since the search endpoint already supports pagination, sorting, and filtering, and we can leverage that for listing collections owned by a group without needing to implement those features again in this endpoint
+
+// List datasets owned by group
+// use search datasets endpoint with owner_group_id filter instead of implementing a separate endpoint for this, since the search endpoint already supports pagination, sorting, and filtering, and we can leverage that for listing datasets owned by a group without needing to implement those features again in this endpoint
+
+module.exports = router;

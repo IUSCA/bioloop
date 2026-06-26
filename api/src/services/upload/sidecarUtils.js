@@ -41,17 +41,23 @@ function relocateSidecarForUpload({ uploadDir, datasetId, processId }) {
 
   if (!fs.existsSync(src)) {
     // Idempotent retries are expected if a prior attempt already relocated it.
-    return { moved: false, reason: 'source_missing', source: src, destination: dst };
+    return {
+      moved: false, reason: 'source_missing', source: src, destination: dst,
+    };
   }
 
   fs.mkdirSync(sidecarDir, { recursive: true });
 
   if (fs.existsSync(dst)) {
-    return { moved: true, deduped: true, source: src, destination: dst, action: 'already_exists' };
+    return {
+      moved: true, deduped: true, source: src, destination: dst, action: 'already_exists',
+    };
   }
 
   fs.copyFileSync(src, dst);
-  return { moved: true, deduped: false, source: src, destination: dst, action: 'copied' };
+  return {
+    moved: true, deduped: false, source: src, destination: dst, action: 'copied',
+  };
 }
 
 module.exports = { relocateSidecarForUpload };

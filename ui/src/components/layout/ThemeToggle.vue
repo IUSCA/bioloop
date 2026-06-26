@@ -1,7 +1,6 @@
 <template>
   <va-button
     round
-    data-testid="theme-toggle"
     :icon="isDark ? 'light_mode' : 'dark_mode'"
     @click="toggleDark()"
     preset="primary"

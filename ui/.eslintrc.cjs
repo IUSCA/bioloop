@@ -16,6 +16,7 @@ module.exports = {
   },
   rules: {
     "vue/multi-word-component-names": "off",
+    "vuejs-accessibility/label-has-for": "off",
     "no-unused-vars": [
       "error", // or "warn"
       {
@@ -53,5 +54,7 @@ module.exports = {
         "invalid-first-character-of-tag-name": false,
       },
     ],
+    // Ignore unknown at-rules in CSS (e.g., @apply for Tailwind)
+    "vue/no-unknown-css-at-rules": "off",
   },
 };

@@ -168,9 +168,119 @@ const ALERT_TYPES = {
   ERROR: 'ERROR',
 };
 
-const NOTIFICATION_TYPES = {
-  DATASET_CREATED: 'DATASET_CREATED',
-};
+const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
+
+// need to specify ids to have deterministic seeding
+const GRANT_ACCESS_TYPES = [
+  {
+    id: 1,
+    name: 'DATASET:VIEW_METADATA',
+    description: 'See dataset exists',
+    long_description: 'See dataset exists and view non-sensitive metadata such as description, size, file count',
+  },
+  {
+    id: 2,
+    name: 'DATASET:VIEW_SENSITIVE_METADATA',
+    description: 'Paths, infrastructure and lifecycle data',
+    long_description: 'View sensitive metadata such as file paths, infrastructure details, and lifecycle data',
+  },
+  {
+    id: 3,
+    name: 'DATASET:REQUEST_ACCESS',
+    description: 'Can request access',
+    long_description: 'Can request other access types, which may include '
+    + 'viewing sensitive metadata, listing files, downloading, remote access, or compute access',
+  },
+  {
+    id: 4,
+    name: 'DATASET:LIST_FILES',
+    description: 'Browse file tree',
+    long_description: 'Browse file tree and see file names, size.',
+  },
+  {
+    id: 5,
+    name: 'DATASET:DOWNLOAD',
+    description: 'Local copy',
+    long_description: 'Download individual files or entire bundle for local use',
+  },
+  {
+    id: 6,
+    name: 'DATASET:COMPUTE',
+    description: 'Run compute jobs',
+    long_description: 'Run compute jobs on dataset in place, without downloading',
+  },
+  {
+    id: 7,
+    name: 'COLLECTION:VIEW_METADATA',
+    description: 'See collection exists',
+    long_description: 'See collection exists and view non-sensitive metadata such as description, dataset count',
+  },
+  {
+    id: 8,
+    name: 'COLLECTION:REQUEST_ACCESS',
+    description: 'Can request access',
+    long_description: 'Can request other access types, which may include listing datasets in collection',
+  },
+  {
+    id: 9,
+    name: 'COLLECTION:LIST_CONTENTS',
+    description: 'Browse datasets in collection',
+    long_description: 'Browse datasets in collection and see dataset names, types, and size',
+  },
+  {
+    id: 10,
+    name: 'DATASET:REMOTE_ACCESS',
+    description: 'Path to storage',
+    long_description: 'Access dataset in place via provided path, without downloading',
+  },
+  {
+    id: 11,
+    name: 'DATASET:LIST_DERIVED_DATASETS',
+    description: 'View derived datasets',
+    long_description: 'View derived datasets and their metadata that reference this dataset as a source',
+  },
+  {
+    id: 12,
+    name: 'DATASET:LIST_SOURCE_DATASETS',
+    description: 'View source datasets',
+    long_description: 'View source datasets and their metadata that reference this dataset as a derived dataset',
+  },
+];
+
+const GRANT_PRESETS = [
+  {
+    id: 1,
+    name: 'Discoverable',
+    description: 'Allows users to view collection and dataset metadata and request further access',
+    resource_types: ['COLLECTION'],
+    access_type_ids: [1, 3, 7, 9],
+  },
+  {
+    id: 2,
+    name: 'Standard Research Use',
+    description: 'Allows users to view and download datasets',
+    resource_types: ['COLLECTION'],
+    access_type_ids: [1, 4, 5, 7, 9],
+  },
+  // Dataset-only copies of built-in presets (collection actions removed):
+  {
+    id: 3,
+    name: 'Discoverable (Dataset)',
+    description: 'Dataset grants only: view metadata and request access',
+    resource_types: ['DATASET'],
+    access_type_ids: [1, 3],
+  },
+  {
+    id: 4,
+    name: 'Standard Research Use (Dataset)',
+    description: 'Dataset grants only: view, list files, download',
+    resource_types: ['DATASET'],
+    access_type_ids: [1, 4, 5],
+  },
+];
+
+const JWT_COOKIE_NAME = 'jwt';
+const GRAFANA_COOKIE_NAME = 'grafana_token';
 
 module.exports = {
   INCLUDE_FILES,
@@ -187,5 +297,9 @@ module.exports = {
   ALERT_STATUSES,
   DATASET_STATES,
   INCLUDE_PROJECTS,
-  NOTIFICATION_TYPES,
+  EVERYONE_GROUP_ID,
+  GRANT_ACCESS_TYPES,
+  GRANT_PRESETS,
+  JWT_COOKIE_NAME,
+  GRAFANA_COOKIE_NAME,
 };

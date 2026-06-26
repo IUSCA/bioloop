@@ -1,14 +1,11 @@
 const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 const { generate_date_range } = require('../../src/services/datetime');
-const data = require('./data');
 
 // generates records to be seeded into the dataset_state table, across the given number of years
-function generate_staged_logs(num_years) {
+function generate_staged_logs(num_years, dataset_ids) {
   const end_date = new Date();
   const start_date = dayjs(end_date).subtract(num_years, 'year').toDate();
-
-  const { datasets } = data;
 
   const staging_logs = [];
 
@@ -21,7 +18,7 @@ function generate_staged_logs(num_years) {
         state: 'STAGED',
         timestamp: date,
         metadata: {},
-        dataset_id: datasets[Math.floor(Math.random() * datasets.length)].id,
+        dataset_id: dataset_ids[Math.floor(Math.random() * dataset_ids.length)],
       });
     });
   });

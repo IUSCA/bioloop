@@ -11,7 +11,10 @@
     "source.organizeImports": "explicit"
   },
   "eslint.validate": [
-    "javascript"
+    "javascript",
+    "javascriptreact", 
+    "vue",
+    "html"
   ],
   "files.associations": {
     "*.css": "postcss"
@@ -32,6 +35,16 @@
   },
   "[json]": {
     "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "prisma.pinToPrisma6": true,
+  "[prisma]": {
+    "editor.defaultFormatter": "Prisma.prisma"
+  },
+  "[sql]": {
+    "editor.defaultFormatter": "adpyke.vscode-sql-formatter"
+  },
+  "chat.tools.terminal.autoApprove": {
+    "npx jest": true
   },
   "playwright.configFile": "tests/playwright.config.js",
   "playwright.env": {

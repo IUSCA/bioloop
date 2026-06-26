@@ -1,3 +1,14 @@
+const icons = {
+  group: "mdi-account-group",
+  user: "mdi-account",
+  dataset: "mdi-file-document",
+  collection: "mdi-folder-multiple",
+  request: "mdi-lock-open",
+  grant: "mdi-certificate",
+  resource: "mdi-database",
+  members: "mdi-account-multiple",
+};
+
 const exports = {
   sidebar: {
     user_items: [
@@ -25,6 +36,37 @@ const exports = {
             path: "/datasets/uploads",
           },
         ],
+      },
+      // ── Governance (v2) ──────────────────────────────────────────────────
+      {
+        icon: "mdi-home-outline",
+        title: "Home",
+        path: "/v2/home",
+        test_id: "sidebar-v2-home",
+      },
+      {
+        icon: `${icons.group}-outline`,
+        title: "Groups",
+        path: "/v2/groups",
+        test_id: "sidebar-v2-groups",
+      },
+      {
+        icon: `${icons.collection}-outline`,
+        title: "Collections",
+        path: "/v2/collections",
+        test_id: "sidebar-v2-collections",
+      },
+      {
+        icon: `${icons.dataset}-outline`,
+        title: "Datasets",
+        path: "/v2/datasets",
+        test_id: "sidebar-v2-datasets",
+      },
+      {
+        icon: `${icons.access_request}-outline`,
+        title: "Access Requests",
+        path: "/v2/access-requests",
+        test_id: "sidebar-v2-access-requests",
       },
     ],
     operator_items: [
@@ -99,6 +141,13 @@ const exports = {
     ],
     bottom_items: [
       {
+        feature_key: "notifications",
+        icon: "mdi-bell-outline",
+        title: "Notifications",
+        path: "/notifications",
+        test_id: "sidebar-notifications",
+      },
+      {
         icon: "mdi-information",
         title: "About",
         path: "/about",
@@ -164,32 +213,16 @@ const exports = {
       EXPIRED: "EXPIRED",
     },
   },
-  notificationTheme: {
-    filters: {
-      unread: {
-        color: "primary",
-        iconOn: "mdi:email",
-        iconOff: "mdi:email-outline",
-      },
-      read: {
-        color: "info",
-        iconOn: "mdi:email-open",
-        iconOff: "mdi:email-open-outline",
-      },
-      bookmarked: {
-        color: "success",
-        iconOn: "mdi:bookmark",
-        iconOff: "mdi:bookmark-outline",
-      },
-    },
-    delivery: {
-      roleBroadcast: { color: "primary" },
-    },
-    actions: {
-      read: { color: "info", icon: "mdi:email-open-outline" },
-      bookmark: { color: "success", icon: "mdi:bookmark-outline" },
-      link: { color: "primary", icon: "mdi:open-in-new" },
-    },
+  icons,
+  // A special group that implicitly contains all users. It is used for granting access to all users without having to
+  // explicitly add them to a group. id will always be "00000000-0000-0000-0000-000000000000" for consistency,
+  // and the backend recognizes this as a special case.
+  EVERYONE_GROUP: {
+    id: "00000000-0000-0000-0000-000000000000",
+    name: "Everyone",
+    tag: "everyone",
+    icon: "mdi-earth",
+    description: "All users in the system, including external collaborators",
   },
 };
 

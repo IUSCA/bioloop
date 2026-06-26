@@ -6,12 +6,11 @@ const { generate_date_range } = require('../../src/services/datetime');
 const prisma = new PrismaClient();
 
 // generates records to be seeded into the data_access_log table, across the given number of years
-async function generate_data_access_logs(num_years) {
+async function generate_data_access_logs(num_years, dataset_ids) {
   const dataset_files = await prisma.dataset_file.findMany();
   // exclude directories from retrieved files list
   const files = dataset_files.filter((record) => record.filetype === 'file');
 
-  const datasets = await prisma.dataset.findMany();
   const users = await prisma.user.findMany();
 
   const end_date = new Date();
@@ -35,7 +34,7 @@ async function generate_data_access_logs(num_years) {
           : null,
         dataset_id: is_direct_download
           ? null
-          : datasets[Math.floor(Math.random() * datasets.length)].id,
+          : dataset_ids[Math.floor(Math.random() * dataset_ids.length)],
         user_id: users[Math.floor(Math.random() * users.length)].id,
       });
     });

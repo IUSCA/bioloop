@@ -258,5 +258,25 @@ export default {
       "rose-900": "#881337",
       "rose-950": "#4c0519",
     },
+    presets: {
+      light: {
+        backgroundPrimary: "#F4F6F8",
+        backgroundSecondary: "#FFFFFF",
+        backgroundSidebar: "#1a2332",
+        backgroundCardPrimary: "#F7F9F9",
+        backgroundCardSecondary: "#ECFDE6",
+        success: "#228200",
+        info: "#158DE3",
+        danger: "#E42222",
+        warning: "#FFD43A",
+      },
+      dark: {
+        backgroundPrimary: "#060c17",
+        backgroundSecondary: "#1f2937",
+        backgroundCardPrimary: "#1f2937",
+        backgroundCardSecondary: "#1a2535",
+        backgroundSidebar: "#0d1117",
+      },
+    },
   },
 };

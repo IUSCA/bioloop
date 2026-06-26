@@ -29,7 +29,7 @@ function issueJWT({ userProfile, forever = false, aud }) {
   return jsonwt.sign(claim, key, signOpt);
 }
 
-const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id']);
+const get_user_profile = _.pick(['username', 'email', 'name', 'roles', 'cas_id', 'id', 'subject_id']);
 
 async function onLogin({ user, method, updateLastLogin = true }) {
   if (updateLastLogin) { await userService.updateLastLogin({ id: user.id, method }); }
@@ -256,6 +256,8 @@ function issueToken(claim) {
   return jsonwt.sign(claim, key, signOpt);
 }
 
+const isPlatformAdmin = (req) => req.user?.roles?.includes('admin') === true;
+
 module.exports = {
   onLogin,
   issueJWT,
@@ -268,4 +270,5 @@ module.exports = {
   getLoginUser,
   issueSignupToken,
   issueToken,
+  isPlatformAdmin,
 };

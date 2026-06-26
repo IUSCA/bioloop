@@ -8,6 +8,7 @@ const { authenticate } = require('@/middleware/auth');
 const { accessControl } = require('@/middleware/auth');
 const userService = require('@/services/user');
 const authService = require('@/services/auth');
+const constants = require('@/constants');
 
 const isPermittedTo = accessControl('auth');
 const router = express.Router();
@@ -17,6 +18,23 @@ const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
 const microsoftRouter = require('./microsoft');
 const signupRouter = require('./signup');
+
+router.post('/logout', authenticate, asyncHandler(async (req, res, next) => {
+  // #swagger.tags = ['Auth']
+
+  // nothing to do on the backend for logout since we are using JWTs, but we can clear the cookie here just in case
+  res.clearCookie(constants.JWT_COOKIE_NAME, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Strict',
+  });
+  res.clearCookie(constants.GRAFANA_COOKIE_NAME, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'Strict',
+  });
+  return res.json({ message: 'Logged out successfully' });
+}));
 
 router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
@@ -45,7 +63,7 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
   return createError.BadRequest('Not a valid user');
 }));
 
-if (!['production', 'test'].includes(config.get('mode'))) {
+if (!['production', 'test'].includes(config.get('env'))) {
   router.post(
     '/test_login',
     asyncHandler(async (req, res, next) => {

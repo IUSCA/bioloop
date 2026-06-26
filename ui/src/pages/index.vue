@@ -9,7 +9,7 @@ const auth = useAuthStore();
 const router = useRouter();
 
 if (auth.canOperate) {
-  router.push("/dashboard");
+  router.push("/v2/groups");
 } else {
   router.push("/projects");
 }

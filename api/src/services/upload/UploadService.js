@@ -242,7 +242,7 @@ class UploadService {
         const tusInfoPath = `${tusFilePath}.json`;
 
         const { originalFilename } = readTusFileInfo({ tusInfoPath, datasetId, process_id });
-        
+
         // Mirror this sidecar metadata file into a dataset-specific folder
         // for cleanup organization while keeping the source sidecar in place.
         // - Canonical path where metadata file is stored by TUS:

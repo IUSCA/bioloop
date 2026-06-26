@@ -16,6 +16,7 @@ const {
   axiosErrorHandler,
   prismaConstraintFailedHandler,
 } = require('./middleware/error');
+const { initializePolicyContext } = require('./authorization');
 const createTusMiddleware = require('./middleware/tus');
 const uploadService = require('./services/upload');
 const logger = require('./services/logger');
@@ -34,7 +35,7 @@ app.use(createTusMiddleware(tusServer));
 logger.info('TUS server mounted at /uploads/files');
 
 // request logger - https://github.com/expressjs/morgan
-if (config.get('mode') === 'production') {
+if (config.get('env') === 'production') {
   app.use(requestLogger('combined', { skip: (req, res) => res.statusCode < 400 }));
 } else {
   app.use(requestLogger('dev'));
@@ -53,7 +54,7 @@ app.use(cookieParser());
 // compress all responses
 app.use(compression());
 
-if (!['production', 'test'].includes(config.get('mode'))) {
+if (!['production', 'test'].includes(config.get('env'))) {
   // mount swagger ui
   try {
     const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));
@@ -62,6 +63,8 @@ if (!['production', 'test'].includes(config.get('mode'))) {
     console.error('Unable to load "./swagger_output.json"', e);
   }
 }
+
+app.use(initializePolicyContext);
 
 // mount router
 app.use('/', indexRouter);

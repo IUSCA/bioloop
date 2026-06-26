@@ -64,11 +64,8 @@ function moveTusFileToDestination({
   tusFilePath,
   dataset,
   selection_mode,
-  directory_name,
   relative_path,
   originalFilename,
-  datasetId,
-  process_id,
 }) {
   const baseOriginPath = dataset.origin_path;
   let finalPath;

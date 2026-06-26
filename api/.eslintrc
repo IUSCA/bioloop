@@ -16,37 +16,35 @@
   },
   "rules": {
     "no-underscore-dangle": 0,
-    "no-unused-vars": ["error", { "argsIgnorePattern": "next" }],
+    "no-unused-vars": ["error", { "argsIgnorePattern": "next|ctx" }],
     "no-use-before-define": ["error", { "variables": false }],
     "no-multi-str": 0,
     "consistent-return": 0,
     "camelcase": 0,
     "no-console": ["error", { "allow": ["warn", "error"] }],
-    "comment-length/limit-multi-line-comments": [
-      "warn",
-      {
-        "mode": "overflow-only",
-        "maxLength": 120,
-        "logicalWrap": true,
-        "ignoreUrls": true,
-        "ignoreCommentsWithCode": true,
-        "tabSize": 2
-      }
-    ],
-    "comment-length/limit-single-line-comments": [
-      "warn",
-      {
-        "mode": "overflow-only",
-        "maxLength": 120,
-        "logicalWrap": true,
-        "ignoreUrls": true,
-        "ignoreCommentsWithCode": true,
-        "tabSize": 2
-      }
-    ],
+    "comment-length/limit-multi-line-comments": "off",
+    "comment-length/limit-single-line-comments": "off",
     "max-len": ["error", { "ignoreComments": true, "code": 120 }],
     "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/*.test.js", "**/*.spec.js"]}],
-    "local-rules/no-original-prisma-inside-tx": "error"
+    "local-rules/no-original-prisma-inside-tx": "error",
+    "no-await-in-loop": "off",
+    // Override airbnb-base config to allow for...of loops (required for await in loops).
+    // Removes ForOfStatement restriction while keeping ForInStatement, LabeledStatement, and WithStatement.
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ForInStatement",
+        "message": "for...in loops iterate over the entire prototype chain, use Object.{keys,values,entries} and iterate over the resulting array instead"
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labels are a form of GOTO; using them makes code confusing and hard to maintain and refactor"
+      },
+      {
+        "selector": "WithStatement",
+        "message": "`with` is disallowed in strict mode because it makes code impossible to predict and optimize"
+      }
+    ]
   },
   "env": {
     "node": true,

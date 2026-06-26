@@ -1,256 +1,123 @@
+/**
+ * src/routes/notifications.js
+ *
+ * REST + SSE endpoints for in-app notifications.
+ *
+ * GET  /notifications/stream       — SSE stream; browser subscribes once and stays connected
+ * GET  /notifications              — paginated list (newest first)
+ * GET  /notifications/unread-count — { count: number }
+ * PATCH /notifications/:id/read    — mark one notification as read
+ * PATCH /notifications/read-all    — mark all notifications as read
+ */
+
 const express = require('express');
-const {
-  query, body, param,
-} = require('express-validator');
+const { query } = require('express-validator');
 const createError = require('http-errors');
 
-const prisma = require('@/db');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { accessControl } = require('@/middleware/auth');
 const { validate } = require('@/middleware/validators');
-const { resolveEligibleRecipients } = require('@/services/notifications/recipientService');
-const { fetchCurrentUserNotifications } = require('@/services/notifications/queryService');
-const { updateNotificationStateHandler } = require('@/services/notifications/stateUpdateHandler');
+const InAppNotificationService = require('@/notification/inApp/InAppNotificationService');
+const { sseManager } = require('@/notification/inApp/sseManager');
 
 const isPermittedTo = accessControl('notifications');
 const router = express.Router();
 
+// ── SSE stream — browser connects once and stays open ──────────────────────
 router.get(
-  '/:username/all',
-  isPermittedTo('read', { checkOwnership: true }),
-  validate([
-    param('username').trim().notEmpty(),
-    query('read').optional().isBoolean().toBoolean(),
-    query('bookmarked').optional().isBoolean().toBoolean(),
-    query('search').optional().trim().isLength({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('offset').optional().isInt({ min: 0 }).toInt(),
-  ]),
-  asyncHandler(async (req, res) => {
+  '/stream',
+  isPermittedTo('read'),
+  (req, res) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Get current user's notifications
-    const notifications = await fetchCurrentUserNotifications({ req });
-    return res.json(notifications);
-  }),
+    // #swagger.summary = Open SSE stream for real-time notification push
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no', // disable nginx proxy buffering
+    });
+    res.flushHeaders();
+
+    sseManager.addConnection(req.user.id, res);
+  },
 );
 
+// ── Paginated notification list ─────────────────────────────────────────────
 router.get(
   '/',
   isPermittedTo('read'),
   validate([
-    query('read').optional().isBoolean().toBoolean(),
-    query('bookmarked').optional().isBoolean().toBoolean(),
-    query('search').optional().trim().isLength({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('offset').optional().isInt({ min: 0 }).toInt(),
+    query('page').default(1).isInt({ min: 1 }).toInt(),
+    query('limit').default(20).isInt({ min: 1, max: 100 }).toInt(),
   ]),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Get notifications for current requester
-    const notifications = await fetchCurrentUserNotifications({ req });
-    return res.json(notifications);
+    // #swagger.summary = Get paginated notifications for the current user
+    const { page, limit } = req.query;
+    const result = await InAppNotificationService.getForUser(req.user.id, { page, limit });
+    res.json(result);
   }),
 );
 
-router.post(
-  '/',
-  isPermittedTo('create'),
-  validate([
-    body('label').trim().notEmpty(),
-    body('text').optional().isString(),
-    body('type').optional().isString(),
-    body('metadata').optional().isObject(),
-    body('role_ids').optional().isArray(),
-    body('role_ids.*').optional().isInt().toInt(),
-    body('user_ids').optional().isArray(),
-    body('user_ids.*').optional().isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Post a notification
-
-    const roleIds = req.body.role_ids || [];
-    const userIds = req.body.user_ids || [];
-    if (roleIds.length === 0 && userIds.length === 0) {
-      return next(createError.BadRequest('A user or user role must be specified as the recipient of the notification'));
-    }
-
-    const createdNotification = await prisma.$transaction(async (tx) => {
-      const recipientRows = await resolveEligibleRecipients({
-        tx,
-        roleIds,
-        userIds,
-      });
-      if (recipientRows.length === 0) {
-        throw createError.BadRequest('No eligible recipients found for notifications feature');
-      }
-
-      return tx.notification.create({
-        data: {
-          type: req.body.type,
-          label: req.body.label,
-          text: req.body.text,
-          metadata: req.body.metadata,
-          created_by_id: req.user.id,
-          recipients: {
-            createMany: {
-              data: recipientRows,
-            },
-          },
-        },
-      });
-    });
-
-    res.json(createdNotification);
-  }),
-);
-
-router.post(
-  '/:id/recipients',
-  isPermittedTo('create'),
-  validate([
-    param('id').isInt().toInt(),
-    body('role_ids').optional().isArray(),
-    body('role_ids.*').optional().isInt().toInt(),
-    body('user_ids').optional().isArray(),
-    body('user_ids.*').optional().isInt().toInt(),
-  ]),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['notifications']
-    // #swagger.summary = Add recipients to an existing notification
-    const roleIds = req.body.role_ids || [];
-    const userIds = req.body.user_ids || [];
-    if (roleIds.length === 0 && userIds.length === 0) {
-      return next(createError.BadRequest('A user or user role must be specified as the recipient of the notification'));
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const notification = await tx.notification.findUnique({
-        where: { id: req.params.id },
-        select: { id: true },
-      });
-      if (!notification) throw createError.NotFound('Notification not found');
-
-      const candidateRecipients = await resolveEligibleRecipients({
-        tx,
-        roleIds,
-        userIds,
-      });
-      if (candidateRecipients.length === 0) {
-        throw createError.BadRequest('No eligible recipients found for notifications feature');
-      }
-
-      const existingRecipients = await tx.notification_recipient.findMany({
-        where: {
-          notification_id: req.params.id,
-          user_id: {
-            in: candidateRecipients.map((row) => row.user_id),
-          },
-        },
-        select: {
-          user_id: true,
-        },
-      });
-      const existingUserIds = new Set(existingRecipients.map((row) => row.user_id));
-      const recipientRowsToCreate = candidateRecipients
-        .filter((row) => !existingUserIds.has(row.user_id))
-        .map((row) => ({
-          ...row,
-          notification_id: req.params.id,
-        }));
-
-      if (recipientRowsToCreate.length === 0) {
-        return {
-          conflict: false,
-          created_count: 0,
-        };
-      }
-
-      await tx.notification_recipient.createMany({
-        data: recipientRowsToCreate,
-      });
-      return {
-        conflict: false,
-        created_count: recipientRowsToCreate.length,
-      };
-    });
-
-    return res.json(result);
-  }),
-);
-
-router.patch(
-  '/:username/mark-all-read',
-  isPermittedTo('update', { checkOwnership: true }),
-  validate([
-    param('username').trim().notEmpty(),
-  ]),
+// ── Unread count ────────────────────────────────────────────────────────────
+router.get(
+  '/unread-count',
+  isPermittedTo('read'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Mark all current user's notifications as read
-    const now = new Date();
-    const updated = await prisma.notification_recipient.updateMany({
-      where: {
-        user_id: req.user.id,
-        is_read: false,
-      },
-      data: {
-        is_read: true,
-        read_at: now,
-      },
-    });
-
-    return res.json({
-      updated_count: updated.count,
-    });
+    // #swagger.summary = Get unread notification count for the current user
+    const count = await InAppNotificationService.getUnreadCount(req.user.id);
+    res.json({ count });
   }),
 );
 
+// ── Mark all read ───────────────────────────────────────────────────────────
+// Must be registered before /:id/read to prevent 'read-all' matching as an id
 router.patch(
-  '/mark-all-read',
+  '/read-all',
   isPermittedTo('update'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['notifications']
-    // #swagger.summary = Mark all requester's notifications as read
-    const now = new Date();
-    const updated = await prisma.notification_recipient.updateMany({
-      where: {
-        user_id: req.user.id,
-        is_read: false,
-      },
-      data: {
-        is_read: true,
-        read_at: now,
-      },
-    });
-
-    return res.json({
-      updated_count: updated.count,
-    });
+    // #swagger.summary = Mark all notifications as read for the current user
+    await InAppNotificationService.markAllRead(req.user.id);
+    res.json({ success: true });
   }),
 );
 
+// ── Mark one read ───────────────────────────────────────────────────────────
 router.patch(
-  '/:username/:id/state',
-  isPermittedTo('update', { checkOwnership: true }),
-  validate([
-    param('username').trim().notEmpty(),
-    param('id').isInt().toInt(),
-    body('is_read').optional().isBoolean().toBoolean(),
-    body('is_bookmarked').optional().isBoolean().toBoolean(),
-  ]),
-  updateNotificationStateHandler,
-);
-
-router.patch(
-  '/:id/state',
+  '/:id/read',
   isPermittedTo('update'),
   validate([
-    param('id').isInt().toInt(),
-    body('is_read').optional().isBoolean().toBoolean(),
-    body('is_bookmarked').optional().isBoolean().toBoolean(),
+    query('id').isUUID(),
   ]),
-  updateNotificationStateHandler,
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Mark a single notification as read
+    const { count } = await InAppNotificationService.markRead(req.params.id, req.user.id);
+    if (count === 0) {
+      throw createError.NotFound('Notification not found');
+    }
+    res.json({ success: true });
+  }),
+);
+
+// ── Delete one notification ─────────────────────────────────────────────────
+router.delete(
+  '/:id',
+  isPermittedTo('delete'),
+  validate([
+    query('id').isUUID(),
+  ]),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['notifications']
+    // #swagger.summary = Delete a notification (owner only)
+    const { count } = await InAppNotificationService.delete(req.params.id, req.user.id);
+    if (count === 0) {
+      throw createError.NotFound('Notification not found');
+    }
+    res.json({ success: true });
+  }),
 );
 
 module.exports = router;

@@ -64,7 +64,6 @@ const grantsObject = {
       'create:any': ['*'],
     },
     notifications: {
-      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
@@ -83,6 +82,9 @@ const grantsObject = {
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
+    },
+    system: {
+      'read:any': ['*'],
     },
   },
 
@@ -134,8 +136,8 @@ const grantsObject = {
       'read:any': ['*'],
     },
     notifications: {
-      'read:own': ['*'],
-      'update:own': ['*'],
+      'read:any': ['*'],
+      'update:any': ['*'],
     },
   },
 
@@ -193,7 +195,6 @@ const grantsObject = {
       'delete:any': ['*'],
     },
     notifications: {
-      'create:any': ['*'],
       'read:any': ['*'],
       'update:any': ['*'],
       'delete:any': ['*'],
@@ -217,4 +218,7 @@ const grantsObject = {
 };
 const ac = new AccessControl(grantsObject);
 
-module.exports = ac;
+module.exports = {
+  ac,
+  grantsObject,
+};

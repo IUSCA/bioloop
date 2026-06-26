@@ -139,7 +139,8 @@ async function findAll({
     )
     select *, count(*) over() as total_count from results
     order by ${sort_sql} nulls last
-    ${take !== undefined ? Prisma.sql`limit ${take}  offset ${skip}` : Prisma.empty}
+    ${take !== undefined ? Prisma.sql`limit ${take}` : Prisma.empty}
+    ${skip !== undefined ? Prisma.sql`offset ${skip}` : Prisma.empty}
   `;
 
   const users = await prisma.$queryRaw(sql);
