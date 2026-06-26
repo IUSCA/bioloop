@@ -11,11 +11,16 @@ The Dataset Import feature lets authorized users browse configured filesystem
 paths, select a directory, and initiate a dataset import workflow through a
 guided stepper UI.
 
+The UI now has two import routes:
+
+- `/datasets/imports` - import history table
+- `/datasets/imports/new` - import stepper for creating a new import
+
 Import sources are the filesystem locations the UI is allowed to browse. They
-are stored in the database and managed by an administrator — the UI dynamically
+are stored in the database and managed by an administrator. The UI dynamically
 fetches the list of sources and presents them in a dropdown, so no application
-code or config changes are needed when a new source is added or an existing one
-is changed.
+code or static filesystem config changes are needed when a source is added or
+updated.
 
 ---
 
@@ -23,7 +28,9 @@ is changed.
 
 Each Import Source lives in the `import_source` table. Fields of the table are described below.
 
-### Field reference
+### Import Sources table
+
+#### Field reference
 
 | Field | Required | Description |
 |---|---|---|
@@ -32,6 +39,14 @@ Each Import Source lives in the `import_source` table. Fields of the table are d
 | `description` | No | Longer description of this source (not currently shown in the UI, reserved for future use). |
 | `sort_order` | No | Integer; lower values appear first in the dropdown.  Sources with no sort order sort after those with one, then alphabetically by label. |
 | `mounted_path` | No | The path at which this source is mounted **inside the API container**.  Only needed when the container mount point differs from `path`.  When omitted (or `null`), the API reads files directly from `path`.  See section 2.3 for examples of both cases. |
+
+### Import history table
+
+The Imports history page (`/datasets/imports`) is backed by the
+`dataset_import_log` table.
+
+Each import-log row references a dataset via `dataset_id` and stores
+import-specific metadata (for example, `source_run`, `notes`, and `metadata`).
 
 ---
 
@@ -52,8 +67,8 @@ npx prisma migrate deploy
 ### 3.2 Create `import_sources.json`
 
 In the `api/` directory, create a file named `import_sources.json` containing
-a JSON array of import source objects.  The file is read by the seed script and
-can be re-run at any time to add or update sources.
+a JSON array of import source objects. The file is read by the production init
+script and can be re-run at any time to add or update sources.
 
 ```json
 [
@@ -72,7 +87,7 @@ can be re-run at any time to add or update sources.
 ]
 ```
 
-### 3.3 Run the seed script
+### 3.3 Run the initialization script
 
 From the `api/` directory:
 

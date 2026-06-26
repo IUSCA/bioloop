@@ -77,6 +77,34 @@ class WorkflowService {
     return pending_steps.length > 0;
   }
 
+  get_integrated_workflow_status(workflows) {
+    const ACTIVE_STATES = ["PENDING", "STARTED"];
+
+    const integratedWorkflows = (workflows || []).filter(
+      (wf) => wf.name === "integrated",
+    );
+
+    if (integratedWorkflows.length === 0) {
+      return null;
+    }
+
+    const latestWorkflow = integratedWorkflows[integratedWorkflows.length - 1];
+
+    if (!latestWorkflow.status) {
+      return null;
+    }
+
+    if (ACTIVE_STATES.includes(latestWorkflow.status)) {
+      return "ACTIVE";
+    }
+
+    if (latestWorkflow.status === "SUCCESS") {
+      return "SUCCESS";
+    }
+
+    return "FAILURE";
+  }
+
   getWorkflowProcesses({
     workflow_id,
     step = null,

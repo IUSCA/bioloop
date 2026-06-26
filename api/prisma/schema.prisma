@@ -52,6 +52,7 @@ model dataset {
   // @@index([resource_id])
   create_method DATASET_CREATE_METHOD?
   upload_logs   dataset_upload_log[]
+  import_logs   dataset_import_log[]
 
   @@unique([name, type, is_deleted])
   @@index([owner_group_id])
@@ -108,6 +109,19 @@ model dataset_upload_log {
   dataset_id  Int
 
   @@unique([dataset_id])
+}
+
+model dataset_import_log {
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  source_run String?
+  notes      String?
+  metadata   Json?
+  dataset    dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  dataset_id Int
+
+  @@index([dataset_id])
 }
 
 model dataset_audit {
