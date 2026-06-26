@@ -32,7 +32,7 @@
     "base_url": "DOWNLOAD_SERVER_BASE_URL"
   },
   "upload": {
-    "path": "UPLOAD_HOST_DIR",
+    "host_path": "UPLOAD_HOST_DIR",
     "max_file_size_bytes": {
       "__name": "UPLOAD_MAX_FILE_SIZE_BYTES",
       "__format": "number"

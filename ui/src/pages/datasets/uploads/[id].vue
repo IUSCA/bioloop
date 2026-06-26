@@ -47,20 +47,6 @@
                     <td>Last Updated</td>
                     <td>{{ formatDate(upload.updated_at) }}</td>
                   </tr>
-                  <tr
-                    v-if="upload.process_id"
-                    data-testid="upload-overview-process-id-row"
-                  >
-                    <td>Process ID</td>
-                    <td>
-                      <code
-                        class="text-sm"
-                        data-testid="upload-overview-process-id"
-                      >
-                        {{ upload.process_id }}
-                      </code>
-                    </td>
-                  </tr>
                   <tr v-if="upload.metadata?.verification_task_id">
                     <td>Verification Task ID</td>
                     <td>

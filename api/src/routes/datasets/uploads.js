@@ -501,7 +501,9 @@ router.post(
         // finished and/or the post-upload processing having been triggered.
         //
         // Format: /uploads/{type}/{id}/{name}
-        const uploadBasePath = config.get('upload.path');
+        // Persist host-visible path in DB when provided (UPLOAD_HOST_DIR),
+        // otherwise fall back to container upload path.
+        const uploadBasePath = config.get('upload.host_path') || config.get('upload.path');
         const datasetOriginPath = path.join(
           uploadBasePath,
           type.toLowerCase(),
