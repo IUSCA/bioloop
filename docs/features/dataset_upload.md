@@ -1,4 +1,4 @@
-# Dataset Upload (TUS Rewrite)
+# Dataset Upload
 
 ## Overview
 
@@ -241,8 +241,7 @@ before starting the next upload is sufficient.
   destroying the stream. On the next retry, `Upload-Offset` will reflect that
   partial write, and the write-stream opens at the correct offset with
   `flags: 'r+'`.
-- **No client timeout.** Unlike earlier implementations, there is no 30-second
-  wall-clock abort. The client will exhaust all 14 retries (~16 minutes total)
+- **No client timeout.** The client will exhaust all 14 retries (~16 minutes total)
   before calling `onError`. To simulate a true timeout failure, set
   `SIMULATE_UPLOAD_FAILURE_COUNT` to a value exceeding 14.
 - **Retry button creates a new upload.** If the client does exhaust retries,
@@ -296,6 +295,7 @@ The directory must exist on the host before `docker compose up`.
 ```bash
 cd /path/to/workers
 poetry install
+# (Optional) Do a test by importing the library
 python -c "import blake3; print('blake3 ok')"
 ```
 

@@ -1,0 +1,31 @@
+# Fails fast when workers/pyproject.toml was updated without regenerating poetry.lock
+# (Docker builds run `poetry install` and exit with the same error otherwise.)
+name: Workers Poetry lockfile
+
+on:
+  pull_request:
+    paths:
+      - 'workers/**'
+      - '.github/workflows/workers-poetry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - '.github/workflows/workers-poetry.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install Poetry
+        run: pip install poetry==1.8.2
+      - name: Verify poetry.lock matches pyproject.toml
+        run: poetry check --lock
