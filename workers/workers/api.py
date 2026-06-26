@@ -135,7 +135,9 @@ def get_all_datasets(
         archived=None,
         bundle=False,
         match_name_exact=False,
-        include_audit_logs=False):
+        include_audit_logs=False,
+        limit=None,
+        offset=None):
     with APIServerSession() as s:
         payload = {
             'type': dataset_type,
@@ -147,6 +149,10 @@ def get_all_datasets(
             'match_name_exact': match_name_exact,
             'include_audit_logs': include_audit_logs,
         }
+        if limit is not None:
+            payload['limit'] = limit
+        if offset is not None:
+            payload['offset'] = offset
         r = s.get('datasets', params=payload)
         r.raise_for_status()
         datasets = r.json()['datasets']
@@ -400,6 +406,20 @@ def get_dataset_upload_log(dataset_id: int) -> dict:
         r = s.get(f'datasets/uploads/{dataset_id}/upload-log')
         r.raise_for_status()
         return r.json()
+
+
+def get_uploads_by_statuses(statuses: list[str]) -> list[dict]:
+    """Return upload rows for any of the given Prisma upload_status values.
+
+    Each item includes dataset_id, dataset_name, origin_path, status.
+    """
+    if not statuses:
+        return []
+    with APIServerSession() as s:
+        params = [('statuses', st) for st in statuses]
+        r = s.get('datasets/uploads/by-status', params=params)
+        r.raise_for_status()
+        return r.json().get('uploads', [])
 
 
 def update_dataset_upload_log(
