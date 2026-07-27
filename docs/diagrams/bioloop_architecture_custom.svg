@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 760"
+     font-family="Helvetica, Arial, sans-serif" font-size="12">
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3"
+            markerWidth="10" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#555"/>
+    </marker>
+    <style>
+      .cluster { rx: 8; ry: 8; stroke: #bbb; stroke-width: 1; }
+      .node { rx: 5; ry: 5; stroke: #999; stroke-width: 1; }
+      .node-text { text-anchor: middle; font-size: 11px; fill: #333; }
+      .cluster-label { font-size: 12px; font-weight: bold; fill: #555; text-anchor: middle; }
+      .edge { stroke: #555; stroke-width: 1.3; fill: none; marker-end: url(#arrow); }
+      .edge-label { font-size: 9px; fill: #666; text-anchor: middle; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="740" height="760" fill="white"/>
+
+  <!-- ══════════ Row 0: User ══════════ -->
+  <ellipse cx="370" cy="42" rx="88" ry="28" fill="#e0e0e0" stroke="#999" stroke-width="1"/>
+  <text x="370" y="38" class="node-text" font-size="11">Researcher /</text>
+  <text x="370" y="52" class="node-text" font-size="11">Operator</text>
+
+  <!-- ══════════ Row 1: Frontend ══════════ -->
+  <rect x="255" y="95" width="230" height="80" fill="#dce8f8" class="cluster"/>
+  <text x="370" y="112" class="cluster-label">Frontend</text>
+  <rect x="285" y="120" width="170" height="42" fill="#b3d4f5" class="node"/>
+  <text x="370" y="137" class="node-text">UI</text>
+  <text x="370" y="151" class="node-text" font-size="10">(Vue 3 / Vite)</text>
+
+  <!-- ══════════ Row 2: Core Services + Auth ══════════ -->
+  <!-- Core Services cluster -->
+  <rect x="60" y="210" width="280" height="140" fill="#fff3cd" class="cluster"/>
+  <text x="200" y="228" class="cluster-label">Core Services</text>
+  <rect x="90" y="238" width="220" height="42" fill="#ffe082" class="node"/>
+  <text x="200" y="255" class="node-text">API</text>
+  <text x="200" y="269" class="node-text" font-size="10">(Node.js / Express)</text>
+  <rect x="90" y="292" width="220" height="42" fill="#ffe082" class="node"/>
+  <text x="200" y="309" class="node-text">Secure Download</text>
+  <text x="200" y="323" class="node-text" font-size="10">(Node.js)</text>
+
+  <!-- Auth cluster -->
+  <rect x="400" y="210" width="280" height="140" fill="#fde8e8" class="cluster"/>
+  <text x="540" y="228" class="cluster-label">Auth</text>
+  <rect x="430" y="238" width="220" height="42" fill="#f5b8b8" class="node"/>
+  <text x="540" y="255" class="node-text">Signet</text>
+  <text x="540" y="269" class="node-text" font-size="10">(OAuth 2.0)</text>
+  <rect x="430" y="292" width="220" height="42" fill="#f5b8b8" class="node"/>
+  <text x="540" y="309" class="node-text">PostgreSQL</text>
+  <text x="540" y="323" class="node-text" font-size="10">(Signet)</text>
+
+  <!-- ══════════ Row 3: Rhythm (left) + Workers (right) ══════════ -->
+  <!-- Rhythm cluster -->
+  <rect x="60" y="390" width="280" height="200" fill="#e8f5e8" class="cluster"/>
+  <text x="200" y="408" class="cluster-label">Workflow Engine (Rhythm)</text>
+  <rect x="90" y="418" width="220" height="42" fill="#a5d6a7" class="node"/>
+  <text x="200" y="435" class="node-text">Rhythm API</text>
+  <text x="200" y="449" class="node-text" font-size="10">(FastAPI)</text>
+  <rect x="90" y="472" width="220" height="42" fill="#a5d6a7" class="node"/>
+  <text x="200" y="493" class="node-text">RabbitMQ</text>
+  <rect x="90" y="528" width="220" height="42" fill="#a5d6a7" class="node"/>
+  <text x="200" y="545" class="node-text">MongoDB</text>
+  <text x="200" y="559" class="node-text" font-size="10">(Task State)</text>
+
+  <!-- Workers cluster -->
+  <rect x="400" y="390" width="280" height="145" fill="#f0e8ff" class="cluster"/>
+  <text x="540" y="408" class="cluster-label">Workers (Python / Celery)</text>
+  <rect x="430" y="418" width="220" height="42" fill="#ce93d8" class="node"/>
+  <text x="540" y="435" class="node-text">celery_worker</text>
+  <text x="540" y="449" class="node-text" font-size="10">(Task Executor)</text>
+  <rect x="430" y="472" width="220" height="42" fill="#ce93d8" class="node"/>
+  <text x="540" y="489" class="node-text">watch</text>
+  <text x="540" y="503" class="node-text" font-size="10">(File Monitor)</text>
+
+  <!-- ══════════ Row 4: Storage ══════════ -->
+  <rect x="60" y="635" width="620" height="100" fill="#fff8e1" class="cluster"/>
+  <text x="370" y="653" class="cluster-label">Storage</text>
+  <rect x="90" y="663" width="150" height="42" fill="#ffe57f" class="node"/>
+  <text x="165" y="680" class="node-text">PostgreSQL</text>
+  <text x="165" y="694" class="node-text" font-size="10">(App Data)</text>
+  <rect x="270" y="663" width="170" height="42" fill="#ffe57f" class="node"/>
+  <text x="355" y="684" class="node-text">Shared File Volume</text>
+  <rect x="470" y="663" width="180" height="42" fill="#ffe57f" class="node"/>
+  <text x="560" y="680" class="node-text">Tape Storage</text>
+  <text x="560" y="694" class="node-text" font-size="10">(Long-term Archive)</text>
+
+  <!-- ══════════ Edges ══════════ -->
+
+  <!-- User → UI -->
+  <line x1="370" y1="70" x2="370" y2="120" class="edge"/>
+
+  <!-- UI → API  (down-left) -->
+  <path d="M 340,162 L 340,190 L 200,190 L 200,238" class="edge"/>
+
+  <!-- UI → Secure Download (down-left, offset to avoid overlap) -->
+  <path d="M 370,162 L 370,200 L 260,200 L 260,292" class="edge"/>
+
+  <!-- API → Signet (right) -->
+  <line x1="310" y1="259" x2="430" y2="259" class="edge"/>
+
+  <!-- Signet → Signet DB (down within cluster) -->
+  <line x1="540" y1="280" x2="540" y2="292" class="edge"/>
+
+  <!-- API → Rhythm API (down, dispatch) -->
+  <path d="M 200,280 L 200,418" class="edge"/>
+  <text x="210" y="355" class="edge-label" text-anchor="start">dispatch</text>
+
+  <!-- API → PostgreSQL storage (down, routed along left margin) -->
+  <path d="M 90,268 L 28,268 L 28,684 L 90,684" class="edge"/>
+
+  <!-- Rhythm → RabbitMQ (down within cluster) -->
+  <line x1="200" y1="460" x2="200" y2="472" class="edge"/>
+
+  <!-- Rhythm → MongoDB (down within cluster) -->
+  <line x1="240" y1="460" x2="240" y2="528" class="edge"/>
+
+  <!-- RabbitMQ → celery_worker (right) -->
+  <path d="M 310,485 L 370,485 L 370,432 L 430,432" class="edge"/>
+  <text x="370" y="478" class="edge-label" text-anchor="end">tasks</text>
+
+  <!-- celery_worker → MongoDB (left, results) -->
+  <path d="M 430,453 L 375,453 L 375,549 L 310,549" class="edge"/>
+  <text x="375" y="510" class="edge-label" text-anchor="start"> results</text>
+
+  <!-- celery_worker → File Volume (down) -->
+  <path d="M 510,460 L 510,610 L 380,610 L 380,663" class="edge"/>
+
+  <!-- celery_worker → Tape Storage (down) -->
+  <path d="M 570,460 L 570,615 L 560,615 L 560,663" class="edge"/>
+
+  <!-- watch → File Volume (down) -->
+  <path d="M 600,514 L 600,620 L 330,620 L 330,663" class="edge"/>
+
+  <!-- watch → API (up-left, routed through gap between rows) -->
+  <path d="M 430,493 L 390,493 L 390,375 L 48,375 L 48,250 L 90,250" class="edge"/>
+  <text x="100" y="368" class="edge-label" text-anchor="start">trigger ingest</text>
+
+  <!-- Secure DL → File Volume (down-right) -->
+  <path d="M 310,313 L 350,313 L 350,625 L 355,625 L 355,663" class="edge"/>
+
+</svg>
