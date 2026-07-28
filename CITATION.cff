@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Bioloop"
+abstract: >
+  Bioloop is a web-based data management portal for research teams. It provides
+  project-based organization, data ingestion, provenance tracking, custom Celery
+  pipelines, and secure file downloads.
+license: ECL-2.0
+repository-code: "https://github.com/iusca/bioloop/"
+doi: "10.5281/zenodo.19206731"
+version: "v1.0.0"
+date-released: "2026-03-24"
+authors:
+  - given-names: Deepak
+    family-names: Duggirala
+    affiliation: Indiana University
+  - given-names: Charles
+    family-names: Brandt
+    affiliation: Indiana University
+  - given-names: Rishi
+    family-names: Pandey
+    affiliation: Indiana University
+  - given-names: Ryan
+    family-names: Long
+    affiliation: Indiana University
+  - given-names: Karthiek
+    family-names: Duggirala
+    affiliation: Indiana University
