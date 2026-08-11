@@ -24,6 +24,22 @@ const logger = require('@/services/logger');
 const isPermittedTo = accessControl('datasets');
 const router = express.Router();
 
+/**
+ * Respond with dataset ids matching filterQuery (bulk "Add all matching").
+ * We might need to set a soft cap for the number of datasets returned.
+ */
+async function respondWithDatasetIds({ res, filterQuery, orderBy }) {
+  const rows = await prisma.dataset.findMany({
+    ...filterQuery,
+    orderBy,
+    select: { id: true },
+  });
+
+  return res.json({
+    ids: rows.map((row) => row.id),
+  });
+}
+
 // stats - UI
 router.get(
   '/stats',
@@ -105,6 +121,7 @@ router.get(
   query('sort_by').default('updated_at'),
   query('sort_order').default('desc').isIn(['asc', 'desc']),
   query('match_name_exact').default(false).toBoolean(),
+  query('ids_only').toBoolean().optional(),
 
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -117,6 +134,13 @@ router.get(
     const orderBy = {
       [req.query.sort_by]: req.query.sort_order,
     };
+
+    if (req.query.ids_only) {
+      return respondWithDatasetIds({
+        res, filterQuery, orderBy,
+      });
+    }
+
     const datasetRetrievalQuery = {
       skip: req.query.offset ?? Prisma.skip,
       take: req.query.limit ?? Prisma.skip,
@@ -389,6 +413,7 @@ router.get(
     query('include_audit_logs').toBoolean().optional(),
     query('include_projects').toBoolean().optional(),
     query('id').isInt().toInt().optional(),
+    query('ids_only').toBoolean().optional(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -406,6 +431,13 @@ router.get(
         sort: req.query.sort_order,
       };
     }
+
+    if (req.query.ids_only) {
+      return respondWithDatasetIds({
+        res, filterQuery, orderBy,
+      });
+    }
+
     const datasetRetrievalQuery = {
       skip: req.query.offset ?? Prisma.skip,
       take: req.query.limit ?? Prisma.skip,

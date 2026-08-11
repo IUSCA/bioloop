@@ -1,9 +1,9 @@
 <template>
   <DatasetSelect
     :selected-results="props.selectedResults"
+    :column-widths="props.columnWidths"
     @select="handleSelect"
     @remove="handleRemove"
-    :column-widths="props.columnWidths"
   />
 </template>
 
@@ -17,9 +17,11 @@ const props = defineProps({
   },
   columnWidths: {
     type: Object,
-    required: true,
+    required: false,
   },
 });
+
+const emit = defineEmits(["select", "remove"]);
 
 const projectFormStore = useProjectFormStore();
 
@@ -27,11 +29,13 @@ function handleSelect(datasets) {
   for (const ds of datasets) {
     projectFormStore.addDataset(ds);
   }
+  emit("select", datasets);
 }
 
 function handleRemove(datasets) {
   for (const ds of datasets) {
     projectFormStore.removeDataset(ds);
   }
+  emit("remove", datasets);
 }
 </script>
