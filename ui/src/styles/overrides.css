@@ -6,6 +6,14 @@
   --va-list-item-label-caption-color: rgb(148 163 184);
   --va-checkbox-square-background-color: var(--va-background-element);
   --va-checkbox-square-border: solid 0.0625rem var(--va-secondary);
+  /* !important: Vuestic applyPreset writes these on :root at runtime. */
+  --va-secondary: #475569 !important;
+  --va-text-secondary: #475569 !important;
+}
+
+:root.dark {
+  --va-secondary: #cbd5e1 !important;
+  --va-text-secondary: #cbd5e1 !important;
 }
 
 div.inner-loading__overlay {
