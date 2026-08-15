@@ -104,7 +104,11 @@
           class="flex justify-center"
         >
           <va-popover message="Upload verified">
-            <va-icon name="check_circle_outline" color="success" />
+            <Icon
+              icon="mdi:check-circle-outline"
+              class="text-2xl"
+              style="color: var(--va-success)"
+            />
           </va-popover>
         </div>
         <!-- Integrated workflow running -->
@@ -127,7 +131,11 @@
           class="flex justify-center"
         >
           <va-popover message="Registration completed successfully">
-            <va-icon name="check_circle" color="success" />
+            <Icon
+              icon="mdi:check-circle"
+              class="text-2xl"
+              style="color: var(--va-success)"
+            />
           </va-popover>
         </div>
         <!-- Integrated workflow failed -->
@@ -136,7 +144,11 @@
           class="flex justify-center"
         >
           <va-popover message="Registration failed">
-            <va-icon name="warning" color="warning" />
+            <Icon
+              icon="mdi:alert"
+              class="text-2xl"
+              style="color: var(--va-warning)"
+            />
           </va-popover>
         </div>
         <!-- Upload verification failed -->
@@ -153,7 +165,11 @@
                 : 'Upload verification failed'
             "
           >
-            <va-icon name="error" color="danger" />
+            <Icon
+              icon="mdi:alert-circle"
+              class="text-2xl"
+              style="color: var(--va-danger)"
+            />
           </va-popover>
         </div>
         <!-- Permanently failed -->
@@ -170,7 +186,11 @@
                 : 'Upload permanently failed — all retries exhausted'
             "
           >
-            <va-icon name="error" color="danger" />
+            <Icon
+              icon="mdi:alert-circle"
+              class="text-2xl"
+              style="color: var(--va-danger)"
+            />
           </va-popover>
         </div>
         <!-- Processing failed -->
@@ -187,7 +207,11 @@
                 : 'Processing failed'
             "
           >
-            <va-icon name="error" color="danger" />
+            <Icon
+              icon="mdi:alert-circle"
+              class="text-2xl"
+              style="color: var(--va-danger)"
+            />
           </va-popover>
         </div>
         <!-- Processing (workflow triggered but not yet detected) -->
@@ -210,7 +234,11 @@
           class="flex justify-center"
         >
           <va-popover message="Upload complete">
-            <va-icon name="check_circle" color="success" />
+            <Icon
+              icon="mdi:check-circle"
+              class="text-2xl"
+              style="color: var(--va-success)"
+            />
           </va-popover>
         </div>
         <!-- Upload failed -->
@@ -225,13 +253,21 @@
                 : 'Upload failed'
             "
           >
-            <va-icon name="error" color="danger" />
+            <Icon
+              icon="mdi:alert-circle"
+              class="text-2xl"
+              style="color: var(--va-danger)"
+            />
           </va-popover>
         </div>
         <!-- Fallback: unknown status -->
         <div v-else class="flex justify-center">
           <va-popover :message="`Status: ${rowData.status || 'Unknown'}`">
-            <va-icon name="help_outline" color="secondary" />
+            <Icon
+              icon="mdi:help-circle-outline"
+              class="text-2xl"
+              style="color: var(--va-secondary)"
+            />
           </va-popover>
         </div>
       </template>

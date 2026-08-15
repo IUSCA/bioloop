@@ -56,7 +56,11 @@
           class="flex justify-center"
         >
           <va-popover :message="'Registration completed successfully'">
-            <va-icon name="check_circle" color="success" />
+            <Icon
+              icon="mdi:check-circle"
+              class="text-2xl"
+              style="color: var(--va-success)"
+            />
           </va-popover>
         </div>
         <div
@@ -64,7 +68,11 @@
           class="flex justify-center"
         >
           <va-popover :message="'Registration failed'">
-            <va-icon name="warning" color="warning" />
+            <Icon
+              icon="mdi:alert"
+              class="text-2xl"
+              style="color: var(--va-warning)"
+            />
           </va-popover>
         </div>
       </template>

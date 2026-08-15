@@ -4,10 +4,10 @@
     :class="getAlertClasses(props.alert.type)"
   >
     <!-- Alert Icon -->
-    <va-icon
-      :name="alertService.getAlertIcon(props.alert.type)"
-      :color="alertService.getIconColor(props.alert.type)"
-      size="1.25rem"
+    <Icon
+      :icon="alertService.getAlertIcon(props.alert.type)"
+      class="text-xl flex-none"
+      :style="{ color: alertService.getIconColor(props.alert.type) }"
     />
 
     <!-- Alert Message -->

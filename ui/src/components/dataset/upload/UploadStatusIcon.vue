@@ -5,12 +5,11 @@
     class="flex items-center space-x-2"
     data-testid="status-processing"
   >
-    <va-icon
+    <Icon
       v-if="props.showIcon"
-      class="text-2xl"
-      name="loop"
-      spin="clockwise"
-      color="primary"
+      class="animate-spin text-2xl"
+      icon="mdi:loading"
+      style="color: var(--va-primary)"
       data-testid="icon-processing"
     />
     <va-chip size="small" color="primary" data-testid="chip-processing"

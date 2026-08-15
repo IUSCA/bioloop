@@ -88,7 +88,7 @@
               size="medium"
               padding-direction="left"
               padding-amount="sm"
-              icon="info"
+              icon="mdi:information"
               data-testid="new-project-alert"
             >
               A new Project will be created

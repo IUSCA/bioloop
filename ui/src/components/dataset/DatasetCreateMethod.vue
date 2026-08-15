@@ -15,10 +15,9 @@
           >{{ tooltipParts.suffix }}
         </div>
       </template>
-      <va-icon
-        name="info_outline"
-        size="small"
-        class="ml-1 va-text-secondary cursor-help"
+      <Icon
+        icon="mdi:information-outline"
+        class="ml-1 text-lg va-text-secondary cursor-help"
       />
     </va-popover>
   </div>

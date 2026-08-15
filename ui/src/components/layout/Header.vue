@@ -14,9 +14,17 @@
         <va-list>
           <va-list-item @keyup.enter="$emit('toggleSidebarVisibility')">
             <va-list-item-section class="m-0" icon>
-              <va-icon
+              <Icon
                 @click="$emit('toggleSidebarVisibility')"
-                :name="'menu' + (props.isSidebarCollapsed ? '_open' : '')"
+                :icon="
+                  props.isSidebarCollapsed
+                    ? 'material-symbols:menu-open'
+                    : 'material-symbols:menu'
+                "
+                class="text-2xl cursor-pointer"
+                :aria-label="
+                  props.isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'
+                "
               />
             </va-list-item-section>
           </va-list-item>
