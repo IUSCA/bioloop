@@ -39,12 +39,14 @@
       <va-list-item-section v-if="props.showRemove" class="flex-none">
         <va-button
           preset="secondary"
-          icon="delete"
           color="danger"
           round
+          aria-label="Remove"
           @click="emit('remove', dataset)"
           class="self-end"
-        />
+        >
+          <Icon icon="material-symbols:delete" class="text-xl" />
+        </va-button>
       </va-list-item-section>
     </va-list-item>
   </va-list>

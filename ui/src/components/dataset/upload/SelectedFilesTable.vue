@@ -31,12 +31,14 @@
       <div class="flex justify-end" data-testid="file-table-actions">
         <va-button
           preset="plain"
-          icon="delete"
           color="danger"
+          aria-label="Remove file"
           @click="removeFile(rowIndex)"
           :disabled="(props.files || []).length < 1"
           data-testid="delete-file-button"
-        />
+        >
+          <Icon icon="material-symbols:delete" class="text-xl" />
+        </va-button>
       </div>
     </template>
   </va-data-table>

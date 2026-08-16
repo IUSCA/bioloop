@@ -15,7 +15,7 @@
 
             <!-- retries -->
             <span v-if="source.retries" class="">
-              <i-mdi-refresh class="text-sm inline mt-[-3px]" />{{
+              <Icon icon="mdi:refresh" class="text-sm inline mt-[-3px]" />{{
                 source.retries
               }}
             </span>
@@ -56,9 +56,16 @@
         <template #cell(actions)="{ row, isExpanded }">
           <va-button
             @click="row.toggleRowDetails()"
-            :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
             preset="plain"
           >
+            <Icon
+              :icon="
+                isExpanded
+                  ? 'material-symbols:keyboard-arrow-up'
+                  : 'material-symbols:keyboard-arrow-down'
+              "
+              class="mr-2 text-xl"
+            />
             {{ isExpanded ? "Hide" : "More info" }}
           </va-button>
         </template>

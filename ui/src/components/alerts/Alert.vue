@@ -23,10 +23,12 @@
       v-if="props.dismissable"
       preset="plain"
       size="small"
-      icon="close"
+      aria-label="Dismiss"
       @click="handleClose"
       class="flex-shrink-0"
-    />
+    >
+      <Icon icon="material-symbols:close" class="text-xl" />
+    </va-button>
   </div>
 </template>
 

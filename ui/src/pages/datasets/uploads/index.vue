@@ -1,9 +1,11 @@
 <template>
   <va-alert
     color="warning"
-    icon="warning"
     v-if="!auth.isFeatureEnabled('uploads')"
   >
+    <template #icon>
+      <Icon icon="mdi:alert" class="text-xl" />
+    </template>
     This feature is currently disabled
   </va-alert>
 
@@ -28,11 +30,11 @@
       <!-- create button -->
       <div class="flex-none">
         <va-button
-          icon="add"
           class="px-1"
           color="success"
           @click="router.push('/datasets/uploads/new')"
         >
+          <Icon icon="material-symbols:add" class="mr-2 text-xl" />
           Upload Dataset
         </va-button>
       </div>

@@ -49,10 +49,11 @@
         class="flex-none"
         preset="plain"
         color="primary"
-        icon="download"
+        aria-label="Download"
         v-if="showDownload && rowData.filetype !== 'directory'"
         @click="showDownload ? initiate_file_download(rowData) : () => {}"
       >
+        <Icon icon="material-symbols:download" class="text-xl" />
       </va-button>
     </template>
 

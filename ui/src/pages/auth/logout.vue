@@ -5,7 +5,7 @@
     <va-card class="w-full max-w-md">
       <va-card-content class="px-9">
         <div class="flex flex-col gap-2 items-center justify-center opacity-90">
-          <env-alert class="w-full" icon="warning" />
+          <env-alert class="w-full" icon="mdi:alert" />
 
           <AppIcon size="3rem" />
           <AppTitle />

@@ -1,9 +1,11 @@
 <template>
   <va-alert
     color="warning"
-    icon="warning"
     v-if="!auth.isFeatureEnabled('import')"
   >
+    <template #icon>
+      <Icon icon="mdi:alert" class="text-xl" />
+    </template>
     This feature is currently disabled
   </va-alert>
 
@@ -26,11 +28,11 @@
 
       <div class="flex-none">
         <va-button
-          icon="add"
           class="px-1"
           color="success"
           @click="router.push('/datasets/imports/new')"
         >
+          <Icon icon="material-symbols:add" class="mr-2 text-xl" />
           Import Dataset
         </va-button>
       </div>

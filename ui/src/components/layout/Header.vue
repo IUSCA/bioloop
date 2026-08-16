@@ -47,7 +47,7 @@
 
     <template #right>
       <va-navbar-item class="flex items-center">
-        <env-alert icon="warning" />
+        <env-alert icon="mdi:alert" />
       </va-navbar-item>
 
       <va-navbar-item
