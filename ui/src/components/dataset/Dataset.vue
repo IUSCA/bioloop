@@ -32,15 +32,6 @@
                   <Icon icon="mdi:folder-open" class="pr-2 text-xl" />
                   Browse Files
                 </va-button>
-
-                <!-- edit description -->
-                <!-- <va-button
-                  preset="primary"
-                  @click="openModalToEditDataset"
-                  class="flex-none"
-                >
-                  <Icon icon="mdi:pencil-outline" class="pr-2 text-xl" /> Edit Description
-                </va-button> -->
               </div>
             </va-card-content>
           </va-card>

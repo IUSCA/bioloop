@@ -10,7 +10,7 @@
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
-          class="w-full autocomplete-input"
+          class="w-full"
           @click="openResults"
           @clear="onClear"
           :disabled="props.disabled"
@@ -247,12 +247,3 @@ function loadMore() {
   emit("load-more");
 }
 </script>
-
-<style lang="scss">
-.autocomplete-input {
-  /* Clear icon is too big and its font size is set by element style tag in the vuestic library */
-  .va-input-wrapper__field i.va-icon {
-    font-size: 24px !important;
-  }
-}
-</style>

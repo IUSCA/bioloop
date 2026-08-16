@@ -34,11 +34,6 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
   z-index: calc(var(--va-z-index-teleport-overlay) + 100);
 }
 
-/* Clear icon is too big and its font size is set by element style tag in the vuestic library */
-.va-input-wrapper__field i.va-icon {
-  font-size: 24px !important;
-}
-
 /* In dark mode, the list item text color is not changing and the original color does not look good.
  * Override the list item text color with general text color and it does change when switched to dark mode.
 */

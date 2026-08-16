@@ -98,7 +98,7 @@
           >
             <confirm-button
               action="Resume Workflow"
-              icon="mdi-play"
+              icon="mdi:play"
               color="primary"
               :disabled="is_resume_locked"
               @click="resume_workflow"
@@ -107,7 +107,7 @@
             <confirm-hold-button
               v-if="auth.canAdmin"
               action="Delete Workflow"
-              icon="mdi-delete"
+              icon="mdi:delete"
               color="danger"
               @click="delete_workflow"
             ></confirm-hold-button>
@@ -117,7 +117,7 @@
             <confirm-hold-button
               v-if="auth.canAdmin"
               action="Delete Workflow"
-              icon="mdi-delete"
+              icon="mdi:delete"
               color="danger"
               @click="delete_workflow"
             ></confirm-hold-button>
@@ -127,14 +127,14 @@
             <div class="flex justify-start items-center gap-3">
               <confirm-button
                 action="Stop Workflow"
-                icon="mdi-stop-circle-outline"
+                icon="mdi:stop-circle-outline"
                 color="danger"
                 @click="pause_workflow"
               ></confirm-button>
               <confirm-hold-button
                 v-if="auth.canAdmin"
                 action="Delete Workflow"
-                icon="mdi-delete"
+                icon="mdi:delete"
                 color="danger"
                 @click="delete_workflow"
               ></confirm-hold-button>

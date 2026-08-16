@@ -26,7 +26,7 @@
         class="flex items-center gap-1"
         v-if="rowData.filetype === 'directory'"
       >
-        <Icon icon="mdi-folder" class="text-xl flex-none text-gray-700" />
+        <Icon icon="mdi:folder" class="text-xl flex-none text-gray-700" />
         <span> {{ rowData.name }} </span>
       </div>
 

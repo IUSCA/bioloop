@@ -15,7 +15,7 @@
       >
         <Icon
           v-if="rowData.type === 'directory'"
-          icon="mdi-folder"
+          icon="mdi:folder"
           class="text-xl flex-none text-gray-700"
           data-testid="file-type-folder-icon"
         />

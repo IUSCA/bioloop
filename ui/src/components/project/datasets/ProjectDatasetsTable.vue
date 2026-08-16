@@ -123,18 +123,6 @@
       </div>
     </template>
 
-    <!-- <template #cell(share)="{ rowData }">
-      <div class="">
-        <va-button
-          class="shadow"
-          preset="primary"
-          color="info"
-          icon="material-symbols:share"
-          @click="openModalToShareProject(rowData)"
-        />
-      </div>
-    </template> -->
-
     <template #cell(metadata)="{ rowData }">
       <maybe :data="rowData?.metadata?.num_genome_files" />
     </template>
@@ -416,7 +404,6 @@ const columns = computed(() => [
   },
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
-  // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   {
     key: "type",
     sortable: true,

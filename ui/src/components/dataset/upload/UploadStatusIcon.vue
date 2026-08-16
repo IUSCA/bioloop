@@ -124,7 +124,6 @@
 
 <script setup>
 import constants from "@/constants";
-import { Icon } from "@iconify/vue";
 
 const props = defineProps({
   submissionStatus: {

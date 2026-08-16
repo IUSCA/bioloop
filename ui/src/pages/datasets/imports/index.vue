@@ -145,7 +145,6 @@ import toast from "@/services/toast";
 import wfService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 import { useNavStore } from "@/stores/nav";
-import { Icon } from "@iconify/vue";
 import { HalfCircleSpinner } from "epic-spinners";
 import _ from "lodash";
 import { useColors } from "vuestic-ui";

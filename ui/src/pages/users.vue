@@ -101,7 +101,7 @@
             @click="openModalToEditItem(rowData)"
             :disabled="!canEdit(rowData)"
           >
-            <i-mdi-pencil class="text-lg" />
+            <Icon icon="mdi:pencil" class="text-lg" />
           </va-button>
         </div>
 
@@ -114,7 +114,7 @@
               color="info"
               @click="openModalToLogInAsUser(rowData)"
             >
-              <i-mdi-account-convert-outline class="" />
+              <Icon icon="mdi:account-convert-outline" class="text-lg" />
             </va-button>
           </va-popover>
         </div>

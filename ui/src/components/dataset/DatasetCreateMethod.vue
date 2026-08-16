@@ -24,7 +24,6 @@
 </template>
 
 <script setup>
-import { Icon } from "@iconify/vue";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -40,10 +39,10 @@ const props = defineProps({
 });
 
 const CREATE_METHOD_CONFIG = {
-  UPLOAD: { icon: "mdi-cloud-upload-outline", label: "Upload" },
-  IMPORT: { icon: "mdi-file-import-outline", label: "Import" },
-  SCAN: { icon: "mdi-radar", label: "Scan" },
-  ON_DEMAND: { icon: "mdi-gesture-tap", label: "On Demand" },
+  UPLOAD: { icon: "mdi:cloud-upload-outline", label: "Upload" },
+  IMPORT: { icon: "mdi:file-import-outline", label: "Import" },
+  SCAN: { icon: "mdi:radar", label: "Scan" },
+  ON_DEMAND: { icon: "mdi:gesture-tap", label: "On Demand" },
 };
 
 // Each entry is { prefix, suffix } — the path is rendered as <code> between them.
