@@ -36,7 +36,7 @@ In the development environment, the API calls from the UI are proxied by the vit
     - [jsconfig.json / tsconfig.json](https://code.visualstudio.com/docs/languages/jsconfig)
 - [tailwind](https://tailwindcss.com/docs/guides/vite)
 - [Layouts](https://github.com/JohnCampionJr/vite-plugin-vue-layouts)
-- Icons
+- [Iconify](https://icon-sets.iconify.design/) (`<Icon>`)
 - [Vuetify and tailwind](https://michaelzanggl.com/articles/add-tailwind-css-to-vuetify/)
 - [pinia](https://pinia.vuejs.org/)
 - [https dev](https://vitejs.dev/config/server-options.html#server-https)
@@ -47,18 +47,14 @@ In the development environment, the API calls from the UI are proxied by the vit
 
 ## Icons
 
-There are multiple ways to include icons:
-- [Material Icons](https://fonts.google.com/icons?icon.set=Material+Icons) are provided by Vuestic. Iconify icon components are auto imported.
-  - usage: `<va-icon name="dashboard" />`
-- [Iconify](https://icon-sets.iconify.design/?query=) has a lot of third party / community icons
-  - usage: `<Icon icon="mdi-flask" class="text-2xl" />`
-  - usage: `<i-mdi-flask/>`
+Use [Iconify](https://icon-sets.iconify.design/) through the auto-imported `<Icon>` component (`@iconify/vue`).
 
-Iconify icons are installed using
-- Installation: option-1: https://docs.iconify.design/icon-components/vue/
-- Installation: option-2: https://github.com/antfu/unplugin-icons and [auto-importing](https://github.com/antfu/unplugin-icons#auto-importing)
-  - need to install [specific packs](https://github.com/antfu/unplugin-icons#icons-data) ex: `pnpm i -D @iconify-json/mdi`
-  - mdi is installed in this repo and is a recommended icon library to use
+```html
+<Icon icon="mdi:flask" class="text-2xl" />
+<Icon icon="material-symbols:search" class="text-xl" />
+```
+
+`mdi` is the default set. Prefer `collection:name` (colon) over `mdi-flask`. File type icons use `vscode-icons:...` (`FileTypeIcon.vue`).
 
 ## Colors
 
