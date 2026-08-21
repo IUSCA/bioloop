@@ -20,7 +20,7 @@ concurrency:
 jobs:
   check:
     name: Lint and Build
-    runs-on: ubuntu-
+    runs-on: ubuntu-latest
     
     defaults:
       run:
