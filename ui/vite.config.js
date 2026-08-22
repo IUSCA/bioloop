@@ -11,6 +11,18 @@ import Layouts from "vite-plugin-vue-layouts";
 import { visualizer } from "rollup-plugin-visualizer";
 import { VueRouterAutoImports } from "unplugin-vue-router";
 
+function loadDevHttps() {
+  const keyPath = "./.cert/key.pem";
+  const certPath = "./.cert/cert.pem";
+  if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
+    return undefined;
+  }
+  return {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath),
+  };
+}
+
 // https://vitejs.dev/config/
 // eslint-disable-next-line no-unused-vars
 export default defineConfig(({ command, mode }) => {
@@ -76,10 +88,8 @@ export default defineConfig(({ command, mode }) => {
       port: 443,
 
       // https://vitejs.dev/config/#server-https
-      https: {
-        key: fs.readFileSync("./.cert/key.pem"),
-        cert: fs.readFileSync("./.cert/cert.pem"),
-      },
+      // Certs are local-only; CI and `vite build` run without them.
+      https: loadDevHttps(),
       // just `true` yields errors with Firefox as of 2022.12
       // https: true,
 
