@@ -90,8 +90,8 @@
           @click="step = 1"
           preset="plain"
           class="mb-4"
-          icon="arrow_back"
         >
+          <Icon icon="material-symbols:arrow-back" class="mr-2 text-xl" />
           Previous
         </VaButton>
 

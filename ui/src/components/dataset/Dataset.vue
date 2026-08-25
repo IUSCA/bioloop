@@ -29,18 +29,9 @@
                   class="flex-none"
                   :color="isDark ? '#9171f8' : '#A020F0'"
                 >
-                  <i-mdi-folder-open class="pr-2 text-xl" />
+                  <Icon icon="mdi:folder-open" class="pr-2 text-xl" />
                   Browse Files
                 </va-button>
-
-                <!-- edit description -->
-                <!-- <va-button
-                  preset="primary"
-                  @click="openModalToEditDataset"
-                  class="flex-none"
-                >
-                  <i-mdi-pencil-outline class="pr-2 text-xl" /> Edit Description
-                </va-button> -->
               </div>
             </va-card-content>
           </va-card>
@@ -87,14 +78,14 @@
               </va-card-title>
               <va-card-content>
                 <div class="flex flex-nowrap gap-3 justify-start items-center">
-                  <i-mdi-chart-box-outline class="flex-initial text-2xl" />
+                  <Icon icon="mdi:chart-box-outline" class="flex-initial text-2xl" />
                   <a
                     class="va-link flex items-center justify-start"
                     target="_blank"
                     :href="`/api/reports/${dataset?.metadata?.report_id}/multiqc_report.html`"
                   >
                     <span class="flex-initial">MultiQC Report</span>
-                    <i-mdi-open-in-new class="flex-initial inline-block pl-1" />
+                    <Icon icon="mdi:open-in-new" class="flex-initial inline-block pl-1" />
                   </a>
                 </div>
               </va-card-content>
@@ -119,7 +110,7 @@
                     class="flex-initial"
                     @click="stage_modal = true"
                   >
-                    <i-mdi-cloud-sync class="pr-2 text-2xl" />
+                    <Icon icon="mdi:cloud-sync" class="pr-2 text-2xl" />
                     Stage Files
                   </va-button>
 
@@ -133,7 +124,7 @@
                     preset="secondary"
                     @click="delete_archive_modal.visible = true"
                   >
-                    <i-mdi-delete class="pr-2 text-2xl" />
+                    <Icon icon="mdi:delete" class="pr-2 text-2xl" />
                     Delete Archive
                   </va-button>
 
@@ -147,7 +138,7 @@
                     preset="secondary"
                     @click="openModalToDownloadDataset"
                   >
-                    <i-mdi-download class="pr-2 text-2xl" />
+                    <Icon icon="mdi:download" class="pr-2 text-2xl" />
                     Download
                   </va-button>
                 </div>
@@ -177,7 +168,7 @@
                   preset="plain"
                   @click="delete_archive_modal.visible = false"
                 >
-                  <i-mdi-close />
+                  <Icon icon="mdi:close" />
                 </va-button>
               </div>
             </template>
@@ -189,7 +180,7 @@
 
               <div class="flex flex-col items-center gap-2">
                 <div>
-                  <i-mdi-zip-box-outline class="text-3xl" />
+                  <Icon icon="mdi:zip-box-outline" class="text-3xl" />
                 </div>
                 <span class="text-xl tracking-wide">
                   {{ config.dataset.types[dataset.type]?.label }} /
@@ -197,14 +188,14 @@
                 </span>
                 <div class="flex items-center gap-5">
                   <div class="flex items-center gap-1">
-                    <i-mdi-harddisk class="text-xl" />
+                    <Icon icon="mdi:harddisk" class="text-xl" />
                     <span> {{ formatBytes(dataset.du_size) }} </span>
                   </div>
                   <div
                     class="flex items-center gap-1"
                     v-if="auth.isFeatureEnabled('genomeBrowser')"
                   >
-                    <i-mdi-file-multiple class="text-xl" />
+                    <Icon icon="mdi:file-multiple" class="text-xl" />
                     <span> {{ dataset.metadata?.num_genome_files }} </span>
                   </div>
                 </div>
@@ -305,7 +296,7 @@
           v-else
           class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
         >
-          <i-mdi-card-remove-outline class="inline-block text-4xl pr-3" />
+          <Icon icon="mdi:card-remove-outline" class="inline-block text-4xl pr-3" />
           <span class="text-lg">
             There are no workflows associated with this dataset.
           </span>

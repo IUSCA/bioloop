@@ -12,11 +12,11 @@
           <!-- <span>Task ID: {{ p.task_id }} </span> -->
           <div class="flex gap-3 pt-1">
             <div class="flex gap-1 flex-none">
-              <i-mdi-cog class="flex-none" aria-label="pid" />
+              <Icon icon="mdi:cog" class="flex-none" aria-label="pid" />
               <span>PID: {{ p.pid }}</span>
             </div>
             <div class="flex gap-1 flex-none">
-              <i-mdi:server-network aria-label="hostname" class="flex-none" />
+              <Icon icon="mdi:server-network" aria-label="hostname" class="flex-none" />
               <span>{{ p.hostname }} </span>
             </div>
           </div>
@@ -28,7 +28,7 @@
         <va-list-item-label>
           <div>
             <va-popover message="Started On" :hover-over-timeout="500">
-              <i-mdi-calendar
+              <Icon icon="mdi:calendar"
                 class="inline-block text-slate-700 dark:text-slate-300"
               />
             </va-popover>
