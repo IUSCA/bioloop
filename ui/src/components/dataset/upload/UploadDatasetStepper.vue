@@ -496,6 +496,10 @@ import config from "@/config";
 import { default as Constants } from "@/constants";
 import datasetService from "@/services/dataset";
 import {
+  buildSizeManifest,
+  buildUploadPayload,
+} from "@/services/dataset/payload";
+import {
   hasMetadataAssignmentError,
   validateDatasetName as runDatasetNameValidation,
 } from "@/services/dataset/validation";
@@ -775,20 +779,16 @@ const someFilesPendingUpload = computed(
   () => filesNotUploaded.value.length > 0,
 );
 
-const uploadFormData = computed(() => {
-  return {
+const uploadFormData = computed(() =>
+  buildUploadPayload({
     name: uploadedDatasetName.value,
-    type: selectedDatasetType.value["value"],
-    ...(selectedRawData.value && {
-      src_dataset_id: selectedRawData.value.id,
-    }),
-    ...(projectSelected.value &&
-      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
-    ...(selectedSourceInstrument.value && {
-      src_instrument_id: selectedSourceInstrument.value.id,
-    }),
-  };
-});
+    type: selectedDatasetType.value.value,
+    selectedRawData: selectedRawData.value,
+    projectSelected: projectSelected.value,
+    selectedSourceInstrument: selectedSourceInstrument.value,
+    willCreateNewProject: willCreateNewProject.value,
+  }),
+);
 
 /**
  * Handler invoked when the user selects one or files that are to be uploaded.
@@ -1422,31 +1422,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
   }
 
   return true;
-};
-
-const buildSizeManifest = (files) => {
-  const normalized = files.map((file) => {
-    const relativePath = file.webkitRelativePath
-      ? file.webkitRelativePath
-          .replace(/\\/g, "/")
-          .split("/")
-          .slice(1)
-          .join("/")
-      : file.name.replace(/\\/g, "/").replace(/^\.\//, "");
-    return {
-      path: relativePath,
-      size: file.size,
-    };
-  });
-
-  normalized.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-
-  return {
-    mode: "path-size-v1",
-    file_count: normalized.length,
-    total_size: normalized.reduce((sum, f) => sum + f.size, 0),
-    files: normalized,
-  };
 };
 
 const handleUploadComplete = async () => {

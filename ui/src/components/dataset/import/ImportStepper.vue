@@ -302,8 +302,8 @@
 
 <script setup>
 import config from "@/config";
-import Constants from "@/constants";
 import datasetService from "@/services/dataset";
+import { buildImportPayload } from "@/services/dataset/payload";
 import {
   hasMetadataAssignmentError,
   validateDatasetName as runDatasetNameValidation,
@@ -491,20 +491,15 @@ const isNextButtonDisabled = computed(() => {
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being imported.
  */
 const importFormData = computed(() => {
-  return {
-    name: importedDatasetName.value,
-    type: selectedDatasetType.value["value"],
-    ...(selectedRawData.value && {
-      src_dataset_id: selectedRawData.value.id,
-    }),
-    ...(projectSelected.value &&
-      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
-    ...(selectedSourceInstrument.value && {
-      src_instrument_id: selectedSourceInstrument.value.id,
-    }),
-    origin_path: selectedFile.value.path,
-    create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-  };
+    buildImportPayload({
+      name: importedDatasetName.value,
+    type: selectedDatasetType.value.value,
+    selectedRawData: selectedRawData.value,
+    projectSelected: projectSelected.value,
+    selectedSourceInstrument: selectedSourceInstrument.value,
+    selectedFile: selectedFile.value,
+    willCreateNewProject: willCreateNewProject.value,
+    })
 });
 
 const resetRawDataSearch = () => {

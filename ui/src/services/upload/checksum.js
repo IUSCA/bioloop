@@ -42,11 +42,10 @@ async function _loadBlake3() {
  *
  * For single-file uploads webkitRelativePath is empty; fall back to file.name.
  *
- * @private
  * @param {File} file
  * @returns {string} Forward-slash path with no leading root directory
  */
-function _manifestPath(file) {
+export function getManifestPath(file) {
   if (file.webkitRelativePath) {
     // "rootDir/sub/file.txt" → "sub/file.txt"
     const parts = file.webkitRelativePath.replace(/\\/g, "/").split("/");
@@ -190,7 +189,7 @@ export async function computeManifestHash(files, progressCallback = null) {
       processedBytes += file.size;
 
       manifest.push({
-        path: _manifestPath(file),
+        path: getManifestPath(file),
         size: file.size,
         hash: fileHash,
       });
