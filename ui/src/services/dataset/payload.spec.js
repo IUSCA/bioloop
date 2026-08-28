@@ -61,6 +61,20 @@ describe("buildImportPayload", () => {
 
     expect(result).not.toHaveProperty("project_id");
   });
+
+  it("does not include import-only fields", () => {
+    const result = buildUploadPayload({
+      name: "dataset-a",
+      type: "RAW_DATA",
+      selectedRawData: null,
+      projectSelected: null,
+      selectedSourceInstrument: null,
+      willCreateNewProject: false,
+    });
+  
+    expect(result).not.toHaveProperty("origin_path");
+    expect(result).not.toHaveProperty("create_method");
+  });
 });
 
 
@@ -115,19 +129,6 @@ describe("buildUploadPayload", () => {
 });
 
 
-it("does not include import-only fields", () => {
-  const result = buildUploadPayload({
-    name: "dataset-a",
-    type: "RAW_DATA",
-    selectedRawData: null,
-    projectSelected: null,
-    selectedSourceInstrument: null,
-    willCreateNewProject: false,
-  });
-
-  expect(result).not.toHaveProperty("origin_path");
-  expect(result).not.toHaveProperty("create_method");
-});
 
 describe("buildSizeManifest", () => {
   it("uses the filename for single-file uploads", () => {
