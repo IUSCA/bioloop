@@ -1,0 +1,49 @@
+digraph dataflow_pipeline {
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Helvetica"];
+    compound=true;
+
+    subgraph cluster_lab {
+        label="Laboratory";
+        style=filled; fillcolor="#f0f0f0";
+        inst1 [label="Instrument\n(legacy OS)", fillcolor="#d0d0d0"];
+        inst2 [label="Instrument\n(modern)", fillcolor="#d0d0d0"];
+    }
+
+    subgraph cluster_vm {
+        label="Hosted Instance";
+        style=filled; fillcolor="#dce8f8";
+
+        samba [label="Samba\n(SMB Gateway)", fillcolor="#b3d4f5"];
+
+        subgraph cluster_bioloop {
+            label="Bioloop";
+            style=filled; fillcolor="#e8f0fc";
+            watch   [label="watch worker\n(file monitor)", fillcolor="#90caf9"];
+            bioloop [label="API + celery_worker\n(orchestration)", fillcolor="#90caf9"];
+        }
+
+        tape [label="Tape Archive\n(HPSS / SDA)", shape=cylinder, fillcolor="#b3d4f5"];
+        hpc  [label="HPC Filesystem\n(Lustre / Slate)", shape=cylinder, fillcolor="#b3d4f5"];
+    }
+
+    subgraph cluster_access {
+        label="Researcher Access";
+        style=filled; fillcolor="#e8f5e8";
+        webui    [label="Web Browser\n(Bioloop UI)", fillcolor="#a5d6a7"];
+        hpclogin [label="HPC Systems\n(direct access)", fillcolor="#a5d6a7"];
+    }
+
+    inst1   -> samba   [label="SMB write"];
+    inst2   -> samba   [label="SMB write"];
+    samba   -> watch   [label="new files detected"];
+    watch   -> bioloop [label="trigger ingest"];
+
+    bioloop -> tape    [label="1. archive\n(tar + checksum)"];
+    tape    -> bioloop [label="confirmed"];
+    bioloop -> hpc     [label="2. stage\n(untar to Lustre)"];
+
+    hpc     -> webui   [label="secure download"];
+    hpc     -> hpclogin [label="direct I/O"];
+    webui   -> bioloop [label="manage / notify"];
+}
