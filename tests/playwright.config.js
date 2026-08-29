@@ -1,5 +1,7 @@
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({
+  path: path.resolve(__dirname, '.env.default'),
+});
 
 const { defineConfig, devices } = require('@playwright/test');
 const testRuntimeConfig = require('config');
