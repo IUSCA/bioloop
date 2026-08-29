@@ -26,7 +26,7 @@
     "config": "^3.3.9",
     "dayjs": "^1.11.10",
     "dompurify": "^3.2.4",
-    "echarts": "^5.5.1",
+    "echarts": "^6.1.0",
     "epic-spinners": "^2.0.0",
     "hash-wasm": "^4.12.0",
     "jwt-decode": "^4.0.0",
@@ -40,7 +40,7 @@
     "turndown": "^7.1.2",
     "tus-js-client": "^4.3.1",
     "vue": "^3.3.4",
-    "vue-echarts": "^7.0.3",
+    "vue-echarts": "^8.0.1",
     "vue-router": "^4.2.5",
     "vuestic-ui": "^1.9.11"
   },
