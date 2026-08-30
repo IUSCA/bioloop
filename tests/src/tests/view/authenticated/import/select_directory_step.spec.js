@@ -2,233 +2,387 @@ import {
   assertSelectHasValue,
   selectDropdownOption,
 } from '../../../../actions';
+
 import { expect, test } from '../../../../fixtures';
 
 const IMPORT_SOURCE_TEST_ID = 'import-source-select';
 const FILE_AUTOCOMPLETE_TEST_ID = 'import-file-autocomplete';
 const NEXT_BUTTON_TEST_ID = 'import-next-button';
 
-test.describe.serial('Dataset Import — Select Directory step', () => {
-  let page;
+const navigateToSelectDirectory = async (page) => {
+  await page.goto('/datasets/import');
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    await page.goto('/datasets/import');
-  });
+  // Wait for import sources to load
+  await page.waitForSelector(
+    '[data-testid="import-source-select"] .va-select-content__option',
+  );
+};
 
-  test('should render the Import Source dropdown with the label "Import Source"', async () => {
-    const importSourceDropdown = page.getByTestId(IMPORT_SOURCE_TEST_ID);
-    await expect(importSourceDropdown).toBeVisible();
+const openFileTypeahead = async (page) => {
+  // Click the file typeahead input to trigger the search
+  await page.click(
+    `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+  );
 
-    const label = importSourceDropdown.locator('label');
-    await expect(label).toContainText('Import Source');
-  });
+  // Wait for loading or results
+  await page.waitForSelector(
+    `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"], ` +
+      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul__loading"]`,
+  );
 
-  test('should auto-select the first import source on mount', async () => {
-    // The component selects the first configured import source by default
-    await assertSelectHasValue({ page, testId: IMPORT_SOURCE_TEST_ID, hasValue: true });
-  });
+  // Wait for the loading state to resolve
+  await page.waitForSelector(
+    `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
+    { timeout: 15000 },
+  );
+};
 
-  test('should render the file typeahead with the label "Dataset Path"', async () => {
-    const fileTypeahead = page.getByTestId(FILE_AUTOCOMPLETE_TEST_ID);
-    await expect(fileTypeahead).toBeVisible();
+const selectFirstDirectory = async (page) => {
+  await openFileTypeahead(page);
 
-    const label = page.locator(`[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--container"] label`);
-    await expect(label).toContainText('Dataset Path');
-  });
+  const hasResults =
+    (await page
+      .locator(
+        `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
+      )
+      .count()) > 0;
 
-  test('should show the import source path as a badge in the file typeahead', async () => {
-    // After import source auto-selection, the base path badge is visible
-    const badge = page.locator(`[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--container"] .base-path-badge`);
-    await expect(badge).toBeVisible();
-  });
+  if (!hasResults) {
+    return false;
+  }
 
-  test('should have Next disabled before any directory is selected', async () => {
-    await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
-  });
+  // Select the first result
+  await page
+    .getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`)
+    .click();
 
-  test('should open the import source dropdown and show seeded options', async () => {
-    const importSourceDropdown = page.getByTestId(IMPORT_SOURCE_TEST_ID);
-    await importSourceDropdown.click();
+  return true;
+};
 
-    await page.waitForSelector('.va-select-dropdown__content', { state: 'visible' });
+const showMissingDirectoryError = async (page) => {
+  // Try to proceed to the next step without selecting a directory.
+  // Clicking Next when disabled does nothing, so we need to trick the stepper
+  // into showing the error. The error appears when step is no longer pristine
+  // (i.e., user has interacted with the form). Clicking the file typeahead
+  // and then closing it marks the step as non-pristine.
+  await page.click(
+    `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+  );
 
-    const options = page.locator('.va-select-option');
-    const count = await options.count();
+  // Wait for the dropdown to open
+  await page.waitForSelector(
+    `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"], ` +
+      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul__loading"]`,
+  );
 
-    // At least the two seeded sources should be present
-    expect(count).toBeGreaterThanOrEqual(2);
+  // Close by clicking outside
+  await page.keyboard.press('Escape');
 
-    // Close the dropdown by pressing Escape
-    await page.keyboard.press('Escape');
-  });
+  // Wait a moment for reactive updates
+  await page.waitForTimeout(500);
+};
 
-  test('should switch the import source and reset the file search', async () => {
-    // Select the second import source (index 1)
-    await selectDropdownOption({
-      page,
-      testId: IMPORT_SOURCE_TEST_ID,
-      optionIndex: 1,
-    });
+test.describe('Dataset Import — Select Directory step', () => {
+  test(
+    'should render the Import Source dropdown with the label "Import Source"',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    // After switching the source, the file typeahead should be cleared
-    const fileInput = page.locator(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
-    await expect(fileInput).toHaveValue('');
+      const importSourceDropdown =
+        page.getByTestId(IMPORT_SOURCE_TEST_ID);
 
-    // Next should still be disabled
-    await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
-  });
+      await expect(importSourceDropdown).toBeVisible();
 
-  test('should open the file typeahead and show available directories', async () => {
-    // Switch back to the first import source
-    await selectDropdownOption({
-      page,
-      testId: IMPORT_SOURCE_TEST_ID,
-      optionIndex: 0,
-    });
+      const label = importSourceDropdown.locator('label');
 
-    // Click the file typeahead input to trigger the search
-    await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
+      await expect(label).toContainText('Import Source');
+    },
+  );
 
-    // Wait for loading or results
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"], [data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul__loading"]`,
-    );
+  test(
+    'should auto-select the first import source on mount',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    // Wait for the loading state to resolve
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-      { timeout: 15000 },
-    );
+      // The component selects the first configured import source by default
+      await assertSelectHasValue({
+        page,
+        testId: IMPORT_SOURCE_TEST_ID,
+        hasValue: true,
+      });
+    },
+  );
 
-    // The results list is now visible (with results or "None matched")
-    const resultsList = page.getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul`);
-    await expect(resultsList).toBeVisible();
-  });
+  test(
+    'should render the file typeahead with the label "Dataset Path"',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-  test('should filter results so that all visible entries contain the search term', async () => {
-    // The typeahead is open (results list visible) from the previous test.
-    // We derive a search term from the first available result so the test is
-    // not tied to specific seeded directory names.
-    const resultItems = page.locator(
-      `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
-    );
-    const initialCount = await resultItems.count();
-    test.skip(initialCount < 2, 'Need at least 2 results to verify filtering');
+      const fileTypeahead =
+        page.getByTestId(FILE_AUTOCOMPLETE_TEST_ID);
 
-    // Extract the directory name from the first result's full path and use the
-    // first half as a search term that should narrow the results.
-    const firstButtonText = (
-      await resultItems.first().locator('button').textContent()
-    ).trim();
-    const dirName = firstButtonText.includes('/')
-      ? firstButtonText.slice(firstButtonText.lastIndexOf('/') + 1)
-      : firstButtonText;
-    const searchTerm = dirName.slice(0, Math.max(5, Math.ceil(dirName.length / 2)));
+      await expect(fileTypeahead).toBeVisible();
 
-    // Type the search term into the file input.  The watch in ImportStepper sets
-    // searchingFiles = true immediately, then fires the API call after a 1 s
-    // debounce.  We wait for the results list to reappear after loading.
-    const fileInput = page.locator(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
-    await fileInput.fill(searchTerm);
+      const label = page.locator(
+        `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--container"] label`,
+      );
 
-    // Wait for the loading indicator, then wait for the results list.
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-      { timeout: 15000 },
-    );
+      await expect(label).toContainText('Dataset Path');
+    },
+  );
 
-    // Every visible result must contain the search term (the full path displayed
-    // by the autocomplete always includes the relative portion that was typed).
-    const filteredItems = await page
-      .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
-      .all();
+  test(
+    'should show the import source path as a badge in the file typeahead',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    expect(filteredItems.length).toBeGreaterThan(0);
+      // After import source auto-selection, the base path badge is visible
+      const badge = page.locator(
+        `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--container"] .base-path-badge`,
+      );
 
-    for (const item of filteredItems) {
-      const text = (await item.locator('button').textContent()).trim();
-      expect(text.toLowerCase()).toContain(searchTerm.toLowerCase());
-    }
+      await expect(badge).toBeVisible();
+    },
+  );
 
-    // Clear the search term so the following test starts with a clean state.
-    await fileInput.fill('');
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-      { timeout: 15000 },
-    );
-  });
+  test(
+    'should have Next disabled before any directory is selected',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-  test('should enable Next after selecting a directory', async () => {
-    const hasResults = await page
-      .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
-      .count() > 0;
+      await expect(
+        page.getByTestId(NEXT_BUTTON_TEST_ID),
+      ).toBeDisabled();
+    },
+  );
 
-    test.skip(!hasResults, 'No import directories available in test environment');
+  test(
+    'should open the import source dropdown and show seeded options',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    // Select the first result
-    await page.getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`).click();
+      const importSourceDropdown =
+        page.getByTestId(IMPORT_SOURCE_TEST_ID);
 
-    // Input should now contain the selected directory name
-    const fileInput = page.locator(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
-    const selectedValue = await fileInput.inputValue();
-    expect(selectedValue.length).toBeGreaterThan(0);
+      await importSourceDropdown.click();
 
-    // Next should now be enabled
-    await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeEnabled();
-  });
+      await page.waitForSelector(
+        '.va-select-dropdown__content',
+        { state: 'visible' },
+      );
 
-  test('should show an error message when Next is clicked without a directory selected', async () => {
-    // Navigate to a fresh page to reset state
-    await page.goto('/datasets/import');
+      const options = page.locator('.va-select-option');
 
-    // Wait for import sources to load
-    await page.waitForSelector('[data-testid="import-source-select"] .va-select-content__option');
+      const count = await options.count();
 
-    // Try to proceed to the next step without selecting a directory.
-    // Clicking Next when disabled does nothing, so we need to trick the stepper
-    // into showing the error. The error appears when step is no longer pristine
-    // (i.e., user has interacted with the form). Clicking the file typeahead
-    // and then closing it marks the step as non-pristine.
-    await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
+      // At least the two seeded sources should be present
+      expect(count).toBeGreaterThanOrEqual(2);
 
-    // Wait for the dropdown to open
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"], [data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul__loading"]`,
-    );
+      // Close the dropdown by pressing Escape
+      await page.keyboard.press('Escape');
+    },
+  );
 
-    // Close by clicking outside
-    await page.keyboard.press('Escape');
+  test(
+    'should switch the import source and reset the file search',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    // Wait a moment for reactive updates
-    await page.waitForTimeout(500);
+      // Select the second import source (index 1)
+      await selectDropdownOption({
+        page,
+        testId: IMPORT_SOURCE_TEST_ID,
+        optionIndex: 1,
+      });
 
-    // The error message should now appear since the step is no longer pristine
-    // and no file is selected
-    const errorMessage = page.getByTestId('import-source-error');
-    await expect(errorMessage).toBeVisible();
-    await expect(errorMessage).toContainText('A file must be selected for import');
-  });
+      // After switching the source, the file typeahead should be cleared
+      const fileInput = page.locator(
+        `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+      );
 
-  test('should clear the error when a directory is selected', async () => {
-    // The error is showing from the previous test; select a directory to clear it
-    await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
+      await expect(fileInput).toHaveValue('');
 
-    await page.waitForSelector(
-      `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-      { timeout: 15000 },
-    );
+      // Next should still be disabled
+      await expect(
+        page.getByTestId(NEXT_BUTTON_TEST_ID),
+      ).toBeDisabled();
+    },
+  );
 
-    const hasResults = await page
-      .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
-      .count() > 0;
+  test(
+    'should open the file typeahead and show available directories',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
 
-    test.skip(!hasResults, 'No import directories available in test environment');
+      // Switch back to the first import source
+      await selectDropdownOption({
+        page,
+        testId: IMPORT_SOURCE_TEST_ID,
+        optionIndex: 0,
+      });
 
-    await page.getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`).click();
+      await openFileTypeahead(page);
 
-    // Error should no longer be visible
-    const errorMessage = page.getByTestId('import-source-error');
-    await expect(errorMessage).not.toBeVisible();
-  });
+      // The results list is now visible (with results or "None matched")
+      const resultsList = page.getByTestId(
+        `${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul`,
+      );
+
+      await expect(resultsList).toBeVisible();
+    },
+  );
+
+  test(
+    'should filter results so that all visible entries contain the search term',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
+
+      // Switch back to the first import source
+      await selectDropdownOption({
+        page,
+        testId: IMPORT_SOURCE_TEST_ID,
+        optionIndex: 0,
+      });
+
+      // Open the typeahead and load the initial results.
+      await openFileTypeahead(page);
+
+      // We derive a search term from the first available result so the test is
+      // not tied to specific seeded directory names.
+      const resultItems = page.locator(
+        `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
+      );
+
+      const initialCount = await resultItems.count();
+
+      test.skip(
+        initialCount < 2,
+        'Need at least 2 results to verify filtering',
+      );
+
+      // Extract the directory name from the first result's full path and use the
+      // first half as a search term that should narrow the results.
+      const firstButtonText = (
+        await resultItems.first().locator('button').textContent()
+      ).trim();
+
+      const dirName = firstButtonText.includes('/')
+        ? firstButtonText.slice(firstButtonText.lastIndexOf('/') + 1)
+        : firstButtonText;
+
+      const searchTerm = dirName.slice(
+        0,
+        Math.max(5, Math.ceil(dirName.length / 2)),
+      );
+
+      // Type the search term into the file input. The watch in ImportStepper sets
+      // searchingFiles = true immediately, then fires the API call after a 1 s
+      // debounce. We wait for the results list to reappear after loading.
+      const fileInput = page.locator(
+        `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+      );
+
+      await fileInput.fill(searchTerm);
+
+      // Wait for the loading indicator, then wait for the results list.
+      await page.waitForSelector(
+        `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
+        { timeout: 15000 },
+      );
+
+      // Every visible result must contain the search term (the full path displayed
+      // by the autocomplete always includes the relative portion that was typed).
+      const filteredItems = await page
+        .locator(
+          `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
+        )
+        .all();
+
+      expect(filteredItems.length).toBeGreaterThan(0);
+
+      for (const item of filteredItems) {
+        const text = (
+          await item.locator('button').textContent()
+        ).trim();
+
+        expect(text.toLowerCase()).toContain(
+          searchTerm.toLowerCase(),
+        );
+      }
+    },
+  );
+
+  test(
+    'should enable Next after selecting a directory',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
+
+      const hasResults = await selectFirstDirectory(page);
+
+      test.skip(
+        !hasResults,
+        'No import directories available in test environment',
+      );
+
+      // Input should now contain the selected directory name
+      const fileInput = page.locator(
+        `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+      );
+
+      const selectedValue = await fileInput.inputValue();
+
+      expect(selectedValue.length).toBeGreaterThan(0);
+
+      // Next should now be enabled
+      await expect(
+        page.getByTestId(NEXT_BUTTON_TEST_ID),
+      ).toBeEnabled();
+    },
+  );
+
+  test(
+    'should show an error message when Next is clicked without a directory selected',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
+
+      await showMissingDirectoryError(page);
+
+      // The error message should now appear since the step is no longer pristine
+      // and no file is selected
+      const errorMessage =
+        page.getByTestId('import-source-error');
+
+      await expect(errorMessage).toBeVisible();
+
+      await expect(errorMessage).toContainText(
+        'A file must be selected for import',
+      );
+    },
+  );
+
+  test(
+    'should clear the error when a directory is selected',
+    async ({ page }) => {
+      await navigateToSelectDirectory(page);
+
+      // First create the missing-directory error in this test so the test does
+      // not depend on state left behind by a previous test.
+      await showMissingDirectoryError(page);
+
+      const errorMessage =
+        page.getByTestId('import-source-error');
+
+      await expect(errorMessage).toBeVisible();
+
+      const hasResults = await selectFirstDirectory(page);
+
+      test.skip(
+        !hasResults,
+        'No import directories available in test environment',
+      );
+
+      // Error should no longer be visible
+      await expect(errorMessage).not.toBeVisible();
+    },
+  );
 });

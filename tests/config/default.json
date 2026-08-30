@@ -22,6 +22,9 @@
       "enabledForRoles": [
         "admin"
       ]
+    },
+    "import": {
+    "enabledForRoles": ["admin"]
     }
   }
 }

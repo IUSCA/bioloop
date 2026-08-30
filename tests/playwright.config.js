@@ -229,8 +229,8 @@ module.exports = {
         name: 'operator_import',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/import/*.spec.js',
-        testIgnore: '/view/authenticated/import/access_control.spec.js',
+        testMatch: '/view/authenticated/import/access_control.spec.js',
+
       },
       // user — no import access: only verifies the "feature disabled" alert
       {
