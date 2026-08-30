@@ -1,4 +1,7 @@
-
+/**
+ * Verifies import-source selection, directory searching and selection, and
+ * missing-directory validation on the Select Directory step.
+ */
 import {
   assertSelectHasValue,
   selectDropdownOption,
@@ -13,11 +16,6 @@ import {
 } from '../../../../actions/datasetImport';
 
 import { expect, test } from '../../../../fixtures';
-
-/**
- * Verifies import-source selection, directory searching and selection, and
- * missing-directory validation on the Select Directory step.
- */
 
 test.describe('Dataset Import — Select Directory step', () => {
   test(

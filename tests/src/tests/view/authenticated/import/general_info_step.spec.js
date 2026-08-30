@@ -1,3 +1,7 @@
+/**
+ * Verifies the General Info defaults, editable metadata fields, and dependent
+ * field behavior when assignments or the dataset type change.
+ */
 import {
   assertAutoCompleteHasValue,
   assertAutoCompleteState,
@@ -12,11 +16,6 @@ import {
 } from '../../../../actions';
 import { navigateToImportGeneralInfo } from '../../../../actions/datasetImport';
 import { expect, test } from '../../../../fixtures';
-
-/**
- * Verifies the General Info defaults, editable metadata fields, and dependent
- * field behavior when assignments or the dataset type change.
- */
 
 const defaultDatasetType = 'Data Product';
 

@@ -1,4 +1,7 @@
-
+/**
+ * Verifies the initial step controls and the Next/Previous button states as
+ * the user moves into and completes General Info.
+ */
 import {
   selectAutocompleteResult,
   selectDropdownOption,
@@ -11,16 +14,12 @@ import {
 } from '../../../../actions/datasetImport';
 import { expect, test } from '../../../../fixtures';
 
-/**
- * Verifies the initial step controls and the Next/Previous button states as
- * the user moves into and completes General Info.
- */
-
 const PREVIOUS_BUTTON_TEST_ID = 'import-previous-button';
 
 test.describe('Dataset Import — Next/Previous buttons', () => {
   test(
     'should show the expected controls on initial page load',
+    { tag: '@smoke' },
     async ({ page }) => {
       await navigateToImportSelectDirectory(page);
 

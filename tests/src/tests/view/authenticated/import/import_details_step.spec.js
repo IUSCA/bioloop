@@ -1,14 +1,12 @@
-
+/**
+ * Verifies the Import Details initial state, dataset-name validation, and
+ * forward and backward step navigation.
+ */
 import {
   IMPORT_NEXT_BUTTON_TEST_ID,
   navigateToImportDetails,
 } from '../../../../actions/datasetImport';
 import { expect, test } from '../../../../fixtures';
-
-/**
- * Verifies the Import Details initial state, dataset-name validation, and
- * forward and backward step navigation.
- */
 
 const PREVIOUS_BUTTON_TEST_ID = 'import-previous-button';
 const DATASET_NAME_INPUT_TEST_ID = 'dataset-name-input';
@@ -85,10 +83,14 @@ test.describe('Dataset Import — Import Details step', () => {
 
   test(
     'should enable Next after a valid dataset name is entered',
+    { tag: '@smoke' },
     async ({ page }) => {
       const onStep2 = await navigateToImportDetails(page);
 
-      test.skip(!onStep2, 'Could not reach Import step');
+      expect(
+        onStep2,
+        'Expected a seeded import directory to be available',
+      ).toBe(true);
 
       const nameInput = page.getByTestId(
         DATASET_NAME_INPUT_TEST_ID,

@@ -1,5 +1,6 @@
-
-
+/**
+ * Verifies the complete stateful import submission and resulting workflow.
+ */
 import { setCheckboxState } from '../../../../actions';
 import {
   IMPORT_NEXT_BUTTON_TEST_ID,
