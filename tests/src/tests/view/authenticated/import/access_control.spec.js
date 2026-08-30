@@ -1,3 +1,7 @@
+/**
+ * Verifies that roles without dataset import access see the disabled-feature
+ * warning instead of the import stepper.
+ */
 import { test, expect } from '@playwright/test';
 import config from 'config';
 import { FEATURE_ROLE_SYNC_NOTE } from '../../../../constants';

@@ -10,88 +10,21 @@ import {
   selectDropdownOption,
   setCheckboxState,
 } from '../../../../actions';
-import { navigateToNextStep } from '../../../../actions/stepper';
+import { navigateToImportGeneralInfo } from '../../../../actions/datasetImport';
 import { expect, test } from '../../../../fixtures';
 
-
 /**
- * Navigate from the Select Directory step to the General Info step.
- *
- * Each test starts with a fresh Page instance, so the setup required to reach
- * General Info must be repeated for every test instead of depending on state
- * created by a previous test.
- *
- * Returns false when there are no import directories available in the current
- * test environment so the calling test can be skipped.
+ * Verifies the General Info defaults, editable metadata fields, and dependent
+ * field behavior when assignments or the dataset type change.
  */
 
-const navigateToGeneralInfo = async (page) => {
-  await page.goto('/datasets/import');
-
-  await page.waitForSelector(
-    '[data-testid="import-source-select"] .va-select-content__option',
-  );
-
-  await page.click(
-    `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
-  );
-
-  await page.waitForSelector(
-    `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-    { timeout: 15000 },
-  );
-
-  const results = page.locator(
-    `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
-  );
-
-  if ((await results.count()) === 0) {
-    return false;
-  }
-
-  await results.first().click();
-
-  await expect(
-    page.getByTestId(NEXT_BUTTON_TEST_ID),
-  ).toBeEnabled();
-
-  await navigateToNextStep({
-    page,
-    nextButtonTestId: NEXT_BUTTON_TEST_ID,
-  });
-
-  await expect(
-    page.getByTestId('import-metadata-dataset-type-select'),
-  ).toBeVisible();
-
-  return true;
-};
-
-const NEXT_BUTTON_TEST_ID = 'import-next-button';
-const FILE_AUTOCOMPLETE_TEST_ID = 'import-file-autocomplete';
 const defaultDatasetType = 'Data Product';
 
 test.describe('Dataset Import — General Info step', () => {
   test(
-    'should proceed to General Info step after directory is selected',
-    async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
-
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
-
-      await expect(
-        page.getByTestId('import-metadata-dataset-type-select'),
-      ).toBeVisible();
-    },
-  );
-
-  test(
     'should display General Info form fields in their default states',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -147,7 +80,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should allow selecting values in the General Info form fields',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -197,7 +130,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should allow clearing values in the General Info form fields',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -235,7 +168,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should disable and clear Source Raw Data when Dataset Type changes to Raw Data',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -295,7 +228,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should disable and clear Source Raw Data when Assign Source Raw Data is unchecked',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -372,7 +305,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should disable and clear Project when Assign Project is unchecked',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,
@@ -433,7 +366,7 @@ test.describe('Dataset Import — General Info step', () => {
   test(
     'should disable and clear Source Instrument when Assign Source Instrument is unchecked',
     async ({ page }) => {
-      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+      const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
       test.skip(
         !reachedGeneralInfo,

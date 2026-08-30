@@ -1,7 +1,13 @@
+
+
 import { setCheckboxState } from '../../../../actions';
+import {
+  IMPORT_NEXT_BUTTON_TEST_ID,
+  navigateToImportSelectDirectory,
+  selectFirstImportDirectory,
+} from '../../../../actions/datasetImport';
 import { navigateToNextStep } from '../../../../actions/stepper';
 import { expect, test } from '../../../../fixtures';
-
 
 /**
  * Dataset Import E2E workflow test.
@@ -32,53 +38,26 @@ import { expect, test } from '../../../../fixtures';
  * independent test. The entire import flow succeeds or fails as one E2E test.
  */
 
-const FILE_AUTOCOMPLETE_TEST_ID = 'import-file-autocomplete';
-const NEXT_BUTTON_TEST_ID = 'import-next-button';
 const DATASET_NAME_INPUT_TEST_ID = 'dataset-name-input';
-
 
 test.describe('Dataset Import — submit and verify workflow', () => {
   test('should submit and verify the import workflow', async ({ page }) => {
     // href of the dataset link shown after successful import submission
     let datasetHref;
 
-    await page.goto('/datasets/import');
+    await navigateToImportSelectDirectory(page);
 
     // ----- Step 0: Select Directory -----
     await test.step('should select the first directory and enable Next', async () => {
-      await page.waitForSelector(
-        '[data-testid="import-source-select"] .va-select-content__option',
-      );
-
-      await page.click(
-        `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
-      );
-
-      await page.waitForSelector(
-        `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-        { timeout: 15000 },
-      );
-
-      const hasResults =
-        (await page
-          .locator(
-            `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
-          )
-          .count()) > 0;
+      const hasResults = await selectFirstImportDirectory(page);
 
       test.skip(
         !hasResults,
         'No import directories available in test environment',
       );
 
-      await page
-        .getByTestId(
-          `${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`,
-        )
-        .click();
-
       await expect(
-        page.getByTestId(NEXT_BUTTON_TEST_ID),
+        page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID),
       ).toBeEnabled();
     });
 
@@ -87,14 +66,14 @@ test.describe('Dataset Import — submit and verify workflow', () => {
       'should uncheck optional assignment fields and proceed to Import Details',
       async () => {
         const nextEnabled = await page
-          .getByTestId(NEXT_BUTTON_TEST_ID)
+          .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
           .isEnabled();
 
         if (!nextEnabled) return;
 
         await navigateToNextStep({
           page,
-          nextButtonTestId: NEXT_BUTTON_TEST_ID,
+          nextButtonTestId: IMPORT_NEXT_BUTTON_TEST_ID,
         });
 
         await page.waitForSelector(
@@ -134,7 +113,7 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .poll(
             () =>
               page
-                .getByTestId(NEXT_BUTTON_TEST_ID)
+                .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
                 .isEnabled(),
             { timeout: 5000 },
           )
@@ -142,7 +121,7 @@ test.describe('Dataset Import — submit and verify workflow', () => {
 
         await navigateToNextStep({
           page,
-          nextButtonTestId: NEXT_BUTTON_TEST_ID,
+          nextButtonTestId: IMPORT_NEXT_BUTTON_TEST_ID,
         });
       },
     );
@@ -179,7 +158,7 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .poll(
             () =>
               page
-                .getByTestId(NEXT_BUTTON_TEST_ID)
+                .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
                 .isEnabled(),
             { timeout: 10000 },
           )
@@ -199,7 +178,7 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           'Could not reach Import Details step',
         );
 
-        await page.getByTestId(NEXT_BUTTON_TEST_ID).click();
+        await page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID).click();
 
         await expect(
           page.getByText('Initiated dataset import'),
