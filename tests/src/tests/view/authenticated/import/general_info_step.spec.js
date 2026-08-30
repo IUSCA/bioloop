@@ -13,61 +13,97 @@ import {
 import { navigateToNextStep } from '../../../../actions/stepper';
 import { expect, test } from '../../../../fixtures';
 
+
+/**
+ * Navigate from the Select Directory step to the General Info step.
+ *
+ * Each test starts with a fresh Page instance, so the setup required to reach
+ * General Info must be repeated for every test instead of depending on state
+ * created by a previous test.
+ *
+ * Returns false when there are no import directories available in the current
+ * test environment so the calling test can be skipped.
+ */
+
+const navigateToGeneralInfo = async (page) => {
+  await page.goto('/datasets/import');
+
+  await page.waitForSelector(
+    '[data-testid="import-source-select"] .va-select-content__option',
+  );
+
+  await page.click(
+    `input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`,
+  );
+
+  await page.waitForSelector(
+    `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
+    { timeout: 15000 },
+  );
+
+  const results = page.locator(
+    `[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`,
+  );
+
+  if ((await results.count()) === 0) {
+    return false;
+  }
+
+  await results.first().click();
+
+  await expect(
+    page.getByTestId(NEXT_BUTTON_TEST_ID),
+  ).toBeEnabled();
+
+  await navigateToNextStep({
+    page,
+    nextButtonTestId: NEXT_BUTTON_TEST_ID,
+  });
+
+  await expect(
+    page.getByTestId('import-metadata-dataset-type-select'),
+  ).toBeVisible();
+
+  return true;
+};
+
 const NEXT_BUTTON_TEST_ID = 'import-next-button';
 const FILE_AUTOCOMPLETE_TEST_ID = 'import-file-autocomplete';
 const defaultDatasetType = 'Data Product';
 
-test.describe.serial('Dataset Import — General Info step', () => {
-  let page;
+test.describe('Dataset Import — General Info step', () => {
+  test(
+    'should proceed to General Info step after directory is selected',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    await page.goto('/datasets/import');
-  });
-
-  test.describe('Select Directory step setup', () => {
-    test.beforeAll(async () => {
-      // Wait for import sources to load
-      await page.waitForSelector('[data-testid="import-source-select"] .va-select-content__option');
-
-      // Open the file typeahead
-      await page.click(`input[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}"]`);
-
-      // Wait for results to load
-      await page.waitForSelector(
-        `[data-testid="${FILE_AUTOCOMPLETE_TEST_ID}--search-results-ul"]`,
-        { timeout: 15000 },
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
       );
 
-      const hasResults = await page
-        .locator(`[data-testid^="${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-"]`)
-        .count() > 0;
+      await expect(
+        page.getByTestId('import-metadata-dataset-type-select'),
+      ).toBeVisible();
+    },
+  );
 
-      if (!hasResults) {
-        return;
-      }
+  test(
+    'should display General Info form fields in their default states',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
 
-      // Select the first directory
-      await page.getByTestId(`${FILE_AUTOCOMPLETE_TEST_ID}--search-result-li-0`).click();
-    });
-
-    test('should proceed to General Info step after directory is selected', async () => {
-      const nextEnabled = await page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled();
-      test.skip(!nextEnabled, 'No import directories available in test environment');
-
-      await navigateToNextStep({ page, nextButtonTestId: NEXT_BUTTON_TEST_ID });
-      await page.waitForSelector('[data-testid="import-metadata-dataset-type-select"]');
-    });
-  });
-
-  test.describe('General Info step fields', () => {
-    test('should display General Info form fields in their default states', async () => {
-      const nextEnabled = await page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled() === false
-        && await page.locator('[data-testid="import-metadata-dataset-type-select"]').isVisible();
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
 
       // Dataset Type select is visible with default value
-      const datasetTypeSelect = page.getByTestId('import-metadata-dataset-type-select');
+      const datasetTypeSelect = page.getByTestId(
+        'import-metadata-dataset-type-select',
+      );
       await expect(datasetTypeSelect).toBeVisible();
+
       await assertSelectValue({
         page,
         testId: 'import-metadata-dataset-type-select',
@@ -101,11 +137,23 @@ test.describe.serial('Dataset Import — General Info step', () => {
       });
 
       // Assign Source Instrument checkbox is checked by default (if instruments available)
-      const sourceInstrumentSelect = page.getByTestId('import-metadata-source-instrument-select');
+      const sourceInstrumentSelect = page.getByTestId(
+        'import-metadata-source-instrument-select',
+      );
       await expect(sourceInstrumentSelect).toBeVisible();
-    });
+    },
+  );
 
-    test('should allow selecting values in the General Info form fields', async () => {
+  test(
+    'should allow selecting values in the General Info form fields',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
       // Change Dataset Type to Raw Data
       await selectDropdownOption({
         page,
@@ -143,9 +191,33 @@ test.describe.serial('Dataset Import — General Info step', () => {
         optionIndex: 0,
         verify: true,
       });
-    });
+    },
+  );
 
-    test('should allow clearing values in the General Info form fields', async () => {
+  test(
+    'should allow clearing values in the General Info form fields',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
+      // Select source Raw Data
+      await selectAutocompleteResult({
+        page,
+        testId: 'import-metadata-dataset-autocomplete',
+        verify: true,
+      });
+
+      // Select Project
+      await selectAutocompleteResult({
+        page,
+        testId: 'import-metadata-project-autocomplete',
+        verify: true,
+      });
+
       await clearAutoComplete({
         page,
         testId: 'import-metadata-dataset-autocomplete',
@@ -157,9 +229,19 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-project-autocomplete',
         verify: true,
       });
-    });
+    },
+  );
 
-    test('should disable and clear Source Raw Data when Dataset Type changes to Raw Data', async () => {
+  test(
+    'should disable and clear Source Raw Data when Dataset Type changes to Raw Data',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
       // Verify the Assign Source Raw Data checkbox is enabled
       await assertCheckboxState({
         page,
@@ -207,9 +289,19 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-dataset-autocomplete',
         disabled: true,
       });
-    });
+    },
+  );
 
-    test('should disable and clear Source Raw Data when Assign Source Raw Data is unchecked', async () => {
+  test(
+    'should disable and clear Source Raw Data when Assign Source Raw Data is unchecked',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
       // Reset Dataset Type to Data Product so Source Raw Data can be assigned
       await selectDropdownOption({
         page,
@@ -274,9 +366,19 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-dataset-autocomplete',
         disabled: false,
       });
-    });
+    },
+  );
 
-    test('should disable and clear Project when Assign Project is unchecked', async () => {
+  test(
+    'should disable and clear Project when Assign Project is unchecked',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
       await assertCheckboxState({
         page,
         testId: 'import-metadata-assign-project-checkbox',
@@ -325,9 +427,19 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-project-autocomplete',
         disabled: false,
       });
-    });
+    },
+  );
 
-    test('should disable and clear Source Instrument when Assign Source Instrument is unchecked', async () => {
+  test(
+    'should disable and clear Source Instrument when Assign Source Instrument is unchecked',
+    async ({ page }) => {
+      const reachedGeneralInfo = await navigateToGeneralInfo(page);
+
+      test.skip(
+        !reachedGeneralInfo,
+        'No import directories available in test environment',
+      );
+
       // Select a Source Instrument first
       await selectDropdownOption({
         page,
@@ -370,6 +482,6 @@ test.describe.serial('Dataset Import — General Info step', () => {
         testId: 'import-metadata-source-instrument-select',
         hasValue: false,
       });
-    });
-  });
+    },
+  );
 });
