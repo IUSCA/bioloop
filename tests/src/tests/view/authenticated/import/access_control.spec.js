@@ -25,7 +25,7 @@ test.describe('Dataset Import access control', () => {
 
     await expect(page).toHaveURL('/datasets/import');
 
-    // Non-admin roles see the feature-disabled alert instead of the stepper.
+    // Roles without import access see the feature-disabled alert instead of the stepper.
     // Explicit timeout covers the auth-store resolution delay on first load.
     await expect(
       page.locator('.va-alert').filter({ hasText: 'This feature is currently disabled' }),

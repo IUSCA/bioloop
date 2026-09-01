@@ -125,7 +125,7 @@ module.exports = {
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['admin_notifications', 'operator_login'],
+        dependencies: ['operator_login'],
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_cross_user_state.spec.js',
@@ -229,8 +229,8 @@ module.exports = {
         name: 'operator_import',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
         dependencies: ['operator_login'],
-        testMatch: '/view/authenticated/import/access_control.spec.js',
-
+        testMatch: '/view/authenticated/import/*.spec.js',
+        testIgnore: '/view/authenticated/import/access_control.spec.js',
       },
       // user — no import access: only verifies the "feature disabled" alert
       {

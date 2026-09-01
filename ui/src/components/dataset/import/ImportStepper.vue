@@ -490,7 +490,7 @@ const isNextButtonDisabled = computed(() => {
 /**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being imported.
  */
-const importFormData = computed(() => {
+const importFormData = computed(() => 
     buildImportPayload({
       name: importedDatasetName.value,
     type: selectedDatasetType.value.value,
@@ -500,7 +500,7 @@ const importFormData = computed(() => {
     selectedFile: selectedFile.value,
     willCreateNewProject: willCreateNewProject.value,
     })
-});
+);
 
 const resetRawDataSearch = () => {
   selectedRawData.value = null;
