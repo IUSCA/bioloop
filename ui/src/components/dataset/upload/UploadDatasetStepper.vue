@@ -495,6 +495,14 @@ import DatasetSelectAutoComplete from "@/components/dataset/DatasetSelectAutoCom
 import config from "@/config";
 import { default as Constants } from "@/constants";
 import datasetService from "@/services/dataset";
+import {
+  buildSizeManifest,
+  buildUploadPayload,
+} from "@/services/dataset/payload";
+import {
+  hasMetadataAssignmentError,
+  validateDatasetName as runDatasetNameValidation,
+} from "@/services/dataset/validation";
 import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
@@ -505,7 +513,6 @@ import {
 } from "@/services/upload/checksum";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
-import { Icon } from "@iconify/vue";
 import _ from "lodash";
 import * as tus from "tus-js-client";
 import { VaDivider, VaPopover } from "vuestic-ui";
@@ -518,12 +525,6 @@ const STEP_KEYS = {
   UPLOAD: "upload",
 };
 
-// Various errors that may be shown to the user during the process of uploading a dataset.
-const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
-const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
-const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
-const DATASET_NAME_MIN_LENGTH_ERROR =
-  "Dataset name must have 3 or more characters.";
 
 // The various steps that the user will taken through during the process of uploading a dataset.
 const steps = [
@@ -778,22 +779,16 @@ const someFilesPendingUpload = computed(
   () => filesNotUploaded.value.length > 0,
 );
 
-const uploadFormData = computed(() => {
-  return {
+const uploadFormData = computed(() =>
+  buildUploadPayload({
     name: uploadedDatasetName.value,
-    type: selectedDatasetType.value["value"],
-    ...(selectedRawData.value && {
-      src_dataset_id: selectedRawData.value.id,
-    }),
-    ...(projectSelected.value &&
-      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
-    ...(projectSelected.value &&
-      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
-    ...(selectedSourceInstrument.value && {
-      src_instrument_id: selectedSourceInstrument.value.id,
-    }),
-  };
-});
+    type: selectedDatasetType.value.value,
+    selectedRawData: selectedRawData.value,
+    projectSelected: projectSelected.value,
+    selectedSourceInstrument: selectedSourceInstrument.value,
+    willCreateNewProject: willCreateNewProject.value,
+  }),
+);
 
 /**
  * Handler invoked when the user selects one or files that are to be uploaded.
@@ -895,70 +890,22 @@ const removeFile = (fileIndex) => {
   }
 };
 
-// Async function to check if a Dataset already exists in the system for a given name and type.
-const validateIfExists = (value) => {
-  return new Promise((resolve, reject) => {
-    // Vuestic claims that it should not run async validation if synchronous
-    // validation fails, but it seems to be triggering async validation
-    // nonetheless when `value` is ''. Hence the explicit check for whether
-    // `value` is falsy.
-    if (!value) {
-      resolve(true);
-    } else {
-      datasetService
-        .check_if_exists({
-          type: selectedDatasetType.value["value"],
-          name: value,
-        })
-        .then((res) => {
-          resolve(res.data.exists);
-        })
-        .catch((e) => {
-          console.error(e);
-          reject();
-        });
-    }
-  });
-};
-
-/**
- * Async function to check if a name selected for the Dataset being uploaded is valid.
- *
- * Conditions to consider a name valid:
- * - Not empty
- * - Minimum length of 3 characters
- * - No spaces
- * - Does not already exist in the system
- */
 const validateDatasetName = async () => {
-  if (!uploadedDatasetName.value) {
-    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (uploadedDatasetName.value?.length < 3) {
-    return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
-  } else if (uploadedDatasetName.value?.indexOf(" ") > -1) {
-    return { isNameValid: false, error: DATASET_NAME_HAS_SPACES_ERROR };
-  }
-
   validatingForm.value = true;
-  return validateIfExists(uploadedDatasetName.value)
-    .then((res) => {
-      const datasetExistsError = (datasetType) => {
-        const datasetTypeLabel = datasetTypes.find(
-          (type) => type.value === datasetType,
-        ).label;
-        return `A ${datasetTypeLabel} with this name already exists.`;
-      };
-      return {
-        isNameValid: !res,
-        error: res && datasetExistsError(selectedDatasetType.value["value"]),
-      };
-    })
-    .catch(() => {
-      return { isNameValid: false, error: UNKNOWN_VALIDATION_ERROR };
-    })
-    .finally(() => {
-      validatingForm.value = false;
+
+  try {
+    return await runDatasetNameValidation({
+      name: uploadedDatasetName.value,
+      datasetType: selectedDatasetType.value["value"],
+      datasetTypes,
+      checkIfExists: async ({ name, type }) => {
+        const res = await datasetService.check_if_exists({ name, type });
+        return res.data.exists;
+      },
     });
+  } finally {
+    validatingForm.value = false;
+  }
 };
 
 // Clears any details related to the directory that is currently selected for upload, and the files within it.
@@ -1005,12 +952,16 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (willAssignSourceRawData.value && !selectedRawData.value) ||
-      (willAssignProject.value && !projectSelected.value) ||
-      (willAssignSourceInstrument.value && !selectedSourceInstrument.value)
+      hasMetadataAssignmentError({
+        willAssignSourceRawData: willAssignSourceRawData.value,
+        selectedRawData: selectedRawData.value,
+        willAssignProject: willAssignProject.value,
+        projectSelected: projectSelected.value,
+        willAssignSourceInstrument: willAssignSourceInstrument.value,
+        selectedSourceInstrument: selectedSourceInstrument.value,
+      })
     ) {
       formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
-      return;
     }
   }
 
@@ -1471,31 +1422,6 @@ const uploadFilesWithTus = async (files, endpoint) => {
   }
 
   return true;
-};
-
-const buildSizeManifest = (files) => {
-  const normalized = files.map((file) => {
-    const relativePath = file.webkitRelativePath
-      ? file.webkitRelativePath
-          .replace(/\\/g, "/")
-          .split("/")
-          .slice(1)
-          .join("/")
-      : file.name.replace(/\\/g, "/").replace(/^\.\//, "");
-    return {
-      path: relativePath,
-      size: file.size,
-    };
-  });
-
-  normalized.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-
-  return {
-    mode: "path-size-v1",
-    file_count: normalized.length,
-    total_size: normalized.reduce((sum, f) => sum + f.size, 0),
-    files: normalized,
-  };
 };
 
 const handleUploadComplete = async () => {

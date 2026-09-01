@@ -26,7 +26,7 @@ function time(value) {
    * date("2023-06-14T01:18:40.501Z") -> "01:18:40 AM"
    */
   if (value == null) return null;
-  return dayjs(value).format("HH:mm:ss A");
+  return dayjs(value).format("hh:mm:ss A");
 }
 
 function displayDateTime(value) {
@@ -153,5 +153,6 @@ export {
   fromNow,
   getMidnightNextDay,
   readableDuration,
-  time,
+  time
 };
+

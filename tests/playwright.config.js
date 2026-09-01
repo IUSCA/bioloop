@@ -1,5 +1,7 @@
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({
+  path: path.resolve(__dirname, '.env.default'),
+});
 
 const { defineConfig, devices } = require('@playwright/test');
 const testRuntimeConfig = require('config');
@@ -123,7 +125,7 @@ module.exports = {
       {
         name: 'operator_notifications',
         use: { ...devices['Desktop Chrome'], storageState: OPERATOR_STORAGE_STATE },
-        dependencies: ['admin_notifications', 'operator_login'],
+        dependencies: ['operator_login'],
         testMatch: [
           '/view/authenticated/notifications/non_user_role_notifications.spec.js',
           '/view/authenticated/notifications/notification_cross_user_state.spec.js',

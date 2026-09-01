@@ -6,6 +6,14 @@
   --va-list-item-label-caption-color: rgb(148 163 184);
   --va-checkbox-square-background-color: var(--va-background-element);
   --va-checkbox-square-border: solid 0.0625rem var(--va-secondary);
+  /* !important: Vuestic applyPreset writes these on :root at runtime. */
+  --va-secondary: #475569 !important;
+  --va-text-secondary: #475569 !important;
+}
+
+:root.dark {
+  --va-secondary: #cbd5e1 !important;
+  --va-text-secondary: #cbd5e1 !important;
 }
 
 div.inner-loading__overlay {
@@ -24,11 +32,6 @@ div.va-modal--fixed-layout div.va-modal__header div.va-modal__title {
 /* va-select drop downs are not visible if the component is on a modal */
 div.va-dropdown__content.va-dropdown__content-wrapper {
   z-index: calc(var(--va-z-index-teleport-overlay) + 100);
-}
-
-/* Clear icon is too big and its font size is set by element style tag in the vuestic library */
-.va-input-wrapper__field i.va-icon {
-  font-size: 24px !important;
 }
 
 /* In dark mode, the list item text color is not changing and the original color does not look good.

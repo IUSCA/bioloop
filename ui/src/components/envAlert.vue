@@ -1,5 +1,8 @@
 <template>
-  <va-alert v-if="showEnv" :icon="props.icon" :color="props.color" dense>
+  <va-alert v-if="showEnv" :color="props.color" dense>
+    <template #icon>
+      <Icon :icon="props.icon" class="text-xl" />
+    </template>
     Mode: {{ _env }}
   </va-alert>
 </template>
@@ -16,7 +19,7 @@ const props = defineProps({
   },
   icon: {
     type: String,
-    default: "info",
+    default: "mdi:information",
   },
 });
 

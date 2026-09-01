@@ -10,7 +10,7 @@
           type="text"
           :placeholder="props.placeholder"
           v-model="text"
-          class="w-full autocomplete-input"
+          class="w-full"
           @click="openResults"
           @clear="onClear"
           :disabled="props.disabled"
@@ -36,11 +36,10 @@
           :data-testid="`${props.dataTestId}--search-results-li__loading`"
         >
           <div class="flex">
-            <va-icon
-              class="mx-auto"
-              name="loop"
-              spin="clockwise"
-              color="primary"
+            <Icon
+              class="mx-auto animate-spin text-2xl"
+              icon="mdi:loading"
+              style="color: var(--va-primary)"
             />
           </div>
         </li>
@@ -82,7 +81,7 @@
           <span
             class="flex gap-2 items-center justify-center va-text-secondary"
           >
-            <i-mdi:magnify-remove-outline class="flex-none text-xl" />
+            <Icon icon="mdi:magnify-remove-outline" class="flex-none text-xl" />
             <span class="flex-none">None matched</span>
           </span>
         </li>
@@ -102,7 +101,7 @@
               <span
                 class="flex gap-2 items-center justify-center va-text-secondary"
               >
-                <i-mdi:chevron-down class="flex-none text-xl" />
+                <Icon icon="mdi:chevron-down" class="flex-none text-xl" />
                 <span class="flex-none">Load More</span>
               </span>
             </button>
@@ -248,12 +247,3 @@ function loadMore() {
   emit("load-more");
 }
 </script>
-
-<style lang="scss">
-.autocomplete-input {
-  /* Clear icon is too big and its font size is set by element style tag in the vuestic library */
-  .va-input-wrapper__field i.va-icon {
-    font-size: 24px !important;
-  }
-}
-</style>

@@ -1,113 +1,114 @@
+/**
+ * Verifies the initial step controls and the Next/Previous button states as
+ * the user moves into and completes General Info.
+ */
 import {
   selectAutocompleteResult,
   selectDropdownOption,
 } from '../../../../actions';
-import { navigateToNextStep } from '../../../../actions/stepper';
+import {
+  IMPORT_NEXT_BUTTON_TEST_ID,
+  IMPORT_PATH,
+  navigateToImportGeneralInfo,
+  navigateToImportSelectDirectory,
+} from '../../../../actions/datasetImport';
 import { expect, test } from '../../../../fixtures';
 
-const NEXT_BUTTON_TEST_ID = 'import-next-button';
 const PREVIOUS_BUTTON_TEST_ID = 'import-previous-button';
 
-test.describe.serial('Dataset Import — Next/Previous buttons', () => {
-  let page;
+test.describe('Dataset Import — Next/Previous buttons', () => {
+  test(
+    'should show the expected controls on initial page load',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await navigateToImportSelectDirectory(page);
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    await page.goto('/datasets/import');
-  });
+      await expect(page).toHaveURL(IMPORT_PATH);
 
-  test('should show Previous as disabled and Next as disabled on page load', async () => {
-    await expect(page.getByTestId(PREVIOUS_BUTTON_TEST_ID)).toBeDisabled();
-    await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
-  });
+      const selectDirectoryStep = page.getByTestId('step-button-0');
+      const generalInfoStep = page.getByTestId('step-button-1');
+      const importStep = page.getByTestId('step-button-2');
 
-  test.describe('should enable Next after an import source and directory are selected', () => {
-    test.beforeAll(async () => {
-      // Wait for import sources to load, then verify the dropdown has a selection
-      await page.waitForSelector('[data-testid="import-source-select"] .va-select-content__option');
-    });
+      await expect(
+        selectDirectoryStep.getByTestId('step-label'),
+      ).toHaveText('Select Directory');
+      await expect(
+        generalInfoStep.getByTestId('step-label'),
+      ).toHaveText('General Info');
+      await expect(importStep.getByTestId('step-label')).toHaveText('Import');
 
-    test('should keep Next disabled when import source is selected but no directory chosen', async () => {
-      // The import source is auto-selected on mount; Next should still be disabled
-      // because no directory has been selected yet
-      await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
-    });
+      await expect(selectDirectoryStep).toBeEnabled();
+      await expect(generalInfoStep).toBeDisabled();
+      await expect(importStep).toBeDisabled();
 
-    test.describe('should enable Next once a directory is selected', () => {
-      test.beforeAll(async () => {
-        // Attempt to open the file typeahead and select a directory.
-        // This test is skipped if no directories are available in the test environment.
-        await page.click(`input[data-testid="import-file-autocomplete"]`);
+      await expect(
+        page.getByTestId(PREVIOUS_BUTTON_TEST_ID),
+      ).toBeDisabled();
 
-        // Wait for either loading to start or results to appear
-        await page.waitForSelector(
-          '[data-testid="import-file-autocomplete--search-results-ul"], [data-testid="import-file-autocomplete--search-results-ul__loading"]',
-        );
+      await expect(
+        page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID),
+      ).toBeDisabled();
+    },
+  );
 
-        // Wait for the loading indicator to clear and the actual results to appear
-        await page.waitForSelector('[data-testid="import-file-autocomplete--search-results-ul"]', { timeout: 15000 });
+  test(
+    'should show Previous as enabled and Next as disabled when no fields are filled',
+    async ({ page }) => {
+      const onGeneralInfo = await navigateToImportGeneralInfo(page);
+
+      test.skip(
+        !onGeneralInfo,
+        'Could not reach General Info step',
+      );
+
+      await expect(
+        page.getByTestId(PREVIOUS_BUTTON_TEST_ID),
+      ).toBeEnabled();
+
+      await expect(
+        page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID),
+      ).toBeDisabled();
+    },
+  );
+
+  test(
+    'should show Next as enabled after filling the form',
+    async ({ page }) => {
+      const onGeneralInfo = await navigateToImportGeneralInfo(page);
+
+      test.skip(
+        !onGeneralInfo,
+        'Could not reach General Info step',
+      );
+
+      // Select source Raw Data
+      await selectAutocompleteResult({
+        page,
+        testId: 'import-metadata-dataset-autocomplete',
+        resultIndex: 0,
       });
 
-      test('should enable Next after a directory is selected', async () => {
-        const hasResults = await page.locator('[data-testid^="import-file-autocomplete--search-result-li-"]').count() > 0;
-
-        test.skip(!hasResults, 'No import directories available in test environment');
-
-        // Select the first result
-        await page.getByTestId('import-file-autocomplete--search-result-li-0').click();
-
-        await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeEnabled();
-        await expect(page.getByTestId(PREVIOUS_BUTTON_TEST_ID)).toBeDisabled();
-      });
-    });
-  });
-
-  test.describe('should show Previous enabled and Next disabled on the General Info step', () => {
-    test.beforeAll(async () => {
-      const nextEnabled = await page.getByTestId(NEXT_BUTTON_TEST_ID).isEnabled();
-      if (!nextEnabled) {
-        test.skip();
-        return;
-      }
-      await navigateToNextStep({ page, nextButtonTestId: NEXT_BUTTON_TEST_ID });
-    });
-
-    test('should show Previous as enabled and Next as disabled when no fields are filled', async () => {
-      // Wait for General Info step to load
-      await page.waitForSelector('[data-testid="import-metadata-dataset-type-select"]');
-
-      await expect(page.getByTestId(PREVIOUS_BUTTON_TEST_ID)).toBeEnabled();
-      await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeDisabled();
-    });
-
-    test.describe('should enable Next after General Info fields are filled', () => {
-      test.beforeAll(async () => {
-        // Select source Raw Data
-        await selectAutocompleteResult({
-          page,
-          testId: 'import-metadata-dataset-autocomplete',
-          resultIndex: 0,
-        });
-
-        // Select Project
-        await selectAutocompleteResult({
-          page,
-          testId: 'import-metadata-project-autocomplete',
-          resultIndex: 0,
-        });
-
-        // Select Source Instrument
-        await selectDropdownOption({
-          page,
-          testId: 'import-metadata-source-instrument-select',
-          optionIndex: 0,
-        });
+      // Select Project
+      await selectAutocompleteResult({
+        page,
+        testId: 'import-metadata-project-autocomplete',
+        resultIndex: 0,
       });
 
-      test('should show Next as enabled after filling the form', async () => {
-        await expect(page.getByTestId(NEXT_BUTTON_TEST_ID)).toBeEnabled();
-        await expect(page.getByTestId(PREVIOUS_BUTTON_TEST_ID)).toBeEnabled();
+      // Select Source Instrument
+      await selectDropdownOption({
+        page,
+        testId: 'import-metadata-source-instrument-select',
+        optionIndex: 0,
       });
-    });
-  });
+
+      await expect(
+        page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID),
+      ).toBeEnabled();
+
+      await expect(
+        page.getByTestId(PREVIOUS_BUTTON_TEST_ID),
+      ).toBeEnabled();
+    },
+  );
 });

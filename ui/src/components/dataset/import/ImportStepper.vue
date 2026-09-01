@@ -302,15 +302,18 @@
 
 <script setup>
 import config from "@/config";
-import Constants from "@/constants";
 import datasetService from "@/services/dataset";
+import { buildImportPayload } from "@/services/dataset/payload";
+import {
+  hasMetadataAssignmentError,
+  validateDatasetName as runDatasetNameValidation,
+} from "@/services/dataset/validation";
 import fileSystemService from "@/services/fs";
 import importService from "@/services/import";
 import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { Icon } from "@iconify/vue";
 import { watchDebounced } from "@vueuse/core";
 import { VaPopover } from "vuestic-ui";
 
@@ -323,11 +326,6 @@ const STEP_KEYS = {
 };
 
 // Various errors that may be shown to the user during the process of importing a dataset.
-const UNKNOWN_VALIDATION_ERROR = "An unknown error occurred";
-const DATASET_NAME_REQUIRED_ERROR = "Dataset name cannot be empty";
-const DATASET_NAME_HAS_SPACES_ERROR = "Dataset name cannot contain spaces";
-const DATASET_NAME_MIN_LENGTH_ERROR =
-  "Dataset name must have 3 or more characters.";
 const NO_FILE_SELECTED_ERROR = "A file must be selected for import";
 
 // Import sources loaded from the API
@@ -492,22 +490,17 @@ const isNextButtonDisabled = computed(() => {
 /**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being imported.
  */
-const importFormData = computed(() => {
-  return {
-    name: importedDatasetName.value,
-    type: selectedDatasetType.value["value"],
-    ...(selectedRawData.value && {
-      src_dataset_id: selectedRawData.value.id,
-    }),
-    ...(projectSelected.value &&
-      !willCreateNewProject.value && { project_id: projectSelected.value.id }),
-    ...(selectedSourceInstrument.value && {
-      src_instrument_id: selectedSourceInstrument.value.id,
-    }),
-    origin_path: selectedFile.value.path,
-    create_method: Constants.DATASET_CREATE_METHODS.IMPORT,
-  };
-});
+const importFormData = computed(() => 
+    buildImportPayload({
+      name: importedDatasetName.value,
+    type: selectedDatasetType.value.value,
+    selectedRawData: selectedRawData.value,
+    projectSelected: projectSelected.value,
+    selectedSourceInstrument: selectedSourceInstrument.value,
+    selectedFile: selectedFile.value,
+    willCreateNewProject: willCreateNewProject.value,
+    })
+);
 
 const resetRawDataSearch = () => {
   selectedRawData.value = null;
@@ -574,70 +567,22 @@ const isStepperButtonDisabled = (stepIndex) => {
   );
 };
 
-// Async function to check if a Dataset already exists in the system for a given name and type.
-const validateIfExists = (value) => {
-  return new Promise((resolve, reject) => {
-    // Vuestic claims that it should not run async validation if synchronous
-    // validation fails, but it seems to be triggering async validation
-    // nonetheless when `value` is ''. Hence the explicit check for whether
-    // `value` is falsy.
-    if (!value) {
-      resolve(true);
-    } else {
-      datasetService
-        .check_if_exists({
-          type: selectedDatasetType.value["value"],
-          name: value,
-        })
-        .then((res) => {
-          resolve(res.data.exists);
-        })
-        .catch((_e) => {
-          // console.error(_e);
-          reject();
-        });
-    }
-  });
-};
-
-/**
- * Async function to check if a name selected for the Dataset being imported is valid.
- *
- * Conditions to consider a name valid:
- * - Not empty
- * - Minimum length of 3 characters
- * - No spaces
- * - Does not already exist in the system
- */
 const validateDatasetName = async () => {
-  if (!importedDatasetName.value) {
-    return { isNameValid: false, error: DATASET_NAME_REQUIRED_ERROR };
-  } else if (importedDatasetName.value.length < 3) {
-    return { isNameValid: false, error: DATASET_NAME_MIN_LENGTH_ERROR };
-  } else if (importedDatasetName.value.indexOf(" ") > -1) {
-    return { isNameValid: false, error: DATASET_NAME_HAS_SPACES_ERROR };
-  }
-
   validatingForm.value = true;
-  return validateIfExists(importedDatasetName.value)
-    .then((res) => {
-      const datasetExistsError = (datasetType) => {
-        const datasetTypeLabel = datasetTypes.find(
-          (type) => type.value === datasetType,
-        ).label;
-        return `A ${datasetTypeLabel} with this name already exists.`;
-      };
-      return {
-        isNameValid: !res,
-        error: res && datasetExistsError(selectedDatasetType.value["value"]),
-      };
-    })
-    .catch(() => {
-      return { isNameValid: false, error: UNKNOWN_VALIDATION_ERROR };
-    })
-    .finally(() => {
-      validatingForm.value = false;
+
+  try {
+    return await runDatasetNameValidation({
+      name: importedDatasetName.value,
+      datasetType: selectedDatasetType.value["value"],
+      datasetTypes,
+      checkIfExists: async ({ name, type }) => {
+        const res = await datasetService.check_if_exists({ name, type });
+        return res.data.exists;
+      },
     });
+  } finally {
+    validatingForm.value = false;
+  }
 };
 
 // Reset form errors across all steps.
@@ -663,12 +608,17 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-      (willAssignSourceRawData.value && !selectedRawData.value) ||
-      (willAssignProject.value && !projectSelected.value) ||
-      (willAssignSourceInstrument.value && !selectedSourceInstrument.value)
-    ) {
-      formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
-    }
+  hasMetadataAssignmentError({
+    willAssignSourceRawData: willAssignSourceRawData.value,
+    selectedRawData: selectedRawData.value,
+    willAssignProject: willAssignProject.value,
+    projectSelected: projectSelected.value,
+    willAssignSourceInstrument: willAssignSourceInstrument.value,
+    selectedSourceInstrument: selectedSourceInstrument.value,
+  })
+) {
+  formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
+}
   }
 
   if (step.value === 2) {

@@ -63,9 +63,11 @@
           class="shadow"
           preset="primary"
           color="info"
-          icon="cloud_sync"
           disabled
-        />
+          aria-label="Staged"
+        >
+          <Icon icon="material-symbols:cloud-sync" class="text-xl" />
+        </va-button>
       </div>
       <div v-else class="flex justify-center">
         <!-- dataset is not staged and is being archived -->
@@ -98,9 +100,11 @@
           class="shadow flex-none"
           preset="primary"
           color="info"
-          icon="cloud_sync"
+          aria-label="Stage dataset"
           @click="openModalToStageProject(rowData)"
-        />
+        >
+          <Icon icon="material-symbols:cloud-sync" class="text-xl" />
+        </va-button>
       </div>
     </template>
 
@@ -110,24 +114,14 @@
           class="shadow"
           preset="primary"
           color="info"
-          icon="cloud_download"
+          aria-label="Download dataset"
           @click="openModalToDownloadProject(rowData)"
           :disabled="!rowData.is_staged"
-        />
+        >
+          <Icon icon="material-symbols:cloud-download" class="text-xl" />
+        </va-button>
       </div>
     </template>
-
-    <!-- <template #cell(share)="{ rowData }">
-      <div class="">
-        <va-button
-          class="shadow"
-          preset="primary"
-          color="info"
-          icon="share"
-          @click="openModalToShareProject(rowData)"
-        />
-      </div>
-    </template> -->
 
     <template #cell(metadata)="{ rowData }">
       <maybe :data="rowData?.metadata?.num_genome_files" />
@@ -410,7 +404,6 @@ const columns = computed(() => [
   },
   { key: "stage", width: "70px", thAlign: "center", tdAlign: "center" },
   { key: "download", width: "100px", thAlign: "center", tdAlign: "center" },
-  // { key: "share", width: "70px", thAlign: "center", tdAlign: "center" },
   {
     key: "type",
     sortable: true,

@@ -15,17 +15,15 @@
           >{{ tooltipParts.suffix }}
         </div>
       </template>
-      <va-icon
-        name="info_outline"
-        size="small"
-        class="ml-1 va-text-secondary cursor-help"
+      <Icon
+        icon="mdi:information-outline"
+        class="ml-1 text-lg va-text-secondary cursor-help"
       />
     </va-popover>
   </div>
 </template>
 
 <script setup>
-import { Icon } from "@iconify/vue";
 import { computed } from "vue";
 
 const props = defineProps({
@@ -41,10 +39,10 @@ const props = defineProps({
 });
 
 const CREATE_METHOD_CONFIG = {
-  UPLOAD: { icon: "mdi-cloud-upload-outline", label: "Upload" },
-  IMPORT: { icon: "mdi-file-import-outline", label: "Import" },
-  SCAN: { icon: "mdi-radar", label: "Scan" },
-  ON_DEMAND: { icon: "mdi-gesture-tap", label: "On Demand" },
+  UPLOAD: { icon: "mdi:cloud-upload-outline", label: "Upload" },
+  IMPORT: { icon: "mdi:file-import-outline", label: "Import" },
+  SCAN: { icon: "mdi:radar", label: "Scan" },
+  ON_DEMAND: { icon: "mdi:gesture-tap", label: "On Demand" },
 };
 
 // Each entry is { prefix, suffix } — the path is rendered as <code> between them.

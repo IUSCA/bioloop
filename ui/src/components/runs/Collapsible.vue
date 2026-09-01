@@ -12,7 +12,7 @@
       </div>
 
       <Icon
-        :icon="isCollapsed ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+        :icon="isCollapsed ? 'mdi:chevron-up' : 'mdi:chevron-down'"
         class="text-xl collapse_icon flex-none"
       />
     </div>

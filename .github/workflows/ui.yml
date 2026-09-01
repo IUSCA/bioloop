@@ -1,0 +1,121 @@
+# Lint + production build for ui/. No deploy.
+name: UI CI
+
+on:
+  pull_request:
+    paths:
+      - "ui/**"
+      - "tests/**"
+      - "docker-compose-e2e.yml"
+      - ".github/workflows/ui.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ui/**"
+      - "tests/**"
+      - "docker-compose-e2e.yml"
+      - ".github/workflows/ui.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: ui
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "21"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Show Node and npm
+        run: node -v && npm -v
+        
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run lint
+        run: npm run lint:check
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build UI
+        run: npm run build
+
+  smoke:
+    name: Import Smoke Tests
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "21"
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: tests
+        run: npx playwright install --with-deps chromium
+
+      - name: Start E2E stack
+        run: |
+          docker compose -f docker-compose-e2e.yml up -d --build \
+            ui init_test_data
+          docker compose -f docker-compose-e2e.yml wait init_test_data
+
+      - name: Wait for UI
+        run: |
+          curl --insecure --fail --silent --show-error \
+            --retry 60 --retry-delay 5 --retry-all-errors \
+            https://localhost/
+
+      - name: Run import smoke tests
+        working-directory: tests
+        run: |
+          npx playwright test \
+            --project=admin_import \
+            --project=user_import \
+            --grep @smoke
+
+      - name: Show E2E service logs on failure
+        if: failure()
+        run: docker compose -f docker-compose-e2e.yml logs --no-color
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: import-smoke-playwright-report
+          path: |
+            tests/playwright-report/
+            tests/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop E2E stack
+        if: always()
+        run: docker compose -f docker-compose-e2e.yml down -v --remove-orphans
