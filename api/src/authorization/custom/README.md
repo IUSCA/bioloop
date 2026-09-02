@@ -167,14 +167,6 @@ When merging updates from the base bioloop repository:
 **Example conflict resolution in `index.js`:**
 
 ```javascript
-<<<<<<< HEAD (your derived app)
-const projectPolicies = require('./custom/policies/project');
-const experimentPolicies = require('./custom/policies/experiment');
-=======
-// (base repo has no changes in this section)
->>>>>>> upstream (base bioloop)
-
-// Keep both:
 const projectPolicies = require('./custom/policies/project');
 const experimentPolicies = require('./custom/policies/experiment');
 ```
