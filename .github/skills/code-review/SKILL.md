@@ -70,11 +70,15 @@ Apply the review criteria from the relevant reference file(s) for the changed fi
 
 | Files Changed | Reference File |
 |---|---|
-| `*.vue`, components, composables | `references/vue3-tailwind.md` |
-| `routes/`, `services/`, `middleware/`, Express files | `references/express-backend.md` |
-| `prisma/schema.prisma`, migrations, DB query code | `references/postgres.md` |
-| `package.json`, `vite.config.*`, `.env*`, CI files | `references/general-js.md` |
-| Any JS/TS logic (shared util, helpers, services) | `references/general-js.md` |
+| `*.vue`, components, composables | `docs/contributing/conventions/vue3-tailwind.md` |
+| `routes/`, `services/`, `middleware/`, Express files | `docs/contributing/conventions/express-backend.md` |
+| `prisma/schema.prisma`, migrations, DB query code | `docs/contributing/conventions/postgres-prisma.md` |
+| `package.json`, `vite.config.*`, `.env*`, CI files | `docs/contributing/conventions/general-javascript.md` |
+| Any JS/TS logic (shared util, helpers, services) | `docs/contributing/conventions/general-javascript.md` |
+
+These reference files live under `docs/`, not beside this skill, so that they are
+shared by every developer and agent working in the repository rather than being
+specific to GitHub tooling. Paths above are relative to the repository root.
 
 You may need to consult multiple reference files for a single PR (e.g., a feature that touches Vue + Express + SQL).
 

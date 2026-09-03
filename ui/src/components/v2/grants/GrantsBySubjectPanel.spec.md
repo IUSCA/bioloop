@@ -5,7 +5,7 @@
 **Context:** Used inside per-resource tabs (e.g., `CollectionGrantsTab`). The resource is established by the parent — this component does not identify or describe the resource.  
 **Audience:** Administrators and data stewards managing access on a specific resource.
 
-> **Coding Standards:** [UI Coding Standards](../../../docs/ui/coding_standards.md). Use Tailwind CSS, dark mode variants, `border-solid`, and existing utility components.
+> **Coding Standards:** [UI Coding Standards](../../../../../docs/contributing/ui-coding-standards.md). Use Tailwind CSS, dark mode variants, `border-solid`, and existing utility components.
 
 ---
 

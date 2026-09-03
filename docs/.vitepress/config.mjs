@@ -13,9 +13,10 @@ let vitePressOptions =  {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'UI', link: '/ui/overview' },
-      { text: 'API', link: '/api/introduction' },
-      { text: 'Workers', link: '/worker/overview' },
+      { text: 'Guides', link: '/guides/install-docker' },
+      { text: 'Reference', link: '/reference/architecture' },
+      { text: 'Contributing', link: '/contributing/ui-coding-standards' },
+      { text: 'Design', link: '/design/' },
 
     ],
 

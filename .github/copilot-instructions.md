@@ -2,7 +2,12 @@
 
 ## UI Development (`ui/` folder)
 
-Consult [UI Coding Standards](../docs/ui/coding_standards.md) for:
+Project conventions live under [`docs/contributing/`](../docs/contributing/), not in this
+file, so that every developer and AI agent shares one source regardless of tooling.
+See [Stack Conventions](../docs/contributing/conventions/) for JavaScript, Express,
+PostgreSQL/Prisma, and Vue 3 rules.
+
+Consult [UI Coding Standards](../docs/contributing/ui-coding-standards.md) for:
 - Detailed styling guidelines
 - Icon usage and libraries
 - Component best practices
