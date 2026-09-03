@@ -38,6 +38,7 @@ frontmatter, and repeats them in a banner at the top.
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
 - [Groups implementation status](./groups/implementation-status.md) — code map and gap register for the design records above
+- [Groups design review](./groups/design-review.md) — an independent review that argues with the records above. Nothing in it has been decided.
 
 ## Ideas
 

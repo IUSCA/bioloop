@@ -31,6 +31,7 @@
     "combinators",
     "datamodel",
     "dataproducts",
+    "dataverse",
     "dbeaver",
     "dbgenerated",
     "dbname",
@@ -197,7 +198,8 @@
     "vueuse",
     "watchlib",
     "WCAG",
-    "weakcb"
+    "weakcb",
+    "zenodo"
   ],
   "ignorePaths": [
     "cspell.json",

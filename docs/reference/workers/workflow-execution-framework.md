@@ -1,19 +1,13 @@
 ---
 title: Workflow Execution Framework
-status: idea
-implemented: partial
-last_verified: 2026-09-02
+order: 1
 ---
-
-::: danger Idea — not committed to
-This is a *target* design for the Celery layer, not a description of it. The running system is described in [Workers](/reference/workers/overview.md). Read the requirements here as aspirations that the current implementation does not all meet.
-:::
 
 # Celery-Based Workflow Execution Framework
 
 ## Overview
 
-This document specifies the technical requirements, design guidelines, and architectural considerations for implementing a distributed task and workflow execution system using Celery. The system is intended to support robust, scalable, and observable execution of long-running and interdependent business processes.
+This document describes the distributed task and workflow execution system Bioloop runs on Celery. It covers the requirements the tasks and workflows are built to, the guidelines new tasks follow, and the architectural considerations behind the layer. The system executes long-running and interdependent business processes with fault tolerance and observability.
 
 ## Objectives
 
@@ -36,7 +30,7 @@ This document specifies the technical requirements, design guidelines, and archi
 * Tasks must only contain business logic.
 * Record-keeping, orchestration, and error handling should be externally managed via configuration.
 
-### 3Metadata and Persistence
+### Metadata and Persistence
 
 Each task must have a corresponding database record containing:
 
