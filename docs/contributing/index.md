@@ -11,6 +11,7 @@ keeping them accurate keeps generated code consistent too.
 
 - [UI coding standards](./ui-coding-standards.md)
 - [Modal component pattern](./modal-component-pattern.md)
+- [V2 page patterns](./v2-page-patterns.md) — capability gating, list and detail page shapes
 - [API tooling](./api-tooling.md) — linting and formatting
 - [Spell checking](./spellcheck.md)
 - [Stack conventions](./conventions/) — JavaScript, Express, PostgreSQL/Prisma, Vue 3

@@ -1,0 +1,691 @@
+Title: ValidationChain | express-validator
+
+URL Source: http://express-validator.github.io/docs/api/validation-chain/
+
+Published Time: Wed, 19 Nov 2025 11:01:44 GMT
+
+Markdown Content:
+The validation chain contains all of the built-in validators, sanitizers and utility methods to fine tune the behaviour of the validation for a certain field or fields.
+
+Validation chains are created by the [`check()` functions](https://express-validator.github.io/docs/api/check), and they can be used in a few ways:
+
+*   as express.js route handlers, which will run the validation automatically;
+*   as parameter of some of express-validator's other functions, like `oneOf()` or `checkExact()`;
+*   [standalone, where you have full control over when the validation runs and how](https://express-validator.github.io/docs/guides/manually-running).
+
+tip
+
+If you're writing a function that accepts a `ValidationChain`, the TypeScript type can be imported using
+
+`import { ValidationChain } from 'express-validator';`
+
+## Built-in validators[​](http://express-validator.github.io/docs/api/validation-chain/#built-in-validators "Direct link to Built-in validators")
+
+### `.custom()`[​](http://express-validator.github.io/docs/api/validation-chain/#custom "Direct link to custom")
+
+`custom(validator: (value, { req, location, path, pathValues }) => any): ValidationChain`
+
+Adds a custom validator function to the chain.
+
+The field value will be valid if:
+
+*   The custom validator returns truthy; or
+*   The custom validator returns a promise that resolves.
+
+If the custom validator returns falsy, a promise that rejects, or if the function throws, then the value will be considered invalid.
+
+A common use case for `.custom()` is to verify that an e-mail address doesn't already exists. If it does, return an error:
+
+`app.post(  '/signup',  body('email').custom(async value => {    const existingUser = await Users.findUserByEmail(value);    if (existingUser) {      throw new Error('E-mail already in use');    }  }),  (req, res) => {    // Handle request  },);`
+
+If the field was selected using [wildcards or globstars](https://express-validator.github.io/docs/guides/field-selection#advanced-features), you can access the values they matched by using the `pathValues` property. This is useful if you want to use some other property of the same object in your validation:
+
+`app.post(  '/purchase',  [    body('products.*.quantity').custom((quantity, { req, pathValues }) => {      const index = Number(pathValues[0]);      const { id } = req.body.products[index];      if (getProductStock(id) < quantity) {        throw new Error(`There's not enough of product ${id} in stock`);      }    }),  ],  (req, res) => {    // Handle request  },);`
+
+### `.exists()`[​](http://express-validator.github.io/docs/api/validation-chain/#exists "Direct link to exists")
+
+`exists(options?: {  values?: 'undefined' | 'null' | 'falsy',  checkNull?: boolean,  checkFalsy?: boolean}): ValidationChain`
+
+Adds a validator to check if the field exists.
+
+Which values are considered existent depends on `options.values`. By default, it's set to `undefined`:
+
+| `options.values` | Behavior |
+| --- | --- |
+| `undefined` | `undefined` values don't exist |
+| `null` | `undefined` and `null` values don't exist |
+| `falsy` | Falsy values (empty strings, `0`, `false`, `null` and `undefined` values don't exist |
+
+`options.checkNull` and `options.checkFalsy` are deprecated options. They are aliases to setting `options.values` to `null` and `falsy`, respectively.
+
+note
+
+Using `.exists()` is only necessary if you aren't adding any other validator or sanitizer.
+
+### `.isArray()`[​](http://express-validator.github.io/docs/api/validation-chain/#isarray "Direct link to isarray")
+
+`isArray(options?: { min?: number; max?: number }): ValidationChain`
+
+Adds a validator to check that a value is an array. This is analogous to [the JavaScript function `Array.isArray(value)`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray).
+
+You can also check that the array's length is greater than or equal to `options.min` and/or that it's less than or equal to `options.max`.
+
+`// Verifies that the friends list is an arraybody('friends').isArray();// Verifies that ingredients is an array with length >= 0body('ingredients').isArray({ min: 0 });// Verifies that team_members is an array with length >= 0 and <= 10check('team_members').isArray({ min: 0, max: 10 });`
+
+### `.isObject()`[​](http://express-validator.github.io/docs/api/validation-chain/#isobject "Direct link to isobject")
+
+`isObject(options?: { strict?: boolean }): ValidationChain`
+
+Adds a validator to check that a value is an object. For example, `{}`, `{ foo: 'bar' }` and `new MyCustomClass()` would all pass this validator.
+
+If the `strict` option is set to `false`, then this validator works analogous to [`typeof value === 'object'` in pure JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof), where both arrays and the `null` value are considered objects.
+
+### `.isString()`[​](http://express-validator.github.io/docs/api/validation-chain/#isstring "Direct link to isstring")
+
+`isString(): ValidationChain`
+
+Adds a validator to check that a value is a string. This is analogous to a [`typeof value === 'string'` in pure JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof).
+
+### `.isULID()`[​](http://express-validator.github.io/docs/api/validation-chain/#isulid "Direct link to isulid")
+
+`isULID(): ValidationChain`
+
+Adds a validator to check that a value is an [ULID](https://github.com/ulid/spec).
+
+### `.notEmpty()`[​](http://express-validator.github.io/docs/api/validation-chain/#notempty "Direct link to notempty")
+
+`notEmpty(): ValidationChain`
+
+Adds a validator to check that a value is a string that's not empty. This is analogous to `.not().isEmpty()`.
+
+### Standard validators[​](http://express-validator.github.io/docs/api/validation-chain/#standard-validators "Direct link to Standard validators")
+
+info
+
+Please check the documentation on standard validators [here](https://express-validator.github.io/docs/guides/validation-chain#standard-validatorssanitizers).
+
+#### `contains()`[​](http://express-validator.github.io/docs/api/validation-chain/#contains "Direct link to contains")
+
+`contains(elem: any, options?: {  ignoreCase?: boolean;  minOccurrences?: number;}): ValidationChain`
+
+#### `equals()`[​](http://express-validator.github.io/docs/api/validation-chain/#equals "Direct link to equals")
+
+`equals(comparison: string): ValidationChain`
+
+#### `isAbaRouting()`[​](http://express-validator.github.io/docs/api/validation-chain/#isabarouting "Direct link to isabarouting")
+
+`isAbaRouting(): ValidationChain`
+
+#### `isAfter()`[​](http://express-validator.github.io/docs/api/validation-chain/#isafter "Direct link to isafter")
+
+`isAfter(dateOrOptions?: string | {  comparisonDate?: string;}): ValidationChain`
+
+#### `isAlpha()`[​](http://express-validator.github.io/docs/api/validation-chain/#isalpha "Direct link to isalpha")
+
+`isAlpha(locale?: AlphaLocale, options?: {  ignore?: string | string[] | RegExp;}): ValidationChain`
+
+Possible values of AlphaLocale
+
+#### `isAlphanumeric()`[​](http://express-validator.github.io/docs/api/validation-chain/#isalphanumeric "Direct link to isalphanumeric")
+
+`isAlphanumeric(locale?: AlphanumericLocale, options?: {  ignore?: string | RegExp;}): ValidationChain`
+
+Possible values of AlphanumericLocale
+
+#### `isAscii()`[​](http://express-validator.github.io/docs/api/validation-chain/#isascii "Direct link to isascii")
+
+`isAscii(): ValidationChain`
+
+#### `isBase32()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbase32 "Direct link to isbase32")
+
+`isBase32(options?: {  crockford?: boolean;}): ValidationChain`
+
+#### `isBase58()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbase58 "Direct link to isbase58")
+
+`isBase58(): ValidationChain`
+
+#### `isBase64()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbase64 "Direct link to isbase64")
+
+`isBase64(options?: {  urlSafe?: boolean;}): ValidationChain`
+
+#### `isBefore()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbefore "Direct link to isbefore")
+
+`isBefore(date?: string): ValidationChain`
+
+#### `isBIC()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbic "Direct link to isbic")
+
+`isBIC(): ValidationChain`
+
+#### `isBoolean()`[​](http://express-validator.github.io/docs/api/validation-chain/#isboolean "Direct link to isboolean")
+
+`isBoolean(options?: {  strict?: boolean;  loose?: boolean;}): ValidationChain`
+
+#### `isBtcAddress()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbtcaddress "Direct link to isbtcaddress")
+
+`isBtcAddress(): ValidationChain`
+
+#### `isByteLength()`[​](http://express-validator.github.io/docs/api/validation-chain/#isbytelength "Direct link to isbytelength")
+
+`isByteLength(options: {  min?: number;  max?: number;  lt?: number;  gt?: number;}): ValidationChain`
+
+#### `isCreditCard()`[​](http://express-validator.github.io/docs/api/validation-chain/#iscreditcard "Direct link to iscreditcard")
+
+`isCreditCard(options?: {  provider?: 'amex' | 'dinersclub' | 'discover' | 'jcb' | 'mastercard' | 'unionpay' | 'visa';}): ValidationChain`
+
+#### `isCurrency()`[​](http://express-validator.github.io/docs/api/validation-chain/#iscurrency "Direct link to iscurrency")
+
+`isCurrency(options?: {  symbol?: string;  require_symbol?: boolean;  allow_space_after_symbol?: boolean;  symbol_after_digits?: boolean;  allow_negatives?: boolean;  parens_for_negatives?: boolean;  negative_sign_before_digits?: boolean;  negative_sign_after_digits?: boolean;  allow_negative_sign_placeholder?: boolean;  thousands_separator?: string;  decimal_separator?: string;  allow_decimal?: boolean;  require_decimal?: boolean;  digits_after_decimal?: number[];  allow_space_after_digits?: boolean;}): ValidationChain`
+
+#### `isDataURI()`[​](http://express-validator.github.io/docs/api/validation-chain/#isdatauri "Direct link to isdatauri")
+
+`isDataURI(): ValidationChain`
+
+#### `isDate()`[​](http://express-validator.github.io/docs/api/validation-chain/#isdate "Direct link to isdate")
+
+`isDate(options?: {  format?: string;  delimiters?: string[];  strictMode?: boolean;}): ValidationChain`
+
+#### `isDecimal()`[​](http://express-validator.github.io/docs/api/validation-chain/#isdecimal "Direct link to isdecimal")
+
+`isDecimal(options?: {  decimal_digits?: string;  force_decimal?: boolean;  locale?: AlphanumericLocale;  blacklisted_chars?: string;}): ValidationChain`
+
+#### `isDivisibleBy()`[​](http://express-validator.github.io/docs/api/validation-chain/#isdivisibleby "Direct link to isdivisibleby")
+
+`isDivisibleBy(number: number): ValidationChain`
+
+#### `isEAN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isean "Direct link to isean")
+
+`isEAN(): ValidationChain`
+
+#### `isEmail()`[​](http://express-validator.github.io/docs/api/validation-chain/#isemail "Direct link to isemail")
+
+`isEmail(options?: {  allow_display_name?: boolean;  allow_underscores?: boolean;  allow_utf8_local_part?: boolean;  require_tld?: boolean;  ignore_max_length?: boolean;  allow_ip_domain?: boolean;  domain_specific_validation?: boolean;  blacklisted_chars?: string;  host_blacklist?: (string | RegExp)[];  host_whitelist?: (string | RegExp)[];}): ValidationChain`
+
+#### `isEmpty()`[​](http://express-validator.github.io/docs/api/validation-chain/#isempty "Direct link to isempty")
+
+`isEmpty(options?: {  ignore_whitespace: boolean;}): ValidationChain`
+
+#### `isEthereumAddress()`[​](http://express-validator.github.io/docs/api/validation-chain/#isethereumaddress "Direct link to isethereumaddress")
+
+`isEthereumAddress(): ValidationChain`
+
+#### `isFQDN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isfqdn "Direct link to isfqdn")
+
+`isFQDN(options?: {  require_tld?: boolean;  allow_underscores?: boolean;  allow_trailing_dot?: boolean;  allow_numeric_tld?: boolean;  allow_wildcard?: boolean;  ignore_max_length?: boolean;}): ValidationChain`
+
+#### `isFloat()`[​](http://express-validator.github.io/docs/api/validation-chain/#isfloat "Direct link to isfloat")
+
+`isFloat(options?: {  min?: number;  max?: number;  lt?: number;  gt?: number;  locale?: AlphanumericLocale;}): ValidationChain`
+
+#### `isFreightContainerID()`[​](http://express-validator.github.io/docs/api/validation-chain/#isfreightcontainerid "Direct link to isfreightcontainerid")
+
+`isFreightContainerID(): ValidationChain`
+
+#### `isFullWidth()`[​](http://express-validator.github.io/docs/api/validation-chain/#isfullwidth "Direct link to isfullwidth")
+
+`isFullWidth(): ValidationChain`
+
+#### `isHalfWidth()`[​](http://express-validator.github.io/docs/api/validation-chain/#ishalfwidth "Direct link to ishalfwidth")
+
+`isHalfWidth(): ValidationChain`
+
+#### `isHash()`[​](http://express-validator.github.io/docs/api/validation-chain/#ishash "Direct link to ishash")
+
+`isHash(algorithm: HashAlgorithm): ValidationChain`
+
+Possible values of HashAlgorithm
+
+#### `isHexColor()`[​](http://express-validator.github.io/docs/api/validation-chain/#ishexcolor "Direct link to ishexcolor")
+
+`isHexColor(): ValidationChain`
+
+#### `isHexadecimal()`[​](http://express-validator.github.io/docs/api/validation-chain/#ishexadecimal "Direct link to ishexadecimal")
+
+`isHexadecimal(): ValidationChain`
+
+#### `isHSL()`[​](http://express-validator.github.io/docs/api/validation-chain/#ishsl "Direct link to ishsl")
+
+`isHSL(): ValidationChain`
+
+#### `isIBAN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiban "Direct link to isiban")
+
+`isIBAN(options?: {  whitelist?: readonly IBANCode[];  blacklist?: readonly IBANCode[];}): ValidationChain`
+
+#### `isIdentityCard()`[​](http://express-validator.github.io/docs/api/validation-chain/#isidentitycard "Direct link to isidentitycard")
+
+`isIdentityCard(locale?: IdentityCardLocale): ValidationChain`
+
+Possible values of IdentityCardLocale
+
+#### `isIMEI()`[​](http://express-validator.github.io/docs/api/validation-chain/#isimei "Direct link to isimei")
+
+`isIMEI(options?: {  allow_hyphens?: boolean;}): ValidationChain`
+
+#### `isIP()`[​](http://express-validator.github.io/docs/api/validation-chain/#isip "Direct link to isip")
+
+`isIP(version?: 4 | 6): ValidationChain`
+
+#### `isIPRange()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiprange "Direct link to isiprange")
+
+`isIPRange(version?: 4 | 6): ValidationChain`
+
+#### `isISBN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isisbn "Direct link to isisbn")
+
+`isISBN(versionOrOptions?: number | {  version?: '10' | '13';}): ValidationChain`
+
+#### `isISSN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isissn "Direct link to isissn")
+
+`isISSN(options?: {  case_sensitive?: boolean;  require_hyphen?: boolean;}): ValidationChain`
+
+#### `isISIN()`[​](http://express-validator.github.io/docs/api/validation-chain/#isisin "Direct link to isisin")
+
+`isISIN(): ValidationChain`
+
+#### `isISO6346()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso6346 "Direct link to isiso6346")
+
+`isISO6346(): ValidationChain`
+
+#### `isISO6391()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso6391 "Direct link to isiso6391")
+
+`isISO6391(): ValidationChain`
+
+#### `isISO8601()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso8601 "Direct link to isiso8601")
+
+`isISO8601(options?: {  strict?: boolean;  strictSeparator?: boolean;}): ValidationChain`
+
+#### `isISO31661Numeric()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso31661numeric "Direct link to isiso31661numeric")
+
+`isISO31661Numeric(): ValidationChain`
+
+#### `isISO31661Alpha2()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso31661alpha2 "Direct link to isiso31661alpha2")
+
+`isISO31661Alpha2(): ValidationChain`
+
+#### `isISO31661Alpha3()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso31661alpha3 "Direct link to isiso31661alpha3")
+
+`isISO31661Alpha3(): ValidationChain`
+
+#### `isISO4217()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso4217 "Direct link to isiso4217")
+
+`isISO4217(): ValidationChain`
+
+#### `isISO15924()`[​](http://express-validator.github.io/docs/api/validation-chain/#isiso15924 "Direct link to isiso15924")
+
+`isISO15924(): ValidationChain`
+
+#### `isISRC()`[​](http://express-validator.github.io/docs/api/validation-chain/#isisrc "Direct link to isisrc")
+
+`isISRC(): ValidationChain`
+
+#### `isIn()`[​](http://express-validator.github.io/docs/api/validation-chain/#isin "Direct link to isin")
+
+`isIn(values: readonly any[]): ValidationChain`
+
+#### `isInt()`[​](http://express-validator.github.io/docs/api/validation-chain/#isint "Direct link to isint")
+
+`isInt(options?: {  min?: number;  max?: number;  lt?: number;  gt?: number;  allow_leading_zeroes?: boolean;}): ValidationChain`
+
+#### `isJSON()`[​](http://express-validator.github.io/docs/api/validation-chain/#isjson "Direct link to isjson")
+
+`isJSON(options?: {  allow_primitives?: boolean;}): ValidationChain`
+
+#### `isJWT()`[​](http://express-validator.github.io/docs/api/validation-chain/#isjwt "Direct link to isjwt")
+
+`isJWT(): ValidationChain`
+
+#### `isLatLong()`[​](http://express-validator.github.io/docs/api/validation-chain/#islatlong "Direct link to islatlong")
+
+`isLatLong(options?: {  checkDMS?: boolean;}): ValidationChain`
+
+#### `isLength()`[​](http://express-validator.github.io/docs/api/validation-chain/#islength "Direct link to islength")
+
+`isLength(options: {  min?: number;  max?: number;}): ValidationChain`
+
+#### `isLicensePlate()`[​](http://express-validator.github.io/docs/api/validation-chain/#islicenseplate "Direct link to islicenseplate")
+
+`isLicensePlate(locale: IsLicensePlateLocale): ValidationChain`
+
+Possible values of IsLicensePlateLocale
+
+#### `isLocale()`[​](http://express-validator.github.io/docs/api/validation-chain/#islocale "Direct link to islocale")
+
+`isLocale(): ValidationChain`
+
+#### `isLowercase()`[​](http://express-validator.github.io/docs/api/validation-chain/#islowercase "Direct link to islowercase")
+
+`isLowercase(): ValidationChain`
+
+#### `isLuhnNumber()`[​](http://express-validator.github.io/docs/api/validation-chain/#isluhnnumber "Direct link to isluhnnumber")
+
+`isLuhnNumber(): ValidationChain`
+
+#### `isMagnetURI()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismagneturi "Direct link to ismagneturi")
+
+`isMagnetURI(): ValidationChain`
+
+#### `isMailtoURI()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismailtouri "Direct link to ismailtouri")
+
+`isMailtoURI(options?: {  allow_display_name?: boolean;  allow_underscores?: boolean;  allow_utf8_local_part?: boolean;  require_tld?: boolean;  ignore_max_length?: boolean;  allow_ip_domain?: boolean;  domain_specific_validation?: boolean;  blacklisted_chars?: string;  host_blacklist?: (string | RegExp)[];  host_whitelist?: (string | RegExp)[];}): ValidationChain`
+
+#### `isMACAddress()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismacaddress "Direct link to ismacaddress")
+
+`isMACAddress(options?: {  no_separators?: boolean;  no_colons?: boolean;  eui?: '48' | '64';}): ValidationChain`
+
+#### `isMD5()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismd5 "Direct link to ismd5")
+
+`isMD5(): ValidationChain`
+
+#### `isMimeType()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismimetype "Direct link to ismimetype")
+
+`isMimeType(): ValidationChain`
+
+#### `isMobilePhone()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismobilephone "Direct link to ismobilephone")
+
+`isMobilePhone(locale: MobilePhoneLocale | readonly Options.MobilePhoneLocale[], options?: {  strictMode?: boolean;}): ValidationChain`
+
+Possible values of MobilePhoneLocale
+
+#### `isMongoId()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismongoid "Direct link to ismongoid")
+
+`isMongoId(): ValidationChain`
+
+#### `isMultibyte()`[​](http://express-validator.github.io/docs/api/validation-chain/#ismultibyte "Direct link to ismultibyte")
+
+`isMultibyte(): ValidationChain`
+
+#### `isNumeric()`[​](http://express-validator.github.io/docs/api/validation-chain/#isnumeric "Direct link to isnumeric")
+
+`isNumeric(options?: {  no_symbols: boolean;  locale?: AlphanumericLocale;}): ValidationChain`
+
+#### `isOctal()`[​](http://express-validator.github.io/docs/api/validation-chain/#isoctal "Direct link to isoctal")
+
+`isOctal(): ValidationChain`
+
+#### `isPassportNumber()`[​](http://express-validator.github.io/docs/api/validation-chain/#ispassportnumber "Direct link to ispassportnumber")
+
+`isPassportNumber(countryCode?: PassportCountryCode): ValidationChain`
+
+Possible values of PassportCountryCode
+
+#### `isPort()`[​](http://express-validator.github.io/docs/api/validation-chain/#isport "Direct link to isport")
+
+`isPort(): ValidationChain`
+
+#### `isPostalCode()`[​](http://express-validator.github.io/docs/api/validation-chain/#ispostalcode "Direct link to ispostalcode")
+
+`isPostalCode(locale: PostalCodeLocale): ValidationChain`
+
+Possible values of PostalCodeLocale
+
+#### `isRgbColor()`[​](http://express-validator.github.io/docs/api/validation-chain/#isrgbcolor "Direct link to isrgbcolor")
+
+`isRgbColor(includePercentValues?: boolean): ValidationChain`
+
+#### `isRFC3339()`[​](http://express-validator.github.io/docs/api/validation-chain/#isrfc3339 "Direct link to isrfc3339")
+
+`isRFC3339(): ValidationChain`
+
+#### `isSemVer()`[​](http://express-validator.github.io/docs/api/validation-chain/#issemver "Direct link to issemver")
+
+`isSemVer(): ValidationChain`
+
+#### `isSlug()`[​](http://express-validator.github.io/docs/api/validation-chain/#isslug "Direct link to isslug")
+
+`isSlug(): ValidationChain`
+
+#### `isStrongPassword()`[​](http://express-validator.github.io/docs/api/validation-chain/#isstrongpassword "Direct link to isstrongpassword")
+
+`isStrongPassword(options?: {  minLength?: number;  minLowercase?: number;  minUppercase?: number;  minNumbers?: number;  minSymbols?: number;  returnScore?: boolean;  pointsPerUnique?: number;  pointsPerRepeat?: number;  pointsForContainingLower?: number;  pointsForContainingUpper?: number;  pointsForContainingNumber?: number;  pointsForContainingSymbol?: number;}): ValidationChain`
+
+#### `isSurrogatePair()`[​](http://express-validator.github.io/docs/api/validation-chain/#issurrogatepair "Direct link to issurrogatepair")
+
+`isSurrogatePair(): ValidationChain`
+
+#### `isTaxID()`[​](http://express-validator.github.io/docs/api/validation-chain/#istaxid "Direct link to istaxid")
+
+`isTaxID(locale: TaxIDLocale): ValidationChain`
+
+Possible values of TaxIDLocale
+
+#### `isTime()`[​](http://express-validator.github.io/docs/api/validation-chain/#istime "Direct link to istime")
+
+`isTime(options: {  hourFormat?: 'hour24' | 'hour12';  mode?: 'default' | 'withSeconds';}): ValidationChain`
+
+#### `isURL()`[​](http://express-validator.github.io/docs/api/validation-chain/#isurl "Direct link to isurl")
+
+`isURL(options?: {  require_tld?: boolean;  allow_underscores?: boolean;  allow_trailing_dot?: boolean;  allow_numeric_tld?: boolean;  allow_wildcard?: boolean;  ignore_max_length?: boolean;  protocols?: URLProtocol[];  require_protocol?: boolean;  require_host?: boolean;  require_port?: boolean;  require_valid_protocol?: boolean;  host_whitelist?: (string | RegExp)[];  host_blacklist?: (string | RegExp)[];  allow_protocol_relative_urls?: boolean;  disallow_auth?: boolean;  validate_length?: boolean;  max_allowed_length?: number;  allow_fragments?: boolean;  allow_query_components?: boolean;}): ValidationChain`
+
+#### `isULID()`[​](http://express-validator.github.io/docs/api/validation-chain/#isulid "Direct link to isulid")
+
+`isULID(): ValidationChain`
+
+#### `isUUID()`[​](http://express-validator.github.io/docs/api/validation-chain/#isuuid "Direct link to isuuid")
+
+`isUUID(version?: UUIDVersion): ValidationChain`
+
+Possible values of UUIDVersion
+
+#### `isUppercase()`[​](http://express-validator.github.io/docs/api/validation-chain/#isuppercase "Direct link to isuppercase")
+
+`isUppercase(): ValidationChain`
+
+#### `isVariableWidth()`[​](http://express-validator.github.io/docs/api/validation-chain/#isvariablewidth "Direct link to isvariablewidth")
+
+`isVariableWidth(): ValidationChain`
+
+#### `isVAT()`[​](http://express-validator.github.io/docs/api/validation-chain/#isvat "Direct link to isvat")
+
+`isVAT(countryCode: VATCountryCode): ValidationChain`
+
+Possible values of VATCountryCode
+
+#### `isWhitelisted()`[​](http://express-validator.github.io/docs/api/validation-chain/#iswhitelisted "Direct link to iswhitelisted")
+
+`isWhitelisted(chars: string | readonly string[]): ValidationChain`
+
+#### `matches()`[​](http://express-validator.github.io/docs/api/validation-chain/#matches "Direct link to matches")
+
+`matches(pattern: RegExp | string, modifiers?: string): ValidationChain`
+
+## Built-in sanitizers[​](http://express-validator.github.io/docs/api/validation-chain/#built-in-sanitizers "Direct link to Built-in sanitizers")
+
+### `.customSanitizer()`[​](http://express-validator.github.io/docs/api/validation-chain/#customsanitizer "Direct link to customsanitizer")
+
+`customSanitizer(sanitizer: (value, { req, location, path, pathValues }) => any): ValidationChain`
+
+Adds a custom sanitizer function to the chain. The value returned by the function will become the new value of the field.
+
+`app.post('/object/:id', param('id').customSanitizer((value, { req }) => {  // In this app, users have MongoDB style object IDs, everything else, numbers  return req.query.type === 'user' ? ObjectId(value) : Number(value);})), (req, res) => {  // Handle request});`
+
+### `.default()`[​](http://express-validator.github.io/docs/api/validation-chain/#default "Direct link to default")
+
+`default(defaultValue: any): ValidationChain`
+
+Replaces the value of the field if it's either an empty string, `null`, `undefined`, or `NaN`.
+
+`app.post('/', body('username').default('foo'), (req, res, next) => {  // 'bar'     => 'bar'  // ''        => 'foo'  // undefined => 'foo'  // null      => 'foo'  // NaN       => 'foo'});`
+
+note
+
+If using an object as the default value, it'll be deeply cloned, to avoid sharing references between requests.
+
+### `.replace()`[​](http://express-validator.github.io/docs/api/validation-chain/#replace "Direct link to replace")
+
+`replace(valuesFrom: any[], valueTo: any): ValidationChain`
+
+Replaces the value of the field with `valueTo` whenever the current value is in `valuesFrom`.
+
+`app.post('/', body('username').replace(['bar', 'BAR'], 'foo'), (req, res, next) => {  // 'bar_' => 'bar_'  // 'bar'  => 'foo'  // 'BAR'  => 'foo'  console.log(req.body.username);});`
+
+note
+
+If using an object as the replacement value, it'll be deeply cloned, to avoid sharing references between requests.
+
+### `.toArray()`[​](http://express-validator.github.io/docs/api/validation-chain/#toarray "Direct link to toarray")
+
+`toArray(): ValidationChain`
+
+Transforms the value to an array. If it already is one, nothing is done. `undefined` values become empty arrays.
+
+### `.toLowerCase()`[​](http://express-validator.github.io/docs/api/validation-chain/#tolowercase "Direct link to tolowercase")
+
+`toLowerCase(): ValidationChain`
+
+Converts the value to lower case. If not a string, does nothing.
+
+### `.toUpperCase()`[​](http://express-validator.github.io/docs/api/validation-chain/#touppercase "Direct link to touppercase")
+
+`toUpperCase(): ValidationChain`
+
+Converts the value to upper case. If not a string, does nothing.
+
+### Standard sanitizers[​](http://express-validator.github.io/docs/api/validation-chain/#standard-sanitizers "Direct link to Standard sanitizers")
+
+info
+
+Please check the documentation on standard sanitizers [here](https://express-validator.github.io/docs/guides/validation-chain#standard-validatorssanitizers).
+
+#### `blacklist()`[​](http://express-validator.github.io/docs/api/validation-chain/#blacklist "Direct link to blacklist")
+
+`blacklist(chars: string): ValidationChain`
+
+#### `escape()`[​](http://express-validator.github.io/docs/api/validation-chain/#escape "Direct link to escape")
+
+`escape(): ValidationChain`
+
+#### `unescape()`[​](http://express-validator.github.io/docs/api/validation-chain/#unescape "Direct link to unescape")
+
+`unescape(): ValidationChain`
+
+#### `ltrim()`[​](http://express-validator.github.io/docs/api/validation-chain/#ltrim "Direct link to ltrim")
+
+`ltrim(chars?: string): ValidationChain`
+
+#### `normalizeEmail()`[​](http://express-validator.github.io/docs/api/validation-chain/#normalizeemail "Direct link to normalizeemail")
+
+`normalizeEmail(options?: {  all_lowercase?: boolean;  gmail_lowercase?: boolean;  gmail_remove_dots?: boolean;  gmail_remove_subaddress?: boolean;  gmail_convert_googlemaildotcom?: boolean;  outlookdotcom_lowercase?: boolean;  outlookdotcom_remove_subaddress?: boolean;  yahoo_lowercase?: boolean;  yahoo_remove_subaddress?: boolean;  icloud_lowercase?: boolean;  icloud_remove_subaddress?: boolean;  yandex_convert_yandexru?: boolean;}): ValidationChain`
+
+#### `rtrim()`[​](http://express-validator.github.io/docs/api/validation-chain/#rtrim "Direct link to rtrim")
+
+`rtrim(chars?: string): ValidationChain`
+
+#### `stripLow()`[​](http://express-validator.github.io/docs/api/validation-chain/#striplow "Direct link to striplow")
+
+`stripLow(keep_new_lines?: boolean): ValidationChain`
+
+#### `toBoolean()`[​](http://express-validator.github.io/docs/api/validation-chain/#toboolean "Direct link to toboolean")
+
+`toBoolean(strict?: boolean): ValidationChain`
+
+#### `toDate()`[​](http://express-validator.github.io/docs/api/validation-chain/#todate "Direct link to todate")
+
+`toDate(): ValidationChain`
+
+#### `toFloat()`[​](http://express-validator.github.io/docs/api/validation-chain/#tofloat "Direct link to tofloat")
+
+`toFloat(): ValidationChain`
+
+#### `toInt()`[​](http://express-validator.github.io/docs/api/validation-chain/#toint "Direct link to toint")
+
+`toInt(radix?: number): ValidationChain`
+
+#### `trim()`[​](http://express-validator.github.io/docs/api/validation-chain/#trim "Direct link to trim")
+
+`trim(chars?: string): ValidationChain`
+
+#### `whitelist()`[​](http://express-validator.github.io/docs/api/validation-chain/#whitelist "Direct link to whitelist")
+
+`whitelist(chars: string): ValidationChain`
+
+## Modifiers[​](http://express-validator.github.io/docs/api/validation-chain/#modifiers "Direct link to Modifiers")
+
+### `.bail()`[​](http://express-validator.github.io/docs/api/validation-chain/#bail "Direct link to bail")
+
+`bail(options?: { level: 'chain' | 'request' }): ValidationChain`
+
+**Parameters:**
+
+| Name | Description |
+| --- | --- |
+| `options.level` | The level at which the validation chain should be stopped. Defaults to `chain`. |
+
+Stops running the validation chain if any of the previous validators failed.
+
+This is useful to prevent a custom validator that touches a database or external API from running when you know it will fail.
+
+`.bail()` can be used multiple times in the same validation chain if desired:
+
+`body('username')  .isEmail()  // If not an email, stop here  .bail()  .custom(checkDenylistDomain)  // If domain is not allowed, don't go check if it already exists  .bail()  .custom(checkEmailExists);`
+
+If the `level` option is set to `request`, then also no further validation chains will run on the current request. For example:
+
+`app.get(  '/search',  query('query').notEmpty().bail({ level: 'request' }),  // If `query` is empty, then the following validation chains won't run:  query('query_type').isIn(['user', 'posts']),  query('num_results').isInt(),  (req, res) => {    // Handle request  },);`
+
+caution
+
+Functions such as [`oneOf()`](https://express-validator.github.io/docs/api/one-of) and [`checkExact()`](https://express-validator.github.io/docs/api/check-exact) can become slower when using request-level bail, since validation chains that would normally run in parallel need to run in sequence.
+
+### `.if()`[​](http://express-validator.github.io/docs/api/validation-chain/#if "Direct link to if")
+
+`if(condition: CustomValidator | ContextRunner): ValidationChain`
+
+Adds a condition on whether the validation chain should continue running on a field or not.
+
+The condition may be either a [custom validator](http://express-validator.github.io/docs/api/validation-chain/#custom) or a [`ContextRunner` instance](https://express-validator.github.io/docs/api/misc#contextrunner).
+
+`body('newPassword')  // Only validate if the old password has been provided  .if((value, { req }) => req.body.oldPassword)  // Or, use a validation chain instead  .if(body('oldPassword').notEmpty())  // The length of the new password will only be checked if `oldPassword` is provided.  .isLength({ min: 6 });`
+
+### `.not()`[​](http://express-validator.github.io/docs/api/validation-chain/#not "Direct link to not")
+
+`not(): ValidationChain`
+
+Negates the result of the next validator in the chain.
+
+`check('weekday').not().isIn(['sunday', 'saturday']);`
+
+### `.optional()`[​](http://express-validator.github.io/docs/api/validation-chain/#optional "Direct link to optional")
+
+`optional(options?: boolean | {  values?: 'undefined' | 'null' | 'falsy',  nullable?: boolean,  checkFalsy?: boolean,}): ValidationChain`
+
+Marks the current validation chain as optional. An optional field skips validation depending on its value, instead of failing it.
+
+Which values are considered optional depends on `options.values`. By default, it's set to `undefined`:
+
+| `options.values` | Behavior |
+| --- | --- |
+| `undefined` | `undefined` values are optional |
+| `null` | `undefined` and `null` values are optional |
+| `falsy` | Falsy values (empty strings, `0`, `false`, `null` and `undefined` values are optional |
+
+`options.nullable` and `options.checkFalsy` are deprecated options. They are aliases to setting `options.values` to `null` or `falsy`.
+
+If `options` is `false`, then the field won't be optional.
+
+info
+
+Unlike validators and sanitizers, `.optional()` is not positional: it'll affect how values are interpreted, no matter where it happens in the chain.
+
+For example, there are no differences between this:
+
+`body('json_string').isLength({ max: 100 }).isJSON().optional().`
+
+and this:
+
+`body('json_string').optional().isLength({ max: 100 }).isJSON().`
+
+### `.hide()`[​](http://express-validator.github.io/docs/api/validation-chain/#hide "Direct link to hide")
+
+`hide(hiddenValue?: string): ValidationChain`
+
+Hide the field's value in errors returned by [`validationResult()`](https://express-validator.github.io/docs/api/validation-result). If the value is confidential information (such as api key), you might want to call this method to prevent exposing it. If `hiddenValue` is set, it's set as the value in the errors for this field.
+
+| Name | Description |
+| --- | --- |
+| `hiddenValue` | String to replace field's value with. |
+
+`// Omits the value in the errorsquery('api_key').custom(isValidKey).hide();// Replaces the value in the errors with '*****'query('api_key').custom(isValidKey).hide('*****');`
+
+### `.withMessage()`[​](http://express-validator.github.io/docs/api/validation-chain/#withmessage "Direct link to withmessage")
+
+`withMessage(message: any): ValidationChain`
+
+Sets the error message used by the previous validator.

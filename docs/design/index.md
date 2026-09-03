@@ -34,8 +34,10 @@ frontmatter, and repeats them in a banner at the top.
 - [Access presets](./groups/access-presets.md) — `active`, partially shipped
 - [Group use cases](./groups/use-cases.md) — `active`
 - [Group invitations](./groups/invitations.md) — `active`, not started
+- [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
+- [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
-- [Groups implementation status](./groups/implementation-status.md) — code map and gap register for the four records above
+- [Groups implementation status](./groups/implementation-status.md) — code map and gap register for the design records above
 
 ## Ideas
 

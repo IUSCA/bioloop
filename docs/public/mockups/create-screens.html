@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Screens — Data Governance Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #0c1420;
+    --surface:    #111d2e;
+    --panel:      #172030;
+    --raised:     #1e2d42;
+    --hover:      #243549;
+    --border:     #243448;
+    --border-hi:  #2e4160;
+    --border-focus: #3b82f6;
+
+    --text:       #dde6f0;
+    --text-muted: #7a90a8;
+    --text-dim:   #3d5470;
+
+    --blue:       #3b82f6;
+    --blue-dim:   #1e3a5f;
+    --blue-soft:  #2563eb;
+    --amber:      #f59e0b;
+    --amber-dim:  #3d2a05;
+    --teal:       #0d9488;
+    --teal-dim:   #063330;
+    --red:        #ef4444;
+    --red-dim:    #3b0f0f;
+    --violet:     #8b5cf6;
+    --violet-dim: #2e1b5e;
+    --green:      #22c55e;
+    --green-dim:  #0d2e1a;
+
+    --radius:     6px;
+    --radius-lg:  10px;
+    --radius-xl:  14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060c17;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── SHOWCASE NAV ──────────────────────────────────────────── */
+  .showcase-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #040912;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 0;
+    height: 44px;
+    overflow-x: auto;
+  }
+  .showcase-nav-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 2px;
+    padding-right: 20px; border-right: 1px solid var(--border);
+    margin-right: 16px; white-space: nowrap;
+  }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px; padding: 0 16px; height: 44px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  .screen { display: none; min-height: calc(100vh - 44px); }
+  .screen.active { display: block; }
+
+  /* ── APP SHELL ────────────────────────────────────────────── */
+  .topnav {
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 0;
+    position: sticky; top: 44px; z-index: 50;
+  }
+  .logo { display: flex; align-items: center; gap: 8px; margin-right: 40px; }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--blue), var(--teal));
+    border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 15px; }
+  .topnav-links { display: flex; gap: 2px; flex: 1; }
+  .topnav-link {
+    color: var(--text-muted); text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border-radius: var(--radius); transition: color .12s, background .12s;
+  }
+  .topnav-link:hover { color: var(--text); background: var(--raised); }
+  .topnav-link.active { color: var(--text); background: var(--raised); }
+  .avatar-btn {
+    background: var(--raised); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 5px 10px; color: var(--text); cursor: pointer;
+    font-size: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: #fff;
+  }
+
+  /* ── PAGE LAYOUT ──────────────────────────────────────────── */
+  .page-content {
+    max-width: 1160px; margin: 0 auto; padding: 32px 24px;
+  }
+  .page-content.narrow { max-width: 760px; }
+
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 28px;
+  }
+  .breadcrumb a { color: var(--blue); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb-sep { color: var(--text-dim); }
+
+  /* ── FORM PAGE HEADER ─────────────────────────────────────── */
+  .form-page-header { margin-bottom: 32px; }
+  .form-page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; color: var(--text);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .form-page-title .icon-wrap {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .form-page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+
+  /* ── TWO-COL LAYOUT ───────────────────────────────────────── */
+  .form-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+  .form-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── FORM CARD ────────────────────────────────────────────── */
+  .form-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+  .form-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .form-card-header-icon { font-size: 16px; opacity: .7; }
+  .form-card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--text-muted); }
+  .form-card-body { padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+
+  /* ── FORM ELEMENTS ────────────────────────────────────────── */
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .form-label {
+    font-size: 12px; font-weight: 500; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .form-label .req { color: var(--red); font-size: 11px; }
+  .form-hint { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .form-input {
+    width: 100%;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .form-input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+  .form-input::placeholder { color: var(--text-dim); }
+  .form-input.mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .form-textarea {
+    min-height: 90px; resize: vertical;
+  }
+  .form-input-wrap { position: relative; }
+  .form-input-prefix {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-dim);
+    pointer-events: none;
+  }
+  .form-input.with-prefix { padding-left: 28px; }
+
+  /* slug preview */
+  .slug-preview {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-muted);
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .slug-preview .slug-label { color: var(--text-dim); }
+  .slug-preview .slug-val { color: var(--teal); }
+
+  /* input with icon */
+  .input-with-icon { position: relative; }
+  .input-with-icon .input-icon {
+    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--text-dim); font-size: 13px; pointer-events: none;
+  }
+  .input-with-icon input { padding-left: 32px; }
+
+  /* ── TOGGLE SWITCH ────────────────────────────────────────── */
+  .toggle-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px;
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color .12s;
+  }
+  .toggle-row:hover { border-color: var(--border-hi); }
+  .toggle-row.checked { border-color: var(--teal); background: var(--teal-dim); }
+  .toggle {
+    flex-shrink: 0; margin-top: 2px;
+    width: 36px; height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: background .2s;
+  }
+  .toggle.on { background: var(--teal); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 14px; height: 14px;
+    background: #fff; border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: left .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  }
+  .toggle.on::after { left: 19px; }
+  .toggle-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
+
+  /* ── PARENT SELECTOR ──────────────────────────────────────── */
+  .parent-selector {
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .parent-search {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .parent-search input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; flex: 1;
+  }
+  .parent-search input::placeholder { color: var(--text-dim); }
+  .parent-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .parent-option:last-child { border-bottom: none; }
+  .parent-option:hover { background: var(--hover); }
+  .parent-option.selected { background: var(--blue-dim); border-color: var(--blue-dim); }
+  .parent-option .po-icon { font-size: 16px; flex-shrink: 0; }
+  .parent-option .po-text { flex: 1; }
+  .parent-option .po-name { font-size: 13px; color: var(--text); }
+  .parent-option .po-path {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-muted);
+    margin-top: 1px;
+  }
+  .parent-option .po-check { color: var(--blue); font-size: 14px; }
+  .parent-option .po-badge {
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .parent-option .po-badge.admin { background: var(--blue-dim); color: #6ba3f5; }
+
+  /* fixed selected display */
+  .selected-parent {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--blue-dim);
+    border: 1px solid #1e3a5f;
+    border-radius: var(--radius);
+  }
+  .selected-parent-icon { font-size: 18px; }
+  .selected-parent-info { flex: 1; }
+  .selected-parent-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .selected-parent-path { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .selected-parent-change {
+    font-size: 11px; color: var(--blue); cursor: pointer;
+    background: none; border: none; padding: 4px 8px;
+  }
+  .selected-parent-change:hover { text-decoration: underline; }
+
+  /* ── OWNER GROUP SELECTOR ─────────────────────────────────── */
+  .owner-group-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .owner-group-option:last-child { border-bottom: none; }
+  .owner-group-option:hover { background: var(--hover); }
+  .owner-group-option.selected { background: var(--blue-dim); }
+  .ogo-icon { font-size: 16px; flex-shrink: 0; }
+  .ogo-text { flex: 1; }
+  .ogo-name { font-size: 13px; color: var(--text); }
+  .ogo-path { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .ogo-role { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: var(--blue-dim); color: #6ba3f5; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── PREVIEW CARD ─────────────────────────────────────────── */
+  .preview-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    position: sticky; top: 108px;
+  }
+  .preview-card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .6px;
+    color: var(--text-muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .preview-card-body { padding: 16px; }
+  .preview-resource {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px;
+    background: var(--raised);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+  .preview-resource-icon { font-size: 20px; }
+  .preview-resource-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; }
+  .preview-resource-slug { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+  .preview-section-title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); margin-bottom: 8px; margin-top: 14px; }
+  .preview-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .preview-row:last-child { border-bottom: none; }
+  .preview-key { font-size: 11px; color: var(--text-muted); }
+  .preview-val { font-size: 11px; color: var(--text); font-family: 'IBM Plex Mono', monospace; text-align: right; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+  .preview-ancestry {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    font-size: 11px; padding: 8px 10px;
+    background: var(--bg); border-radius: var(--radius);
+    margin-top: 8px;
+  }
+  .preview-ancestry-item { color: var(--text-muted); }
+  .preview-ancestry-item.current { color: var(--text); font-weight: 500; }
+  .preview-ancestry-sep { color: var(--text-dim); font-size: 10px; }
+
+  /* ── INFO / WARN CALLOUTS ─────────────────────────────────── */
+  .callout {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 14px; border-radius: var(--radius);
+    font-size: 12px; line-height: 1.6;
+  }
+  .callout.info { background: var(--blue-dim); border: 1px solid #1e3a5f; color: #93c5fd; }
+  .callout.warn { background: var(--amber-dim); border: 1px solid #5a3d08; color: #fbbf24; }
+  .callout.teal { background: var(--teal-dim); border: 1px solid #0a4a44; color: #2dd4bf; }
+  .callout.violet { background: var(--violet-dim); border: 1px solid #2e1b5e; color: #c4b5fd; }
+  .callout-icon { flex-shrink: 0; margin-top: 1px; }
+  .callout strong { font-weight: 600; }
+
+  /* ── RADIO GROUP ──────────────────────────────────────────── */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-option {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px;
+    background: var(--raised);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .radio-option:hover { border-color: var(--border-hi); }
+  .radio-option.selected { border-color: var(--blue); background: var(--blue-dim); }
+  .radio-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0; margin-top: 2px;
+    transition: border-color .12s;
+    position: relative;
+  }
+  .radio-dot::after {
+    content: '';
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--blue);
+    opacity: 0; transition: opacity .12s;
+  }
+  .radio-option.selected .radio-dot { border-color: var(--blue); }
+  .radio-option.selected .radio-dot::after { opacity: 1; }
+  .radio-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .radio-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+
+  /* ── BUTTON ROW ───────────────────────────────────────────── */
+  .btn-row {
+    display: flex; align-items: center;
+    justify-content: flex-end; gap: 10px;
+    padding-top: 8px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: var(--radius);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; border: none;
+    transition: all .12s;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-soft); }
+  .btn-secondary { background: var(--raised); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--border-hi); background: var(--hover); }
+  .btn-ghost { background: none; color: var(--text-muted); border: 1px solid transparent; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border); background: var(--raised); }
+
+  /* role badge */
+  .role-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    padding: 3px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .role-badge.platform { background: var(--violet-dim); color: #a78bfa; border: 1px solid #2e1b5e; }
+  .role-badge.admin    { background: var(--blue-dim);   color: #6ba3f5; border: 1px solid #1e3a5f; }
+
+  /* ── CONTEXT BANNER ───────────────────────────────────────── */
+  .context-banner {
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px;
+  }
+  .context-banner.platform { background: #1a1030; border-color: #3d1f7a; color: #c4b5fd; }
+  .context-banner.admin { background: var(--blue-dim); border-color: #1e3a5f; color: #93c5fd; }
+
+  /* ── DIVIDER ──────────────────────────────────────────────── */
+  .divider { border: none; border-top: 1px solid var(--border); }
+
+  /* ── ANIM ─────────────────────────────────────────────────── */
+  .fade-in { animation: fadeIn .35s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .d1 { animation-delay: .04s; }
+  .d2 { animation-delay: .09s; }
+  .d3 { animation-delay: .14s; }
+  .d4 { animation-delay: .19s; }
+  .d5 { animation-delay: .24s; }
+
+  /* ── STATUS INLINE ────────────────────────────────────────── */
+  .inline-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: var(--green); box-shadow: 0 0 5px var(--green); }
+  .dot.amber { background: var(--amber); }
+
+  /* ── COLLECTION DATASET PICKER ────────────────────────────── */
+  .dataset-picker { background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .dataset-picker-search { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .dataset-picker-search input { background: none; border: none; outline: none; color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; flex: 1; }
+  .dataset-picker-search input::placeholder { color: var(--text-dim); }
+  .dataset-option {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .1s;
+  }
+  .dataset-option:last-child { border-bottom: none; }
+  .dataset-option:hover { background: var(--hover); }
+  .dataset-option.selected { background: var(--teal-dim); }
+  .dataset-option .do-check { color: var(--teal); font-size: 14px; margin-left: auto; }
+  .dataset-option .do-name { font-size: 13px; color: var(--text); }
+  .dataset-option .do-meta { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .selected-datasets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .selected-dataset-tag {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--teal-dim); border: 1px solid #0a4a44;
+    color: #2dd4bf; border-radius: 4px; padding: 4px 8px; font-size: 11px;
+  }
+  .selected-dataset-tag button { background: none; border: none; color: #2dd4bf; cursor: pointer; font-size: 13px; line-height: 1; opacity: .7; }
+  .selected-dataset-tag button:hover { opacity: 1; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+    padding: 2px 7px; border-radius: 3px;
+  }
+  .tag.type { background: var(--raised); color: var(--text-muted); border: 1px solid var(--border); }
+  .tag.size { background: var(--bg); color: var(--text-dim); border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- SHOWCASE NAV -->
+<nav class="showcase-nav">
+  <span class="showcase-nav-label">Create Screens</span>
+  <button class="nav-btn active" onclick="show('create-group-platform')">Create Group — Platform Admin</button>
+  <button class="nav-btn" onclick="show('create-child-group')">Create Child Group — Group Admin</button>
+  <button class="nav-btn" onclick="show('create-collection')">Create Collection</button>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 1: CREATE GROUP — PLATFORM ADMIN                            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-create-group-platform">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link active">Groups</a>
+      <a class="topnav-link">Datasets</a>
+      <a class="topnav-link">Collections</a>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span class="role-badge platform">Platform Admin</span>
+      <div class="avatar-btn"><div class="avatar" style="background:linear-gradient(135deg,var(--violet),#6d28d9)">S</div> Sonia Adler ▾</div>
+    </div>
+  </nav>
+
+  <!-- Platform admin context banner -->
+  <div class="context-banner platform">
+    <span>🛡</span>
+    <span>You are acting as <strong>Platform Admin</strong> — you can create root groups or place new groups anywhere in the hierarchy.</span>
+  </div>
+
+  <div class="page-content fade-in">
+    <div class="breadcrumb">
+      <a href="#">Groups</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Create Group</span>
+    </div>
+
+    <div class="form-page-header fade-in d1">
+      <div class="form-page-title">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#1e3a5f,#0d2a4a)">🏢</div>
+        Create Group
+      </div>
+      <div class="form-page-subtitle">
+        Define a new organizational group. Groups own datasets and collections, and determine governance authority over resources.
+      </div>
+    </div>
+
+    <div class="form-layout">
+      <!-- LEFT: FORM -->
+      <div class="form-col">
+
+        <!-- IDENTITY -->
+        <div class="form-card fade-in d2">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🪪</span>
+            <span class="form-card-title">Identity</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Group Name <span class="req">*</span></label>
+              <input class="form-input" type="text" placeholder="e.g. Computational Genomics Lab" value="Computational Genomics Lab">
+              <span class="form-hint">The display name shown across the portal.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Slug <span class="req">*</span></label>
+              <div class="input-with-icon">
+                <input class="form-input mono" type="text" placeholder="auto-generated" value="computational-genomics-lab">
+              </div>
+              <div class="slug-preview">
+                <span class="slug-label">URL path:</span>
+                <span class="slug-val">/groups/computational-genomics-lab</span>
+              </div>
+              <span class="form-hint">Lowercase, hyphens only. Used in URLs and API references. Cannot be changed after creation.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-input form-textarea" placeholder="Describe this group's purpose, research focus, or institutional role…">Research group focused on large-scale genomic data analysis and computational methods.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- HIERARCHY PLACEMENT -->
+        <div class="form-card fade-in d3">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🌳</span>
+            <span class="form-card-title">Hierarchy Placement</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Group Type</label>
+              <div class="radio-group">
+                <div class="radio-option" onclick="toggleRadio(this, 'placement')">
+                  <div class="radio-dot"></div>
+                  <div>
+                    <div class="radio-label">Root group (no parent)</div>
+                    <div class="radio-desc">Top-level group — exists independently. Admins of this group have no oversight from above.</div>
+                  </div>
+                </div>
+                <div class="radio-option selected" onclick="toggleRadio(this, 'placement')">
+                  <div class="radio-dot"></div>
+                  <div>
+                    <div class="radio-label">Child of an existing group</div>
+                    <div class="radio-desc">Nest this group under a parent. Admins of the parent will gain oversight visibility over this group.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Parent Group <span class="req">*</span></label>
+              <!-- Selected state shown -->
+              <div class="selected-parent">
+                <span class="selected-parent-icon">🏢</span>
+                <div class="selected-parent-info">
+                  <div class="selected-parent-name">Research Center</div>
+                  <div class="selected-parent-path">research-center · root · 14 members · 4 subgroups</div>
+                </div>
+                <button class="selected-parent-change">Change</button>
+              </div>
+
+              <!-- Dropdown list (shown when "Change" clicked) -->
+              <div class="parent-selector" style="margin-top:10px">
+                <div class="parent-search">
+                  <span style="color:var(--text-dim)">🔍</span>
+                  <input type="text" placeholder="Search all groups…" value="">
+                </div>
+                <div class="parent-option selected">
+                  <span class="po-icon">🏢</span>
+                  <div class="po-text">
+                    <div class="po-name">Research Center</div>
+                    <div class="po-path">/ research-center · root · 14 members</div>
+                  </div>
+                  <span class="po-badge admin">Admin</span>
+                  <span class="po-check">✓</span>
+                </div>
+                <div class="parent-option">
+                  <span class="po-icon">🧪</span>
+                  <div class="po-text">
+                    <div class="po-name">AI Lab</div>
+                    <div class="po-path">/ research-center / ai-lab · 8 members</div>
+                  </div>
+                  <span class="po-badge admin">Admin</span>
+                </div>
+                <div class="parent-option">
+                  <span class="po-icon">🧬</span>
+                  <div class="po-text">
+                    <div class="po-name">Bio Lab</div>
+                    <div class="po-path">/ research-center / bio-lab · 6 members</div>
+                  </div>
+                  <span class="po-badge admin">Admin</span>
+                </div>
+                <div class="parent-option">
+                  <span class="po-icon">🏛</span>
+                  <div class="po-text">
+                    <div class="po-name">Physics Department</div>
+                    <div class="po-path">/ physics-department · root · 9 members</div>
+                  </div>
+                  <span class="po-badge admin">Admin</span>
+                </div>
+              </div>
+              <span class="form-hint">As platform admin, you can place this group under any existing group.</span>
+            </div>
+
+            <div class="callout info">
+              <span class="callout-icon">ℹ</span>
+              <div>
+                <strong>Oversight consequence:</strong> Admins of <strong>Research Center</strong> will automatically gain read-only oversight visibility over this group and all resources it owns. They cannot modify grants or governance settings.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="form-card fade-in d4">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">⚙</span>
+            <span class="form-card-title">Settings</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">User Contributions</label>
+              <div class="toggle-row checked" onclick="this.classList.toggle('checked'); this.querySelector('.toggle').classList.toggle('on')">
+                <div class="toggle on"></div>
+                <div>
+                  <div class="toggle-label">Allow member contributions</div>
+                  <div class="toggle-desc">Group members can upload datasets owned by this group. Ownership and governance remain with group admins — contributors do not gain governance authority.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Initial Admins</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔍</span>
+                <input class="form-input" type="text" placeholder="Search users to add as admins…">
+              </div>
+              <span class="form-hint">You will be added as admin automatically. Add others here.</span>
+              <!-- Added users -->
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px">
+                <div style="display:flex;align-items:center;gap:6px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:5px 10px">
+                  <div class="avatar" style="width:20px;height:20px;font-size:9px;background:linear-gradient(135deg,var(--violet),#6d28d9)">S</div>
+                  <span style="font-size:12px">Sonia Adler</span>
+                  <span style="font-size:10px;color:var(--text-dim)">(you)</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:5px 10px">
+                  <div class="avatar" style="width:20px;height:20px;font-size:9px">I</div>
+                  <span style="font-size:12px">Irene Zhang</span>
+                  <button style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;line-height:1;margin-left:2px">×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row fade-in d5">
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-secondary">Save as Draft</button>
+          <button class="btn btn-primary">Create Group →</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: PREVIEW -->
+      <div>
+        <div class="preview-card fade-in d2">
+          <div class="preview-card-header">
+            <span>👁</span> Live Preview
+          </div>
+          <div class="preview-card-body">
+            <div class="preview-resource">
+              <span class="preview-resource-icon">🏢</span>
+              <div>
+                <div class="preview-resource-name">Computational Genomics Lab</div>
+                <div class="preview-resource-slug">computational-genomics-lab</div>
+              </div>
+            </div>
+
+            <div class="preview-section-title">Ancestry</div>
+            <div class="preview-ancestry">
+              <span class="preview-ancestry-item">🏢 Research Center</span>
+              <span class="preview-ancestry-sep">›</span>
+              <span class="preview-ancestry-item current">🏢 Computational Genomics Lab</span>
+            </div>
+
+            <div class="preview-section-title">Configured</div>
+            <div class="preview-row"><span class="preview-key">Status</span><span class="preview-val">● Active</span></div>
+            <div class="preview-row"><span class="preview-key">User contrib.</span><span class="preview-val">Enabled</span></div>
+            <div class="preview-row"><span class="preview-key">Admins</span><span class="preview-val">Sonia Adler, Irene Zhang</span></div>
+            <div class="preview-row"><span class="preview-key">Members</span><span class="preview-val">2 (direct)</span></div>
+
+            <div class="preview-section-title">Oversight</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.6; padding: 6px 0">
+              Admins of <span style="color:var(--amber)">Research Center</span> will have read-only oversight over this group.
+            </div>
+
+            <hr class="divider" style="margin:12px 0">
+            <div class="inline-status">
+              <div class="dot green"></div>
+              <span style="font-size:11px; color:var(--text-muted)">Ready to create</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 2: CREATE CHILD GROUP — GROUP ADMIN                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-create-child-group">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link active">Groups</a>
+      <a class="topnav-link">Datasets</a>
+      <a class="topnav-link">Collections</a>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span class="role-badge admin">Group Admin</span>
+      <div class="avatar-btn"><div class="avatar">E</div> Erin Park ▾</div>
+    </div>
+  </nav>
+
+  <!-- Group admin context banner -->
+  <div class="context-banner admin">
+    <span>🛡</span>
+    <span>Creating a subgroup under <strong>AI Lab</strong> — your administrative authority. The new group will inherit your oversight and the full ancestry chain.</span>
+  </div>
+
+  <div class="page-content fade-in">
+    <div class="breadcrumb">
+      <a>Groups</a>
+      <span class="breadcrumb-sep">/</span>
+      <a>Research Center</a>
+      <span class="breadcrumb-sep">/</span>
+      <a>AI Lab</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Create Subgroup</span>
+    </div>
+
+    <div class="form-page-header fade-in d1">
+      <div class="form-page-title">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#0d2a4a,#0d2040)">🧪</div>
+        Create Subgroup
+      </div>
+      <div class="form-page-subtitle">
+        Adding a child group to <strong style="color:var(--text)">AI Lab</strong>. The new group will be nested within AI Lab's hierarchy — members of this subgroup will be implicit members of AI Lab and Research Center.
+      </div>
+    </div>
+
+    <div class="form-layout">
+      <div class="form-col">
+
+        <!-- IDENTITY -->
+        <div class="form-card fade-in d2">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🪪</span>
+            <span class="form-card-title">Identity</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Subgroup Name <span class="req">*</span></label>
+              <input class="form-input" type="text" placeholder="e.g. NLP Research Team" value="NLP Research Team">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Slug <span class="req">*</span></label>
+              <input class="form-input mono" type="text" value="nlp-research-team">
+              <div class="slug-preview">
+                <span class="slug-label">URL path:</span>
+                <span class="slug-val">/groups/nlp-research-team</span>
+              </div>
+              <span class="form-hint">Cannot be changed after creation.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-input form-textarea" placeholder="Describe this subgroup's focus…">Natural language processing and large language model research within the AI Lab.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- PARENT — LOCKED -->
+        <div class="form-card fade-in d3">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🌳</span>
+            <span class="form-card-title">Parent Group</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Parent</label>
+              <!-- Locked to AI Lab — group admin can only create under groups they admin -->
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--raised);border:1px solid var(--border);border-radius:var(--radius);opacity:.8">
+                <span style="font-size:18px">🧪</span>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:500">AI Lab</div>
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted)">ai-lab · research-center / ai-lab · 8 members</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span class="role-badge admin">Your group</span>
+                  <span style="font-size:10px;color:var(--text-dim)">🔒</span>
+                </div>
+              </div>
+              <span class="form-hint">As group admin, you can only create subgroups within groups you administer. You cannot change this parent.</span>
+            </div>
+
+            <div class="callout warn">
+              <span class="callout-icon">⚠</span>
+              <div>
+                <strong>Membership propagation:</strong> All future members of <strong>NLP Research Team</strong> will automatically become implicit members of AI Lab and Research Center. This cannot be restricted — it is a structural consequence of group nesting.
+              </div>
+            </div>
+
+            <div class="callout info" style="margin-top:10px">
+              <span class="callout-icon">ℹ</span>
+              <div>
+                <strong>Oversight chain:</strong> Admins of <span style="color:#93c5fd">Research Center</span> (Dana Reyes) and <span style="color:#93c5fd">AI Lab</span> (you) will have oversight visibility over this subgroup.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="form-card fade-in d4">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">⚙</span>
+            <span class="form-card-title">Settings</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">User Contributions</label>
+              <div class="toggle-row" onclick="this.classList.toggle('checked'); this.querySelector('.toggle').classList.toggle('on')">
+                <div class="toggle"></div>
+                <div>
+                  <div class="toggle-label">Allow member contributions</div>
+                  <div class="toggle-desc">Let members of this subgroup upload datasets that will be owned by this group.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Initial Admins</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔍</span>
+                <input class="form-input" type="text" placeholder="Search users to designate as admins…">
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+                <div style="display:flex;align-items:center;gap:6px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:5px 10px">
+                  <div class="avatar" style="width:20px;height:20px;font-size:9px">E</div>
+                  <span style="font-size:12px">Erin Park</span>
+                  <span style="font-size:10px;color:var(--text-dim)">(you)</span>
+                </div>
+              </div>
+              <span class="form-hint" style="margin-top:6px">You are automatically added as admin. You can designate additional admins here or after creation.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Initial Members</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔍</span>
+                <input class="form-input" type="text" placeholder="Add members from AI Lab or the wider hierarchy…">
+              </div>
+              <span class="form-hint">Optional. You can add members after creation. Members must already be in the broader group hierarchy.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row fade-in d5">
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-primary">Create Subgroup →</button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: PREVIEW -->
+      <div>
+        <div class="preview-card fade-in d2">
+          <div class="preview-card-header">
+            <span>👁</span> Live Preview
+          </div>
+          <div class="preview-card-body">
+            <div class="preview-resource">
+              <span class="preview-resource-icon">🧪</span>
+              <div>
+                <div class="preview-resource-name">NLP Research Team</div>
+                <div class="preview-resource-slug">nlp-research-team</div>
+              </div>
+            </div>
+
+            <div class="preview-section-title">Ancestry</div>
+            <div class="preview-ancestry">
+              <span class="preview-ancestry-item">🏢 Research Center</span>
+              <span class="preview-ancestry-sep">›</span>
+              <span class="preview-ancestry-item">🧪 AI Lab</span>
+              <span class="preview-ancestry-sep">›</span>
+              <span class="preview-ancestry-item current">🧪 NLP Research Team</span>
+            </div>
+
+            <div class="preview-section-title">Membership Propagation</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.7; padding:6px 0;">
+              Members of NLP Research Team will also count as members of:
+              <div style="margin-top:6px; display:flex; flex-direction:column; gap:3px">
+                <span style="color:var(--text)">↑ 🧪 AI Lab</span>
+                <span style="color:var(--text)">↑ 🏢 Research Center</span>
+              </div>
+            </div>
+
+            <div class="preview-section-title">Oversight Chain</div>
+            <div style="font-size:11px; line-height:1.7; padding:4px 0">
+              <div><span style="color:var(--amber)">Erin Park</span> <span style="color:var(--text-muted)">(AI Lab admin)</span></div>
+              <div><span style="color:var(--amber)">Dana Reyes</span> <span style="color:var(--text-muted)">(Research Center admin)</span></div>
+            </div>
+
+            <div class="preview-section-title">Configured</div>
+            <div class="preview-row"><span class="preview-key">User contrib.</span><span class="preview-val">Disabled</span></div>
+            <div class="preview-row"><span class="preview-key">Admins</span><span class="preview-val">Erin Park</span></div>
+            <div class="preview-row"><span class="preview-key">Members</span><span class="preview-val">1 (direct)</span></div>
+
+            <hr class="divider" style="margin:12px 0">
+            <div class="inline-status">
+              <div class="dot green"></div>
+              <span style="font-size:11px; color:var(--text-muted)">Ready to create</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 3: CREATE COLLECTION                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-create-collection">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link">Groups</a>
+      <a class="topnav-link">Datasets</a>
+      <a class="topnav-link active">Collections</a>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span class="role-badge admin">Group Admin</span>
+      <div class="avatar-btn"><div class="avatar">E</div> Erin Park ▾</div>
+    </div>
+  </nav>
+
+  <div class="page-content fade-in">
+    <div class="breadcrumb">
+      <a>Collections</a>
+      <span class="breadcrumb-sep">/</span>
+      <span>Create Collection</span>
+    </div>
+
+    <div class="form-page-header fade-in d1">
+      <div class="form-page-title">
+        <div class="icon-wrap" style="background:linear-gradient(135deg,#063330,#062824)">📦</div>
+        Create Collection
+      </div>
+      <div class="form-page-subtitle">
+        Collections group datasets for scalable access management. One grant on a collection extends to all its datasets — and to all members of the granted group.
+      </div>
+    </div>
+
+    <div class="form-layout">
+      <div class="form-col">
+
+        <!-- IDENTITY -->
+        <div class="form-card fade-in d2">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🪪</span>
+            <span class="form-card-title">Identity</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Collection Name <span class="req">*</span></label>
+              <input class="form-input" type="text" placeholder="e.g. Genomics Suite 2024" value="Genomics Suite 2024">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Slug <span class="req">*</span></label>
+              <input class="form-input mono" type="text" value="genomics-suite-2024">
+              <div class="slug-preview">
+                <span class="slug-label">URL path:</span>
+                <span class="slug-val">/collections/genomics-suite-2024</span>
+              </div>
+              <span class="form-hint">Cannot be changed after creation.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Description</label>
+              <textarea class="form-input form-textarea" placeholder="Describe the purpose or contents of this collection…">All genomic sequencing datasets from the 2024 research cohort. Used for institutional access grants to the genomics platform.</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- OWNERSHIP -->
+        <div class="form-card fade-in d3">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">🏛</span>
+            <span class="form-card-title">Owning Group</span>
+          </div>
+          <div class="form-card-body">
+            <div class="form-group">
+              <label class="form-label">Owner <span class="req">*</span></label>
+              <span class="form-hint" style="margin-bottom:6px">You can only create collections owned by groups you administer. The owning group's admins will control grants and membership for this collection.</span>
+
+              <div class="parent-selector">
+                <div class="parent-search">
+                  <span style="color:var(--text-dim)">🔍</span>
+                  <input type="text" placeholder="Search groups you administer…">
+                </div>
+                <div class="owner-group-option selected">
+                  <span class="ogo-icon">🧪</span>
+                  <div class="ogo-text">
+                    <div class="ogo-name">AI Lab</div>
+                    <div class="ogo-path">/ research-center / ai-lab · 8 members · 14 datasets</div>
+                  </div>
+                  <span class="ogo-role">Admin</span>
+                  <span style="color:var(--teal);font-size:14px;margin-left:8px">✓</span>
+                </div>
+                <div class="owner-group-option">
+                  <span class="ogo-icon">🤖</span>
+                  <div class="ogo-text">
+                    <div class="ogo-name">Robotics Sub-Lab</div>
+                    <div class="ogo-path">/ research-center / ai-lab / robotics-sub-lab · 4 members</div>
+                  </div>
+                  <span class="ogo-role">Admin</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="callout teal">
+              <span class="callout-icon">ℹ</span>
+              <div>
+                <strong>Authority boundary:</strong> Only admins of <strong>AI Lab</strong> can add or remove datasets, create grants, or modify this collection. No group can grant access to data it does not own — all datasets added must also be owned by AI Lab.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DATASETS -->
+        <div class="form-card fade-in d4">
+          <div class="form-card-header">
+            <span class="form-card-header-icon">📄</span>
+            <span class="form-card-title">Add Datasets <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(optional — add now or after creation)</span></span>
+          </div>
+          <div class="form-card-body">
+            <div class="callout warn" style="margin-bottom:14px">
+              <span class="callout-icon">⚠</span>
+              <div>Only datasets owned by <strong>AI Lab</strong> can be added. Adding a dataset changes effective access for all current grant holders on this collection.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Search Datasets</label>
+              <div class="dataset-picker">
+                <div class="dataset-picker-search">
+                  <span style="color:var(--text-dim)">🔍</span>
+                  <input type="text" placeholder="Search datasets owned by AI Lab…">
+                </div>
+                <div class="dataset-option selected">
+                  <span style="font-size:15px">📄</span>
+                  <div style="flex:1">
+                    <div class="do-name">Genomics Run 2024</div>
+                    <div class="do-meta">OMICS · 1.2 TB · 2,341 files · Active</div>
+                  </div>
+                  <span class="do-check">✓</span>
+                </div>
+                <div class="dataset-option selected">
+                  <span style="font-size:15px">📄</span>
+                  <div style="flex:1">
+                    <div class="do-name">Sequencing Batch v3</div>
+                    <div class="do-meta">OMICS · 340 GB · 892 files · Active</div>
+                  </div>
+                  <span class="do-check">✓</span>
+                </div>
+                <div class="dataset-option">
+                  <span style="font-size:15px">📄</span>
+                  <div style="flex:1">
+                    <div class="do-name">Reference Genome HG38</div>
+                    <div class="do-meta">REFERENCE · 3.2 GB · 12 files · Active</div>
+                  </div>
+                </div>
+                <div class="dataset-option">
+                  <span style="font-size:15px">📄</span>
+                  <div style="flex:1">
+                    <div class="do-name">Vision Benchmark 2024</div>
+                    <div class="do-meta">ML · 88 GB · 14,220 files · Active</div>
+                  </div>
+                </div>
+                <div class="dataset-option" style="opacity:.45">
+                  <span style="font-size:15px">📄</span>
+                  <div style="flex:1">
+                    <div class="do-name" style="text-decoration:line-through;color:var(--text-muted)">Legacy Training Data</div>
+                    <div class="do-meta">ML · 12 GB · Archived</div>
+                  </div>
+                  <span style="font-size:10px;color:var(--text-dim)">Archived</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px">Selected datasets (2)</div>
+              <div class="selected-datasets">
+                <div class="selected-dataset-tag">📄 Genomics Run 2024 <button>×</button></div>
+                <div class="selected-dataset-tag">📄 Sequencing Batch v3 <button>×</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row fade-in d5">
+          <button class="btn btn-ghost">Cancel</button>
+          <button class="btn btn-secondary">Create without Datasets</button>
+          <button class="btn btn-primary">Create Collection →</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: PREVIEW -->
+      <div>
+        <div class="preview-card fade-in d2">
+          <div class="preview-card-header">
+            <span>👁</span> Live Preview
+          </div>
+          <div class="preview-card-body">
+            <div class="preview-resource">
+              <span class="preview-resource-icon">📦</span>
+              <div>
+                <div class="preview-resource-name">Genomics Suite 2024</div>
+                <div class="preview-resource-slug">genomics-suite-2024</div>
+              </div>
+            </div>
+
+            <div class="preview-section-title">Ownership</div>
+            <div class="preview-row"><span class="preview-key">Owner Group</span><span class="preview-val">🧪 AI Lab</span></div>
+            <div class="preview-row"><span class="preview-key">Status</span><span class="preview-val">● Active</span></div>
+
+            <div class="preview-section-title">Datasets (2)</div>
+            <div style="display:flex; flex-direction:column; gap:5px; padding:4px 0">
+              <div style="display:flex; align-items:center; gap:6px; font-size:11px">
+                <span>📄</span>
+                <span style="color:var(--text)">Genomics Run 2024</span>
+                <span style="margin-left:auto; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; font-size:10px">1.2 TB</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; font-size:11px">
+                <span>📄</span>
+                <span style="color:var(--text)">Sequencing Batch v3</span>
+                <span style="margin-left:auto; color:var(--text-muted); font-family:'IBM Plex Mono',monospace; font-size:10px">340 GB</span>
+              </div>
+            </div>
+
+            <div class="preview-section-title">Access Model</div>
+            <div style="font-size:11px; color:var(--text-muted); line-height:1.7; padding:4px 0">
+              A single grant on this collection extends <strong style="color:var(--text)">read_data</strong> (or any access type) to both datasets simultaneously — and to all members of the granted group transitively.
+            </div>
+
+            <div style="margin-top:10px; padding:10px; background:var(--bg); border-radius:var(--radius); border:1px dashed var(--border)">
+              <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px">No grants yet</div>
+              <div style="font-size:11px; color:var(--text-muted)">Grants can be created after the collection is saved.</div>
+            </div>
+
+            <hr class="divider" style="margin:12px 0">
+            <div class="inline-status">
+              <div class="dot green"></div>
+              <span style="font-size:11px; color:var(--text-muted)">Ready to create</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Governance note -->
+        <div class="callout violet fade-in d3" style="margin-top:14px">
+          <span class="callout-icon">🔐</span>
+          <div style="font-size:11px">
+            <strong>Collection membership is a governance operation.</strong> Every dataset add/remove is audited with full provenance — actor, authority, and affected grants.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('screen-' + id);
+  if (el) {
+    el.classList.add('active');
+    el.querySelectorAll('.fade-in').forEach(e => {
+      e.style.animation = 'none';
+      void e.offsetHeight;
+      e.style.animation = '';
+    });
+  }
+  event.target.classList.add('active');
+}
+
+function toggleRadio(el, group) {
+  el.closest('.radio-group').querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

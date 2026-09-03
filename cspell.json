@@ -234,7 +234,8 @@
     ".github/skills/",
     ".github/agents/",
     ".gitignore",
-    "docs/reference/ui/vuestic/*"
+    "docs/reference/ui/vuestic/*",
+    "docs/reference/api/express-validator/"
   ],
   "ignoreRegExpList": [
     "mdi-.*"

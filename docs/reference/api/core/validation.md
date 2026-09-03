@@ -1,5 +1,15 @@
 # Request Validation
 
+::: tip Vendored API dump
+A plain-text snapshot of the express-validator `ValidationChain` API — every built-in
+validator, sanitizer, and modifier — is kept at
+[`docs/reference/api/express-validator/validation-chain.txt`](https://github.com/IUSCA/bioloop/tree/main/docs/reference/api/express-validator)
+so developers and AI agents can look up a chain method without leaving the repo. It is a
+snapshot, not authoritative — check
+[express-validator.github.io](https://express-validator.github.io/docs/api/validation-chain/)
+when a detail matters.
+:::
+
 Request validation ensures that incoming HTTP requests contain the expected data in the correct format. This feature uses [express-validator](https://express-validator.github.io/docs/) to validate the request's query parameters, route parameters, or body content. It helps enforce data integrity and prevents invalid or malicious data from propagating through the system. `express-validator` wraps the extensive collection of validators and sanitizers offered by [validator.js](https://github.com/validatorjs/validator.js).
 
 Without this validation layer, developers would need to write repetitive and error-prone checks in every route handler, leading to cluttered and less maintainable code. By centralizing validation logic, this feature promotes clean, declarative, and reusable code.

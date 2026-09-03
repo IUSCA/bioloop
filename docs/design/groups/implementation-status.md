@@ -1,6 +1,6 @@
 ---
 title: Implementation Status
-order: 6
+order: 8
 status: reference
 last_verified: 2026-09-03
 ---
