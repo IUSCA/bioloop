@@ -80,3 +80,4 @@ signet/signet
 
 /plans
 .DS_Store
+.cspellcache
