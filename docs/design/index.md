@@ -35,6 +35,7 @@ frontmatter, and repeats them in a banner at the top.
 - [Group use cases](./groups/use-cases.md) — `active`
 - [Group invitations](./groups/invitations.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
+- [Groups implementation status](./groups/implementation-status.md) — code map and gap register for the four records above
 
 ## Ideas
 

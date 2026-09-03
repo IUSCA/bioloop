@@ -241,7 +241,7 @@ services:
 
 # Dev containers
   docs:
-    image: node:21
+    image: node:24
     volumes:
       - ./package.json:/opt/sca/app/package.json
       - ./package-lock.json:/opt/sca/app/package-lock.json

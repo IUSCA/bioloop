@@ -81,3 +81,5 @@ signet/signet
 /plans
 .DS_Store
 .cspellcache
+# local build/todo tracking (not tracked)
+/.todo
