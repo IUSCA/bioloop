@@ -2,25 +2,25 @@ const exports = {
   sidebar: {
     user_items: [
       {
-        icon: "mdi-flask",
+        icon: "mdi:flask",
         title: "Projects",
         path: "/projects",
         test_id: "sidebar-projects",
       },
       {
-        icon: "mdi-folder-plus-outline",
+        icon: "mdi:folder-plus-outline",
         title: "Create Dataset",
         test_id: "sidebar-create-dataset",
         children: [
           {
             feature_key: "import",
-            icon: "mdi-file-import-outline",
+            icon: "mdi:file-import-outline",
             title: "Import",
             path: "/datasets/imports",
           },
           {
             feature_key: "uploads",
-            icon: "mdi-cloud-upload-outline",
+            icon: "mdi:cloud-upload-outline",
             title: "Upload",
             path: "/datasets/uploads",
           },
@@ -29,46 +29,46 @@ const exports = {
     ],
     operator_items: [
       {
-        icon: "mdi-monitor-dashboard",
+        icon: "mdi:monitor-dashboard",
         title: "Dashboard",
         path: "/dashboard",
         test_id: "sidebar-dashboard",
       },
       // {
-      //   icon: "mdi-file-lock",
+      //   icon: "mdi:file-lock",
       //   title: "Data Products",
       //   path: "/dataproducts",
       // },
       // {
-      //   icon: "mdi-transition",
+      //   icon: "mdi:transition",
       //   title: "Conversions",
       //   path: "/conversions",
       // },
       // {
-      //   icon: "mdi-folder-upload",
+      //   icon: "mdi:folder-upload",
       //   title: "Data Uploader",
       //   path: "/datauploader",  // cspell: disable-line
       // },
       {
-        icon: "mdi-dna",
+        icon: "mdi:dna",
         title: "Raw Data",
         path: "/rawdata",
         test_id: "sidebar-raw-data",
       },
       {
-        icon: "mdi-package-variant-closed",
+        icon: "mdi:package-variant-closed",
         title: "Data Products",
         path: "/dataproducts",
         test_id: "sidebar-data-products",
       },
       {
-        icon: "mdi-table-account",
+        icon: "mdi:table-account",
         title: "User Management",
         path: "/users",
         test_id: "sidebar-user-management",
       },
       {
-        icon: "mdi-format-list-bulleted",
+        icon: "mdi:format-list-bulleted",
         title: "Stats/Tracking",
         path: "/stats",
         test_id: "sidebar-stats-tracking",
@@ -87,31 +87,31 @@ const exports = {
         test_id: "sidebar-alerts",
       },
       // {
-      //   icon: "mdi-account-multiple",
+      //   icon: "mdi:account-multiple",
       //   title: "Group Management",
       //   path: "/groups",
       // },
       // {
-      //   icon: 'mdi-delete-empty-outline',
+      //   icon: 'mdi:delete-empty-outline',
       //   title: 'Data Cleanup',
       //   path: '/clean',
       // },
     ],
     bottom_items: [
       {
-        icon: "mdi-information",
+        icon: "mdi:information",
         title: "About",
         path: "/about",
         test_id: "sidebar-about",
       },
       {
-        icon: "mdi-account-details",
+        icon: "mdi:account-details",
         title: "Profile",
         path: "/profile",
         test_id: "sidebar-profile",
       },
       {
-        icon: "mdi-logout-variant",
+        icon: "mdi:logout-variant",
         title: "Logout",
         path: "/auth/logout",
         test_id: "sidebar-logout",

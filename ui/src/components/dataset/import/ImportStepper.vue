@@ -310,7 +310,6 @@ import instrumentService from "@/services/instrument";
 import projectService from "@/services/projects";
 import toast from "@/services/toast";
 import { useAuthStore } from "@/stores/auth";
-import { Icon } from "@iconify/vue";
 import { watchDebounced } from "@vueuse/core";
 import { VaPopover } from "vuestic-ui";
 

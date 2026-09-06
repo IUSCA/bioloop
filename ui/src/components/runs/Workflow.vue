@@ -15,7 +15,7 @@
 
             <!-- retries -->
             <span v-if="source.retries" class="">
-              <i-mdi-refresh class="text-sm inline mt-[-3px]" />{{
+              <Icon icon="mdi:refresh" class="text-sm inline mt-[-3px]" />{{
                 source.retries
               }}
             </span>
@@ -56,9 +56,16 @@
         <template #cell(actions)="{ row, isExpanded }">
           <va-button
             @click="row.toggleRowDetails()"
-            :icon="isExpanded ? 'va-arrow-up' : 'va-arrow-down'"
             preset="plain"
           >
+            <Icon
+              :icon="
+                isExpanded
+                  ? 'material-symbols:keyboard-arrow-up'
+                  : 'material-symbols:keyboard-arrow-down'
+              "
+              class="mr-2 text-xl"
+            />
             {{ isExpanded ? "Hide" : "More info" }}
           </va-button>
         </template>
@@ -91,7 +98,7 @@
           >
             <confirm-button
               action="Resume Workflow"
-              icon="mdi-play"
+              icon="mdi:play"
               color="primary"
               :disabled="is_resume_locked"
               @click="resume_workflow"
@@ -100,7 +107,7 @@
             <confirm-hold-button
               v-if="auth.canAdmin"
               action="Delete Workflow"
-              icon="mdi-delete"
+              icon="mdi:delete"
               color="danger"
               @click="delete_workflow"
             ></confirm-hold-button>
@@ -110,7 +117,7 @@
             <confirm-hold-button
               v-if="auth.canAdmin"
               action="Delete Workflow"
-              icon="mdi-delete"
+              icon="mdi:delete"
               color="danger"
               @click="delete_workflow"
             ></confirm-hold-button>
@@ -120,14 +127,14 @@
             <div class="flex justify-start items-center gap-3">
               <confirm-button
                 action="Stop Workflow"
-                icon="mdi-stop-circle-outline"
+                icon="mdi:stop-circle-outline"
                 color="danger"
                 @click="pause_workflow"
               ></confirm-button>
               <confirm-hold-button
                 v-if="auth.canAdmin"
                 action="Delete Workflow"
-                icon="mdi-delete"
+                icon="mdi:delete"
                 color="danger"
                 @click="delete_workflow"
               ></confirm-hold-button>

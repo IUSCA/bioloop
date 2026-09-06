@@ -17,7 +17,7 @@
         class="text-sm va-text-secondary flex items-center gap-2 px-1 mt-2"
         v-if="props.showSlugWarning"
       >
-        <i-mdi-alert class="flex-none" style="color: var(--va-warning)" />
+        <Icon icon="mdi:alert" class="flex-none" style="color: var(--va-warning)" />
         <span class="flex-none">
           Altering the project name could potentially change the URL alias.
         </span>

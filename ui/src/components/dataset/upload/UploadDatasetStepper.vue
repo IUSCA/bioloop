@@ -505,7 +505,6 @@ import {
 } from "@/services/upload/checksum";
 import { formatBytes } from "@/services/utils";
 import { useAuthStore } from "@/stores/auth";
-import { Icon } from "@iconify/vue";
 import _ from "lodash";
 import * as tus from "tus-js-client";
 import { VaDivider, VaPopover } from "vuestic-ui";

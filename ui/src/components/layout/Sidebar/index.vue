@@ -27,7 +27,7 @@
           <va-sidebar-item-title>
             <div class="flex items-center">
               <span>Metrics</span>
-              <i-mdi-open-in-new class="ml-1 text-sm" />
+              <Icon icon="mdi:open-in-new" class="ml-1 text-sm" />
             </div>
           </va-sidebar-item-title>
         </va-sidebar-item-content>

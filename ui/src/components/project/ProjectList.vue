@@ -13,23 +13,23 @@
 
           <span class="va-text-secondary p-1"> &VerticalLine; </span>
 
-          <i-mdi-zip-box-outline class="text-lg inline pr-1" />
+          <Icon icon="mdi:zip-box-outline" class="text-lg inline pr-1" />
           <span class=""> {{ project.datasets?.length }} </span>
 
           <span class="va-text-secondary p-1"> &VerticalLine; </span>
 
-          <i-mdi-account class="text-lg inline pr-1" />
+          <Icon icon="mdi:account" class="text-lg inline pr-1" />
           <span class=""> {{ project.users?.length }} </span>
         </va-list-item-label>
 
         <va-list-item-label caption>
           <div class="flex gap-3 pt-1">
             <div class="flex gap-1 flex-none">
-              <i-mdi:calendar-plus class="flex-none" />
+              <Icon icon="mdi:calendar-plus" class="flex-none" />
               <span> {{ datetime.date(project.created_at) }} </span>
             </div>
             <div class="flex gap-1 flex-none">
-              <i-mdi:update class="flex-none" />
+              <Icon icon="mdi:update" class="flex-none" />
               <span> {{ datetime.date(project.updated_at) }} </span>
             </div>
           </div>
@@ -39,12 +39,14 @@
       <va-list-item-section v-if="props.showRemove" class="flex-none">
         <va-button
           preset="secondary"
-          icon="delete"
           color="danger"
           round
+          aria-label="Remove"
           @click="emit('remove', project)"
           class="self-end"
-        />
+        >
+          <Icon icon="material-symbols:delete" class="text-xl" />
+        </va-button>
       </va-list-item-section>
     </va-list-item>
   </va-list>
