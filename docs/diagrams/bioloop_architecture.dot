@@ -1,0 +1,87 @@
+digraph bioloop_architecture {
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Helvetica", fontsize=11];
+    edge [fontname="Helvetica", fontsize=9];
+    compound=true;
+    nodesep=0.6;
+    ranksep=0.8;
+    splines=ortho;
+
+    // ── Row 1: User ──
+    user [label="Researcher /\nOperator", shape=ellipse, style=filled, fillcolor="#e0e0e0"];
+
+    // ── Row 2: Frontend ──
+    subgraph cluster_frontend {
+        label="Frontend";
+        style=filled; fillcolor="#dce8f8";
+        ui [label="UI\n(Vue 3 / Vite)", fillcolor="#b3d4f5"];
+    }
+
+    // ── Row 3: Core Services + Auth side by side ──
+    subgraph cluster_core {
+        label="Core Services";
+        style=filled; fillcolor="#fff3cd";
+        api [label="API\n(Node / Express)", fillcolor="#ffe082"];
+        secure_dl [label="Secure Download\n(Node.js)", fillcolor="#ffe082"];
+    }
+
+    subgraph cluster_auth {
+        label="Auth";
+        style=filled; fillcolor="#fde8e8";
+        signet [label="Signet\n(OAuth 2.0)", fillcolor="#f5b8b8"];
+        signet_db [label="PostgreSQL\n(Signet)", fillcolor="#f5b8b8"];
+    }
+
+    // ── Row 4: Rhythm (left) + Workers (right) ──
+    subgraph cluster_workflow {
+        label="Workflow Engine (Rhythm)";
+        style=filled; fillcolor="#e8f5e8";
+        rhythm [label="Rhythm API\n(FastAPI)", fillcolor="#a5d6a7"];
+        queue [label="RabbitMQ", fillcolor="#a5d6a7"];
+        mongo [label="MongoDB\n(Task State)", fillcolor="#a5d6a7"];
+    }
+
+    subgraph cluster_workers {
+        label="Workers (Python / Celery)";
+        style=filled; fillcolor="#f0e8ff";
+        celery [label="celery_worker\n(Task Executor)", fillcolor="#ce93d8"];
+        watch  [label="watch\n(File Monitor)", fillcolor="#ce93d8"];
+    }
+
+    // ── Row 5: Storage ──
+    subgraph cluster_storage {
+        label="Storage";
+        style=filled; fillcolor="#fff8e1";
+        postgres [label="PostgreSQL\n(App Data)", fillcolor="#ffe57f"];
+        landing  [label="Shared File Volume\n(/opt/sca/data)", shape=cylinder, fillcolor="#ffe57f"];
+    }
+
+    // ── Rank constraints for portrait layout ──
+    { rank=same; user }
+    { rank=same; ui }
+    { rank=same; api; secure_dl; signet }
+    { rank=same; rhythm; queue; celery; watch }
+    { rank=same; postgres; landing; mongo }
+
+    // ── Edges ──
+    user      -> ui;
+    ui        -> api;
+    ui        -> secure_dl;
+
+    api       -> signet;
+    signet    -> signet_db;
+
+    api       -> rhythm     [label="dispatch"];
+    api       -> postgres;
+
+    rhythm    -> queue;
+    rhythm    -> mongo;
+    queue     -> celery     [label="tasks"];
+    celery    -> mongo      [label="results"];
+    celery    -> landing;
+
+    watch     -> landing;
+    watch     -> api        [label="trigger\ningest"];
+
+    secure_dl -> landing;
+}
