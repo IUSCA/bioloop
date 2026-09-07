@@ -29,7 +29,8 @@ class DatasetService {
    * @param offset     Database offset starting at which results will be retrieved
    * @param sortBy     Object containing property to sort datasets by, whose key is the name
    *                   of said property, and value is one of 'asc' or 'desc'
-   * @returns          Object containing matching datasets, and count of matching datasets
+   * @param ids_only   When true, API returns `{ metadata, ids }` instead of full datasets
+   * @returns          Object containing matching datasets (or ids), and count of matching datasets
    */
   getAll(params) {
     const url = !(auth.canOperate || auth.canAdmin)
