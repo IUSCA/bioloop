@@ -7,6 +7,21 @@
 
 echo "=== API entrypoint start ==="
 
+# Docker Compose selects the runtime mode (for example, docker or ci). Keep
+# that value when loading generated secrets from api/.env so a stale local
+# NODE_ENV entry cannot override the active Compose configuration.
+_COMPOSE_NODE_ENV="${NODE_ENV:-}"
+
+load_runtime_env() {
+  if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+  fi
+
+  if [ -n "$_COMPOSE_NODE_ENV" ]; then
+    export NODE_ENV="$_COMPOSE_NODE_ENV"
+  fi
+}
+
 # workers/.env is created here so the Celery worker container (which mounts
 # this same workers/ directory) can read tokens written by this script.
 if [ ! -f "workers/.env" ]; then
@@ -26,7 +41,7 @@ done
 echo "WORKFLOW_AUTH_TOKEN ready (waited $(( $(date +%s) - _WAIT_START ))s)"
 
 # Load .env so subsequent commands (e.g. openssl, node scripts) can read secrets.
-export $(grep -v '^#' .env | xargs)
+load_runtime_env
 
 # RSA key pair used to sign and verify JWTs issued by this API service.
 # Keys are stored in a named Docker volume so they persist across container restarts.
@@ -165,9 +180,7 @@ else
   echo "APP_API_TOKEN already set. Skipping."
 fi
 
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
-fi
+load_runtime_env
 
 echo "=== API entrypoint complete ==="
 $*

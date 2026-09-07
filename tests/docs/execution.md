@@ -2,21 +2,18 @@
 
 The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point.
 
-### Set CI properties
-1. Set in api/.env:
-```
-NODE_ENV=ci
+### Run the import smoke tests
 
-E2E_USER=e2eUser
-E2E_OPERATOR=e2eOperator
-E2E_ADMIN=e2eAdmin
+From the project root, run:
+
+```bash
+npm run test:smoke
 ```
-2. Set in tests/.env
-```
-E2E_USER=e2eUser
-E2E_OPERATOR=e2eOperator
-E2E_ADMIN=e2eAdmin
-```
+
+This command starts the app in CI mode, prepares the test data, runs the
+selected Playwright smoke tests, and restores any local services that were
+running beforehand. Do not set `NODE_ENV=ci` in `api/.env`; Docker Compose
+selects the correct mode for both E2E and normal local development.
 
 ### Viewing artifacts
 - The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.
@@ -54,4 +51,3 @@ Tests should now show up in VS Code's Playwright plugin, as pictured below.
 
 - Once your tests show up within VS Code's Playwright plugin, you should see a 'Play' button next to each `test` block, clicking which will first run any dependencies (like the ones used to login) and then the actual test.
     - You can decide whether to run these tests in headed or headless mode via the `Show browser` checkbox.
-
