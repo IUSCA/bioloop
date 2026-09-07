@@ -1,6 +1,7 @@
 <template>
   <FileBrowser
-    :dataset-id="props.datasetId"
+    v-if="dataset.id"
+    :dataset="dataset"
     :show-download="auth.isFeatureEnabled('downloads') && dataset.is_staged"
   />
 </template>
