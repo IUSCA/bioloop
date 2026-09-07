@@ -19,7 +19,6 @@ const PREVIOUS_BUTTON_TEST_ID = 'import-previous-button';
 test.describe('Dataset Import — Next/Previous buttons', () => {
   test(
     'should show the expected controls on initial page load',
-    { tag: '@smoke' },
     async ({ page }) => {
       await navigateToImportSelectDirectory(page);
 

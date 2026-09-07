@@ -1,4 +1,15 @@
 const { expect } = require('../fixtures');
+const { navigateToNextStep } = require('./stepper');
+
+/**
+ * Opens the first step of the new dataset upload flow.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @returns {Promise<void>}
+ */
+async function openNewUpload({ page }) {
+  await page.goto('/datasets/uploads/new');
+}
 
 /**
  * Tracks selected files metadata from the upload table
@@ -27,12 +38,38 @@ async function trackSelectedFilesMetadata({ page, tableTestId }) {
   return files;
 }
 
+async function setFilesUsingKnownInput({
+  page,
+  filePaths,
+  candidates,
+  candidateIndex = 0,
+}) {
+  if (candidateIndex >= candidates.length) {
+    throw new Error(
+      'Unable to locate a file input for upload. Checked known upload selectors.',
+    );
+  }
+
+  const fileInput = page.locator(candidates[candidateIndex]).first();
+  try {
+    await fileInput.waitFor({ state: 'attached', timeout: 15000 });
+    await fileInput.setInputFiles(filePaths);
+  } catch (error) {
+    await setFilesUsingKnownInput({
+      page,
+      filePaths,
+      candidates,
+      candidateIndex: candidateIndex + 1,
+    });
+  }
+}
+
 /**
  * Selects files for upload
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
  * @param {string[]} params.filePaths - Array of file paths to upload
- * @param {string} params.fileSelectTestId - The test ID of the file-select trigger element
+ * @param {string} [params.fileSelectTestId] - File-select trigger test ID
  * @returns {Promise<void>}
  */
 async function selectFiles({
@@ -46,44 +83,54 @@ async function selectFiles({
   });
 
   const candidates = [
+    ...(fileSelectTestId
+      ? [`[data-testid="${fileSelectTestId}"] input[type="file"]`]
+      : []),
     '[data-testid="upload-container"] input[type="file"]:not([data-testid="folder-upload-input"])',
     '[data-testid="upload-file-select"] input[type="file"]',
     'input[type="file"]:not([data-testid="folder-upload-input"])',
   ];
 
-  for (let index = 0; index < candidates.length; index += 1) {
-    const fileInput = page.locator(candidates[index]).first();
-    try {
-      await fileInput.waitFor({ state: 'attached', timeout: 15000 });
-      await fileInput.setInputFiles(filePaths);
-      return;
-    } catch (error) {
-      // Try the next known uploader input shape.
-    }
-  }
+  await setFilesUsingKnownInput({ page, filePaths, candidates });
+}
 
-  throw new Error(
-    'Unable to locate a file input for upload. Checked known upload selectors.',
-  );
+/**
+ * Selects files and advances from file selection to the General Info step.
+ * Keep this helper limited to shared navigation: each spec still supplies its
+ * own metadata and assertions after General Info is shown.
+ * @param {Object} params - Parameters object
+ * @param {import('@playwright/test').Page} params.page - Playwright page instance
+ * @param {string[]} params.filePaths - Array of file paths to upload
+ * @param {string} [params.fileSelectTestId] - File selector test ID
+ * @returns {Promise<void>}
+ */
+async function selectFilesAndGoToGeneralInfo({
+  page,
+  filePaths,
+  fileSelectTestId,
+}) {
+  await selectFiles({ page, filePaths, fileSelectTestId });
+  await navigateToNextStep({ page, nextButtonTestId: 'upload-next-button' });
+  await expect(page.getByTestId('upload-metadata-dataset-type-select')).toBeVisible();
 }
 
 /**
  * Selects a directory for upload via the hidden folder input.
  * @param {Object} params - Parameters object
  * @param {import('@playwright/test').Page} params.page - Playwright page instance
- * @param {string[]} params.filePaths - Array of file paths in one directory tree
+ * @param {string} params.directoryPath - Path to the directory to upload
  * @returns {Promise<void>}
  */
 async function selectDirectory({
   page,
-  filePaths,
+  directoryPath,
 }) {
   const folderButton = page.getByTestId('select-folder-button');
   await expect(folderButton).toBeVisible();
 
   const folderInput = page.locator('[data-testid="folder-upload-input"]').first();
   await folderInput.waitFor({ state: 'attached', timeout: 10000 });
-  await folderInput.setInputFiles(filePaths);
+  await folderInput.setInputFiles(directoryPath);
 }
 
 /**
@@ -100,22 +147,27 @@ async function setUploadFailureSimulation({
   count = null,
 }) {
   await page.evaluate(({ _mode, _count }) => {
-    localStorage.removeItem('SIMULATE_UPLOAD_FAILURE');
-    localStorage.removeItem('SIMULATE_UPLOAD_FAILURE_COUNT');
+    globalThis.localStorage.removeItem('SIMULATE_UPLOAD_FAILURE');
+    globalThis.localStorage.removeItem('SIMULATE_UPLOAD_FAILURE_COUNT');
 
     if (_mode) {
-      localStorage.setItem('SIMULATE_UPLOAD_FAILURE', _mode);
+      globalThis.localStorage.setItem('SIMULATE_UPLOAD_FAILURE', _mode);
     }
 
     if (_count != null) {
-      localStorage.setItem('SIMULATE_UPLOAD_FAILURE_COUNT', String(_count));
+      globalThis.localStorage.setItem(
+        'SIMULATE_UPLOAD_FAILURE_COUNT',
+        String(_count),
+      );
     }
   }, { _mode: mode, _count: count });
 }
 
 module.exports = {
+  openNewUpload,
   trackSelectedFilesMetadata,
   selectFiles,
+  selectFilesAndGoToGeneralInfo,
   selectDirectory,
   setUploadFailureSimulation,
 };

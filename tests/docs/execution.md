@@ -2,18 +2,32 @@
 
 The following instructions are meant for running tests on a local host machine, and do not conform to any particular CI/CD workflow at this point.
 
-### Run the import smoke tests
+### Run all end-to-end tests
 
 From the project root, run:
 
 ```bash
-npm run test:smoke
+npm run test:e2e
 ```
 
 This command starts the app in CI mode, prepares the test data, runs the
-selected Playwright smoke tests, and restores any local services that were
-running beforehand. Do not set `NODE_ENV=ci` in `api/.env`; Docker Compose
-selects the correct mode for both E2E and normal local development.
+complete configured Playwright suite, and restores any local services that
+were running beforehand. Do not set `NODE_ENV=ci` in `api/.env`; Docker
+Compose selects the correct mode for both E2E and normal local development.
+
+### Run all dataset upload tests
+
+From the project root, run:
+
+```bash
+npm run test:e2e -- --project=upload --project=upload_role_visibility --project=upload--project_association--user_role--association
+```
+
+To run one upload spec, provide its path and Playwright project:
+
+```bash
+npm run test:e2e -- src/tests/view/authenticated/upload/file_selection_step.spec.js --project=upload
+```
 
 ### Viewing artifacts
 - The `e2e` container mounts its `/opt/sca/app` directory to the host machine's `./tests` directory, to enable accessing test artifacts from the host machine.

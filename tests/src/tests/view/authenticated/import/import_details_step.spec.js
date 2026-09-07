@@ -83,7 +83,6 @@ test.describe('Dataset Import — Import Details step', () => {
 
   test(
     'should enable Next after a valid dataset name is entered',
-    { tag: '@smoke' },
     async ({ page }) => {
       const onStep2 = await navigateToImportDetails(page);
 

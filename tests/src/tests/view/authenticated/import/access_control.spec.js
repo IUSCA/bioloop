@@ -13,9 +13,7 @@ import { FEATURE_ROLE_SYNC_NOTE } from '../../../../constants';
 const importEnabledForRoles = config.enabledFeatures?.import?.enabledForRoles ?? [];
 
 test.describe('Dataset Import access control', () => {
-  test('should show a disabled-feature warning for roles without import access', {
-    tag: '@smoke',
-  }, async ({ page }) => {
+  test('should show a disabled-feature warning for roles without import access', async ({ page }) => {
     expect(
       importEnabledForRoles.length,
       `Import feature has no enabled roles.\n\n${FEATURE_ROLE_SYNC_NOTE}`,
@@ -25,7 +23,8 @@ test.describe('Dataset Import access control', () => {
 
     await expect(page).toHaveURL('/datasets/import');
 
-    // Roles without import access see the feature-disabled alert instead of the stepper.
+    // Roles without import access see the feature-disabled alert instead of
+    // the stepper.
     // Explicit timeout covers the auth-store resolution delay on first load.
     await expect(
       page.locator('.va-alert').filter({ hasText: 'This feature is currently disabled' }),

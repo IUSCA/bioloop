@@ -15,7 +15,6 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "test:e2e": "./bin/test_ui_e2e.sh",
-    "test:smoke": "./bin/test_ui_e2e.sh --project=admin_import --project=user_import --grep @smoke",
     "cloc": "git ls-files -z | grep -z -v -E '(^|/)(package-lock\\.json|poetry\\.lock|docs/\\.vitepress/dist/|metrics/grafana/config/provisioning/dashboards/)' | xargs -0 npx cloc"
   }
 }
