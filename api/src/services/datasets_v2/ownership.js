@@ -1,4 +1,5 @@
 const prisma = require('@/db');
+const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const { normalize_name } = require('./create');
 
 /**
@@ -18,6 +19,11 @@ const { normalize_name } = require('./create');
  * Archived groups are excluded. An archived group accepts no new datasets, because
  * dataset.contribute is classified as a mutating action.
  *
+ * The two system principals are excluded as well. `Public` and `Authenticated Users` are
+ * rows in the group table so a grant can name them as a subject, but neither has members
+ * nor a place in the hierarchy, so neither can own data. `listGroups` excludes them for
+ * the same reason.
+ *
  * @see docs/design/groups/dataset-creation-plan.md — A2
  * @param {object} user - the authenticated user; needs subject_id and roles
  * @returns {Promise<Array<{id, name, slug, description, allow_user_contributions, admitted_by}>>}
@@ -35,7 +41,7 @@ async function listEligibleOwnerGroups(user) {
 
   if (is_platform_admin) {
     const groups = await prisma.group.findMany({
-      where: { is_archived: false },
+      where: { is_archived: false, id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS } },
       select,
       orderBy: { name: 'asc' },
     });
@@ -64,7 +70,10 @@ async function listEligibleOwnerGroups(user) {
   if (candidateIds.length === 0) return [];
 
   const groups = await prisma.group.findMany({
-    where: { id: { in: candidateIds }, is_archived: false },
+    where: {
+      id: { in: candidateIds, notIn: SYSTEM_PRINCIPAL_GROUP_IDS },
+      is_archived: false,
+    },
     select,
     orderBy: { name: 'asc' },
   });
@@ -80,9 +89,16 @@ async function listEligibleOwnerGroups(user) {
 
 /**
  * The owning group's contribution flag, for authorizing against a group that owns nothing
- * yet. Returns null when the group does not exist or is archived.
+ * yet. Returns null when the group does not exist, is archived, or is a system principal.
+ *
+ * Every v2 creation route resolves its owning group through here, so refusing the system
+ * principals in one place refuses them for create, import, and upload alike. A platform
+ * admin passes the `dataset.contribute` check against any group, so the exclusion has to
+ * sit ahead of the policy engine rather than inside it.
  */
 async function getOwnerGroupForAuthorization(owner_group_id) {
+  if (SYSTEM_PRINCIPAL_GROUP_IDS.includes(owner_group_id)) return null;
+
   return prisma.group.findFirst({
     where: { id: owner_group_id, is_archived: false },
     select: { id: true, allow_user_contributions: true },

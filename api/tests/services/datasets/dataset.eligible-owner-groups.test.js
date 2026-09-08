@@ -14,8 +14,9 @@ global.__basedir = path.join(__dirname, '..', '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
-const { listEligibleOwnerGroups } = require('@/services/datasets_v2');
+const { listEligibleOwnerGroups, getOwnerGroupForAuthorization } = require('@/services/datasets_v2');
 const { authorizeAction } = require('@/authorization');
+const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const {
   createTestUser,
   createTestGroup,
@@ -112,6 +113,27 @@ describe('listEligibleOwnerGroups', () => {
 
     expect(groups.get(closedGroup.id)?.admitted_by).toBe('PLATFORM_ADMIN');
     expect(groups.has(archivedOpenGroup.id)).toBe(false);
+  });
+
+  test('never offers a system principal, even to a platform admin', async () => {
+    // Public and Authenticated Users are groups only so a grant can name them as a subject.
+    // Neither has members or a place in the hierarchy, so neither can own data.
+    const groups = byId(await listEligibleOwnerGroups({ subject_id: loner.subject_id, roles: ['admin'] }));
+
+    SYSTEM_PRINCIPAL_GROUP_IDS.forEach((id) => {
+      expect(groups.has(id)).toBe(false);
+    });
+  });
+
+  test('refuses a system principal as an owning group for authorization', async () => {
+    // The creation routes resolve the group through this call, so returning null here is
+    // what stops a platform admin from importing a dataset into Public.
+    for (const id of SYSTEM_PRINCIPAL_GROUP_IDS) {
+      // eslint-disable-next-line no-await-in-loop
+      expect(await getOwnerGroupForAuthorization(id)).toBeNull();
+    }
+
+    expect(await getOwnerGroupForAuthorization(closedGroup.id)).not.toBeNull();
   });
 
   test('agrees with the contribute policy on every group it offers', async () => {

@@ -185,6 +185,15 @@ unaffected.
 admin sees the groups they administer, and a member sees groups where
 `allow_user_contributions` is true. Each row says which rule admitted it.
 
+Two groups are never eligible. `Public` and `Authenticated Users` are rows in the group table
+so a grant can name them as a subject, but neither has members nor a place in the hierarchy,
+so neither can own data. `listGroups` already excludes them for the same reason.
+
+Excluding them from the list alone is not enough, because a platform admin passes the
+`dataset.contribute` check against any group. `getOwnerGroupForAuthorization` refuses them as
+well, and every v2 creation route — create, import, and upload — resolves its owning group
+through that one call, so the refusal covers all three.
+
 *Reuse:* the search helpers in `services/groups.js`, the hydrators. *New:* one service, one
 route.
 
