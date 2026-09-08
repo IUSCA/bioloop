@@ -11,6 +11,7 @@ const {
   AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder,
 } = audit;
 const grantService = require('@/services/grants');
+const restrictionService = require('@/services/restrictions');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const { RESOURCE_SCOPES } = require('./resources');
 
@@ -171,6 +172,15 @@ async function archiveCollection(collection_id, actor_id) {
       },
     });
 
+    // The restriction is what evaluation reads; is_archived above is its denormalisation
+    // for listings and the UI badge. Written in the same transaction so they cannot drift.
+    // @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+    await restrictionService.applyRestriction(tx, {
+      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
+      resource_id: collection_id,
+      actor_id,
+    });
+
     // Create audit record for collection archival
     const builder = new AuditBuilder(tx, { actor_id });
     await builder
@@ -196,6 +206,12 @@ async function unarchiveCollection(collection_id, actor_id) {
         archived_at: null,
         is_archived: false,
       },
+    });
+
+    await restrictionService.liftRestriction(tx, {
+      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
+      resource_id: collection_id,
+      actor_id,
     });
 
     // Create audit record for collection unarchival

@@ -133,18 +133,47 @@ included `READ_DATA` and has been corrected. This also settles `.todo` L1 T6.
 
 Nobody's effective access narrowed. The order only widens what a grant satisfies.
 
-## Phase 5 — Restriction layer and archiving
+## Phase 5 — Restriction layer and archiving — **done**
 
 Implements [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive).
 Satisfies use case 17 and closes the archive enforcement holes.
 
-- Migration: a restriction table and a seeded restriction-type lookup, with `ARCHIVED` as
-  the only type.
-- Evaluation checks restrictions before grants, for every action, with one type present.
-- Restrictions propagate down the group tree and to the resources a group governs.
-- Archiving stops being a hand-written list of prohibited actions and becomes one rule.
-- Tests: an archived group blocks every mutation on its resources and its descendants,
-  reading is unaffected, and lifting the restriction restores mutation.
+- Migration: `restriction_type` and `restriction`, with `ARCHIVED` as the only type. A
+  restriction attaches to exactly one of a group or a resource, enforced by a check
+  constraint, and a partial unique index allows one open restriction of a type per target.
+  Rows are closed rather than deleted, the same way memberships are.
+- `effective_restriction` resolves where a restriction reaches: the group it names, every
+  descendant group, and the datasets and collections those groups govern, plus restrictions
+  attached straight to a resource.
+- Evaluation checks restrictions before policies, for every action. The check is injected
+  into the core middleware as a dependency, so the engine stays free of any knowledge of
+  restrictions. A blocked action returns 403 naming the restriction rather than a generic
+  denial.
+- The capability set is filtered the same way, so the UI does not offer a button that would
+  403.
+- Archiving writes a restriction row in the same transaction that sets `is_archived`, which
+  stays as the denormalisation the listings, the archived filter, and the badge read.
+- Tests: 19 covering propagation down the tree and to governed resources, reading being
+  unaffected, lifting restoring mutation, re-archiving opening a second row, idempotence,
+  and the two columns agreeing with the table.
+
+Two things were settled during implementation rather than in the decision.
+
+**The classification of actions is written out, not inferred.** `MUTATING_ACTIONS` and
+`READING_ACTIONS` name all 61 registered policy actions, and a test asserts every action
+appears in exactly one of them and that neither names an action that does not exist. A
+naming convention would silently fail to cover an action somebody adds later. That test
+immediately caught two mistakes in the first draft of the lists.
+
+**`unarchive` is the only exemption.** Ownership transfer was exempt for a while, so that
+datasets could leave the archived `Unassigned Datasets` group without unarchiving it. That
+made the rule harder to state for one workflow, and the archive dialog already promises
+users that grant creation and revocation both stop. A platform admin now unarchives,
+reassigns, and re-archives, which leaves an audit record of each step.
+
+The service-level `is_archived` checks that predate this phase are kept. They cover the
+three operations they always covered, and they still fire when a service is called outside
+a route. The restriction layer is what covers the other fifty-odd actions.
 
 ## Phase 6 — Derived datasets are never more open than their sources
 

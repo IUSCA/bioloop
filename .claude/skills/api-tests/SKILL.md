@@ -113,6 +113,41 @@ This was the cause of both suites that used to be listed here as flaky. If a rac
 starts failing intermittently, check for this shape before assuming the timing is
 unfixable — eight consecutive runs of a suite is a reasonable bar for calling it settled.
 
+## Cover the shape a caller actually gets back
+
+Two bugs in one session came from testing a function's logic and not its return shape.
+`evaluateCapabilitySet` returns a map of action name to boolean, not a list, and code
+written against it as a list threw `capabilities is not iterable` on the first real request
+while every unit test passed.
+
+When you wrap or filter something the request path uses, assert on the shape the caller
+receives, not only on the values. A quick check before writing the wrapper:
+
+```
+node -e "global.__basedir=process.cwd(); require('module-alias/register');
+  const x = require('@/some/module'); console.log(typeof x.thing, x.thing)"
+```
+
+The route tests under `tests/routes/` need an authenticated session, which is why the
+service suites do not cover the middleware. Until that scaffolding exists, exercise the
+page in a browser after a middleware change — the `dev-servers` skill has the recipe.
+
+## Assert a classification is exhaustive, not just correct
+
+Where code enumerates a domain — every policy action, every access type, every restriction
+type — write the test that walks the registry and asserts nothing is missing and nothing
+listed is fictional:
+
+```js
+expect(unclassified).toEqual([]);   // registered but not in either list
+expect(phantom).toEqual([]);        // in a list but not registered
+```
+
+Both halves matter. The first caught a real action nobody had classified, which would have
+escaped every restriction; the second caught a hand-written entry for an action that does
+not exist. A naming convention is not a substitute, because it fails silently for whatever
+somebody adds next.
+
 ## Test helpers
 
 `tests/services/helpers.js` holds the fixtures. Two membership helpers matter, because

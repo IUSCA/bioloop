@@ -10,6 +10,38 @@ const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
  * This middleware should be added early in the request processing pipeline
  * to ensure all authorization checks can benefit from caching.
  */
+/**
+ * Turn off the capabilities a restriction blocks.
+ *
+ * `evaluateCapabilitySet` returns a map of action name to boolean, not a list, and the
+ * shape has to survive: `toCapabilitiesArray` and the caller-role derivation both read it.
+ * So a blocked action is set to false rather than removed.
+ *
+ * Only actions that are currently true are checked, because a capability the policy already
+ * denied cannot be blocked any further. The checker short-circuits on reading actions
+ * without touching the database, so most entries cost nothing.
+ *
+ * @param {Object} params
+ * @param {Object<string, boolean>} params.capabilities
+ * @returns {Promise<Object<string, boolean>>}
+ */
+async function filterRestrictedCapabilities({
+  capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
+}) {
+  const filtered = { ...capabilities };
+
+  for (const [action, granted] of Object.entries(filtered)) {
+    if (granted) {
+      // eslint-disable-next-line no-await-in-loop
+      const blockedBy = await restrictionChecker({
+        resourceType, action, resourceId, preFetchedResource,
+      });
+      if (blockedBy) filtered[action] = false;
+    }
+  }
+  return filtered;
+}
+
 function initializePolicyContext(req, res, next) {
   // check if req has policyContext and if not initialize it to an empty object
   if (!req.policyContext) {
@@ -28,7 +60,17 @@ function initializePolicyContext(req, res, next) {
   next();
 }
 
-function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry, events) {
+/**
+ * @param {PolicyRegistry} policyRegistry
+ * @param {HydratorRegistry} hydratorRegistry
+ * @param {Object} [events]
+ * @param {Function} [restrictionChecker] - Optional
+ *   `async ({resourceType, action, resourceId, preFetchedResource}) => string|null`.
+ *   Returns the name of a restriction that blocks this action, or null. Injected rather
+ *   than imported so the core engine stays free of any knowledge of restrictions.
+ *   @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+ */
+function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry, events, restrictionChecker = null) {
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
@@ -57,6 +99,20 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
         },
       };
 
+      const preFetchedResource = preFetchedResourceFn ? preFetchedResourceFn(req) : undefined;
+
+      // allowed = no restriction blocks this AND some grant permits it.
+      // The restriction half runs first, because it is cheaper and because a blocked action
+      // should say what blocked it rather than report a generic authorization failure.
+      if (restrictionChecker) {
+        const blockedBy = await restrictionChecker({
+          resourceType, action, resourceId, preFetchedResource,
+        });
+        if (blockedBy) {
+          return next(createError(403, `Blocked by a ${blockedBy} restriction`));
+        }
+      }
+
       // call authorizeWithFilters
       const result = await authorizeWithFilters({
         policy,
@@ -66,7 +122,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
         policyExecutionContext,
         preFetched: {
           user: req.user,
-          resource: preFetchedResourceFn ? preFetchedResourceFn(req) : undefined,
+          resource: preFetchedResource,
           context: {
             req,
           },
@@ -85,7 +141,13 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
           hydratorRegistry,
           policyExecutionContext,
         });
-        req.permission.capabilities = capabilities;
+        // A capability the caller could exercise but a restriction blocks is not a
+        // capability. Filtering here keeps the UI from offering a button that 403s.
+        req.permission.capabilities = restrictionChecker
+          ? await filterRestrictedCapabilities({
+            capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
+          })
+          : capabilities;
       }
       if (shouldDeriveCallerRole) {
         const callerRole = await deriveCallerRole({
@@ -100,6 +162,7 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
 }
 
 module.exports = {
+  filterRestrictedCapabilities,
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
 };

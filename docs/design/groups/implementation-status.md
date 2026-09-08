@@ -54,6 +54,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | ABAC engine | — | `authorize()` middleware | `authorization/core/`, `authorization/builtin/policies/` | capability flags on responses |
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
+| Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 
@@ -158,6 +159,29 @@ user granted `DOWNLOAD` is reported as also having `LIST_FILES` and `VIEW_METADA
 The order only widens what a grant satisfies. Restrictions, when they arrive, only narrow;
 the two are kept apart on purpose.
 
+### Restrictions compose by AND
+
+`restriction` rows attach to a group or a resource and block actions independently of any
+grant: `allowed = no restriction blocks this AND some grant permits it`. One type exists,
+`ARCHIVED`. The `effective_restriction` view resolves where a restriction reaches — the
+group it names, every descendant group, and the datasets and collections those groups
+govern — so archiving a lab freezes its projects and their data in one row.
+
+The check runs before the policy, at the middleware, and is injected as a dependency so the
+core engine knows nothing about restrictions. It also filters the capability set, so the UI
+does not offer a button that would return 403. A blocked action returns 403 naming the
+restriction.
+
+`MUTATING_ACTIONS` and `READING_ACTIONS` in `authorization/builtin/restrictions.js` classify
+all 61 registered policy actions, and a test asserts the classification is complete and
+mentions no action that does not exist. `unarchive` is the only exemption, because blocking
+it would make an archived group impossible to restore.
+
+Archiving writes a restriction row in the same transaction that sets `is_archived`, which
+remains as the denormalisation the listings, the archived filter, and the UI badge read. A
+test asserts the two agree for every group and collection. The service-level `is_archived`
+checks that predate this are kept, so a service called outside a route is still guarded.
+
 ## Deviations
 
 Places where the code and the design disagree. Each is a decision to make, not
@@ -224,7 +248,6 @@ what the hand-written implication was standing in for: `DOWNLOAD`, `COMPUTE`, an
 
 - **`GET /audit/records` has no authorization at all.** It sits behind `authenticate` and nothing else, so any logged-in user can read the entire authorization audit log — actors, subjects, resource names, decisions. The design scopes audit visibility to owning-group admins, oversight, and platform admins.
 - **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always`, and the service validates only the *subject*. A user who knows any resource UUID can file a request against a resource they cannot see, and nothing checks `REQUEST_ACCESS`. `assertGrantItemsApplicableToResourceType` is called on grant creation but not here, so a request can also name access types that do not apply to the resource type.
-- **Archive prohibitions are partial.** The design forbids, on an archived group: creating grants on its resources, creating datasets or collections owned by it, and creating child groups. None of those are checked — only metadata, membership, and collection-content mutations are.
 - **Legacy `/datasets` routes bypass ABAC entirely.** They still use the old RBAC `accessControl()` middleware. The group model only governs `/v2/datasets`. Until the legacy surface is retired or migrated, the "consistency across interfaces" expectation (use cases 11, 56) does not hold.
 
 ---

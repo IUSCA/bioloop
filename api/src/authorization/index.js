@@ -53,6 +53,9 @@ const { accessRequestPolicies } = require('./builtin/policies/access_request');
 const { grantPolicies } = require('./builtin/policies/grant');
 const { userPolicies } = require('./builtin/policies/user');
 
+// Builtin restriction layer
+const restrictions = require('./builtin/restrictions');
+
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
 const { contextHydrator } = require('./builtin/hydrators/context');
@@ -95,8 +98,16 @@ hydratorRegistry.register('dataset', datasetHydrator);
 
 // Register custom hydrators (add yours here in derived apps)
 
-// create middleware function factory with the policy and hydrator registries
-const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry);
+// create middleware function factory with the policy and hydrator registries.
+// The restriction checker is injected here rather than imported by the core engine, so
+// core stays framework code and the restriction layer stays part of this application.
+// @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
+  policyRegistry,
+  hydratorRegistry,
+  undefined,
+  restrictions.checkRestriction,
+);
 
 // inject hydrate registry into core authorizeWithFilters function
 async function authorizeWithFilters({
@@ -126,6 +137,17 @@ async function authorizeAction(resourceType, action, {
   const policyContainer = policyRegistry.get(resourceType);
   const policy = policyContainer.getPolicy(action);
   const attributeRules = policyContainer.getAttributeRules(action);
+
+  // allowed = no restriction blocks this AND some grant permits it.
+  const blockedBy = await restrictions.checkRestriction({
+    resourceType,
+    action,
+    resourceId: identifiers.resource,
+    preFetchedResource: preFetched?.resource,
+  });
+  if (blockedBy) {
+    return { granted: false, filter: null, blockedBy };
+  }
 
   const permission = await authorizeWithFilters({
     policy,
@@ -163,6 +185,9 @@ module.exports = {
   // Core authorization functions
   authorizeWithFilters,
   authorizeAction,
+
+  // Restriction layer
+  restrictions,
 
   // Middleware
   initializePolicyContext,
