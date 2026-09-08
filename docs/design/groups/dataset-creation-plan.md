@@ -13,11 +13,14 @@ what gets built, in what order, and which layer each piece belongs to. The reaso
 the shapes chosen here lives in [Dataset creation](./dataset-creation.md); this page does not
 repeat it.
 
-The work splits into three features. Feature A is the common ground both halves stand on, and
-nothing in it is visible to a user on its own. Feature B is import, and Feature C is upload.
-Import is usable end to end when B4 lands, and upload when C5 lands.
+The work splits into four features. Feature S changes the naming constraint and the storage
+layout, and ships first and by itself, because nothing else can be built on paths that are
+about to move. Feature A is then the common ground both halves stand on, and nothing in it is
+visible to a user on its own. Feature B is import, and Feature C is upload. Import is usable
+end to end when B4 lands, and upload when C5 lands.
 
 Every phase leaves the tree working. No phase edits an existing upload or import service.
+Feature S is the one place legacy code may be edited at all, and the reason is given there.
 
 ## Nothing retires v1
 
@@ -28,6 +31,10 @@ Three constraints in this plan can only be finished by the cut-over, and each is
 [v2 cut-over](../v2-cutover.md) under *What only the cut-over may do*: a unique
 `origin_path`, retiring the legacy `exists` route, and deleting the two small pieces of logic
 that this plan copies rather than shares.
+
+Feature S is the exception, and it is an approved one. It edits legacy code because storage
+layout and the naming constraint are shared substrate rather than a v2 feature. Legacy
+behaviour is unchanged, which is the condition that made it acceptable.
 
 ## What each layer contributes
 
@@ -62,6 +69,99 @@ collides with `services/upload/`, and `routes/datasets_v2/imports.js` with
 `routes/datasets/imports.js`. The suffix marks a collision, not a version, which is the rule
 in [`v1-v2-coexistence`](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/v1-v2-coexistence/SKILL.md).
 
+## Feature S — Group-scoped names and the storage layout
+
+This ships **before** Features A, B, and C, and by itself. It changes the naming constraint on
+`dataset` and every storage path derived from a dataset name. Nothing in import or upload can
+be built on a layout that is about to move.
+
+**This feature may edit legacy code**, which nothing else in this plan may do. Storage layout
+and the naming constraint are single facts about the system, so there is no way to give the
+legacy half one layout and the new half another. The seeded default group is what makes the
+edit safe: a legacy caller passes no group, lands in `Unassigned Datasets`, and behaves
+exactly as before. [Dataset storage](./dataset-storage.md) is the design record.
+
+Data is disposable throughout. The development database is reseeded rather than migrated in
+place where that is simpler.
+
+### S1 — The `Unassigned Datasets` group and `group.archive_key`
+
+`group` gains `archive_key`, unique and not null, derived from the slug at creation and never
+updated. `slug` is regenerated on rename, so an archive layout built on it would fragment the
+first time a group is renamed.
+
+The migration seeds an `Unassigned Datasets` group at a fixed id, with no members and
+`allow_user_contributions` false. Creating a group requires a `subject` row first, because
+`group.id` is a foreign key to `subject.id`.
+
+### S2 — `dataset.owner_group_id` becomes NOT NULL with a default
+
+The migration backfills existing nulls to the seeded group, sets the column default to that
+group's id, and then makes the column `NOT NULL`. Order matters within the migration.
+
+`datasets_v2/create.js` still throws without an explicit group, so v2 never reaches the
+default by accident. The default exists for legacy callers only.
+
+### S3 — The unique key becomes per group
+
+`@@unique([name, type, is_deleted])` becomes `@@unique([owner_group_id, name, type,
+is_deleted])`.
+
+One call site reads the old compound key: the legacy `exists` route at
+`api/src/routes/datasets/index.js:1143`, which does a `findUnique` on
+`name_type_is_deleted`. It becomes a `findFirst` on the same three fields, which preserves its
+current meaning exactly — it answers whether any dataset anywhere holds the name.
+
+### S4 — Storage paths carry the group or the alias
+
+Six paths change, and none of them may keep a bare dataset name.
+
+- **Archive:** `<archive>/<archive_key>/<name>.tar`. Readable, because a recovery reads it
+  without the database.
+- **QC report:** `<qc>/<archive_key>/<name>/qc`. Same reason, same shape.
+- **Bundle under construction:** `<generate>/<id>.tar`. A local temp file nobody reads. This
+  decouples the local filename from the tape object name, which `archive()` currently
+  conflates by deriving the tape path from `bundle.name`.
+- **Bundle fetched from tape:** `<bundle stage>/<stage_alias>.tar`. Also local and transient.
+- **Extracted tree:** `<stage>/<stage_alias>/<name>`. Already alias-keyed; unchanged.
+- **Bundle download symlink:** `<download>/bundles/<stage_alias>/<name>.tar`. The alias
+  directory supplies uniqueness and the last segment stays readable, because the browser names
+  the saved file from it.
+
+The bundle download symlink was `<download>/<name>.<type>.tar`. The `.{type}` suffix existed
+to separate two types of the same name in one shared download directory. It does not survive
+two groups holding the same name and type, and it is redundant in the bundle staging
+directory, which is already per type.
+
+### S5 — The API builds the same download path
+
+`services/datasets_v2/files.js` calls `datasetService.getBundleName`, which is defined
+nowhere, so `GET /v2/datasets/:id/bundle/download` throws a `TypeError` today. Both halves
+gain a single helper returning `bundles/<stage_alias>/<name>.tar`, and the legacy route at
+`api/src/routes/datasets/index.js:1075` uses it too.
+
+### S6 — `dataset.archive_group_key`
+
+Stamped from the owning group when the archive is written, beside `archive_path`, and never
+recomputed. It records who owned the dataset when the bundle was written, which the current
+`owner_group_id` no longer answers once a transfer is possible.
+
+### S7 — Ownership transfer rules
+
+No transfer route exists yet. These are the rules one must obey, written down before it is
+built.
+
+A transfer changes `owner_group_id` and moves no bytes. It checks the name is free in the
+target group first, because the unique key can reject it. Re-archival after a transfer deletes
+the object at the recorded `archive_path` before writing the new one, or that object is
+referenced by nothing and stays on tape forever.
+
+### S8 — Reseed and verify end to end
+
+Reseed the development database, then run a dataset of the same name and type through the
+`integrated` workflow under two different groups. Both must reach STAGED with distinct archive
+objects, distinct staged trees, and distinct download links.
+
 ## Feature A — Common work
 
 ### A1 — A `contribute` action on the dataset policy
@@ -95,92 +195,10 @@ open to every `user` role.
 *Reuse:* `normalize_name`. *New:* one route. *Untouched:* the legacy `exists` route, still
 called by the legacy steppers.
 
-### A4 — Per-group dataset names, and the archive layout that makes them safe
+### A4 — Nothing; the naming work is Feature S
 
-One piece of work, because doing half of it loses data. Three changes:
-
-1. `dataset.owner_group_id` becomes `NOT NULL` with a database default pointing at a seeded
-   `Unassigned Datasets` group that has no members and accepts no contributions. A legacy
-   insert that names no group lands there, so no legacy code changes. Every legacy dataset
-   shares one group, so they stay mutually unique on name and type exactly as today. Backfill
-   existing nulls in the same migration.
-2. `@@unique([name, type, is_deleted])` becomes
-   `@@unique([owner_group_id, name, type, is_deleted])`. Exactly one call site reads the old
-   compound key, the legacy `exists` route at `api/src/routes/datasets/index.js:1143`.
-3. `group` gains an immutable `archive_key`, derived from the slug at creation and never
-   updated, because `slug` is regenerated on rename. `get_archive_path`, `get_bundle_name`,
-   and the QC directory in `workers/workers/dataset.py` and `tasks/qc.py` gain the group
-   directory, as `<archive dir>/<archive_key>/<name>.tar`. Existing archives are unaffected,
-   because `dataset.archive_path` is stored per dataset and read rather than recomputed.
-
-4. `dataset` gains `archive_group_key`, stamped from the owning group when the archive is
-   written and never recomputed. `archive_path` is already write-once, so this makes the pair
-   a complete record of where the bytes went and who owned them at the time.
-   Nothing is added to the bundle itself. See *Recovery reads the path* below.
-
-**Order matters.** The paths must carry the group before the constraint is relaxed. Reversed,
-two groups register the same name and the second archive overwrites the first.
-
-The database is now PostgreSQL 18, so `NULLS NOT DISTINCT` would run. It is still not used
-here, for the reasons in
-[Dataset creation](./dataset-creation.md#alternatives-considered).
-
-*Verify:* that `searchDatasetsForUser` still hides `Unassigned Datasets` rows from
-non-admins, which it should, because nobody is a member of that group.
-
-*New:* one migration, two columns, three worker path functions. *Untouched:* every v1 route,
-and the contents of the bundle.
-
-### A4a — Ownership transfer does not move bytes
-
-Transferring a dataset between groups changes `owner_group_id` and nothing else. It leaves
-`archive_path` and `archive_group_key` alone, so the archive keeps recording custody at the
-time it was written, which is what a recovery needs to know.
-
-Two rules make that safe.
-
-**Check the name before transferring.** The unique key is
-`[owner_group_id, name, type, is_deleted]`, so a transfer into a group that already holds a
-live dataset of that name and type fails at the database. The service checks first and
-refuses with a plain message.
-
-**Re-archival deletes the recorded object first.** `archive_dataset` recomputes the path from
-the current owner, so archiving again after a transfer writes under the new group and
-overwrites `archive_path`. Without a delete, the object under the old group is referenced by
-nothing and stays on tape forever, because `tasks/delete.py` only ever removes the current
-`archive_path`.
-
-*Note:* no ownership transfer route exists yet. This phase is the rules a transfer must obey,
-written down before one is built.
-
-### A4b — Recovery reads the path, and nothing is added to the bundle
-
-`<archive dir>/<archive_key>/<name>.tar` already answers the two questions a recovery asks:
-which group owned this, and what was it called. Nothing further is written to tape.
-
-**The bundle carries no metadata**, because end users download it. `stage_dataset` extracts
-the bundle into the staging directory and `setup_dataset_download` symlinks the tar itself
-into the download directory, so any member added to the bundle appears in the file tree a user
-browses and in the tar they receive. A field that helps an administrator during a recovery
-would be published to everyone who can read the dataset.
-
-**Where metadata may go instead is the tape filename**, which no user ever sees. The tape
-object is named by `get_archive_bundle_name` as `{name}.tar`, while `get_bundle_staged_path`
-and `get_bundle_download_path` both rebuild it as `{name}.{type}.tar`. Staging renames the
-file on the way in. If machine correlation to a database row is ever wanted, the dataset id
-belongs there and nowhere else.
-
-**Renames make the path stale, and that is correct.** `PATCH /v2/datasets/:id` accepts a new
-name and the upload tombstone renames outright, so the filename on tape stops matching the
-current name. Anything written to tape records what was true when it was written. The live
-system never reads the path back; it reads `archive_path` and `archive_group_key` from the
-database.
-
-The one thing the path cannot carry is the mapping from `archive_key` to the group's current
-name. `archive_key` is immutable, so a group renamed from Genomics Core to Center for Genomics
-keeps archiving under `genomics-core`. An administrator recovering from a total database loss
-reads the older name. That is a legibility cost with no data loss, and it is accepted rather
-than solved.
+Per-group dataset names and the storage layout moved to [Feature S](#feature-s-group-scoped-names-and-the-storage-layout),
+which ships first and on its own. The numbering is kept so references elsewhere still resolve.
 
 ### A5 — The owning-group picker
 
