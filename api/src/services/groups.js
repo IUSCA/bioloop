@@ -11,6 +11,7 @@ const audit = require('@/authorization/builtin/audit');
 const { AuditBuilder } = audit;
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const sqlUtils = require('@/utils/sql');
+const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const assert = require('assert');
 
 const PRISMA_GROUP_INCLUDES = {};
@@ -995,10 +996,14 @@ async function searchAllGroups({
     `;
   }
 
-  const excludeEveryoneGroupClause = Prisma.sql`g.slug != 'everyone'`;
+  // The system principals are grant subjects, not groups anybody joins or manages, so they
+  // never appear in a group listing. Excluded by id rather than slug, because a rename
+  // would silently put them back.
+  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+  const excludeSystemPrincipalsClause = Prisma.sql`g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})`;
 
   const finalWhereClause = sqlUtils.buildWhereClause(
-    [searchClause, idFilterClause, archivedClause, membershipClause, excludeEveryoneGroupClause],
+    [searchClause, idFilterClause, archivedClause, membershipClause, excludeSystemPrincipalsClause],
     ' AND ',
   );
 

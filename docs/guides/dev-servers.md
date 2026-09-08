@@ -89,6 +89,22 @@ longer exists. Reads mostly keep working, which is what makes this confusing; wr
 with a foreign-key error on a column such as `group_user.removed_by`. Visiting `/dev-login`
 fixes it. Do not go hunting for a bug in the write path until you have re-logged in.
 
+## Seeing a page as somebody with no privileges
+
+<!-- cspell:ignore ajohnson sdavis ethompson -->
+
+A platform admin sees every dataset, group, and collection whether or not a grant says so,
+so checking an access-control change as `test_user` proves nothing. The seed ships three
+ordinary users who hold the `user` role and belong to no group: `ajohnson`, `sdavis`, and
+`ethompson`. Anything one of them can see, they can see because of a grant.
+
+```
+https://localhost/dev-login?username=ajohnson&next=/v2/datasets
+```
+
+The `user-0NN` accounts are members of the sample groups, so use one of those to check
+access that comes from membership rather than from a grant.
+
 ## When to restart
 
 Both servers reload on file changes. `nodemon` restarts the API when a `.js` file under

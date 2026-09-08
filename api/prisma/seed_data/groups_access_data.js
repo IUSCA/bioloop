@@ -1,6 +1,6 @@
 const dayjs = require('dayjs');
 const { Prisma, GRANT_CREATION_TYPE } = require('@prisma/client');
-const { EVERYONE_GROUP_ID } = require('../../src/constants');
+const { AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID } = require('../../src/constants');
 const { createDeterministicUuidGenerator } = require('./deterministic_uuid');
 // cSpell: ignore tmpl
 /**
@@ -28,7 +28,7 @@ const { createDeterministicUuidGenerator } = require('./deterministic_uuid');
  *        - collection grants (user & group subjects)
  *        - membership scenarios (same group vs different group)
  *        - varying statuses (active, revoked, expired)
- *        - a global grant to the EVERYONE group
+ *        - a global grant to each of the two system principals
  *   6. Generates a set of access requests with varied statuses (draft, review,
  *      approved, partially approved, rejected, withdrawn, expired) and maps
  *      them to request items.
@@ -72,6 +72,10 @@ function generateGroupAccessSeedData({
       .localeCompare(String(b[idKey])));
 
   const datasetsSorted = sortById(datasets, 'resource_id');
+  // The system-principal grants below have to land on datasets the UI will actually show,
+  // so that a dev environment demonstrates both principals. A soft-deleted dataset is
+  // filtered out of every listing, and the first entry above happens to be one.
+  const liveDatasets = datasetsSorted.filter((d) => !d.is_deleted);
   const collectionsSorted = sortById(collections, 'id');
 
   const groupById = (items, key = 'group_id') => (items || []).reduce((acc, item) => {
@@ -202,11 +206,25 @@ function generateGroupAccessSeedData({
     });
   });
 
-  // Grant to EVERYONE group (active)
+  // Grant to the authenticated-users principal (active)
   grants.push({
     id: generate(),
-    subject_id: EVERYONE_GROUP_ID,
-    resource_id: datasetsSorted[0]?.resource_id,
+    subject_id: AUTHENTICATED_USERS_GROUP_ID,
+    resource_id: liveDatasets[0]?.resource_id,
+    access_type_id: 1, // DATASET:VIEW_METADATA
+    granted_by: systemAdminSubjectId,
+    creation_type: GRANT_CREATION_TYPE.MANUAL,
+    valid_from: new Date(),
+    created_at: new Date(),
+  });
+
+  // Grant to the public principal (active). Routes still require authentication, so this
+  // reaches the same people today as the grant above; it is seeded so the wider principal
+  // is exercised end to end.
+  grants.push({
+    id: generate(),
+    subject_id: PUBLIC_GROUP_ID,
+    resource_id: liveDatasets[1]?.resource_id,
     access_type_id: 1, // DATASET:VIEW_METADATA
     granted_by: systemAdminSubjectId,
     creation_type: GRANT_CREATION_TYPE.MANUAL,

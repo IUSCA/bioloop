@@ -1,6 +1,6 @@
 ---
 name: api-tests
-description: Operational technique for the api/ Jest suites - how they use the real database, how to tell a failure you caused from one that was already there, the git stash trap that must never be repeated, why the concurrency suites need their own timeout, and the suites that are known stale or flaky. Use when running or writing anything under api/tests, or when a change makes tests fail and the cause is not obvious.
+description: Operational technique for the api/ Jest suites - how they use the real database, how to tell a failure you caused from one that was already there, the git stash trap that must never be repeated, why the concurrency suites need their own timeout, and why a race can be rejected two different ways. Use when running or writing anything under api/tests, or when a change makes tests fail and the cause is not obvious.
 ---
 
 # Running and fixing the API tests
@@ -51,8 +51,8 @@ Before assuming a failure is yours, check the cheap signals in this order.
    yours.
 2. Read the error rather than the test name. `X is not a constructor` and
    `X is not a function` are import-name drift, not behaviour.
-3. Run the suite alone. Several concurrency suites pass in isolation and fail in a full
-   run.
+3. Run the suite alone, then run it several times. A concurrency suite that fails once in
+   six identical runs is telling you about a race in the test, not about your change.
 4. Check the API is actually up. The route suites (`tests/routes/`) call the running
    server, and a wall of bare `AggregateError` with no message is a refused connection, not
    a behaviour change. `bin/devserver.sh status` reports the **nodemon** process, which
@@ -94,14 +94,24 @@ count from the environment raises the budget with it.
 A new file under `tests/services/<area>/*.concurrency.test.js` needs the same line. A race test
 that times out is almost always this and not a hang.
 
-## Known flaky
+## A race can be rejected two ways, and both are correct
 
-`tests/services/grants/grants.concurrency.test.js` and
-`tests/services/grants/issueGrants.concurrency.test.js` each occasionally fail in a full
-run and pass in isolation. Both race real transactions against real constraints, so timing
-under a loaded database changes which contender wins and how Postgres resolves it — a
-`deadlock detected` where the test expected a conflict message, or an assertion on which
-grant survived. Re-run the suite alone before treating one of these as a regression.
+Two transactions that revoke and recreate a grant for the same
+(subject, resource, access_type) contend for the `grant_no_overlap` exclusion constraint.
+Postgres resolves that either by raising the constraint violation, which the service turns
+into a 409, or — when the two took their locks in opposite orders — by breaking the
+circular wait with a deadlock, Postgres error code `40P01`. Which you get depends on timing.
+
+Exactly one transaction commits either way, and that is the invariant these tests exist to
+check. A test that asserts on the constraint wording, or on `reason.status === 409`, passes
+or fails depending on which resolution Postgres happened to pick. `RACE_REJECTION_PATTERN`
+in `tests/services/concurrency-utils.js` accepts both, and a status assertion should read
+`expect([409, undefined]).toContain(status)` because a deadlock arrives as a raw Prisma
+error with no HTTP status on it.
+
+This was the cause of both suites that used to be listed here as flaky. If a race test
+starts failing intermittently, check for this shape before assuming the timing is
+unfixable — eight consecutive runs of a suite is a reasonable bar for calling it settled.
 
 ## Test helpers
 

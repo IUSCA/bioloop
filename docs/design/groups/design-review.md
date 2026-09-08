@@ -59,9 +59,10 @@ glossary's ownership disagreement was resolved as governance-only, with attribut
 deferred; and the GA4GH question was answered by capturing consent codes at ingest without
 enforcing them.
 
-Phases 1 and 2 of that plan are built. Membership and collection rows are closed rather
-than deleted, and `dataset.owner_group_id` is `NOT NULL` with the datasets that had no
-owner held in an archived system group.
+Phases 1 to 3 of that plan are built. Membership and collection rows are closed rather
+than deleted, `dataset.owner_group_id` is `NOT NULL` with the datasets that had no owner
+held in an archived system group, and a `Public` principal sits alongside the renamed
+`Authenticated Users`.
 
 The member-access contradiction (deviation 1) is **still open.** No decision was taken on
 whether owning-group members get structural read or a seeded grant.
@@ -393,7 +394,7 @@ The code gives structural access to admins only. If grants are the only source o
 consumption rights, the answer is that members get no structural read. Instead, dataset
 creation should seed a real grant to the owning group. The default then becomes a visible,
 explainable, revocable row, which is the same trick that
-[the `Everyone` principal](./design.md#system-principal-everyone) already uses.
+[the system principals](./design.md#system-principals) already use.
 
 **`Everyone` means every authenticated user.** There is no anonymous principal. A research
 portal usually ends up wanting public dataset pages, DOIs, and metadata that a search

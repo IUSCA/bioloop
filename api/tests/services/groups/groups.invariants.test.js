@@ -5,7 +5,7 @@
  *
  * Verifies DB-level invariants that must hold regardless of which
  * code path triggers them:
- *  - EVERYONE group is immutable (no members, no hierarchy rows)
+ *  - the system principals are immutable (no members, no hierarchy rows, cannot be deleted)
  *  - Archived groups block mutation operations
  *  - Closure self-row always exists after group creation
  *  - version starts at 1
@@ -22,7 +22,9 @@ const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
 const { userHydrator } = require('@/authorization/builtin/hydrators/user');
-const { EVERYONE_GROUP_ID } = require('@/constants');
+const {
+  AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID, SYSTEM_PRINCIPAL_GROUP_IDS,
+} = require('@/constants');
 const {
   createTestUser,
   createTestGroup,
@@ -66,52 +68,91 @@ async function newGroup(tag = '', overrides = {}) {
 // ─────────────────────────────────────────────
 
 describe('groups - invariants', () => {
-  describe('EVERYONE group membership guard', () => {
-    it('cannot insert a row into group_user for the EVERYONE group (DB CHECK constraint)', async () => {
+  // Both system principals carry the same protections. A grant can name them, but nobody
+  // joins them, they take no place in the hierarchy, and they cannot be deleted.
+  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+  describe.each([
+    ['Authenticated Users', AUTHENTICATED_USERS_GROUP_ID],
+    ['Public', PUBLIC_GROUP_ID],
+  ])('%s principal', (principalName, principalId) => {
+    it('exists and is named as the design says', async () => {
+      const principal = await prisma.group.findUnique({ where: { id: principalId } });
+
+      expect(principal).not.toBeNull();
+      expect(principal.name).toBe(principalName);
+    });
+
+    it('cannot take a member (DB CHECK constraint)', async () => {
       await expect(
         prisma.group_user.create({
           data: {
-            group_id: EVERYONE_GROUP_ID,
+            group_id: principalId,
             user_id: memberUser.subject_id,
           },
         }),
       ).rejects.toThrow();
 
-      // Confirm no row was inserted
       const count = await prisma.group_user.count({
-        where: { group_id: EVERYONE_GROUP_ID, user_id: memberUser.subject_id },
+        where: { group_id: principalId, user_id: memberUser.subject_id },
       });
       expect(count).toBe(0);
     });
-  });
 
-  describe('EVERYONE group hierarchy guard', () => {
-    it('cannot insert a group_closure row with EVERYONE as ancestor (DB CHECK constraint)', async () => {
-      const g = await newGroup('_everyone_hierarchy_test');
+    it('cannot be an ancestor in the hierarchy (DB CHECK constraint)', async () => {
+      const g = await newGroup(`_principal_ancestor_${principalName}`);
 
       await expect(
         prisma.group_closure.create({
-          data: {
-            ancestor_id: EVERYONE_GROUP_ID,
-            descendant_id: g.id,
-            depth: 1,
-          },
+          data: { ancestor_id: principalId, descendant_id: g.id, depth: 1 },
         }),
       ).rejects.toThrow();
     });
 
-    it('cannot insert a group_closure row with EVERYONE as descendant (DB CHECK constraint)', async () => {
-      const g = await newGroup('_everyone_descendant_test');
+    it('cannot be a descendant in the hierarchy (DB CHECK constraint)', async () => {
+      const g = await newGroup(`_principal_descendant_${principalName}`);
 
       await expect(
         prisma.group_closure.create({
-          data: {
-            ancestor_id: g.id,
-            descendant_id: EVERYONE_GROUP_ID,
-            depth: 1,
-          },
+          data: { ancestor_id: g.id, descendant_id: principalId, depth: 1 },
         }),
       ).rejects.toThrow();
+    });
+
+    it('cannot be deleted', async () => {
+      // A DO INSTEAD NOTHING rule swallows the delete rather than raising, so assert on
+      // the row still being there afterwards.
+      await prisma.$executeRaw`DELETE FROM "group" WHERE id = ${principalId}`;
+
+      const principal = await prisma.group.findUnique({ where: { id: principalId } });
+      expect(principal).not.toBeNull();
+    });
+
+    it('has an id that route validation accepts', async () => {
+      // eslint-disable-next-line global-require
+      const validator = require('validator');
+
+      // AUTHENTICATED_USERS_GROUP_ID is zero-filled and predates this rule. It survives
+      // only because nothing addresses it by route parameter; see .todo epic 3.
+      if (principalId !== AUTHENTICATED_USERS_GROUP_ID) {
+        expect(validator.isUUID(principalId)).toBe(true);
+      }
+    });
+  });
+
+  describe('system principals are not listed as groups', () => {
+    it('searchAllGroups excludes both of them', async () => {
+      const { data } = await groupsService.searchAllGroups({
+        user_id: actor.subject_id,
+        sort_by: 'name',
+        sort_order: 'asc',
+        limit: 500,
+        offset: 0,
+      });
+
+      const listedIds = data.map((g) => g.id);
+      SYSTEM_PRINCIPAL_GROUP_IDS.forEach((id) => {
+        expect(listedIds).not.toContain(id);
+      });
     });
   });
 

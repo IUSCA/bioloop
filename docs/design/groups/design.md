@@ -353,18 +353,29 @@ Each unarchive event must emit an audit record with full provenance.
 
 ---
 
-### System Principal: "Everyone"
+### System principals
 
 #### Definition
 
-A built-in, non-editable principal representing all authenticated users.
+Two built-in, non-editable principals name a whole audience without listing its members.
 
-Characteristics:
+| Principal | Covers |
+|---|---|
+| `Public` | everyone, including people who are not signed in |
+| `Authenticated Users` | everyone signed in to this platform |
 
-* Not a real group in the hierarchy.
-* Cannot have admins.
+`Public` is the wider of the two, so a signed-in user's subject set contains both. Both
+share the same characteristics:
+
+* Not real groups in the hierarchy.
+* Cannot have members or admins.
 * Cannot contain sub-groups.
-* Exists solely as a grant target.
+* Exist solely as grant targets.
+
+Every route requires authentication, so a grant to `Public` reaches the same people as one
+to `Authenticated Users` today. The distinction is recorded because retrofitting a second
+principal into every subject-set query later is the expensive move.
+See [decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed).
 
 #### Purpose
 
@@ -372,8 +383,8 @@ Enables explicit representation of global access.
 
 Example:
 
-* Public dataset → Grant(read_data) to Everyone.
-* Discoverable dataset → Grant(view_metadata) to Everyone.
+* Public dataset → Grant(read_data) to `Public`.
+* Discoverable dataset → Grant(view_metadata) to `Authenticated Users`.
 
 #### Why This Matters
 
@@ -607,7 +618,7 @@ Visibility presets define **who** receives access. Rather than specifying indivi
 
 Examples (illustrative, not prescriptive):
 
-* **`EVERYONE`**: Targets the system-wide "Everyone" principal. Represents public access for any authenticated user.
+* **`PUBLIC`** and **`AUTHENTICATED_USERS`**: Target the two system principals. Represent open access to everyone, and to everyone signed in, respectively.
 * **`OWNING_GROUP`**: Targets the resource's owning group. Provides lab-internal or team-private access.
 * **`INSTITUTION`**: Targets the root group in the organizational hierarchy. Represents university-wide or organization-wide access.
 * **`PARENT_GROUP`**: Targets the immediate parent of the owning group in the hierarchy. Useful for center-level sharing.

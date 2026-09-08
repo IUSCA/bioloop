@@ -85,15 +85,41 @@ because the column is `text`. Route validation does not: `express-validator`'s `
 checks the version and variant nibbles, so a zero-filled id fails `param('id').isUUID()`
 and the row is listable but its detail page returns 400.
 
-Set both nibbles. `00000000-0000-4000-8000-000000000001` reads as a sentinel and parses as
-a version 4 UUID. `EVERYONE_GROUP_ID` predates this and is all zeros; it survives only
-because nothing addresses it by route parameter.
+**And the leading bytes must not be zero.** `createDeterministicUuidGenerator` in
+`prisma/seed_data` counts up from zero in a UUID's last eight bytes and sets exactly those
+version and variant nibbles, so `00000000-0000-4000-8000-000000000001` is both a tidy
+sentinel and the id the seed assigns to `Collection 01`. The two rows live in different
+tables, so nothing fails — the collision only shows up when you read a grant's subject and
+resource ids side by side and find the same string meaning two different things.
 
-The test worth writing is one line, next to the seeded row's other assertions:
+Prefix a sentinel with `ffffffff`, which the generator can never reach:
+`ffffffff-0000-4000-8000-000000000001`. `AUTHENTICATED_USERS_GROUP_ID` breaks both rules
+and keeps its value only because changing it would orphan every grant and audit record
+that names it.
+
+`api/src/constants.js` carries both rules in a comment above the block; keep new sentinels
+inside it.
+
+Two checks worth writing, next to the seeded row's other assertions:
 
 ```js
 expect(validator.isUUID(UNASSIGNED_DATASETS_GROUP_ID)).toBe(true);
+expect(UNASSIGNED_DATASETS_GROUP_ID.startsWith('00000000')).toBe(false);
 ```
+
+## Correcting a migration that has only ever run here
+
+A migration on an unmerged branch that has run nowhere but the disposable development
+database is not history worth preserving. When you find a defect in one — a bad sentinel,
+a wrong default — edit that migration in place and `migrate reset`, rather than adding a
+follow-up migration that corrects it. A fix-forward migration renaming an id that never
+existed outside your laptop is noise in the permanent record.
+
+Say so plainly in the commit message and in the plan document, because the change is
+invisible in a diff of the later commit.
+
+The line to stop at is deployment. Once a migration has run anywhere else, it is frozen
+and the correction has to be a new migration.
 
 ## A nested relation create rejects a scalar foreign key
 

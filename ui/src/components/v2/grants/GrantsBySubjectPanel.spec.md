@@ -371,7 +371,7 @@ Fixed-width container: `w-[150px] flex-shrink-0 flex flex-col gap-0.5 overflow-h
 
 **Line 2 — Meta** (`text-xs text-gray-600 dark:text-gray-400 truncate`):
 - User: `user.email`
-- Everyone group (id `00000000-0000-0000-0000-000000000000`): `"System · all authenticated users"`
+- System principal (Authenticated Users or Public): `group.description`, which says what the principal covers
 - Normal group: `group.description`
 - Archived group: render `"[Archived]"` prefix in `text-amber-700 dark:text-amber-500` followed by the description in default secondary color
 
@@ -581,9 +581,18 @@ If `subjectGroups` is empty (handled by parent, not this component):
 
 `revoked_at` is set. Render at the bottom of the GrantRow list. `opacity-60`. ProvenanceBox shows revocation date, revoker name, and reason. No RevokeButton.
 
-#### 3.8.3 Everyone (system) group
+#### 3.8.3 System principals
 
-Fixed UUID: `00000000-0000-0000-0000-000000000000`. When `group.id` matches, SubjectInfo line 2 reads `"System · all authenticated users"`.
+Two groups exist only to be named as grant subjects, at fixed UUIDs:
+
+| Principal | UUID | Covers |
+|---|---|---|
+| Authenticated Users | `00000000-0000-0000-0000-000000000000` | everyone signed in |
+| Public | `ffffffff-0000-4000-8000-000000000002` | everyone, signed in or not |
+
+Neither has members and neither can be deleted, so no member count or revoke-membership affordance applies. SubjectInfo line 2 renders `group.description`, which already states the audience. `GroupIcon` gives Public the earth icon and Authenticated Users the account-group icon.
+
+Every route still requires sign-in, so a grant to Public currently reaches the same people as one to Authenticated Users. The UI should not claim otherwise.
 
 #### 3.8.4 Archived Group
 

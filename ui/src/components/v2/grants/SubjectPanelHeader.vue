@@ -90,9 +90,6 @@ const subjectMeta = computed(() => {
   if (props.subject.type === "USER") {
     return props.subject.user?.email ?? "";
   }
-  // if (isEveryoneGroup.value) {
-  //   return "System · all authenticated users";
-  // }
   return props.subject.group?.description ?? "";
 });
 

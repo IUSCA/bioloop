@@ -214,15 +214,26 @@ const exports = {
     },
   },
   icons,
-  // A special group that implicitly contains all users. It is used for granting access to all users without having to
-  // explicitly add them to a group. id will always be "00000000-0000-0000-0000-000000000000" for consistency,
-  // and the backend recognizes this as a special case.
-  EVERYONE_GROUP: {
+  // The two system principals. Neither is a group anybody joins; both exist so a grant can
+  // name a whole audience without listing its members. The ids are fixed and the API
+  // recognises them as special cases.
+  //
+  // PUBLIC is the wider of the two. Every route still requires sign-in today, so a grant
+  // to PUBLIC currently reaches the same people as one to AUTHENTICATED_USERS; the
+  // distinction is recorded now so it does not have to be retrofitted later.
+  AUTHENTICATED_USERS_GROUP: {
     id: "00000000-0000-0000-0000-000000000000",
-    name: "Everyone",
-    tag: "everyone",
+    name: "Authenticated Users",
+    tag: "authenticated-users",
+    icon: "mdi-account-group",
+    description: "Everyone signed in to this platform",
+  },
+  PUBLIC_GROUP: {
+    id: "ffffffff-0000-4000-8000-000000000002",
+    name: "Public",
+    tag: "public",
     icon: "mdi-earth",
-    description: "All users in the system, including external collaborators",
+    description: "Everyone, including people who are not signed in",
   },
 };
 

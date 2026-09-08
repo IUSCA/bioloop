@@ -4,10 +4,16 @@ const {
 } = require('@prisma/client');
 const createError = require('http-errors');
 
-const { EVERYONE_GROUP_ID } = require('@/constants');
+const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const prisma = require('@/db');
 
-const EVERYONE_GROUP_ID_SQL = Prisma.raw(`'${EVERYONE_GROUP_ID}'`);
+// The system principals every user belongs to, as a SQL VALUES-style union arm. A grant to
+// either is honoured for any signed-in user: `Public` is the wider audience of the two, so
+// it includes the authenticated one.
+// @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+const SYSTEM_PRINCIPALS_SQL = Prisma.raw(
+  SYSTEM_PRINCIPAL_GROUP_IDS.map((id) => `SELECT '${id}'`).join(' UNION '),
+);
 
 /**
  * Helper to build SQL query for fetching grants or access types for a user and dataset, including via group membership and collection-level grants
@@ -44,7 +50,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
       FROM effective_user_groups
       WHERE user_id = ${user_id}
       UNION
-      SELECT ${EVERYONE_GROUP_ID_SQL}
+      ${SYSTEM_PRINCIPALS_SQL}
     ),
     resources AS (
         SELECT ${dataset_id} AS resource_id
@@ -92,7 +98,7 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
       FROM effective_user_groups
       WHERE user_id = ${user_id}
       UNION
-      SELECT ${EVERYONE_GROUP_ID_SQL}
+      ${SYSTEM_PRINCIPALS_SQL}
     )
     SELECT ${select_fields}
     FROM valid_grants g
@@ -123,7 +129,7 @@ function userValidGrantsQuery(user_id, access_types = []) {
       FROM effective_user_groups
       WHERE user_id = ${user_id}
       UNION
-      SELECT ${EVERYONE_GROUP_ID_SQL}
+      ${SYSTEM_PRINCIPALS_SQL}
     )
     SELECT g.*
     FROM valid_grants g

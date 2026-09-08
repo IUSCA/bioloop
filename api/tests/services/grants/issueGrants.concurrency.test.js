@@ -8,7 +8,9 @@ require('module-alias/register');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
 const Expiry = require('@/utils/expiry');
-const { runRace, fanOut, RACE_TIMEOUT_MS } = require('../concurrency-utils');
+const {
+  runRace, fanOut, RACE_TIMEOUT_MS, RACE_REJECTION_PATTERN,
+} = require('../concurrency-utils');
 
 // Every test here drives runRace, which is far slower than Jest's 5s default.
 jest.setTimeout(RACE_TIMEOUT_MS);
@@ -126,7 +128,7 @@ describe('issueGrants - concurrency', () => {
         if (rejected.length > 0) {
           const status = rejected[0].reason?.status || rejected[0].reason?.statusCode;
           expect([409, undefined]).toContain(status);
-          expect(rejected[0].reason.message).toMatch(/overlapping validity|grant_no_overlap|Conflict/);
+          expect(rejected[0].reason.message).toMatch(RACE_REJECTION_PATTERN);
         }
 
         const active = await prisma.grant.findMany({
@@ -185,7 +187,7 @@ describe('issueGrants - concurrency', () => {
         if (rejected.length > 0) {
           const status = rejected[0].reason?.status || rejected[0].reason?.statusCode;
           expect([409, undefined]).toContain(status);
-          expect(rejected[0].reason.message).toMatch(/overlapping validity|grant_no_overlap|Conflict/);
+          expect(rejected[0].reason.message).toMatch(RACE_REJECTION_PATTERN);
         }
 
         const active = await prisma.grant.findMany({
@@ -225,7 +227,12 @@ describe('issueGrants - concurrency', () => {
 
         expect(fulfilled.length).toBeGreaterThanOrEqual(1);
         expect(rejected.length).toBeGreaterThanOrEqual(1);
-        rejected.forEach((r) => expect(r.reason.status).toBe(409));
+        // The service converts the constraint violation to a 409, but a deadlock comes
+        // straight from Postgres with no HTTP status. Both mean the same thing here.
+        rejected.forEach((r) => {
+          expect([409, undefined]).toContain(r.reason.status);
+          expect(r.reason.message).toMatch(RACE_REJECTION_PATTERN);
+        });
 
         const active = await prisma.grant.findMany({
           where: {
@@ -408,7 +415,7 @@ describe('issueGrants - concurrency', () => {
       conflict = error;
     }
     expect(conflict).not.toBeNull();
-    expect(conflict.message).toMatch(/overlapping validity|grant_no_overlap|Conflict/);
+    expect(conflict.message).toMatch(RACE_REJECTION_PATTERN);
   });
 
   it('supports 10 concurrent non-overlapping access_type issues', async () => {

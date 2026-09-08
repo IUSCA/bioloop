@@ -168,16 +168,37 @@ const ALERT_TYPES = {
   ERROR: 'ERROR',
 };
 
-const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
+// ── Seeded rows with fixed ids ───────────────────────────────────────────────
+//
+// Two rules govern every id in this block.
+//
+// It must parse as an RFC 4122 UUID, with the version (4) and variant (8) nibbles set.
+// Route parameters are checked with express-validator's isUUID(), so a zero-filled
+// sentinel is stored happily by Postgres and then rejected by the route that addresses
+// the row.
+//
+// Its leading bytes must not be zero. createDeterministicUuidGenerator() in
+// prisma/seed_data counts up from zero in the last eight bytes and sets the same version
+// and variant nibbles, so a zero-prefixed sentinel is exactly what the seed emits for its
+// first few rows. AUTHENTICATED_USERS_GROUP_ID breaks both rules and keeps its value only
+// because changing it would orphan every grant and audit record that names it.
+
+// The two system principals. Both are rows in the `group` table so a grant can name them
+// like any other subject, but neither has members or a place in the group hierarchy, and
+// neither can be deleted.
+//
+// PUBLIC is the wider of the two: it means everyone, including people who are not signed
+// in, so an authenticated user's subject set contains both.
+// @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+const AUTHENTICATED_USERS_GROUP_ID = '00000000-0000-0000-0000-000000000000';
+const PUBLIC_GROUP_ID = 'ffffffff-0000-4000-8000-000000000002';
+const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID];
 
 // Archived system group holding datasets that have no owning group. Datasets land here
 // only through the backfill that made dataset.owner_group_id NOT NULL; nothing writes to
 // it at runtime. Its contents are a list for platform admins to work through.
 // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
-// The version (4) and variant (8) nibbles are set so this parses as an RFC 4122 UUID.
-// Route params are validated with express-validator's isUUID(), which rejects a
-// zero-filled sentinel, and the group detail page addresses a group by id.
-const UNASSIGNED_DATASETS_GROUP_ID = '00000000-0000-4000-8000-000000000001';
+const UNASSIGNED_DATASETS_GROUP_ID = 'ffffffff-0000-4000-8000-000000000001';
 
 // need to specify ids to have deterministic seeding
 const GRANT_ACCESS_TYPES = [
@@ -306,7 +327,9 @@ module.exports = {
   ALERT_STATUSES,
   DATASET_STATES,
   INCLUDE_PROJECTS,
-  EVERYONE_GROUP_ID,
+  AUTHENTICATED_USERS_GROUP_ID,
+  PUBLIC_GROUP_ID,
+  SYSTEM_PRINCIPAL_GROUP_IDS,
   UNASSIGNED_DATASETS_GROUP_ID,
   GRANT_ACCESS_TYPES,
   GRANT_PRESETS,

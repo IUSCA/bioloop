@@ -24,6 +24,21 @@ const RACE_RUNS = parseInt(process.env.RACE_RUNS ?? '8', 10);
 const RACE_TIMEOUT_MS = RACE_RUNS * 2_000;
 
 /**
+ * How the database can reject the loser of a grant race.
+ *
+ * Two transactions that both revoke and recreate a grant for the same
+ * (subject, resource, access_type) contend for the `grant_no_overlap` exclusion
+ * constraint. Postgres resolves that either by raising the constraint violation or, when
+ * the two transactions have taken their locks in opposite orders, by breaking the circular
+ * wait with a deadlock, Postgres error code 40P01. Both are correct: exactly one commits
+ * either way, which is the invariant these tests exist to check.
+ *
+ * Asserting on the constraint wording alone makes a test that passes or fails depending on
+ * which resolution Postgres happened to pick.
+ */
+const RACE_REJECTION_PATTERN = /overlapping validity|grant_no_overlap|Conflict|deadlock detected/;
+
+/**
  * Run a race scenario RACE_RUNS times.
  * Each iteration:
  *   1. Calls setup() to provision fresh fixtures
@@ -70,5 +85,5 @@ function fanOut(n, opFactory) {
 }
 
 module.exports = {
-  runRace, fanOut, RACE_RUNS, RACE_TIMEOUT_MS,
+  runRace, fanOut, RACE_RUNS, RACE_TIMEOUT_MS, RACE_REJECTION_PATTERN,
 };

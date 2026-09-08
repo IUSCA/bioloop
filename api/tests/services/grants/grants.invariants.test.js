@@ -8,7 +8,7 @@
  *  - valid_period computed column reflects [valid_from, valid_until)
  *  - valid_grants view correctly filters revoked / future / expired grants
  *  - Transitive group membership resolves grants through the closure table
- *  - EVERYONE group grants apply to any authenticated user
+ *  - grants to either system principal apply to any authenticated user
  */
 
 const path = require('path');
@@ -19,7 +19,9 @@ require('module-alias/register');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
-const { EVERYONE_GROUP_ID } = require('@/constants');
+const {
+  AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID, SYSTEM_PRINCIPAL_GROUP_IDS,
+} = require('@/constants');
 const {
   createTestUser,
   createTestGroup,
@@ -248,39 +250,45 @@ describe('grants - invariants', () => {
     });
   });
 
-  describe('EVERYONE group grants apply to all users', () => {
-    let everyoneDataset;
-    let everyoneGrant;
+  // Routes still require authentication, so both principals reach the same audience today.
+  // The public one is the wider of the two and is honoured for a signed-in user because a
+  // signed-in user is part of "everyone".
+  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
+  describe.each([
+    ['Authenticated Users', AUTHENTICATED_USERS_GROUP_ID],
+    ['Public', PUBLIC_GROUP_ID],
+  ])('grants to the %s principal apply to all users', (principalName, principalId) => {
+    let principalDataset;
     let unaffiliatedUser;
 
     beforeAll(async () => {
-      unaffiliatedUser = await createTestUser('_gi_unaffiliated');
+      unaffiliatedUser = await createTestUser(`_gi_unaffiliated_${principalName}`);
       createdUserIds.push(unaffiliatedUser.id);
 
-      // Use the group from the outer scope as owner (EVERYONE group cannot own datasets)
+      // A system principal cannot own datasets, so borrow any ordinary group as owner.
       const [ownerGroup] = await prisma.group.findMany({
-        where: { id: { not: EVERYONE_GROUP_ID } },
+        where: { id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS } },
         take: 1,
       });
-      everyoneDataset = await createTestDataset(ownerGroup.id, '_gi_everyone');
-      createdDatasetIds.push(everyoneDataset.id);
+      principalDataset = await createTestDataset(ownerGroup.id, `_gi_principal_${principalName}`);
+      createdDatasetIds.push(principalDataset.id);
 
-      const everyoneAccessTypeId = await getAccessTypeId('DATASET:VIEW_METADATA');
-      everyoneGrant = await grantsService.createGrant(
+      const accessTypeId = await getAccessTypeId('DATASET:VIEW_METADATA');
+      const principalGrant = await grantsService.createGrant(
         {
-          subject_id: EVERYONE_GROUP_ID,
-          resource_id: everyoneDataset.resource_id,
-          access_type_id: everyoneAccessTypeId,
+          subject_id: principalId,
+          resource_id: principalDataset.resource_id,
+          access_type_id: accessTypeId,
         },
         actor.subject_id,
       );
-      createdGrantIds.push(everyoneGrant.id);
+      createdGrantIds.push(principalGrant.id);
     });
 
-    it('a user with no group memberships has access via the EVERYONE grant', async () => {
+    it('a user with no group memberships has access through it', async () => {
       const has = await grantsService.userHasGrant({
         user_id: unaffiliatedUser.subject_id,
-        resource_id: everyoneDataset.resource_id,
+        resource_id: principalDataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(has).toBe(true);

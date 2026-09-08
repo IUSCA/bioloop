@@ -75,20 +75,34 @@ the version and variant nibbles. And `@default(uuid())` in the Prisma schema is
 client-side only, so Prisma read phase 1's database defaults as drift and generated a
 migration dropping them — the two surrogate keys are now declared `dbgenerated`.
 
-## Phase 3 — Public principal
+## Phase 3 — Public principal — **done**
 
 Implements [decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed).
 Foundation for use cases A.1 and A.2.
 
-- Rename the existing principal to `Authenticated Users`, keeping its UUID so existing
+- The existing principal is renamed to `Authenticated Users`, keeping its UUID so existing
   grants and audit records resolve.
-- Seed a `Public` principal with its own fixed UUID and the same protection rules.
-- The effective-access SQL includes the public principal in its subject set.
-- Tests: a grant to the public principal is honoured, neither principal can be edited or
-  deleted, and the rename leaves existing grants intact.
+- A `Public` principal is seeded with its own fixed UUID. The delete rule and the two
+  check constraints that protected the old principal now name both.
+- The three subject-set CTEs in `services/grants/helpers.js` union both principals in, so
+  a grant to either is honoured for any signed-in user.
+- Both are offered in the grant subject picker, and both are excluded from group listings
+  by id rather than by slug, so a rename cannot put them back.
+- Tests: each principal exists under the expected name, takes no members, takes no place
+  in the hierarchy, cannot be deleted, is absent from group listings, and confers access
+  to a user with no group memberships.
 
 Routes still require authentication. Serving unauthenticated requests is out of scope by
-decision.
+decision, so a grant to `Public` reaches the same people as one to `Authenticated Users`
+today.
+
+One thing surfaced that the plan did not anticipate. The seed's
+`createDeterministicUuidGenerator` counts up from zero in a UUID's last eight bytes and
+sets the same version and variant nibbles that phase 2 had adopted for its sentinel, so
+the quarantine group's id was the string the seed also assigns to `Collection 01`. Both
+sentinels now carry a `ffffffff` prefix, which the generator can never produce. Phase 2's
+migration was corrected in place rather than by a follow-up, because it had run nowhere
+but a disposable development database.
 
 ## Phase 4 — Access type implication
 

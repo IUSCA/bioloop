@@ -26,7 +26,7 @@ For an argument about whether the design itself is right, see
 
 The authorization **core** is built and tested: closure-table hierarchy, subject/resource
 polymorphism, atomic grants with a DB-level non-overlap guarantee, collections as
-authorization containers, the `Everyone` principal, access requests with preset
+authorization containers, the system principals, access requests with preset
 expansion and supersession, and a partitioned audit table. Roughly 8,300 lines of API
 code and ~20 service test files back it.
 
@@ -52,15 +52,15 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Access requests | `access_request`, `access_request_item` | `routes/access_requests.js` | `services/access_requests/` | `pages/v2/access-requests/` |
 | Audit | `authorization_audit` (monthly partitions) | `routes/audit.js` | `services/audit.js`, `authorization/builtin/audit/` | `pages/v2/audit-logs.vue` |
 | ABAC engine | — | `authorize()` middleware | `authorization/core/`, `authorization/builtin/policies/` | capability flags on responses |
-| `Everyone` principal | seeded row + DB rules in the 2026-03-02 migration | selectable as grant subject | `services/grants/helpers.js` | `SubjectSelector.vue` |
+| System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 
 Key entry points:
 
 - Policy definitions: [api/src/authorization/builtin/policies/](https://github.com/IUSCA/bioloop/tree/main/api/src/authorization/builtin/policies) — one file per resource type.
-- Effective-access SQL: [api/src/services/grants/helpers.js](https://github.com/IUSCA/bioloop/blob/main/api/src/services/grants/helpers.js) — the `subjects ∪ resources` CTE pattern that unions direct user grants, group grants via closure, collection grants, and `Everyone`.
-- Views and constraints: [the 2026-03-02 migration](https://github.com/IUSCA/bioloop/blob/main/api/prisma/migrations/20260302211516_hierarchical_groups_collections_and_data_access/migration.sql) — `effective_user_groups`, `effective_user_oversight_groups`, `valid_grants`, the `grant_no_overlap` GiST exclusion constraint, and the `Everyone`-protection rules.
+- Effective-access SQL: [api/src/services/grants/helpers.js](https://github.com/IUSCA/bioloop/blob/main/api/src/services/grants/helpers.js) — the `subjects ∪ resources` CTE pattern that unions direct user grants, group grants via closure, collection grants, and both system principals.
+- Views and constraints: [the 2026-03-02 migration](https://github.com/IUSCA/bioloop/blob/main/api/prisma/migrations/20260302211516_hierarchical_groups_collections_and_data_access/migration.sql) — `effective_user_groups`, `effective_user_oversight_groups`, `valid_grants`, the `grant_no_overlap` GiST exclusion constraint, and the system-principal protection rules.
 
 ---
 
@@ -128,6 +128,18 @@ Creation does not fall back to that group. The three dataset creation paths do n
 owning group yet, so they now fail at the database level rather than returning an error
 that names the missing field; that work, and the worker release it needs, is tracked as
 `.todo` epic 3 T4.
+
+### A public principal exists
+
+Two system principals are seeded, both protected from deletion, membership, and any place
+in the group hierarchy: `Authenticated Users` (renamed from `Everyone`, keeping its id so
+existing grants and audit records resolve) and `Public`. `Public` is the wider of the two,
+so a signed-in user's subject set contains both, and the three subject-set CTEs in
+`services/grants/helpers.js` union them in.
+
+Every route still requires authentication, so a grant to `Public` reaches the same people
+as one to `Authenticated Users` today. Serving pages to people who are not signed in is
+separate work and is not started.
 
 ## Deviations
 

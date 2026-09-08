@@ -42,9 +42,13 @@ const colorMap = {
 };
 
 const icon = computed(() => {
-  // for everyone group, we want to show the earth icon regardless of metadata type
-  if (props.group.id === constants.EVERYONE_GROUP.id) {
-    return constants.EVERYONE_GROUP.icon;
+  // The system principals get their own icons regardless of metadata type.
+  const principal = [
+    constants.AUTHENTICATED_USERS_GROUP,
+    constants.PUBLIC_GROUP,
+  ].find((p) => p.id === props.group.id);
+  if (principal) {
+    return principal.icon;
   }
 
   const type = props.group?.metadata?.type || "default";

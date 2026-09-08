@@ -73,7 +73,7 @@ const props = defineProps({
 });
 
 const quickGroups = computed(() => {
-  const groups = [constants.EVERYONE_GROUP];
+  const groups = [constants.PUBLIC_GROUP, constants.AUTHENTICATED_USERS_GROUP];
   if (ownerGroup.value && !contextLoading.value) {
     groups.push({
       ...ownerGroup.value,

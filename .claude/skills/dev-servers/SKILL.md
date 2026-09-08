@@ -62,6 +62,22 @@ working because an unknown subject simply resolves to nothing, and then a write 
 a foreign-key violation on a column like `group_user.removed_by`. The fix is to visit
 `/dev-login`, not to debug the write path. This cost a session once.
 
+## Seeing a page as somebody with no privileges
+
+A platform admin sees every dataset, group, and collection regardless of grants, so
+checking an access-control change while signed in as `test_user` proves nothing. The seed
+ships three ordinary users who hold the `user` role and belong to no group at all:
+`ajohnson`, `sdavis`, and `ethompson`. Anything one of them can see, they can see because
+of a grant.
+
+```
+https://localhost/dev-login?username=ajohnson&next=/v2/datasets
+```
+
+The `user-0NN` accounts are members of the sample groups, so use those to check
+membership-derived access instead. Do not hand-insert a user for this; the seed already
+covers both shapes and a hand-made row disappears at the next reset.
+
 ## Restart only when reload cannot cover it
 
 Both servers reload on file changes: `nodemon` for the API, Vite HMR for the UI. Editing a
