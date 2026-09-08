@@ -112,16 +112,25 @@ async function main() {
   }
 
   // Seed import sources for non-production environments.
-  // These paths match the directories created by workers/bin/init_dirs.sh.
+  //
+  // The directory holding them comes from config so a native dev environment and the
+  // docker stack can differ: `import.sources_dir` defaults to /opt/sca/data/imports,
+  // which is what workers/bin/init_dirs.sh creates on the shared volume, and
+  // IMPORT_SOURCES_DIR overrides it with a path on the developer's machine.
+  //
+  // The path has to be absolute and has to exist where both the API and the workers can
+  // read it. The API serves the browse endpoint from it, and a dataset imported from
+  // here keeps it as its origin_path, which a worker later archives from.
+  const importSourcesDir = config.get('import.sources_dir');
   const importSources = [
     {
-      path: '/opt/sca/data/imports/genomics_lab_instrument_drop',
+      path: path.join(importSourcesDir, 'genomics_lab_instrument_drop'),
       label: 'Genomics Lab',
       description: 'Drop location for genomics lab instrument output',
       sort_order: 1,
     },
     {
-      path: '/opt/sca/data/imports/proteomics_lab_instrument_drop',
+      path: path.join(importSourcesDir, 'proteomics_lab_instrument_drop'),
       label: 'Proteomics Lab',
       description: 'Drop location for proteomics lab instrument output',
       sort_order: 2,

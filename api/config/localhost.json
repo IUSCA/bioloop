@@ -1,5 +1,3 @@
 {
-  "upload": {
-    "path": "data/uploads"
-  }
+  "mode": "localhost"
 }

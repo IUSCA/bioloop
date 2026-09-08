@@ -38,6 +38,21 @@ cd api && node src/scripts/issue_token.js svc_tasks     # paste into APP_API_TOK
 The token is a never-expiring JWT for the seeded `svc_tasks` account. Reissue it after
 `prisma migrate reset`, which gives that account a new subject id.
 
+The API needs to agree with the workers about two directories. Add these to `api/.env`,
+using absolute paths, and restart the API afterwards — nodemon does not reload environment
+variables:
+
+```
+UPLOAD_DIR=/absolute/path/to/bioloop/data/uploads
+UPLOAD_HOST_DIR=/absolute/path/to/bioloop/data/uploads
+IMPORT_SOURCES_DIR=/absolute/path/to/bioloop/data/import
+```
+
+`UPLOAD_DIR` is where uploaded files land. `IMPORT_SOURCES_DIR` is where the seeded import
+sources point, and the import UI can only browse inside them. Relative paths do not work
+here: they resolve against each process's own working directory, so the API and a worker
+would disagree about where a file is.
+
 Then install dependencies and create the data directories:
 
 ```bash
@@ -82,6 +97,24 @@ stop changing. About forty seconds later the dataset should have walked `REGISTE
 
 If it stops at `REGISTERED`, the API could not reach rhythm. If it never appears at all,
 `APP_ENV` is not `dev` and the watch script is polling a placeholder path.
+
+## Import and upload
+
+Both legacy flows work once the directories above are set.
+
+**Import** registers a directory that is already on disk; nothing is copied. Put a
+directory under `data/import/genomics_lab_instrument_drop/`, then go to
+`/datasets/imports/new`, pick the source, and type part of the directory name. The
+typeahead only searches while its dropdown is open.
+
+**Upload** sends files from the browser. Go to `/datasets/uploads/new`, choose a file, and
+finish the stepper. The dataset appears immediately in `UPLOADING`; the
+`manage_upload_workflows` cron then moves it through `UPLOADED`, `VERIFYING`, `VERIFIED`,
+`PROCESSING`, and `COMPLETE`, which takes a minute or two because the cron runs once a
+minute. `/datasets/uploads/:id` shows the current status and the verification subprocess's
+own logs.
+
+Both features are gated to the `admin` role in `ui/src/config.js` under `enabledFeatures`.
 
 ## What is different from a real deployment
 

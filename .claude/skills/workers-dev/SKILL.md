@@ -77,6 +77,42 @@ A missing `API_BASE_URL` fails at import with a bare `KeyError: 'API_BASE_URL'` 
 `common.py`, before any logging is set up. Every worker dies instantly and pm2 shows three
 restarts. Check `workers/.env` before reading anything else.
 
+## The API has to agree about two directories
+
+The workers and the API share a filesystem, and two paths have to name the same place in
+both. Both are absolute, and both are set in `api/.env`, which is gitignored:
+
+```
+UPLOAD_DIR=<repo>/data/uploads
+UPLOAD_HOST_DIR=<repo>/data/uploads
+IMPORT_SOURCES_DIR=<repo>/data/import
+```
+
+`UPLOAD_DIR` is `upload.path`, where TUS stages a file and where the API then moves it,
+under `<type subdirectory>/<dataset id>/<name>`. `UPLOAD_HOST_DIR` is `upload.host_path`,
+the prefix the API records in `dataset.origin_path`. Natively they are the same value;
+they differ only where the API sees a mount at a different path than the host does.
+
+`IMPORT_SOURCES_DIR` is where `api/prisma/seed.js` puts the seeded `import_source` rows.
+Those rows are an allowlist: `GET /fs` refuses to browse outside them, and
+`POST /datasets` refuses an `origin_path` outside them.
+
+**A relative path here looks like it works and does not.** `upload.path` was once the
+relative `data/uploads`, which resolves against the *process* working directory — one
+place for the API, a different place for a worker. The API writes the file, records the
+relative path, and the worker then cannot find it. Keep both absolute.
+
+After changing `api/.env`, restart the API. `bin/devserver.sh restart api` — nodemon does
+not reload environment variables, so an edit alone changes nothing and the symptom is a
+stale value that no longer appears anywhere in the config files.
+
+Repointing the import sources on an existing database is a direct update, because the seed
+upserts on `path` and would otherwise add rows rather than move them:
+
+```sql
+UPDATE import_source SET path = replace(path, '/opt/sca/data/imports', '<repo>/data/import');
+```
+
 ## Directories
 
 `workers/workers/config/dev.py` roots every path at the repository's `./data`, which is
@@ -192,6 +228,22 @@ checkout. Run `poetry install --with dev`, or install just what the suite needs
 starting. pm2 does not. `ecosystem.dev.config.js` therefore omits `--pidfile`; if you add it
 back, a worker that crashes will refuse every subsequent restart with a message about the
 pid file already existing.
+
+**A task that spawns a subprocess must use `sys.executable`, never `'python'`.** A bare
+`python` is resolved from PATH, and under pm2 that is whatever interpreter the shell
+offers rather than `workers/.venv/bin/python`. `verify_upload.py` did this, so every
+upload stalled in VERIFYING while the subprocess died on
+`ModuleNotFoundError: No module named 'glom'` at the first `from workers import ...`.
+
+The failure is easy to misread. Celery only reports `SubprocessError` with a return code;
+the traceback is captured by `execute_with_log_tracking` into the `log` table and shown on
+`/datasets/uploads/:id` under "Verification Task Logs". Read it there, or:
+
+```sql
+SELECT level, message FROM log WHERE worker_process_id = <id> ORDER BY id;
+```
+
+The same mistake in a different costume is the `poetry run pytest` trap below.
 
 **Names must match on both sides of the queue.** The celery queue is
 `<app_id>.q`, and `app_id` is `bioloop-dev.sca.iu.edu` in both `api/config/default.json`

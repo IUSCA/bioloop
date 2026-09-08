@@ -20,6 +20,7 @@ The fixed register_process() function handles both WorkflowTask and regular Cele
 """
 
 import logging
+import sys
 
 from workers import api, cmd
 
@@ -53,8 +54,13 @@ def verify_upload_integrity(celery_task, dataset_id):
     worker_process_id = None
 
     try:
+        # sys.executable, not 'python': the subprocess needs the same interpreter
+        # this task is running under. A bare 'python' is resolved from PATH, which
+        # outside a container is whatever interpreter the shell happens to offer —
+        # the failure is an unrelated-looking ModuleNotFoundError from the first
+        # `from workers import ...` line.
         verification_script_cmd = [
-            'python', '-m', 'workers.scripts.verify_upload_integrity',
+            sys.executable, '-m', 'workers.scripts.verify_upload_integrity',
             str(dataset_id),
             str(task_id),
             str(retry_count),
