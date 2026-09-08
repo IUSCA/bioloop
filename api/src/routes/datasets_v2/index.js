@@ -15,6 +15,7 @@ const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
 } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
+const importService = require('@/services/datasets_v2/imports');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 
@@ -85,6 +86,65 @@ router.get(
     }
 
     return res.json(await datasetService.isDatasetNameAvailable({ name, type, owner_group_id }));
+  }),
+);
+
+// ── Import ───────────────────────────────────────────────────────────────────
+
+/**
+ * Register a directory that already exists as a dataset. Nothing is copied.
+ *
+ * Authorized with `contribute`, so a member of a group that accepts contributions may
+ * import into it, not only its admins.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — B3
+ */
+router.post(
+  '/imports',
+  validate([
+    body('name').isString().trim().notEmpty(),
+    body('type').isIn(config.get('dataset_types')),
+    body('origin_path').isString().trim().notEmpty(),
+    body('owner_group_id').isUUID(),
+    body('description').optional().isString(),
+    body('metadata').optional().isObject(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Import a dataset from a directory already on disk'
+    const { owner_group_id } = req.body;
+
+    const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
+    if (!group) return next(createError.NotFound('Group not found'));
+
+    const decision = await authorizeAction('dataset', 'contribute', {
+      identifiers: { user: req.user?.subject_id, resource: null },
+      policyExecutionContext: req.policyContext,
+      preFetched: {
+        user: req.user,
+        resource: {
+          owner_group_id: group.id,
+          owner_group_allows_contributions: group.allow_user_contributions,
+        },
+        context: { req },
+      },
+    });
+    if (!decision.granted) {
+      return next(createError.Forbidden(
+        `Not permitted to create datasets owned by group ${owner_group_id}`,
+      ));
+    }
+
+    const { dataset, workflow } = await importService.importDataset({
+      user: req.user,
+      data: _.pick(['name', 'type', 'origin_path', 'owner_group_id', 'description', 'metadata'])(req.body),
+    });
+
+    if (!dataset) {
+      return next(createError.Conflict('A dataset with that name already exists in this group'));
+    }
+
+    return res.json({ dataset, workflow });
   }),
 );
 
