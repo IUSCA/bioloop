@@ -2,8 +2,10 @@
 // req.params.dataset_id is validated in the parent router (index.js).
 
 const express = require('express');
-const { param } = require('express-validator');
+const { param, query } = require('express-validator');
 const createError = require('http-errors');
+
+const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
@@ -14,7 +16,9 @@ const CONSTANTS = require('@/constants');
 const workflowService = require('@/services/datasets_v2/workflows');
 const datasetService = require('@/services/datasets_v2');
 
-const router = express.Router();
+// mergeParams, so :dataset_id from the parent router reaches these handlers. Without it
+// every route here authorizes and queries against undefined.
+const router = express.Router({ mergeParams: true });
 
 // All routes authorize against the parent dataset identified by dataset_id.
 const byDatasetId = { resourceIdFn: (req) => req.params.dataset_id };
@@ -26,6 +30,33 @@ const authorizeWorkflowRun = (req, res, next) => {
     : 'compute';
   return authorize('dataset', action, byDatasetId)(req, res, next);
 };
+
+// Every run associated with this dataset.
+//
+// Gated by view_workflows, which admits the owning group's admins and its oversight and
+// nobody else: a run carries step names, error traces, and filesystem paths, and the
+// attribute filters already withhold paths from grant holders.
+// @see .todo/issues/06-dataset-actions-workflows.md — Who sees the tab, and who can act
+router.get(
+  '/',
+  validate([
+    query('last_task_run').optional().toBoolean(),
+    query('prev_task_runs').optional().toBoolean(),
+    query('only_active').optional().toBoolean(),
+  ]),
+  authorize('dataset', 'view_workflows', byDatasetId),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = List the workflow runs associated with a dataset
+    const workflows = await workflowService.listDatasetWorkflows(
+      req.params.dataset_id,
+      _.pick(['last_task_run', 'prev_task_runs', 'only_active'])(req.query),
+    );
+
+    if (workflows === null) return next(createError(404, 'Dataset not found'));
+    res.json(workflows);
+  }),
+);
 
 // Create and launch a workflow for a dataset
 router.post(
@@ -42,17 +73,20 @@ router.post(
     // #swagger.summary = Create and launch an integrated or stage workflow for a dataset
     const { dataset_id, workflow_type } = req.params;
 
-    const dataset = await datasetService.getDataset({
-      id: dataset_id,
-      workflows: true,
+    // createWorkflow refuses a second run of the same name while one is pending, so it needs
+    // the runs enriched with name and status. Postgres holds only their ids.
+    const dataset = await datasetService.getDatasetById(dataset_id, {
+      includes: { workflows: true },
     });
 
     if (!dataset) return next(createError(404, 'Dataset not found'));
 
+    dataset.workflows = await workflowService.enrichWorkflows(dataset.workflows);
+
     if (workflow_type === CONSTANTS.WORKFLOWS.STAGE) {
       try {
         await prisma.stage_request_log.create({
-          data: { dataset_id, user_id: req.user.id },
+          data: { dataset_id: dataset.id, user_id: req.user.id },
         });
       } catch (e) {
         logger.error('Error creating stage request log', e);
@@ -92,24 +126,5 @@ router.put(
     res.status(204).send();
   }),
 );
-
-module.exports = router;
-
-// TODO
-// create a workflow and launch it for a dataset
-// router.post(
-//   '/run/:workflow_type',
-//   validate([
-//     param('workflow_type').isIn([
-//       CONSTANTS.WORKFLOWS.INTEGRATED,
-//       CONSTANTS.WORKFLOWS.STAGE,
-//     ]),
-//   ]),
-//   asyncHandler(async (req, res, next) => {
-//   // #swagger.tags = ['datasets']
-//   // #swagger.summary = Create and run a workflow for a dataset
-//     const { dataset_id, workflow_type } = req.params;
-//   }),
-// );
 
 module.exports = router;

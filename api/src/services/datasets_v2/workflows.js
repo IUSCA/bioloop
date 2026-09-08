@@ -2,8 +2,60 @@ const assert = require('assert');
 const config = require('config');
 
 const prisma = require('@/db');
+const logger = require('@/services/logger');
 const wfService = require('@/services/workflow');
 const { DONE_STATUSES } = require('@/constants');
+
+/**
+ * Fills in what Postgres does not hold about a dataset's runs.
+ *
+ * The `workflow` table stores an id, the dataset it belongs to, and who started it. Name,
+ * status, and task runs live in the workflow service, so they are fetched and merged here.
+ * An unreachable workflow service yields an empty list rather than failing the caller, the
+ * same choice the legacy dataset service makes.
+ *
+ * @param {{id: string}[]} rows - workflow rows for one dataset
+ * @param {object} [options] - forwarded to the workflow service
+ * @returns {Promise<object[]>} enriched runs, or [] when the service cannot be reached
+ */
+async function enrichWorkflows(rows, {
+  last_task_run = false, prev_task_runs = false, only_active = false,
+} = {}) {
+  if (!rows?.length) return [];
+
+  try {
+    const res = await wfService.getAll({
+      only_active,
+      last_task_run,
+      prev_task_runs,
+      workflow_ids: rows.map((row) => row.id),
+    });
+    return res.data.results.map((wf) => ({
+      ...wf,
+      ...rows.find((row) => row.id === wf.id),
+    }));
+  } catch (error) {
+    logger.error(`Unable to reach the workflow service for dataset runs: ${error.message}`);
+    return [];
+  }
+}
+
+/**
+ * Every run associated with a dataset, addressed by its resource id.
+ *
+ * @param {string} resource_id - the dataset's resource UUID
+ * @param {object} [options] - forwarded to enrichWorkflows
+ * @returns {Promise<object[]|null>} the runs, or null when no such dataset exists
+ */
+async function listDatasetWorkflows(resource_id, options = {}) {
+  const dataset = await prisma.dataset.findUnique({
+    where: { resource_id },
+    select: { id: true, workflows: { select: { id: true, initiator: true } } },
+  });
+  if (!dataset) return null;
+
+  return enrichWorkflows(dataset.workflows, options);
+}
 
 function get_wf_body(wf_name) {
   assert(config.workflow_registry.has(wf_name), `${wf_name} workflow is not registered`);
@@ -55,4 +107,6 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
 
 module.exports = {
   createWorkflow,
+  enrichWorkflows,
+  listDatasetWorkflows,
 };

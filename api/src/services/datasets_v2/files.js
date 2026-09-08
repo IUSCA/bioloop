@@ -271,18 +271,43 @@ async function searchFiles({
   });
 }
 
+/**
+ * Turns a dataset's resource UUID into its integer primary key.
+ *
+ * @param {string} resource_id
+ * @returns {Promise<number>} the dataset's `id`
+ * @throws {createError.NotFound} when no dataset carries that resource id
+ */
+async function resolveDatasetRowId(resource_id) {
+  const dataset = await prisma.dataset.findUnique({
+    where: { resource_id },
+    select: { id: true },
+  });
+  if (!dataset) throw createError.NotFound('Dataset not found');
+  return dataset.id;
+}
+
+/**
+ * A download URL and token for one file.
+ *
+ * `dataset_id` is the dataset's resource UUID, the way every other v2 entry point addresses a
+ * dataset. `dataset.id` and `dataset_file.dataset_id` are integers, so it is resolved here
+ * rather than by each caller.
+ */
 async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
+  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+
   const val = await prisma.$transaction(async (tx) => {
     const file = await tx.dataset_file.findFirstOrThrow({
       where: {
         id: file_id,
-        dataset_id,
+        dataset_id: dataset_row_id,
       },
     });
 
     const dataset = await tx.dataset.findFirstOrThrow({
       where: {
-        id: dataset_id,
+        id: dataset_row_id,
       },
     });
 
@@ -313,7 +338,7 @@ async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
       data: {
         access_type: 'BROWSER',
         file_id,
-        dataset_id,
+        dataset_id: dataset_row_id,
         user_id: actor_id,
       },
     });
@@ -338,11 +363,16 @@ function getBundleDownloadPath(dataset) {
   return `bundles/${dataset.metadata.stage_alias}/${dataset.name}.tar`;
 }
 
+/**
+ * A download URL and token for the dataset's bundle. Takes the resource UUID, as above.
+ */
 async function getBundleDownloadInfo({ dataset_id, actor_id }) {
+  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+
   const val = await prisma.$transaction(async (tx) => {
     const dataset = await tx.dataset.findFirstOrThrow({
       where: {
-        id: dataset_id,
+        id: dataset_row_id,
       },
     });
 
@@ -372,7 +402,7 @@ async function getBundleDownloadInfo({ dataset_id, actor_id }) {
     await prisma.data_access_log.create({
       data: {
         access_type: 'BROWSER',
-        dataset_id,
+        dataset_id: dataset_row_id,
         user_id: actor_id,
       },
     });
