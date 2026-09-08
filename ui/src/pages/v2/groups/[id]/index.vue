@@ -31,14 +31,14 @@
             </h1>
           </div>
           <div>
-            <ModernChip v-if="group.is_archived" color="accent" class="ml-2">
+            <Badge v-if="group.is_archived" color="neutral" class="ml-2">
               Archived
-            </ModernChip>
+            </Badge>
           </div>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
-          <GroupMemberRoleBadge :role-name="callerRole" size="medium" />
+          <RoleBadge :role-name="callerRole" size="base" />
         </div>
       </div>
 
@@ -350,27 +350,6 @@ function handleActionRequested(payload) {
 
 onMounted(() => fetchGroupData());
 </script>
-
-<style scoped>
-.tab-count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 600;
-  background-color: rgb(219 234 254);
-  color: rgb(29 78 216);
-}
-
-.dark .tab-count-badge {
-  background-color: rgb(30 58 138 / 0.5);
-  color: rgb(147 197 253);
-}
-</style>
 
 <route lang="yaml">
 meta:

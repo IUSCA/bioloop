@@ -53,6 +53,7 @@
                 ? 'All requests have been reviewed.'
                 : 'You have not made any access requests for this dataset.'
             "
+            :show-clear-filters="false"
           />
         </div>
 

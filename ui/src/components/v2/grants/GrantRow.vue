@@ -28,42 +28,30 @@
 
     <!-- Tag Row -->
     <div class="flex flex-wrap gap-1.5 mt-1">
-      <span
+      <Badge
         v-if="props.grant.creation_type === 'ACCESS_REQUEST'"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300"
+        color="primary"
       >
         Access request
-      </span>
-      <span
-        v-if="props.grant.creation_type === 'MANUAL'"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-      >
+      </Badge>
+      <Badge v-if="props.grant.creation_type === 'MANUAL'" color="neutral">
         Manual
-      </span>
-      <span
+      </Badge>
+      <Badge
         v-if="props.grant.creation_type === 'SYSTEM_BOOTSTRAP'"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+        color="neutral"
       >
         System
-      </span>
-      <span
-        v-if="props.grant.revoked_at !== null"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-500"
-      >
+      </Badge>
+      <Badge v-if="props.grant.revoked_at !== null" color="neutral">
         Removed
-      </span>
-      <span
-        v-if="props.grant.source_preset"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300"
-      >
+      </Badge>
+      <Badge v-if="props.grant.source_preset" color="violet" :uppercase="false">
         {{ props.grant.source_preset.name }}
-      </span>
-      <span
-        v-if="props.grant.resource?.type === 'COLLECTION'"
-        class="text-xs font-medium px-2 py-0.5 rounded-sm bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300"
-      >
+      </Badge>
+      <Badge v-if="props.grant.resource?.type === 'COLLECTION'" color="teal">
         via collection
-      </span>
+      </Badge>
     </div>
 
     <!-- Date Row -->

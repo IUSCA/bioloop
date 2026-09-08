@@ -42,11 +42,9 @@
                 Status
               </dt>
               <dd>
-                <ModernChip
-                  :color="props.group.is_archived ? 'accent' : 'success'"
-                >
+                <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
                   {{ props.group.is_archived ? "Archived" : "Active" }}
-                </ModernChip>
+                </Badge>
               </dd>
             </div>
             <div class="py-2.5 flex items-center gap-4">
@@ -280,7 +278,7 @@
               <!-- <VaChip color="primary" size="small" class="shrink-0" square>
                 Admin
               </VaChip> -->
-              <GroupMemberRoleBadge role-name="ADMIN" class="shrink-0" />
+              <RoleBadge role-name="ADMIN" class="shrink-0" />
             </div>
           </div>
           <div v-else class="flex flex-col items-center py-4 gap-1 text-center">

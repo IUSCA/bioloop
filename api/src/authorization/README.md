@@ -224,5 +224,5 @@ if (result.granted) {
 
 ## Related Documentation
 
-- [Architecture](../../docs/architecture.md): System-wide architecture
+- [Architecture](../../../docs/reference/architecture.md): System-wide architecture
 - [Custom Extensions](custom/README.md): Guide for derived app developers

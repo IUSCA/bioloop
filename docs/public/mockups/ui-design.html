@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Governance Portal — UI Design Spec</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+  :root {
+    --ink: #0f1117;
+    --ink-mid: #3a3f4d;
+    --ink-soft: #6b7280;
+    --ink-ghost: #9ca3af;
+    --canvas: #f8f9fc;
+    --surface: #ffffff;
+    --surface-alt: #f1f3f8;
+    --surface-hover: #e9ecf5;
+    --rule: #e2e5ef;
+    --rule-strong: #c4c9d8;
+
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --blue-mid: #93c5fd;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --slate: #475569;
+
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+
+    --radius: 6px;
+    --radius-lg: 10px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.08);
+    --shadow: 0 2px 8px rgba(0,0,0,.1);
+    --shadow-lg: 0 4px 20px rgba(0,0,0,.12);
+
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    background: var(--canvas);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── SPEC PAGE CHROME ── */
+  .spec-header {
+    background: var(--ink);
+    color: white;
+    padding: 32px 48px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .spec-header h1 { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+  .spec-header .version { font-family: var(--mono); font-size: 11px; color: #6b7280; background: #1f2937; padding: 2px 8px; border-radius: 3px; }
+
+  .spec-nav {
+    background: #1a1f2e;
+    padding: 0 48px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    border-bottom: 1px solid #2d3348;
+  }
+  .spec-nav a {
+    color: #9ca3af;
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 10px 14px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .spec-nav a:hover { color: white; border-bottom-color: var(--accent); }
+
+  .spec-body { padding: 48px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── SECTION ── */
+  .spec-section { margin-bottom: 72px; }
+  .spec-section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--rule);
+  }
+  .spec-section-header h2 {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .spec-section-header .section-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-ghost);
+    background: var(--surface-alt);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .spec-section-header p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    flex: 1;
+    text-align: right;
+  }
+
+  .spec-subsection { margin-bottom: 40px; }
+  .spec-subsection h3 {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    padding-left: 12px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* ── WIREFRAME SHELL ── */
+  .wf-shell {
+    background: var(--surface);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 24px;
+  }
+  .wf-shell-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--surface-alt);
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .wf-shell-label .path { color: var(--ink-ghost); }
+  .wf-browser-bar {
+    background: #f0f1f4;
+    padding: 8px 14px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wf-browser-dots { display: flex; gap: 5px; }
+  .wf-browser-dot { width: 10px; height: 10px; border-radius: 50%; background: #d1d5db; }
+  .wf-browser-dot:nth-child(1) { background: #fca5a5; }
+  .wf-browser-dot:nth-child(2) { background: #fcd34d; }
+  .wf-browser-dot:nth-child(3) { background: #6ee7b7; }
+  .wf-url {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  /* ── APP LAYOUT ── */
+  .app-layout { display: flex; height: 580px; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px;
+    background: #111827;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-logo .logo-mark {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: white; font-weight: 700;
+  }
+  .sidebar-logo .logo-text { font-family: var(--mono); font-size: 12px; font-weight: 600; color: white; }
+  .sidebar-section {
+    padding: 8px 0;
+    border-bottom: 1px solid #1f2937;
+  }
+  .sidebar-section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #4b5563;
+    padding: 6px 16px 4px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: #9ca3af;
+    cursor: pointer;
+    position: relative;
+  }
+  .sidebar-item.active {
+    background: #1f2937;
+    color: white;
+  }
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+  .sidebar-item .icon { font-size: 13px; width: 16px; text-align: center; }
+  .sidebar-item .badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: white;
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .sidebar-item .badge.amber { background: var(--amber); }
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 10px 0;
+    border-top: 1px solid #1f2937;
+  }
+
+  /* Main area */
+  .main-area { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+  .topbar {
+    background: white;
+    border-bottom: 1px solid var(--rule);
+    padding: 0 20px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .topbar-breadcrumb .current { color: var(--ink); font-weight: 600; }
+  .topbar-breadcrumb .sep { color: var(--rule-strong); }
+  .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .topbar-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: white; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+  .page-content { padding: 20px; flex: 1; }
+
+  /* ── COMPONENTS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: var(--sans);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all .12s;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: var(--surface-alt); color: var(--ink); border: 1px solid var(--rule-strong); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); }
+  .btn-danger { background: var(--red); color: white; }
+  .btn-sm { padding: 3px 9px; font-size: 11px; }
+
+  .page-header { margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: space-between; }
+  .page-header-left h1 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+  .page-header-left p { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .page-header-actions { display: flex; gap: 8px; align-items: center; }
+
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin-bottom: 16px; }
+  .tab {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .tab-count {
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+  .tab.active .tab-count { background: var(--blue-light); color: var(--accent); }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th {
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 7px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+  }
+  .data-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: middle;
+  }
+  .data-table tr:hover td { background: var(--surface-hover); }
+  .data-table tr:last-child td { border-bottom: none; }
+
+  /* Chips / Badges */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--mono);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .chip-blue { background: var(--blue-light); color: var(--blue); }
+  .chip-green { background: var(--green-light); color: var(--green); }
+  .chip-amber { background: var(--amber-light); color: var(--amber); }
+  .chip-red { background: var(--red-light); color: var(--red); }
+  .chip-purple { background: var(--purple-light); color: var(--purple); }
+  .chip-teal { background: var(--teal-light); color: var(--teal); }
+  .chip-slate { background: #f1f5f9; color: var(--slate); }
+  .chip-ghost { background: var(--surface-alt); color: var(--ink-soft); border: 1px solid var(--rule); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .card-sm { padding: 10px 12px; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .stat-card .stat-label { font-family: var(--mono); font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+  .stat-card .stat-value { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+  .stat-card .stat-sub { font-size: 10px; color: var(--ink-soft); margin-top: 3px; }
+
+  /* Form */
+  .form-group { margin-bottom: 12px; }
+  .form-label { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; display: block; }
+  .form-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--ink);
+  }
+  .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .form-hint { font-size: 10px; color: var(--ink-ghost); margin-top: 3px; }
+
+  /* Alert */
+  .alert {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .alert-info { background: var(--blue-light); color: #1e40af; border: 1px solid #bfdbfe; }
+  .alert-warning { background: var(--amber-light); color: #92400e; border: 1px solid #fde68a; }
+  .alert-error { background: var(--red-light); color: #991b1b; border: 1px solid #fecaca; }
+  .alert-success { background: var(--green-light); color: #14532d; border: 1px solid #bbf7d0; }
+  .alert-icon { font-size: 13px; margin-top: 1px; }
+
+  /* Tree */
+  .tree-node { position: relative; }
+  .tree-node-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .tree-node-header:hover { background: var(--surface-hover); }
+  .tree-node-header.active { background: var(--blue-light); }
+  .tree-children { margin-left: 20px; border-left: 1.5px solid var(--rule); padding-left: 8px; }
+  .tree-toggle { color: var(--ink-ghost); font-size: 10px; width: 12px; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid var(--rule); margin: 14px 0; }
+
+  /* Access explanation */
+  .access-explain {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: #0f1117;
+    color: #e5e7eb;
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    line-height: 1.7;
+  }
+  .access-explain .chain-item { color: var(--blue-mid); }
+  .access-explain .chain-arrow { color: #4b5563; }
+  .access-explain .chain-grant { color: #86efac; }
+  .access-explain .chain-deny { color: #fca5a5; }
+
+  /* Frozen overlay for archived */
+  .archived-banner {
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      rgba(217,119,6,.05) 8px,
+      rgba(217,119,6,.05) 16px
+    );
+    border: 1.5px solid var(--amber);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #92400e;
+  }
+
+  /* Split pane */
+  .split-pane { display: grid; grid-template-columns: 260px 1fr; gap: 0; }
+  .split-left { border-right: 1px solid var(--rule); padding: 14px; overflow-y: auto; }
+  .split-right { padding: 14px; overflow-y: auto; }
+
+  /* Timeline */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline-item { display: flex; gap: 10px; padding: 8px 0; position: relative; }
+  .timeline-item::before { content: ''; position: absolute; left: 14px; top: 26px; bottom: 0; width: 1px; background: var(--rule); }
+  .timeline-item:last-child::before { display: none; }
+  .timeline-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-alt); border: 2px solid var(--rule); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+  .timeline-dot.blue { background: var(--blue-light); border-color: var(--blue); }
+  .timeline-dot.green { background: var(--green-light); border-color: var(--green); }
+  .timeline-dot.red { background: var(--red-light); border-color: var(--red); }
+  .timeline-dot.amber { background: var(--amber-light); border-color: var(--amber); }
+  .timeline-body { flex: 1; }
+  .timeline-title { font-size: 12px; font-weight: 500; }
+  .timeline-meta { font-size: 10px; color: var(--ink-soft); margin-top: 2px; font-family: var(--mono); }
+
+  /* Search box */
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 5px 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  /* Annotation labels */
+  .annotation {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-ghost);
+    padding: 2px 6px;
+    border: 1px dashed var(--rule-strong);
+    border-radius: 3px;
+  }
+
+  /* Design note callout */
+  .design-note {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 3px solid var(--amber);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #78350f;
+    margin-top: 12px;
+  }
+  .design-note strong { font-weight: 600; }
+
+  .spec-note {
+    background: var(--surface-alt);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin-bottom: 20px;
+  }
+
+  /* Two-column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* Overlay modal */
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,17,23,.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 20px;
+    width: 380px;
+    border: 1px solid var(--rule);
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .modal-header h3 { font-size: 14px; font-weight: 600; }
+  .modal-close { color: var(--ink-ghost); font-size: 16px; cursor: pointer; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule); }
+
+  /* Fullscreen sub-shell for modals */
+  .wf-relative { position: relative; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-soft);
+  }
+  .empty-state .empty-icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-state p { font-size: 12px; }
+
+  /* Permission matrix */
+  .perm-grid { display: grid; grid-template-columns: 1fr repeat(3, 80px); gap: 0; }
+  .perm-grid-header {
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--rule);
+    text-align: center;
+  }
+  .perm-grid-header:first-child { text-align: left; }
+  .perm-cell {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 11px;
+    text-align: center;
+  }
+  .perm-cell:first-child { text-align: left; font-size: 12px; }
+  .perm-check { color: var(--green); }
+  .perm-cross { color: var(--ink-ghost); }
+  .perm-eye { color: var(--blue); }
+  
+  /* Hover annotation */
+  .cursor-note {
+    font-family: var(--mono);
+    font-size: 9px;
+    background: var(--ink);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  /* ---- Special: Callout box ---- */
+  .callout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .callout-box {
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    background: var(--surface);
+  }
+  .callout-box h4 { font-family: var(--mono); font-size: 11px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .callout-box ul { padding-left: 16px; font-size: 11px; color: var(--ink-soft); }
+  .callout-box ul li { margin-bottom: 3px; }
+
+  /* Info row */
+  .info-row { display: flex; gap: 6px; margin-bottom: 6px; font-size: 11px; align-items: baseline; }
+  .info-key { font-family: var(--mono); font-size: 10px; color: var(--ink-ghost); width: 120px; flex-shrink: 0; }
+  .info-val { color: var(--ink); }
+
+  hr.spec { border: none; border-top: 2px dashed var(--rule); margin: 32px 0; }
+
+  /* ── SCROLLBARS ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ─────────── SPEC HEADER ─────────── -->
+<div class="spec-header">
+  <h1>Data Governance Portal — UI Design Spec</h1>
+  <span class="version">v1.0 · 2025</span>
+</div>
+<nav class="spec-nav">
+  <a href="#overview">Overview</a>
+  <a href="#global-nav">Global Nav</a>
+  <a href="#groups">Groups</a>
+  <a href="#datasets">Datasets</a>
+  <a href="#collections">Collections</a>
+  <a href="#grants">Grants</a>
+  <a href="#access-requests">Access Requests</a>
+  <a href="#audit">Audit</a>
+  <a href="#access-explainability">Explainability</a>
+  <a href="#platform-admin">Platform Admin</a>
+</nav>
+
+<div class="spec-body">
+
+<!-- ─────────── 0. OVERVIEW ─────────── -->
+<div class="spec-section" id="overview">
+  <div class="spec-section-header">
+    <h2>Design Overview</h2>
+    <span class="section-id">§0</span>
+    <p>Visual language, information architecture, role model</p>
+  </div>
+
+  <div class="callout-grid">
+    <div class="callout-box">
+      <h4>🎨 Visual Language</h4>
+      <ul>
+        <li>IBM Plex Mono for labels, IDs, code; IBM Plex Sans for prose</li>
+        <li>High-contrast neutral palette — data-ink forward</li>
+        <li>Semantic colour: blue = data/access, green = active/granted, amber = warning/archived, red = revoked/danger, purple = collections</li>
+        <li>Tight density — governs large datasets; no decorative whitespace</li>
+        <li>Borders &amp; rules for structure; shadows only for elevation (modals, tooltips)</li>
+      </ul>
+    </div>
+    <div class="callout-box">
+      <h4>🗂 Information Architecture — Top Level Pages</h4>
+      <ul>
+        <li><strong>Groups</strong> — hierarchy, membership, archive</li>
+        <li><strong>Datasets</strong> — ownership, grants, collections membership, lifecycle</li>
+        <li><strong>Collections</strong> — dataset containers, grant targets</li>
+        <li><strong>Grants</strong> — cross-resource grant dashboard &amp; issue</li>
+        <li><strong>Access Requests</strong> — workflow for request/approve/reject</li>
+        <li><strong>Audit Log</strong> — immutable event stream</li>
+        <li><strong>Platform Admin</strong> — super-admin only: users, unarchive, overrides</li>
+      </ul>
+    </div>
+    <div class="callout-box">
+      <h4>👤 Role-Sensitive UI</h4>
+      <ul>
+        <li><strong>Platform Admin</strong> — sees everything, all actions enabled</li>
+        <li><strong>Group Admin</strong> — full governance of own groups/datasets; read-only oversight of descendants</li>
+        <li><strong>Member</strong> — sees group metadata &amp; membership; no governance actions</li>
+        <li>Actions are rendered per-role; forbidden actions are hidden (not greyed) at query layer</li>
+        <li>Oversight-only views carry a visible "Read-only oversight" banner</li>
+      </ul>
+    </div>
+    <div class="callout-box">
+      <h4>⚡ Key UX Principles</h4>
+      <ul>
+        <li>Every access decision is <strong>explainable</strong> — "why does X have access?" surfaced inline</li>
+        <li>Archived groups render with a striped amber visual treatment everywhere they appear</li>
+        <li>Grant atomicity is abstracted via Presets; raw grants exposed in "Advanced" toggle</li>
+        <li>Dual-consent flows use a two-step confirm pattern with clear authority display</li>
+        <li>Audit trail linked from every material action's success toast</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="design-note">
+    <strong>Scope of this spec:</strong> Groups · Datasets · Collections · Grants · Grant Presets · Access Requests (workflow) · Audit Log · Effective Access Explainability · Platform Admin. Excluded from v1: group reparenting, ownership transfer (dual-consent), grants preset management, access request renewal, dataset creation from UI, non-authoritative collections / saved sets.
+  </div>
+</div>
+
+<!-- ─────────── 1. GLOBAL NAVIGATION ─────────── -->
+<div class="spec-section" id="global-nav">
+  <div class="spec-section-header">
+    <h2>Global Navigation</h2>
+    <span class="section-id">§1</span>
+    <p>Persistent sidebar, topbar breadcrumbs, role-sensitive items</p>
+  </div>
+
+  <div class="spec-note">The sidebar is the primary navigation surface. It collapses to icon-only at narrow viewports. The topbar provides contextual breadcrumbs and per-page actions. No global search in v1 — filtering is per-page.</div>
+
+  <div class="wf-shell">
+    <div class="wf-shell-label"><span>SIDEBAR + TOPBAR CHROME</span><span class="path">All pages</span></div>
+    <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / groups</div></div>
+    <div class="app-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <div class="logo-mark">D</div>
+          <div class="logo-text">DataGov</div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Governance</div>
+          <div class="sidebar-item active"><span class="icon">🏢</span> Groups</div>
+          <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+          <div class="sidebar-item"><span class="icon">📦</span> Collections</div>
+          <div class="sidebar-item"><span class="icon">🔑</span> Grants <span class="badge">12</span></div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Workflows</div>
+          <div class="sidebar-item"><span class="icon">📥</span> Access Requests <span class="badge amber">4</span></div>
+          <div class="sidebar-item"><span class="icon">📋</span> Audit Log</div>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-label">Platform Admin</div>
+          <div class="sidebar-item"><span class="icon">⚙️</span> Admin Panel</div>
+        </div>
+        <div class="sidebar-bottom">
+          <div class="sidebar-item"><span class="icon">👤</span> Dana (admin)</div>
+        </div>
+      </div>
+      <div class="main-area">
+        <div class="topbar">
+          <div class="topbar-breadcrumb">
+            <span>DataGov</span>
+            <span class="sep">›</span>
+            <span class="current">Groups</span>
+          </div>
+          <div class="topbar-actions">
+            <div class="search-box">🔍 Filter groups…</div>
+            <button class="btn btn-primary btn-sm">+ New Group</button>
+            <div class="topbar-avatar">DA</div>
+          </div>
+        </div>
+        <div class="page-content">
+          <div style="color: var(--ink-ghost); font-size:11px; font-family: var(--mono); text-align:center; padding: 60px 20px;">
+            ← Page content renders here (see per-page wireframes below)
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="design-note">
+    <strong>Badge rules:</strong> Grants badge = count of active grants on resources I govern. Access Requests badge = pending requests awaiting my action. Badges are hidden when count = 0. Platform Admin section is only rendered for platform_admin role.
+  </div>
+</div>
+
+
+<!-- ─────────── 2. GROUPS ─────────── -->
+<div class="spec-section" id="groups">
+  <div class="spec-section-header">
+    <h2>Groups</h2>
+    <span class="section-id">§2</span>
+    <p>Hierarchy explorer, group detail, membership, archive</p>
+  </div>
+
+  <!-- 2.1 Groups List -->
+  <div class="spec-subsection">
+    <h3>2.1 — Groups Explorer (List + Hierarchy)</h3>
+    <div class="spec-note">Split-pane layout: left = hierarchy tree navigator; right = group detail panel. Tree shows hierarchy with archived nodes visually differentiated.</div>
+
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>GROUPS / EXPLORER</span><span class="path">/groups</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / groups</div></div>
+      <div class="app-layout">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">Governance</div>
+            <div class="sidebar-item active"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item"><span class="icon">📦</span> Collections</div>
+            <div class="sidebar-item"><span class="icon">🔑</span> Grants</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">Workflows</div>
+            <div class="sidebar-item"><span class="icon">📥</span> Requests <span class="badge amber">4</span></div>
+            <div class="sidebar-item"><span class="icon">📋</span> Audit</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Dana (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Groups</span></div>
+            <div class="topbar-actions">
+              <div class="search-box" style="font-size:11px">🔍 Search groups…</div>
+              <button class="btn btn-primary btn-sm">+ New Group</button>
+              <div class="topbar-avatar">DA</div>
+            </div>
+          </div>
+          <div class="split-pane" style="height: calc(100% - 44px);">
+            <!-- Tree -->
+            <div class="split-left" style="padding: 10px 8px;">
+              <div style="font-family: var(--mono); font-size: 9px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-ghost); padding: 4px 8px 8px;">Hierarchy</div>
+              <div class="tree-node">
+                <div class="tree-node-header active">
+                  <span class="tree-toggle">▼</span>
+                  <span>🏢</span>
+                  <span style="font-weight:600; font-size:12px;">Research Center</span>
+                  <span class="chip chip-blue" style="margin-left:auto;">Root</span>
+                </div>
+                <div class="tree-children">
+                  <div class="tree-node">
+                    <div class="tree-node-header">
+                      <span class="tree-toggle">▼</span>
+                      <span>🧪</span>
+                      <span>AI Lab</span>
+                    </div>
+                    <div class="tree-children">
+                      <div class="tree-node-header" style="padding-left:8px">
+                        <span class="tree-toggle">▶</span><span>🤖</span><span>Robotics Sub-Lab</span>
+                      </div>
+                      <div class="tree-node-header" style="padding-left:8px">
+                        <span class="tree-toggle">▶</span><span>👁</span><span>Vision Sub-Lab</span>
+                      </div>
+                      <div class="tree-node-header" style="padding-left:8px; opacity:.5;">
+                        <span class="tree-toggle">▶</span><span>⚗️</span>
+                        <span style="text-decoration: line-through; color: var(--amber);">Old Chem Lab</span>
+                        <span class="chip chip-amber" style="margin-left:auto; font-size:8px">archived</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tree-node-header">
+                    <span class="tree-toggle">▶</span><span>🧬</span><span>Bio Lab</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Detail -->
+            <div class="split-right" style="padding: 14px;">
+              <div class="page-header">
+                <div class="page-header-left">
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                    <span style="font-size:18px;">🏢</span>
+                    <h1>Research Center</h1>
+                    <span class="chip chip-green">active</span>
+                  </div>
+                  <p>Root organizational group. Dana (admin) · 9 members (4 direct, 5 transitive)</p>
+                </div>
+                <div class="page-header-actions">
+                  <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+                  <button class="btn btn-secondary btn-sm">⛔ Archive</button>
+                </div>
+              </div>
+
+              <div class="tabs">
+                <div class="tab active">Overview</div>
+                <div class="tab">Members <span class="tab-count">9</span></div>
+                <div class="tab">Datasets <span class="tab-count">14</span></div>
+                <div class="tab">Grants <span class="tab-count">6</span></div>
+                <div class="tab">Oversight</div>
+                <div class="tab">Audit</div>
+              </div>
+
+              <!-- Overview tab content -->
+              <div class="stat-row" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-card">
+                  <div class="stat-label">Direct Members</div>
+                  <div class="stat-value">4</div>
+                  <div class="stat-sub">+5 transitive</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Owned Datasets</div>
+                  <div class="stat-value">14</div>
+                  <div class="stat-sub">across all sub-groups</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-label">Sub-groups</div>
+                  <div class="stat-value">4</div>
+                  <div class="stat-sub">1 archived</div>
+                </div>
+              </div>
+
+              <div style="margin-bottom:12px;">
+                <div class="info-row"><span class="info-key">Slug</span><span class="info-val" style="font-family:var(--mono); font-size:11px;">research-center</span></div>
+                <div class="info-row"><span class="info-key">Created</span><span class="info-val">Jan 12, 2022</span></div>
+                <div class="info-row"><span class="info-key">Parent</span><span class="info-val"><span class="chip chip-ghost">none (root)</span></span></div>
+                <div class="info-row"><span class="info-key">User contributions</span><span class="info-val"><span class="chip chip-green">Enabled</span></span></div>
+                <div class="info-row"><span class="info-key">Admin(s)</span><span class="info-val">Dana</span></div>
+              </div>
+
+              <div class="alert alert-info">
+                <span class="alert-icon">👁</span>
+                <span>You have <strong>oversight visibility</strong> over all 4 sub-groups as admin of this group. You can view but not govern their resources.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Tree interaction:</strong> Clicking a node loads detail in right pane without page navigation. Archived nodes shown at 50% opacity with strikethrough name and amber chip. Non-admin members cannot see the Grants tab — it is omitted from their tab bar entirely.
+    </div>
+  </div>
+
+  <!-- 2.2 Members Tab -->
+  <div class="spec-subsection">
+    <h3>2.2 — Group Detail: Members Tab</h3>
+    <div class="spec-note">Shows direct and transitive members. "Transitive" members are collapsed under their originating sub-group with an expand affordance. Admins see Add / Remove controls; members see read-only list.</div>
+
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>GROUP DETAIL / MEMBERS TAB</span><span class="path">/groups/ai-lab?tab=members</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / groups / ai-lab / members</div></div>
+      <div class="app-layout" style="height: 520px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item active"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb">
+              <span>Groups</span><span class="sep">›</span><span>Research Center</span><span class="sep">›</span><span class="current">AI Lab</span>
+            </div>
+            <div class="topbar-actions"><div class="topbar-avatar">ER</div></div>
+          </div>
+          <div class="page-content">
+            <div class="page-header">
+              <div class="page-header-left">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                  <span style="font-size:16px;">🧪</span>
+                  <h1>AI Lab</h1>
+                  <span class="chip chip-green">active</span>
+                </div>
+                <p>Parent: Research Center · Erin (admin)</p>
+              </div>
+            </div>
+            <div class="tabs">
+              <div class="tab">Overview</div>
+              <div class="tab active">Members <span class="tab-count">6</span></div>
+              <div class="tab">Datasets <span class="tab-count">8</span></div>
+              <div class="tab">Grants</div>
+              <div class="tab">Audit</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div class="search-box" style="font-size:11px; width:200px;">🔍 Search members…</div>
+              <button class="btn btn-primary btn-sm">+ Add Member</button>
+            </div>
+            <div style="border: 1px solid var(--rule); border-radius: var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Membership</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Bob</strong> <span style="font-size:10px; color:var(--ink-soft);">bob@example.edu</span></td>
+                    <td><span class="chip chip-ghost">Member</span></td>
+                    <td><span class="chip chip-blue">Direct</span></td>
+                    <td style="font-family:var(--mono); font-size:10px; color:var(--ink-soft);">2023-03-14</td>
+                    <td>
+                      <button class="btn btn-ghost btn-sm">Promote to Admin</button>
+                      <button class="btn btn-ghost btn-sm" style="color:var(--red);">Remove</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>Erin</strong> <span style="font-size:10px; color:var(--ink-soft);">erin@example.edu</span></td>
+                    <td><span class="chip chip-purple">Admin</span></td>
+                    <td><span class="chip chip-blue">Direct</span></td>
+                    <td style="font-family:var(--mono); font-size:10px; color:var(--ink-soft);">2022-01-01</td>
+                    <td><span style="color:var(--ink-ghost); font-size:11px;">—</span></td>
+                  </tr>
+                  <tr style="background: var(--surface-alt);">
+                    <td colspan="5" style="padding: 6px 12px; font-family:var(--mono); font-size:10px; color:var(--ink-soft);">
+                      ▼ Transitive via Robotics Sub-Lab (2 members)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left:28px;"><strong>Carol</strong> <span style="font-size:10px; color:var(--ink-soft);">carol@example.edu</span></td>
+                    <td><span class="chip chip-ghost">Member</span></td>
+                    <td><span class="chip chip-teal">Transitive</span> <span style="font-size:10px;color:var(--ink-ghost);">via Robotics</span></td>
+                    <td style="font-family:var(--mono); font-size:10px; color:var(--ink-soft);">2024-02-10</td>
+                    <td><span style="color:var(--ink-ghost); font-size:11px;">Managed in sub-group</span></td>
+                  </tr>
+                  <tr>
+                    <td style="padding-left:28px;"><strong>Frank</strong></td>
+                    <td><span class="chip chip-ghost">Member</span></td>
+                    <td><span class="chip chip-teal">Transitive</span> <span style="font-size:10px;color:var(--ink-ghost);">via Robotics</span></td>
+                    <td style="font-family:var(--mono); font-size:10px; color:var(--ink-soft);">2024-06-01</td>
+                    <td><span style="color:var(--ink-ghost); font-size:11px;">Managed in sub-group</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Transitive members:</strong> Shown in collapsible sub-rows grouped by originating group. "Managed in sub-group" tooltip explains they cannot be removed from this level. Removing a member from a parent group while they're transitive-only is not applicable — they have no direct membership row.
+    </div>
+  </div>
+
+  <!-- 2.3 Archive flow -->
+  <div class="spec-subsection">
+    <h3>2.3 — Archive Group Modal</h3>
+    <div class="spec-note">Triggered from group detail header. Requires explicit understanding acknowledgement. Shows what will be preserved and frozen. Unarchive is platform-admin only.</div>
+
+    <div class="wf-shell wf-relative">
+      <div class="wf-shell-label"><span>ARCHIVE GROUP — Confirm Modal</span><span class="path">/groups/old-chem-lab</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / groups / old-chem-lab</div></div>
+      <div style="height: 400px; background: var(--canvas); position: relative; padding: 20px;">
+        <!-- Blurred background suggestion -->
+        <div style="opacity:.2; pointer-events:none;">
+          <div class="page-header"><div class="page-header-left"><h1>⚗️ Old Chem Lab</h1></div></div>
+          <div class="stat-row" style="grid-template-columns: repeat(3,1fr);">
+            <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">5</div></div>
+            <div class="stat-card"><div class="stat-label">Datasets</div><div class="stat-value">12</div></div>
+            <div class="stat-card"><div class="stat-label">Active Grants</div><div class="stat-value">8</div></div>
+          </div>
+        </div>
+        <div class="modal-backdrop" style="position:absolute;">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>⚠️ Archive Group: Old Chem Lab</h3>
+              <span class="modal-close">✕</span>
+            </div>
+            <div style="font-size:12px; color:var(--ink-soft); margin-bottom:12px;">This action represents a governance boundary closure. Review what changes.</div>
+
+            <div class="two-col" style="gap:8px; margin-bottom:12px;">
+              <div style="background:var(--green-light); border:1px solid #bbf7d0; border-radius:var(--radius); padding:8px 10px;">
+                <div style="font-family:var(--mono); font-size:9px; font-weight:600; color:var(--green); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em;">Preserved</div>
+                <ul style="font-size:11px; color: #14532d; padding-left:14px; line-height:1.8;">
+                  <li>Dataset ownership</li>
+                  <li>All existing grants</li>
+                  <li>Membership (frozen)</li>
+                  <li>Audit history</li>
+                  <li>Hierarchy relationships</li>
+                </ul>
+              </div>
+              <div style="background:var(--red-light); border:1px solid #fecaca; border-radius:var(--radius); padding:8px 10px;">
+                <div style="font-family:var(--mono); font-size:9px; font-weight:600; color:var(--red); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em;">Prohibited after archive</div>
+                <ul style="font-size:11px; color:#991b1b; padding-left:14px; line-height:1.8;">
+                  <li>Add / remove members</li>
+                  <li>Create new grants</li>
+                  <li>Create new datasets</li>
+                  <li>Create collections</li>
+                  <li>Modify collection membership</li>
+                </ul>
+              </div>
+            </div>
+            <div class="alert alert-warning">
+              <span class="alert-icon">🔒</span>
+              <span>Archiving is reversible only by a <strong>Platform Admin</strong>. Type the group name to confirm.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type "OLD CHEM LAB" to confirm</label>
+              <input class="form-input" placeholder="Group name…" />
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-secondary">Cancel</button>
+              <button class="btn btn-danger" style="opacity:.5; cursor:not-allowed;">Archive Group</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Confirm gate:</strong> Danger button remains disabled until the user types the group name exactly. On success, group node in tree gets archived treatment immediately, a success toast links to the audit event.
+    </div>
+  </div>
+
+  <!-- 2.4 Archived Group View -->
+  <div class="spec-subsection">
+    <h3>2.4 — Archived Group View</h3>
+    <div class="spec-note">All mutation controls hidden. Striped amber banner persistent across all tabs. Read-only governance metadata fully visible.</div>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>ARCHIVED GROUP DETAIL</span><span class="path">/groups/old-chem-lab</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / groups / old-chem-lab</div></div>
+      <div class="app-layout" style="height: 400px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section"><div class="sidebar-item active"><span class="icon">🏢</span> Groups</div></div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Dana (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span>Groups</span><span class="sep">›</span><span>AI Lab</span><span class="sep">›</span><span class="current" style="color:var(--amber);">⚗️ Old Chem Lab (archived)</span></div>
+          </div>
+          <div class="page-content">
+            <div class="archived-banner">
+              <span style="font-size:18px;">🗃</span>
+              <div>
+                <div style="font-weight:600; font-size:12px;">This group is archived</div>
+                <div style="font-size:11px;">Archived 2024-08-01 by platform admin · Governance boundary closed. Membership and grants frozen. No new resources may be created under this group.</div>
+              </div>
+            </div>
+            <div class="page-header">
+              <div class="page-header-left">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                  <span style="font-size:16px;opacity:.6;">⚗️</span>
+                  <h1 style="opacity:.7; text-decoration: line-through; color:var(--ink-mid);">Old Chem Lab</h1>
+                  <span class="chip chip-amber">archived</span>
+                </div>
+                <p>Archived group — read only. Unarchive requires Platform Admin.</p>
+              </div>
+              <!-- No edit/archive button -->
+            </div>
+            <div class="tabs">
+              <div class="tab active">Overview</div>
+              <div class="tab">Members <span class="tab-count">5</span> <span style="font-size:9px; color:var(--amber);">frozen</span></div>
+              <div class="tab">Datasets <span class="tab-count">12</span></div>
+              <div class="tab">Grants <span class="tab-count">8</span></div>
+              <div class="tab">Audit</div>
+            </div>
+            <div style="color:var(--ink-soft); font-size:11px;">
+              <div class="info-row"><span class="info-key">Status</span><span class="chip chip-amber">archived</span></div>
+              <div class="info-row"><span class="info-key">Archived by</span><span class="info-val">platform admin</span></div>
+              <div class="info-row"><span class="info-key">Archived date</span><span class="info-val" style="font-family:var(--mono); font-size:11px;">2024-08-01T14:32:00Z</span></div>
+              <div class="info-row"><span class="info-key">Owned datasets</span><span class="info-val">12 (ownership intact)</span></div>
+              <div class="info-row"><span class="info-key">Active grants</span><span class="info-val">8 (remain valid)</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 3. DATASETS ─────────── -->
+<div class="spec-section" id="datasets">
+  <div class="spec-section-header">
+    <h2>Datasets</h2>
+    <span class="section-id">§3</span>
+    <p>Ownership, grants, collection membership, lifecycle</p>
+  </div>
+
+  <div class="spec-note">Datasets are the atomic resource. Only users with a grant (or group members of the owning group) can see a dataset at all. The dataset list is always grant-filtered at the query layer.</div>
+
+  <!-- 3.1 Dataset List -->
+  <div class="spec-subsection">
+    <h3>3.1 — Dataset List</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>DATASETS / LIST</span><span class="path">/datasets</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / datasets</div></div>
+      <div class="app-layout" style="height: 480px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item active"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item"><span class="icon">📦</span> Collections</div>
+            <div class="sidebar-item"><span class="icon">🔑</span> Grants</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Datasets</span></div>
+            <div class="topbar-actions">
+              <div class="search-box" style="font-size:11px">🔍 Search datasets…</div>
+              <select style="font-size:11px; padding:4px 8px; border:1px solid var(--rule); border-radius:var(--radius); background:white; color:var(--ink-soft);">
+                <option>All groups</option><option>AI Lab</option><option>Bio Lab</option>
+              </select>
+              <div class="topbar-avatar">ER</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div class="tabs">
+              <div class="tab active">My Governed <span class="tab-count">8</span></div>
+              <div class="tab">Accessible to Me <span class="tab-count">23</span></div>
+              <div class="tab">Oversight View <span class="tab-count">31</span></div>
+            </div>
+            <div style="border:1px solid var(--rule); border-radius: var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Owner Group</th>
+                    <th>Collections</th>
+                    <th>Access Types</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div style="font-weight:600;">Genome Sequence Set A</div>
+                      <div style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">ds-genome-a</div>
+                    </td>
+                    <td><span class="chip chip-blue">AI Lab</span></td>
+                    <td><span class="chip chip-purple">Genomics Collection</span></td>
+                    <td>
+                      <span class="chip chip-teal">view_metadata</span>
+                      <span class="chip chip-teal">read_data</span>
+                    </td>
+                    <td><span class="chip chip-green">active</span></td>
+                    <td>
+                      <button class="btn btn-ghost btn-sm">Manage</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="font-weight:600;">Robot Sensor Logs 2024</div>
+                      <div style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">ds-robot-sensors-24</div>
+                    </td>
+                    <td><span class="chip chip-blue">Robotics Sub-Lab</span></td>
+                    <td><span style="color:var(--ink-ghost); font-size:11px;">—</span></td>
+                    <td>
+                      <span class="chip chip-teal">view_metadata</span>
+                      <span class="chip chip-teal">download</span>
+                    </td>
+                    <td><span class="chip chip-green">active</span></td>
+                    <td><button class="btn btn-ghost btn-sm">Manage</button></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div style="font-weight:600;">Legacy Spectrometry</div>
+                      <div style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">ds-spectrometry-legacy</div>
+                    </td>
+                    <td><span class="chip chip-amber">Old Chem Lab <span style="font-size:8px;">(archived)</span></span></td>
+                    <td><span style="color:var(--ink-ghost); font-size:11px;">—</span></td>
+                    <td><span class="chip chip-teal">view_metadata</span></td>
+                    <td><span class="chip chip-slate">deprecated</span></td>
+                    <td><button class="btn btn-ghost btn-sm">View</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note"><strong>Three tabs:</strong> "My Governed" = datasets whose owning group I admin. "Accessible to Me" = all datasets I have any grant on. "Oversight View" = all datasets in groups I have oversight over (read-only, no actions). Datasets owned by archived groups are shown with amber owner chip and reduced actions.</div>
+  </div>
+
+  <!-- 3.2 Dataset Detail -->
+  <div class="spec-subsection">
+    <h3>3.2 — Dataset Detail Page</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>DATASET DETAIL</span><span class="path">/datasets/ds-genome-a</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / datasets / ds-genome-a</div></div>
+      <div class="app-layout" style="height: 560px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item active"><span class="icon">📄</span> Datasets</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb">
+              <span>Datasets</span><span class="sep">›</span><span class="current">Genome Sequence Set A</span>
+            </div>
+            <div class="topbar-actions">
+              <button class="btn btn-secondary btn-sm">✏️ Edit metadata</button>
+              <button class="btn btn-secondary btn-sm">🔑 Manage grants</button>
+              <button class="btn btn-secondary btn-sm">⛔ Deprecate</button>
+              <div class="topbar-avatar">ER</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div class="page-header">
+              <div class="page-header-left">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                  <span style="font-size:16px;">📄</span>
+                  <h1>Genome Sequence Set A</h1>
+                  <span class="chip chip-green">active</span>
+                </div>
+                <p>Owned by AI Lab · Added to 1 collection · 4 active grants</p>
+              </div>
+            </div>
+            <div class="tabs">
+              <div class="tab active">Overview</div>
+              <div class="tab">Grants <span class="tab-count">4</span></div>
+              <div class="tab">Collections <span class="tab-count">1</span></div>
+              <div class="tab">Effective Access</div>
+              <div class="tab">Audit</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 260px; gap:14px;">
+              <div>
+                <div class="card" style="margin-bottom:10px;">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">Metadata</div>
+                  <div class="info-row"><span class="info-key">ID / Slug</span><span class="info-val" style="font-family:var(--mono); font-size:11px;">ds-genome-a</span></div>
+                  <div class="info-row"><span class="info-key">Owning Group</span><span class="info-val"><span class="chip chip-blue">AI Lab</span></span></div>
+                  <div class="info-row"><span class="info-key">Status</span><span class="chip chip-green">active</span></div>
+                  <div class="info-row"><span class="info-key">Created</span><span class="info-val" style="font-family:var(--mono); font-size:11px;">2024-01-15</span></div>
+                  <div class="info-row"><span class="info-key">Requires DUA</span><span class="chip chip-amber">Yes</span></div>
+                  <div class="info-row"><span class="info-key">Requires Training</span><span class="chip chip-ghost">No</span></div>
+                </div>
+                <div class="alert alert-info">
+                  <span class="alert-icon">💡</span>
+                  <span>This dataset is in the <strong>Genomics Collection</strong>. Granting access to the collection automatically includes this dataset. <a href="#" style="color:var(--accent);">View collection grants →</a></span>
+                </div>
+              </div>
+              <div>
+                <div class="card" style="margin-bottom:10px;">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px;">Quick Grant</div>
+                  <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input class="form-input" placeholder="User or group…" style="font-size:11px;" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Preset</label>
+                    <select class="form-input" style="font-size:11px;">
+                      <option>DISCOVERABLE — view_metadata</option>
+                      <option>READABLE — view + read_data</option>
+                      <option>DOWNLOADABLE — view + read + download</option>
+                      <option>COMPUTABLE — view + compute</option>
+                      <option>Custom (advanced)…</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Expires (optional)</label>
+                    <input class="form-input" type="date" style="font-size:11px;" />
+                  </div>
+                  <button class="btn btn-primary" style="width:100%; justify-content:center; font-size:11px;">Create Grant</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 4. COLLECTIONS ─────────── -->
+<div class="spec-section" id="collections">
+  <div class="spec-section-header">
+    <h2>Collections</h2>
+    <span class="section-id">§4</span>
+    <p>Dataset containers as grant targets, membership management</p>
+  </div>
+  <div class="spec-note">Collections are first-class authorization containers. Adding/removing a dataset is a high-impact operation — requires admin authority over both collection's owning group AND dataset's owning group (must be same). Always surfaced as governance-level with appropriate friction.</div>
+
+  <div class="spec-subsection">
+    <h3>4.1 — Collection Detail</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>COLLECTION DETAIL</span><span class="path">/collections/genomics-collection</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / collections / genomics-collection</div></div>
+      <div class="app-layout" style="height: 540px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item active"><span class="icon">📦</span> Collections</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span>Collections</span><span class="sep">›</span><span class="current">Genomics Collection</span></div>
+            <div class="topbar-actions">
+              <button class="btn btn-secondary btn-sm">✏️ Edit</button>
+              <button class="btn btn-primary btn-sm">🔑 Grant Access</button>
+              <div class="topbar-avatar">ER</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div class="page-header">
+              <div class="page-header-left">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                  <span style="font-size:16px;">📦</span><h1>Genomics Collection</h1><span class="chip chip-green">active</span>
+                </div>
+                <p>Owned by AI Lab · 4 datasets · 3 active grants · Grant targets propagate to all member datasets</p>
+              </div>
+            </div>
+            <div class="tabs">
+              <div class="tab active">Datasets <span class="tab-count">4</span></div>
+              <div class="tab">Grants <span class="tab-count">3</span></div>
+              <div class="tab">Effective Access</div>
+              <div class="tab">Audit</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:11px; color:var(--ink-soft);">Adding a dataset grants access to all subjects with grants on this collection.</div>
+              <button class="btn btn-secondary btn-sm">+ Add Dataset</button>
+            </div>
+            <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Dataset</th>
+                    <th>Owner Group</th>
+                    <th>Added</th>
+                    <th>Added by</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Genome Sequence Set A</strong><br><span style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">ds-genome-a</span></td>
+                    <td><span class="chip chip-blue">AI Lab</span></td>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2024-03-10</td>
+                    <td style="font-size:11px;">Erin</td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Remove</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Genome Sequence Set B</strong><br><span style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">ds-genome-b</span></td>
+                    <td><span class="chip chip-blue">AI Lab</span></td>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2024-03-10</td>
+                    <td style="font-size:11px;">Erin</td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Remove</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Expression Matrix 2023</strong></td>
+                    <td><span class="chip chip-blue">AI Lab</span></td>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2024-05-22</td>
+                    <td style="font-size:11px;">Bob</td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Remove</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="alert alert-warning" style="margin-top:10px;">
+              <span class="alert-icon">⚠️</span>
+              <span>Only datasets owned by <strong>AI Lab</strong> may be added to this collection. Datasets from other groups are ineligible.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Remove dataset modal:</strong> Removing a dataset from a collection shows a confirmation modal listing all subjects who will lose access (derived through collection grants). This makes the access impact explicit before the operation.
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 5. GRANTS ─────────── -->
+<div class="spec-section" id="grants">
+  <div class="spec-section-header">
+    <h2>Grants</h2>
+    <span class="section-id">§5</span>
+    <p>Cross-resource grant dashboard, issue grants, revoke, expiry</p>
+  </div>
+
+  <div class="spec-subsection">
+    <h3>5.1 — Grants Dashboard</h3>
+    <div class="spec-note">Centralized view of all grants on resources I govern. Filterable by subject, resource, access type, status. Inline revoke. "Issued to me" tab for grants I received.</div>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>GRANTS / DASHBOARD</span><span class="path">/grants</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / grants</div></div>
+      <div class="app-layout" style="height: 540px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item"><span class="icon">📦</span> Collections</div>
+            <div class="sidebar-item active"><span class="icon">🔑</span> Grants <span class="badge">12</span></div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">📥</span> Requests <span class="badge amber">4</span></div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Grants</span></div>
+            <div class="topbar-actions">
+              <button class="btn btn-primary btn-sm">+ Issue Grant</button>
+              <div class="topbar-avatar">ER</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div class="stat-row">
+              <div class="stat-card"><div class="stat-label">Active Grants</div><div class="stat-value">12</div><div class="stat-sub">on my resources</div></div>
+              <div class="stat-card"><div class="stat-label">Expiring Soon</div><div class="stat-value" style="color:var(--amber);">2</div><div class="stat-sub">within 30 days</div></div>
+              <div class="stat-card"><div class="stat-label">Revoked (90d)</div><div class="stat-value">4</div><div class="stat-sub">historical record</div></div>
+              <div class="stat-card"><div class="stat-label">Issued to Me</div><div class="stat-value">7</div><div class="stat-sub">grants I hold</div></div>
+            </div>
+            <div class="tabs">
+              <div class="tab active">My Resources <span class="tab-count">12</span></div>
+              <div class="tab">Issued to Me <span class="tab-count">7</span></div>
+              <div class="tab">Expiring <span class="tab-count">2</span></div>
+              <div class="tab">Revoked / Expired</div>
+            </div>
+            <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap; align-items:center;">
+              <div class="search-box" style="font-size:11px; flex:1; min-width:140px;">🔍 Filter grants…</div>
+              <select style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;">
+                <option>All subjects</option>
+              </select>
+              <select style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;">
+                <option>All resources</option>
+              </select>
+              <select style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;">
+                <option>All access types</option>
+              </select>
+            </div>
+            <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Resource</th>
+                    <th>Access Type</th>
+                    <th>Authority</th>
+                    <th>Expires</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="chip chip-blue">👥 Research Center</span></td>
+                    <td><span class="chip chip-purple">📦 Genomics Collection</span></td>
+                    <td><span class="chip chip-teal">read_data</span></td>
+                    <td style="font-size:10px;color:var(--ink-soft);">Erin via AI Lab</td>
+                    <td style="font-family:var(--mono);font-size:10px; color:var(--amber);">2025-12-31 ⚠</td>
+                    <td><span class="chip chip-green">active</span></td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Revoke</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="chip chip-ghost">👤 alice@example.edu</span></td>
+                    <td><span class="chip chip-slate">📄 Robot Sensor Logs 2024</span></td>
+                    <td><span class="chip chip-teal">view_metadata</span></td>
+                    <td style="font-size:10px;color:var(--ink-soft);">Erin via AI Lab</td>
+                    <td style="font-family:var(--mono);font-size:10px; color:var(--ink-ghost);">—</td>
+                    <td><span class="chip chip-green">active</span></td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Revoke</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="chip chip-ghost">👤 alice@example.edu</span></td>
+                    <td><span class="chip chip-slate">📄 Robot Sensor Logs 2024</span></td>
+                    <td><span class="chip chip-teal">download</span></td>
+                    <td style="font-size:10px;color:var(--ink-soft);">Erin via AI Lab</td>
+                    <td style="font-family:var(--mono);font-size:10px; color:var(--ink-ghost);">—</td>
+                    <td><span class="chip chip-green">active</span></td>
+                    <td><button class="btn btn-ghost btn-sm" style="color:var(--red);">Revoke</button></td>
+                  </tr>
+                  <tr style="opacity:.5;">
+                    <td><span class="chip chip-ghost">👤 bob@old-lab.edu</span></td>
+                    <td><span class="chip chip-slate">📄 Genome Sequence Set A</span></td>
+                    <td><span class="chip chip-teal">read_data</span></td>
+                    <td style="font-size:10px;color:var(--ink-soft);">Erin via AI Lab</td>
+                    <td style="font-family:var(--mono);font-size:10px;">2024-06-01</td>
+                    <td><span class="chip chip-slate">expired</span></td>
+                    <td><button class="btn btn-ghost btn-sm">Renew</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Grant atomicity visible:</strong> alice's two grants (view_metadata + download) appear as separate rows. Revoking one does not revoke the other. A tooltip on the "download" row notes: "download does not imply read_data — grant separately if needed." Expired/revoked rows shown at reduced opacity in the filtered view; full history available in Audit Log.
+    </div>
+  </div>
+
+  <!-- 5.2 Issue Grant Modal -->
+  <div class="spec-subsection">
+    <h3>5.2 — Issue Grant Modal (with Preset abstraction)</h3>
+    <div class="wf-shell wf-relative">
+      <div class="wf-shell-label"><span>ISSUE GRANT — Modal</span><span class="path">Overlay: /grants/new</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / grants</div></div>
+      <div style="height: 460px; background: var(--canvas); position: relative; padding: 20px; overflow: hidden;">
+        <div style="opacity:.15; pointer-events:none; font-family:var(--mono); font-size:12px; color:var(--ink-soft); padding:10px;">[ Grants dashboard in background ]</div>
+        <div class="modal-backdrop" style="position:absolute;">
+          <div class="modal" style="width: 440px;">
+            <div class="modal-header">
+              <h3>🔑 Issue Grant</h3>
+              <span class="modal-close">✕</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Resource</label>
+              <input class="form-input" placeholder="Dataset or collection name…" value="Genomics Collection" style="font-size:11px;"/>
+              <div class="form-hint">Type to search datasets and collections you govern</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input class="form-input" placeholder="User email or group name…" value="Research Center (group)" style="font-size:11px;"/>
+              <div class="form-hint">Group grants apply transitively to all descendants</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Access Preset</label>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:4px;">
+                <div style="border:2px solid var(--accent); border-radius:var(--radius); padding:8px; cursor:pointer; background:var(--blue-light);">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; color:var(--accent);">READABLE</div>
+                  <div style="font-size:10px; color:var(--ink-soft); margin-top:2px;">view_metadata + read_data</div>
+                </div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); padding:8px; cursor:pointer;">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; color:var(--ink-soft);">DISCOVERABLE</div>
+                  <div style="font-size:10px; color:var(--ink-soft); margin-top:2px;">view_metadata only</div>
+                </div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); padding:8px; cursor:pointer;">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; color:var(--ink-soft);">DOWNLOADABLE</div>
+                  <div style="font-size:10px; color:var(--ink-soft); margin-top:2px;">view + read + download</div>
+                </div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); padding:8px; cursor:pointer;">
+                  <div style="font-family:var(--mono); font-size:10px; font-weight:600; color:var(--ink-soft);">COMPUTABLE</div>
+                  <div style="font-size:10px; color:var(--ink-soft); margin-top:2px;">view + compute</div>
+                </div>
+              </div>
+              <div style="margin-top:6px;">
+                <button class="btn btn-ghost btn-sm" style="font-size:10px;">⚙ Advanced: choose individual access types</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expiry (optional)</label>
+              <input class="form-input" type="date" style="font-size:11px;" />
+              <div class="form-hint">Leave blank for indefinite access (reviewable in audit log)</div>
+            </div>
+
+            <div class="alert alert-info" style="margin-top:8px;">
+              <span class="alert-icon">ℹ️</span>
+              <div style="font-size:11px;">
+                <strong>Preview:</strong> This will create <strong>2 grants</strong>: <span class="chip chip-teal" style="font-size:9px;">view_metadata</span> <span class="chip chip-teal" style="font-size:9px;">read_data</span> → <strong>Research Center</strong> on <strong>Genomics Collection</strong>.<br>
+                All 9 transitive members of Research Center will gain access to 4 datasets.
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn btn-secondary">Cancel</button>
+              <button class="btn btn-primary">Create 2 Grants</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Preset to atomic expansion:</strong> The "Preview" block shows exactly how many atomic grants will be written and how many users will be affected. "Advanced" mode swaps the preset grid for individual access type checkboxes. No-overlapping-grant validation happens on submit — if a duplicate would be created, an inline error explains and offers to view the existing grant.
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 6. ACCESS REQUESTS ─────────── -->
+<div class="spec-section" id="access-requests">
+  <div class="spec-section-header">
+    <h2>Access Requests</h2>
+    <span class="section-id">§6</span>
+    <p>Request workflow: DRAFT → UNDER_REVIEW → APPROVED / REJECTED / WITHDRAWN</p>
+  </div>
+
+  <div class="spec-note">Two perspectives: <strong>Requester</strong> (submits, views status, withdraws) and <strong>Reviewer</strong> (group admin of resource's owning group — approves, partial approves, rejects). Both views share the same URL — content adapts to role.</div>
+
+  <div class="spec-subsection">
+    <h3>6.1 — Access Request Queue (Reviewer / Admin View)</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>ACCESS REQUESTS / QUEUE</span><span class="path">/requests</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / requests</div></div>
+      <div class="app-layout" style="height: 520px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item"><span class="icon">🔑</span> Grants</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-item active"><span class="icon">📥</span> Access Requests <span class="badge amber">4</span></div>
+            <div class="sidebar-item"><span class="icon">📋</span> Audit</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Access Requests</span></div>
+            <div class="topbar-actions"><div class="topbar-avatar">ER</div></div>
+          </div>
+          <div class="page-content">
+            <div class="stat-row" style="grid-template-columns: repeat(4, 1fr);">
+              <div class="stat-card"><div class="stat-label">Pending Review</div><div class="stat-value" style="color:var(--amber);">4</div></div>
+              <div class="stat-card"><div class="stat-label">Approved (30d)</div><div class="stat-value" style="color:var(--green);">11</div></div>
+              <div class="stat-card"><div class="stat-label">Rejected (30d)</div><div class="stat-value">2</div></div>
+              <div class="stat-card"><div class="stat-label">Expired</div><div class="stat-value">1</div></div>
+            </div>
+            <div class="tabs">
+              <div class="tab active">Pending Review <span class="tab-count">4</span></div>
+              <div class="tab">My Requests <span class="tab-count">2</span></div>
+              <div class="tab">Resolved</div>
+            </div>
+            <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Requester</th>
+                    <th>Resource</th>
+                    <th>Access Requested</th>
+                    <th>Submitted</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>henry@example.edu</strong><br><span style="font-size:10px;color:var(--ink-soft);">Bio Lab member</span></td>
+                    <td><span class="chip chip-slate">📄 Genome Sequence Set A</span></td>
+                    <td><span class="chip chip-teal">read_data</span> <span class="chip chip-teal">view_metadata</span></td>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2 hours ago</td>
+                    <td><span class="chip chip-amber">under_review</span></td>
+                    <td>
+                      <button class="btn btn-primary btn-sm">Review →</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>extern@collaborator.org</strong><br><span style="font-size:10px;color:var(--ink-soft);">External</span></td>
+                    <td><span class="chip chip-purple">📦 Genomics Collection</span></td>
+                    <td><span class="chip chip-teal">view_metadata</span></td>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">1 day ago</td>
+                    <td><span class="chip chip-amber">under_review</span></td>
+                    <td><button class="btn btn-primary btn-sm">Review →</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6.2 Review Modal -->
+  <div class="spec-subsection">
+    <h3>6.2 — Review Access Request Detail</h3>
+    <div class="wf-shell wf-relative">
+      <div class="wf-shell-label"><span>REQUEST REVIEW PANEL</span><span class="path">/requests/req-001</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / requests / req-001</div></div>
+      <div style="min-height: 460px; background: var(--canvas); padding: 20px; display: grid; grid-template-columns: 1fr 300px; gap:16px;">
+        <!-- Left: request details -->
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <h2 style="font-size:15px; font-weight:600;">Access Request #req-001</h2>
+            <span class="chip chip-amber">under_review</span>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <div class="info-row"><span class="info-key">Requester</span><span class="info-val"><strong>henry@example.edu</strong></span></div>
+            <div class="info-row"><span class="info-key">Affiliation</span><span class="info-val">Bio Lab · member</span></div>
+            <div class="info-row"><span class="info-key">Resource</span><span class="info-val"><span class="chip chip-slate">📄 Genome Sequence Set A</span></span></div>
+            <div class="info-row"><span class="info-key">Owned by</span><span class="info-val"><span class="chip chip-blue">AI Lab</span></span></div>
+            <div class="info-row"><span class="info-key">Requested access</span><span class="info-val"><span class="chip chip-teal">view_metadata</span> <span class="chip chip-teal">read_data</span></span></div>
+            <div class="info-row"><span class="info-key">Submitted</span><span class="info-val" style="font-family:var(--mono); font-size:11px;">2025-03-05T10:22:00Z</span></div>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">Requester's Justification</div>
+            <p style="font-size:12px; color:var(--ink-mid);">"I am analyzing cross-lab genomic datasets for my PhD research on population structure. I need read access to perform alignment computations. My advisor Irene (Bio Lab admin) has reviewed this request."</p>
+          </div>
+          <div class="alert alert-info">
+            <span class="alert-icon">💡</span>
+            <span style="font-size:11px;">No existing grants found for henry@example.edu on this resource or any collection containing it.</span>
+          </div>
+        </div>
+        <!-- Right: action panel -->
+        <div>
+          <div class="card" style="margin-bottom:10px;">
+            <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:10px;">Your Decision</div>
+
+            <div style="margin-bottom:10px;">
+              <div style="font-size:11px; color:var(--ink-soft); margin-bottom:6px;">Grant which access types?</div>
+              <div style="display:flex; flex-direction:column; gap:5px;">
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+                  <input type="checkbox" checked /> <span class="chip chip-teal">view_metadata</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+                  <input type="checkbox" checked /> <span class="chip chip-teal">read_data</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer; opacity:.6;">
+                  <input type="checkbox" disabled /> <span class="chip chip-ghost">download</span> <span style="font-size:10px; color:var(--ink-ghost);">(not requested)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Expiry (optional)</label>
+              <input class="form-input" type="date" style="font-size:11px;" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Note to requester</label>
+              <textarea class="form-input" style="height:60px; font-size:11px; resize:none;" placeholder="Optional note…"></textarea>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <button class="btn btn-primary" style="justify-content:center;">✅ Approve (2 grants)</button>
+              <button class="btn btn-secondary" style="justify-content:center; color:var(--amber);">⚡ Partially Approve</button>
+              <button class="btn btn-secondary" style="justify-content:center; color:var(--red);">❌ Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Partial approval:</strong> The reviewer can uncheck individual access types. "Partially Approve" button activates when at least one but not all requested types are checked. On approval, atomic grants are created immediately and the requester gets an email notification. "Partially Approved" state is terminal — requester can resubmit for remaining access types.
+    </div>
+  </div>
+
+  <!-- 6.3 Requester view -->
+  <div class="spec-subsection">
+    <h3>6.3 — Submit Access Request (Requester View)</h3>
+    <div class="wf-shell wf-relative">
+      <div class="wf-shell-label"><span>REQUEST FORM</span><span class="path">/requests/new</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / requests / new</div></div>
+      <div style="padding: 20px; background: var(--canvas); min-height: 360px; display:grid; grid-template-columns: 1fr 260px; gap:16px;">
+        <div>
+          <h2 style="font-size:14px; font-weight:600; margin-bottom:14px;">Request Access to a Resource</h2>
+          <div class="form-group">
+            <label class="form-label">Resource</label>
+            <input class="form-input" placeholder="Search datasets or collections…" style="font-size:11px;" />
+            <div class="form-hint">You can only request access to resources you can discover (view_metadata grant or public)</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access Types Requested</label>
+            <div style="display:flex; flex-direction:column; gap:5px; margin-top:4px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;"><input type="checkbox" checked /> <span class="chip chip-teal">view_metadata</span></label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;"><input type="checkbox" checked /> <span class="chip chip-teal">read_data</span></label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;"><input type="checkbox" /> <span class="chip chip-ghost">download</span></label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;"><input type="checkbox" /> <span class="chip chip-ghost">compute</span></label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Justification</label>
+            <textarea class="form-input" style="height:80px; resize:none; font-size:11px;" placeholder="Describe your research purpose and how you plan to use this data…"></textarea>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="btn btn-secondary">Save as Draft</button>
+            <button class="btn btn-primary">Submit Request</button>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:10px;">
+            <div style="font-family:var(--mono); font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">Request Flow</div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot blue">✏️</div>
+                <div class="timeline-body"><div class="timeline-title">Draft</div><div class="timeline-meta">Save and edit before submitting</div></div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot amber">👀</div>
+                <div class="timeline-body"><div class="timeline-title">Under Review</div><div class="timeline-meta">Resource owner is notified</div></div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot green">✅</div>
+                <div class="timeline-body"><div class="timeline-title">Approved / Partial</div><div class="timeline-meta">Grants created immediately</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 7. AUDIT LOG ─────────── -->
+<div class="spec-section" id="audit">
+  <div class="spec-section-header">
+    <h2>Audit Log</h2>
+    <span class="section-id">§7</span>
+    <p>Immutable event stream, per-resource audit, filterable timeline</p>
+  </div>
+  <div class="spec-note">Audit log is append-only and immutable. Accessible globally (all events I can see based on my governance authority) or scoped to a resource via the resource's Audit tab. Every material event (grant.created, grant.revoked, grant.expired, membership changes, archive/unarchive, collection mutations) emits a record.</div>
+
+  <div class="spec-subsection">
+    <h3>7.1 — Global Audit Log</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>AUDIT LOG</span><span class="path">/audit</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / audit</div></div>
+      <div class="app-layout" style="height: 500px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">📥</span> Requests</div>
+            <div class="sidebar-item active"><span class="icon">📋</span> Audit Log</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Dana (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Audit Log</span></div>
+            <div class="topbar-actions">
+              <button class="btn btn-secondary btn-sm">⬇ Export CSV</button>
+              <div class="topbar-avatar">DA</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; align-items:center;">
+              <div class="search-box" style="font-size:11px; flex:1; min-width:160px;">🔍 Search events…</div>
+              <select style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;">
+                <option>All event types</option>
+                <option>grant.created</option>
+                <option>grant.revoked</option>
+                <option>grant.expired</option>
+                <option>membership.added</option>
+                <option>group.archived</option>
+                <option>collection.dataset_added</option>
+              </select>
+              <select style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;">
+                <option>All actors</option>
+              </select>
+              <input type="date" style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;" />
+              <span style="font-size:11px;color:var(--ink-soft);">to</span>
+              <input type="date" style="font-size:11px;padding:4px 8px;border:1px solid var(--rule);border-radius:var(--radius);background:white;" />
+            </div>
+            <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Event</th>
+                    <th>Actor</th>
+                    <th>Resource</th>
+                    <th>Subject</th>
+                    <th>Authority</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft); white-space:nowrap;">2025-03-07 09:14:22</td>
+                    <td><span class="chip chip-green">grant.created</span></td>
+                    <td style="font-size:11px;">Erin</td>
+                    <td style="font-size:11px;"><span class="chip chip-purple">📦 Genomics Collection</span></td>
+                    <td style="font-size:11px;"><span class="chip chip-blue">👥 Research Center</span></td>
+                    <td style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">Erin via AI Lab</td>
+                    <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Details</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2025-03-06 17:03:11</td>
+                    <td><span class="chip chip-red">grant.revoked</span></td>
+                    <td style="font-size:11px;">Erin</td>
+                    <td style="font-size:11px;"><span class="chip chip-slate">📄 Genome Seq A</span></td>
+                    <td style="font-size:11px;">extern@old.edu</td>
+                    <td style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">Erin via AI Lab</td>
+                    <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Details</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2025-03-05 08:44:00</td>
+                    <td><span class="chip chip-amber">group.archived</span></td>
+                    <td style="font-size:11px;">platform admin</td>
+                    <td style="font-size:11px;"><span class="chip chip-amber">🏢 Old Chem Lab</span></td>
+                    <td style="font-size:11px;color:var(--ink-ghost);">—</td>
+                    <td style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">platform override</td>
+                    <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Details</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2025-03-04 14:22:09</td>
+                    <td><span class="chip chip-slate">grant.expired</span></td>
+                    <td style="font-size:11px; color:var(--ink-ghost);">system</td>
+                    <td style="font-size:11px;"><span class="chip chip-slate">📄 Genome Seq A</span></td>
+                    <td style="font-size:11px;">bob@old-lab.edu</td>
+                    <td style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">auto-expire</td>
+                    <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Details</button></td>
+                  </tr>
+                  <tr>
+                    <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2025-03-03 11:10:33</td>
+                    <td><span class="chip chip-blue">collection.dataset_added</span></td>
+                    <td style="font-size:11px;">Bob</td>
+                    <td style="font-size:11px;"><span class="chip chip-purple">📦 Genomics Collection</span></td>
+                    <td style="font-size:11px;color:var(--ink-ghost);">Expression Matrix 2023</td>
+                    <td style="font-size:10px; color:var(--ink-soft); font-family:var(--mono);">Bob via AI Lab</td>
+                    <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Details</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Details slide-over:</strong> Clicking "Details" opens a right-side panel with the full audit record: actor identity, authority chain, policy version snapshot, all affected grant IDs, and timestamp. Records are never deletable or editable — UI disables all mutation affordances on this page.
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 8. EFFECTIVE ACCESS EXPLAINABILITY ─────────── -->
+<div class="spec-section" id="access-explainability">
+  <div class="spec-section-header">
+    <h2>Effective Access & Explainability</h2>
+    <span class="section-id">§8</span>
+    <p>"Why does X have access to Y?" — per-dataset and per-user views</p>
+  </div>
+  <div class="spec-note">Explainability is a hard system invariant, not just a UI feature. The UI exposes the minimal grant + membership chain that caused access. Available on Dataset → Effective Access tab, Group → Grants tab, and as a standalone query tool.</div>
+
+  <div class="spec-subsection">
+    <h3>8.1 — Dataset: Effective Access Tab</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>DATASET / EFFECTIVE ACCESS TAB</span><span class="path">/datasets/ds-genome-a?tab=effective-access</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / datasets / ds-genome-a / effective-access</div></div>
+      <div class="app-layout" style="height: 500px;">
+        <div class="sidebar" style="width:200px">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section"><div class="sidebar-item active"><span class="icon">📄</span> Datasets</div></div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Erin (admin)</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span>Datasets</span><span class="sep">›</span><span class="current">Genome Sequence Set A · Effective Access</span></div>
+          </div>
+          <div class="page-content">
+            <div class="tabs">
+              <div class="tab">Overview</div>
+              <div class="tab">Grants <span class="tab-count">4</span></div>
+              <div class="tab">Collections</div>
+              <div class="tab active">Effective Access</div>
+              <div class="tab">Audit</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+              <div>
+                <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">Who has access?</div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+                  <table class="data-table">
+                    <thead><tr><th>User</th><th>Access Types</th><th>Via</th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td style="font-size:11px;">Alice</td>
+                        <td><span class="chip chip-teal" style="font-size:9px;">view_metadata</span> <span class="chip chip-teal" style="font-size:9px;">read_data</span></td>
+                        <td style="font-size:10px;color:var(--ink-soft);">AI Lab member</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;">Bob</td>
+                        <td><span class="chip chip-teal" style="font-size:9px;">view_metadata</span> <span class="chip chip-teal" style="font-size:9px;">read_data</span></td>
+                        <td style="font-size:10px;color:var(--ink-soft);">AI Lab member</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;">Carol</td>
+                        <td><span class="chip chip-teal" style="font-size:9px;">view_metadata</span> <span class="chip chip-teal" style="font-size:9px;">read_data</span></td>
+                        <td style="font-size:10px;color:var(--ink-soft);">via Genomics Collection → Research Center grant</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;">henry@example.edu</td>
+                        <td><span class="chip chip-ghost" style="font-size:9px;">none</span></td>
+                        <td style="font-size:10px;color:var(--ink-soft);">pending request</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">Access Path: Carol → read_data</div>
+                <div class="access-explain">
+<span class="chain-grant">ALLOW</span> dataset.read_data
+  subject: <span class="chain-item">carol@example.edu</span>
+  resource: <span class="chain-item">ds-genome-a</span>
+  
+  Path resolved:
+  <span class="chain-arrow">├─</span> ds-genome-a <span class="chain-arrow">∈</span> <span class="chain-item">Genomics Collection</span>
+  <span class="chain-arrow">├─</span> Grant #g-042: <span class="chain-item">Genomics Collection</span>
+         → <span class="chain-item">Research Center</span>
+         access: <span class="chain-grant">read_data</span>
+  <span class="chain-arrow">├─</span> Carol <span class="chain-arrow">∈</span> <span class="chain-item">Robotics Sub-Lab</span>
+  <span class="chain-arrow">├─</span> Robotics Sub-Lab <span class="chain-arrow">⊆</span> <span class="chain-item">AI Lab</span>
+  <span class="chain-arrow">└─</span> AI Lab <span class="chain-arrow">⊆</span> <span class="chain-item">Research Center</span> ✓
+
+  <span class="chain-grant">GRANTED</span> via collection grant + transitive membership
+                </div>
+                <div style="margin-top:8px; display:flex; gap:6px;">
+                  <div class="search-box" style="font-size:11px; flex:1;">🔍 Explain access for user…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="design-note">
+      <strong>Access path rendering:</strong> The monospace "chain" view renders: which grant, through which collection (if any), through which group ancestry path, to the subject. "Explain access for user…" input field lets admins type any user and get the same path trace for them. This is a read-only governance panel — no actions available here.
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── 9. PLATFORM ADMIN ─────────── -->
+<div class="spec-section" id="platform-admin">
+  <div class="spec-section-header">
+    <h2>Platform Admin</h2>
+    <span class="section-id">§9</span>
+    <p>Super-admin panel: users, unarchive groups, incident response</p>
+  </div>
+  <div class="spec-note">Platform Admin panel is only rendered and accessible to users with the platform_admin role. All actions here are logged with "platform override" authority provenance. Designed for high-friction actions — no bulk operations without explicit confirmation.</div>
+
+  <div class="spec-subsection">
+    <h3>9.1 — Platform Admin Dashboard</h3>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>PLATFORM ADMIN / DASHBOARD</span><span class="path">/admin</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / admin</div></div>
+      <div class="app-layout" style="height: 500px;">
+        <div class="sidebar" style="width:200px;">
+          <div class="sidebar-logo"><div class="logo-mark">D</div><div class="logo-text">DataGov</div></div>
+          <div class="sidebar-section">
+            <div class="sidebar-item"><span class="icon">🏢</span> Groups</div>
+            <div class="sidebar-item"><span class="icon">📄</span> Datasets</div>
+            <div class="sidebar-item"><span class="icon">🔑</span> Grants</div>
+            <div class="sidebar-item"><span class="icon">📥</span> Requests</div>
+            <div class="sidebar-item"><span class="icon">📋</span> Audit</div>
+          </div>
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">Platform Admin</div>
+            <div class="sidebar-item active"><span class="icon">⚙️</span> Admin Panel</div>
+          </div>
+          <div class="sidebar-bottom"><div class="sidebar-item"><span class="icon">👤</span> Superuser</div></div>
+        </div>
+        <div class="main-area">
+          <div class="topbar">
+            <div class="topbar-breadcrumb"><span class="current">Platform Admin</span></div>
+            <div class="topbar-actions">
+              <span class="chip chip-red" style="font-size:10px;">⚠ Platform Admin</span>
+              <div class="topbar-avatar" style="background:var(--red);">SU</div>
+            </div>
+          </div>
+          <div class="page-content">
+            <div class="alert alert-warning" style="margin-bottom:14px;">
+              <span class="alert-icon">⚠️</span>
+              <span>You are operating with <strong>Platform Admin</strong> privileges. All actions are immutably logged with your identity and timestamp.</span>
+            </div>
+            <div class="tabs">
+              <div class="tab active">Users</div>
+              <div class="tab">Archived Groups <span class="tab-count">3</span></div>
+              <div class="tab">Incident Response</div>
+              <div class="tab">System Audit</div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <!-- Users panel -->
+              <div>
+                <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">User Management</div>
+                <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <div class="search-box" style="font-size:11px; flex:1;">🔍 Search users…</div>
+                  <button class="btn btn-primary btn-sm">+ Invite User</button>
+                </div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+                  <table class="data-table">
+                    <thead><tr><th>User</th><th>Groups</th><th>Platform Role</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td style="font-size:11px;"><strong>Dana</strong><br><span style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">dana@example.edu</span></td>
+                        <td style="font-size:11px;">Research Center (admin)</td>
+                        <td><span class="chip chip-ghost">User</span></td>
+                        <td><button class="btn btn-ghost btn-sm" style="font-size:10px;">Manage</button></td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;"><strong>Superuser</strong><br><span style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">admin@example.edu</span></td>
+                        <td style="font-size:11px;color:var(--ink-ghost);">—</td>
+                        <td><span class="chip chip-red">Platform Admin</span></td>
+                        <td><span style="font-size:10px; color:var(--ink-ghost);">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- Archived groups -->
+              <div>
+                <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:8px;">Archived Groups — Unarchive</div>
+                <div style="border:1px solid var(--rule); border-radius:var(--radius); overflow:hidden;">
+                  <table class="data-table">
+                    <thead><tr><th>Group</th><th>Archived</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <span style="text-decoration:line-through; color:var(--amber);">⚗️ Old Chem Lab</span>
+                          <span class="chip chip-amber" style="font-size:8px; margin-left:4px;">archived</span>
+                        </td>
+                        <td style="font-family:var(--mono);font-size:10px;color:var(--ink-soft);">2024-08-01</td>
+                        <td>
+                          <button class="btn btn-secondary btn-sm" style="color:var(--amber);">Unarchive…</button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="alert alert-warning" style="margin-top:8px; font-size:10px;">
+                  <span class="alert-icon">⚠️</span>
+                  <span>Unarchiving reactivates governance authority. Requires typed confirmation and is logged as a platform override event.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9.2 Incident Response -->
+  <div class="spec-subsection">
+    <h3>9.2 — Incident Response Panel</h3>
+    <div class="spec-note">Platform admin can revoke grants outside normal governance authority, e.g. for security incidents. Every action emits audit record with "platform override" authority tag and requires explicit reason entry.</div>
+    <div class="wf-shell">
+      <div class="wf-shell-label"><span>PLATFORM ADMIN / INCIDENT RESPONSE</span><span class="path">/admin?tab=incident</span></div>
+      <div class="wf-browser-bar"><div class="wf-browser-dots"><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div><div class="wf-browser-dot"></div></div><div class="wf-url">portal.example.edu / admin / incident</div></div>
+      <div style="padding:20px; background:var(--canvas); min-height:320px;">
+        <div class="alert alert-error" style="margin-bottom:14px;">
+          <span class="alert-icon">🚨</span>
+          <span>Incident Response actions bypass normal governance authority. They are intended for security incidents only. All actions are immutably logged and will be visible to resource owners.</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+          <div class="card">
+            <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--red); margin-bottom:10px;">Emergency Grant Revocation</div>
+            <div class="form-group">
+              <label class="form-label">Subject</label>
+              <input class="form-input" placeholder="User email or group…" style="font-size:11px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Resource (optional — leave blank to revoke all)</label>
+              <input class="form-input" placeholder="Dataset, collection, or leave blank…" style="font-size:11px;" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Incident Reason (required)</label>
+              <textarea class="form-input" style="height:60px; resize:none; font-size:11px;" placeholder="Describe the security incident justifying this override…"></textarea>
+            </div>
+            <button class="btn btn-danger" style="width:100%; justify-content:center;">🚨 Revoke Grants (Override)</button>
+          </div>
+          <div class="card">
+            <div style="font-family:var(--mono); font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:10px;">Recent Override Actions</div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot red">⚡</div>
+                <div class="timeline-body">
+                  <div class="timeline-title" style="font-size:11px;">Emergency revoke: extern@attacker.com</div>
+                  <div class="timeline-meta">All grants on all resources · Reason: "unauthorized access detected"</div>
+                  <div class="timeline-meta">2025-02-14 · platform admin</div>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot amber">🗃</div>
+                <div class="timeline-body">
+                  <div class="timeline-title" style="font-size:11px;">Group unarchived: Legacy Physics Lab</div>
+                  <div class="timeline-meta">Reason: "Accidental archive, re-activated per department request"</div>
+                  <div class="timeline-meta">2024-11-22 · platform admin</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── FOOTER ─────────── -->
+<hr class="spec" />
+<div style="text-align:center; font-family:var(--mono); font-size:11px; color:var(--ink-ghost); padding-bottom:40px;">
+  Data Governance Portal — UI Design Specification v1.0 · Pages: Groups · Datasets · Collections · Grants · Access Requests · Audit · Explainability · Platform Admin
+</div>
+
+</div><!-- /spec-body -->
+</body>
+</html>

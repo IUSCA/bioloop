@@ -85,3 +85,7 @@ signet/signet
 .ai/
 .cursor/
 .cursorrules
+.DS_Store
+.cspellcache
+# local build/todo tracking (not tracked)
+/.todo

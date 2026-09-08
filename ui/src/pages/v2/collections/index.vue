@@ -1,207 +1,201 @@
 <template>
-  <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-3 max-w-7xl mx-auto">
-      <!-- Header row -->
-      <VaCard class="header card">
-        <VaCardContent>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between gap-5">
-              <!-- Search input -->
-              <div class="flex-1">
-                <Searchbar
-                  v-model="searchTerm"
-                  placeholder="Search collections…"
-                />
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <!-- Header row -->
+    <VaCard class="header card">
+      <VaCardContent>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-5">
+            <!-- Search input -->
+            <div class="flex-1">
+              <Searchbar
+                v-model="searchTerm"
+                placeholder="Search collections…"
+              />
+            </div>
+
+            <VaButton @click="navigateToCreateCollection" v-if="canCreate">
+              <div class="flex items-center justify-between gap-2 mx-1">
+                <i-mdi-plus class="text-sm" />
+                Create Collection
               </div>
-
-              <VaButton @click="navigateToCreateCollection" v-if="canCreate">
-                <div class="flex items-center justify-between gap-2 mx-1">
-                  <i-mdi-plus class="text-sm" />
-                  Create Collection
-                </div>
-              </VaButton>
-            </div>
-
-            <!-- filters -->
-            <div class="flex items-center gap-5">
-              <!-- Scope filter chips -->
-              <ModernButtonToggle
-                v-model="activeScope"
-                label="Access via"
-                :options="scopeFilters"
-                text-by="label"
-                value-by="value"
-                color="blue"
-                size="sm"
-              />
-
-              <!-- Status filter chips -->
-              <ModernButtonToggle
-                v-model="activeStatus"
-                label="Status"
-                :options="statusFilters"
-                text-by="label"
-                value-by="value"
-                color="blue"
-                size="sm"
-              />
-            </div>
+            </VaButton>
           </div>
-        </VaCardContent>
-      </VaCard>
 
-      <!-- keeps layout stable when swapping views -->
-      <VaCard class="min-h-[360px]">
-        <VaCardContent>
-          <Transition name="fade-slide" mode="out-in">
-            <div v-if="error" class="py-12 px-6">
-              <ErrorState
-                title="Failed to load collections"
-                :message="error?.message"
-                @retry="fetchCollections"
-              />
-            </div>
+          <!-- filters -->
+          <div class="flex items-center gap-5">
+            <!-- Scope filter chips -->
+            <ModernButtonToggle
+              v-model="activeScope"
+              label="Access via"
+              :options="scopeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+            />
 
-            <!-- results -->
-            <div v-else-if="collections.length > 0">
-              <VaDataTable
-                :items="collections"
-                :columns="columns"
-                class="collections-table"
-                v-model:sort-by="sortBy"
-                v-model:sorting-order="sortOrder"
-                disable-client-side-sorting
-              >
-                <template #cell(name)="{ row }">
-                  <RouterLink
-                    :to="`/v2/collections/${row.rowData.id}`"
-                    class="text-sm font-medium hover:underline"
-                    style="color: var(--va-primary)"
-                  >
-                    {{ row.rowData.name }}
-                  </RouterLink>
-                </template>
+            <!-- Status filter chips -->
+            <ModernButtonToggle
+              v-model="activeStatus"
+              label="Status"
+              :options="statusFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+            />
+          </div>
+        </div>
+      </VaCardContent>
+    </VaCard>
 
-                <template #cell(description)="{ value }">
-                  <span class="text-sm va-text-secondary line-clamp-1">
-                    {{ value || "—" }}
-                  </span>
-                </template>
+    <!-- keeps layout stable when swapping views -->
+    <VaCard class="min-h-[360px]">
+      <VaCardContent>
+        <Transition name="fade-slide" mode="out-in">
+          <div v-if="loading" class="flex flex-col gap-2 py-2">
+            <VaSkeleton
+              v-for="n in 8"
+              :key="n"
+              variant="rounded"
+              height="40px"
+            />
+          </div>
 
-                <template #cell(owner_group)="{ rowData }">
-                  <div
-                    class="flex items-center gap-[0.4rem]"
-                    :title="rowData.owner_group?.name"
-                  >
-                    <GroupIcon
-                      :group="rowData.owner_group"
-                      size="xs"
-                      class="flex-shrink-0 min-w-0"
-                    />
-                    <RouterLink
-                      :to="`/v2/groups/${rowData.owner_group?.id}`"
-                      class="text-sm hover:underline va-text-secondary"
-                    >
-                      {{ rowData.owner_group?.name || "—" }}
-                    </RouterLink>
-                  </div>
-                </template>
+          <div v-else-if="error" class="py-12 px-6">
+            <ErrorState
+              title="Failed to load collections"
+              :message="error?.message"
+              @retry="fetchCollections"
+            />
+          </div>
 
-                <template #cell(size)="{ rowData }">
-                  <span class="text-sm">
-                    {{
-                      rowData?._count?.datasets != null
-                        ? number_formatter.format(rowData._count.datasets)
-                        : "—"
-                    }}
-                  </span>
-                </template>
-
-                <template #cell(created_at)="{ value }">
-                  <span class="text-sm">
-                    {{ datetime.date(value) }}
-                  </span>
-                </template>
-
-                <template #cell(updated_at)="{ value }">
-                  <span class="text-sm va-text-secondary">
-                    {{ datetime.fromNowShort(value) }}
-                  </span>
-                </template>
-
-                <template #cell(status)="{ rowData }">
-                  <ModernChip
-                    :color="rowData.is_archived ? 'secondary' : 'success'"
-                    size="small"
-                    outline
-                  >
-                    {{ rowData.is_archived ? "Archived" : "Active" }}
-                  </ModernChip>
-                </template>
-              </VaDataTable>
-
-              <Pagination
-                class="mt-5 px-5"
-                v-model:page="currentPage"
-                v-model:page_size="itemsPerPage"
-                :total_results="total"
-                :curr_items="collections.length"
-                :page_size_options="ITEMS_PER_PAGE_OPTIONS"
-              />
-            </div>
-
-            <!-- empty state (filtered results) -->
-            <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
-              <EmptyState
-                title="No results found"
-                message="Try adjusting your filters."
-                @reset="resetFilters"
-              />
-            </div>
-
-            <!-- no data state -->
-            <div
-              v-else-if="!loading && !areFiltersActive"
-              class="flex flex-col items-center justify-center gap-8 py-12 px-6"
+          <!-- results -->
+          <div v-else-if="collections.length > 0">
+            <VaDataTable
+              :items="collections"
+              :columns="columns"
+              class="v2-table"
+              v-model:sort-by="sortBy"
+              v-model:sorting-order="sortOrder"
+              disable-client-side-sorting
             >
-              <div class="flex items-center justify-center">
-                <i-mdi-folder-multiple
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
+              <template #cell(name)="{ row }">
+                <RouterLink
+                  :to="`/v2/collections/${row.rowData.id}`"
+                  class="text-sm font-medium hover:underline"
+                  style="color: var(--va-primary)"
+                >
+                  {{ row.rowData.name }}
+                </RouterLink>
+              </template>
 
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
-              >
-                <h3 class="font-semibold tracking-tight">
-                  No collections available
-                </h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
-                  <template v-if="canCreate">
-                    This group has no collections yet. Add the first collection
-                    to get started.
-                  </template>
-                  <template v-else>
-                    No collections are currently available to you in this group.
-                    This group may have no collections, or you may not have been
-                    granted access. Contact your group administrator for
-                    assistance.
-                  </template>
-                </p>
-              </div>
+              <template #cell(description)="{ value }">
+                <span class="text-sm va-text-secondary line-clamp-1">
+                  {{ value || "—" }}
+                </span>
+              </template>
 
-              <VaButton v-if="canCreate" @click="navigateToCreateCollection">
-                <div class="flex items-center gap-3 px-2">
-                  <i-mdi-plus class="text-lg" />
-                  <span class="font-medium">Create Collection</span>
+              <template #cell(owner_group)="{ rowData }">
+                <div
+                  class="flex items-center gap-[0.4rem]"
+                  :title="rowData.owner_group?.name"
+                >
+                  <GroupIcon
+                    :group="rowData.owner_group"
+                    size="xs"
+                    class="flex-shrink-0 min-w-0"
+                  />
+                  <RouterLink
+                    :to="`/v2/groups/${rowData.owner_group?.id}`"
+                    class="text-sm hover:underline va-text-secondary"
+                  >
+                    {{ rowData.owner_group?.name || "—" }}
+                  </RouterLink>
                 </div>
-              </VaButton>
-            </div>
-          </Transition>
-        </VaCardContent>
-      </VaCard>
-    </div>
-  </VaInnerLoading>
+              </template>
+
+              <template #cell(size)="{ rowData }">
+                <span class="text-sm">
+                  {{
+                    rowData?._count?.datasets != null
+                      ? number_formatter.format(rowData._count.datasets)
+                      : "—"
+                  }}
+                </span>
+              </template>
+
+              <template #cell(created_at)="{ value }">
+                <span class="text-sm">
+                  {{ datetime.date(value) }}
+                </span>
+              </template>
+
+              <template #cell(updated_at)="{ value }">
+                <span class="text-sm va-text-secondary">
+                  {{ datetime.fromNowShort(value) }}
+                </span>
+              </template>
+
+              <template #cell(status)="{ rowData }">
+                <Badge :color="rowData.is_archived ? 'neutral' : 'success'">
+                  {{ rowData.is_archived ? "Archived" : "Active" }}
+                </Badge>
+              </template>
+            </VaDataTable>
+
+            <Pagination
+              class="mt-5 px-5"
+              v-model:page="currentPage"
+              v-model:page_size="itemsPerPage"
+              :total_results="total"
+              :curr_items="collections.length"
+              :page_size_options="ITEMS_PER_PAGE_OPTIONS"
+            />
+          </div>
+
+          <!-- empty state (filtered results) -->
+          <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
+            <EmptyState
+              title="No results found"
+              message="Try adjusting your filters."
+              @reset="resetFilters"
+            />
+          </div>
+
+          <!-- no data state -->
+          <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
+            <EmptyState
+              icon="mdi-folder-multiple"
+              title="No collections available"
+              :show-clear-filters="false"
+            >
+              <template #message>
+                <template v-if="canCreate">
+                  This group has no collections yet. Add the first collection to
+                  get started.
+                </template>
+                <template v-else>
+                  No collections are currently available to you in this group.
+                  This group may have no collections, or you may not have been
+                  granted access. Contact your group administrator for
+                  assistance.
+                </template>
+              </template>
+              <template v-if="canCreate" #actions>
+                <VaButton @click="navigateToCreateCollection">
+                  <div class="flex items-center gap-3 px-2">
+                    <i-mdi-plus class="text-lg" />
+                    <span class="font-medium">Create Collection</span>
+                  </div>
+                </VaButton>
+              </template>
+            </EmptyState>
+          </div>
+        </Transition>
+      </VaCardContent>
+    </VaCard>
+  </div>
   <CollectionCreateModal
     ref="collectionCreateModal"
     @update="fetchCollections"
@@ -347,9 +341,3 @@ meta:
   title: Collections
   nav: [{ label: "Collections" }]
 </route>
-
-<style scoped>
-.collections-table {
-  --va-data-table-cell-padding: 8px;
-}
-</style>

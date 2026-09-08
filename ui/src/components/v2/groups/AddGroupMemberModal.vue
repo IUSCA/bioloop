@@ -8,14 +8,12 @@
     <template #header>
       <div class="flex items-start gap-3 mb-7">
         <div
-          class="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-sky-600/20 to-indigo-600/10 text-sky-600 dark:text-sky-200"
+          class="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-sky-600/20 to-indigo-600/10 text-sky-600 dark:text-sky-200"
         >
           <i-mdi-account-plus class="text-2xl" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Add group member
-          </h2>
+          <h2 class="text-lg font-semibold">Add group member</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400">
             Search for a user and select them to add to this group. Members
             inherit access from the group hierarchy.
@@ -60,7 +58,7 @@
             <div
               v-for="user in selectedUsers"
               :key="user.subject_id"
-              class="flex items-center justify-between gap-3 rounded-xl border border-solid border-slate-200 bg-white/70 px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/40"
+              class="flex items-center justify-between gap-3 rounded-lg border border-solid border-slate-200 bg-white/70 px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/40"
             >
               <div class="flex items-center gap-3">
                 <UserAvatar :username="user.username" :name="user.name" />

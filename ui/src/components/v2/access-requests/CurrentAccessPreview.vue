@@ -1,9 +1,7 @@
 <template>
   <div class="sticky top-4">
     <div class="flex flex-col gap-2">
-      <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-        Current Access
-      </h3>
+      <h3 class="text-sm font-semibold">Current Access</h3>
 
       <!-- Not selected state -->
       <div
@@ -43,6 +41,7 @@
         icon="mdi-lock-outline"
         title="No active grants"
         description="This subject has no active access on this resource."
+        :show-clear-filters="false"
       />
 
       <!-- Grants list -->

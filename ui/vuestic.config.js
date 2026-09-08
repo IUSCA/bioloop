@@ -260,6 +260,10 @@ export default {
     },
     presets: {
       light: {
+        // 6.28:1 on white and 5.80:1 on the #F4F6F8 page ground. gray-500 is not
+        // safe here: it clears AA on a card at 4.83:1 and misses it on the page
+        // ground at 4.46:1, which is where most secondary labels sit.
+        secondary: "#5A6070",
         backgroundPrimary: "#F4F6F8",
         backgroundSecondary: "#FFFFFF",
         backgroundSidebar: "#1a2332",
@@ -271,6 +275,8 @@ export default {
         warning: "#FFD43A",
       },
       dark: {
+        // gray-400. 5.78:1 on the #1f2937 card ground.
+        secondary: "#9ca3af",
         backgroundPrimary: "#060c17",
         backgroundSecondary: "#1f2937",
         backgroundCardPrimary: "#1f2937",

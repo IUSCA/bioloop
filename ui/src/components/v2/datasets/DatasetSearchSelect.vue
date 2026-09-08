@@ -1,15 +1,13 @@
 <template>
   <div
-    class="grid grid-cols-1 lg:grid-cols-2 gap-4 bg-white dark:bg-slate-900 border border-solid border-gray-200 dark:border-slate-700 rounded-2xl p-4 shadow-sm"
+    class="grid grid-cols-1 lg:grid-cols-2 gap-4 bg-white dark:bg-slate-900 border border-solid border-gray-200 dark:border-slate-700 rounded-lg p-4 shadow-sm"
   >
     <!-- Left: Search + Browse -->
 
     <section class="min-w-0">
       <VaInnerLoading :loading="loading" class="space-y-3 min-w-0">
         <div class="flex items-center justify-between gap-3">
-          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Search datasets
-          </h3>
+          <h3 class="text-sm font-semibold">Search datasets</h3>
           <span
             class="text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400"
             >Total {{ totalCount }}</span
@@ -32,18 +30,18 @@
           </div>
           <div
             v-else
-            class="overflow-auto border border-solid border-gray-100 dark:border-slate-800 rounded-xl p-2 bg-gray-50 dark:bg-slate-800"
+            class="overflow-auto border border-solid border-gray-100 dark:border-slate-800 rounded-lg p-2 bg-gray-50 dark:bg-slate-800"
           >
             <template v-if="localDatasets.length">
               <ul class="space-y-2">
                 <li
                   v-for="dataset in localDatasets"
                   :key="dataset.id"
-                  class="rounded-xl"
+                  class="rounded-lg"
                 >
                   <button
                     type="button"
-                    class="w-full text-left p-3 rounded-xl flex items-start justify-between gap-3 border border-solid border-transparent hover:border-sky-200 dark:hover:border-sky-700 bg-white dark:bg-slate-900 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+                    class="w-full text-left p-3 rounded-lg flex items-start justify-between gap-3 border border-solid border-transparent hover:border-sky-200 dark:hover:border-sky-700 bg-white dark:bg-slate-900 dark:hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
                     :class="{
                       'opacity-60 pointer-events-none': isSelected(dataset),
                     }"
@@ -103,12 +101,10 @@
 
     <!-- Right: Selected list -->
     <section
-      class="min-w-0 border border-solid border-gray-100 dark:border-slate-700 rounded-2xl p-4 bg-gray-50 dark:bg-slate-950 flex flex-col"
+      class="min-w-0 border border-solid border-gray-100 dark:border-slate-700 rounded-lg p-4 bg-gray-50 dark:bg-slate-950 flex flex-col"
     >
       <div class="flex items-center justify-between mb-3">
-        <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-100">
-          Selected datasets
-        </h3>
+        <h3 class="text-sm font-semibold">Selected datasets</h3>
         <div class="flex items-center gap-2">
           <span
             class="text-xs font-semibold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
@@ -131,7 +127,7 @@
           <div
             v-for="dataset in selected"
             :key="dataset.id"
-            class="bg-white dark:bg-slate-900 border border-solid border-gray-200 dark:border-slate-800 rounded-xl p-3 flex items-start justify-between gap-3"
+            class="bg-white dark:bg-slate-900 border border-solid border-gray-200 dark:border-slate-800 rounded-lg p-3 flex items-start justify-between gap-3"
           >
             <div class="min-w-0">
               <div

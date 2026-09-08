@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Governance Portal — UI Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0c1420;
+    --surface:   #111d2e;
+    --panel:     #172030;
+    --raised:    #1e2d42;
+    --border:    #243448;
+    --border-hi: #2e4160;
+
+    --text:      #dde6f0;
+    --text-muted:#7a90a8;
+    --text-dim:  #3d5470;
+
+    --blue:      #3b82f6;
+    --blue-dim:  #1e3a5f;
+    --amber:     #f59e0b;
+    --amber-dim: #3d2a05;
+    --teal:      #0d9488;
+    --teal-dim:  #063330;
+    --red:       #ef4444;
+    --red-dim:   #3b0f0f;
+    --violet:    #8b5cf6;
+    --violet-dim:#2e1b5e;
+    --green:     #22c55e;
+    --green-dim: #0d2e1a;
+
+    --radius:    6px;
+    --radius-lg: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #080e18;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── SHOWCASE NAVIGATION ────────────────────────────────── */
+  .showcase-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #060b14;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 0;
+    height: 44px;
+    overflow-x: auto;
+  }
+  .showcase-nav-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border);
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    padding: 0 14px;
+    height: 44px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* ── SCREEN WRAPPER ─────────────────────────────────────── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── APP SHELL ──────────────────────────────────────────── */
+  .app-shell {
+    display: flex; flex-direction: column;
+    min-height: calc(100vh - 44px);
+    background: var(--bg);
+  }
+
+  /* ── TOP NAV ────────────────────────────────────────────── */
+  .topnav {
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px;
+    gap: 0;
+    position: sticky; top: 44px; z-index: 50;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 8px;
+    margin-right: 40px;
+  }
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--blue), var(--teal));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    color: var(--text);
+    letter-spacing: .3px;
+  }
+  .topnav-links { display: flex; gap: 2px; flex: 1; }
+  .topnav-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    transition: color .12s, background .12s;
+  }
+  .topnav-link:hover { color: var(--text); background: var(--raised); }
+  .topnav-link.active { color: var(--text); background: var(--raised); }
+  .topnav-right { display: flex; align-items: center; gap: 10px; }
+  .notif-btn {
+    background: none; border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text-muted); cursor: pointer;
+    padding: 5px 10px; font-size: 12px;
+    display: flex; align-items: center; gap: 5px;
+    transition: border-color .12s, color .12s;
+  }
+  .notif-btn:hover { border-color: var(--border-hi); color: var(--text); }
+  .notif-badge {
+    background: var(--red); color: #fff;
+    font-size: 10px; font-weight: 600;
+    padding: 1px 5px; border-radius: 10px;
+  }
+  .avatar-btn {
+    background: var(--raised); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 5px 10px;
+    color: var(--text); cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .avatar { width: 20px; height: 20px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--violet));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: #fff; }
+
+  /* ── ROLE BANNER ────────────────────────────────────────── */
+  .role-banner {
+    background: var(--amber-dim);
+    border-bottom: 1px solid var(--amber);
+    padding: 8px 24px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px;
+    color: var(--amber);
+  }
+  .role-banner.oversight { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+  .role-banner.grant { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); }
+  .role-banner.archived { background: var(--red-dim); border-color: var(--red); color: #fc8585; }
+
+  /* ── PAGE LAYOUT ────────────────────────────────────────── */
+  .page-content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .page-header {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-header-left { display: flex; flex-direction: column; gap: 6px; }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .breadcrumb a { color: var(--blue); text-decoration: none; }
+  .breadcrumb-sep { color: var(--text-dim); }
+  .resource-title {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .resource-icon { font-size: 22px; }
+  .resource-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .resource-meta {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .resource-meta-sep { color: var(--text-dim); }
+  .page-header-right { display: flex; align-items: center; gap: 8px; }
+
+  /* ── ROLE BADGE ─────────────────────────────────────────── */
+  .role-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    padding: 3px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .role-badge.admin    { background: var(--blue-dim);   color: #6ba3f5; border: 1px solid #1e3a5f; }
+  .role-badge.platform { background: var(--violet-dim); color: #a78bfa; border: 1px solid #2e1b5e; }
+  .role-badge.oversight{ background: var(--amber-dim);  color: #fbbf24; border: 1px solid #3d2a05; }
+  .role-badge.grant    { background: var(--teal-dim);   color: #2dd4bf; border: 1px solid #063330; }
+  .role-badge.member   { background: #1a2332;           color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* ── STATUS BADGE ───────────────────────────────────────── */
+  .status-badge {
+    font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .status-badge::before { content: '●'; font-size: 8px; }
+  .status-badge.active   { background: var(--green-dim); color: #4ade80; }
+  .status-badge.archived { background: var(--red-dim);   color: #f87171; }
+  .status-badge.pending  { background: var(--amber-dim); color: #fbbf24; }
+  .status-badge.approved { background: var(--green-dim); color: #4ade80; }
+  .status-badge.rejected { background: var(--red-dim);   color: #f87171; }
+  .status-badge.draft    { background: var(--raised);    color: var(--text-muted); }
+
+  /* ── TABS ───────────────────────────────────────────────── */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab {
+    padding: 10px 16px; cursor: pointer;
+    font-size: 13px; color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .12s, border-color .12s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--blue); }
+  .tab-count {
+    background: var(--raised); color: var(--text-muted);
+    font-size: 10px; padding: 1px 6px; border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .tab.active .tab-count { background: var(--blue-dim); color: var(--blue); }
+
+  /* ── BUTTONS ────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: var(--radius);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; border: none; text-decoration: none;
+    transition: all .12s;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-secondary {
+    background: var(--raised); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--border-hi); background: #253549; }
+  .btn-ghost { background: none; color: var(--text-muted); border: 1px solid transparent; padding: 5px 10px; }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border); background: var(--raised); }
+  .btn-danger { background: var(--red-dim); color: #f87171; border: 1px solid #5b1a1a; }
+  .btn-danger:hover { background: #4a1212; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid #5a3d08; }
+
+  /* ── PANELS & CARDS ─────────────────────────────────────── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .panel-title { font-size: 12px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: .5px; }
+  .panel-body { padding: 18px; }
+
+  /* ── GRID LAYOUTS ───────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-meta { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+
+  /* ── METADATA TABLE ─────────────────────────────────────── */
+  .meta-table { width: 100%; }
+  .meta-row { display: flex; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-key {
+    width: 140px; flex-shrink: 0;
+    font-size: 11px; color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    padding-top: 1px;
+  }
+  .meta-val { font-size: 13px; color: var(--text); }
+
+  /* ── DATA TABLE ─────────────────────────────────────────── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left; padding: 10px 14px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--surface);
+  }
+  .data-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--text);
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--raised); }
+  .data-table .mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  /* ── STAT CARDS ─────────────────────────────────────────── */
+  .stat-card {
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; color: var(--text);
+    line-height: 1;
+  }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── SEARCH BAR ─────────────────────────────────────────── */
+  .search-bar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 12px;
+    margin-bottom: 16px;
+  }
+  .search-icon { color: var(--text-dim); font-size: 14px; }
+  .search-input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px; flex: 1;
+  }
+  .search-input::placeholder { color: var(--text-dim); }
+  .filter-chip {
+    background: var(--raised); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; color: var(--text-muted); cursor: pointer;
+    transition: all .12s;
+  }
+  .filter-chip:hover, .filter-chip.active { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+
+  /* ── GROUP TREE ─────────────────────────────────────────── */
+  .tree-row {
+    display: flex; align-items: center;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background .1s;
+    gap: 8px;
+  }
+  .tree-row:last-child { border-bottom: none; }
+  .tree-row:hover { background: var(--raised); }
+  .tree-indent { flex-shrink: 0; }
+  .tree-icon { font-size: 15px; flex-shrink: 0; }
+  .tree-name { flex: 1; font-size: 13px; }
+  .tree-meta { display: flex; align-items: center; gap: 8px; }
+
+  /* ── ACCESS TYPE PILLS ──────────────────────────────────── */
+  .access-pills { display: flex; flex-wrap: wrap; gap: 4px; }
+  .access-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; padding: 2px 7px;
+    border-radius: 3px;
+    background: var(--teal-dim); color: #2dd4bf;
+    border: 1px solid #0a4a44;
+  }
+  .access-pill.governance { background: var(--blue-dim); color: #93c5fd; border-color: var(--blue-dim); }
+
+  /* ── INLINE FORM ELEMENTS ───────────────────────────────── */
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; display: block; font-weight: 500; }
+  .form-input {
+    width: 100%; background: var(--raised); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 12px;
+    color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 13px;
+    outline: none; transition: border-color .12s;
+  }
+  .form-input:focus { border-color: var(--blue); }
+  .form-textarea { min-height: 80px; resize: vertical; }
+
+  /* ── SIDE DRAWER ────────────────────────────────────────── */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: flex; justify-content: flex-end;
+    z-index: 200;
+  }
+  .drawer {
+    width: 420px; background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 24px;
+    display: flex; flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    animation: slideIn .2s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .drawer-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-title { font-family: 'DM Serif Display', serif; font-size: 18px; }
+  .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+
+  /* ── MODAL ──────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px;
+    width: 440px; max-width: 90vw;
+    animation: fadeUp .2s ease;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 18px; }
+  .modal-warn {
+    background: var(--amber-dim); border: 1px solid #5a3d08;
+    border-radius: var(--radius); padding: 12px;
+    font-size: 12px; color: #fbbf24; margin-bottom: 16px;
+    display: flex; gap: 8px;
+  }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* ── EXPLAINABILITY BLOCK ───────────────────────────────── */
+  .explain-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px;
+    margin-top: 8px;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .explain-block .hl { color: var(--teal); }
+  .explain-block .hl-amber { color: var(--amber); }
+
+  /* ── EMPTY STATE ────────────────────────────────────────── */
+  .empty-state {
+    padding: 40px; text-align: center;
+    color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 32px; margin-bottom: 12px; opacity: .4; }
+  .empty-state-text { font-size: 13px; max-width: 280px; margin: 0 auto; line-height: 1.6; }
+
+  /* ── ACTION MENU ────────────────────────────────────────── */
+  .action-menu-wrap { position: relative; display: inline-flex; }
+  .kebab-btn {
+    background: none; border: 1px solid transparent;
+    border-radius: var(--radius); padding: 4px 8px;
+    color: var(--text-muted); cursor: pointer; font-size: 14px;
+  }
+  .kebab-btn:hover { border-color: var(--border); background: var(--raised); color: var(--text); }
+
+  /* ── GRANT ROW SUBJECT ──────────────────────────────────── */
+  .subject-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px;
+  }
+  .subject-type-icon { font-size: 13px; }
+
+  /* ── CHECKBOX ───────────────────────────────────────────── */
+  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .checkbox-item { display: flex; align-items: center; gap: 8px; }
+  .checkbox-item input { accent-color: var(--blue); }
+  .checkbox-item label { font-size: 12px; color: var(--text); cursor: pointer; }
+  .checkbox-item .mono-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+  /* ── AUDIT ROW ──────────────────────────────────────────── */
+  .audit-row {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); white-space: nowrap; margin-top: 2px; }
+  .audit-event { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--blue); white-space: nowrap; }
+  .audit-desc { font-size: 12px; color: var(--text-muted); }
+  .audit-actor { color: var(--text); }
+
+  /* ── ACCESS REQUEST CARD ────────────────────────────────── */
+  .req-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px;
+    display: flex; gap: 14px; align-items: flex-start;
+    transition: border-color .12s;
+  }
+  .req-card:hover { border-color: var(--border-hi); }
+  .req-card-icon { font-size: 20px; margin-top: 2px; }
+  .req-card-body { flex: 1; }
+  .req-card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .req-card-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+  .req-card-meta span { display: flex; align-items: center; gap: 4px; }
+  .req-card-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+  /* ── SECTION HEADER ─────────────────────────────────────── */
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .section-title { font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--text-muted); }
+
+  /* ── DIVIDER ────────────────────────────────────────────── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* ── INLINE INFO ────────────────────────────────────────── */
+  .info-callout {
+    background: var(--blue-dim); border: 1px solid #1e3a5f;
+    border-radius: var(--radius); padding: 10px 12px;
+    font-size: 11px; color: #93c5fd;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .warn-callout {
+    background: var(--amber-dim); border: 1px solid #5a3d08;
+    border-radius: var(--radius); padding: 10px 12px;
+    font-size: 11px; color: #fbbf24;
+    display: flex; gap: 8px;
+  }
+
+  /* ── STAGGER ANIMATION ──────────────────────────────────── */
+  .fade-in { animation: fadeIn .3s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .delay-1 { animation-delay: .05s; }
+  .delay-2 { animation-delay: .1s; }
+  .delay-3 { animation-delay: .15s; }
+  .delay-4 { animation-delay: .2s; }
+  .delay-5 { animation-delay: .25s; }
+
+  /* ── MISC ───────────────────────────────────────────────── */
+  .flex { display: flex; }
+  .flex-center { display: flex; align-items: center; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .gap-16 { gap: 16px; }
+  .gap-20 { gap: 20px; }
+  .mt-4  { margin-top: 4px; }
+  .mt-8  { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-muted { color: var(--text-muted); }
+  .text-mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .text-sm { font-size: 11px; }
+  .locked-block {
+    background: var(--bg); border: 1px dashed var(--border);
+    border-radius: var(--radius); padding: 12px;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-dim); font-size: 11px;
+  }
+  .transitive-label {
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-dim);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SHOWCASE NAV -->
+<nav class="showcase-nav">
+  <span class="showcase-nav-label">Screens</span>
+  <button class="nav-btn active" onclick="showScreen('groups-browse', this)">Groups Browse</button>
+  <button class="nav-btn" onclick="showScreen('group-overview', this)">Group Detail — Overview</button>
+  <button class="nav-btn" onclick="showScreen('group-members', this)">Group — Members</button>
+  <button class="nav-btn" onclick="showScreen('group-resources', this)">Group — Resources</button>
+  <button class="nav-btn" onclick="showScreen('group-audit', this)">Group — Audit Log</button>
+  <button class="nav-btn" onclick="showScreen('dataset-overview', this)">Dataset — Overview</button>
+  <button class="nav-btn" onclick="showScreen('dataset-access', this)">Dataset — Access Grants</button>
+  <button class="nav-btn" onclick="showScreen('dataset-requests', this)">Dataset — Access Requests</button>
+  <button class="nav-btn" onclick="showScreen('dataset-oversight', this)">Dataset — Oversight View</button>
+  <button class="nav-btn" onclick="showScreen('collection-detail', this)">Collection Detail</button>
+  <button class="nav-btn" onclick="showScreen('requests-inbox', this)">Requests Inbox</button>
+  <button class="nav-btn" onclick="showScreen('grant-drawer', this)">Grant Drawer</button>
+  <button class="nav-btn" onclick="showScreen('archive-modal', this)">Archive Modal</button>
+</nav>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 1: GROUPS BROWSE                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-groups-browse">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link active">Groups</a>
+      <a class="topnav-link">Datasets</a>
+      <a class="topnav-link">Collections</a>
+      <a class="topnav-link">Access Requests</a>
+    </div>
+    <div class="topnav-right">
+      <button class="notif-btn">🔔 <span class="notif-badge">4</span></button>
+      <div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div>
+    </div>
+  </nav>
+
+  <div class="page-content fade-in">
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title">
+          <span class="resource-name">Groups</span>
+        </div>
+        <span class="text-muted text-sm">Browse and manage organizational groups</span>
+      </div>
+      <div class="page-header-right">
+        <button class="btn btn-primary">＋ Create Group</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" placeholder="Search groups by name or slug..." value="">
+      <div class="filter-chip active">All Groups</div>
+      <div class="filter-chip">My Groups</div>
+      <div class="filter-chip">I Oversee</div>
+    </div>
+
+    <div class="panel fade-in delay-1">
+      <div class="panel-header">
+        <span class="panel-title">Group Hierarchy</span>
+        <span class="text-sm text-muted">12 groups total</span>
+      </div>
+
+      <!-- Root: Research Center -->
+      <div class="tree-row fade-in delay-1">
+        <span class="tree-indent" style="width:0"></span>
+        <span>▼</span>
+        <span class="tree-icon">🏢</span>
+        <span class="tree-name" style="font-weight:500">Research Center</span>
+        <div class="tree-meta">
+          <span class="role-badge admin">Admin</span>
+          <span class="text-mono text-muted">14 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Child: AI Lab -->
+      <div class="tree-row fade-in delay-2">
+        <span class="tree-indent" style="width:24px; border-left:2px solid var(--border); margin-left:16px"></span>
+        <span>▼</span>
+        <span class="tree-icon">🧪</span>
+        <span class="tree-name">AI Lab</span>
+        <div class="tree-meta">
+          <span class="role-badge admin">Admin</span>
+          <span class="text-mono text-muted">8 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Child: Robotics Sub-Lab -->
+      <div class="tree-row fade-in delay-3" style="background:var(--bg)">
+        <span class="tree-indent" style="width:48px; border-left:2px solid var(--border); margin-left:32px"></span>
+        <span>▶</span>
+        <span class="tree-icon">🤖</span>
+        <span class="tree-name" style="color:var(--text-muted)">Robotics Sub-Lab</span>
+        <div class="tree-meta">
+          <span class="role-badge member">Member</span>
+          <span class="text-mono text-muted">4 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Child: Vision Sub-Lab -->
+      <div class="tree-row fade-in delay-3" style="background:var(--bg)">
+        <span class="tree-indent" style="width:48px; border-left:2px solid var(--border); margin-left:32px"></span>
+        <span>▶</span>
+        <span class="tree-icon">👁</span>
+        <span class="tree-name" style="color:var(--text-muted)">Vision Sub-Lab</span>
+        <div class="tree-meta">
+          <span class="role-badge member">Member</span>
+          <span class="text-mono text-muted">3 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Child: Bio Lab (oversight) -->
+      <div class="tree-row fade-in delay-4">
+        <span class="tree-indent" style="width:24px; border-left:2px solid var(--border); margin-left:16px"></span>
+        <span>▶</span>
+        <span class="tree-icon">🧬</span>
+        <span class="tree-name">Bio Lab</span>
+        <div class="tree-meta">
+          <span class="role-badge oversight">Oversight</span>
+          <span class="text-mono text-muted">6 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Root: Physics Dept -->
+      <div class="tree-row fade-in delay-5">
+        <span class="tree-indent" style="width:0"></span>
+        <span>▶</span>
+        <span class="tree-icon">🏛</span>
+        <span class="tree-name">Physics Department</span>
+        <div class="tree-meta">
+          <span class="text-mono text-muted">—</span>
+          <span class="text-mono text-muted">9 members</span>
+          <span class="status-badge active">Active</span>
+        </div>
+      </div>
+
+      <!-- Archived group -->
+      <div class="tree-row" style="opacity:.5">
+        <span class="tree-indent" style="width:0"></span>
+        <span>▶</span>
+        <span class="tree-icon">🗄</span>
+        <span class="tree-name" style="text-decoration:line-through; color:var(--text-muted)">Legacy Core Lab</span>
+        <div class="tree-meta">
+          <span class="role-badge oversight">Oversight</span>
+          <span class="text-mono text-muted">3 members</span>
+          <span class="status-badge archived">Archived</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 2: GROUP DETAIL — OVERVIEW                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-group-overview">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link active">Groups</a>
+      <a class="topnav-link">Datasets</a>
+      <a class="topnav-link">Collections</a>
+      <a class="topnav-link">Access Requests</a>
+    </div>
+    <div class="topnav-right">
+      <button class="notif-btn">🔔 <span class="notif-badge">4</span></button>
+      <div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div>
+    </div>
+  </nav>
+
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16">
+      <a>Groups</a> <span class="breadcrumb-sep">/</span>
+      <a>Research Center</a> <span class="breadcrumb-sep">/</span>
+      <span>AI Lab</span>
+    </div>
+
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title">
+          <span class="resource-icon">🧪</span>
+          <span class="resource-name">AI Lab</span>
+        </div>
+        <div class="resource-meta">
+          <span>ai-lab</span>
+          <span class="resource-meta-sep">·</span>
+          <span>Created Jan 15, 2023</span>
+          <span class="resource-meta-sep">·</span>
+          <span>Parent: Research Center</span>
+        </div>
+      </div>
+      <div class="page-header-right">
+        <span class="role-badge admin">Admin</span>
+        <button class="btn btn-secondary">⋮ Actions</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Overview</div>
+      <div class="tab">Members <span class="tab-count">8</span></div>
+      <div class="tab">Subgroups <span class="tab-count">2</span></div>
+      <div class="tab">Resources <span class="tab-count">14</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div class="grid-meta">
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="panel fade-in delay-1">
+          <div class="panel-header"><span class="panel-title">Group Details</span>
+            <button class="btn btn-ghost btn-sm">✏ Edit Metadata</button>
+          </div>
+          <div class="panel-body">
+            <div class="meta-table">
+              <div class="meta-row"><span class="meta-key">Name</span><span class="meta-val">AI Lab</span></div>
+              <div class="meta-row"><span class="meta-key">Slug</span><span class="meta-val text-mono">ai-lab</span></div>
+              <div class="meta-row"><span class="meta-key">Description</span><span class="meta-val">Machine learning and AI research group focused on computer vision and robotics.</span></div>
+              <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-badge active">Active</span></span></div>
+              <div class="meta-row"><span class="meta-key">User Contrib.</span><span class="meta-val">✅ Enabled</span></div>
+              <div class="meta-row"><span class="meta-key">Parent Group</span><span class="meta-val"><a style="color:var(--blue)">Research Center</a></span></div>
+              <div class="meta-row"><span class="meta-key">Created</span><span class="meta-val text-mono">2023-01-15</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Ancestry</span></div>
+          <div class="panel-body">
+            <div style="display:flex; align-items:center; gap:8px; font-size:12px; flex-wrap:wrap">
+              <span style="color:var(--text-muted)">🏢</span>
+              <a style="color:var(--blue)">Research Center</a>
+              <span style="color:var(--text-dim)">›</span>
+              <span style="font-weight:500">🧪 AI Lab</span>
+            </div>
+            <div class="info-callout mt-8" style="font-size:11px">
+              <span>ℹ</span>
+              <span>Admins of <strong>Research Center</strong> have oversight visibility over this group and its resources. They cannot modify governance settings.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-3">
+          <div class="panel-header"><span class="panel-title">Danger Zone</span></div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:8px">
+            <div class="flex-center gap-12" style="justify-content:space-between">
+              <div>
+                <div style="font-size:13px; font-weight:500">Archive this group</div>
+                <div class="text-sm text-muted mt-4">Freezes membership and blocks new governance actions.</div>
+              </div>
+              <button class="btn btn-danger btn-sm">Archive</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="grid-2" style="gap:10px">
+          <div class="stat-card fade-in delay-1"><div class="stat-val">8</div><div class="stat-label">Members</div></div>
+          <div class="stat-card fade-in delay-2"><div class="stat-val">2</div><div class="stat-label">Subgroups</div></div>
+          <div class="stat-card fade-in delay-3"><div class="stat-val">14</div><div class="stat-label">Datasets</div></div>
+          <div class="stat-card fade-in delay-4"><div class="stat-val">31</div><div class="stat-label">Active Grants</div></div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Admins</span></div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:10px">
+            <div class="flex-center gap-8">
+              <div class="avatar" style="width:28px;height:28px;font-size:12px">E</div>
+              <div><div style="font-size:13px">Erin Park</div><div class="text-mono text-muted">erin@uni.edu</div></div>
+              <span class="role-badge admin" style="margin-left:auto">Admin</span>
+            </div>
+            <div class="flex-center gap-8">
+              <div class="avatar" style="width:28px;height:28px;font-size:12px;background:linear-gradient(135deg,var(--teal),#059669)">D</div>
+              <div><div style="font-size:13px">Dana Reyes</div><div class="text-mono text-muted">dana@uni.edu</div></div>
+              <span class="role-badge admin" style="margin-left:auto">Admin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 3: GROUP — MEMBERS TAB                                           -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-group-members">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Groups</a><span class="breadcrumb-sep">/</span><a>Research Center</a><span class="breadcrumb-sep">/</span><span>AI Lab</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">🧪</span><span class="resource-name">AI Lab</span></div>
+        <div class="resource-meta"><span>ai-lab</span><span class="resource-meta-sep">·</span><span>8 members</span></div>
+      </div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab">Overview</div>
+      <div class="tab active">Members <span class="tab-count">8</span></div>
+      <div class="tab">Subgroups <span class="tab-count">2</span></div>
+      <div class="tab">Resources <span class="tab-count">14</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div class="search-bar" style="margin-bottom:16px">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" placeholder="Search members...">
+      <div class="filter-chip active">All (8)</div>
+      <div class="filter-chip">Direct (4)</div>
+      <div class="filter-chip">Transitive (4)</div>
+      <button class="btn btn-primary btn-sm" style="margin-left:auto">＋ Add Member</button>
+    </div>
+
+    <div class="panel">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Membership</th>
+            <th>Joined</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="fade-in delay-1">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px">B</div> Bob Chen</div></td>
+            <td class="mono">bob@uni.edu</td>
+            <td><span class="role-badge member">Member</span></td>
+            <td><span style="font-size:11px;color:var(--green)">● Direct</span></td>
+            <td class="mono">Mar 2024</td>
+            <td><button class="kebab-btn">⋮</button></td>
+          </tr>
+          <tr class="fade-in delay-2">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,var(--amber),#d97706)">E</div> Erin Park</div></td>
+            <td class="mono">erin@uni.edu</td>
+            <td><span class="role-badge admin">Admin</span></td>
+            <td><span style="font-size:11px;color:var(--green)">● Direct</span></td>
+            <td class="mono">Jan 2023</td>
+            <td><button class="kebab-btn">⋮</button></td>
+          </tr>
+          <tr class="fade-in delay-3" style="opacity:.7">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#475569,#334155)">C</div> Carol Wu</div></td>
+            <td class="mono">carol@uni.edu</td>
+            <td><span class="role-badge member">Member</span></td>
+            <td><span class="transitive-label">↗ via Robotics Sub-Lab</span></td>
+            <td class="mono">Jun 2024</td>
+            <td><span class="text-muted" style="font-size:11px">—</span></td>
+          </tr>
+          <tr class="fade-in delay-3" style="opacity:.7">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#475569,#334155)">F</div> Frank Torres</div></td>
+            <td class="mono">frank@uni.edu</td>
+            <td><span class="role-badge admin">Admin</span></td>
+            <td><span class="transitive-label">↗ via Robotics Sub-Lab</span></td>
+            <td class="mono">Sep 2023</td>
+            <td><span class="text-muted" style="font-size:11px">—</span></td>
+          </tr>
+          <tr class="fade-in delay-4" style="opacity:.7">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#475569,#334155)">E2</div> Eve Torres</div></td>
+            <td class="mono">eve@uni.edu</td>
+            <td><span class="role-badge member">Member</span></td>
+            <td><span class="transitive-label">↗ via Vision Sub-Lab</span></td>
+            <td class="mono">Nov 2024</td>
+            <td><span class="text-muted" style="font-size:11px">—</span></td>
+          </tr>
+          <tr class="fade-in delay-4" style="opacity:.7">
+            <td><div class="flex-center gap-8"><div class="avatar" style="width:26px;height:26px;font-size:11px;background:linear-gradient(135deg,#475569,#334155)">G</div> Grace Kim</div></td>
+            <td class="mono">grace@uni.edu</td>
+            <td><span class="role-badge admin">Admin</span></td>
+            <td><span class="transitive-label">↗ via Vision Sub-Lab</span></td>
+            <td class="mono">Nov 2024</td>
+            <td><span class="text-muted" style="font-size:11px">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-callout mt-12" style="font-size:11px">
+      <span>ℹ</span>
+      <span>Transitive members (↗) belong through descendant subgroups. Manage them from their respective group. Actions on transitive members are not available here.</span>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 4: GROUP — RESOURCES TAB                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-group-resources">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Groups</a><span class="breadcrumb-sep">/</span><a>Research Center</a><span class="breadcrumb-sep">/</span><span>AI Lab</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">🧪</span><span class="resource-name">AI Lab</span></div>
+      </div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab">Overview</div>
+      <div class="tab">Members <span class="tab-count">8</span></div>
+      <div class="tab">Subgroups <span class="tab-count">2</span></div>
+      <div class="tab active">Resources <span class="tab-count">14</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:20px">
+      <div class="panel fade-in delay-1">
+        <div class="panel-header">
+          <span class="panel-title">Datasets <span style="color:var(--text-muted);font-weight:400">(12)</span></span>
+          <div class="flex-center gap-8">
+            <div class="filter-chip active">Active</div>
+            <div class="filter-chip">Archived</div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Files</th><th>Updated</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><a style="color:var(--blue)">Genomics Run 2024</a></td><td class="mono">OMICS</td><td class="mono">1.2 TB</td><td class="mono">2,341</td><td class="mono">2d ago</td><td><span class="status-badge active">Active</span></td></tr>
+            <tr><td><a style="color:var(--blue)">Training Set v3</a></td><td class="mono">ML</td><td class="mono">340 GB</td><td class="mono">892</td><td class="mono">1w ago</td><td><span class="status-badge active">Active</span></td></tr>
+            <tr><td><a style="color:var(--blue)">Vision Benchmark 2024</a></td><td class="mono">ML</td><td class="mono">88 GB</td><td class="mono">14,220</td><td class="mono">3w ago</td><td><span class="status-badge active">Active</span></td></tr>
+            <tr style="opacity:.55"><td><a style="color:var(--text-muted);text-decoration:line-through">Legacy Training Data</a></td><td class="mono">ML</td><td class="mono">12 GB</td><td class="mono">—</td><td class="mono">1y ago</td><td><span class="status-badge archived">Archived</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel fade-in delay-2">
+        <div class="panel-header">
+          <span class="panel-title">Collections <span style="color:var(--text-muted);font-weight:400">(2)</span></span>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Datasets</th><th>Active Grants</th><th>Updated</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><a style="color:var(--blue)">📦 Genomics Suite</a></td><td class="mono">3</td><td class="mono">12</td><td class="mono">1w ago</td><td><span class="status-badge active">Active</span></td></tr>
+            <tr><td><a style="color:var(--blue)">📦 ML Benchmarks</a></td><td class="mono">5</td><td class="mono">8</td><td class="mono">2w ago</td><td><span class="status-badge active">Active</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 5: GROUP — AUDIT LOG                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-group-audit">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Groups</a><span class="breadcrumb-sep">/</span><span>AI Lab</span></div>
+    <div class="page-header">
+      <div class="page-header-left"><div class="resource-title"><span class="resource-icon">🧪</span><span class="resource-name">AI Lab</span></div></div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab">Overview</div><div class="tab">Members <span class="tab-count">8</span></div><div class="tab">Subgroups</div><div class="tab">Resources</div><div class="tab active">Audit Log</div>
+    </div>
+
+    <div class="panel fade-in delay-1">
+      <div class="panel-header">
+        <span class="panel-title">Audit Log</span>
+        <div class="flex-center gap-8">
+          <select class="form-input" style="width:auto;padding:4px 8px;font-size:11px"><option>All Events</option><option>Grant events</option><option>Member events</option><option>Metadata events</option></select>
+          <button class="btn btn-ghost btn-sm">Export CSV</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="audit-row fade-in delay-1">
+          <span class="audit-time">2025-03-06<br>14:32 UTC</span>
+          <span class="audit-event">member.added</span>
+          <div class="audit-desc">Bob Chen added as <strong class="audit-actor">Member</strong> by <a style="color:var(--blue)">Erin Park</a></div>
+        </div>
+        <div class="audit-row fade-in delay-2">
+          <span class="audit-time">2025-03-05<br>09:11 UTC</span>
+          <span class="audit-event">grant.created</span>
+          <div class="audit-desc">Grant <span class="text-mono">read_data</span> created on <a style="color:var(--blue)">Genomics Run 2024</a> for <strong class="audit-actor">Bio Lab</strong> by <a style="color:var(--blue)">Erin Park</a> · expires never</div>
+        </div>
+        <div class="audit-row fade-in delay-3">
+          <span class="audit-time">2025-03-03<br>11:00 UTC</span>
+          <span class="audit-event">grant.revoked</span>
+          <div class="audit-desc">Grant <span class="text-mono">download</span> revoked on <a style="color:var(--blue)">Training Set v3</a> for <strong class="audit-actor">External Collaborator</strong> by <a style="color:var(--blue)">Dana Reyes</a></div>
+        </div>
+        <div class="audit-row fade-in delay-4">
+          <span class="audit-time">2025-02-28<br>16:00 UTC</span>
+          <span class="audit-event">metadata.edited</span>
+          <div class="audit-desc">Group description updated by <a style="color:var(--blue)">Erin Park</a></div>
+        </div>
+        <div class="audit-row fade-in delay-5">
+          <span class="audit-time">2025-01-15<br>10:00 UTC</span>
+          <span class="audit-event">group.created</span>
+          <div class="audit-desc">Group created under <strong class="audit-actor">Research Center</strong> by <a style="color:var(--blue)">Platform Admin</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 6: DATASET DETAIL — OVERVIEW                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-dataset-overview">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Datasets</a><span class="breadcrumb-sep">/</span><a>AI Lab</a><span class="breadcrumb-sep">/</span><span>Genomics Run 2024</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">📄</span><span class="resource-name">Genomics Run 2024</span></div>
+        <div class="resource-meta"><span>genomics-run-2024</span><span class="resource-meta-sep">·</span><span>OMICS</span><span class="resource-meta-sep">·</span><span>Owned by <a style="color:var(--blue)">AI Lab</a></span><span class="resource-meta-sep">·</span><span>Updated 2 days ago</span></div>
+      </div>
+      <div class="page-header-right">
+        <span class="role-badge admin">Admin</span>
+        <button class="btn btn-secondary">⋮ Actions</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Overview</div>
+      <div class="tab">Files <span class="tab-count">2,341</span></div>
+      <div class="tab">Access <span class="tab-count">3</span></div>
+      <div class="tab">Collections <span class="tab-count">2</span></div>
+      <div class="tab">Requests <span class="tab-count">2</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div class="grid-meta">
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="panel fade-in delay-1">
+          <div class="panel-header"><span class="panel-title">Metadata</span><button class="btn btn-ghost btn-sm">✏ Edit</button></div>
+          <div class="panel-body">
+            <div class="meta-table">
+              <div class="meta-row"><span class="meta-key">Name</span><span class="meta-val">Genomics Run 2024</span></div>
+              <div class="meta-row"><span class="meta-key">Slug</span><span class="meta-val text-mono">genomics-run-2024</span></div>
+              <div class="meta-row"><span class="meta-key">Description</span><span class="meta-val">Full genome sequencing from cohort 2024, primary instrument run.</span></div>
+              <div class="meta-row"><span class="meta-key">Type</span><span class="meta-val text-mono">OMICS</span></div>
+              <div class="meta-row"><span class="meta-key">Size</span><span class="meta-val">1.2 TB (2,341 files)</span></div>
+              <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-badge active">Active</span></span></div>
+              <div class="meta-row"><span class="meta-key">Staged</span><span class="meta-val"><span style="color:var(--green)">● Yes</span></span></div>
+              <div class="meta-row"><span class="meta-key">Owner Group</span><span class="meta-val"><a style="color:var(--blue)">AI Lab</a></span></div>
+              <div class="meta-row"><span class="meta-key">Created</span><span class="meta-val text-mono">2024-01-15</span></div>
+              <div class="meta-row"><span class="meta-key">Updated</span><span class="meta-val text-mono">2025-03-04</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Sensitive Infrastructure Paths</span></div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:8px">
+            <div class="meta-row"><span class="meta-key">Origin Path</span><span class="meta-val text-mono" style="font-size:11px;word-break:break-all">/mnt/instruments/sequencer-01/run-2024/</span></div>
+            <div class="meta-row"><span class="meta-key">Archive Path</span><span class="meta-val text-mono" style="font-size:11px;word-break:break-all">/archive/genomics/2024/run-001/</span></div>
+            <div class="meta-row"><span class="meta-key">Staged Path</span><span class="meta-val text-mono" style="font-size:11px;word-break:break-all">/stage/active/genomics-run-2024/</span></div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-3">
+          <div class="panel-header"><span class="panel-title">Actions</span></div>
+          <div class="panel-body" style="display:flex; flex-wrap:wrap; gap:8px">
+            <button class="btn btn-primary">Download All</button>
+            <button class="btn btn-secondary">Request Stage</button>
+            <button class="btn btn-secondary">Manage Grants</button>
+            <button class="btn btn-danger">Archive Dataset</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="grid-2" style="gap:10px">
+          <div class="stat-card fade-in delay-1"><div class="stat-val">2,341</div><div class="stat-label">Files</div></div>
+          <div class="stat-card fade-in delay-2"><div class="stat-val">1.2 TB</div><div class="stat-label">Total Size</div></div>
+          <div class="stat-card fade-in delay-3"><div class="stat-val">3</div><div class="stat-label">Active Grants</div></div>
+          <div class="stat-card fade-in delay-4"><div class="stat-val">2</div><div class="stat-label">Collections</div></div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Collections</span></div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:8px">
+            <div class="flex-center gap-8" style="padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>📦</span><a style="color:var(--blue);font-size:13px">Genomics Suite</a>
+              <span class="text-muted text-sm" style="margin-left:auto">3 datasets</span>
+            </div>
+            <div class="flex-center gap-8" style="padding:6px 0">
+              <span>📦</span><a style="color:var(--blue);font-size:13px">Public Research</a>
+              <span class="text-muted text-sm" style="margin-left:auto">12 datasets</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-3">
+          <div class="panel-header"><span class="panel-title">Workflows</span></div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:6px">
+            <div class="flex-center gap-8">
+              <span style="color:var(--green)">●</span>
+              <span style="font-size:12px">Ingestion complete</span>
+              <span class="text-mono text-muted" style="margin-left:auto">Jan 15</span>
+            </div>
+            <div class="flex-center gap-8">
+              <span style="color:var(--green)">●</span>
+              <span style="font-size:12px">QC passed</span>
+              <span class="text-mono text-muted" style="margin-left:auto">Jan 16</span>
+            </div>
+            <div class="flex-center gap-8">
+              <span style="color:var(--amber)">●</span>
+              <span style="font-size:12px">Archival pending</span>
+              <span class="text-mono text-muted" style="margin-left:auto">In queue</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 7: DATASET — ACCESS (GRANTS) TAB                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-dataset-access">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Datasets</a><span class="breadcrumb-sep">/</span><span>Genomics Run 2024</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">📄</span><span class="resource-name">Genomics Run 2024</span></div>
+        <div class="resource-meta"><span>genomics-run-2024</span><span class="resource-meta-sep">·</span><span>AI Lab</span></div>
+      </div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab">Overview</div><div class="tab">Files</div><div class="tab active">Access <span class="tab-count">3</span></div><div class="tab">Collections</div><div class="tab">Requests</div><div class="tab">Audit Log</div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:20px">
+      <div class="panel fade-in delay-1">
+        <div class="panel-header">
+          <span class="panel-title">Active Grants</span>
+          <button class="btn btn-primary btn-sm">＋ Grant Access</button>
+        </div>
+
+        <!-- Grant row 1 -->
+        <div style="border-bottom:1px solid var(--border)">
+          <div style="padding:14px 18px; display:flex; align-items:flex-start; gap:14px">
+            <div style="flex:0 0 160px">
+              <div class="subject-chip">
+                <span class="subject-type-icon">👥</span>
+                <a style="color:var(--blue);font-size:13px">AI Lab</a>
+              </div>
+              <div class="text-mono text-muted mt-4">GROUP</div>
+            </div>
+            <div style="flex:1">
+              <div class="access-pills">
+                <span class="access-pill">view_metadata</span>
+                <span class="access-pill">list_files</span>
+                <span class="access-pill">read_data</span>
+                <span class="access-pill">download</span>
+                <span class="access-pill">compute</span>
+              </div>
+            </div>
+            <div style="flex:0 0 80px; font-size:11px; color:var(--text-muted); font-family:monospace">Never</div>
+            <div style="flex:0 0 80px; text-align:right"><span class="status-badge active" style="font-size:10px">Active</span></div>
+            <button class="kebab-btn">⋮</button>
+          </div>
+          <!-- Explainability -->
+          <div style="padding:0 18px 14px; padding-left:36px">
+            <div class="explain-block">
+              Grant <span class="hl">#a3f2</span> → AI Lab (GROUP) → view_metadata, list_files, read_data, download, compute<br>
+              Carol Wu is member of <span class="hl-amber">Robotics Sub-Lab</span> → <span class="hl">AI Lab</span> (transitive, depth 1)<br>
+              <span style="color:var(--text-dim)">∴ Carol Wu has all 5 access types via this grant</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grant row 2 -->
+        <div style="border-bottom:1px solid var(--border); padding:14px 18px; display:flex; align-items:center; gap:14px">
+          <div style="flex:0 0 160px">
+            <div class="subject-chip"><span class="subject-type-icon">👤</span><a style="color:var(--blue);font-size:13px">Dr. Maria Chen</a></div>
+            <div class="text-mono text-muted mt-4">USER</div>
+          </div>
+          <div style="flex:1">
+            <div class="access-pills">
+              <span class="access-pill">view_metadata</span>
+              <span class="access-pill">read_data</span>
+            </div>
+          </div>
+          <div style="flex:0 0 80px; font-size:11px; color:var(--amber); font-family:monospace">Dec 31 2025</div>
+          <div style="flex:0 0 80px; text-align:right"><span class="status-badge active" style="font-size:10px">Active</span></div>
+          <button class="kebab-btn">⋮</button>
+        </div>
+
+        <!-- Grant row 3 — Everyone -->
+        <div style="padding:14px 18px; display:flex; align-items:center; gap:14px">
+          <div style="flex:0 0 160px">
+            <div class="subject-chip"><span>🌐</span><span style="font-size:13px;color:var(--text)">Everyone</span></div>
+            <div class="text-mono text-muted mt-4">SYSTEM PRINCIPAL</div>
+          </div>
+          <div style="flex:1"><div class="access-pills"><span class="access-pill">view_metadata</span></div></div>
+          <div style="flex:0 0 80px; font-size:11px; color:var(--text-muted); font-family:monospace">Never</div>
+          <div style="flex:0 0 80px; text-align:right"><span class="status-badge active" style="font-size:10px">Active</span></div>
+          <button class="kebab-btn">⋮</button>
+        </div>
+      </div>
+
+      <div class="panel fade-in delay-2">
+        <div class="panel-header">
+          <span class="panel-title">Revoked / Expired <span style="color:var(--text-muted);font-weight:400">(2)</span></span>
+          <button class="btn btn-ghost btn-sm">Show history</button>
+        </div>
+        <div style="padding:14px 18px; display:flex; align-items:center; gap:14px; opacity:.5">
+          <div style="flex:0 0 160px"><div class="subject-chip"><span class="subject-type-icon">👤</span><span style="font-size:13px;color:var(--text-muted);text-decoration:line-through">External Collab.</span></div></div>
+          <div style="flex:1"><div class="access-pills" style="opacity:.5"><span class="access-pill" style="background:var(--red-dim);color:#f87171;border-color:var(--red-dim)">download</span></div></div>
+          <div style="flex:0 0 80px; font-size:11px; color:var(--red); font-family:monospace">Revoked</div>
+          <div style="flex:0 0 80px; text-align:right"><span class="status-badge archived" style="font-size:10px">Revoked</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 8: DATASET — ACCESS REQUESTS TAB                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-dataset-requests">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Datasets</a><span class="breadcrumb-sep">/</span><span>Genomics Run 2024</span></div>
+    <div class="page-header">
+      <div class="page-header-left"><div class="resource-title"><span class="resource-icon">📄</span><span class="resource-name">Genomics Run 2024</span></div></div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab">Overview</div><div class="tab">Files</div><div class="tab">Access</div><div class="tab">Collections</div><div class="tab active">Requests <span class="tab-count">2</span></div><div class="tab">Audit Log</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div>
+        <div class="section-header"><span class="section-title">Pending Review</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="req-card fade-in delay-1">
+            <div class="req-card-icon">📋</div>
+            <div class="req-card-body">
+              <div class="req-card-title">Frank Torres — <span class="text-mono" style="color:var(--text-muted)">read_data, download</span></div>
+              <div class="req-card-meta">
+                <span>👤 frank@uni.edu</span>
+                <span>📅 Submitted 2 days ago</span>
+                <span><span class="status-badge pending">Under Review</span></span>
+              </div>
+              <div style="margin-top:10px; font-size:12px; color:var(--text-muted); font-style:italic; padding:8px 10px; background:var(--raised); border-radius:4px; border-left:2px solid var(--border)">
+                "I need access to this dataset for my thesis research on genomic expression patterns in the 2024 cohort. My PI Erin Park is aware."
+              </div>
+              <div class="req-card-actions">
+                <button class="btn btn-primary btn-sm">Review</button>
+                <button class="btn btn-ghost btn-sm">View Profile</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="req-card fade-in delay-2">
+            <div class="req-card-icon">📋</div>
+            <div class="req-card-body">
+              <div class="req-card-title">Maria Chen — <span class="text-mono" style="color:var(--text-muted)">view_metadata</span></div>
+              <div class="req-card-meta">
+                <span>👤 maria@external.org</span>
+                <span>📅 Submitted 5 days ago</span>
+                <span><span class="status-badge pending">Under Review</span></span>
+              </div>
+              <div style="margin-top:10px; font-size:12px; color:var(--text-muted); font-style:italic; padding:8px 10px; background:var(--raised); border-radius:4px; border-left:2px solid var(--border)">
+                "External collaborator from Stanford. Need to verify dataset compatibility before requesting full access."
+              </div>
+              <div class="req-card-actions">
+                <button class="btn btn-primary btn-sm">Review</button>
+                <button class="btn btn-ghost btn-sm">View Profile</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div>
+        <div class="section-header">
+          <span class="section-title">Resolved Requests</span>
+        </div>
+        <div class="panel">
+          <table class="data-table">
+            <thead><tr><th>Requester</th><th>Access Requested</th><th>Submitted</th><th>Decision</th><th>Decided By</th></tr></thead>
+            <tbody>
+              <tr style="opacity:.6"><td>Dr. Alice Wong</td><td class="mono">read_data</td><td class="mono">Feb 12</td><td><span class="status-badge approved">Approved</span></td><td>Erin Park</td></tr>
+              <tr style="opacity:.6"><td>Bob External</td><td class="mono">download</td><td class="mono">Jan 30</td><td><span class="status-badge rejected">Rejected</span></td><td>Dana Reyes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 9: DATASET — OVERSIGHT VIEW                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-dataset-oversight">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+
+  <!-- Oversight banner -->
+  <div class="role-banner oversight">
+    <span>👁</span>
+    <span><strong>Oversight view</strong> — You can observe governance metadata for this dataset but cannot modify settings, create grants, or take administrative actions. Your authority derives from being admin of <strong>Research Center</strong>, which oversees AI Lab.</span>
+  </div>
+
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Datasets</a><span class="breadcrumb-sep">/</span><span>Genomics Run 2024</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">📄</span><span class="resource-name">Genomics Run 2024</span></div>
+        <div class="resource-meta"><span>genomics-run-2024</span><span class="resource-meta-sep">·</span><span>OMICS</span><span class="resource-meta-sep">·</span><span>Owned by <a style="color:var(--blue)">AI Lab</a></span></div>
+      </div>
+      <div class="page-header-right">
+        <span class="role-badge oversight">Oversight</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Overview</div>
+      <div class="tab">Files</div>
+      <div class="tab">Access <span class="tab-count">3</span></div>
+      <div class="tab">Collections <span class="tab-count">2</span></div>
+      <div class="tab">Audit Log</div>
+      <!-- Requests tab NOT shown — no review_access_requests in caps -->
+    </div>
+
+    <div class="grid-meta">
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="panel fade-in delay-1">
+          <div class="panel-header"><span class="panel-title">Metadata</span>
+            <!-- No edit button — oversight is read-only -->
+          </div>
+          <div class="panel-body">
+            <div class="meta-table">
+              <div class="meta-row"><span class="meta-key">Name</span><span class="meta-val">Genomics Run 2024</span></div>
+              <div class="meta-row"><span class="meta-key">Type</span><span class="meta-val text-mono">OMICS</span></div>
+              <div class="meta-row"><span class="meta-key">Size</span><span class="meta-val">1.2 TB (2,341 files)</span></div>
+              <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-badge active">Active</span></span></div>
+              <div class="meta-row"><span class="meta-key">Owner Group</span><span class="meta-val"><a style="color:var(--blue)">AI Lab</a></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Sensitive Infrastructure Paths</span></div>
+          <div class="panel-body">
+            <div class="locked-block">
+              <span>🔒</span>
+              <span>Infrastructure paths require <strong>view_sensitive_metadata</strong> grant. Oversight access does not include infrastructure details.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- No "Actions" panel rendered — no capabilities for mutation -->
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px">
+        <div class="grid-2" style="gap:10px">
+          <div class="stat-card fade-in delay-1"><div class="stat-val">2,341</div><div class="stat-label">Files</div></div>
+          <div class="stat-card fade-in delay-2"><div class="stat-val">3</div><div class="stat-label">Active Grants</div></div>
+        </div>
+        <div class="warn-callout fade-in delay-3">
+          <span>⚠</span>
+          <span>You are viewing this dataset in read-only oversight mode. To take action, contact the AI Lab admin team.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 10: COLLECTION DETAIL                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-collection-detail">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link active">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb mb-16"><a>Collections</a><span class="breadcrumb-sep">/</span><span>Genomics Suite</span></div>
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="resource-title"><span class="resource-icon">📦</span><span class="resource-name">Genomics Suite</span></div>
+        <div class="resource-meta"><span>genomics-suite</span><span class="resource-meta-sep">·</span><span>Owned by <a style="color:var(--blue)">AI Lab</a></span><span class="resource-meta-sep">·</span><span>3 datasets</span><span class="resource-meta-sep">·</span><span>Updated 1 week ago</span></div>
+      </div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span><button class="btn btn-secondary">⋮ Actions</button></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Overview</div>
+      <div class="tab">Datasets <span class="tab-count">3</span></div>
+      <div class="tab">Access <span class="tab-count">5</span></div>
+      <div class="tab">Requests <span class="tab-count">1</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div class="grid-meta">
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel fade-in delay-1">
+          <div class="panel-header"><span class="panel-title">Collection Details</span><button class="btn btn-ghost btn-sm">✏ Edit</button></div>
+          <div class="panel-body">
+            <div class="meta-table">
+              <div class="meta-row"><span class="meta-key">Name</span><span class="meta-val">Genomics Suite</span></div>
+              <div class="meta-row"><span class="meta-key">Slug</span><span class="meta-val text-mono">genomics-suite</span></div>
+              <div class="meta-row"><span class="meta-key">Description</span><span class="meta-val">All genomics datasets from the 2024 research cohort, including sequencing runs and reference data.</span></div>
+              <div class="meta-row"><span class="meta-key">Owner Group</span><span class="meta-val"><a style="color:var(--blue)">AI Lab</a></span></div>
+              <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val"><span class="status-badge active">Active</span></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header">
+            <span class="panel-title">Datasets in Collection</span>
+            <button class="btn btn-primary btn-sm">＋ Add Dataset</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><a style="color:var(--blue)">📄 Genomics Run 2024</a></td>
+                <td class="mono">OMICS</td><td class="mono">1.2 TB</td>
+                <td><span class="status-badge active">Active</span></td>
+                <td><button class="kebab-btn">⋮</button></td>
+              </tr>
+              <tr>
+                <td><a style="color:var(--blue)">📄 Sequencing Batch v3</a></td>
+                <td class="mono">OMICS</td><td class="mono">340 GB</td>
+                <td><span class="status-badge active">Active</span></td>
+                <td><button class="kebab-btn">⋮</button></td>
+              </tr>
+              <tr>
+                <td><a style="color:var(--blue)">📄 Reference Genome HG38</a></td>
+                <td class="mono">REFERENCE</td><td class="mono">3.2 GB</td>
+                <td><span class="status-badge active">Active</span></td>
+                <td><button class="kebab-btn">⋮</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="warn-callout" style="margin:14px 18px; margin-top:0">
+            <span>⚠</span>
+            <span>Adding or removing datasets changes effective access for all 5 grant holders. This action is audited.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="grid-2" style="gap:10px">
+          <div class="stat-card fade-in delay-1"><div class="stat-val">3</div><div class="stat-label">Datasets</div></div>
+          <div class="stat-card fade-in delay-2"><div class="stat-val">5</div><div class="stat-label">Active Grants</div></div>
+        </div>
+
+        <div class="panel fade-in delay-2">
+          <div class="panel-header"><span class="panel-title">Grant Summary</span><button class="btn btn-ghost btn-sm">Manage →</button></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:8px">
+            <div class="flex-center gap-8" style="padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>👥</span><span style="font-size:12px">Bio Lab</span>
+              <div style="margin-left:auto"><div class="access-pills"><span class="access-pill">read_data</span><span class="access-pill">list_datasets</span></div></div>
+            </div>
+            <div class="flex-center gap-8" style="padding:6px 0; border-bottom:1px solid var(--border)">
+              <span>👤</span><span style="font-size:12px">Dr. Alice Wong</span>
+              <div style="margin-left:auto"><div class="access-pills"><span class="access-pill">view_metadata</span></div></div>
+            </div>
+            <div class="flex-center gap-8" style="padding:6px 0">
+              <span>🌐</span><span style="font-size:12px">Everyone</span>
+              <div style="margin-left:auto"><div class="access-pills"><span class="access-pill">view_metadata</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 11: ACCESS REQUESTS INBOX                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-requests-inbox">
+<div class="app-shell">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link">Collections</a><a class="topnav-link active">Access Requests</a></div>
+    <div class="topnav-right"><button class="notif-btn">🔔 <span class="notif-badge">4</span></button><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="page-header">
+      <div class="page-header-left"><span class="resource-name">Access Requests</span><div class="text-sm text-muted mt-4">Review incoming requests and manage your own</div></div>
+      <div class="page-header-right"><button class="btn btn-primary">＋ Request Access</button></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Pending Review <span class="tab-count" style="background:var(--amber-dim);color:var(--amber)">4</span></div>
+      <div class="tab">My Requests <span class="tab-count">3</span></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="req-card fade-in delay-1">
+        <div class="req-card-icon">📋</div>
+        <div class="req-card-body">
+          <div class="req-card-title">Frank Torres requests access to <a style="color:var(--blue)">Genomics Run 2024</a></div>
+          <div class="req-card-meta">
+            <span>👤 frank@uni.edu</span>
+            <span>📂 DATASET · AI Lab</span>
+            <div class="access-pills" style="display:inline-flex"><span class="access-pill">read_data</span><span class="access-pill">download</span></div>
+            <span>⏱ 2 days ago</span>
+            <span><span class="status-badge pending">Under Review</span></span>
+          </div>
+          <div class="req-card-actions">
+            <button class="btn btn-primary btn-sm">Review Request</button>
+            <button class="btn btn-ghost btn-sm">View Dataset →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="req-card fade-in delay-2">
+        <div class="req-card-icon">📋</div>
+        <div class="req-card-body">
+          <div class="req-card-title">Maria Chen requests access to <a style="color:var(--blue)">Genomics Run 2024</a></div>
+          <div class="req-card-meta">
+            <span>👤 maria@external.org</span>
+            <span>📂 DATASET · AI Lab</span>
+            <div class="access-pills" style="display:inline-flex"><span class="access-pill">view_metadata</span></div>
+            <span>⏱ 5 days ago</span>
+            <span><span class="status-badge pending">Under Review</span></span>
+          </div>
+          <div class="req-card-actions">
+            <button class="btn btn-primary btn-sm">Review Request</button>
+            <button class="btn btn-ghost btn-sm">View Dataset →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="req-card fade-in delay-3">
+        <div class="req-card-icon">📦</div>
+        <div class="req-card-body">
+          <div class="req-card-title">Henry Park requests access to <a style="color:var(--blue)">ML Benchmarks</a></div>
+          <div class="req-card-meta">
+            <span>👤 henry@uni.edu</span>
+            <span>📦 COLLECTION · AI Lab</span>
+            <div class="access-pills" style="display:inline-flex"><span class="access-pill">list_datasets</span><span class="access-pill">view_metadata</span></div>
+            <span>⏱ 1 week ago</span>
+            <span><span class="status-badge pending">Under Review</span></span>
+          </div>
+          <div class="req-card-actions">
+            <button class="btn btn-primary btn-sm">Review Request</button>
+            <button class="btn btn-ghost btn-sm">View Collection →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="req-card fade-in delay-4">
+        <div class="req-card-icon">📋</div>
+        <div class="req-card-body">
+          <div class="req-card-title">Irene Zhang requests access to <a style="color:var(--blue)">Vision Benchmark 2024</a></div>
+          <div class="req-card-meta">
+            <span>👤 irene@uni.edu</span>
+            <span>📂 DATASET · AI Lab</span>
+            <div class="access-pills" style="display:inline-flex"><span class="access-pill">compute</span></div>
+            <span>⏱ 1 week ago</span>
+            <span><span class="status-badge pending">Under Review</span></span>
+          </div>
+          <div class="req-card-actions">
+            <button class="btn btn-primary btn-sm">Review Request</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 12: GRANT ACCESS DRAWER                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-grant-drawer">
+<div class="app-shell" style="position:relative">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+
+  <!-- Dimmed background page content -->
+  <div class="page-content" style="filter:blur(2px);opacity:.4;pointer-events:none">
+    <div class="page-header">
+      <div class="page-header-left"><div class="resource-title"><span class="resource-icon">📄</span><span class="resource-name">Genomics Run 2024</span></div></div>
+      <div class="page-header-right"><span class="role-badge admin">Admin</span></div>
+    </div>
+    <div class="tabs"><div class="tab">Overview</div><div class="tab">Files</div><div class="tab active">Access</div></div>
+    <div class="panel" style="margin-top:20px"><div style="height:200px"></div></div>
+  </div>
+
+  <!-- Drawer overlay -->
+  <div class="drawer-overlay" style="position:absolute">
+    <div style="flex:1" onclick=""></div>
+    <div class="drawer">
+      <div class="drawer-header">
+        <span class="drawer-title">Grant Access</span>
+        <button class="close-btn">✕</button>
+      </div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:20px; padding:10px 12px; background:var(--raised); border-radius:var(--radius); border-left:3px solid var(--blue)">
+        Granting access to <strong style="color:var(--text)">Genomics Run 2024</strong> · AI Lab
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Subject Type</label>
+        <div style="display:flex;gap:8px">
+          <div class="filter-chip active">👤 User</div>
+          <div class="filter-chip">👥 Group</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">User</label>
+        <input class="form-input" placeholder="Search users..." value="frank@uni.edu">
+        <div style="margin-top:6px; padding:8px 10px; background:var(--raised); border-radius:var(--radius); border:1px solid var(--border); display:flex; align-items:center; gap:8px">
+          <div class="avatar" style="width:24px;height:24px;font-size:10px">F</div>
+          <div><div style="font-size:12px">Frank Torres</div><div class="text-mono text-muted">frank@uni.edu · Robotics Sub-Lab</div></div>
+          <span style="margin-left:auto; color:var(--green); font-size:12px">✓</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Access Types</label>
+        <div style="background:var(--raised); border-radius:var(--radius); border:1px solid var(--border); overflow:hidden">
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c1" checked><label for="c1" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">view_metadata</label>
+            <span style="font-size:10px; color:var(--text-muted)">See dataset exists</span>
+          </div>
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c2"><label for="c2" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">view_sensitive_metadata</label>
+            <span style="font-size:10px; color:var(--text-muted)">Paths, infrastructure</span>
+          </div>
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c3"><label for="c3" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">list_files</label>
+            <span style="font-size:10px; color:var(--text-muted)">Browse file tree</span>
+          </div>
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c4" checked><label for="c4" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">read_data</label>
+            <span style="font-size:10px; color:var(--text-muted)">API / in-browser access</span>
+          </div>
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c5" checked><label for="c5" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">download</label>
+            <span style="font-size:10px; color:var(--text-muted)">Local copy</span>
+          </div>
+          <div style="padding:8px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c6"><label for="c6" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">compute</label>
+            <span style="font-size:10px; color:var(--text-muted)">Workflow pipelines</span>
+          </div>
+          <div style="padding:8px 12px; display:flex; align-items:center; gap:8px">
+            <input type="checkbox" id="c7"><label for="c7" style="font-size:12px; color:var(--text); cursor:pointer; flex:1">request_stage</label>
+            <span style="font-size:10px; color:var(--text-muted)">Trigger staging</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Expiry</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div class="filter-chip active">Never</div>
+          <div class="filter-chip">Custom date</div>
+        </div>
+      </div>
+
+      <div style="margin-top:auto; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary">Create Grants (3)</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 13: ARCHIVE CONFIRMATION MODAL                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-archive-modal">
+<div class="app-shell" style="position:relative">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="topnav-links"><a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a></div>
+    <div class="topnav-right"><div class="avatar-btn"><div class="avatar">D</div> Dana Reyes ▾</div></div>
+  </nav>
+
+  <div class="page-content" style="filter:blur(2px);opacity:.3;pointer-events:none">
+    <div class="page-header"><div class="page-header-left"><div class="resource-title"><span class="resource-icon">🧪</span><span class="resource-name">AI Lab</span></div></div></div>
+    <div class="panel" style="margin-top:20px"><div style="height:200px"></div></div>
+  </div>
+
+  <!-- Modal overlay -->
+  <div class="modal-overlay" style="position:absolute">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Archive "AI Lab"?</span>
+        <button class="close-btn">✕</button>
+      </div>
+
+      <div class="modal-warn">
+        <span>⚠</span>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div><strong>This will permanently freeze the group.</strong></div>
+          <div>Membership becomes read-only — no members can be added or removed.</div>
+          <div>No new datasets, collections, or grants can be created under this group.</div>
+          <div style="color:var(--amber)">Existing grants and dataset ownership remain intact.</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px">
+        This action is <strong style="color:var(--text)">reversible</strong> — only a Platform Admin can unarchive. An audit record will be created.
+      </div>
+
+      <div style="background:var(--raised); border-radius:var(--radius); padding:12px; margin-bottom:16px">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px">Affected: <strong style="color:var(--text)">8 members</strong>, <strong style="color:var(--text)">14 datasets</strong>, <strong style="color:var(--text)">2 subgroups</strong></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Type <strong style="color:var(--text)">ai-lab</strong> to confirm</label>
+        <input class="form-input" placeholder="ai-lab">
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-danger" style="opacity:.4; cursor:not-allowed">Archive Group</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
+<script>
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const screen = document.getElementById('screen-' + id);
+  if (screen) {
+    screen.classList.add('active');
+    // Retrigger fade-in animations
+    screen.querySelectorAll('.fade-in').forEach(el => {
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = '';
+    });
+  }
+  if (btn) btn.classList.add('active');
+}
+</script>
+</body>
+</html>

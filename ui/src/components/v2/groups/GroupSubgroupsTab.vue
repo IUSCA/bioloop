@@ -10,20 +10,16 @@
               <Searchbar v-model="searchTerm" placeholder="Search subgroups…" />
             </div>
 
-            <!-- Scope filter chips -->
-            <div class="flex items-center gap-2">
-              <VaChip
-                v-for="f in scopeFilters"
-                :key="f.value"
-                :color="activeScope === f.value ? 'primary' : 'secondary'"
-                class="cursor-pointer"
-                size="small"
-                :outline="activeScope !== f.value"
-                @click="setScope(f.value)"
-              >
-                {{ f.label }}
-              </VaChip>
-            </div>
+            <ModernButtonToggle
+              :model-value="activeScope"
+              label="Depth"
+              :options="scopeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+              @update:model-value="setScope"
+            />
 
             <VaButton
               size="small"
@@ -70,37 +66,34 @@
               v-else-if="
                 subgroups.length === 0 && !loading && !areFiltersActive
               "
-              class="flex flex-col items-center justify-center gap-4 py-12"
+              class="py-12 px-6"
             >
-              <div class="flex items-center justify-center">
-                <i-mdi-folder-multiple
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
-
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+              <EmptyState
+                icon="mdi-folder-multiple"
+                title="No subgroups"
+                :show-clear-filters="false"
               >
-                <h3 class="font-semibold tracking-tight">No subgroups</h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
+                <template #message>
                   <template v-if="props.canCreate">
                     This group currently has no subgroups. Create the first
                     subgroup to get started.
                   </template>
-                </p>
-              </div>
-
-              <VaButton v-if="props.canCreate" @click="handleCreateSubgroup">
-                <div class="flex items-center gap-3 px-2">
-                  <i-mdi-plus class="text-lg" />
-                  <span class="font-medium">Create Subgroup</span>
-                </div>
-              </VaButton>
+                </template>
+                <template v-if="props.canCreate" #actions>
+                  <VaButton @click="handleCreateSubgroup">
+                    <div class="flex items-center gap-3 px-2">
+                      <i-mdi-plus class="text-lg" />
+                      <span class="font-medium">Create Subgroup</span>
+                    </div>
+                  </VaButton>
+                </template>
+              </EmptyState>
             </div>
 
             <!-- Table -->
             <VaDataTable
               v-else-if="subgroups.length > 0"
+              class="v2-table"
               :items="subgroups"
               :columns="columns"
               striped
@@ -118,12 +111,9 @@
               </template>
 
               <template #cell(status)="{ rowData }">
-                <ModernChip
-                  :color="rowData.is_archived ? 'secondary' : 'success'"
-                  size="small"
-                >
+                <Badge :color="rowData.is_archived ? 'neutral' : 'success'">
                   {{ rowData.is_archived ? "Archived" : "Active" }}
-                </ModernChip>
+                </Badge>
               </template>
             </VaDataTable>
           </Transition>
@@ -224,9 +214,3 @@ function handleSubgroupCreated() {
 
 onMounted(() => fetchSubgroups());
 </script>
-
-<style scoped>
-.card.header {
-  --va-card-padding: 0.8rem;
-}
-</style>

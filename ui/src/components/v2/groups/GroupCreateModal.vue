@@ -21,7 +21,7 @@
           />
         </div>
         <div>
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+          <h2 class="text-xl font-semibold">
             {{ props.isSubgroup ? "Create Subgroup" : "Create Group" }}
           </h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -187,7 +187,7 @@
               <!-- Membership Propagation Warning -->
               <ModernAlert
                 icon="mdi-information"
-                color="amber"
+                color="warning"
                 title="Membership propagation"
               >
                 Members of this subgroup are automatically implicit members of
@@ -202,7 +202,7 @@
               <!-- Oversight Chain Info -->
               <ModernAlert
                 icon="mdi-information"
-                color="blue"
+                color="info"
                 title="Oversight visibility"
               >
                 Admins of

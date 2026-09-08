@@ -1,11 +1,8 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-2">
-      <h1 class="text-xl font-semibold">Access Requests</h1>
-      <p class="text-sm text-gray-600 dark:text-gray-300">
-        Review and manage access requests you are responsible for.
-      </p>
-    </div>
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <p class="text-sm va-text-secondary">
+      Review and manage access requests you are responsible for.
+    </p>
 
     <VaTabs
       v-model="activeTab"
@@ -52,6 +49,7 @@
             title="No access requests pending review"
             message="Requests that need your review will appear here."
             @reset="fetchPendingRequests"
+            :show-clear-filters="false"
           />
         </div>
 
@@ -99,6 +97,7 @@
             title="No reviewed access requests"
             message="Requests you reviewed will appear here."
             @reset="fetchReviewedRequests"
+            :show-clear-filters="false"
           />
         </div>
 
@@ -231,27 +230,6 @@ onMounted(() => {
   fetchReviewedRequests();
 });
 </script>
-
-<style scoped>
-.tab-count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 600;
-  background-color: rgb(219 234 254);
-  color: rgb(29 78 216);
-}
-
-.dark .tab-count-badge {
-  background-color: rgb(30 58 138 / 0.5);
-  color: rgb(147 197 253);
-}
-</style>
 
 <route lang="yaml">
 meta:

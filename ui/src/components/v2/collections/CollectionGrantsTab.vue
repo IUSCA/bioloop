@@ -98,6 +98,7 @@
               message="Grant access to specific users or groups to give them permission to use this collection."
               :showClearFilters="false"
               @reset="fetchGrants"
+              :show-clear-filters="false"
             />
           </div>
 

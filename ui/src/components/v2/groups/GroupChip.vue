@@ -20,7 +20,9 @@
     </div>
     <button
       v-if="props.removable"
-      class="ml-1 hover:opacity-70 w-4 h-4 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+      type="button"
+      :aria-label="`Remove ${props.group?.name}`"
+      class="focus-ring ml-1 hover:opacity-70 w-4 h-4 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
       @click="emit('remove')"
     >
       <i-mdi-close class="" />

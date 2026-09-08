@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Data Governance Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0c1420;
+  --surface:    #111d2e;
+  --panel:      #152030;
+  --raised:     #1c2d40;
+  --hover:      #223448;
+  --border:     #22344a;
+  --border-hi:  #2c4260;
+
+  --text:       #dce6f0;
+  --text-muted: #7089a4;
+  --text-dim:   #3a526a;
+
+  --blue:       #3b82f6;
+  --blue-dim:   #162d50;
+  --blue-soft:  #2563eb;
+  --blue-glow:  rgba(59,130,246,.15);
+  --amber:      #f59e0b;
+  --amber-dim:  #361f00;
+  --teal:       #0d9488;
+  --teal-dim:   #052e2a;
+  --red:        #ef4444;
+  --red-dim:    #300a0a;
+  --violet:     #8b5cf6;
+  --violet-dim: #20144a;
+  --green:      #22c55e;
+  --green-dim:  #0a2618;
+
+  --r:  6px;
+  --rl: 10px;
+  --rx: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── SWITCHER ─────────────────────────────────────── */
+.switcher {
+  position: sticky; top: 0; z-index: 200;
+  background: #050c18;
+  border-bottom: 1px solid var(--border);
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 4px;
+  overflow-x: auto;
+}
+.sw-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 2px;
+  padding-right: 18px; border-right: 1px solid var(--border);
+  margin-right: 12px; white-space: nowrap; flex-shrink: 0;
+}
+.sw-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px; color: var(--text-muted);
+  padding: 0 14px; height: 44px; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+}
+.sw-btn:hover { color: var(--text); }
+.sw-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+.screen { display: none; min-height: calc(100vh - 44px); }
+.screen.active { display: block; }
+
+/* ── TOP NAV ──────────────────────────────────────── */
+.topnav {
+  height: 52px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 0;
+  position: sticky; top: 44px; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 8px; margin-right: 36px; }
+.logo-mark {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--blue), var(--teal));
+  border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.logo-text { font-family: 'DM Serif Display', serif; font-size: 15px; letter-spacing: .2px; }
+.nav-links { display: flex; gap: 2px; flex: 1; }
+.nav-link {
+  color: var(--text-muted); text-decoration: none; font-size: 13px;
+  padding: 6px 11px; border-radius: var(--r);
+  transition: color .1s, background .1s;
+}
+.nav-link:hover { color: var(--text); background: var(--raised); }
+.nav-link.active { color: var(--text); background: var(--raised); }
+.nav-right { display: flex; align-items: center; gap: 8px; }
+.notif {
+  position: relative; background: none;
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 5px 9px; cursor: pointer; color: var(--text-muted); font-size: 13px;
+  transition: border-color .1s, color .1s;
+}
+.notif:hover { border-color: var(--border-hi); color: var(--text); }
+.notif-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--red); border: 1px solid var(--surface);
+}
+.avatar-btn {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 5px 10px; cursor: pointer;
+  font-size: 12px; color: var(--text);
+  transition: border-color .1s;
+}
+.avatar-btn:hover { border-color: var(--border-hi); }
+.av {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: #fff;
+  flex-shrink: 0;
+}
+
+/* ── GREETING HERO ────────────────────────────────── */
+.hero {
+  padding: 36px 28px 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: relative; overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 600px 200px at 80% -40%, rgba(59,130,246,.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-inner { max-width: 1160px; margin: 0 auto; position: relative; }
+.hero-greeting {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px; color: var(--text); line-height: 1.2;
+  margin-bottom: 6px;
+}
+.hero-sub { font-size: 13px; color: var(--text-muted); }
+.hero-meta { display: flex; align-items: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+.hero-tag {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-muted);
+}
+
+/* role pill */
+.role-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500;
+  padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .4px;
+}
+.role-pill.platform { background: var(--violet-dim); color: #b89ffe; border: 1px solid #3a2260; }
+.role-pill.admin    { background: var(--blue-dim);   color: #78aaff; border: 1px solid #1a3860; }
+.role-pill.member   { background: var(--raised);     color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── PAGE BODY ────────────────────────────────────── */
+.page-body { max-width: 1160px; margin: 0 auto; padding: 28px 28px 60px; }
+
+/* ── GRID SYSTEMS ─────────────────────────────────── */
+.dash-grid-admin    { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.dash-grid-platform { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.dash-grid-member   { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+.full-col { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── STAT ROW ─────────────────────────────────────── */
+.stat-row { display: grid; gap: 12px; margin-bottom: 20px; }
+.stat-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.stat-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.stat-row.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative; overflow: hidden;
+  transition: border-color .15s;
+}
+.stat-card:hover { border-color: var(--border-hi); }
+.stat-card.urgent { border-color: #5a2500; background: #160b00; }
+.stat-card.urgent::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--amber); }
+.stat-card.ok { border-color: #0a3322; }
+.stat-card.ok::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--teal); }
+.stat-card.info::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--blue); }
+
+.stat-val {
+  font-family: 'DM Serif Display', serif;
+  font-size: 32px; color: var(--text); line-height: 1;
+}
+.stat-val.amber { color: var(--amber); }
+.stat-val.red   { color: var(--red);   }
+.stat-val.teal  { color: var(--teal);  }
+.stat-val.blue  { color: var(--blue);  }
+.stat-label { font-size: 11px; color: var(--text-muted); }
+.stat-delta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--text-dim); margin-top: auto;
+}
+
+/* ── PANEL CARD ───────────────────────────────────── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--rx);
+  overflow: hidden;
+}
+.panel-head {
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+}
+.panel-title {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--text-muted);
+}
+.panel-action {
+  font-size: 11px; color: var(--blue); cursor: pointer;
+  background: none; border: none; padding: 0;
+  transition: color .1s;
+}
+.panel-action:hover { color: #93c5fd; text-decoration: underline; }
+.panel-body { padding: 0; }
+.panel-body.pad { padding: 16px; }
+.panel-empty {
+  padding: 32px 20px; text-align: center;
+  color: var(--text-dim); font-size: 12px;
+}
+.panel-empty .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .3; }
+
+/* ── LIST ROWS ────────────────────────────────────── */
+.list-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+  cursor: pointer;
+}
+.list-row:last-child { border-bottom: none; }
+.list-row:hover { background: var(--hover); }
+.list-row.urgent-row { border-left: 3px solid var(--amber); padding-left: 15px; }
+.list-row.ok-row     { border-left: 3px solid var(--teal);  padding-left: 15px; }
+
+.row-icon { font-size: 16px; flex-shrink: 0; }
+.row-main { flex: 1; min-width: 0; }
+.row-title { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.row-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.row-time  { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+
+/* ── BADGE / PILL ─────────────────────────────────── */
+.badge {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  padding: 2px 7px; border-radius: 3px;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.badge.pending  { background: var(--amber-dim); color: #fbbf24; border: 1px solid #5a3d00; }
+.badge.approved { background: var(--green-dim); color: #4ade80; border: 1px solid #0a3820; }
+.badge.active   { background: var(--teal-dim);  color: #2dd4bf; border: 1px solid #0a4a44; }
+.badge.revoked  { background: var(--red-dim);   color: #f87171; border: 1px solid #5b1a1a; }
+.badge.admin-b  { background: var(--blue-dim);  color: #78aaff; border: 1px solid #1a3860; }
+.badge.member-b { background: var(--raised);    color: var(--text-muted); border: 1px solid var(--border); }
+.badge.count    { background: var(--raised);    color: var(--text-muted); border: 1px solid var(--border); min-width: 22px; justify-content: center; }
+.badge.urgent-count { background: var(--amber-dim); color: var(--amber); border: 1px solid #5a3d00; }
+
+/* ── BUTTONS ──────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--r);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; border: none; text-decoration: none;
+  transition: all .12s;
+}
+.btn-sm { padding: 5px 10px; font-size: 11px; }
+.btn-primary  { background: var(--blue);  color: #fff; }
+.btn-primary:hover  { background: var(--blue-soft); }
+.btn-secondary { background: var(--raised); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border-hi); background: var(--hover); }
+.btn-ghost { background: none; color: var(--text-muted); border: 1px solid transparent; }
+.btn-ghost:hover { color: var(--text); border-color: var(--border); background: var(--raised); }
+.btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid #5a3d00; }
+.btn-amber:hover { background: #4a2c00; }
+
+/* ── SECTION LABEL ────────────────────────────────── */
+.section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-dim);
+  margin-bottom: 10px; padding-left: 2px;
+}
+
+/* ── REQUEST CARD ─────────────────────────────────── */
+.req-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.req-card:last-child { border-bottom: none; }
+.req-card:hover { background: var(--hover); }
+.req-card.urgent-row { border-left: 3px solid var(--amber); padding-left: 15px; }
+.req-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+.req-body  { flex: 1; min-width: 0; }
+.req-title { font-size: 13px; color: var(--text); line-height: 1.4; }
+.req-meta  { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap; }
+.req-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ── ACCESS GRANT ROW ─────────────────────────────── */
+.grant-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; border-bottom: 1px solid var(--border);
+  transition: background .1s; cursor: pointer;
+}
+.grant-row:last-child { border-bottom: none; }
+.grant-row:hover { background: var(--hover); }
+.grant-resource { flex: 1; min-width: 0; }
+.grant-name { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grant-source { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.grant-types { display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; max-width: 200px; }
+.access-pill {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  padding: 2px 6px; border-radius: 3px;
+  background: var(--teal-dim); color: #2dd4bf; border: 1px solid #0a3a36;
+}
+
+/* ── GROUP ROW ────────────────────────────────────── */
+.group-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  transition: background .1s; cursor: pointer;
+}
+.group-row:last-child { border-bottom: none; }
+.group-row:hover { background: var(--hover); }
+.group-icon { font-size: 16px; flex-shrink: 0; }
+.group-info { flex: 1; }
+.group-name { font-size: 13px; color: var(--text); }
+.group-path { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.group-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+
+/* ── ACTIVITY FEED ────────────────────────────────── */
+.activity-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 9px 18px; border-bottom: 1px solid var(--border);
+}
+.activity-row:last-child { border-bottom: none; }
+.act-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 5px;
+}
+.act-dot.blue   { background: var(--blue); }
+.act-dot.teal   { background: var(--teal); }
+.act-dot.amber  { background: var(--amber); }
+.act-dot.red    { background: var(--red); }
+.act-dot.violet { background: var(--violet); }
+.act-text { flex: 1; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.act-text strong { color: var(--text); font-weight: 500; }
+.act-text a { color: var(--blue); }
+.act-time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); white-space: nowrap; margin-top: 2px; }
+
+/* ── QUICK ACTIONS ────────────────────────────────── */
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qa-btn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 14px; border-radius: var(--rl);
+  background: var(--raised); border: 1px solid var(--border);
+  cursor: pointer; text-decoration: none;
+  transition: border-color .12s, background .12s;
+}
+.qa-btn:hover { border-color: var(--border-hi); background: var(--hover); }
+.qa-icon { font-size: 18px; margin-bottom: 2px; }
+.qa-label { font-size: 12px; font-weight: 500; color: var(--text); }
+.qa-desc  { font-size: 10px; color: var(--text-muted); line-height: 1.4; }
+
+/* ── EXPIRY WARNING ───────────────────────────────── */
+.expiry-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 18px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background .1s;
+}
+.expiry-row:last-child { border-bottom: none; }
+.expiry-row:hover { background: var(--hover); }
+.expiry-bar { width: 60px; height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; }
+.expiry-fill { height: 100%; border-radius: 2px; }
+
+/* ── DIVIDER ──────────────────────────────────────── */
+hr.div { border: none; border-top: 1px solid var(--border); }
+
+/* ── ANIM ─────────────────────────────────────────── */
+.fa { animation: fa .4s ease both; }
+@keyframes fa { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.d1 { animation-delay: .05s; } .d2 { animation-delay: .10s; }
+.d3 { animation-delay: .15s; } .d4 { animation-delay: .20s; }
+.d5 { animation-delay: .25s; } .d6 { animation-delay: .30s; }
+
+/* ── CALLOUT ──────────────────────────────────────── */
+.callout {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 14px; border-radius: var(--r);
+  font-size: 12px; line-height: 1.6; margin: 12px 16px;
+}
+.callout.info   { background: var(--blue-dim); border: 1px solid #1a3860; color: #93c5fd; }
+.callout.amber  { background: var(--amber-dim); border: 1px solid #5a3d00; color: #fbbf24; }
+
+/* ── MISC ─────────────────────────────────────────── */
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.text-muted { color: var(--text-muted); }
+.flex { display: flex; } .flex-c { display: flex; align-items: center; }
+.gap-8 { gap: 8px; } .gap-12 { gap: 12px; }
+.mt-4 { margin-top: 4px; } .mt-12 { margin-top: 12px; } .mt-20 { margin-top: 20px; }
+.mb-16 { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<nav class="switcher">
+  <span class="sw-label">Dashboard View</span>
+  <button class="sw-btn active" onclick="sw('admin')">Group Admin</button>
+  <button class="sw-btn" onclick="sw('nonadmin')">Non-Admin Member</button>
+  <button class="sw-btn" onclick="sw('platform')">Platform Admin</button>
+</nav>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN A: GROUP ADMIN DASHBOARD
+     User: Erin Park — admin of AI Lab, Robotics Sub-Lab
+     Focus: pending work queue + governance summary for owned groups
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-admin">
+
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links">
+      <a class="nav-link active">Home</a>
+      <a class="nav-link">Groups</a>
+      <a class="nav-link">Datasets</a>
+      <a class="nav-link">Collections</a>
+      <a class="nav-link">Access Requests</a>
+    </div>
+    <div class="nav-right">
+      <button class="notif">🔔<div class="notif-dot"></div></button>
+      <div class="avatar-btn">
+        <div class="av" style="background:linear-gradient(135deg,#2563eb,#0d9488)">E</div>
+        Erin Park ▾
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="flex-c gap-12">
+        <div class="hero-greeting">Good morning, Erin.</div>
+        <span class="role-pill admin">Group Admin</span>
+      </div>
+      <div class="hero-sub">You have <strong style="color:var(--amber)">4 access requests</strong> awaiting your review across 2 groups.</div>
+      <div class="hero-meta">
+        <div class="hero-tag">🧪 Admin of <strong style="color:var(--text)">AI Lab</strong></div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">🤖 Admin of <strong style="color:var(--text)">Robotics Sub-Lab</strong></div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">👁 Oversight of <strong style="color:var(--text)">2 groups</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <!-- TOP STATS -->
+    <div class="stat-row cols-4 fa d1">
+      <div class="stat-card urgent">
+        <div class="stat-val amber">4</div>
+        <div class="stat-label">Pending Reviews</div>
+        <div class="stat-delta">↑ 2 since yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">14</div>
+        <div class="stat-label">Datasets under my groups</div>
+        <div class="stat-delta">2 added this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">31</div>
+        <div class="stat-label">Active Grants</div>
+        <div class="stat-delta">across 2 groups</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">8</div>
+        <div class="stat-label">Group Members</div>
+        <div class="stat-delta">4 direct · 4 transitive</div>
+      </div>
+    </div>
+
+    <div class="dash-grid-admin">
+      <!-- LEFT COLUMN -->
+      <div class="full-col">
+
+        <!-- PENDING REVIEW — primary work surface -->
+        <div class="fa d2">
+          <div class="section-label">Needs your review</div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="flex-c gap-8">
+                <span class="panel-title">Access Requests</span>
+                <span class="badge urgent-count">4 pending</span>
+              </div>
+              <button class="panel-action">View all →</button>
+            </div>
+            <div class="panel-body">
+              <div class="req-card urgent-row">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Frank Torres</strong> — <span class="mono" style="color:var(--text-muted);font-size:11px">read_data, download</span></div>
+                  <div class="req-meta">
+                    <span>📄 Genomics Run 2024</span>
+                    <span>🧪 AI Lab</span>
+                    <span>⏱ 2 days ago</span>
+                  </div>
+                </div>
+                <div class="req-actions" style="flex-direction:column; align-items:flex-end">
+                  <button class="btn btn-amber btn-sm">Review</button>
+                  <span class="row-time">2d ago</span>
+                </div>
+              </div>
+
+              <div class="req-card urgent-row">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Maria Chen</strong> — <span class="mono" style="color:var(--text-muted);font-size:11px">view_metadata</span></div>
+                  <div class="req-meta">
+                    <span>📄 Genomics Run 2024</span>
+                    <span>🧪 AI Lab</span>
+                    <span>⏱ 5 days ago</span>
+                  </div>
+                </div>
+                <div class="req-actions" style="flex-direction:column; align-items:flex-end">
+                  <button class="btn btn-amber btn-sm">Review</button>
+                  <span class="row-time">5d ago</span>
+                </div>
+              </div>
+
+              <div class="req-card">
+                <span class="req-icon">📦</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Henry Park</strong> — <span class="mono" style="color:var(--text-muted);font-size:11px">list_datasets, view_metadata</span></div>
+                  <div class="req-meta">
+                    <span>📦 ML Benchmarks</span>
+                    <span>🧪 AI Lab</span>
+                    <span>⏱ 1 week ago</span>
+                  </div>
+                </div>
+                <div class="req-actions" style="flex-direction:column; align-items:flex-end">
+                  <button class="btn btn-secondary btn-sm">Review</button>
+                  <span class="row-time">7d ago</span>
+                </div>
+              </div>
+
+              <div class="req-card">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Irene Zhang</strong> — <span class="mono" style="color:var(--text-muted);font-size:11px">compute</span></div>
+                  <div class="req-meta">
+                    <span>📄 Vision Benchmark 2024</span>
+                    <span>🤖 Robotics Sub-Lab</span>
+                    <span>⏱ 1 week ago</span>
+                  </div>
+                </div>
+                <div class="req-actions" style="flex-direction:column; align-items:flex-end">
+                  <button class="btn btn-secondary btn-sm">Review</button>
+                  <span class="row-time">8d ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRANTS EXPIRING SOON -->
+        <div class="fa d3">
+          <div class="section-label">Expiring grants — action may be needed</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Grants Expiring Soon</span>
+              <button class="panel-action">Manage grants →</button>
+            </div>
+            <div class="panel-body">
+              <div class="expiry-row">
+                <span style="font-size:14px">👤</span>
+                <div style="flex:1; min-width:0">
+                  <div class="row-title">Dr. Maria Chen → Genomics Run 2024</div>
+                  <div class="row-sub mono" style="font-size:10px">view_metadata · read_data</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:11px; color:var(--red)">Dec 31, 2025</div>
+                  <div class="expiry-bar" style="margin-top:4px; margin-left:auto">
+                    <div class="expiry-fill" style="width:85%; background:var(--red)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="expiry-row">
+                <span style="font-size:14px">👥</span>
+                <div style="flex:1; min-width:0">
+                  <div class="row-title">External Collaborators → Training Set v3</div>
+                  <div class="row-sub mono" style="font-size:10px">read_data</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:11px; color:var(--amber)">Mar 1, 2026</div>
+                  <div class="expiry-bar" style="margin-top:4px; margin-left:auto">
+                    <div class="expiry-fill" style="width:55%; background:var(--amber)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="expiry-row">
+                <span style="font-size:14px">👥</span>
+                <div style="flex:1; min-width:0">
+                  <div class="row-title">Bio Lab → Genomics Suite</div>
+                  <div class="row-sub mono" style="font-size:10px">read_data · list_datasets</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:11px; color:var(--text-muted)">Jun 30, 2026</div>
+                  <div class="expiry-bar" style="margin-top:4px; margin-left:auto">
+                    <div class="expiry-fill" style="width:25%; background:var(--teal)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECENT ACTIVITY IN MY GROUPS -->
+        <div class="fa d4">
+          <div class="section-label">Recent activity in my groups</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Activity Feed</span>
+              <button class="panel-action">Audit log →</button>
+            </div>
+            <div class="panel-body">
+              <div class="activity-row">
+                <div class="act-dot teal"></div>
+                <div class="act-text"><strong>Grant created</strong> — <a>Genomics Run 2024</a> → read_data granted to <strong>Bio Lab</strong> by you</div>
+                <div class="act-time">2h ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot blue"></div>
+                <div class="act-text"><strong>Member added</strong> — <strong>Bob Chen</strong> added to AI Lab by you</div>
+                <div class="act-time">1d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot amber"></div>
+                <div class="act-text"><strong>Access request</strong> — <strong>Frank Torres</strong> requested read_data on <a>Genomics Run 2024</a></div>
+                <div class="act-time">2d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot red"></div>
+                <div class="act-text"><strong>Grant revoked</strong> — download revoked on <a>Training Set v3</a> for <strong>External Collab.</strong> by Dana Reyes</div>
+                <div class="act-time">3d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot violet"></div>
+                <div class="act-text"><strong>Dataset added</strong> to collection <a>Genomics Suite</a> — Reference Genome HG38</div>
+                <div class="act-time">5d ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="full-col">
+
+        <!-- MY GROUPS -->
+        <div class="fa d2">
+          <div class="section-label">My groups</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Administered Groups</span>
+              <button class="panel-action">All groups →</button>
+            </div>
+            <div class="panel-body">
+              <div class="group-row">
+                <span class="group-icon">🧪</span>
+                <div class="group-info">
+                  <div class="group-name">AI Lab</div>
+                  <div class="group-path">research-center / ai-lab</div>
+                </div>
+                <div class="group-stats">
+                  <span class="badge admin-b">Admin</span>
+                  <span style="font-size:10px; color:var(--text-muted); font-family:monospace">8 members · 14 datasets</span>
+                </div>
+              </div>
+              <div class="group-row">
+                <span class="group-icon">🤖</span>
+                <div class="group-info">
+                  <div class="group-name">Robotics Sub-Lab</div>
+                  <div class="group-path">research-center / ai-lab / robotics-sub-lab</div>
+                </div>
+                <div class="group-stats">
+                  <span class="badge admin-b">Admin</span>
+                  <span style="font-size:10px; color:var(--text-muted); font-family:monospace">4 members · 3 datasets</span>
+                </div>
+              </div>
+              <hr class="div">
+              <div class="group-row" style="opacity:.7">
+                <span class="group-icon">👁</span>
+                <div class="group-info">
+                  <div class="group-name">Vision Sub-Lab</div>
+                  <div class="group-path mono" style="font-size:10px; color:var(--text-muted)">oversight only — read-only</div>
+                </div>
+                <div class="group-stats">
+                  <span class="badge" style="background:var(--amber-dim);color:#fbbf24;border:1px solid #5a3d00;font-size:9px">Oversight</span>
+                </div>
+              </div>
+              <div class="group-row" style="opacity:.7">
+                <span class="group-icon">👁</span>
+                <div class="group-info">
+                  <div class="group-name">Bio Lab</div>
+                  <div class="group-path mono" style="font-size:10px; color:var(--text-muted)">oversight only — read-only</div>
+                </div>
+                <div class="group-stats">
+                  <span class="badge" style="background:var(--amber-dim);color:#fbbf24;border:1px solid #5a3d00;font-size:9px">Oversight</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="fa d3">
+          <div class="section-label">Quick actions</div>
+          <div class="quick-actions">
+            <a class="qa-btn">
+              <span class="qa-icon">＋</span>
+              <span class="qa-label">Create Subgroup</span>
+              <span class="qa-desc">Add a child group under AI Lab</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">📦</span>
+              <span class="qa-label">New Collection</span>
+              <span class="qa-desc">Group datasets for bulk access</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">🔑</span>
+              <span class="qa-label">Grant Access</span>
+              <span class="qa-desc">Issue a grant on a dataset</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">👤</span>
+              <span class="qa-label">Add Member</span>
+              <span class="qa-desc">Add someone to AI Lab</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- DATASETS SUMMARY -->
+        <div class="fa d4">
+          <div class="section-label">Recently updated datasets</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Datasets</span>
+              <button class="panel-action">View all →</button>
+            </div>
+            <div class="panel-body">
+              <div class="list-row">
+                <span class="row-icon">📄</span>
+                <div class="row-main">
+                  <div class="row-title">Genomics Run 2024</div>
+                  <div class="row-sub">AI Lab · OMICS · 1.2 TB</div>
+                </div>
+                <div class="row-right">
+                  <span class="badge active">Active</span>
+                  <span class="row-time">2d ago</span>
+                </div>
+              </div>
+              <div class="list-row">
+                <span class="row-icon">📄</span>
+                <div class="row-main">
+                  <div class="row-title">Training Set v3</div>
+                  <div class="row-sub">AI Lab · ML · 340 GB</div>
+                </div>
+                <div class="row-right">
+                  <span class="badge active">Active</span>
+                  <span class="row-time">1w ago</span>
+                </div>
+              </div>
+              <div class="list-row">
+                <span class="row-icon">📄</span>
+                <div class="row-main">
+                  <div class="row-title">Vision Benchmark 2024</div>
+                  <div class="row-sub">Robotics Sub-Lab · ML · 88 GB</div>
+                </div>
+                <div class="row-right">
+                  <span class="badge active">Active</span>
+                  <span class="row-time">3w ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN B: NON-ADMIN MEMBER DASHBOARD
+     User: Bob Chen — member of AI Lab (direct), Research Center (transitive)
+     Focus: my access, my requests, my groups — personal access hub
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-nonadmin">
+
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links">
+      <a class="nav-link active">Home</a>
+      <a class="nav-link">Groups</a>
+      <a class="nav-link">Datasets</a>
+      <a class="nav-link">Collections</a>
+      <a class="nav-link">Access Requests</a>
+    </div>
+    <div class="nav-right">
+      <button class="notif">🔔</button>
+      <div class="avatar-btn">
+        <div class="av" style="background:linear-gradient(135deg,#374151,#1f2937)">B</div>
+        Bob Chen ▾
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="flex-c gap-12">
+        <div class="hero-greeting">Welcome back, Bob.</div>
+        <span class="role-pill member">Member</span>
+      </div>
+      <div class="hero-sub">You have access to <strong style="color:var(--text)">6 datasets</strong> across <strong style="color:var(--text)">2 groups</strong>.</div>
+      <div class="hero-meta">
+        <div class="hero-tag">🧪 Member of <strong style="color:var(--text)">AI Lab</strong></div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">🏢 Member of <strong style="color:var(--text)">Research Center</strong> <span style="color:var(--text-dim);font-size:10px">(transitive)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- STATS -->
+    <div class="stat-row cols-3 fa d1">
+      <div class="stat-card ok">
+        <div class="stat-val teal">6</div>
+        <div class="stat-label">Datasets I can access</div>
+        <div class="stat-delta">via grants + group membership</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">2</div>
+        <div class="stat-label">Groups I belong to</div>
+        <div class="stat-delta">1 direct · 1 transitive</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">1</div>
+        <div class="stat-label">Pending request</div>
+        <div class="stat-delta">awaiting review</div>
+      </div>
+    </div>
+
+    <div class="dash-grid-member">
+      <!-- LEFT -->
+      <div class="full-col">
+
+        <!-- MY ACCESS -->
+        <div class="fa d2">
+          <div class="section-label">My dataset access</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Accessible Datasets</span>
+              <button class="panel-action">Browse all →</button>
+            </div>
+            <div class="panel-body">
+
+              <div class="grant-row">
+                <span style="font-size:15px">📄</span>
+                <div class="grant-resource">
+                  <div class="grant-name">Genomics Run 2024</div>
+                  <div class="grant-source">via AI Lab membership · owner: AI Lab</div>
+                </div>
+                <div class="grant-types">
+                  <span class="access-pill">read_data</span>
+                  <span class="access-pill">download</span>
+                  <span class="access-pill">view_metadata</span>
+                </div>
+              </div>
+
+              <div class="grant-row">
+                <span style="font-size:15px">📄</span>
+                <div class="grant-resource">
+                  <div class="grant-name">Training Set v3</div>
+                  <div class="grant-source">via AI Lab membership · owner: AI Lab</div>
+                </div>
+                <div class="grant-types">
+                  <span class="access-pill">read_data</span>
+                  <span class="access-pill">view_metadata</span>
+                </div>
+              </div>
+
+              <div class="grant-row">
+                <span style="font-size:15px">📄</span>
+                <div class="grant-resource">
+                  <div class="grant-name">Vision Benchmark 2024</div>
+                  <div class="grant-source">via AI Lab membership · owner: Robotics Sub-Lab</div>
+                </div>
+                <div class="grant-types">
+                  <span class="access-pill">view_metadata</span>
+                  <span class="access-pill">list_files</span>
+                </div>
+              </div>
+
+              <div class="grant-row">
+                <span style="font-size:15px">📦</span>
+                <div class="grant-resource">
+                  <div class="grant-name">Public Research Collection</div>
+                  <div class="grant-source">direct grant to you · 4 datasets · owner: Bio Lab</div>
+                </div>
+                <div class="grant-types">
+                  <span class="access-pill">view_metadata</span>
+                  <span class="access-pill">list_datasets</span>
+                </div>
+              </div>
+
+              <div style="padding:10px 18px; border-top:1px solid var(--border)">
+                <button class="btn btn-primary btn-sm">＋ Request Access to more datasets</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MY ACCESS REQUESTS -->
+        <div class="fa d3">
+          <div class="section-label">My access requests</div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="flex-c gap-8">
+                <span class="panel-title">Requests</span>
+              </div>
+              <button class="btn btn-primary btn-sm">＋ New Request</button>
+            </div>
+            <div class="panel-body">
+              <div class="req-card">
+                <span class="req-icon">⏳</span>
+                <div class="req-body">
+                  <div class="req-title">Bio Lab Archive — <span class="mono" style="color:var(--text-muted);font-size:11px">download</span></div>
+                  <div class="req-meta">
+                    <span>📄 Bio Lab Archive v2</span>
+                    <span>Submitted Feb 22</span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <span class="badge pending">Under Review</span>
+                  <span class="row-time">23d ago</span>
+                </div>
+              </div>
+
+              <div class="req-card" style="opacity:.7">
+                <span class="req-icon">✅</span>
+                <div class="req-body">
+                  <div class="req-title">Public Dataset v2 — <span class="mono" style="color:var(--text-muted);font-size:11px">read_data</span></div>
+                  <div class="req-meta">
+                    <span>📄 Public Dataset v2</span>
+                    <span>Approved by Erin Park · Mar 1</span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <span class="badge approved">Approved</span>
+                  <span class="row-time">16d ago</span>
+                </div>
+              </div>
+
+              <div class="req-card" style="opacity:.7">
+                <span class="req-icon">❌</span>
+                <div class="req-body">
+                  <div class="req-title">Genomics Suite — <span class="mono" style="color:var(--text-muted);font-size:11px">view_metadata</span></div>
+                  <div class="req-meta">
+                    <span>📦 Genomics Suite</span>
+                    <span>Rejected by Dana Reyes · Feb 10</span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                  <span class="badge revoked">Rejected</span>
+                  <span class="row-time">35d ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT -->
+      <div class="full-col">
+
+        <!-- MY GROUPS -->
+        <div class="fa d2">
+          <div class="section-label">My groups</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Group Membership</span>
+              <button class="panel-action">Browse groups →</button>
+            </div>
+            <div class="panel-body">
+              <div class="group-row">
+                <span class="group-icon">🧪</span>
+                <div class="group-info">
+                  <div class="group-name">AI Lab</div>
+                  <div class="group-path">Direct member since Mar 2024</div>
+                </div>
+                <span class="badge member-b">Member</span>
+              </div>
+              <div class="group-row" style="opacity:.7">
+                <span class="group-icon">🏢</span>
+                <div class="group-info">
+                  <div class="group-name">Research Center</div>
+                  <div class="group-path" style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim)">↗ transitive via AI Lab</div>
+                </div>
+                <span class="badge member-b">Member</span>
+              </div>
+            </div>
+            <div class="callout info" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-bottom:none">
+              <span style="flex-shrink:0">ℹ</span>
+              <span>Being a member of AI Lab automatically makes you a member of Research Center. You cannot view or edit datasets owned by these groups unless you have an explicit grant.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DISCOVER DATASETS -->
+        <div class="fa d3">
+          <div class="section-label">Discover &amp; request</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Discoverable Datasets</span>
+              <button class="panel-action">See all →</button>
+            </div>
+            <div class="panel-body">
+              <div class="list-row">
+                <span class="row-icon">📄</span>
+                <div class="row-main">
+                  <div class="row-title">Reference Genome HG38</div>
+                  <div class="row-sub">Bio Lab · REFERENCE · 3.2 GB</div>
+                </div>
+                <button class="btn btn-ghost btn-sm">Request</button>
+              </div>
+              <div class="list-row">
+                <span class="row-icon">📦</span>
+                <div class="row-main">
+                  <div class="row-title">Genomics Suite</div>
+                  <div class="row-sub">AI Lab Collection · 3 datasets</div>
+                </div>
+                <button class="btn btn-ghost btn-sm">Request</button>
+              </div>
+              <div class="list-row">
+                <span class="row-icon">📄</span>
+                <div class="row-main">
+                  <div class="row-title">Sequencing Batch v3</div>
+                  <div class="row-sub">AI Lab · OMICS · 340 GB</div>
+                </div>
+                <button class="btn btn-ghost btn-sm">Request</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN C: PLATFORM ADMIN DASHBOARD
+     User: Sonia Adler — platform admin
+     Focus: system-wide health, governance signals, operational awareness
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-platform">
+
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links">
+      <a class="nav-link active">Home</a>
+      <a class="nav-link">Groups</a>
+      <a class="nav-link">Datasets</a>
+      <a class="nav-link">Collections</a>
+      <a class="nav-link">Access Requests</a>
+      <a class="nav-link" style="color:var(--violet)">⬡ Admin</a>
+    </div>
+    <div class="nav-right">
+      <button class="notif">🔔<div class="notif-dot"></div></button>
+      <div class="avatar-btn">
+        <div class="av" style="background:linear-gradient(135deg,var(--violet),#6d28d9)">S</div>
+        Sonia Adler ▾
+      </div>
+    </div>
+  </nav>
+
+  <div class="hero" style="background:linear-gradient(135deg,#0d1a2e 0%, #0d1228 100%)">
+    <div class="hero-inner">
+      <div class="flex-c gap-12">
+        <div class="hero-greeting">System Overview</div>
+        <span class="role-pill platform">Platform Admin</span>
+      </div>
+      <div class="hero-sub">Full governance authority across all groups and resources.</div>
+      <div class="hero-meta">
+        <div class="hero-tag">🏢 <strong style="color:var(--text)">12</strong> groups</div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">📄 <strong style="color:var(--text)">47</strong> datasets</div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">📦 <strong style="color:var(--text)">8</strong> collections</div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">🔑 <strong style="color:var(--text)">143</strong> active grants</div>
+        <div class="hero-tag" style="color:var(--border-hi)">·</div>
+        <div class="hero-tag">👤 <strong style="color:var(--text)">38</strong> users</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+
+    <!-- TOP STATS — system health signals -->
+    <div class="stat-row cols-5 fa d1">
+      <div class="stat-card urgent">
+        <div class="stat-val amber">9</div>
+        <div class="stat-label">Pending Reviews</div>
+        <div class="stat-delta">across all groups</div>
+      </div>
+      <div class="stat-card" style="border-color:#1a3820">
+        <div class="stat-val red">2</div>
+        <div class="stat-label">Groups without Admin</div>
+        <div class="stat-delta">⚠ needs attention</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val amber">5</div>
+        <div class="stat-label">Grants expiring &lt;30d</div>
+        <div class="stat-delta">may need renewal</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">3</div>
+        <div class="stat-label">Archived groups</div>
+        <div class="stat-delta">1 archived this month</div>
+      </div>
+      <div class="stat-card ok">
+        <div class="stat-val teal">143</div>
+        <div class="stat-label">Active Grants</div>
+        <div class="stat-delta">↑ 12 this month</div>
+      </div>
+    </div>
+
+    <div class="dash-grid-platform">
+
+      <!-- LEFT COLUMN -->
+      <div class="full-col">
+
+        <!-- GOVERNANCE ALERTS — platform-only signals -->
+        <div class="fa d2">
+          <div class="section-label">Governance attention needed</div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="flex-c gap-8">
+                <span class="panel-title">Alerts</span>
+                <span class="badge urgent-count">3</span>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="list-row urgent-row" style="align-items:flex-start; padding-top:13px; padding-bottom:13px">
+                <span class="row-icon">⚠️</span>
+                <div class="row-main">
+                  <div class="row-title">2 groups have no active admin</div>
+                  <div class="row-sub" style="margin-top:4px">Legacy Core Lab, Synthesis Lab — no governance authority assigned. Datasets owned by these groups cannot be managed.</div>
+                </div>
+                <button class="btn btn-amber btn-sm" style="flex-shrink:0;margin-top:2px">Fix</button>
+              </div>
+              <div class="list-row" style="align-items:flex-start; padding-top:13px; padding-bottom:13px">
+                <span class="row-icon">🕐</span>
+                <div class="row-main">
+                  <div class="row-title">5 grants expiring within 30 days</div>
+                  <div class="row-sub" style="margin-top:4px">Access may lapse for active users. Admins have not been notified yet.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" style="flex-shrink:0;margin-top:2px">Review</button>
+              </div>
+              <div class="list-row" style="align-items:flex-start; padding-top:13px; padding-bottom:13px">
+                <span class="row-icon">📋</span>
+                <div class="row-main">
+                  <div class="row-title">9 access requests stale for &gt;7 days</div>
+                  <div class="row-sub" style="margin-top:4px">Requests unreviewed across multiple groups. Requesters may be blocked on work.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" style="flex-shrink:0;margin-top:2px">Review</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALL PENDING REQUESTS — system-wide -->
+        <div class="fa d3">
+          <div class="section-label">All pending access requests — system-wide</div>
+          <div class="panel">
+            <div class="panel-head">
+              <div class="flex-c gap-8">
+                <span class="panel-title">Access Requests</span>
+                <span class="badge urgent-count">9 pending</span>
+              </div>
+              <button class="panel-action">View all →</button>
+            </div>
+            <div class="panel-body">
+              <div class="req-card urgent-row">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Frank Torres</strong> → read_data, download on <a style="color:var(--blue)">Genomics Run 2024</a></div>
+                  <div class="req-meta"><span>🧪 AI Lab</span><span>Admin: Erin Park</span><span style="color:var(--red)">⏱ 8 days · overdue</span></div>
+                </div>
+                <span class="badge pending">Pending</span>
+              </div>
+              <div class="req-card urgent-row">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Maria Chen</strong> → view_metadata on <a style="color:var(--blue)">Genomics Run 2024</a></div>
+                  <div class="req-meta"><span>🧪 AI Lab</span><span>Admin: Erin Park</span><span style="color:var(--amber)">⏱ 5 days</span></div>
+                </div>
+                <span class="badge pending">Pending</span>
+              </div>
+              <div class="req-card">
+                <span class="req-icon">📦</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Henry Park</strong> → list_datasets on <a style="color:var(--blue)">ML Benchmarks</a></div>
+                  <div class="req-meta"><span>🧪 AI Lab</span><span>Admin: Erin Park</span><span>⏱ 7 days</span></div>
+                </div>
+                <span class="badge pending">Pending</span>
+              </div>
+              <div class="req-card">
+                <span class="req-icon">📋</span>
+                <div class="req-body">
+                  <div class="req-title"><strong>Nadia Ross</strong> → read_data on <a style="color:var(--blue)">Proteomics Set A</a></div>
+                  <div class="req-meta"><span>🧬 Bio Lab</span><span>Admin: Irene Zhang</span><span>⏱ 4 days</span></div>
+                </div>
+                <span class="badge pending">Pending</span>
+              </div>
+              <div style="padding:10px 18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-muted)">
+                + 5 more requests across Physics Dept, Synthesis Lab →
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SYSTEM-WIDE ACTIVITY -->
+        <div class="fa d4">
+          <div class="section-label">Recent system activity</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Platform Audit Feed</span>
+              <button class="panel-action">Full audit log →</button>
+            </div>
+            <div class="panel-body">
+              <div class="activity-row">
+                <div class="act-dot blue"></div>
+                <div class="act-text"><strong>Group created</strong> — <a>NLP Research Team</a> under AI Lab by <strong>Erin Park</strong></div>
+                <div class="act-time">1h ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot teal"></div>
+                <div class="act-text"><strong>Grant created</strong> — <a>Genomics Run 2024</a> → read_data granted to Bio Lab by <strong>Erin Park</strong></div>
+                <div class="act-time">3h ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot red"></div>
+                <div class="act-text"><strong>Grant revoked</strong> — download revoked on <a>Training Set v3</a> for External Collab. by <strong>Dana Reyes</strong></div>
+                <div class="act-time">1d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot amber"></div>
+                <div class="act-text"><strong>Group archived</strong> — <a>Legacy Core Lab</a> archived by <strong>Sonia Adler</strong></div>
+                <div class="act-time">2d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot violet"></div>
+                <div class="act-text"><strong>Dataset transferred</strong> — <a>Proteomics Set A</a> ownership moved from Synthesis Lab → Bio Lab by <strong>Sonia Adler</strong></div>
+                <div class="act-time">3d ago</div>
+              </div>
+              <div class="activity-row">
+                <div class="act-dot blue"></div>
+                <div class="act-text"><strong>New user</strong> — <strong>Nadia Ross</strong> joined the platform</div>
+                <div class="act-time">4d ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="full-col">
+
+        <!-- GROUPS WITHOUT ADMINS — critical signal -->
+        <div class="fa d2">
+          <div class="section-label">Groups needing attention</div>
+          <div class="panel" style="border-color:#3b1a00">
+            <div class="panel-head" style="background:#120900">
+              <div class="flex-c gap-8">
+                <span class="panel-title" style="color:var(--amber)">⚠ No Admin Assigned</span>
+                <span class="badge urgent-count">2</span>
+              </div>
+              <button class="panel-action">Fix all →</button>
+            </div>
+            <div class="panel-body">
+              <div class="group-row">
+                <span class="group-icon">🗄</span>
+                <div class="group-info">
+                  <div class="group-name" style="color:var(--amber)">Legacy Core Lab</div>
+                  <div class="group-path">root / legacy-core-lab · archived · 3 datasets</div>
+                </div>
+                <button class="btn btn-amber btn-sm">Assign Admin</button>
+              </div>
+              <div class="group-row">
+                <span class="group-icon">⚗️</span>
+                <div class="group-info">
+                  <div class="group-name" style="color:var(--amber)">Synthesis Lab</div>
+                  <div class="group-path">research-center / bio-lab / synthesis-lab · 1 dataset</div>
+                </div>
+                <button class="btn btn-amber btn-sm">Assign Admin</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALL GROUPS — compact tree -->
+        <div class="fa d3">
+          <div class="section-label">All groups</div>
+          <div class="panel">
+            <div class="panel-head">
+              <span class="panel-title">Group Overview</span>
+              <button class="panel-action">Manage groups →</button>
+            </div>
+            <div class="panel-body">
+              <div class="list-row">
+                <span class="row-icon">🏢</span>
+                <div class="row-main"><div class="row-title">Research Center</div><div class="row-sub">root · 14 members</div></div>
+                <div class="row-right"><span class="badge active">Active</span><span style="font-size:10px;color:var(--text-dim);font-family:monospace">4 subgroups</span></div>
+              </div>
+              <div class="list-row" style="padding-left:28px">
+                <span class="row-icon">🧪</span>
+                <div class="row-main"><div class="row-title">AI Lab</div><div class="row-sub">8 members · 14 datasets</div></div>
+                <div class="row-right"><span class="badge active">Active</span></div>
+              </div>
+              <div class="list-row" style="padding-left:46px">
+                <span class="row-icon">🤖</span>
+                <div class="row-main"><div class="row-title">Robotics Sub-Lab</div><div class="row-sub">4 members</div></div>
+                <div class="row-right"><span class="badge active">Active</span></div>
+              </div>
+              <div class="list-row" style="padding-left:46px">
+                <span class="row-icon">👁</span>
+                <div class="row-main"><div class="row-title">Vision Sub-Lab</div><div class="row-sub">3 members</div></div>
+                <div class="row-right"><span class="badge active">Active</span></div>
+              </div>
+              <div class="list-row" style="padding-left:28px">
+                <span class="row-icon">🧬</span>
+                <div class="row-main"><div class="row-title">Bio Lab</div><div class="row-sub">6 members</div></div>
+                <div class="row-right"><span class="badge active">Active</span></div>
+              </div>
+              <div class="list-row">
+                <span class="row-icon">🏛</span>
+                <div class="row-main"><div class="row-title">Physics Department</div><div class="row-sub">root · 9 members</div></div>
+                <div class="row-right"><span class="badge active">Active</span></div>
+              </div>
+              <div class="list-row" style="opacity:.5">
+                <span class="row-icon">🗄</span>
+                <div class="row-main"><div class="row-title" style="text-decoration:line-through;color:var(--text-muted)">Legacy Core Lab</div><div class="row-sub">root · archived</div></div>
+                <div class="row-right"><span class="badge revoked" style="font-size:9px">Archived</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLATFORM QUICK ACTIONS -->
+        <div class="fa d4">
+          <div class="section-label">Platform actions</div>
+          <div class="quick-actions">
+            <a class="qa-btn">
+              <span class="qa-icon">🏢</span>
+              <span class="qa-label">Create Group</span>
+              <span class="qa-desc">Root or nested, any position</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">🗄</span>
+              <span class="qa-label">Unarchive Group</span>
+              <span class="qa-desc">Restore a closed group</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">🔍</span>
+              <span class="qa-label">Audit Log</span>
+              <span class="qa-desc">Full platform event history</span>
+            </a>
+            <a class="qa-btn">
+              <span class="qa-icon">📊</span>
+              <span class="qa-label">Access Report</span>
+              <span class="qa-desc">Who has access to what</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function sw(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('screen-' + id);
+  if (el) {
+    el.classList.add('active');
+    el.querySelectorAll('.fa').forEach(e => {
+      e.style.animation = 'none';
+      void e.offsetHeight;
+      e.style.animation = '';
+    });
+  }
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

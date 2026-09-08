@@ -62,11 +62,11 @@
                 Status
               </dt>
               <dd>
-                <ModernChip
-                  :color="props.collection.is_archived ? 'accent' : 'success'"
+                <Badge
+                  :color="props.collection.is_archived ? 'neutral' : 'success'"
                 >
                   {{ props.collection.is_archived ? "Archived" : "Active" }}
-                </ModernChip>
+                </Badge>
               </dd>
             </div>
 

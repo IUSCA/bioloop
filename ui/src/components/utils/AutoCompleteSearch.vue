@@ -34,8 +34,9 @@
               Recent Searches
             </h6>
             <button
+              type="button"
               @click="clearAllRecent"
-              class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2"
+              class="focus-ring text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2"
             >
               Clear All
             </button>
@@ -62,8 +63,10 @@
               </div>
             </slot>
             <button
+              type="button"
+              :aria-label="`Remove ${term} from recent searches`"
               @click.stop="removeRecent(term)"
-              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-2"
+              class="focus-ring text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-2"
             >
               <i-mdi:close class="text-sm" />
             </button>

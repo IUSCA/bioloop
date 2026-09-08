@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grant Views — Data Governance Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0c1420;
+  --surface:    #111d2e;
+  --panel:      #152030;
+  --raised:     #1c2d40;
+  --hover:      #223448;
+  --border:     #22344a;
+  --border-hi:  #2c4260;
+
+  --text:       #dce6f0;
+  --text-muted: #6e8aa4;
+  --text-dim:   #374f66;
+
+  --blue:       #3b82f6;
+  --blue-dim:   #162d50;
+  --teal:       #0d9488;
+  --teal-dim:   #052e2a;
+  --amber:      #f59e0b;
+  --amber-dim:  #321d00;
+  --red:        #ef4444;
+  --red-dim:    #2c0a0a;
+  --violet:     #8b5cf6;
+  --violet-dim: #1e1040;
+  --green:      #22c55e;
+  --green-dim:  #092418;
+  --slate:      #475569;
+  --slate-dim:  #111c28;
+
+  --r:  5px;
+  --rl: 10px;
+  --rx: 14px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #070f1a;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── SWITCHER ─────────────────────────────────────── */
+.switcher {
+  position: sticky; top: 0; z-index: 200;
+  background: #040b14;
+  border-bottom: 1px solid var(--border);
+  height: 44px;
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 4px;
+  overflow-x: auto;
+}
+.sw-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 2px;
+  padding-right: 18px; border-right: 1px solid var(--border);
+  margin-right: 12px; white-space: nowrap; flex-shrink: 0;
+}
+.sw-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px; color: var(--text-muted);
+  padding: 0 14px; height: 44px; white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+}
+.sw-btn:hover { color: var(--text); }
+.sw-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+.screen { display: none; min-height: calc(100vh - 44px); }
+.screen.active { display: block; }
+
+/* ── TOPNAV ───────────────────────────────────────── */
+.topnav {
+  height: 52px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 24px;
+  position: sticky; top: 44px; z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 8px; margin-right: 36px; }
+.logo-mark { width: 28px; height: 28px; background: linear-gradient(135deg, var(--blue), var(--teal)); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+.logo-text { font-family: 'DM Serif Display', serif; font-size: 15px; }
+.nav-links { display: flex; gap: 2px; flex: 1; }
+.nav-link { color: var(--text-muted); text-decoration: none; font-size: 13px; padding: 6px 11px; border-radius: var(--r); transition: color .1s, background .1s; }
+.nav-link:hover { color: var(--text); background: var(--raised); }
+.nav-link.active { color: var(--text); background: var(--raised); }
+.nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.av { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.avatar-btn { display: flex; align-items: center; gap: 7px; background: var(--raised); border: 1px solid var(--border); border-radius: var(--r); padding: 5px 10px; cursor: pointer; font-size: 12px; color: var(--text); }
+
+/* ── PAGE SHELL ───────────────────────────────────── */
+.page { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
+.page-title { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+.page-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 28px; }
+.section { margin-bottom: 40px; }
+.section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-dim);
+  margin-bottom: 12px; padding-left: 2px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+
+/* ── CONTEXT NOTE ─────────────────────────────────── */
+.context-note {
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 12px;
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* ── BUTTONS ──────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: var(--r);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; border: none; transition: all .12s;
+}
+.btn-sm { padding: 4px 9px; font-size: 11px; }
+.btn-xs { padding: 3px 7px; font-size: 10px; }
+.btn-ghost { background: none; color: var(--text-muted); border: 1px solid transparent; }
+.btn-ghost:hover { color: var(--text); border-color: var(--border); background: var(--raised); }
+.btn-secondary { background: var(--raised); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { border-color: var(--border-hi); }
+.btn-danger { background: var(--red-dim); color: #f87171; border: 1px solid #4a1010; }
+.btn-danger:hover { background: #3a0d0d; border-color: #6b1a1a; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: #2563eb; }
+
+/* ── BADGES / PILLS ───────────────────────────────── */
+.pill {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  padding: 2px 7px; border-radius: 20px; display: inline-flex; align-items: center; gap: 3px;
+  white-space: nowrap;
+}
+.pill.active   { background: var(--teal-dim);  color: #2dd4bf; border: 1px solid #0a3a36; }
+.pill.revoked  { background: var(--red-dim);   color: #f87171; border: 1px solid #4a1010; }
+.pill.expired  { background: var(--slate-dim); color: #94a3b8; border: 1px solid #1e2d3d; }
+.pill.manual   { background: var(--raised);    color: var(--text-muted); border: 1px solid var(--border); }
+.pill.system   { background: var(--violet-dim);color: #c4b5fd; border: 1px solid #2a1660; }
+.pill.expiring { background: var(--amber-dim); color: #fbbf24; border: 1px solid #4a2d00; }
+
+.access-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--teal-dim); border: 1px solid #0a3a36;
+  border-radius: 4px; padding: 3px 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #2dd4bf;
+}
+.access-chip.collection { background: var(--blue-dim); color: #78aaff; border-color: #1a3860; }
+.access-chip.revoked-chip { background: var(--red-dim); color: #f87171; border-color: #4a1010; }
+
+/* subject chip */
+.subj-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px;
+}
+.subj-icon { font-size: 13px; flex-shrink: 0; }
+
+/* ── EXPIRY BAR ───────────────────────────────────── */
+.expiry-track { width: 52px; height: 3px; background: var(--raised); border-radius: 2px; overflow: hidden; }
+.expiry-fill  { height: 100%; border-radius: 2px; transition: width .3s; }
+
+/* ──────────────────────────────────────────────────
+   VIEW 1: COMPACT ROW
+   Used inside dashboard cards (expiring grants, recent grants, etc.)
+   ~40px tall, single line, no expansion
+────────────────────────────────────────────────── */
+.compact-list { background: var(--panel); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; }
+.compact-head { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.compact-head-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+.compact-head-action { font-size: 11px; color: var(--blue); background: none; border: none; cursor: pointer; }
+.compact-head-action:hover { text-decoration: underline; }
+
+.compact-row {
+  display: grid;
+  grid-template-columns: 26px 1fr 1fr minmax(80px, auto) 60px 28px;
+  align-items: center;
+  gap: 0;
+  padding: 0 16px;
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .1s;
+}
+.compact-row:last-child { border-bottom: none; }
+.compact-row:hover { background: var(--hover); }
+.compact-row.row-expiring { border-left: 2px solid var(--amber); padding-left: 14px; }
+.compact-row.row-expiring .compact-row { padding-left: 14px; }
+.compact-row.row-revoked { opacity: .55; }
+
+.cr-status { display: flex; align-items: center; }
+.cr-dot { width: 7px; height: 7px; border-radius: 50%; }
+.cr-dot.active  { background: var(--teal); box-shadow: 0 0 4px var(--teal); }
+.cr-dot.expiring{ background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+.cr-dot.revoked { background: var(--red); }
+.cr-dot.expired { background: var(--slate); }
+
+.cr-subject { display: flex; align-items: center; gap: 7px; min-width: 0; padding-right: 12px; }
+.cr-subject-icon { font-size: 13px; flex-shrink: 0; }
+.cr-subject-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr-subject-type { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text-dim); margin-left: 3px; }
+
+.cr-resource { display: flex; align-items: center; gap: 6px; min-width: 0; padding-right: 12px; }
+.cr-resource-icon { font-size: 12px; flex-shrink: 0; }
+.cr-resource-name { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.cr-access { display: flex; align-items: center; }
+
+.cr-expiry { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.cr-expiry-date { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); }
+.cr-expiry-date.soon { color: var(--amber); }
+.cr-expiry-date.never { color: var(--text-dim); }
+.cr-expiry-date.past  { color: var(--red); }
+
+.cr-action { display: flex; align-items: center; justify-content: center; }
+.cr-action-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 15px; padding: 4px; border-radius: 4px; transition: color .1s, background .1s; }
+.cr-action-btn:hover { color: var(--text); background: var(--raised); }
+
+/* ──────────────────────────────────────────────────
+   VIEW 2: ROW CARD
+   Used in grants tab of a resource (dataset/collection)
+   Expandable for provenance. Revoke action for admins.
+────────────────────────────────────────────────── */
+.grant-list { display: flex; flex-direction: column; gap: 0; background: var(--panel); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; }
+.grant-list-head { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.grant-list-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
+
+.grant-card { border-bottom: 1px solid var(--border); transition: background .1s; }
+.grant-card:last-child { border-bottom: none; }
+.grant-card.is-revoked { opacity: .5; }
+.grant-card.is-expiring { border-left: 2px solid var(--amber); }
+
+.grant-card-main {
+  display: grid;
+  grid-template-columns: 200px 1fr auto auto 32px;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 18px;
+  cursor: pointer;
+  transition: background .1s;
+}
+.grant-card.is-expiring .grant-card-main { padding-left: 16px; }
+.grant-card-main:hover { background: var(--hover); }
+
+.gc-subject { display: flex; flex-direction: column; gap: 3px; }
+.gc-subject-who { display: flex; align-items: center; gap: 6px; }
+.gc-subject-icon { font-size: 15px; }
+.gc-subject-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.gc-subject-detail { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); padding-left: 21px; }
+
+.gc-access { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.gc-validity { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.gc-valid-from { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+.gc-valid-until { font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+.gc-valid-until.never    { color: var(--text-dim); }
+.gc-valid-until.soon     { color: var(--amber); }
+.gc-valid-until.past     { color: var(--red); }
+
+.gc-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.gc-expand { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 4px 6px; border-radius: 4px; transition: color .1s, background .1s; line-height: 1; flex-shrink: 0; }
+.gc-expand:hover { color: var(--text); background: var(--raised); }
+.gc-expand.open { transform: rotate(180deg); color: var(--blue); }
+
+/* expanded provenance panel */
+.grant-card-detail {
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 14px 18px;
+  display: none;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+.grant-card-detail.open { display: grid; }
+.gcd-block { display: flex; flex-direction: column; gap: 8px; }
+.gcd-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--text-dim); }
+.gcd-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.gcd-key { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.gcd-val { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text); text-align: right; word-break: break-all; max-width: 180px; }
+.gcd-val.dim { color: var(--text-dim); }
+.gcd-val.amber { color: var(--amber); }
+.gcd-val.teal  { color: var(--teal); }
+
+/* revoke in-card confirmation */
+.revoke-confirm {
+  background: #160500; border-top: 1px solid #4a1010;
+  padding: 12px 18px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+}
+.revoke-confirm.open { display: flex; }
+.revoke-confirm-text { font-size: 12px; color: #f87171; flex: 1; }
+.revoke-confirm-text strong { font-weight: 600; }
+.revoke-reason {
+  flex: 1; background: var(--raised); border: 1px solid #4a1010;
+  border-radius: var(--r); padding: 6px 10px;
+  color: var(--text); font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
+  outline: none;
+}
+.revoke-reason:focus { border-color: var(--red); }
+.revoke-reason::placeholder { color: var(--text-dim); }
+
+/* ──────────────────────────────────────────────────
+   VIEW 3: FULL DETAIL MODAL
+────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(4, 10, 20, .75);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300;
+  padding: 24px;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--rx);
+  width: 640px; max-width: 100%;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  animation: modalIn .2s ease;
+  position: relative;
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(.97) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--surface); z-index: 10;
+}
+.modal-title-block { display: flex; flex-direction: column; gap: 6px; }
+.modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; line-height: 1.2; }
+.modal-id { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); }
+.modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 18px; padding: 2px; line-height: 1; }
+.modal-close:hover { color: var(--text); }
+
+.modal-body { padding: 0; }
+
+/* status banner at top of modal */
+.modal-status-bar {
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.modal-status-bar.status-active  { background: linear-gradient(90deg, var(--teal-dim) 0%, transparent 100%); }
+.modal-status-bar.status-revoked { background: linear-gradient(90deg, var(--red-dim) 0%, transparent 100%); }
+.modal-status-bar.status-expiring{ background: linear-gradient(90deg, var(--amber-dim) 0%, transparent 100%); }
+.msb-icon { font-size: 20px; }
+.msb-label { font-size: 13px; font-weight: 500; }
+.msb-sub   { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+/* modal sections */
+.modal-section { padding: 16px 22px; border-bottom: 1px solid var(--border); }
+.modal-section:last-child { border-bottom: none; }
+.ms-title {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+/* two-col fact grid */
+.fact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fact-item { display: flex; flex-direction: column; gap: 4px; }
+.fact-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+.fact-val { font-size: 13px; color: var(--text); }
+.fact-val.mono { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.fact-val.dim  { color: var(--text-muted); }
+
+/* person block */
+.person-block {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.person-av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+.person-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.person-email { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); }
+
+/* resource block */
+.resource-block {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.resource-block-icon { font-size: 20px; flex-shrink: 0; }
+.resource-block-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.resource-block-slug { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.resource-block-owner { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+/* access type block */
+.access-type-block {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 14px;
+  background: var(--teal-dim); border: 1px solid #0a3a36;
+  border-radius: var(--r);
+}
+.access-type-block.collection { background: var(--blue-dim); border-color: #1a3860; }
+.at-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.at-name { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text); font-weight: 500; }
+.at-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+/* timeline */
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+.tl-row:not(:last-child)::before {
+  content: ''; position: absolute;
+  left: 7px; top: 22px; bottom: -8px;
+  width: 1px; background: var(--border);
+}
+.tl-dot {
+  width: 15px; height: 15px; border-radius: 50%;
+  flex-shrink: 0; border: 2px solid; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px;
+}
+.tl-dot.created { border-color: var(--teal); background: var(--teal-dim); color: var(--teal); }
+.tl-dot.expiry  { border-color: var(--amber); background: var(--amber-dim); color: var(--amber); }
+.tl-dot.revoked { border-color: var(--red); background: var(--red-dim); color: var(--red); }
+.tl-dot.future  { border-color: var(--border); background: var(--raised); color: var(--text-dim); }
+.tl-content { flex: 1; }
+.tl-event { font-size: 12px; color: var(--text); font-weight: 500; }
+.tl-when  { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.tl-detail { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+/* modal footer */
+.modal-footer {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; bottom: 0; background: var(--surface);
+  gap: 10px;
+}
+.modal-footer-left { display: flex; align-items: center; gap: 8px; }
+.modal-footer-right { display: flex; gap: 8px; }
+
+/* revoke panel inside modal */
+.revoke-panel {
+  background: #120400; border: 1px solid #4a1010;
+  border-radius: var(--r); padding: 14px;
+  margin: 0 22px 16px;
+  display: none;
+  flex-direction: column; gap: 10px;
+}
+.revoke-panel.open { display: flex; }
+.revoke-panel-title { font-size: 12px; color: #f87171; font-weight: 600; }
+.revoke-input {
+  background: var(--raised); border: 1px solid #4a1010;
+  border-radius: var(--r); padding: 8px 10px;
+  color: var(--text); font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px; outline: none; width: 100%;
+  transition: border-color .12s;
+}
+.revoke-input:focus { border-color: var(--red); }
+.revoke-input::placeholder { color: var(--text-dim); }
+.revoke-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ── MISC ─────────────────────────────────────────── */
+.flex { display: flex; }
+.flex-c { display: flex; align-items: center; }
+.gap-6  { gap: 6px;  }
+.gap-10 { gap: 10px; }
+.gap-12 { gap: 12px; }
+.mt-8   { margin-top: 8px; }
+.mt-12  { margin-top: 12px; }
+.dimtext { color: var(--text-muted); }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* anim */
+.fa { animation: fa .3s ease both; }
+@keyframes fa { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.d1{animation-delay:.04s} .d2{animation-delay:.09s} .d3{animation-delay:.14s}
+.d4{animation-delay:.19s} .d5{animation-delay:.24s} .d6{animation-delay:.29s}
+
+/* group badge on resource block */
+.group-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--raised); border: 1px solid var(--border);
+  border-radius: 3px; padding: 2px 7px;
+  font-size: 10px; color: var(--text-muted);
+  font-family: 'IBM Plex Mono', monospace;
+}
+</style>
+</head>
+<body>
+
+<nav class="switcher">
+  <span class="sw-label">Grant Views</span>
+  <button class="sw-btn active" onclick="sw('compact')">1 — Compact Row</button>
+  <button class="sw-btn" onclick="sw('rowcard')">2 — Row Card (Resource Grants Tab)</button>
+  <button class="sw-btn" onclick="sw('modal')">3 — Full Detail Modal</button>
+</nav>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 1 — COMPACT VIEW
+     Used in: dashboard cards (expiring grants, recent grants, my access)
+     Fits in 44px rows. No expansion, click navigates to resource.
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-compact">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links"><a class="nav-link active">Home</a><a class="nav-link">Datasets</a><a class="nav-link">Collections</a></div>
+    <div class="nav-right"><div class="avatar-btn"><div class="av" style="background:linear-gradient(135deg,#2563eb,#0d9488)">E</div>Erin Park ▾</div></div>
+  </nav>
+
+  <div class="page">
+    <div class="page-title fa d1">Compact Grant Rows</div>
+    <div class="page-desc fa d2">Used inside dashboard panels — expiring grants, recent grants, access summary. Fixed 44px height, no expand. Clicking navigates to the resource's access tab.</div>
+
+    <!-- Column header reference -->
+    <div style="display:grid; grid-template-columns:26px 1fr 1fr minmax(80px,auto) 60px 28px; gap:0; padding:0 16px; height:30px; align-items:center; margin-bottom:2px">
+      <div></div>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);font-weight:600;font-family:'IBM Plex Mono',monospace">Subject</div>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);font-weight:600;font-family:'IBM Plex Mono',monospace">Resource</div>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);font-weight:600;font-family:'IBM Plex Mono',monospace">Access Type</div>
+      <div style="font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);font-weight:600;font-family:'IBM Plex Mono',monospace;text-align:right">Expires</div>
+      <div></div>
+    </div>
+
+    <!-- EXAMPLE 1: Expiring grants panel (dashboard) -->
+    <div class="section fa d2">
+      <div class="section-label">Expiring grants — example dashboard card</div>
+      <div class="compact-list">
+        <div class="compact-head">
+          <div class="flex-c gap-10">
+            <span class="compact-head-title">Grants Expiring Soon</span>
+            <span class="pill expiring">3 within 30 days</span>
+          </div>
+          <button class="compact-head-action">View all grants →</button>
+        </div>
+
+        <!-- Row: expiring soon, user subject, dataset resource -->
+        <div class="compact-row row-expiring">
+          <div class="cr-status"><div class="cr-dot expiring"></div></div>
+          <div class="cr-subject">
+            <span class="cr-subject-icon">👤</span>
+            <span class="cr-subject-name">Dr. Maria Chen</span>
+            <span class="cr-subject-type">USER</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📄</span>
+            <span class="cr-resource-name">Genomics Run 2024</span>
+          </div>
+          <div class="cr-access">
+            <span class="access-chip">DATASET:READ_DATA</span>
+          </div>
+          <div class="cr-expiry">
+            <span class="cr-expiry-date soon">Dec 31</span>
+            <div class="expiry-track"><div class="expiry-fill" style="width:88%;background:var(--red)"></div></div>
+          </div>
+          <div class="cr-action"><button class="cr-action-btn" title="Open grant">↗</button></div>
+        </div>
+
+        <!-- Row: expiring moderately soon, group subject, dataset -->
+        <div class="compact-row row-expiring">
+          <div class="cr-status"><div class="cr-dot expiring"></div></div>
+          <div class="cr-subject">
+            <span class="cr-subject-icon">👥</span>
+            <span class="cr-subject-name">External Collaborators</span>
+            <span class="cr-subject-type">GROUP</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📄</span>
+            <span class="cr-resource-name">Training Set v3</span>
+          </div>
+          <div class="cr-access">
+            <span class="access-chip">DATASET:READ_DATA</span>
+          </div>
+          <div class="cr-expiry">
+            <span class="cr-expiry-date soon">Mar 1, 2026</span>
+            <div class="expiry-track"><div class="expiry-fill" style="width:55%;background:var(--amber)"></div></div>
+          </div>
+          <div class="cr-action"><button class="cr-action-btn">↗</button></div>
+        </div>
+
+        <!-- Row: active, never expires, collection resource, group subject -->
+        <div class="compact-row">
+          <div class="cr-status"><div class="cr-dot active"></div></div>
+          <div class="cr-subject">
+            <span class="cr-subject-icon">👥</span>
+            <span class="cr-subject-name">Bio Lab</span>
+            <span class="cr-subject-type">GROUP</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📦</span>
+            <span class="cr-resource-name">Genomics Suite</span>
+          </div>
+          <div class="cr-access">
+            <span class="access-chip collection">COLLECTION:READ_DATA</span>
+          </div>
+          <div class="cr-expiry">
+            <span class="cr-expiry-date never">Never</span>
+            <div class="expiry-track"><div class="expiry-fill" style="width:15%;background:var(--teal)"></div></div>
+          </div>
+          <div class="cr-action"><button class="cr-action-btn">↗</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXAMPLE 2: My access (non-admin member view) -->
+    <div class="section fa d3">
+      <div class="section-label">My access — example non-admin dashboard card</div>
+      <div class="compact-list">
+        <div class="compact-head">
+          <span class="compact-head-title">My Dataset Access</span>
+          <button class="compact-head-action">Browse all →</button>
+        </div>
+
+        <!-- Active, via group membership -->
+        <div class="compact-row">
+          <div class="cr-status"><div class="cr-dot active"></div></div>
+          <div class="cr-subject" style="flex-direction:column;align-items:flex-start;gap:0">
+            <span style="font-size:12px;color:var(--text)">via AI Lab membership</span>
+            <span style="font-size:10px;color:var(--text-dim);font-family:monospace">group grant</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📄</span>
+            <span class="cr-resource-name">Genomics Run 2024</span>
+          </div>
+          <div class="cr-access"><span class="access-chip">DATASET:DOWNLOAD</span></div>
+          <div class="cr-expiry"><span class="cr-expiry-date never">Never</span></div>
+          <div class="cr-action"><button class="cr-action-btn">↗</button></div>
+        </div>
+
+        <!-- Active, direct grant -->
+        <div class="compact-row">
+          <div class="cr-status"><div class="cr-dot active"></div></div>
+          <div class="cr-subject" style="flex-direction:column;align-items:flex-start;gap:0">
+            <span style="font-size:12px;color:var(--text)">Direct grant</span>
+            <span style="font-size:10px;color:var(--text-dim);font-family:monospace">user grant</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📦</span>
+            <span class="cr-resource-name">Public Research Coll.</span>
+          </div>
+          <div class="cr-access"><span class="access-chip collection">COLLECTION:VIEW_META</span></div>
+          <div class="cr-expiry"><span class="cr-expiry-date soon">Jun 30</span></div>
+          <div class="cr-action"><button class="cr-action-btn">↗</button></div>
+        </div>
+
+        <!-- Revoked -->
+        <div class="compact-row row-revoked">
+          <div class="cr-status"><div class="cr-dot revoked"></div></div>
+          <div class="cr-subject">
+            <span class="cr-subject-icon">👤</span>
+            <span class="cr-subject-name">Bob Chen (you)</span>
+          </div>
+          <div class="cr-resource">
+            <span class="cr-resource-icon">📄</span>
+            <span class="cr-resource-name">Sequencing Batch v3</span>
+          </div>
+          <div class="cr-access"><span class="access-chip revoked-chip">DATASET:DOWNLOAD</span></div>
+          <div class="cr-expiry"><span class="cr-expiry-date past">Revoked Feb 3</span></div>
+          <div class="cr-action"><button class="cr-action-btn">↗</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 2 — ROW CARD VIEW
+     Used in: Access tab of a dataset or collection page
+     Resource context already known. Shows subject, access, validity.
+     Expandable provenance. Revoke action for admins.
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-rowcard">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links"><a class="nav-link">Groups</a><a class="nav-link active">Datasets</a><a class="nav-link">Collections</a></div>
+    <div class="nav-right"><div class="avatar-btn"><div class="av" style="background:linear-gradient(135deg,#2563eb,#0d9488)">E</div>Erin Park ▾</div></div>
+  </nav>
+
+  <div class="page">
+    <div class="page-title fa d1">Grant Row Cards</div>
+    <div class="page-desc fa d2">Used in the Access tab of a dataset or collection. Resource is already known from context. Supports expand-for-provenance and inline revoke confirmation.</div>
+
+    <div class="context-note fa d2">
+      <span>📄</span>
+      <span>Showing grants for <strong>Genomics Run 2024</strong> — AI Lab — OMICS</span>
+      <span style="margin-left:auto;color:var(--text-dim);font-size:10px;font-family:monospace">manage_grants ✓</span>
+    </div>
+
+    <div class="section fa d3">
+      <div class="section-label">Active grants</div>
+      <div class="grant-list">
+        <div class="grant-list-head">
+          <div class="flex-c gap-10">
+            <span class="grant-list-title">Grants</span>
+            <span class="pill active">3 active</span>
+          </div>
+          <div class="flex-c gap-6">
+            <button class="btn btn-secondary btn-sm">Filter</button>
+            <button class="btn btn-primary btn-sm">＋ Grant Access</button>
+          </div>
+        </div>
+
+        <!-- ─── GRANT 1: Active, group subject, never expires ─── -->
+        <div class="grant-card" id="gc1">
+          <div class="grant-card-main" onclick="toggleCard('gc1')">
+            <div class="gc-subject">
+              <div class="gc-subject-who">
+                <span class="gc-subject-icon">👥</span>
+                <span class="gc-subject-name">AI Lab</span>
+                <span class="pill manual" style="font-size:9px">GROUP</span>
+              </div>
+              <div class="gc-subject-detail">ai-lab · 8 members (incl. transitive)</div>
+            </div>
+            <div class="gc-access">
+              <span class="access-chip">DATASET:VIEW_METADATA</span>
+              <span class="access-chip">DATASET:LIST_FILES</span>
+              <span class="access-chip">DATASET:READ_DATA</span>
+              <span class="access-chip">DATASET:DOWNLOAD</span>
+            </div>
+            <div class="gc-validity">
+              <span class="gc-valid-from">From Mar 16, 2026</span>
+              <span class="gc-valid-until never">No expiry</span>
+            </div>
+            <div class="gc-actions">
+              <span class="pill active">Active</span>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); toggleRevoke('gc1-revoke')">Revoke</button>
+            </div>
+            <button class="gc-expand" id="gc1-expand" onclick="event.stopPropagation(); toggleCard('gc1')">▾</button>
+          </div>
+
+          <!-- Provenance expansion -->
+          <div class="grant-card-detail" id="gc1-detail">
+            <div class="gcd-block">
+              <div class="gcd-label">Grant</div>
+              <div class="gcd-row"><span class="gcd-key">ID</span><span class="gcd-val dim">00000000-0000-4000-8000-000000000aaa</span></div>
+              <div class="gcd-row"><span class="gcd-key">Created</span><span class="gcd-val">Mar 16, 2026 16:08</span></div>
+              <div class="gcd-row"><span class="gcd-key">Type</span><span class="gcd-val"><span class="pill manual">MANUAL</span></span></div>
+              <div class="gcd-row"><span class="gcd-key">Justification</span><span class="gcd-val dim">—</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Granted by</div>
+              <div class="gcd-row"><span class="gcd-key">Name</span><span class="gcd-val">Erin Park</span></div>
+              <div class="gcd-row"><span class="gcd-key">Email</span><span class="gcd-val dim">erin@uni.edu</span></div>
+              <div class="gcd-row"><span class="gcd-key">User ID</span><span class="gcd-val dim">3d24dee4…</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Subject detail</div>
+              <div class="gcd-row"><span class="gcd-key">Group</span><span class="gcd-val">AI Lab</span></div>
+              <div class="gcd-row"><span class="gcd-key">Slug</span><span class="gcd-val dim">ai-lab</span></div>
+              <div class="gcd-row"><span class="gcd-key">Members</span><span class="gcd-val">8</span></div>
+              <div class="gcd-row"><span class="gcd-key">Archived</span><span class="gcd-val teal">No</span></div>
+            </div>
+          </div>
+
+          <!-- Inline revoke confirmation -->
+          <div class="revoke-confirm" id="gc1-revoke">
+            <span style="font-size:16px">⚠️</span>
+            <div class="revoke-confirm-text">
+              <strong>Revoke access for AI Lab?</strong> All 8 members (including transitive) will lose access immediately.
+            </div>
+            <input class="revoke-reason" placeholder="Reason for revocation (optional)" style="max-width:220px">
+            <button class="btn btn-secondary btn-sm" onclick="toggleRevoke('gc1-revoke')">Cancel</button>
+            <button class="btn btn-danger btn-sm">Confirm Revoke</button>
+          </div>
+        </div>
+
+        <!-- ─── GRANT 2: Active, user subject, expiring ─── -->
+        <div class="grant-card is-expiring" id="gc2">
+          <div class="grant-card-main" onclick="toggleCard('gc2')">
+            <div class="gc-subject">
+              <div class="gc-subject-who">
+                <span class="gc-subject-icon">👤</span>
+                <span class="gc-subject-name">Dr. Maria Chen</span>
+                <span class="pill manual" style="font-size:9px">USER</span>
+              </div>
+              <div class="gc-subject-detail">maria@external.org · external collaborator</div>
+            </div>
+            <div class="gc-access">
+              <span class="access-chip">DATASET:VIEW_METADATA</span>
+              <span class="access-chip">DATASET:READ_DATA</span>
+            </div>
+            <div class="gc-validity">
+              <span class="gc-valid-from">From Jan 5, 2026</span>
+              <span class="gc-valid-until soon">⏱ Expires Dec 31, 2025</span>
+            </div>
+            <div class="gc-actions">
+              <span class="pill expiring">Expiring</span>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); toggleRevoke('gc2-revoke')">Revoke</button>
+            </div>
+            <button class="gc-expand" id="gc2-expand" onclick="event.stopPropagation(); toggleCard('gc2')">▾</button>
+          </div>
+          <div class="grant-card-detail" id="gc2-detail">
+            <div class="gcd-block">
+              <div class="gcd-label">Grant</div>
+              <div class="gcd-row"><span class="gcd-key">ID</span><span class="gcd-val dim">00000000-0000-4000-8000-000000000bbb</span></div>
+              <div class="gcd-row"><span class="gcd-key">Created</span><span class="gcd-val">Jan 5, 2026 09:22</span></div>
+              <div class="gcd-row"><span class="gcd-key">Type</span><span class="gcd-val"><span class="pill manual">MANUAL</span></span></div>
+              <div class="gcd-row"><span class="gcd-key">Justification</span><span class="gcd-val">External collaboration, Stanford–IU genomics project</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Granted by</div>
+              <div class="gcd-row"><span class="gcd-key">Name</span><span class="gcd-val">Dana Reyes</span></div>
+              <div class="gcd-row"><span class="gcd-key">Email</span><span class="gcd-val dim">dana@uni.edu</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Subject detail</div>
+              <div class="gcd-row"><span class="gcd-key">Name</span><span class="gcd-val">Dr. Maria Chen</span></div>
+              <div class="gcd-row"><span class="gcd-key">Email</span><span class="gcd-val dim">maria@external.org</span></div>
+              <div class="gcd-row"><span class="gcd-key">Deleted</span><span class="gcd-val teal">No</span></div>
+            </div>
+          </div>
+          <div class="revoke-confirm" id="gc2-revoke">
+            <span style="font-size:16px">⚠️</span>
+            <div class="revoke-confirm-text"><strong>Revoke access for Dr. Maria Chen?</strong></div>
+            <input class="revoke-reason" placeholder="Reason (optional)" style="max-width:220px">
+            <button class="btn btn-secondary btn-sm" onclick="toggleRevoke('gc2-revoke')">Cancel</button>
+            <button class="btn btn-danger btn-sm">Confirm Revoke</button>
+          </div>
+        </div>
+
+        <!-- ─── GRANT 3: Active, Everyone (system principal), never expires ─── -->
+        <div class="grant-card" id="gc3">
+          <div class="grant-card-main" onclick="toggleCard('gc3')">
+            <div class="gc-subject">
+              <div class="gc-subject-who">
+                <span class="gc-subject-icon">🌐</span>
+                <span class="gc-subject-name">Everyone</span>
+                <span class="pill system" style="font-size:9px">SYSTEM</span>
+              </div>
+              <div class="gc-subject-detail">All authenticated users</div>
+            </div>
+            <div class="gc-access">
+              <span class="access-chip">DATASET:VIEW_METADATA</span>
+            </div>
+            <div class="gc-validity">
+              <span class="gc-valid-from">From Mar 16, 2026</span>
+              <span class="gc-valid-until never">No expiry</span>
+            </div>
+            <div class="gc-actions">
+              <span class="pill active">Active</span>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); toggleRevoke('gc3-revoke')">Revoke</button>
+            </div>
+            <button class="gc-expand" id="gc3-expand" onclick="event.stopPropagation(); toggleCard('gc3')">▾</button>
+          </div>
+          <div class="grant-card-detail" id="gc3-detail">
+            <div class="gcd-block">
+              <div class="gcd-label">Grant</div>
+              <div class="gcd-row"><span class="gcd-key">ID</span><span class="gcd-val dim">00000000-0000-4000-8000-000000000ccc</span></div>
+              <div class="gcd-row"><span class="gcd-key">Created</span><span class="gcd-val">Mar 16, 2026</span></div>
+              <div class="gcd-row"><span class="gcd-key">Type</span><span class="gcd-val"><span class="pill system">SYSTEM</span></span></div>
+              <div class="gcd-row"><span class="gcd-key">Justification</span><span class="gcd-val dim">Public discoverability preset</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Granted by</div>
+              <div class="gcd-row"><span class="gcd-key">Name</span><span class="gcd-val">svc_tasks</span></div>
+              <div class="gcd-row"><span class="gcd-key">Email</span><span class="gcd-val dim">svc_tasks@iu.edu</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Subject</div>
+              <div class="gcd-row"><span class="gcd-key">Principal</span><span class="gcd-val" style="color:var(--violet)">Everyone (system)</span></div>
+              <div class="gcd-row"><span class="gcd-key">Scope</span><span class="gcd-val dim">All authenticated users</span></div>
+            </div>
+          </div>
+          <div class="revoke-confirm" id="gc3-revoke">
+            <span style="font-size:16px">⚠️</span>
+            <div class="revoke-confirm-text"><strong>Revoke public discoverability?</strong> This dataset will no longer appear in search results for non-members.</div>
+            <input class="revoke-reason" placeholder="Reason (optional)" style="max-width:220px">
+            <button class="btn btn-secondary btn-sm" onclick="toggleRevoke('gc3-revoke')">Cancel</button>
+            <button class="btn btn-danger btn-sm">Confirm Revoke</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revoked grants section -->
+    <div class="section fa d4">
+      <div class="section-label">Revoked / expired grants</div>
+      <div class="grant-list">
+        <div class="grant-list-head">
+          <span class="grant-list-title">Grant History</span>
+        </div>
+
+        <div class="grant-card is-revoked" id="gc4">
+          <div class="grant-card-main" onclick="toggleCard('gc4')">
+            <div class="gc-subject">
+              <div class="gc-subject-who">
+                <span class="gc-subject-icon">👤</span>
+                <span class="gc-subject-name">External Collab.</span>
+                <span class="pill manual" style="font-size:9px">USER</span>
+              </div>
+              <div class="gc-subject-detail">ext@partner.org</div>
+            </div>
+            <div class="gc-access">
+              <span class="access-chip revoked-chip">DATASET:DOWNLOAD</span>
+            </div>
+            <div class="gc-validity">
+              <span class="gc-valid-from">Jan 1 – Feb 3, 2026</span>
+              <span class="gc-valid-until past">Revoked Feb 3, 2026</span>
+            </div>
+            <div class="gc-actions">
+              <span class="pill revoked">Revoked</span>
+            </div>
+            <button class="gc-expand" id="gc4-expand" onclick="event.stopPropagation(); toggleCard('gc4')">▾</button>
+          </div>
+          <div class="grant-card-detail" id="gc4-detail">
+            <div class="gcd-block">
+              <div class="gcd-label">Grant</div>
+              <div class="gcd-row"><span class="gcd-key">ID</span><span class="gcd-val dim">00000000-0000-4000-8000-000000000ddd</span></div>
+              <div class="gcd-row"><span class="gcd-key">Type</span><span class="gcd-val"><span class="pill manual">MANUAL</span></span></div>
+              <div class="gcd-row"><span class="gcd-key">Justification</span><span class="gcd-val">Temporary access for data transfer</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Revocation</div>
+              <div class="gcd-row"><span class="gcd-key">Revoked by</span><span class="gcd-val">Dana Reyes</span></div>
+              <div class="gcd-row"><span class="gcd-key">Revoked at</span><span class="gcd-val">Feb 3, 2026 11:40</span></div>
+              <div class="gcd-row"><span class="gcd-key">Reason</span><span class="gcd-val amber">Data transfer complete, access no longer needed</span></div>
+            </div>
+            <div class="gcd-block">
+              <div class="gcd-label">Granted by</div>
+              <div class="gcd-row"><span class="gcd-key">Name</span><span class="gcd-val">Dana Reyes</span></div>
+              <div class="gcd-row"><span class="gcd-key">Email</span><span class="gcd-val dim">dana@uni.edu</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 3 — FULL DETAIL MODAL
+     Opened from: compact row "↗", row card kebab "View Details",
+     or direct link to /grants/:id
+     Shows all fields. Lifecycle timeline. Revoke panel for admins.
+═══════════════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-modal">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">DataGov</span></div>
+    <div class="nav-links"><a class="nav-link">Groups</a><a class="nav-link active">Datasets</a><a class="nav-link">Collections</a></div>
+    <div class="nav-right"><div class="avatar-btn"><div class="av" style="background:linear-gradient(135deg,#2563eb,#0d9488)">E</div>Erin Park ▾</div></div>
+  </nav>
+
+  <!-- Dimmed background -->
+  <div style="padding:28px 24px; filter:blur(2px); opacity:.25; pointer-events:none; max-width:1100px; margin:0 auto">
+    <div style="height:40px;background:var(--panel);border-radius:8px;margin-bottom:12px"></div>
+    <div style="height:24px;width:300px;background:var(--raised);border-radius:4px;margin-bottom:20px"></div>
+    <div style="height:300px;background:var(--panel);border-radius:12px"></div>
+  </div>
+
+  <!-- Modal variants: use switcher inside page -->
+  <div style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:400;display:flex;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px">
+    <span style="font-size:11px;color:var(--text-muted);align-self:center;margin-right:4px">Show modal:</span>
+    <button class="btn btn-primary btn-sm" onclick="openModal('active')">Active Grant</button>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('expiring')">Expiring Grant</button>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('revoked')">Revoked Grant</button>
+    <button class="btn btn-secondary btn-sm" onclick="openModal('collection')">Collection Grant</button>
+  </div>
+
+  <!-- ── MODAL: ACTIVE GRANT ── -->
+  <div class="modal-overlay" id="modal-active" style="display:flex" onclick="closeOnOverlay(event,'modal-active')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <div class="modal-title">Grant Details</div>
+          <div class="modal-id">ID: 00000000-0000-4000-8000-000000000aaa</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('modal-active').style.display='none'">✕</button>
+      </div>
+
+      <div class="modal-status-bar status-active">
+        <span class="msb-icon">🔑</span>
+        <div>
+          <div class="msb-label">Active Grant</div>
+          <div class="msb-sub">No expiry · Created Mar 16, 2026</div>
+        </div>
+        <span class="pill active" style="margin-left:auto">Active</span>
+      </div>
+
+      <!-- ACCESS TYPE -->
+      <div class="modal-section">
+        <div class="ms-title">Access Type</div>
+        <div class="access-type-block">
+          <span class="at-icon">🔐</span>
+          <div>
+            <div class="at-name">DATASET:READ_DATA</div>
+            <div class="at-desc">Read dataset data via API or in-browser viewer. Does not include download or compute.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBJECT -->
+      <div class="modal-section">
+        <div class="ms-title">Subject — Who has access</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#374151,#1f2937)">B</div>
+          <div>
+            <div class="person-name">name-092</div>
+            <div class="person-email">user-092@iu.edu · @user-092</div>
+          </div>
+          <span class="pill manual" style="margin-left:auto">USER</span>
+        </div>
+        <div class="fact-grid" style="margin-top:10px">
+          <div class="fact-item"><div class="fact-label">Subject ID</div><div class="fact-val mono dim">5751870f-bf08…1cbe</div></div>
+          <div class="fact-item"><div class="fact-label">Account Status</div><div class="fact-val" style="color:var(--teal)">Active</div></div>
+        </div>
+      </div>
+
+      <!-- RESOURCE -->
+      <div class="modal-section">
+        <div class="ms-title">Resource — What they can access</div>
+        <div class="resource-block">
+          <span class="resource-block-icon">📄</span>
+          <div style="flex:1">
+            <div class="resource-block-name">Genomics Run 2024</div>
+            <div class="resource-block-slug">genomics-run-2024</div>
+            <div class="resource-block-owner">
+              <span class="group-tag">🧪 AI Lab</span>
+            </div>
+          </div>
+          <span style="font-size:10px;font-family:monospace;color:var(--text-muted)">DATASET</span>
+        </div>
+        <div class="fact-grid" style="margin-top:10px">
+          <div class="fact-item"><div class="fact-label">Resource ID</div><div class="fact-val mono dim">00000000-0000-4000-8000-000000000001</div></div>
+          <div class="fact-item"><div class="fact-label">Owner Group ID</div><div class="fact-val mono dim">0bc7fa6c…8b1b</div></div>
+          <div class="fact-item"><div class="fact-label">Owner Group</div><div class="fact-val">AI Lab</div></div>
+          <div class="fact-item"><div class="fact-label">Group archived</div><div class="fact-val" style="color:var(--teal)">No</div></div>
+        </div>
+      </div>
+
+      <!-- LIFECYCLE TIMELINE -->
+      <div class="modal-section">
+        <div class="ms-title">Lifecycle</div>
+        <div class="timeline">
+          <div class="tl-row">
+            <div class="tl-dot created">✓</div>
+            <div class="tl-content">
+              <div class="tl-event">Grant created</div>
+              <div class="tl-when">Mar 16, 2026 · 16:08 UTC</div>
+              <div class="tl-detail">Granted by <strong>svc_tasks</strong> (svc_tasks@iu.edu) · MANUAL</div>
+            </div>
+          </div>
+          <div class="tl-row">
+            <div class="tl-dot created" style="border-color:var(--teal)">↑</div>
+            <div class="tl-content">
+              <div class="tl-event">Valid from</div>
+              <div class="tl-when">Mar 16, 2026 · 16:08 UTC</div>
+            </div>
+          </div>
+          <div class="tl-row">
+            <div class="tl-dot future">∞</div>
+            <div class="tl-content">
+              <div class="tl-event">No expiry configured</div>
+              <div class="tl-when" style="color:var(--text-dim)">Grant is indefinite until revoked</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fact-grid" style="margin-top:14px">
+          <div class="fact-item"><div class="fact-label">Justification</div><div class="fact-val dim">None provided</div></div>
+          <div class="fact-item"><div class="fact-label">Creation Type</div><div class="fact-val"><span class="pill manual">MANUAL</span></div></div>
+          <div class="fact-item"><div class="fact-label">Grant ID</div><div class="fact-val mono dim">00000000-0000-4000-8000-000000000aaa</div></div>
+          <div class="fact-item"><div class="fact-label">Access Type ID</div><div class="fact-val mono dim">9</div></div>
+        </div>
+      </div>
+
+      <!-- GRANTOR BLOCK -->
+      <div class="modal-section">
+        <div class="ms-title">Granted by</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#1e3a5f,#0c2040)">S</div>
+          <div>
+            <div class="person-name">svc_tasks</div>
+            <div class="person-email">svc_tasks@iu.edu · @svc_tasks</div>
+          </div>
+          <span class="pill system" style="margin-left:auto">SERVICE</span>
+        </div>
+      </div>
+
+      <!-- Revoke panel -->
+      <div class="revoke-panel" id="modal-active-revoke">
+        <div class="revoke-panel-title">⚠ Revoke this grant</div>
+        <div style="font-size:12px;color:var(--text-muted)">Access for <strong style="color:var(--text)">name-092</strong> will be removed immediately. This action is permanent and audited.</div>
+        <input class="revoke-input" placeholder="Reason for revocation (optional but recommended)">
+        <div class="revoke-btns">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-active-revoke').classList.remove('open')">Cancel</button>
+          <button class="btn btn-danger btn-sm">Confirm Revoke</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-footer-left">
+          <span style="font-size:10px;color:var(--text-dim);font-family:monospace">manage_grants ✓</span>
+        </div>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-active').style.display='none'">Close</button>
+          <button class="btn btn-danger" onclick="document.getElementById('modal-active-revoke').classList.toggle('open')">Revoke Grant</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: EXPIRING ── -->
+  <div class="modal-overlay" id="modal-expiring" style="display:none" onclick="closeOnOverlay(event,'modal-expiring')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <div class="modal-title">Grant Details</div>
+          <div class="modal-id">ID: 00000000-0000-4000-8000-000000000bbb</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('modal-expiring').style.display='none'">✕</button>
+      </div>
+      <div class="modal-status-bar status-expiring">
+        <span class="msb-icon">⏱</span>
+        <div>
+          <div class="msb-label">Expiring Soon</div>
+          <div class="msb-sub">Expires Dec 31, 2025 · 12 days remaining</div>
+        </div>
+        <span class="pill expiring" style="margin-left:auto">Expiring</span>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Access Type</div>
+        <div class="access-type-block">
+          <span class="at-icon">🔐</span>
+          <div><div class="at-name">COLLECTION:READ_DATA</div><div class="at-desc">List datasets in collection and read dataset metadata</div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Subject — Who has access</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#374151,#1f2937)">M</div>
+          <div><div class="person-name">Dr. Maria Chen</div><div class="person-email">maria@external.org · @maria-chen</div></div>
+          <span class="pill manual" style="margin-left:auto">USER</span>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Resource</div>
+        <div class="resource-block">
+          <span class="resource-block-icon">📦</span>
+          <div style="flex:1"><div class="resource-block-name">Genomics Suite</div><div class="resource-block-slug">genomics-suite · 3 datasets</div><div class="resource-block-owner"><span class="group-tag">🧪 AI Lab</span></div></div>
+          <span style="font-size:10px;font-family:monospace;color:var(--text-muted)">COLLECTION</span>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Lifecycle</div>
+        <div class="timeline">
+          <div class="tl-row"><div class="tl-dot created">✓</div><div class="tl-content"><div class="tl-event">Grant created</div><div class="tl-when">Jan 5, 2026 · 09:22 UTC</div><div class="tl-detail">Granted by <strong>Dana Reyes</strong> · MANUAL · Justification: "External collaboration, Stanford–IU genomics project"</div></div></div>
+          <div class="tl-row"><div class="tl-dot expiry">!</div><div class="tl-content"><div class="tl-event" style="color:var(--amber)">Expires Dec 31, 2025</div><div class="tl-when" style="color:var(--amber)">12 days remaining — consider renewal</div></div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Granted by</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#2563eb,#0d9488)">D</div>
+          <div><div class="person-name">Dana Reyes</div><div class="person-email">dana@uni.edu</div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left"></div>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-expiring').style.display='none'">Close</button>
+          <button class="btn btn-danger">Revoke Grant</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: REVOKED ── -->
+  <div class="modal-overlay" id="modal-revoked" style="display:none" onclick="closeOnOverlay(event,'modal-revoked')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <div class="modal-title">Grant Details</div>
+          <div class="modal-id">ID: 00000000-0000-4000-8000-000000000ddd</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('modal-revoked').style.display='none'">✕</button>
+      </div>
+      <div class="modal-status-bar status-revoked">
+        <span class="msb-icon">⛔</span>
+        <div><div class="msb-label">Revoked</div><div class="msb-sub">Revoked Feb 3, 2026 by Dana Reyes</div></div>
+        <span class="pill revoked" style="margin-left:auto">Revoked</span>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Access Type</div>
+        <div class="access-type-block" style="background:var(--red-dim);border-color:#4a1010">
+          <span class="at-icon">🚫</span>
+          <div><div class="at-name" style="color:#f87171">DATASET:DOWNLOAD</div><div class="at-desc">Download dataset files to local storage.</div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Subject</div>
+        <div class="person-block" style="opacity:.6">
+          <div class="person-av" style="background:var(--raised)">E</div>
+          <div><div class="person-name">External Collab.</div><div class="person-email">ext@partner.org</div></div>
+          <span class="pill manual" style="margin-left:auto">USER</span>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Resource</div>
+        <div class="resource-block" style="opacity:.6">
+          <span class="resource-block-icon">📄</span>
+          <div style="flex:1"><div class="resource-block-name">Training Set v3</div><div class="resource-block-slug">training-set-v3</div><div class="resource-block-owner"><span class="group-tag">🧪 AI Lab</span></div></div>
+          <span style="font-size:10px;font-family:monospace;color:var(--text-muted)">DATASET</span>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Lifecycle</div>
+        <div class="timeline">
+          <div class="tl-row"><div class="tl-dot created">✓</div><div class="tl-content"><div class="tl-event">Grant created</div><div class="tl-when">Jan 1, 2026</div><div class="tl-detail">Granted by <strong>Dana Reyes</strong> · Justification: "Temporary access for data transfer"</div></div></div>
+          <div class="tl-row"><div class="tl-dot revoked">✕</div><div class="tl-content"><div class="tl-event" style="color:var(--red)">Grant revoked</div><div class="tl-when" style="color:var(--red)">Feb 3, 2026 · 11:40 UTC</div><div class="tl-detail">Revoked by <strong>Dana Reyes</strong></div><div style="margin-top:6px;padding:8px 10px;background:var(--raised);border-left:2px solid var(--red);border-radius:0 4px 4px 0;font-size:11px;color:var(--text-muted)">"Data transfer complete, access no longer needed"</div></div></div>
+        </div>
+        <div class="fact-grid" style="margin-top:14px">
+          <div class="fact-item"><div class="fact-label">Valid From</div><div class="fact-val mono">Jan 1, 2026</div></div>
+          <div class="fact-item"><div class="fact-label">Valid Until</div><div class="fact-val mono dim">—</div></div>
+          <div class="fact-item"><div class="fact-label">Revoked At</div><div class="fact-val mono" style="color:var(--red)">Feb 3, 2026 11:40</div></div>
+          <div class="fact-item"><div class="fact-label">Creation Type</div><div class="fact-val"><span class="pill manual">MANUAL</span></div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Grantor / Revoker</div>
+        <div class="fact-grid">
+          <div class="fact-item"><div class="fact-label">Granted by</div><div class="fact-val">Dana Reyes</div></div>
+          <div class="fact-item"><div class="fact-label">Revoked by</div><div class="fact-val" style="color:var(--red)">Dana Reyes</div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left"><span style="font-size:11px;color:var(--text-muted)">This grant is revoked. No further actions available.</span></div>
+        <div class="modal-footer-right"><button class="btn btn-secondary" onclick="document.getElementById('modal-revoked').style.display='none'">Close</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL: COLLECTION GRANT ── -->
+  <div class="modal-overlay" id="modal-collection" style="display:none" onclick="closeOnOverlay(event,'modal-collection')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title-block">
+          <div class="modal-title">Grant Details</div>
+          <div class="modal-id">ID: 00000000-0000-4000-8000-000000000bbb</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('modal-collection').style.display='none'">✕</button>
+      </div>
+      <div class="modal-status-bar status-active">
+        <span class="msb-icon">🔑</span>
+        <div><div class="msb-label">Active Grant — Collection</div><div class="msb-sub">No expiry · Covers all datasets in collection</div></div>
+        <span class="pill active" style="margin-left:auto">Active</span>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Access Type</div>
+        <div class="access-type-block collection">
+          <span class="at-icon">📦</span>
+          <div><div class="at-name">COLLECTION:READ_DATA</div><div class="at-desc">List datasets in collection and read dataset metadata. Access extends to all current and future datasets in this collection.</div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Subject — Who has access</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#374151,#1f2937)">N</div>
+          <div><div class="person-name">name-092</div><div class="person-email">user-092@iu.edu · @user-092</div></div>
+          <span class="pill manual" style="margin-left:auto">USER</span>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Resource — Collection</div>
+        <div class="resource-block">
+          <span class="resource-block-icon">📦</span>
+          <div style="flex:1">
+            <div class="resource-block-name">Collection 01</div>
+            <div class="resource-block-slug">collection-01</div>
+            <div class="resource-block-owner"><span class="group-tag">Owner group ID: 0bc7fa6c…8b1b</span></div>
+          </div>
+          <span style="font-size:10px;font-family:monospace;color:var(--text-muted)">COLLECTION</span>
+        </div>
+        <div style="margin-top:10px; padding:10px 12px; background:var(--raised); border-radius:var(--r); border:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Collection metadata</div>
+          <div class="fact-grid">
+            <div class="fact-item"><div class="fact-label">Name</div><div class="fact-val">Collection 01</div></div>
+            <div class="fact-item"><div class="fact-label">Datasets</div><div class="fact-val">—</div></div>
+            <div class="fact-item"><div class="fact-label">Created</div><div class="fact-val mono dim">Mar 13, 2026</div></div>
+            <div class="fact-item"><div class="fact-label">Archived</div><div class="fact-val" style="color:var(--teal)">No</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Lifecycle</div>
+        <div class="timeline">
+          <div class="tl-row"><div class="tl-dot created">✓</div><div class="tl-content"><div class="tl-event">Grant created</div><div class="tl-when">Mar 16, 2026 · 16:08 UTC</div><div class="tl-detail">Granted by <strong>svc_tasks</strong> · MANUAL · No justification</div></div></div>
+          <div class="tl-row"><div class="tl-dot future">∞</div><div class="tl-content"><div class="tl-event">No expiry configured</div><div class="tl-when" style="color:var(--text-dim)">Grant is indefinite</div></div></div>
+        </div>
+      </div>
+      <div class="modal-section">
+        <div class="ms-title">Granted by</div>
+        <div class="person-block">
+          <div class="person-av" style="background:linear-gradient(135deg,#1e3a5f,#0c2040)">S</div>
+          <div><div class="person-name">svc_tasks</div><div class="person-email">svc_tasks@iu.edu</div></div>
+          <span class="pill system" style="margin-left:auto">SERVICE</span>
+        </div>
+      </div>
+      <div class="revoke-panel" id="modal-collection-revoke">
+        <div class="revoke-panel-title">⚠ Revoke collection grant</div>
+        <div style="font-size:12px;color:var(--text-muted)">Access for <strong style="color:var(--text)">name-092</strong> to all datasets in <strong style="color:var(--text)">Collection 01</strong> will be removed immediately.</div>
+        <input class="revoke-input" placeholder="Reason for revocation (optional)">
+        <div class="revoke-btns">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('modal-collection-revoke').classList.remove('open')">Cancel</button>
+          <button class="btn btn-danger btn-sm">Confirm Revoke</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-left"></div>
+        <div class="modal-footer-right">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-collection').style.display='none'">Close</button>
+          <button class="btn btn-danger" onclick="document.getElementById('modal-collection-revoke').classList.toggle('open')">Revoke Grant</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function sw(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sw-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  event.target.classList.add('active');
+  // hide all modals when switching
+  document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+}
+
+function toggleCard(id) {
+  const detail = document.getElementById(id + '-detail');
+  const expand = document.getElementById(id + '-expand');
+  if (!detail) return;
+  const isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  if (expand) expand.classList.toggle('open', !isOpen);
+}
+
+function toggleRevoke(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+
+function openModal(type) {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+  const m = document.getElementById('modal-' + type);
+  if (m) m.style.display = 'flex';
+}
+
+function closeOnOverlay(e, id) {
+  if (e.target === e.currentTarget) document.getElementById(id).style.display = 'none';
+}
+</script>
+</body>
+</html>
