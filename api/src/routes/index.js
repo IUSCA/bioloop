@@ -33,6 +33,7 @@ if (featureService.isFeatureEnabled({ key: 'import' })) {
 router.use('/v2/datasets', require('./datasets_v2'));
 router.use('/v2/users', require('./users_v2'));
 router.use('/v2/import-sources', require('./import_sources'));
+router.use('/v2/fs', require('./fs_v2'));
 
 router.use('/datasets', require('./datasets'));
 router.use('/metrics', require('./metrics'));
