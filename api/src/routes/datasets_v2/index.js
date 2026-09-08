@@ -16,6 +16,7 @@ const {
 } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
+const uploadService = require('@/services/datasets_v2/uploads');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 
@@ -145,6 +146,91 @@ router.post(
     }
 
     return res.json({ dataset, workflow });
+  }),
+);
+
+// ── Upload ───────────────────────────────────────────────────────────────────
+
+/**
+ * Register a dataset that is about to be uploaded from a browser.
+ *
+ * Returns the upload log. The transfer itself goes to the TUS server, which is unchanged
+ * and keys everything on dataset_id, so nothing downstream cares which route created the
+ * dataset.
+ *
+ * Authorized with `contribute`, so a member of a group that accepts contributions may upload
+ * into it and not only its admins.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — C1
+ */
+router.post(
+  '/uploads',
+  validate([
+    body('name').isString().trim().notEmpty().isLength({ min: 3 }),
+    body('type').isIn(config.get('dataset_types')),
+    body('owner_group_id').isUUID(),
+    body('description').optional().isString(),
+    body('metadata').optional().isObject(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Register a dataset to be uploaded'
+    const { owner_group_id } = req.body;
+
+    const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
+    if (!group) return next(createError.NotFound('Group not found'));
+
+    const decision = await authorizeAction('dataset', 'contribute', {
+      identifiers: { user: req.user?.subject_id, resource: null },
+      policyExecutionContext: req.policyContext,
+      preFetched: {
+        user: req.user,
+        resource: {
+          owner_group_id: group.id,
+          owner_group_allows_contributions: group.allow_user_contributions,
+        },
+        context: { req },
+      },
+    });
+    if (!decision.granted) {
+      return next(createError.Forbidden(
+        `Not permitted to create datasets owned by group ${owner_group_id}`,
+      ));
+    }
+
+    const upload_log = await uploadService.registerUpload({
+      user: req.user,
+      data: _.pick(['name', 'type', 'owner_group_id', 'description', 'metadata'])(req.body),
+    });
+
+    if (!upload_log) {
+      return next(createError.Conflict('A dataset with that name already exists in this group'));
+    }
+
+    return res.json(upload_log);
+  }),
+);
+
+/**
+ * The upload log for one dataset.
+ *
+ * v2 has its own read because the legacy upload routes are gated by the old role-based
+ * middleware, and a contributor who is not an administrator would be refused there.
+ */
+router.get(
+  '/:id/upload-log',
+  validate([param('id').isUUID()]),
+  authorize('dataset', 'view_workflows'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Upload log for a dataset'
+    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    if (!dataset) return next(createError.NotFound('Dataset not found'));
+
+    const upload_log = await uploadService.getUploadLog(dataset.id);
+    if (!upload_log) return next(createError.NotFound('Dataset was not uploaded'));
+
+    return res.json(upload_log);
   }),
 );
 
