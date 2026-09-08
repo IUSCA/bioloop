@@ -542,6 +542,18 @@ async function main() {
   // open rows, so re-seeding never opens a second membership.
   await prisma.group_user.createMany({ data: group_user, skipDuplicates: true });
 
+  // Import sources are seeded before groups exist, so their owning groups are attached
+  // here. A source with no group is invisible to the v2 browse routes.
+  // @see docs/design/groups/dataset-creation-plan.md — B1
+  await prisma.import_source.updateMany({
+    where: { label: 'Genomics Lab' },
+    data: { owner_group_id: '83101409-fa05-44be-abca-c91fff4f9754' }, // Genomics Core
+  });
+  await prisma.import_source.updateMany({
+    where: { label: 'Proteomics Lab' },
+    data: { owner_group_id: '79606964-2385-4c72-8f5f-6d3412049a1c' }, // Bioinformatics Core
+  });
+
   // // updates datasets with owner_group_id
   const datasetResourceIds = datasets.map((d) => d.resource_id);
   const dataset_group_updates = groupData.generateDatasetOwnerships(datasetResourceIds);

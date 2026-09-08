@@ -245,6 +245,8 @@ model user {
   //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
   subject                     subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
   owned_import_sources        import_source[]
+  requested_import_sources    import_source[]             @relation("import_source_requester")
+  approved_import_sources     import_source[]             @relation("import_source_approver")
 
   @@index([subject_id])
 }
@@ -542,6 +544,7 @@ model group {
   revoked_grants    grant[]                     @relation("grant_revoking_authority")
 
   affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
+  import_sources      import_source[]
 }
 
 // Closure table for efficient hierarchy traversal
@@ -1208,6 +1211,39 @@ model import_source {
   created_at   DateTime @default(now()) @db.Timestamp(6)
   updated_at   DateTime @default(now()) @updatedAt @db.Timestamp(6)
   metadata     Json?
+
+  // The group whose members may browse and import from this source. Nullable: a source with
+  // no group stays reachable through the legacy browse routes, which are global. The v2
+  // routes serve only sources that name a group.
+  // @see docs/design/groups/dataset-creation-plan.md — B1
+  owner_group_id String?
+  owner_group    group?  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+
+  // ACTIVE accepts imports. SUSPENDED is listed and refuses them, which is what an
+  // unreadable path becomes. RETIRED is neither listed nor importable. A source is never
+  // deleted, because datasets imported from it still hold paths underneath it.
+  status IMPORT_SOURCE_STATUS @default(ACTIVE)
+
+  // Provenance of the decision to trust this path. A group admin asks, a platform admin
+  // confirms the path is readable by the API and the workers, and inserts the row.
+  requested_by_id  Int?
+  requested_by     user?     @relation("import_source_requester", fields: [requested_by_id], references: [id], onDelete: SetNull)
+  approved_by_id   Int?
+  approved_by      user?     @relation("import_source_approver", fields: [approved_by_id], references: [id], onDelete: SetNull)
+  approved_at      DateTime? @db.Timestamp(6)
+  // Last time a scheduled check confirmed the path is readable. An unmounted path returns an
+  // empty listing, which a user reads as "my data is gone"; the check says so instead.
+  path_verified_at DateTime? @db.Timestamp(6)
+  status_reason    String?
+
+  @@index([owner_group_id])
+  @@index([status])
+}
+
+enum IMPORT_SOURCE_STATUS {
+  ACTIVE
+  SUSPENDED
+  RETIRED
 }
 
 enum access_type {
