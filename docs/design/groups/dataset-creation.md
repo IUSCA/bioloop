@@ -490,7 +490,10 @@ before a reload throws the work away.
 Transfer is the short part. Verification, archiving, and staging run for minutes afterwards,
 and the user should be free to leave.
 
-**Per dataset**, progress appears on the dataset's own page. The legacy
+**Per dataset**, progress appears on the dataset's own page, in an Upload tab that reads
+`GET /v2/datasets/:id/upload-log`. The tab is offered only when `create_method` is `UPLOAD`.
+It names the status and says in a sentence what that status means, because the raw
+`PERMANENTLY_FAILED` tells a person nothing about what to do next. The legacy
 `/datasets/uploads/:id` page shows the same information at a second address, which splits a
 dataset across two places for no gain.
 
@@ -498,10 +501,21 @@ dataset across two places for no gain.
 `/datasets/uploads/` page is a parallel list of the same rows, and one filterable list is
 better than two lists that can disagree.
 
+The filter takes one of three group names rather than a raw status. `UPLOAD_STATUS_GROUPS`
+collapses the ten statuses into `IN_PROGRESS`, `FAILED`, and `COMPLETE`, which are the three
+answers a person wants from a listing. `ANY` returns every uploaded dataset whatever became
+of it. A single status is accepted too, for a caller that wants one.
+
 One case needs care. An upload that fails terminally is tombstoned: the dataset is renamed
 and marked deleted so its name is freed. Those rows fall out of a normal dataset listing, and
 the person who uploaded still needs to find out what happened. The filter therefore has to
-reach them, which is the one place the single-list approach costs something.
+reach them, which is the one place the single-list approach costs something. `GET /v2/datasets`
+hides deleted datasets unless asked, and it drops that default when `upload_status` is given.
+
+The listing then shows the upload's own state in the status column, in place of the usual
+active-or-archived badge, because a tombstoned failed upload otherwise reads only as
+"Archived" and hides the failure the filter was used to find. `include_upload_log` puts the
+log on each row.
 
 ### What carries over from the existing screens
 

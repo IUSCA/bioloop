@@ -361,13 +361,28 @@ and stops if the page is reloaded.
 
 ### C5 — Watching an upload afterwards
 
-Per dataset, a panel on `pages/v2/datasets/[id]/` reads `GET /v2/datasets/:id/upload-log`.
-Across datasets, an upload-state filter on the v2 datasets list replaces a parallel uploads
-page like the legacy `/datasets/uploads/`.
+Per dataset, an Upload tab on `pages/v2/datasets/[id]/` reads `GET /v2/datasets/:id/upload-log`.
+It appears only when `create_method` is `UPLOAD`, and it says what each status means in the
+words someone waiting on their own upload would use. Across datasets, an upload-state filter
+on the v2 datasets list replaces a parallel uploads page like the legacy `/datasets/uploads/`.
 
-*Decide when building:* a terminally failed upload is tombstoned, so the dataset is renamed,
-marked deleted, and falls out of a normal listing. The filter has to reach those rows, or the
-person who uploaded never learns what happened.
+*Decided while building.* Three things.
+
+The filter takes a group name, not a raw status. `UPLOAD_STATUS_GROUPS` in `api/src/constants.js`
+collapses the ten statuses into `IN_PROGRESS`, `FAILED`, and `COMPLETE`, which are the three
+answers a person wants from a listing. `ANY` returns every uploaded dataset whatever became of
+it, and a single status is still accepted for a caller that wants one. A test asserts the three
+groups cover every status exactly once, so a status added to the enum cannot ship unclassified.
+
+The deleted-row default is dropped when the filter is on. `GET /v2/datasets` hides deleted
+datasets unless asked. A terminally failed upload is tombstoned — renamed and marked deleted —
+so that default would hide exactly the rows the person who uploaded needs to see. The route
+applies the default only when `upload_status` is absent.
+
+The listing shows the upload's own state while the filter is on. `include_upload_log` adds the
+log to each row, and the status column shows the upload status in place of the usual
+active-or-archived badge. Without it a tombstoned failed upload reads only as "Archived", which
+hides the failure the filter was used to find.
 
 *Reuse:* the status vocabulary in `UploadStatusBadge.vue` and `UploadStatusIcon.vue`.
 

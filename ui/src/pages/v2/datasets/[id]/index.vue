@@ -138,6 +138,13 @@
               </span>
             </span>
           </VaTab>
+          <!--
+            Offered only for a dataset that was uploaded. The route behind it reads the
+            upload log, which no other creation route writes.
+          -->
+          <VaTab name="upload" v-if="isUpload && can('view_workflows')"
+            >Upload</VaTab
+          >
           <VaTab name="audit-log" v-if="can('view_audit_logs')"
             >Audit Log</VaTab
           >
@@ -208,6 +215,11 @@
           :loading="false"
         />
 
+        <DatasetUploadTab
+          v-else-if="activeTab === 'upload'"
+          :dataset-id="dataset.resource_id"
+        />
+
         <DatasetAuditLogTab
           v-else-if="activeTab === 'audit-log'"
           :dataset-id="dataset.resource_id"
@@ -266,6 +278,11 @@ const capabilities = computed(
 const callerRole = computed(() => dataset.value?._meta?.caller_role);
 
 const hasFiles = computed(() => (counts.value?.files || 0) > 0);
+
+const isUpload = computed(
+  () =>
+    dataset.value?.create_method === constants.DATASET_CREATE_METHODS.UPLOAD,
+);
 
 function can(action) {
   return capabilities.value.has(action);

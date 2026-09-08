@@ -19,6 +19,7 @@ const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+const { UPLOAD_STATUS_FILTERS } = require('@/constants');
 
 const router = express.Router();
 
@@ -166,7 +167,8 @@ router.post(
 router.post(
   '/uploads',
   validate([
-    body('name').isString().trim().notEmpty().isLength({ min: 3 }),
+    body('name').isString().trim().notEmpty()
+      .isLength({ min: 3 }),
     body('type').isIn(config.get('dataset_types')),
     body('owner_group_id').isUUID(),
     body('description').optional().isString(),
@@ -240,9 +242,10 @@ router.get(
 router.get(
   '/',
   validate([
-    query('is_deleted').toBoolean().default(false),
+    query('is_deleted').optional().toBoolean(),
     query('is_archived').optional().toBoolean(),
     query('is_staged').optional().toBoolean(),
+    query('upload_status').optional().isIn(UPLOAD_STATUS_FILTERS),
     query('has_workflows').optional().toBoolean(),
     query('has_derived_data').optional().toBoolean(),
     query('has_source_data').optional().toBoolean(),
@@ -262,6 +265,7 @@ router.get(
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').optional().toBoolean(),
     query('include_bundle').optional().toBoolean(),
+    query('include_upload_log').optional().toBoolean(),
     query('id').optional().isInt().toInt(),
     query('resource_id').optional().isUUID(),
     query('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)),
@@ -272,11 +276,20 @@ router.get(
     // #swagger.summary = 'List and search datasets'
 
     const filters = _.pick(
-      ['is_deleted', 'is_archived', 'is_staged',
+      ['is_deleted', 'is_archived', 'is_staged', 'upload_status',
         'has_workflows', 'has_derived_data', 'has_source_data',
         'type', 'name', 'id', 'resource_id', 'owner_group_id', 'collection_id', 'scope',
         'created_at_start', 'created_at_end', 'updated_at_start', 'updated_at_end', 'days_since_last_staged'],
     )(req.query);
+
+    // Deleted datasets are hidden unless the caller asks for them. The exception is a
+    // search by upload state: an upload that fails for good is tombstoned, so the dataset
+    // is renamed and marked deleted, and the default would hide exactly the rows the
+    // person who uploaded needs to see.
+    // @see docs/design/groups/dataset-creation-plan.md — C5
+    if (filters.is_deleted == null && filters.upload_status == null) {
+      filters.is_deleted = false;
+    }
 
     const sort = _.pick(['sort_by', 'sort_order'])(req.query);
 
@@ -285,6 +298,7 @@ router.get(
     const includes = {
       states: req.query.include_states,
       bundle: req.query.include_bundle,
+      upload_log: req.query.include_upload_log,
     };
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
