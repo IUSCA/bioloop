@@ -1,6 +1,6 @@
 const assert = require('assert');
 const path = require('node:path');
-const { Prisma } = require('@prisma/client');
+const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 
 const config = require('config');
 // const _ = require('lodash/fp');
@@ -14,6 +14,7 @@ const FileGraph = require('./fileGraph');
 const workflowService = require('./workflow');
 const projectService = require('./project');
 const featureService = require('./features');
+const grantService = require('./grants');
 const logger = require('./logger');
 
 const { log_axios_error } = require('../utils');
@@ -887,6 +888,21 @@ async function create({
   try {
     created_dataset = await tx.dataset.create({
       data,
+    });
+
+    // The owning group reads what it governs. In the same transaction as the dataset, so a
+    // dataset is never briefly reachable by nobody.
+    // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+    //
+    // requester_id here is a user.id, while a grant records a subject_id.
+    const requester = requester_id
+      ? await tx.user.findUnique({ where: { id: requester_id }, select: { subject_id: true } })
+      : null;
+    await grantService.seedOwningGroupGrant(tx, {
+      resource_id: created_dataset.resource_id,
+      resource_type: RESOURCE_TYPE.DATASET,
+      owner_group_id: created_dataset.owner_group_id,
+      actor_id: requester?.subject_id ?? null,
     });
 
     await _handle_project_association({

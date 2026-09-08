@@ -455,6 +455,9 @@ describe('issueGrants - lifecycle', () => {
     createdGrantIds.push(grant.id);
 
     await deleteDataset(collectionDataset.id);
+    // Every collection carries the owning group's seeded grant, and grant.resource is
+    // onDelete: Restrict, so the rows go first.
+    await prisma.grant.deleteMany({ where: { resource_id: collection.id } });
     await prisma.collection.delete({ where: { id: collection.id } });
   });
 });

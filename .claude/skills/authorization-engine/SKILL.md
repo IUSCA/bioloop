@@ -74,6 +74,31 @@ Registering a container takes two lines in `authorization/index.js`: the `requir
 2 and a `policyRegistry.register(...)` in section 4. A resource-free action, such as
 `audit.read_records`, is guarded with `authorize('audit', 'read_records', { resourceIdFn: () => null })`.
 
+## Grants pin their resource, so a resource carrying one cannot be hard-deleted
+
+`grant.resource` is `onDelete: Restrict`. Every dataset and every collection now carries at
+least the owning group's seeded grant, so this is the normal case rather than an edge one.
+
+`deleteCollection` removes the collection's grants in the same transaction before deleting it.
+A revoked grant on a collection that no longer exists is not a fact anybody can use, and who
+held access survives in `authorization_audit`, which stores ids rather than holding foreign
+keys. A test that deletes a collection through Prisma directly has to do the same.
+
+Datasets are soft-deleted, so their grants stay and this does not arise.
+
+## The owning group's grant is a row, not a rule
+
+Membership of the owning group confers no read. Creating a dataset or a collection writes a
+grant to the owning group, carrying the read plane only: `DATASET:LIST_FILES` or
+`COLLECTION:LIST_CONTENTS`, either of which satisfies its `VIEW_METADATA` counterpart through
+the access-type closure. `creation_type` is `SYSTEM_BOOTSTRAP`, so it reads differently from an
+admin's deliberate grant.
+
+The visible consequence is that an ordinary member opening a resource their group owns is
+labelled `GRANT HOLDER`, not `MEMBER`. That is correct: the access came from the row.
+
+@see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

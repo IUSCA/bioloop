@@ -248,7 +248,7 @@ Implements [decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-e
   admin-only action refusing everyone else, an archived resource still refusing a platform
   admin, and a per-resource-type check that no policy names the role.
 
-## Phase 10 — Creating a resource seeds a grant to its owning group
+## Phase 10 — Creating a resource seeds a grant to its owning group — **done**
 
 Implements [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-grant-not-structural-read).
 
@@ -259,9 +259,23 @@ Implements [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-gr
   other grant.
 - Existing resources get the same grant through a backfill, so the rule holds for rows that
   predate it.
-- Tests: creation writes the grant; a member reads through it; revoking it removes the
-  member's access while leaving group admins' structural access intact; the backfill is
-  idempotent.
+- The grant carries the read plane and nothing more: `DATASET:LIST_FILES` for a dataset and
+  `COLLECTION:LIST_CONTENTS` for a collection. Either satisfies its `VIEW_METADATA`
+  counterpart through the access-type closure, so one row is enough. Downloading stays a
+  deliberate grant.
+- `creation_type` is `SYSTEM_BOOTSTRAP`, which the enum already had, so a seeded grant is
+  distinguishable from an admin's deliberate one in the audit log and in the Access tab.
+- `granted_by` is `NOT NULL` and points at a user, and a backfill has no human actor. The
+  `svc_tasks` service account is the granter. It says plainly that the system issued these
+  rather than attributing them to somebody who did not act, and both the dev seed and
+  `src/scripts/init_prod_users.js` create it.
+- The rows are written in three places, because resources arrive three ways: the services, the
+  backfill migration for rows that predate the rule, and `prisma/seed.js`, which inserts
+  resources directly after migrations have run.
+- Tests: 11, covering the grant's subject, access type, creation type, expiry and issuing
+  authority; a member reading through it; revoking it removing that access; a non-member
+  getting nothing; the helper refusing a resource type it has no access type for; and an
+  invariant query asserting no dataset or collection is missing its grant.
 
 ## Phase 11 — Attribution
 

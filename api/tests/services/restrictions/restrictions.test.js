@@ -265,7 +265,7 @@ describe('an archived collection', () => {
     const collection = await collectionsService.createCollection({
       name: `Test Collection ${Date.now()}_res`,
       owner_group_id: g.id,
-    }, actor.subject_id);
+    }, { actor_id: actor.subject_id });
 
     await collectionsService.archiveCollection(collection.id, actor.subject_id);
 
@@ -280,6 +280,9 @@ describe('an archived collection', () => {
     })).toBeNull();
 
     await prisma.restriction.deleteMany({ where: { resource_id: collection.id } });
+    // grant.resource is onDelete: Restrict and every collection carries the owning group's
+    // seeded grant, so the grants go first.
+    await prisma.grant.deleteMany({ where: { resource_id: collection.id } });
     await prisma.collection.deleteMany({ where: { id: collection.id } });
   });
 });

@@ -1,4 +1,4 @@
-const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
+const { Prisma, GROUP_MEMBER_ROLE, RESOURCE_TYPE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
 const { randomUUID } = require('crypto');
@@ -78,6 +78,16 @@ async function createCollection(data, { actor_id }) {
     const _collection = await tx.collection.create({
       data: createData,
       include: PRISMA_COLLECTION_INCLUDES,
+    });
+
+    // The owning group reads what it governs. Written here rather than derived from
+    // membership, so what members hold is a visible, revocable row.
+    // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+    await grantService.seedOwningGroupGrant(tx, {
+      resource_id: _collection.id,
+      resource_type: RESOURCE_TYPE.COLLECTION,
+      owner_group_id: _collection.owner_group_id,
+      actor_id,
     });
 
     // Create audit record for collection creation
@@ -233,6 +243,16 @@ async function unarchiveCollection(collection_id, actor_id) {
  */
 async function deleteCollection(collection_id, actor_id) {
   return prisma.$transaction(async (tx) => {
+    // grant.resource is onDelete: Restrict, so a collection carrying any grant cannot be
+    // deleted while those rows stand. Every collection now carries at least the owning
+    // group's seeded grant, so this is not an edge case.
+    //
+    // The rows go rather than being revoked. A revoked grant on a collection that no longer
+    // exists is not a fact anybody can use, and who held access survives in
+    // authorization_audit, which records ids rather than holding foreign keys.
+    // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+    await tx.grant.deleteMany({ where: { resource_id: collection_id } });
+
     const deletedCollection = await tx.collection.delete({
       where: { id: collection_id },
     });

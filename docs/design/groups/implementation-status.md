@@ -56,6 +56,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Platform admin | — | one engine check ahead of every action policy | `authorization/index.js`, `authorization/core/middlewares.js` | `PLATFORM ADMIN` caller-role badge |
+| Owning-group grant | seeded `grant` row per resource, `SYSTEM_BOOTSTRAP` | written with the resource, backfilled for older rows | `services/grants/issue.js`, `services/collections.js`, `services/dataset.js` | listed in the Access tab like any grant |
 | Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
@@ -184,6 +185,25 @@ remains as the denormalisation the listings, the archived filter, and the UI bad
 test asserts the two agree for every group and collection. The service-level `is_archived`
 checks that predate this are kept, so a service called outside a route is still guarded.
 
+### The owning group holds a grant on what it governs
+
+Creating a dataset or a collection writes a grant to the owning group in the same
+transaction as the resource, so a resource is never briefly reachable by nobody. Membership
+confers no read on its own.
+
+The grant carries the read plane and nothing more: `DATASET:LIST_FILES` or
+`COLLECTION:LIST_CONTENTS`. Either satisfies its `VIEW_METADATA` counterpart through the
+access-type closure, so one row does the work of two. Downloading stays a deliberate grant.
+
+`creation_type` is `SYSTEM_BOOTSTRAP`, so a seeded grant reads differently from an admin's
+deliberate one. `granted_by` is the `svc_tasks` service account, because the column is
+`NOT NULL` and points at a user while a backfill has no human actor.
+
+The rows are written in three places, because resources arrive three ways: the services, a
+backfill migration for rows that predate the rule, and `prisma/seed.js`, which inserts
+resources directly after migrations have run. A test asserts no dataset or collection is
+missing its grant.
+
 ### Platform admin is one check in the engine
 
 The engine allows a platform admin every action before consulting the action's own policy,
@@ -240,17 +260,15 @@ people as one carrying none.
 Places where the code and the design disagree. Each is a decision to make, not
 necessarily a bug.
 
-### 1. Owning-group *members* get no consumption access
+### 1. Owning-group *members* get no consumption access — **resolved**
 
-The design's consumption path lists "subject is a member of the owning group" as an
-allow condition, and use case C.9 says members of the owning group and its descendants
-can read without explicit grants. The code does not do this: only owning-group **admins**
-get structural data access; ordinary members need a grant like anyone else.
+Settled by [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-grant-not-structural-read)
+and built in phase 10. Membership confers no read by itself, which is the stricter reading
+the code already took. Creating a dataset or a collection now writes a grant to the owning
+group, so members read through a row rather than through a rule.
 
-The design contradicts itself here — the same document also states grants are the only
-source of consumption rights and that access is zero-default. The implementation picked
-the stricter reading. **The design document should be corrected to match, or the policies
-changed.**
+The design's two statements are both satisfied. Members can read what their group owns, and
+grants remain the only source of consumption rights.
 
 ### 2. `unarchive` policy is defined but not used
 
@@ -313,9 +331,8 @@ list below predates it and is kept for the items the plan does not cover:
 1. Scope `GET /audit/records` to owning-group admins and oversight; it is platform admin only today. Fix the `unarchive` policy binding.
 2. Gate access-request creation on resource visibility and `REQUEST_ACCESS`; validate item applicability.
 3. Schedule `expireStaleRequests`.
-4. Resolve deviation 1 (member consumption access) in the design document, then align the policies.
-5. Complete archive prohibitions.
-6. Notifications for grant and access-request decisions.
-7. Contributor uploads (`allow_user_contributions` + `user_dataset_contribution`).
-8. Invitations — the design is ready to build against.
-9. Ownership transfer, then reparenting.
+4. Complete archive prohibitions.
+5. Notifications for grant and access-request decisions.
+6. Contributor uploads (`allow_user_contributions` + `user_dataset_contribution`).
+7. Invitations — the design is ready to build against.
+8. Ownership transfer, then reparenting.

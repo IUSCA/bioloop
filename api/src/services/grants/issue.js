@@ -101,6 +101,73 @@ async function _createGrant(tx, data, auditData = {}) {
 }
 
 /**
+ * The access type an owning group holds on a resource it governs.
+ *
+ * Membership of the owning group confers no read by itself. Creating a resource writes this
+ * grant, so what members hold is a row they can see in the Access tab and an admin can
+ * revoke, rather than a rule that only exists in the source.
+ *
+ * File listing is the read plane, per decision 7, so `LIST_FILES` is what "members can read"
+ * means for a dataset. It satisfies `VIEW_METADATA` through the access-type closure without a
+ * second row. Downloading stays a deliberate grant.
+ *
+ * @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+ */
+const OWNING_GROUP_ACCESS_TYPE = {
+  [RESOURCE_TYPE.DATASET]: 'DATASET:LIST_FILES',
+  [RESOURCE_TYPE.COLLECTION]: 'COLLECTION:LIST_CONTENTS',
+};
+
+/**
+ * Grant the owning group read access to a resource it governs.
+ *
+ * Runs in the caller's transaction, so a resource is never briefly reachable by nobody.
+ *
+ * @param {Object} tx - Prisma transaction client. Required.
+ * @param {Object} params
+ * @param {string} params.resource_id
+ * @param {string} params.resource_type - RESOURCE_TYPE.DATASET or RESOURCE_TYPE.COLLECTION
+ * @param {string} params.owner_group_id
+ * @param {string} params.actor_id - recorded as granted_by
+ * @returns {Promise<Object>} the created grant
+ */
+async function seedOwningGroupGrant(tx, {
+  resource_id, resource_type, owner_group_id, actor_id,
+}) {
+  const name = OWNING_GROUP_ACCESS_TYPE[resource_type];
+  if (!name) {
+    // A resource type with no entry is a gap to report, not a value to guess.
+    throw new Error(`No owning-group access type is defined for resource type ${resource_type}`);
+  }
+
+  const accessType = await tx.grant_access_type.findFirstOrThrow({ where: { name } });
+
+  // granted_by is NOT NULL and points at a user. A resource created by a worker has no human
+  // actor, so the svc_tasks service account stands in. It says the system issued the grant
+  // rather than attributing it to somebody who did not act, and it is the same account the
+  // backfill migration and the seed use.
+  let granted_by_id = actor_id;
+  if (!granted_by_id) {
+    const svc = await tx.user.findUniqueOrThrow({
+      where: { username: 'svc_tasks' },
+      select: { subject_id: true },
+    });
+    granted_by_id = svc.subject_id;
+  }
+
+  return _createGrant(tx, {
+    subject_id: owner_group_id,
+    resource_id,
+    access_type_id: accessType.id,
+    creation_type: GRANT_CREATION_TYPE.SYSTEM_BOOTSTRAP,
+    granted_by: granted_by_id,
+    issuing_authority_id: owner_group_id,
+    expiry: Expiry.never(),
+    justification: 'Seeded at creation: the owning group reads what it governs',
+  });
+}
+
+/**
  * Create a single grant (backwards compatibility wrapper for legacy createGrant API - used for testing)
  * @param {Object} data - grant fields (subject_id, resource_id, access_type_id, valid_from?, valid_until?, etc.)
  * @param {string} granted_by - user ID performing grant creation
@@ -487,6 +554,8 @@ function buildEffectiveGrants(tx, params, items) {
 
 module.exports = {
   createGrant,
+  seedOwningGroupGrant,
+  OWNING_GROUP_ACCESS_TYPE,
   issueGrants,
   buildEffectiveGrants,
   GrantIssueService, // exported for testing purposes

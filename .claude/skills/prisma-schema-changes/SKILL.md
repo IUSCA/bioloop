@@ -152,6 +152,58 @@ invisible in a diff of the later commit.
 The line to stop at is deployment. Once a migration has run anywhere else, it is frozen
 and the correction has to be a new migration.
 
+## A failed migration blocks the next attempt, and editing it demands a reset
+
+When a data migration fails part-way, Prisma records the attempt. Fixing the SQL and running
+`migrate dev` again does not retry it: Prisma sees a migration whose checksum changed after it
+was applied and asks to reset the whole database, which needs the user's consent and destroys
+the development data.
+
+`migrate resolve --rolled-back` is not enough either. It leaves the row in place, and
+`migrate deploy` then refuses with P3009 because a failed migration is present.
+
+The way through, on a development database, is to delete the row and deploy:
+
+```sh
+psql ... -c "DELETE FROM _prisma_migrations WHERE migration_name = '<name>';"
+npx prisma migrate deploy
+```
+
+Postgres runs each migration in a transaction, so a migration that failed on any statement
+wrote nothing and there is no partial state to undo. Iterate that way until the SQL is right.
+
+## Writing rows by hand: the three columns that bite
+
+A data migration or backfill that inserts into an existing table has to satisfy constraints
+Prisma normally handles in the client.
+
+**Client-side defaults are not database defaults.** `@default(uuid())` generates the value in
+the Prisma client, so the column has no `DEFAULT` in Postgres and a plain `INSERT` fails on
+the not-null primary key. Supply `(gen_random_uuid())::text` yourself. `@default(dbgenerated(...))`
+is the one that does reach the database.
+
+**Check what a NOT NULL provenance column actually points at.** `grant.granted_by` is NOT NULL
+and its foreign key is to `user.subject_id`, not to `subject`. A group is a subject and passes
+the eye test, and then violates the constraint. For a row the system issues rather than a
+person, use the `svc_tasks` service account, which both `prisma/seed.js` and
+`src/scripts/init_prod_users.js` create.
+
+**Make the insert re-runnable.** Guard it with `NOT EXISTS`, so a re-run adds nothing rather
+than tripping a uniqueness or exclusion constraint. The `grant_no_overlap` exclusion
+constraint turns a careless second run into an error rather than a duplicate.
+
+## A backfill migration cannot see seeded lookup rows on a fresh database
+
+`prisma/seed.js` runs after migrations, so on a fresh database a migration that joins a lookup
+table such as `grant_access_type` matches nothing. That is usually harmless, because the tables
+it would backfill are empty too — but only if the seed then writes the same rows for what it
+creates.
+
+So a backfill of this shape needs writing in three places, not one: the service that creates
+the row from now on, the migration for rows that predate the rule, and the seed for rows the
+seed inserts directly. Leaving out the seed gives a freshly reset database that is quietly
+inconsistent with every other environment.
+
 ## A nested relation create rejects a scalar foreign key
 
 `prisma.dataset.create({ data: { resource: { create: {...} }, owner_group_id: '...' } })`

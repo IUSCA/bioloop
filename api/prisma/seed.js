@@ -583,6 +583,42 @@ async function main() {
     skipDuplicates: true,
   });
 
+  // The owning group reads what it governs. Written here as well as in the services, because
+  // the seed inserts resources directly and the backfill migration runs before the seed, so
+  // a freshly reset database would otherwise have resources with no owning-group grant.
+  // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
+  const svcTasks = await prisma.user.findUniqueOrThrow({
+    where: { username: 'svc_tasks' },
+    select: { subject_id: true },
+  });
+
+  const owningGroupGrants = [];
+  for (const g of groupsWithMembers) {
+    for (const d of g.owned_datasets.filter((x) => !x.is_deleted)) {
+      owningGroupGrants.push({
+        subject_id: g.id,
+        resource_id: d.resource_id,
+        access_type_id: accessTypeIdByName.get('DATASET:LIST_FILES'),
+        creation_type: 'SYSTEM_BOOTSTRAP',
+        granted_by: svcTasks.subject_id,
+        issuing_authority_id: g.id,
+        justification: 'Seeded at creation: the owning group reads what it governs',
+      });
+    }
+    for (const c of g.owned_collections) {
+      owningGroupGrants.push({
+        subject_id: g.id,
+        resource_id: c.id,
+        access_type_id: accessTypeIdByName.get('COLLECTION:LIST_CONTENTS'),
+        creation_type: 'SYSTEM_BOOTSTRAP',
+        granted_by: svcTasks.subject_id,
+        issuing_authority_id: g.id,
+        justification: 'Seeded at creation: the owning group reads what it governs',
+      });
+    }
+  }
+  await prisma.grant.createMany({ data: owningGroupGrants, skipDuplicates: true });
+
   await Promise.all(
     accessSeedData.accessRequests.map((r) => prisma.access_request.upsert({
       where: { id: r.id },
