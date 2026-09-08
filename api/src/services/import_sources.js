@@ -21,6 +21,33 @@ const SOURCE_SELECT = {
   owner_group: { select: { id: true, name: true, slug: true } },
 };
 
+/**
+ * Groups whose sources this user may browse: the ones they are an effective member of, plus
+ * the ones they have oversight over. Both are read from the views that already exclude
+ * removed and expired memberships.
+ */
+async function reachableGroupIds(subject_id) {
+  const rows = await prisma.$queryRaw`
+    SELECT DISTINCT group_id AS id FROM effective_user_groups WHERE user_id = ${subject_id}
+    UNION
+    SELECT DISTINCT group_id AS id FROM effective_user_oversight_groups WHERE user_id = ${subject_id}
+  `;
+  return rows.map((r) => r.id);
+}
+
+async function isReadableDirectory(target) {
+  try {
+    const stat = await fsp.stat(target);
+    if (!stat.isDirectory()) return false;
+    // Bitwise OR is how fs.access takes a mode; R_OK to list it, X_OK to descend into it.
+    // eslint-disable-next-line no-bitwise
+    await fsp.access(target, fsConstants.R_OK | fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // mounted_path is deliberately absent from SOURCE_SELECT: it is a fact about where the API
 // process happens to see the filesystem, and no caller needs it.
 
@@ -62,20 +89,6 @@ async function listImportSourcesForUser(user) {
     select: SOURCE_SELECT,
     orderBy,
   });
-}
-
-/**
- * Groups whose sources this user may browse: the ones they are an effective member of, plus
- * the ones they have oversight over. Both are read from the views that already exclude
- * removed and expired memberships.
- */
-async function reachableGroupIds(subject_id) {
-  const rows = await prisma.$queryRaw`
-    SELECT DISTINCT group_id AS id FROM effective_user_groups WHERE user_id = ${subject_id}
-    UNION
-    SELECT DISTINCT group_id AS id FROM effective_user_oversight_groups WHERE user_id = ${subject_id}
-  `;
-  return rows.map((r) => r.id);
 }
 
 /**
@@ -170,17 +183,6 @@ async function verifyImportSourcePaths() {
   }
 
   return { checked: sources.length, suspended, restored };
-}
-
-async function isReadableDirectory(target) {
-  try {
-    const stat = await fsp.stat(target);
-    if (!stat.isDirectory()) return false;
-    await fsp.access(target, fsConstants.R_OK | fsConstants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 module.exports = {

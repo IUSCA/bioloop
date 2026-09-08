@@ -134,26 +134,20 @@ describe('listImportSourcesForUser', () => {
 
 describe('resolveImportSourceForUser', () => {
   test('resolves a path inside the user\'s own source', async () => {
-    const resolved = await resolveImportSourceForUser(
-      asUser(insider), path.join(tmpRoot, 'own', 'RUN_ALPHA'),
-    );
+    const resolved = await resolveImportSourceForUser(asUser(insider), path.join(tmpRoot, 'own', 'RUN_ALPHA'));
 
     expect(resolved?.id).toBe(ownSource.id);
   });
 
   test('refuses a path inside another group\'s source', async () => {
     // The whole point: guessing the path is not enough.
-    const resolved = await resolveImportSourceForUser(
-      asUser(insider), path.join(tmpRoot, 'other', 'SECRET_RUN'),
-    );
+    const resolved = await resolveImportSourceForUser(asUser(insider), path.join(tmpRoot, 'other', 'SECRET_RUN'));
 
     expect(resolved).toBeNull();
   });
 
   test('marks a suspended source unavailable rather than serving it', async () => {
-    const resolved = await resolveImportSourceForUser(
-      asUser(insider), path.join(tmpRoot, 'gone', 'anything'),
-    );
+    const resolved = await resolveImportSourceForUser(asUser(insider), path.join(tmpRoot, 'gone', 'anything'));
 
     expect(resolved?.unavailable).toBe(true);
   });

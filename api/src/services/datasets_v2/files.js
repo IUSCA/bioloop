@@ -6,7 +6,6 @@ const config = require('config');
 const prisma = require('@/db');
 const FileGraph = require('@/services/fileGraph');
 const authService = require('@/services/auth');
-const datasetService = require('@/services/datasets_v2');
 
 /**
  * Adds files to a dataset.

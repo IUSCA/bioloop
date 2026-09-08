@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Confirm every import source's path is still readable.
  *

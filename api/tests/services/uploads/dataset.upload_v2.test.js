@@ -121,7 +121,9 @@ describe('registerUpload', () => {
     });
 
     const matching = await prisma.dataset.count({
-      where: { name, type: 'RAW_DATA', owner_group_id: group.id, is_deleted: false },
+      where: {
+        name, type: 'RAW_DATA', owner_group_id: group.id, is_deleted: false,
+      },
     });
     expect(matching).toBe(1);
   });
