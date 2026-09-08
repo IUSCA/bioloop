@@ -1,7 +1,7 @@
 const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('./utils/index');
+const { platformAdminOnly } = require('./utils/index');
 const { PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES } = require('./group');
 
 const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
@@ -67,13 +67,15 @@ const PUBLIC_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'is_archived', '_count.datasets',
 ].concat(GROUP_PUBLIC_ATTRIBUTES.map((attr) => `owner_group.${attr}`)); // include owner group attributes with 'owner_group.' prefix
 
+// No policy below names the platform-admin role. The engine allows a platform admin every
+// action before any of these run, so repeating the term here would be dead weight.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 collectionPolicies
   .actions({
   // here isCollectionAdmin means the user is admin of the group that will be the owner of the collection
-    create: Policy.or([isPlatformAdmin, isCollectionAdmin]),
+    create: isCollectionAdmin,
 
     view_metadata: Policy.or([
-      isPlatformAdmin,
       isCollectionAdmin,
       hasCollectionOversight,
       userHasGrant('COLLECTION:VIEW_METADATA'),
@@ -81,26 +83,24 @@ collectionPolicies
 
     list: Policy.always, // anyone can list collections, but the results will be filtered based on their permissions
     list_datasets: Policy.or([
-      isPlatformAdmin,
       isCollectionAdmin,
       hasCollectionOversight,
       userHasGrant('COLLECTION:LIST_CONTENTS')]),
 
-    edit_metadata: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    add_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    remove_dataset: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    transfer_ownership: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    delete: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    archive: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    unarchive: isPlatformAdmin,
+    edit_metadata: isCollectionAdmin,
+    add_dataset: isCollectionAdmin,
+    remove_dataset: isCollectionAdmin,
+    transfer_ownership: isCollectionAdmin,
+    delete: isCollectionAdmin,
+    archive: isCollectionAdmin,
+    unarchive: platformAdminOnly,
 
-    list_grants: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
-    manage_grants: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    review_requests: Policy.or([isPlatformAdmin, isCollectionAdmin]),
-    view_audit_logs: Policy.or([isPlatformAdmin, isCollectionAdmin, hasCollectionOversight]),
+    list_grants: Policy.or([isCollectionAdmin, hasCollectionOversight]),
+    manage_grants: isCollectionAdmin,
+    review_requests: isCollectionAdmin,
+    view_audit_logs: Policy.or([isCollectionAdmin, hasCollectionOversight]),
   })
   .roles([
-    { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
     { policy: isCollectionAdmin, role: CallerRole.ADMIN },
     { policy: hasCollectionOversight, role: CallerRole.OVERSIGHT },
     {
@@ -115,10 +115,6 @@ collectionPolicies
   // sensitive information about the collection or its datasets
     '*': [
       {
-        policy: isPlatformAdmin,
-        attribute_filters: ['*'], // * - all attributes
-      },
-      {
         policy: isCollectionAdmin,
         attribute_filters: ['*'], // * - all attributes
       },
@@ -132,10 +128,6 @@ collectionPolicies
       },
     ],
     list: [
-      {
-        policy: isPlatformAdmin,
-        attribute_filters: ['*'],
-      },
       {
         // for listing, we can't uniformly apply the attribute filters because
         // different collections in the list might have different permissions, so we will apply the PUBLIC_ATTRIBUTES filter

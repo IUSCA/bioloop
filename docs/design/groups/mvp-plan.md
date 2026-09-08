@@ -228,7 +228,7 @@ Implements [decision 10](./decisions.md#_10-derived-and-source-dataset-access-ar
   reversal is pinned by a test rather than left as an absence, so a later change that
   reintroduces the coupling fails rather than passing quietly.
 
-## Phase 9 — Platform admin is one check in the engine
+## Phase 9 — Platform admin is one check in the engine — **done**
 
 Implements [decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-engine).
 
@@ -238,9 +238,15 @@ Implements [decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-e
   it, so an archived group stays archived for a platform admin.
 - `GET /audit/records` gains the authorization it never had, which is the hole this change
   exists to close.
-- Tests: a platform admin reaches every action a policy could gate; a non-admin is
-  unaffected; an archived resource still refuses a platform admin's mutations; and a
-  coverage test asserts no built-in policy still names the role.
+- `platformAdminOnly` replaces `Policy.or([isPlatformAdmin])` for actions nobody qualifies
+  for on their own, so removing the term does not leave an empty combinator.
+- The short-circuit evaluates with an all-attributes rule rather than none. An empty rule set
+  produces a filter that strips every field, which would have granted the action and returned
+  an object with nothing in it.
+- Tests: 15, covering every dataset action granted without a grant or membership, capabilities
+  all true, the caller role, no attribute filtered out, a non-admin still refused, an
+  admin-only action refusing everyone else, an archived resource still refusing a platform
+  admin, and a per-resource-type check that no policy names the role.
 
 ## Phase 10 — Creating a resource seeds a grant to its owning group
 

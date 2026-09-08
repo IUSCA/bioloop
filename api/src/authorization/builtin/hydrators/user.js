@@ -10,8 +10,11 @@ const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user
 userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
   const rows = await dbClient.user_role.findMany({
+    // The relation on user_role is `users`, not `user`. Naming it wrongly threw only when
+    // this attribute was actually hydrated, which routes never do — the auth middleware
+    // pre-fetches req.user with its roles already attached.
     where: {
-      user: {
+      users: {
         subject_id: id,
       },
     },

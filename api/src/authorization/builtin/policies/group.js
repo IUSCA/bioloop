@@ -1,6 +1,6 @@
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('./utils/index');
+const { platformAdminOnly } = require('./utils/index');
 
 class GroupPolicy extends Policy {
   constructor({ name, requires, evaluate }) {
@@ -75,48 +75,46 @@ const CallerRole = Object.freeze({
 
 const PUBLIC_ATTRIBUTES = ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', '_count.members'];
 
+// No policy below names the platform-admin role. The engine allows a platform admin every
+// action before any of these run, so repeating the term here would be dead weight.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 groupPolicies
   .roles([
-    { policy: isPlatformAdmin, role: CallerRole.PLATFORM_ADMIN },
     { policy: isGroupAdmin, role: CallerRole.ADMIN },
     { policy: hasGroupOversight, role: CallerRole.OVERSIGHT },
     { policy: isGroupMember, role: CallerRole.MEMBER },
     { policy: canAccessResourcesOwnedByGroup, role: CallerRole.RESOURCE_ACCESS },
   ])
   .actions({
-    create: isPlatformAdmin,
-    create_child: Policy.or([isPlatformAdmin, isGroupAdmin]),
+    create: platformAdminOnly,
+    create_child: isGroupAdmin,
 
-    archive: Policy.or([isPlatformAdmin, isGroupAdmin]),
-    unarchive: isPlatformAdmin,
+    archive: isGroupAdmin,
+    unarchive: platformAdminOnly,
 
-    view_metadata: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
-    edit_metadata: Policy.or([isPlatformAdmin, isGroupAdmin]),
+    view_metadata: Policy.or([isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
+    edit_metadata: isGroupAdmin,
     list: Policy.always, // database query will contains filters based on user's access, so no policy needed here
-    view_hierarchy: isPlatformAdmin,
-    list_invalid: isPlatformAdmin,
-    view_audit_logs: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
+    view_hierarchy: platformAdminOnly,
+    list_invalid: platformAdminOnly,
+    view_audit_logs: Policy.or([isGroupAdmin, hasGroupOversight]),
 
-    view_members: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
-    view_ancestors: Policy.or([isPlatformAdmin, isGroupMember, hasGroupOversight]),
+    view_members: Policy.or([isGroupMember, hasGroupOversight]),
+    view_ancestors: Policy.or([isGroupMember, hasGroupOversight]),
 
     // all descendants
-    view_descendants: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
+    view_descendants: Policy.or([isGroupAdmin, hasGroupOversight]),
 
-    add_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
-    remove_member: Policy.or([isPlatformAdmin, isGroupAdmin]),
-    edit_member_role: Policy.or([isPlatformAdmin, isGroupAdmin]),
+    add_member: isGroupAdmin,
+    remove_member: isGroupAdmin,
+    edit_member_role: isGroupAdmin,
 
-    add_dataset: Policy.or([isPlatformAdmin, isGroupAdmin, isMemberContributionsAllowed]),
-    add_collection: Policy.or([isPlatformAdmin, isGroupAdmin]),
+    add_dataset: Policy.or([isGroupAdmin, isMemberContributionsAllowed]),
+    add_collection: isGroupAdmin,
   })
   .attributes({
     // * - any action
     '*': [
-      {
-        policy: isPlatformAdmin,
-        attribute_filters: ['*'], // * - all attributes
-      },
       {
         policy: isGroupAdmin,
         attribute_filters: ['*'], // * - all attributes
@@ -144,7 +142,7 @@ groupPolicies
     ],
     view_members: [
       {
-        policy: Policy.or([isPlatformAdmin, isGroupAdmin, hasGroupOversight]),
+        policy: Policy.or([isGroupAdmin, hasGroupOversight]),
         attribute_filters: ['*'],
       },
       {
@@ -153,10 +151,6 @@ groupPolicies
       },
     ],
     list: [
-      {
-        policy: isPlatformAdmin,
-        attribute_filters: ['*'],
-      },
       {
         policy: Policy.always,
         attribute_filters: PUBLIC_ATTRIBUTES.concat([

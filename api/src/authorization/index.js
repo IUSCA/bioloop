@@ -52,9 +52,17 @@ const { datasetPolicies } = require('./builtin/policies/dataset');
 const { accessRequestPolicies } = require('./builtin/policies/access_request');
 const { grantPolicies } = require('./builtin/policies/grant');
 const { userPolicies } = require('./builtin/policies/user');
+const { auditPolicies } = require('./builtin/policies/audit');
 
 // Builtin restriction layer
 const restrictions = require('./builtin/restrictions');
+
+// The single platform-admin check. Policies do not name the role; the engine consults this
+// once, before any action policy runs and after the restriction check.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
+const { isPlatformAdmin } = require('./builtin/policies/utils/index');
+
+const PLATFORM_ADMIN = { policy: isPlatformAdmin, callerRole: 'PLATFORM_ADMIN' };
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
@@ -80,6 +88,7 @@ policyRegistry.register(datasetPolicies);
 policyRegistry.register(accessRequestPolicies);
 policyRegistry.register(grantPolicies);
 policyRegistry.register(userPolicies);
+policyRegistry.register(auditPolicies);
 
 // Register derived app policy containers here
 
@@ -107,6 +116,7 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
   hydratorRegistry,
   undefined,
   restrictions.checkRestriction,
+  PLATFORM_ADMIN,
 );
 
 // inject hydrate registry into core authorizeWithFilters function
@@ -147,6 +157,30 @@ async function authorizeAction(resourceType, action, {
   });
   if (blockedBy) {
     return { granted: false, filter: null, blockedBy };
+  }
+
+  // A platform admin is allowed every action, so the action's own policy is not consulted.
+  // After the restriction check, for the same reason as in the middleware.
+  // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
+  const adminResult = await authorizeWithFilters({
+    policy: PLATFORM_ADMIN.policy,
+    // Everything, always. An empty rule set makes a filter that strips every field.
+    attributeRules: [{ policy: Policy.always, attribute_filters: ['*'] }],
+    identifiers,
+    registry: hydratorRegistry,
+    policyExecutionContext,
+    preFetched,
+  });
+  if (adminResult.granted) {
+    if (shouldDeriveCapabilities) {
+      adminResult.capabilities = Object.fromEntries(
+        policyContainer.getActionNames().map((name) => [name, true]),
+      );
+    }
+    if (shouldDeriveCallerRole) {
+      adminResult.callerRole = PLATFORM_ADMIN.callerRole;
+    }
+    return adminResult;
   }
 
   const permission = await authorizeWithFilters({

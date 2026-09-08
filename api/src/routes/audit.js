@@ -3,12 +3,16 @@ const { query } = require('express-validator');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const auditService = require('@/services/audit');
+const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 
 const router = express.Router();
 
 // Get audit records with comprehensive filtering, sorting, and pagination
 router.get(
   '/records',
+  // These records span the whole platform, so reading them is platform admin only.
+  // @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
+  authorize('audit', 'read_records', { resourceIdFn: () => null }),
   validate([
     query('filter[event_type]').optional().isString().trim(),
     query('filter[actor_id]').optional().isUUID(),

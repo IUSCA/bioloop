@@ -3,6 +3,7 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { authorizeWithFilters } = require('./authorize');
+const Policy = require('./policies/Policy');
 const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
 
 /**
@@ -42,6 +43,14 @@ async function filterRestrictedCapabilities({
   return filtered;
 }
 
+/**
+ * The attribute rule the platform-admin short-circuit evaluates with: everything, always.
+ *
+ * `createFilterFunction` treats an empty filter list as deny-all, so a short-circuit that
+ * passed no rules would grant the action and then hand back an object with no fields.
+ */
+const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
+
 function initializePolicyContext(req, res, next) {
   // check if req has policyContext and if not initialize it to an empty object
   if (!req.policyContext) {
@@ -69,8 +78,18 @@ function initializePolicyContext(req, res, next) {
  *   Returns the name of a restriction that blocks this action, or null. Injected rather
  *   than imported so the core engine stays free of any knowledge of restrictions.
  *   @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+ * @param {Object} [platformAdmin] - Optional `{ policy, callerRole }`. When the policy grants,
+ *   every action is allowed without consulting the action's own policy. Injected for the same
+ *   reason as the restriction checker: the role name and the policy are application facts.
+ *   @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
  */
-function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry, events, restrictionChecker = null) {
+function createAuthorizationMiddlewareFunction(
+  policyRegistry,
+  hydratorRegistry,
+  events,
+  restrictionChecker = null,
+  platformAdmin = null,
+) {
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
@@ -110,6 +129,51 @@ function createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry,
         });
         if (blockedBy) {
           return next(createError(403, `Blocked by a ${blockedBy} restriction`));
+        }
+      }
+
+      // A platform admin is allowed every action, so the action's own policy is not
+      // consulted. This runs after the restriction check on purpose: an archived group is
+      // archived for a platform admin too.
+      //
+      // The result of this evaluation is used as the permission directly. It is given one
+      // attribute rule matching everything, because an empty rule set produces a filter that
+      // strips every field rather than one that passes them through.
+      // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
+      if (platformAdmin) {
+        const adminResult = await authorizeWithFilters({
+          policy: platformAdmin.policy,
+          attributeRules: ALL_ATTRIBUTES,
+          identifiers,
+          registry: hydratorRegistry,
+          policyExecutionContext,
+          preFetched: {
+            user: req.user,
+            resource: preFetchedResource,
+            context: { req },
+          },
+        });
+
+        if (adminResult.granted) {
+          req.permission = adminResult;
+
+          if (shouldDeriveCapabilities) {
+            const capabilities = Object.fromEntries(
+              policyContainer.getActionNames().map((name) => [name, true]),
+            );
+            // Restrictions still bite. An admin is offered no button an archived
+            // resource would refuse.
+            req.permission.capabilities = restrictionChecker
+              ? await filterRestrictedCapabilities({
+                capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker,
+              })
+              : capabilities;
+          }
+          if (shouldDeriveCallerRole) {
+            req.permission.callerRole = platformAdmin.callerRole;
+          }
+
+          return next();
         }
       }
 

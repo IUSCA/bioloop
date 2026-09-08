@@ -55,6 +55,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
+| Platform admin | — | one engine check ahead of every action policy | `authorization/index.js`, `authorization/core/middlewares.js` | `PLATFORM ADMIN` caller-role badge |
 | Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
@@ -183,6 +184,23 @@ remains as the denormalisation the listings, the archived filter, and the UI bad
 test asserts the two agree for every group and collection. The service-level `is_archived`
 checks that predate this are kept, so a service called outside a route is still guarded.
 
+### Platform admin is one check in the engine
+
+The engine allows a platform admin every action before consulting the action's own policy,
+so no built-in policy names the role. Seventy-seven hand-written `isPlatformAdmin` terms came
+out of the five policy files, and a test asserts none has come back.
+
+The check runs after the restriction check, not before it. An archived group is archived for
+a platform admin too, and a test covers that.
+
+`platformAdminOnly` names an action nobody qualifies for on their own, reachable only through
+the short-circuit. It replaces what `Policy.or([isPlatformAdmin])` used to say, and stops the
+removal from leaving an empty combinator that reads as an oversight.
+
+`GET /audit/records` gained authorization it never had. It is platform admin only, expressed
+through a small `audit` policy container rather than a hand-written role check, so the rule
+still lives in one place.
+
 ### Derived and source dataset access are independent
 
 A derived dataset's access is decided on the derivative alone. A derivative may be shared
@@ -281,7 +299,7 @@ what the hand-written implication was standing in for: `DOWNLOAD`, `COMPUTE`, an
 
 ### Enforcement holes
 
-- **`GET /audit/records` has no authorization at all.** It sits behind `authenticate` and nothing else, so any logged-in user can read the entire authorization audit log — actors, subjects, resource names, decisions. The design scopes audit visibility to owning-group admins, oversight, and platform admins.
+- **`GET /audit/records` is platform admin only, not scoped.** Phase 9 closed the hole: the route carried no authorization at all, so any logged-in user could read the whole audit log. It now requires a platform admin. The design scopes audit visibility to owning-group admins and oversight as well, which needs the query filtered by the caller's authority rather than merely gated.
 - **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always`, and the service validates only the *subject*. A user who knows any resource UUID can file a request against a resource they cannot see, and nothing checks `REQUEST_ACCESS`. `assertGrantItemsApplicableToResourceType` is called on grant creation but not here, so a request can also name access types that do not apply to the resource type.
 - **Legacy `/datasets` routes bypass ABAC entirely.** They still use the old RBAC `accessControl()` middleware. The group model only governs `/v2/datasets`. Until the legacy surface is retired or migrated, the "consistency across interfaces" expectation (use cases 11, 56) does not hold.
 
@@ -292,7 +310,7 @@ what the hand-written implication was standing in for: `DOWNLOAD`, `COMPUTE`, an
 Superseded by the [MVP Implementation Plan](./mvp-plan.md), whose phases 1 and 2 are complete. The
 list below predates it and is kept for the items the plan does not cover:
 
-1. Authorize `GET /audit/records`; fix the `unarchive` policy binding.
+1. Scope `GET /audit/records` to owning-group admins and oversight; it is platform admin only today. Fix the `unarchive` policy binding.
 2. Gate access-request creation on resource visibility and `REQUEST_ACCESS`; validate item applicability.
 3. Schedule `expireStaleRequests`.
 4. Resolve deviation 1 (member consumption access) in the design document, then align the policies.

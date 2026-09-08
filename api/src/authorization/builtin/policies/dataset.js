@@ -1,7 +1,7 @@
 const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('./utils/index');
+const { platformAdminOnly } = require('./utils/index');
 const { dataset: PUBLIC_ATTRIBUTES } = require('./base_attributes');
 
 const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
@@ -109,18 +109,20 @@ const datasetPolicies = new PolicyContainer({
 //   // du_size excluded (internal accounting detail)
 // ]);
 
+// No policy below names the platform-admin role. The engine allows a platform admin every
+// action before any of these run, so repeating the term here would be dead weight.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 datasetPolicies
   .actions({
 
     // ------------------------------------------------------------------
     // CREATION
-    // Platform admins can create datasets for any group.
     // Group admins can create datasets owned by their group.
     // Normal users cannot create datasets directly — they contribute via
     // the upload pathway which is gated by group.allow_user_contributions
     // and enforced at the service layer, not the policy layer.
     // ------------------------------------------------------------------
-    create: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+    create: isDatasetOwningGroupAdmin,
 
     // ------------------------------------------------------------------
     // EXISTENCE / METADATA VISIBILITY
@@ -128,13 +130,11 @@ datasetPolicies
     // that this dataset exists at all — not in listings, not by ID.
     //
     // Allowed by:
-    //   1. Platform admin
-    //   2. Owner group admin (structural authority)
-    //   3. Oversight authority over owning group (structural, read-only)
-    //   4. Active grant of type view_metadata
+    //   1. Owner group admin (structural authority)
+    //   2. Oversight authority over owning group (structural, read-only)
+    //   3. Active grant of type view_metadata
     // ------------------------------------------------------------------
     view_metadata: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:VIEW_METADATA'),
@@ -147,7 +147,6 @@ datasetPolicies
     // beyond basic view_metadata.
     // ------------------------------------------------------------------
     view_sensitive_metadata: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
@@ -162,7 +161,6 @@ datasetPolicies
     // alone does NOT imply the ability to enumerate files.
     // ------------------------------------------------------------------
     list_files: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_FILES'),
@@ -180,19 +178,16 @@ datasetPolicies
     // LIST_FILES, so any of them satisfies this check.
     // @see docs/design/groups/decisions.md — 7. Access types imply one another
     read_data: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:LIST_FILES'),
     ]),
 
     download: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:DOWNLOAD'),
     ]),
 
     compute: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:COMPUTE'),
     ]),
@@ -203,7 +198,6 @@ datasetPolicies
     // Requires an explicit grant — oversight does not include staging.
     // ------------------------------------------------------------------
     request_stage: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:DOWNLOAD'),
       userHasGrant('DATASET:COMPUTE'),
@@ -211,28 +205,28 @@ datasetPolicies
 
     // ------------------------------------------------------------------
     // GOVERNANCE ACTIONS
-    // Only platform admins and owner group admins.
+    // Only the owner group's admins.
     // Oversight is read-only and never includes mutation authority.
     // ------------------------------------------------------------------
-    edit_metadata: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
-    archive: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
-    unarchive: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
-    transfer_ownership: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
-    edit: Policy.or([isPlatformAdmin]),
+    edit_metadata: isDatasetOwningGroupAdmin,
+    archive: isDatasetOwningGroupAdmin,
+    unarchive: isDatasetOwningGroupAdmin,
+    transfer_ownership: isDatasetOwningGroupAdmin,
+    edit: platformAdminOnly,
 
     // ------------------------------------------------------------------
     // GRANT MANAGEMENT
-    // Only the owner group's admins (and platform admins) may create,
-    // modify, or revoke grants on a dataset.
+    // Only the owner group's admins may create, modify, or revoke grants
+    // on a dataset.
     // ------------------------------------------------------------------
-    manage_grants: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+    manage_grants: isDatasetOwningGroupAdmin,
 
     // ------------------------------------------------------------------
     // ACCESS REQUEST REVIEW
     // Incoming access requests on this dataset are reviewed by the
     // owner group's admins.
     // ------------------------------------------------------------------
-    review_access_requests: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+    review_access_requests: isDatasetOwningGroupAdmin,
 
     // ------------------------------------------------------------------
     // AUDIT LOG VISIBILITY
@@ -240,7 +234,6 @@ datasetPolicies
     // Grant holders cannot — audit logs are governance metadata.
     // ------------------------------------------------------------------
     view_audit_logs: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
     ]),
@@ -252,7 +245,6 @@ datasetPolicies
     // Grant holders cannot see workflow internals.
     // ------------------------------------------------------------------
     view_workflows: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
     ]),
@@ -264,7 +256,6 @@ datasetPolicies
     // do not gain visibility into collection membership.
     // ------------------------------------------------------------------
     view_collections: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
     ]),
@@ -276,7 +267,6 @@ datasetPolicies
     // Grant holders need explicit grant to see source datasets.
     // ------------------------------------------------------------------
     view_source_datasets: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_SOURCE_DATASETS'),
@@ -289,7 +279,6 @@ datasetPolicies
     // Grant holders need explicit grant to see derived datasets.
     // ------------------------------------------------------------------
     view_derived_datasets: Policy.or([
-      isPlatformAdmin,
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_DERIVED_DATASETS'),
@@ -307,9 +296,9 @@ datasetPolicies
     // even when they have view_metadata — those require view_sensitive_metadata.
     // ------------------------------------------------------------------
     '*': [
-      // Platform admin and owner group admin: full access
+      // Owner group admin: full access
       {
-        policy: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+        policy: isDatasetOwningGroupAdmin,
         attribute_filters: ['*'],
       },
 
@@ -347,17 +336,13 @@ datasetPolicies
     ],
     list: [
       {
-        policy: isPlatformAdmin,
-        attribute_filters: ['*'],
-      },
-      {
         policy: Policy.always,
         attribute_filters: PUBLIC_ATTRIBUTES, // listing only returns public attributes, even for structural roles
       },
     ],
     view_source_datasets: [
       {
-        policy: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+        policy: isDatasetOwningGroupAdmin,
         attribute_filters: ['*'],
       },
       {
@@ -371,7 +356,7 @@ datasetPolicies
     ],
     view_derived_datasets: [
       {
-        policy: Policy.or([isPlatformAdmin, isDatasetOwningGroupAdmin]),
+        policy: isDatasetOwningGroupAdmin,
         attribute_filters: ['*'],
       },
       {
@@ -385,7 +370,6 @@ datasetPolicies
     ],
   })
   .roles([
-    { policy: isPlatformAdmin, role: callerRoles.PLATFORM_ADMIN },
     { policy: isDatasetOwningGroupAdmin, role: callerRoles.ADMIN },
     { policy: hasDatasetOwningGroupOversight, role: callerRoles.OVERSIGHT },
     {

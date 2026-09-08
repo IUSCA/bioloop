@@ -2,7 +2,6 @@ const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('./utils/index');
 
 class UserPolicy extends Policy {
   constructor({ name, requires, evaluate }) {
@@ -28,8 +27,11 @@ const userPolicies = new PolicyContainer({
   description: 'Policies for User resource',
 });
 
+// No policy below names the platform-admin role. The engine allows a platform admin every
+// action before any of these run, so repeating the term here would be dead weight.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 userPolicies.actions({
-  list: Policy.or([isPlatformAdmin, isAdminOfAnyGroup]),
+  list: isAdminOfAnyGroup,
 })
   .attributes({
     '*': [

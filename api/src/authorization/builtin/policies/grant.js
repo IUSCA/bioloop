@@ -2,7 +2,6 @@ const collectionService = require('@/services/collections');
 const datasetService = require('@/services/datasets_v2');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('./utils/index');
 const baseAttributes = require('./base_attributes');
 
 class GrantPolicy extends Policy {
@@ -107,13 +106,16 @@ const grantPolicies = new PolicyContainer({
   description: 'Policies for Grants resource',
 });
 
+// No policy below names the platform-admin role. The engine allows a platform admin every
+// action before any of these run, so repeating the term here would be dead weight.
+// @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 grantPolicies
   .actions({
-    create: Policy.or([isPlatformAdmin, isAdminOfResourceGroup]),
-    read: Policy.or([isPlatformAdmin, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
-    revoke: Policy.or([isPlatformAdmin, isAdminOfResourceGroup]),
-    list_for_resource: Policy.or([isPlatformAdmin, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
-    list_for_subject: Policy.or([isPlatformAdmin, isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup]),
+    create: isAdminOfResourceGroup,
+    read: Policy.or([isAdminOfResourceGroup, hasOversightOfResourceGroup]),
+    revoke: isAdminOfResourceGroup,
+    list_for_resource: Policy.or([isAdminOfResourceGroup, hasOversightOfResourceGroup]),
+    list_for_subject: Policy.or([isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup]),
     list: Policy.always, // listing grants is allowed, but the results will be filtered based on the user's permissions
   })
   .attributes({
