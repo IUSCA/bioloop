@@ -101,8 +101,9 @@ const buildDatasetCreateQuery = (data) => {
 // ── Dataset CRUD ─────────────────────────────────────────────────────────────
 
 /**
- * Creates a dataset and seeds its owning group's grant. Idempotent — returns null if a
- * non-deleted dataset with the same name+type already exists rather than throwing.
+ * Creates a dataset and seeds its owning group's grant. Idempotent — returns null if the
+ * owning group already holds a non-deleted dataset of the same name and type, rather than
+ * throwing.
  *
  * @param {object} options
  * @param {object} [options.tx] - run inside this transaction; one is opened when omitted
@@ -114,8 +115,15 @@ async function createDataset({ tx = null, data, actor_id = null }) {
   // reachable by nobody.
   // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
   const run = async (client) => {
+    // Scoped to the owning group, matching the unique key. A global check would report a
+    // conflict for a name another group holds, which both blocks a legitimate create and
+    // tells the caller that the other group holds it.
+    // @see docs/design/groups/dataset-storage.md — What group scoping changed
+    const owner_group_id = data.owner_group_id ?? data.owner_group?.connect?.id;
     const existing = await client.dataset.findFirst({
-      where: { name: data.name, type: data.type, is_deleted: false },
+      where: {
+        name: data.name, type: data.type, is_deleted: false, owner_group_id,
+      },
       select: { id: true },
     });
     if (existing) return null;

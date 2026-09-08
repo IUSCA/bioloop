@@ -366,7 +366,8 @@ class TestWatchRegistration:
 
         archive_dataset
             archive_path == get_archive_path(dataset)
-            archive file exists on disk
+            archive file exists on disk, under its owning group's archive_key directory
+            archive_group_key == get_archive_key(dataset)
             bundle.name == get_archive_bundle_name(dataset)
             bundle.size > 0
             bundle.md5 == utils.checksum(archive_file)  ← end-to-end integrity
@@ -376,7 +377,7 @@ class TestWatchRegistration:
             staged directory exists on disk
             metadata.stage_alias == stage_alias(dataset)  ← deterministic alias
             staged bundle file exists at get_bundle_staged_path(dataset)
-            staged bundle filename == get_bundle_name(dataset)
+            staged bundle filename == <stage_alias>.tar
 
         validate_dataset
             is_staged == True

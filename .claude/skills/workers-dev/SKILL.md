@@ -88,6 +88,19 @@ gitignored. Two fields cause most of the trouble:
   A good token has `profile.subject_id` and a `profile.id` matching the current
   `svc_tasks` row. Reissue whenever either is missing or stale.
 
+  **A stale token does not always produce an error status.** `POST /v2/datasets/bulk`
+  answers `200` with every dataset in `errored` and an empty `created`, because it treats a
+  per-dataset failure as data rather than as an exception. The cause is only in the API log:
+
+  ```
+  Error in bulkCreateDatasets: ... "code":"P2003","meta":{"constraint":"grant_granted_by_fkey"}
+  ```
+
+  `grant.granted_by` is NOT NULL and its foreign key is to `user.subject_id`, so seeding the
+  owning group's grant fails when the token names a `subject_id` that no longer exists. Read
+  the API log rather than the worker's output when a bulk create returns `errored` with no
+  explanation.
+
 A missing `API_BASE_URL` fails at import with a bare `KeyError: 'API_BASE_URL'` from
 `common.py`, before any logging is set up. Every worker dies instantly and pm2 shows three
 restarts. Check `workers/.env` before reading anything else.
