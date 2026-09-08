@@ -134,6 +134,10 @@
       ]
     }
   },
+  "workflow_policy_actions": {
+    "integrated": "compute",
+    "stage": "request_stage"
+  },
   "dataset_types": [
     "RAW_DATA",
     "DATA_PRODUCT"

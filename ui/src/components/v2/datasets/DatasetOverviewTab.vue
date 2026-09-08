@@ -215,8 +215,9 @@
           />
 
           <ActionButton
-            v-if="props.canDownload"
-            :disabled="props.dataset.is_staged"
+            v-if="props.canRequestStage"
+            :disabled="props.dataset.is_staged || staging"
+            :loading="staging"
             icon="mdi-cloud-download"
             icon-color="text-blue-500"
             title="Request Stage"
@@ -247,6 +248,8 @@
 
 <script setup>
 import DatasetType from "@/components/dataset/DatasetType.vue";
+import datasetService from "@/services/v2/datasets";
+import toast from "@/services/toast";
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import DatasetEditMetadataModal from "./DatasetEditMetadataModal.vue";
@@ -261,6 +264,9 @@ const props = defineProps({
   canArchive: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
   canDownload: { type: Boolean, default: false },
+  // Staging is its own authority. Being able to download a dataset that is already staged
+  // does not imply being able to ask for it to be staged again.
+  canRequestStage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -293,8 +299,29 @@ function openDownloadModal() {
   downloadModalRef.value?.show();
 }
 
+const staging = ref(false);
+
 function handleStageRequest() {
-  console.log("Stage request clicked");
+  staging.value = true;
+  datasetService
+    .runWorkflow({ id: props.dataset.resource_id, workflow_type: "stage" })
+    .then(() => {
+      toast.success("Staging requested. It will appear in Workflows shortly.");
+      emit("update");
+    })
+    .catch((err) => {
+      // The API refuses a second stage run while one is pending; say so rather than
+      // reporting a generic failure.
+      const pending = err?.response?.status === 500;
+      toast.error(
+        pending
+          ? "This dataset is already being staged."
+          : "Unable to request staging",
+      );
+    })
+    .finally(() => {
+      staging.value = false;
+    });
 }
 
 function handleNavigateToFiles() {

@@ -161,6 +161,7 @@
           :can-archive="can('archive')"
           :can-issue-grants="can('manage_grants')"
           :can-download="can('download')"
+          :can-request-stage="can('request_stage')"
           @update="fetchDatasetData"
           @delete="openDeleteModal"
           @action-requested="handleActionRequested"

@@ -23,11 +23,13 @@ const router = express.Router({ mergeParams: true });
 // All routes authorize against the parent dataset identified by dataset_id.
 const byDatasetId = { resourceIdFn: (req) => req.params.dataset_id };
 
-// Dynamic action selection: stage → request_stage, integrated → compute
+// Which policy action gates a run is config, not a branch here. A workflow that names no
+// action is refused rather than defaulted to something permissive.
 const authorizeWorkflowRun = (req, res, next) => {
-  const action = req.params.workflow_type === CONSTANTS.WORKFLOWS.STAGE
-    ? 'request_stage'
-    : 'compute';
+  const action = workflowService.policyActionFor(req.params.workflow_type);
+  if (!action) {
+    return next(createError(400, `No policy action is defined for workflow ${req.params.workflow_type}`));
+  }
   return authorize('dataset', action, byDatasetId)(req, res, next);
 };
 
@@ -62,10 +64,7 @@ router.get(
 router.post(
   '/run/:workflow_type',
   validate([
-    param('workflow_type').isIn([
-      CONSTANTS.WORKFLOWS.INTEGRATED,
-      CONSTANTS.WORKFLOWS.STAGE,
-    ]),
+    param('workflow_type').isIn(workflowService.runnableWorkflows()),
   ]),
   authorizeWorkflowRun,
   asyncHandler(async (req, res, next) => {

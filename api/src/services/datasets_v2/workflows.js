@@ -7,6 +7,36 @@ const wfService = require('@/services/workflow');
 const { DONE_STATUSES } = require('@/constants');
 
 /**
+ * The workflows a caller may launch on a dataset, and the policy action each one needs.
+ *
+ * Config decides this, not the route: adding a workflow to `workflow_policy_actions` makes it
+ * runnable, and leaving it out keeps it internal. `delete` is deliberately absent — it runs as
+ * a consequence of archiving a dataset, never because somebody asked for it directly.
+ *
+ * Kept beside `workflow_registry` rather than inside it, because the legacy dataset service
+ * builds its workflow payload by spreading a registry entry, and would send this to the
+ * workflow service.
+ * @see .todo/issues/06-dataset-actions-workflows.md — Phase 3
+ *
+ * @returns {string[]} registered workflow names that can be launched
+ */
+function runnableWorkflows() {
+  return Object.keys(config.get('workflow_policy_actions'))
+    .filter((name) => config.workflow_registry.has(name));
+}
+
+/**
+ * The dataset policy action that gates launching or resuming a workflow.
+ *
+ * @param {string} wf_name
+ * @returns {string|null} the action name, or null when the workflow is not one a caller may launch
+ */
+function policyActionFor(wf_name) {
+  const actions = config.get('workflow_policy_actions');
+  return Object.prototype.hasOwnProperty.call(actions, wf_name) ? actions[wf_name] : null;
+}
+
+/**
  * Fills in what Postgres does not hold about a dataset's runs.
  *
  * The `workflow` table stores an id, the dataset it belongs to, and who started it. Name,
@@ -107,6 +137,8 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
 
 module.exports = {
   createWorkflow,
+  runnableWorkflows,
+  policyActionFor,
   enrichWorkflows,
   listDatasetWorkflows,
 };
