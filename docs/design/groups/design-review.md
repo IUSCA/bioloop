@@ -44,7 +44,7 @@ table says where each one landed.
 |---|---|
 | 1. Governance authority is not a grant | **Rejected.** Roles stay an enum and groups do not become resources. Too large for the first release. Validity columns on `group_user` recover the membership-expiry half of the benefit. |
 | 2. Nothing in the model can say "no" | **Accepted, narrowly, and implemented.** A restriction layer composing by AND ahead of grants, with archiving as its only type, propagating down the group tree and to governed resources. Negative grants rejected outright. |
-| 3. Access does not follow data provenance | **Accepted, half built.** A grant-time check stops a derived dataset being granted more widely than its sources. Restrictions travelling down the derivation graph waits for a second restriction type. |
+| 3. Access does not follow data provenance | **Accepted, half built, and that half implemented.** A grant-time check walks `dataset_hierarchy` and stops a derived dataset being granted more widely than its narrowest source. Restrictions travelling down the derivation graph waits for a second restriction type. |
 | 4. Collections cannot cross group boundaries | **Option 2 taken.** Collections stay single-owner. A separate non-authorization concept for describing a set of datasets comes later, and the symmetry argument in design.md should be corrected. |
 | 5. The no-overlap rule does not do what it claims | **Not taken up.** The exclusion constraint stays for now. Finding 7 in this review depends on nothing here, and dropping the constraint can be revisited without a migration penalty. |
 | 6. Access types claim to be orthogonal | **Accepted, and implemented.** A seeded partial order over the twelve existing access types, closed over once at startup and read at both grant-check sites. Presets stop being load-bearing. |
@@ -59,12 +59,13 @@ glossary's ownership disagreement was resolved as governance-only, with attribut
 deferred; and the GA4GH question was answered by capturing consent codes at ingest without
 enforcing them.
 
-Phases 1 to 5 of that plan are built. Membership and collection rows are closed rather
+Phases 1 to 6 of that plan are built. Membership and collection rows are closed rather
 than deleted, `dataset.owner_group_id` is `NOT NULL` with the datasets that had no owner
 held in an archived system group, and a `Public` principal sits alongside the renamed
 `Authenticated Users`. Access types now carry a partial order, so a grant of `DOWNLOAD`
 satisfies a check for `VIEW_METADATA`. A restriction layer composes by AND ahead of
-grants, with archiving as its only type.
+grants, with archiving as its only type. A derived dataset can no longer be granted to a
+wider audience than its sources.
 
 The member-access contradiction (deviation 1) is **still open.** No decision was taken on
 whether owning-group members get structural read or a seeded grant.

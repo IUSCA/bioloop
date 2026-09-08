@@ -175,16 +175,26 @@ The service-level `is_archived` checks that predate this phase are kept. They co
 three operations they always covered, and they still fire when a service is called outside
 a route. The restriction layer is what covers the other fifty-odd actions.
 
-## Phase 6 — Derived datasets are never more open than their sources
+## Phase 6 — Derived datasets are never more open than their sources — **done**
 
 Implements the buildable half of use case 58.
 
-- A check at grant-issue time walks `dataset_hierarchy` and refuses a grant that would make
-  a derived dataset reachable by a wider audience than any of its sources.
-- Openness is ordered: public, then authenticated, then group or user.
-- Tests: a derivative of a group-only dataset cannot be granted to either system principal,
-  an unrelated dataset is unaffected, and a multi-source derivative takes the narrowest
-  source.
+- `services/grants/derivedOpenness.js` runs inside `_createGrant`, the single point every
+  grant passes through, and before anything is written, so a refused grant leaves no trace.
+- Openness is ordered: public, then authenticated, then group or user. Every dataset is
+  reachable by its owning group's admins whether or not a grant says so, so a scoped grant
+  is the floor and can never be too open. That makes the two system principals the only
+  subjects this check can refuse, which keeps the rule to one sentence.
+- The walk is transitive. A recursive query over `dataset_hierarchy` collects every source,
+  directly or through a chain, using `UNION` so a cycle terminates. Direct sources alone
+  would be enough if the rule had held at every earlier issue, but the check runs at issue
+  time only and a source's grants can be widened or revoked afterwards.
+- The refusal names the source that is too narrow, so the message says what to do about it.
+- Tests: 9, covering refusal for both principals, the message naming the source, nothing
+  written on refusal, allowing once the source is widened, a wider source satisfying a
+  narrower grant but not the reverse, a multi-source derivative taking the narrowest, a
+  grandchild not escaping through a public parent, and an unrelated dataset being
+  unaffected.
 
 The other half — restrictions travelling from source to derivative — waits for the second
 restriction type, per decision 6.

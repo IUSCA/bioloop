@@ -13,6 +13,7 @@ const { getPrismaGrantValidityFilter } = require('./fetch');
 const {
   getResourceOwnerGroupId,
 } = require('./helpers');
+const { assertNotMoreOpenThanSources } = require('./derivedOpenness');
 
 // ============================================================================
 // Grant Creation
@@ -40,6 +41,14 @@ const GRANT_OVERLAP_ERROR_MSG = 'An active grant with overlapping validity alrea
  * @returns {Promise<Object>} Created grant
  */
 async function _createGrant(tx, data, auditData = {}) {
+  // A derived dataset is never reachable by a wider audience than its sources. Refuses
+  // before anything is written, so a rejected grant leaves no trace.
+  // @see docs/design/groups/use-cases.md — use case 58
+  await assertNotMoreOpenThanSources(tx, {
+    resource_id: data.resource_id,
+    subject_id: data.subject_id,
+  });
+
   // Capture the issuing authority (owner group of the resource at grant creation time)
   let { issuing_authority_id } = data;
   if (data.issuing_authority_id === undefined) {

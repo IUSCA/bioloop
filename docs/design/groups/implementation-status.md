@@ -55,6 +55,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
+| Derived dataset openness | checked in `_createGrant`, recursive walk of `dataset_hierarchy` | refuses a grant wider than the narrowest source | `services/grants/derivedOpenness.js` | refusal shown in the grant dialog |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 
@@ -181,6 +182,21 @@ Archiving writes a restriction row in the same transaction that sets `is_archive
 remains as the denormalisation the listings, the archived filter, and the UI badge read. A
 test asserts the two agree for every group and collection. The service-level `is_archived`
 checks that predate this are kept, so a service called outside a route is still guarded.
+
+### Derived datasets are never more open than their sources
+
+`services/grants/derivedOpenness.js` runs inside `_createGrant` and refuses a grant that
+would make a derived dataset reachable by a wider audience than any of its sources. Openness
+is ordered public, then authenticated, then group or user; every dataset is already
+reachable by its owning group's admins, so a scoped grant is the floor and only the two
+system principals can be refused.
+
+The walk over `dataset_hierarchy` is transitive, because the check runs at issue time only
+and a source's grants can change afterwards. The refusal names the source that is too
+narrow.
+
+Restrictions travelling from source to derivative, the other half of use case 58, waits for
+the second restriction type.
 
 ## Deviations
 

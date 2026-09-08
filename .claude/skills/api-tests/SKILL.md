@@ -148,6 +148,22 @@ escaped every restriction; the second caught a hand-written entry for an action 
 not exist. A naming convention is not a substitute, because it fails silently for whatever
 somebody adds next.
 
+## To test a guard, seed the state it prevents
+
+A guard that runs on the write path cannot be set up through that write path. Building the
+"grandchild of a private dataset" case for the derived-openness check failed at first
+because the setup step — making the middle dataset public — was itself refused by the rule
+under test.
+
+Write the invalid state straight to the table with `prisma.<model>.create`, then exercise
+the guard. That is not cheating: the state is reachable in a running system, because these
+checks run when something is issued and the world changes afterwards. Say which real
+sequence produces it, in a comment, so the next reader does not take the seeded row for a
+shortcut.
+
+A setup step being rejected by the code under test is worth a second look before you fix
+the test. It sometimes means the rule is working and the scenario was wrong.
+
 ## Test helpers
 
 `tests/services/helpers.js` holds the fixtures. Two membership helpers matter, because
