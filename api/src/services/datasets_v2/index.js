@@ -15,6 +15,7 @@ const grantService = require('@/services/grants');
 const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 const fetchModule = require('./fetch');
 const createModule = require('./create');
+const useConditionsModule = require('./useConditions');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -323,4 +324,5 @@ module.exports = {
   getDerivedDatasets,
   ...fetchModule,
   ...createModule,
+  ...useConditionsModule,
 };

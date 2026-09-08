@@ -59,13 +59,14 @@ glossary's ownership disagreement was resolved as governance-only, with attribut
 deferred; and the GA4GH question was answered by capturing consent codes at ingest without
 enforcing them.
 
-Phases 1 to 6 of that plan are built. Membership and collection rows are closed rather
+All seven phases of that plan are built. Membership and collection rows are closed rather
 than deleted, `dataset.owner_group_id` is `NOT NULL` with the datasets that had no owner
 held in an archived system group, and a `Public` principal sits alongside the renamed
 `Authenticated Users`. Access types now carry a partial order, so a grant of `DOWNLOAD`
 satisfies a check for `VIEW_METADATA`. A restriction layer composes by AND ahead of
 grants, with archiving as its only type. A derived dataset can no longer be granted to a
-wider audience than its sources.
+wider audience than its sources. Datasets carry machine-readable consent codes, recorded at
+registration and read by nothing.
 
 The member-access contradiction (deviation 1) is **still open.** No decision was taken on
 whether owning-group members get structural read or a seeded grant.

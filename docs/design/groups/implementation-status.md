@@ -56,6 +56,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Derived dataset openness | checked in `_createGrant`, recursive walk of `dataset_hierarchy` | refuses a grant wider than the narrowest source | `services/grants/derivedOpenness.js` | refusal shown in the grant dialog |
+| Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 
@@ -197,6 +198,24 @@ narrow.
 
 Restrictions travelling from source to derivative, the other half of use case 58, waits for
 the second restriction type.
+
+### Consent codes are captured, not enforced
+
+`dataset_use_condition` records one row per condition on a dataset: the vocabulary the code
+came from, the code, an optional label, an optional note, and who recorded it when.
+`POST /datasets` accepts a `use_conditions` array and `buildDatasetCreateQuery` writes the
+rows in the same statement as the dataset. `services/datasets_v2/useConditions.js` records
+them after the fact for datasets already registered, and answers the query the table exists
+for: which datasets carry a given code.
+
+No vocabulary lookup table is seeded. GA4GH Data Use Ontology identifiers cannot be verified
+from inside this repository, and seeding unverified ones would state a guess as a fact. The
+`system` column is free text, so DUO, a local code list, or a study's own scheme all fit,
+and a verified DUO seed can be added later without changing the table.
+
+Nothing reads these rows for an authorization decision. A test asserts it: a dataset
+carrying the strictest-sounding condition in the vocabulary is reachable by exactly the same
+people as one carrying none.
 
 ## Deviations
 

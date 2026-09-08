@@ -12,7 +12,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { RESOURCE_TYPE } = require('@prisma/client');
 
-global.__basedir = path.join(__dirname, '..', '..');
+global.__basedir = path.join(__dirname, '..', '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');

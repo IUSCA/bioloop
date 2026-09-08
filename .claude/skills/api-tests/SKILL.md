@@ -178,6 +178,49 @@ time:
 A test that looks up a membership by `group_id_user_id` is written against a key that no
 longer exists.
 
+## `__basedir` counts from the test file, not from `tests/`
+
+Every test opens with
+
+```js
+global.__basedir = path.join(__dirname, '..', '..');
+```
+
+which is correct only for a file directly in `tests/services/`. A file one level deeper, such
+as `tests/services/datasets/`, needs three `..` or `__basedir` lands on `tests/` instead of
+the `api/` root.
+
+The mistake is silent for most tests. `__basedir` is read by `src/services/auth.js`, which
+does `fs.readFileSync(path.join(global.__basedir, config.get('auth.jwt.key')))` at import
+time. A suite that never pulls in the auth middleware passes with the wrong value. The moment
+one does — importing `@/services/dataset` is enough, since it requires `src/middleware/auth`
+— the whole suite fails to run with `ENOENT: tests/keys/auth.key`.
+
+Count the directories rather than copying the line from a neighbouring test.
+
+## Two `buildDatasetCreateQuery` functions exist, and only one is wired up
+
+`src/services/dataset.js` (v1) exports the one the routes call. `POST /datasets` and
+`POST /datasets/bulk` both go through it. `src/services/datasets_v2/create.js` has a second,
+tidier copy that it does not export; nothing outside that file calls the v2 creation path at
+all. Editing the v2 copy changes nothing a route does, and no test catches it, because the
+v2 module still loads and still passes its own tests.
+
+Before changing dataset creation, check which module the route imports. `src/routes/datasets/index.js`
+imports `@/services/dataset`, not `@/services/datasets_v2`.
+
+## Do not call `datasetService.create` just to get a dataset row
+
+The v1 `create` runs `_handle_project_association`, which for a requester with no projects
+consults the `auto_create_project_on_dataset_creation` feature flag and then
+`getPermission({ resource: 'projects', action: 'create' })`. That call returns `undefined`
+for a plain `user`, so the service throws `Cannot read properties of undefined (reading
+'granted')` before it returns.
+
+A test that needs a dataset row and not the legacy project machinery should build the query
+with `buildDatasetCreateQuery` and hand it to `prisma.dataset.create` directly. Supply
+`owner_group_id` and `resource_id`, because both are `NOT NULL` and the route sends neither.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

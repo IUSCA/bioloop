@@ -45,18 +45,19 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group   group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
-  collections   collection_dataset[]
-  contributions user_dataset_contribution[]
-  resource_id   String                      @unique
+  owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  collections    collection_dataset[]
+  contributions  user_dataset_contribution[]
+  resource_id    String                      @unique
   // Restrict: prevents deleting a resource row directly while this dataset still references it.
   // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
-  resource      resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
+  resource       resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
   // @@index([resource_id])
-  create_method DATASET_CREATE_METHOD?
-  upload_logs   dataset_upload_log[]
-  import_logs   dataset_import_log[]
+  create_method  DATASET_CREATE_METHOD?
+  upload_logs    dataset_upload_log[]
+  import_logs    dataset_import_log[]
+  use_conditions dataset_use_condition[]
 
   @@unique([name, type, is_deleted])
   @@index([owner_group_id])
@@ -483,6 +484,8 @@ model subject {
   access_requests      access_request[]
   applied_restrictions restriction[]    @relation("restriction_applier")
   lifted_restrictions  restriction[]    @relation("restriction_lifter")
+
+  recorded_use_conditions dataset_use_condition[] @relation("use_condition_recorder")
 }
 
 // created everyone group and added rules to protect modification in migration script
@@ -796,6 +799,41 @@ model restriction_type {
   liftable    Boolean
 
   restrictions restriction[]
+}
+
+/// A condition the donors consented to, recorded on a dataset at registration.
+///
+/// Nothing enforces these. They are captured because the information decays: the conditions
+/// sit on a consent form near the people who ran the study, and reconstructing them later
+/// means going through review paperwork study by study.
+///
+/// `system` names the vocabulary a code belongs to, so a code is machine-readable without
+/// this schema having to know any particular ontology. The intended value is 'DUO', the
+/// GA4GH Data Use Ontology. No vocabulary is seeded, so nothing validates that a code
+/// exists in the system it claims.
+/// @see docs/design/groups/decisions.md — 9. Consent codes are captured, not enforced
+model dataset_use_condition {
+  id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  dataset_id Int
+
+  /// The vocabulary, e.g. 'DUO'.
+  system String
+  /// The identifier within that vocabulary, e.g. 'DUO:0000007'.
+  code   String
+  /// The human-readable term as recorded, kept so the row still means something if the
+  /// vocabulary moves or the code is retired.
+  label  String?
+  /// Free text from the consent form that the code does not capture.
+  note   String?
+
+  recorded_at DateTime @default(now()) @db.Timestamp(6)
+  recorded_by String?
+
+  dataset  dataset  @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  recorder subject? @relation("use_condition_recorder", fields: [recorded_by], references: [id], onDelete: SetNull)
+
+  @@unique([dataset_id, system, code])
+  @@index([system, code])
 }
 
 /// One restriction in force, attached to either a group or a resource.

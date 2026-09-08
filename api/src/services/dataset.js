@@ -1195,6 +1195,7 @@ const buildDatasetCreateQuery = (data) => {
   const {
     name, type, du_size, description, size, origin_path, bundle_size, metadata, workflow_id,
     user_id, src_instrument_id, src_dataset_id, state, create_method,
+    use_conditions, recorded_by,
   } = data;
   /* eslint-disable no-unused-vars */
 
@@ -1242,6 +1243,23 @@ const buildDatasetCreateQuery = (data) => {
       },
     ],
   };
+
+  // Conditions the donors consented to, as recorded at registration. Captured only;
+  // nothing reads them for an authorization decision.
+  // @see docs/design/groups/decisions.md — 9. Consent codes are captured, not enforced
+  if (use_conditions?.length) {
+    create_query.use_conditions = {
+      create: use_conditions.map(({
+        system, code, label, note,
+      }) => ({
+        system,
+        code,
+        label: label ?? null,
+        note: note ?? null,
+        recorded_by: recorded_by ?? null,
+      })),
+    };
+  }
 
   create_query.audit_logs = {
     create: [

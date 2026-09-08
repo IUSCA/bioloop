@@ -199,14 +199,34 @@ Implements the buildable half of use case 58.
 The other half — restrictions travelling from source to derivative — waits for the second
 restriction type, per decision 6.
 
-## Phase 7 — Consent codes
+## Phase 7 — Consent codes — **done**
 
 Implements [decision 9](./decisions.md#_9-consent-codes-are-captured-not-enforced).
 
-- A table holding one or more data use codes per dataset, recorded at registration.
-- No enforcement anywhere. The codes are captured because the information decays, not
-  because anything reads them yet.
-- Tests: codes round-trip through dataset registration and are queryable.
+- `dataset_use_condition` holds one row per condition on a dataset: `system`, `code`, an
+  optional human-readable `label`, an optional free-text `note`, plus `recorded_at` and
+  `recorded_by`. A dataset may carry any number of rows, or none.
+- The row records which vocabulary a code came from rather than assuming one. No vocabulary
+  lookup table is seeded. GA4GH Data Use Ontology identifiers cannot be verified from inside
+  this repository, and seeding unverified ones would state a guess as a fact. `system` is
+  free text so DUO, a local code list, or a study's own scheme all fit, and a verified DUO
+  seed can be added later without changing the table.
+- `(dataset_id, system, code)` is unique. Recording the same code twice is a mistake rather
+  than a second fact, so `recordUseConditions` skips a repeat and returns how many rows it
+  actually added. The same code in a different vocabulary is a different fact and is kept.
+- `POST /datasets` accepts a `use_conditions` array and `buildDatasetCreateQuery` turns it
+  into a nested create, so the codes land in the same statement as the dataset.
+  `services/datasets_v2/useConditions.js` also records them after the fact, for datasets
+  already registered.
+- Nothing reads these rows for an authorization decision. That is the decision, not an
+  omission, and a test asserts it: a dataset carrying the strictest-sounding condition in
+  the vocabulary is reachable by exactly the same people as one carrying none.
+- `datasetsWithUseCondition(system, code)` is the query the table exists for — somebody asks
+  which held data was collected under a particular consent.
+- Tests: 11, covering round-trip through registration, who captured them and when, a
+  dataset registered with none, a code with no label or note, recording after registration,
+  a repeat adding nothing, the same code in two vocabularies, an empty list, the query by
+  code, no effect on who can reach the dataset, and deletion taking the rows with it.
 
 ---
 

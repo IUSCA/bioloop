@@ -517,6 +517,13 @@ router.post(
     body('state').optional(),
     body('metadata').optional(),
     body('description').optional().notEmpty().escape(),
+    // Conditions the donors consented to, captured and never enforced.
+    // @see docs/design/groups/decisions.md — 9. Consent codes are captured, not enforced
+    body('use_conditions').optional().isArray(),
+    body('use_conditions.*.system').notEmpty().isString(),
+    body('use_conditions.*.code').notEmpty().isString(),
+    body('use_conditions.*.label').optional().isString(),
+    body('use_conditions.*.note').optional().isString(),
   ]),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
@@ -532,7 +539,7 @@ router.post(
     const {
       create_method, project_id, src_instrument_id, src_dataset_id,
       name, type, origin_path, du_size, size, bundle_size, workflow_id, state, metadata,
-      description,
+      description, use_conditions,
     } = req.body;
 
     // remove any HTML entities inserted by browser because of URL encoding
@@ -567,6 +574,8 @@ router.post(
       create_method,
       metadata,
       description,
+      use_conditions,
+      recorded_by: req.user.subject_id,
     });
 
     // idempotence: creates dataset or returns error 409 on repeated requests
