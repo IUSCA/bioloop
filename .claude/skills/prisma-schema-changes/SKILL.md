@@ -192,6 +192,28 @@ person, use the `svc_tasks` service account, which both `prisma/seed.js` and
 than tripping a uniqueness or exclusion constraint. The `grant_no_overlap` exclusion
 constraint turns a careless second run into an error rather than a duplicate.
 
+## The development database is Postgres 14
+
+`NULLS NOT DISTINCT` on a unique index arrived in Postgres 15, and this database is 14.5. The
+error is a bare `syntax error at or near "NULLS"`, which reads like a typo rather than a
+version problem.
+
+Where a NULL column takes part in a uniqueness rule, write two partial unique indexes instead:
+
+```sql
+CREATE UNIQUE INDEX "..._key"    ON t ("a", "b", "c") WHERE "c" IS NOT NULL;
+CREATE UNIQUE INDEX "..._no_c_key" ON t ("a", "b")      WHERE "c" IS NULL;
+```
+
+Without the second one Postgres treats every NULL as distinct and the same row can be inserted
+repeatedly. The `restriction` table already uses this pair, so it is the idiom here.
+
+Prisma does not model a partial unique index, so declare these in the migration only. Adding a
+plain `@@unique` to `schema.prisma` to stand in for them produces permanent drift. Leave a
+comment on the model saying where the real indexes are. `createMany({ skipDuplicates: true })`
+still respects them, because it emits `ON CONFLICT DO NOTHING` with no target — so a duplicate
+becomes a skipped row rather than an error.
+
 ## A backfill migration cannot see seeded lookup rows on a fresh database
 
 `prisma/seed.js` runs after migrations, so on a fresh database a migration that joins a lookup

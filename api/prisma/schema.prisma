@@ -58,6 +58,8 @@ model dataset {
   upload_logs    dataset_upload_log[]
   import_logs    dataset_import_log[]
   use_conditions dataset_use_condition[]
+  funding        dataset_funding[]
+  affiliations   dataset_affiliation[]
 
   @@unique([name, type, is_deleted])
   @@index([owner_group_id])
@@ -524,6 +526,8 @@ model group {
   subject           subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
   issued_grants     grant[]                     @relation("grant_issuing_authority")
   revoked_grants    grant[]                     @relation("grant_revoking_authority")
+
+  affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
 }
 
 // Closure table for efficient hierarchy traversal
@@ -834,6 +838,69 @@ model dataset_use_condition {
 
   @@unique([dataset_id, system, code])
   @@index([system, code])
+}
+
+/// Who funded the work behind a dataset.
+///
+/// Attribution is a different relationship from governance. `owner_group_id` says who decides
+/// access and nothing else, so it must never be widened to carry credit as well. A dataset may
+/// name any number of funding sources, or none.
+///
+/// "Award" rather than "grant" throughout, because `grant` already means an authorization
+/// grant everywhere else in this schema.
+///
+/// No policy, filter, or grant check reads these rows.
+/// @see docs/design/groups/decisions.md — 13. Attribution is its own relationship
+model dataset_funding {
+  id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  dataset_id Int
+
+  /// The funding body, as it should appear in a citation, e.g. 'National Institutes of Health'.
+  funder       String
+  /// The award identifier within that body, e.g. 'R01HG012345'. Null when the funding is
+  /// acknowledged without a specific award.
+  award_number String?
+  /// Anything the two fields above do not carry, such as a sub-award or a co-funding note.
+  note         String?
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  dataset dataset @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+
+  /// One row per award per dataset, enforced by two partial unique indexes that exist only
+  /// in the migration: Prisma does not model a partial unique index, and declaring a plain
+  /// three-column one here would produce permanent drift. The restriction table does the same.
+  @@index([funder])
+}
+
+/// An organisation to credit for a dataset, beyond the group that governs it.
+///
+/// Exactly one of `group_id` and `organization` is set. A group reference stays current as the
+/// group is renamed and gives the page something to link to; free text covers a collaborator
+/// who has no presence on this platform.
+///
+/// No policy, filter, or grant check reads these rows. Adding an affiliation must not widen
+/// who can reach a dataset.
+/// @see docs/design/groups/decisions.md — 13. Attribution is its own relationship
+model dataset_affiliation {
+  id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  dataset_id Int
+
+  /// A group on this platform. Mutually exclusive with `organization`.
+  group_id     String?
+  /// An organisation with no presence here. Mutually exclusive with `group_id`.
+  organization String?
+  /// What the affiliation is, e.g. 'Data collection' or 'Analysis'. Free text on purpose:
+  /// contribution taxonomies are a research question, not a schema decision.
+  role         String?
+
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  dataset dataset @relation(fields: [dataset_id], references: [id], onDelete: Cascade)
+  group   group?  @relation("dataset_affiliation_group", fields: [group_id], references: [id], onDelete: Cascade)
+
+  @@index([dataset_id])
+  @@index([group_id])
 }
 
 /// One restriction in force, attached to either a group or a resource.

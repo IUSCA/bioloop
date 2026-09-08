@@ -277,7 +277,7 @@ Implements [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-gr
   getting nothing; the helper refusing a resource type it has no access type for; and an
   invariant query asserting no dataset or collection is missing its grant.
 
-## Phase 11 — Attribution
+## Phase 11 — Attribution — **done**
 
 Implements [decision 13](./decisions.md#_13-attribution-is-its-own-relationship).
 
@@ -287,8 +287,27 @@ Implements [decision 13](./decisions.md#_13-attribution-is-its-own-relationship)
   affiliation does not widen who can reach a dataset.
 - Answers use case 13, which asks researchers to cite ownership correctly using data that
   currently has nowhere to live except the `metadata` column.
-- Tests: attribution round-trips through the dataset record, several sources and
-  affiliations coexist on one dataset, and access is unchanged by any of it.
+- Two tables rather than one with a kind column, because the two relationships have
+  different shapes. `dataset_funding` carries a funder and an award number.
+  `dataset_affiliation` carries either a group on this platform or a free-text organisation,
+  with a CHECK constraint allowing exactly one — the same shape `restriction` uses.
+- "Award" rather than "grant" throughout, because `grant` already names an authorization
+  grant everywhere else in the schema.
+- A group reference stays current as the group is renamed and gives a page something to link
+  to. Free text covers a collaborator with no presence here.
+- `role` is free text. Contribution taxonomies are a research question rather than a schema
+  decision, and guessing one now would be harder to undo than leaving it open.
+- One row per award per dataset, enforced by two partial unique indexes rather than one
+  three-column index, because Postgres treats every NULL as distinct and a funder
+  acknowledged without an award number could otherwise be recorded repeatedly.
+  `NULLS NOT DISTINCT` would say this in one line and needs Postgres 15; this database is 14.
+- No route or page exposes any of this yet. Use case 13 is `Later` and triggered by the first
+  publication that cites data held here; the foundation is the part that could not wait,
+  because the information has nowhere to live except the `metadata` column.
+- Tests: 15, covering funding round-tripping, several sources on one dataset, a funder with no
+  award number recorded once, a repeat adding nothing, the query by funder, crediting a group
+  and an outside organisation, refusing an affiliation naming both or neither, an affiliated
+  group gaining no access, the owning group unchanged, removal, and deletion cascading.
 
 ---
 
@@ -298,6 +317,6 @@ Every phase ends with the same four steps, in order: tests pass, the affected su
 exercised from the UI where one exists, [Implementation Status](./implementation-status.md)
 and [Design Review](./design-review.md) are updated to match, update or create new skill based on operational lessons learned, and the work is committed.
 
-Phases 1, 2, 4, 7, 8, and 9 have no user-visible surface of their own. Their UI check is that
+Phases 1, 2, 4, 7, 8, 9, and 11 have no user-visible surface of their own. Their UI check is that
 the surfaces built on top of them — the members tab, the grant subject picker, the dataset
 pages — still behave.

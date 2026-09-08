@@ -72,7 +72,7 @@ Four further decisions followed, and the work is sequenced as phases 8 to 11. Th
 derived-dataset rule built in phase 6 is reversed. Platform admin becomes one check in the
 engine rather than 77 hand-written policy terms. The member-access contradiction
 (deviation 1) is settled: members get a grant seeded at creation, not structural read.
-Attribution gets a model of its own.
+Attribution gets a model of its own, separate from the owning group.
 
 ---
 

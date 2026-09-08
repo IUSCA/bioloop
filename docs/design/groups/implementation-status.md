@@ -57,6 +57,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Platform admin | — | one engine check ahead of every action policy | `authorization/index.js`, `authorization/core/middlewares.js` | `PLATFORM ADMIN` caller-role badge |
 | Owning-group grant | seeded `grant` row per resource, `SYSTEM_BOOTSTRAP` | written with the resource, backfilled for older rows | `services/grants/issue.js`, `services/collections.js`, `services/dataset.js` | listed in the Access tab like any grant |
+| Attribution | `dataset_funding`, `dataset_affiliation` | none yet | `services/datasets_v2/attribution.js` | none yet |
 | Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
@@ -184,6 +185,25 @@ Archiving writes a restriction row in the same transaction that sets `is_archive
 remains as the denormalisation the listings, the archived filter, and the UI badge read. A
 test asserts the two agree for every group and collection. The service-level `is_archived`
 checks that predate this are kept, so a service called outside a route is still guarded.
+
+### Attribution is its own relationship
+
+`dataset_funding` records who paid for the work: a funder and, where there is one, an award
+number. `dataset_affiliation` records who to credit: either a group on this platform or a
+free-text organisation, with a CHECK constraint allowing exactly one. A dataset may carry any
+number of either, or none.
+
+Two tables rather than one with a kind column, because the shapes genuinely differ. "Award"
+rather than "grant" throughout, because `grant` already names an authorization grant.
+
+`owner_group_id` still means governance and nothing else, which decision 8 made a standing
+requirement. Nothing here is read by an authorization decision, and a test asserts it: adding
+an affiliation to a group leaves that group's members exactly as unable to reach the dataset
+as they were.
+
+No route or page exposes this yet. Use case 13 is `Later`, triggered by the first publication
+that cites data held here. What could not wait was the place for the information to live,
+which until now was the `metadata` column, where nothing can query it.
 
 ### The owning group holds a grant on what it governs
 

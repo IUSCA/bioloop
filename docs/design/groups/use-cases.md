@@ -158,7 +158,8 @@ These users request, discover, and use data. They do not want to think about acc
 13. **Cite dataset ownership correctly** — `Later` · **foundation**
     * Outcome: a dataset page states who to credit and which grant funded the work.
     * Trigger: the first publication that cites data held here.
-    * Why foundation: the schema records exactly one owning group and no funding or affiliation at all. Attribution is a different relationship from governance, and it needs its own table rather than a wider `owner_group_id`. See Q3.
+    * Why foundation: attribution is a different relationship from governance, and it needs its own table rather than a wider `owner_group_id`. See Q3.
+    * Today: `dataset_funding` and `dataset_affiliation` hold the data and a service reads and writes them, built in phase 11. No route or page surfaces it, which is what the trigger above is for.
 
 ---
 
@@ -475,7 +476,7 @@ constraint that keeps it possible. The plan is in [MVP Implementation Plan](./mv
 | 38 — an order over access types | **Building now**, phase 4. |
 | 4, 55 — explanation from the deciding query | **Constraint accepted.** The closure in phase 4 and the restriction check in phase 5 both run inside the deciding query. |
 | 58 — derived datasets no more open than their sources | **Withdrawn.** Built in phase 6, removed in phase 8. Derived and source access are independent, per decision 10. |
-| 13 — attribution | **Building**, phase 11. Funding and affiliation get their own relationship, per decision 13. |
+| 13 — attribution | **Foundation built** in phase 11: `dataset_funding` and `dataset_affiliation`, with a service. No route or page yet. |
 | 25, 50 — cross-group collections | **Deferred by decision.** Collections stay single-owner; a non-authorization concept covers the rest later. |
 | 51 — grants attaching to a dataset or a version | **Still open.** No decision taken, and nothing in the plan forecloses one. |
 

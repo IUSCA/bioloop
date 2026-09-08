@@ -16,6 +16,7 @@ const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 const fetchModule = require('./fetch');
 const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
+const attributionModule = require('./attribution');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -325,4 +326,5 @@ module.exports = {
   ...fetchModule,
   ...createModule,
   ...useConditionsModule,
+  ...attributionModule,
 };
