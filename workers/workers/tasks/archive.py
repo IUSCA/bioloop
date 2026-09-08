@@ -11,8 +11,10 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 import workers.workflow_utils as wf_utils
+from workers import storage
 from workers.config import config
-from workers.dataset import get_archive_bundle_name
+from workers.dataset import (get_archive_bundle_name, get_archive_key,
+                             get_archive_path, get_bundle_generate_path)
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -47,7 +49,11 @@ def make_tarfile(celery_task: WorkflowTask, tar_path: Path, source_dir: str, sou
 
 
 def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = False):
-    bundle = Path(config["paths"][dataset["type"]]["bundle"]["generate"]) / get_archive_bundle_name(dataset)
+    # The local tar is named for the dataset id and the tape object for the dataset name.
+    # They are deliberately different: nobody reads the local file, and two groups may hold
+    # the same dataset name.
+    bundle = Path(get_bundle_generate_path(dataset))
+    bundle.parent.mkdir(parents=True, exist_ok=True)
 
     make_tarfile(celery_task=celery_task,
                  tar_path=bundle,
@@ -57,13 +63,17 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
     bundle_size = bundle.stat().st_size
     bundle_checksum = utils.checksum(bundle)
     bundle_attrs = {
-        'name': bundle.name,
+        'name': get_archive_bundle_name(dataset),
         'size': bundle_size,
         'md5': bundle_checksum,
     }
 
+    # get_archive_dir creates the per-type directory; the group directory below it is ours.
+    archive_key = get_archive_key(dataset)
     dataset_type_archive_dir = wf_utils.get_archive_dir(dataset['type'])
-    dataset_bundle_path = f'{dataset_type_archive_dir}/{bundle.name}'
+    storage.ensure_directory(f'{dataset_type_archive_dir}/{archive_key}')
+
+    dataset_bundle_path = get_archive_path(dataset)
 
     wf_utils.archive(local_file_path=bundle,
                       archive_path=dataset_bundle_path,
@@ -74,14 +84,18 @@ def archive(celery_task: WorkflowTask, dataset: dict, delete_local_file: bool = 
         print("deleting local bundle")
         bundle.unlink()
 
-    return dataset_bundle_path, bundle_attrs
+    return dataset_bundle_path, bundle_attrs, archive_key
 
 
 def archive_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id, bundle=True)
-    archived_bundle_path, bundle_attrs = archive(celery_task, dataset)
+    archived_bundle_path, bundle_attrs, archive_key = archive(celery_task, dataset)
+    # archive_group_key records who owned the dataset when the bundle was written. The owner
+    # can change afterwards; the tape object does not move.
+    # @see docs/design/groups/dataset-storage.md — Archival
     update_data = {
         'archive_path': archived_bundle_path,
+        'archive_group_key': archive_key,
         'bundle': bundle_attrs
     }
     api.update_dataset(dataset_id=dataset_id, update_data=update_data)

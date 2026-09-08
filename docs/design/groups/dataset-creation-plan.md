@@ -71,7 +71,10 @@ in [`v1-v2-coexistence`](https://github.com/IUSCA/bioloop/blob/main/.claude/skil
 
 ## Feature S — Group-scoped names and the storage layout
 
-This ships **before** Features A, B, and C, and by itself. It changes the naming constraint on
+**Shipped 2026-09-08.** Each phase below is done; the section is kept because it is the record
+of what changed and why.
+
+This shipped **before** Features A, B, and C, and by itself. It changes the naming constraint on
 `dataset` and every storage path derived from a dataset name. Nothing in import or upload can
 be built on a layout that is about to move.
 

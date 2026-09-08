@@ -131,6 +131,21 @@ routes behind them keep working unchanged while the v2 equivalents are built bes
 user can create a dataset either way, and the two produce rows that differ only in whether an
 owning group and a seeded grant are present.
 
+### Done ahead of the cut-over: per-group dataset names
+
+Scoping `@@unique([name, type, is_deleted])` to the owning group looked like cut-over work,
+because it needed every legacy row to have a group. A database default supplied that instead.
+`dataset.owner_group_id` is `NOT NULL` defaulting to the seeded `Unassigned Datasets` group,
+so a legacy insert that names no group lands there and behaves exactly as before.
+
+That made the change safe to apply while v1 is live, and it is applied. The storage paths
+moved with it, because a name-keyed archive path loses data the moment two groups share a
+name. [Dataset storage](./groups/dataset-storage.md) is the record.
+
+This is the one place the groups work has edited legacy code, and the reason is that storage
+layout and the naming constraint are shared substrate rather than a v2 feature. Legacy
+behaviour is unchanged.
+
 ### What only the cut-over may do
 
 Some fixes the v2 work identifies cannot be applied while v1 is live, because v1 writes the
@@ -139,10 +154,6 @@ same tables. They wait for step 1, and they are listed here so they are not atte
 - **A unique constraint on `dataset.origin_path`.** The v2 import service refuses a duplicate
   in application code. The database cannot enforce it while the legacy routes can still
   insert one, and nothing has audited whether duplicates already exist.
-- **Per-group dataset names.** `@@unique([name, type, is_deleted])` is global. Scoping it to
-  the owning group requires every legacy row to have one, which is step 2. It also requires
-  the worker archive, bundle, and QC paths to be keyed by dataset id rather than by name;
-  that part is independent and may be done at any time.
 - **Retiring the legacy `exists` route.** `GET /datasets/:type/:name/exists` answers for any
   name in the system. The v2 dialogs call a scoped endpoint instead, and the legacy route
   stays until the legacy steppers stop calling it.

@@ -202,6 +202,10 @@ async function createGroup({
         id,
         name: data.name,
         slug,
+        // Frozen at creation. updateGroup regenerates slug on rename and must never touch
+        // this, or a rename would fragment the group's archive directory.
+        // @see docs/design/groups/dataset-storage.md — Archival
+        archive_key: slug,
         description: data.description ?? Prisma.skip,
         allow_user_contributions: data.allow_user_contributions ?? Prisma.skip,
         metadata: data.metadata ?? Prisma.skip,

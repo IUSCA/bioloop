@@ -84,6 +84,29 @@ the requirement in the v2 service and route, and leave the column permissive.
 column stays nullable so the legacy routes still work. Do not re-add the database
 constraint before cut-over.
 
+## Shared substrate is the one carve-out, and it is granted rather than inferred
+
+Storage layout and the naming constraint on `dataset` are single facts about the system.
+There is no way to give v1 one archive layout and v2 another, so "write it in the v2 module"
+has no meaning for them, and the additive rule does not fit.
+
+The user approved editing legacy code for exactly one such change: group-scoped dataset names
+and the storage paths that go with them. What made it acceptable was that legacy behaviour is
+unchanged — `dataset.owner_group_id` is `NOT NULL` with a database default naming the seeded
+`Unassigned Datasets` group, so a legacy caller that sends no group lands there and behaves
+as before. See [dataset-storage.md](../../../docs/design/groups/dataset-storage.md).
+
+The edits it took, as the shape to expect: the legacy `exists` route swapped a `findUnique`
+on the dropped compound key for a `findFirst` preserving its global meaning; the legacy
+`get_dataset` service began returning `owner_group.archive_key`, because the workers build
+paths from it; and `get_bundle_name` in the legacy service and in the UI dropped the `.{type}`
+segment. Each is small, and none changes what a legacy caller observes.
+
+**Ask before assuming a change qualifies.** The default is still additive. A change is shared
+substrate only when both halves must agree on one value — a path format, a uniqueness rule, a
+column every writer populates. A feature that merely happens to be easier to write in v1 is
+not.
+
 ## Tests belong to the half they exercise
 
 A test of v2 behaviour must import the v2 module. `dataset.use-conditions.test.js`

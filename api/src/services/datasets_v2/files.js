@@ -325,6 +325,20 @@ async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
   return val;
 }
 
+/**
+ * Path the download server serves a dataset's bundle from, relative to the download root.
+ *
+ * `bundles/<stage_alias>/<name>.tar`. The alias directory supplies uniqueness, because two
+ * groups may hold a dataset of the same name; the last segment stays readable, because the
+ * browser names the saved file from it. Kept here rather than shared with the legacy
+ * service, which v2 code does not call.
+ *
+ * @see docs/design/groups/dataset-storage.md — Download
+ */
+function getBundleDownloadPath(dataset) {
+  return `bundles/${dataset.metadata.stage_alias}/${dataset.name}.tar`;
+}
+
 async function getBundleDownloadInfo({ dataset_id, actor_id }) {
   const val = await prisma.$transaction(async (tx) => {
     const dataset = await tx.dataset.findFirstOrThrow({
@@ -336,7 +350,7 @@ async function getBundleDownloadInfo({ dataset_id, actor_id }) {
     if (!dataset.metadata?.stage_alias) {
       throw createError.NotFound('Dataset is not prepared for download');
     }
-    const download_file_path = datasetService.getBundleName(dataset);
+    const download_file_path = getBundleDownloadPath(dataset);
     const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
 
     // use url.pathname instead of download_file_path to deal with spaces in

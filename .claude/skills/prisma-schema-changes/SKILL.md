@@ -78,6 +78,54 @@ field, so the rename has to come first.
 primary key breaks seeding, which only surfaces at the end of a reset. `createMany({ data,
 skipDuplicates: true })` works against a partial unique index and is the smaller change.
 
+## A NOT NULL column both halves can write: use a database default
+
+A constraint only the new code needs normally has to live in the service, because the legacy
+routes write the same table. There is one shape where it can live in the column instead: give
+the column a `NOT NULL` and a **database default** naming a seeded sentinel row.
+
+`dataset.owner_group_id` is the worked example. Migration `20260908010000` made it `NOT NULL`
+with no default and broke legacy creation, which sends no owning group. `20260909010000`
+reversed it. `20260910010000` made it `NOT NULL` *with* a default pointing at the seeded
+`Unassigned Datasets` group, and legacy creation keeps working untouched — the insert omits
+the column and Postgres supplies the sentinel.
+
+Two things to check before reaching for this:
+
+- **The default must be a real row, and it must exist before the first insert.** A foreign
+  key does not care that the value came from a default. Create the sentinel earlier in the
+  same migration, or in an earlier one, guarded with `ON CONFLICT DO NOTHING`.
+- **An explicit `NULL` still fails, and that is correct.** The default covers a caller that
+  omits the column, not one that insists on no value. Say so in the test, because the two
+  cases read alike and only one of them is the compatibility guarantee.
+
+Prisma renders a literal default as `'value'::text`, which matches what Postgres reports, so
+`@default("ffffffff-...")` produces no drift. Confirm with the `--create-only` drift check
+above rather than assuming.
+
+## Changing a composite unique key renames its Prisma lookup
+
+Prisma names a compound unique key after its fields, so moving `@@unique([name, type,
+is_deleted])` to `@@unique([owner_group_id, name, type, is_deleted])` renames the client-side
+lookup from `name_type_is_deleted` to `owner_group_id_name_type_is_deleted`. Every
+`findUnique` and `upsert` that names the old key stops compiling against the new client.
+
+Grep for the old key name, not for the field list:
+
+```bash
+grep -rn "name_type_is_deleted" --include=*.js . | grep -v node_modules
+```
+
+Both hits mattered and neither was obvious. `prisma/seed.js` used it in an `upsert` `where`,
+which fails only at the end of a reset. A route used it in a `findUnique`; where the route's
+meaning was deliberately global, `findFirst` on the same three fields preserves it exactly.
+
+A backfill of this shape needs writing in three places, and a column added to a table the seed
+writes directly needs the same. `group.archive_key` had to be set by the migration for
+existing rows, by `createGroup()` for new ones, and by `prisma/seed.js`, which builds group
+rows as plain objects rather than going through the service. Missing the third gives a
+reset that fails on `Argument \`archive_key\` is missing`.
+
 ## Lookup rows come from the seed, not from a migration
 
 `grant_access_type`, `grant_preset`, and the roles are populated by `prisma/seed.js`, which

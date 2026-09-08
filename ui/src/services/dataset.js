@@ -168,7 +168,7 @@ class DatasetService {
   }
 
   get_bundle_name(dataset) {
-    return `${dataset.name}.${dataset.type}.tar`;
+    return `${dataset.name}.tar`;
   }
 
   logDatasetUpload(data) {

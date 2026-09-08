@@ -1072,7 +1072,7 @@ router.get(
     if (dataset.metadata.stage_alias) {
       const download_file_path = isFileDownload
         ? `${dataset.metadata.stage_alias}/${file.path}`
-        : `${datasetService.get_bundle_name(dataset)}`;
+        : `${datasetService.get_bundle_download_path(dataset)}`;
       const url = new URL(download_file_path, `${config.get('download_server.base_url')}`);
       // use url.pathname instead of download_file_path to deal with spaces in
       // the file path oauth scope cannot contain spaces
@@ -1138,14 +1138,17 @@ router.get(
     // the requested name before checking for the existence of a dataset with this name.
     const normalizedName = datasetService.normalize_name(req.params.name);
 
-    const matchingDataset = await prisma.dataset.findUnique({
+    // Dataset names are unique within an owning group rather than globally, so there is no
+    // longer a single row to look up. This route keeps its original meaning — whether any
+    // dataset anywhere holds the name — because the legacy steppers rely on it.
+    // @see docs/design/groups/dataset-storage.md — What group scoping changed
+    const matchingDataset = await prisma.dataset.findFirst({
       where: {
-        name_type_is_deleted: {
-          name: normalizedName,
-          type: req.params.datasetType,
-          is_deleted: req.query.deleted,
-        },
+        name: normalizedName,
+        type: req.params.datasetType,
+        is_deleted: req.query.deleted,
       },
+      select: { id: true },
     });
     res.json({ exists: !!matchingDataset });
   }),

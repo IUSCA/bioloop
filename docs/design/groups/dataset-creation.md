@@ -212,9 +212,11 @@ A database constraint would be stronger, and it is not safe to add yet: the lega
 write the same column, and nothing has audited whether duplicates already exist. Audit first,
 constrain afterwards.
 
-### Dataset names are unique across the whole system
+### Dataset names were unique across the whole system
 
-`dataset` carries `@@unique([name, type, is_deleted])`. Two things follow.
+`dataset` carried `@@unique([name, type, is_deleted])`, and two things followed from it. The
+key is now `[owner_group_id, name, type, is_deleted]`; the problem is recorded here because
+the shape of the fix follows from it.
 
 A member of one group can discover another group's dataset names.
 `GET /datasets/:type/:name/exists` answers yes or no for any name, and every `user` role may
@@ -308,8 +310,8 @@ every downloader, because `stage_dataset` extracts the bundle into the staging d
 `setup_dataset_download` symlinks the tar into the download directory.
 
 The path carries the group and the name, which is what a recovery needs. Anything further
-belongs in the tape filename, which is rebuilt as `{name}.{type}.tar` before a user ever sees
-it, and not in the bundle.
+belongs in the tape filename, which is rebuilt as `bundles/<stage_alias>/<name>.tar` before a
+user ever sees it, and not in the bundle.
 
 #### Order of work
 

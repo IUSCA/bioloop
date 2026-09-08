@@ -232,6 +232,10 @@ async function get_dataset({
       source_datasets: true,
       derived_datasets: true,
       projects: includeProjects,
+      // The workers build the archive and QC paths from the owning group's archive_key, so
+      // it travels with every dataset read rather than behind a query flag.
+      // @see docs/design/groups/dataset-storage.md — Archival
+      owner_group: { select: { id: true, name: true, archive_key: true } },
       ...(include_source_instrument ? {
         src_instrument: {
           select: {
@@ -932,7 +936,18 @@ const get_dataset_active_workflows = async ({ dataset } = {}) => {
  * @param {Object} dataset - The dataset which has been or will be staged.
  * @returns {string} The name of the bundle which contains the staged dataset.
  */
-const get_bundle_name = (dataset) => `${dataset.name}.${dataset.type}.tar`;
+const get_bundle_name = (dataset) => `${dataset.name}.tar`;
+
+/**
+ * Path the download server serves a dataset's bundle from, relative to the download root.
+ *
+ * The stage_alias directory supplies uniqueness, because two groups may hold a dataset of
+ * the same name. The last segment stays readable, because the browser names the saved file
+ * from it.
+ *
+ * @see docs/design/groups/dataset-storage.md — Download
+ */
+const get_bundle_download_path = (dataset) => `bundles/${dataset.metadata.stage_alias}/${get_bundle_name(dataset)}`;
 
 /**
  * Middleware to check if a user has access to a dataset.
@@ -1313,6 +1328,7 @@ module.exports = {
   add_files,
   create,
   get_bundle_name,
+  get_bundle_download_path,
   get_dataset_active_workflows,
   get_dataset_creator,
   has_dataset_assoc,

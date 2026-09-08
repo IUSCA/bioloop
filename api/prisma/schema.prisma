@@ -27,12 +27,17 @@ model dataset {
   is_staged         Boolean  @default(false)
   metadata          Json?
   src_instrument_id Int?
-  // The group that governs this dataset. Nullable at the column, required by v2: the legacy
-  // creation routes write rows without one until cut-over, so the constraint lives in
-  // datasets_v2 rather than in the schema.
-  // @see docs/design/v2-cutover.md — What v2 requires that the schema does not
+  // The group that governs this dataset. The database default is the seeded
+  // 'Unassigned Datasets' group, so a caller that names no group still produces a row with
+  // an owner. datasets_v2 refuses without an explicit group, so only legacy callers reach
+  // the default.
+  // @see docs/design/groups/dataset-storage.md — What group scoping changed
   // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
-  owner_group_id    String?
+  owner_group_id    String   @default("ffffffff-0000-4000-8000-000000000001")
+  // The owning group at the moment the archive was written, stamped beside archive_path and
+  // never recomputed. owner_group_id can change afterwards; the tape object does not move.
+  // @see docs/design/groups/dataset-storage.md — Archival
+  archive_group_key String?
 
   workflows        workflow[]
   files            dataset_file[]
@@ -46,7 +51,7 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group    group?                      @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collections    collection_dataset[]
   contributions  user_dataset_contribution[]
   resource_id    String                      @unique
@@ -62,7 +67,10 @@ model dataset {
   funding        dataset_funding[]
   affiliations   dataset_affiliation[]
 
-  @@unique([name, type, is_deleted])
+  // Names are unique within an owning group, not globally, so two groups may hold a dataset
+  // of the same name without either being able to discover the other.
+  // @see docs/design/groups/dataset-storage.md — What group scoping changed
+  @@unique([owner_group_id, name, type, is_deleted])
   @@index([owner_group_id])
   @@index([resource_id])
 }
@@ -496,6 +504,11 @@ model group {
   id          String  @id @default(uuid())
   name        String  @unique
   slug        String  @unique
+  // Immutable directory name for this group's archives. Derived from the slug at creation
+  // and never updated, because slug is regenerated whenever the group is renamed and an
+  // archive layout built on it would fragment on the first rename.
+  // @see docs/design/groups/dataset-storage.md — Archival
+  archive_key String  @unique
   description String?
 
   // Lifecycle

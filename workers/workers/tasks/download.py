@@ -58,8 +58,11 @@ def setup_download(celery_task, dataset_id, **kwargs):
     # remove if exists and create a symlink in download dir pointing to the staged path
     rm(download_path)
     download_path.symlink_to(staged_path, target_is_directory=True)
-    # do the same for the bundle file
+    # do the same for the bundle file. Its parent is <download>/bundles/<stage_alias>/, an
+    # opaque directory that supplies uniqueness so the filename can stay readable.
+    # @see docs/design/groups/dataset-storage.md — Download
     rm(bundle_download_path)
+    bundle_download_path.parent.mkdir(parents=True, exist_ok=True)
     bundle_download_path.symlink_to(bundle_path)
 
     # enable others to read and cd into stage directory
@@ -68,4 +71,6 @@ def setup_download(celery_task, dataset_id, **kwargs):
 
     # enable others to navigate to leaf by granting execute permission on parent directories
     grant_access_to_parent_chain(staged_path, root=Path(config['paths']['root']))
+    # the bundles/<stage_alias>/ directories are new on each stage and need the same
+    grant_access_to_parent_chain(bundle_download_path, root=Path(config['paths']['root']))
     return dataset_id,

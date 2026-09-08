@@ -1,12 +1,15 @@
 /**
  * dataset.owner-group.test.js
  *
- * Every dataset v2 creates is governed by exactly one group. The requirement lives in the
- * v2 service rather than in the column, because the legacy creation routes still write rows
- * without an owning group until cut-over. Also covers the archived quarantine group that
- * holds the datasets which had no owner when the groups work started.
+ * Every dataset is governed by exactly one group. The column is NOT NULL with a database
+ * default naming the seeded 'Unassigned Datasets' group, so a legacy caller that sends no
+ * group still produces a row with an owner. The v2 service refuses without an explicit
+ * group, so only legacy callers reach the default.
  *
- * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
+ * Also covers the naming rule those two facts exist to support: a dataset name is unique
+ * within its owning group rather than across the whole system.
+ *
+ * @see docs/design/groups/dataset-storage.md — What group scoping changed
  * @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
  */
 
@@ -54,7 +57,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 }, 30_000);
 
-describe('v2 requires an owning group, the column does not', () => {
+describe('every dataset has an owning group', () => {
   test('a dataset can be created with an owning group', async () => {
     const dataset = await createTestDataset(group.id, '_dog_ok');
     datasetsToDelete.push(dataset.id);
@@ -63,30 +66,69 @@ describe('v2 requires an owning group, the column does not', () => {
   });
 
   test('the v2 service refuses to create a dataset with no owning group', () => {
-    // The refusal is here rather than in the database, so v1 keeps working until cut-over.
+    // v2 never reaches the database default. A dataset it creates names its group.
     expect(() => buildDatasetCreateQuery({ name: 'Orphan', type: 'RAW_DATA' }))
       .toThrow(/owner_group_id/);
   });
 
-  test('the database still accepts one, so legacy creation keeps working', async () => {
-    // Migration 20260908010000 made this column NOT NULL and broke the legacy routes, which
-    // send no owning group. 20260909010000 dropped the constraint again. This pins the
-    // reversal: the column has to stay permissive while v1 still writes datasets.
+  test('an insert that names no group lands in Unassigned Datasets', async () => {
+    // This is what keeps the legacy creation routes working. They send no owning group, and
+    // the column default parks the row rather than rejecting it.
     const resource_id = randomUUID();
     await prisma.resource.create({ data: { id: resource_id, type: RESOURCE_TYPE.DATASET } });
     const name = `Orphan Dataset ${Date.now()}`;
 
     await prisma.$executeRaw`
-      INSERT INTO "dataset" ("name", "type", "is_deleted", "resource_id", "owner_group_id")
-      VALUES (${name}, 'RAW_DATA', false, ${resource_id}, NULL)
+      INSERT INTO "dataset" ("name", "type", "is_deleted", "resource_id")
+      VALUES (${name}, 'RAW_DATA', false, ${resource_id})
     `;
 
     const orphan = await prisma.dataset.findFirst({ where: { name } });
     expect(orphan).not.toBeNull();
-    expect(orphan.owner_group_id).toBeNull();
+    expect(orphan.owner_group_id).toBe(UNASSIGNED_DATASETS_GROUP_ID);
 
     await prisma.dataset.deleteMany({ where: { id: orphan.id } });
     await prisma.resource.deleteMany({ where: { id: resource_id } });
+  });
+
+  test('an explicit NULL owning group is rejected', async () => {
+    // The default covers a caller that omits the column. One that insists on NULL is asking
+    // for a dataset no group governs, which is the state the constraint exists to prevent.
+    const resource_id = randomUUID();
+    await prisma.resource.create({ data: { id: resource_id, type: RESOURCE_TYPE.DATASET } });
+    const name = `Explicit Null ${Date.now()}`;
+
+    await expect(prisma.$executeRaw`
+      INSERT INTO "dataset" ("name", "type", "is_deleted", "resource_id", "owner_group_id")
+      VALUES (${name}, 'RAW_DATA', false, ${resource_id}, NULL)
+    `).rejects.toThrow();
+
+    await prisma.resource.deleteMany({ where: { id: resource_id } });
+  });
+
+  test('two groups may hold a dataset of the same name and type', async () => {
+    // The whole point of the per-group key. Neither group can discover that the other holds
+    // the name, and neither can deny it to the other by taking it first.
+    const other = await createTestGroup(actor.subject_id, '_dog_other');
+    groupsToDelete.push(other.id);
+
+    const shared_name = `Shared Name ${Date.now()}`;
+    const first = await createTestDataset(group.id, '', { name: shared_name });
+    datasetsToDelete.push(first.id);
+    const second = await createTestDataset(other.id, '', { name: shared_name });
+    datasetsToDelete.push(second.id);
+
+    expect(first.name).toBe(second.name);
+    expect(first.type).toBe(second.type);
+    expect(first.owner_group_id).not.toBe(second.owner_group_id);
+  });
+
+  test('one group may not hold the same name twice', async () => {
+    const dup_name = `Duplicate Name ${Date.now()}`;
+    const first = await createTestDataset(group.id, '', { name: dup_name });
+    datasetsToDelete.push(first.id);
+
+    await expect(createTestDataset(group.id, '', { name: dup_name })).rejects.toThrow();
   });
 
   test('an owning group cannot be deleted while it still owns datasets', async () => {
@@ -159,6 +201,17 @@ describe('the quarantine group', () => {
     const validator = require('validator');
 
     expect(validator.isUUID(UNASSIGNED_DATASETS_GROUP_ID)).toBe(true);
+    // And it must not collide with the deterministic ids the seed generates, which count up
+    // from zero in the last eight bytes with the same version and variant nibbles set.
+    expect(UNASSIGNED_DATASETS_GROUP_ID.startsWith('00000000')).toBe(false);
+  });
+
+  test('has an archive_key, so its datasets have somewhere to be archived', async () => {
+    const quarantine = await prisma.group.findUnique({
+      where: { id: UNASSIGNED_DATASETS_GROUP_ID },
+    });
+
+    expect(quarantine.archive_key).toBe('unassigned-datasets');
   });
 
   test('takes part in the closure table like any other group', async () => {

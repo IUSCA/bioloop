@@ -73,7 +73,8 @@ import workers.api as api
 import workers.utils as utils
 from workers.config import config
 from workers.dataset import (compute_staging_path, get_archive_bundle_name,
-                             get_archive_path, get_bundle_download_path,
+                             get_archive_key, get_archive_path,
+                             get_bundle_download_path,
                              get_bundle_name, get_bundle_staged_path,
                              get_dataset_download_path, stage_alias)
 from workers.services.watchlib import Observer
@@ -544,6 +545,17 @@ class TestWatchRegistration:
         assert archive_file.exists(), (
             f'id={_id} — archive file missing on disk: {expected_archive}'
         )
+        # The group directory is what lets two groups hold the same dataset name without
+        # the second archive overwriting the first.
+        # @see docs/design/groups/dataset-storage.md — Archival
+        assert archive_file.parent.name == get_archive_key(fresh), (
+            f'id={_id} — archive is not under its owning group: '
+            f'expected parent="{get_archive_key(fresh)}", got="{archive_file.parent.name}"'
+        )
+        assert fresh.get('archive_group_key') == get_archive_key(fresh), (
+            f'id={_id} — archive_group_key not stamped: '
+            f'expected="{get_archive_key(fresh)}", got="{fresh.get("archive_group_key")}"'
+        )
 
         bundle: dict[str, Any] = fresh.get('bundle') or {}
         assert bundle, f'id={_id} — bundle metadata is empty/None after archive_dataset'
@@ -594,9 +606,12 @@ class TestWatchRegistration:
         assert bundle_staged.exists(), (
             f'id={_id} — staged bundle file missing: {bundle_staged}'
         )
-        assert bundle_staged.name == get_bundle_name(fresh), (
+        # The staged bundle is named for the stage alias, not the dataset. It is a local,
+        # transient file shared across groups, and two groups may hold the same name.
+        # @see docs/design/groups/dataset-storage.md — Staging
+        assert bundle_staged.name == f'{stored_alias}.tar', (
             f'id={_id} — staged bundle filename mismatch: '
-            f'expected="{get_bundle_name(fresh)}", got="{bundle_staged.name}"'
+            f'expected="{stored_alias}.tar", got="{bundle_staged.name}"'
         )
 
         logger.info(

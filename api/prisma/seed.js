@@ -272,7 +272,8 @@ async function main() {
 
     await prisma.dataset.upsert({
       where: {
-        name_type_is_deleted: {
+        owner_group_id_name_type_is_deleted: {
+          owner_group_id: UNASSIGNED_DATASETS_GROUP_ID,
           name: dataset_obj.name,
           type: dataset_obj.type,
           is_deleted: dataset_obj.is_deleted || false,
@@ -481,12 +482,15 @@ async function main() {
   );
 
   await Promise.all(
+    // archive_key is frozen at creation and equals the slug at that moment. createGroup()
+    // does the same, and the migration backfilled existing rows the same way.
+    // @see docs/design/groups/dataset-storage.md — Archival
     groups.map((g) => prisma.group.upsert({
       where: {
         id: g.id,
       },
       update: {},
-      create: g,
+      create: { ...g, archive_key: g.slug },
     })),
   );
 

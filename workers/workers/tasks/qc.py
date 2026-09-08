@@ -12,6 +12,7 @@ import workers.cmd as cmd
 import workers.config.celeryconfig as celeryconfig
 import workers.utils as utils
 from workers.config import config
+from workers.dataset import get_archive_key
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -64,7 +65,11 @@ def create_report(celery_task: WorkflowTask, dataset_dir: Path, dataset_qc_dir: 
 def generate_qc(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
     dataset_type = dataset['type']
-    dataset_qc_dir = Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'
+    # The group directory is here for the same reason it is in the archive path: the
+    # directory is keyed by name, and names are only unique within a group.
+    # @see docs/design/groups/dataset-storage.md — Quality-control reports
+    dataset_qc_dir = (Path(config['paths'][dataset_type]['qc'])
+                      / get_archive_key(dataset) / dataset['name'] / 'qc')
     staged_path = Path(dataset['staged_path'])
 
     report_id = create_report(
