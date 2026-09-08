@@ -1,6 +1,6 @@
 ---
 title: Glossary
-order: 2
+order: 5
 status: reference
 last_verified: 2026-09-02
 ---

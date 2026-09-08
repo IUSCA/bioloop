@@ -30,15 +30,20 @@ frontmatter, and repeats them in a banner at the top.
 
 ## Active work
 
-- [Hierarchical groups, collections, and access control](./groups/design.md) — `active`, partially shipped
+The groups records answer four different questions, and each has one page.
+
+- [Hierarchical groups, collections, and access control](./groups/design.md) — **how it works.** `active`, partially shipped
+- [Groups decisions](./groups/decisions.md) — **why it is shaped that way**, and what was rejected
+- [Group use cases](./groups/use-cases.md) — **what users need**, and what is still missing
+- [Groups code map](./groups/code-map.md) — **where the code is**
+
+Supporting records:
+
 - [Access presets](./groups/access-presets.md) — `active`, partially shipped
-- [Group use cases](./groups/use-cases.md) — `active`
 - [Group invitations](./groups/invitations.md) — `active`, not started
 - [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
-- [Groups implementation status](./groups/implementation-status.md) — code map and gap register for the design records above
-- [Groups design review](./groups/design-review.md) — an independent review that argues with the records above. Nothing in it has been decided.
 
 ## Ideas
 

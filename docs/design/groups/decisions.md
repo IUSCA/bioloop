@@ -1,15 +1,19 @@
 ---
 title: Decisions
-order: 10
+order: 2
 status: active
 last_verified: 2026-09-08
 ---
 
 ::: tip A decision record
-Nine questions raised by the [design review](./design-review.md) and collected in the
-[use cases](./use-cases.md) were settled on 2026-09-08, and four more were settled later
-that day after the first nine were built. This page records what was decided and why. It
-supersedes the open-question wording in those pages.
+Thirteen questions about the shape of the groups system, raised by a design review of
+2026-09-03 and collected in the [use cases](./use-cases.md), were settled on 2026-09-08.
+This page records what was decided and why, including the alternatives that were rejected
+and the reasoning behind each.
+
+It is the companion to [Design](./design.md), which describes what the system does without
+re-arguing why. When the two disagree, this page is the record of intent and the design page
+is the one to correct.
 :::
 
 # Groups — Decisions

@@ -1,6 +1,6 @@
 ---
 title: Trust and Communication
-order: 7
+order: 9
 status: active
 implemented: none
 last_verified: 2026-09-03

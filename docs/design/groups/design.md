@@ -9,7 +9,7 @@ last_verified: 2026-09-08
 ::: warning Design record — active
 This is the design record for the groups, collections, and grants system. It describes the
 target state. Much of it has shipped; the parts that have not are marked where they appear,
-and [Implementation Status](./implementation-status.md) maps each concept to the code that
+and [Code Map](./code-map.md) maps each concept to the code that
 implements it. The reasoning behind the shape of the system, and the alternatives that were
 rejected, are in [Decisions](./decisions.md).
 :::

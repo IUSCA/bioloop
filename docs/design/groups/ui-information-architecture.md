@@ -1,6 +1,6 @@
 ---
 title: UI Information Architecture
-order: 6
+order: 8
 status: active
 implemented: partial
 last_verified: 2026-09-03
@@ -9,7 +9,7 @@ last_verified: 2026-09-03
 ::: warning Design record — active
 The page structure the [groups design](./design.md) is meant to be operated through.
 Some of this is built and some is not. For what the code does today, see
-[Implementation Status](./implementation-status.md).
+[Code Map](./code-map.md).
 :::
 
 # UI Information Architecture

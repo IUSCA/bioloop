@@ -1,6 +1,6 @@
 ---
 title: Group Invitations
-order: 5
+order: 7
 status: active
 implemented: none
 last_verified: 2026-09-02

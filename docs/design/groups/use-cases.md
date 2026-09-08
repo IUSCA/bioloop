@@ -9,9 +9,9 @@ last_verified: 2026-09-08
 ::: warning Design record — active
 Anticipated user needs for the [groups design](./design.md), sorted by what the first
 release must contain and by what the design must not foreclose. The questions this page
-raised were settled on 2026-09-08 — see [Decisions](./decisions.md) and the
-[MVP Implementation Plan](./mvp-plan.md). This is not a description
-of what the UI does today; for that, read [Implementation Status](./implementation-status.md).
+raised were settled on 2026-09-08 — see [Decisions](./decisions.md). What the design
+describes and the code does not is in [What is not built](#what-is-not-built) below. For
+where the code lives, read [Code Map](./code-map.md).
 :::
 
 # Group Use Cases
@@ -463,22 +463,64 @@ its own.
 
 ## What the design must not foreclose
 
-Everything that was on this list is now either being built or explicitly deferred with the
-constraint that keeps it possible. The plan is in [MVP Implementation Plan](./mvp-plan.md).
+Everything that was on this list is now either built or explicitly deferred with the
+constraint that keeps it possible.
 
-| Item | Status |
+| Item | Outcome |
 |---|---|
-| 19, 34 — membership and collection history | **Building now**, phase 1. The only item where delay was destroying data. |
-| 59 — non-null owning group | **Building now**, phase 2. |
-| A.1 — a principal for people who are not logged in | **Building the principal**, phase 3. The route path is deferred. |
-| 43 — time-bound membership | **Unblocked** by phase 1, which adds `valid_until`. Now a service and UI change with no migration. |
-| 17, 39, 45, 46, 47 — a way to say no | **Primitive built** in phase 5, with archiving as its only consumer. The rest become a seed row each. |
-| 38 — an order over access types | **Building now**, phase 4. |
-| 4, 55 — explanation from the deciding query | **Constraint accepted.** The closure in phase 4 and the restriction check in phase 5 both run inside the deciding query. |
-| 58 — derived datasets no more open than their sources | **Withdrawn.** Built in phase 6, removed in phase 8. Derived and source access are independent, per decision 10. |
-| 13 — attribution | **Foundation built** in phase 11: `dataset_funding` and `dataset_affiliation`, with a service. No route or page yet. |
+| 19, 34 — membership and collection history | **Built.** Rows are closed rather than deleted, and current state is read through a view. |
+| 59 — non-null owning group | **Built.** Datasets that had no owner were moved into an archived quarantine group. |
+| A.1 — a principal for people who are not logged in | **Principal built.** `Public` sits alongside `Authenticated Users`. Serving unauthenticated requests is deferred. |
+| 43 — time-bound membership | **Unblocked.** `group_user` carries `valid_until`; a service and UI change with no migration remains. |
+| 17, 39, 45, 46, 47 — a way to say no | **Primitive built.** Restrictions compose by AND, with archiving as the only type. The rest become a seed row each. |
+| 38 — an order over access types | **Built.** A seeded partial order, closed over once at startup. |
+| 4, 55 — explanation from the deciding query | **Constraint accepted.** The access-type closure and the restriction check both run inside the deciding query. |
+| 58 — derived datasets no more open than their sources | **Withdrawn.** Built, then removed. Derived and source access are independent — see [decision 10](./decisions.md). |
+| 13 — attribution | **Foundation built.** `dataset_funding` and `dataset_affiliation`, with a service. No route or page yet. |
 | 25, 50 — cross-group collections | **Deferred by decision.** Collections stay single-owner; a non-authorization concept covers the rest later. |
-| 51 — grants attaching to a dataset or a version | **Still open.** No decision taken, and nothing in the plan forecloses one. |
+| 51 — grants attaching to a dataset or a version | **Still open.** No decision taken, and nothing forecloses one. |
+
+---
+
+## What is not built
+
+The design describes more than the code does. This is the difference, as of 2026-09-08.
+Sequencing lives in the local backlog rather than here.
+
+### Not started
+
+- **Invitations.** No `group_invitation` model, route, service, or UI. [The design record](./invitations.md) is complete and carries its own checklist.
+- **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Either build it or drop the table, so the schema stops implying it exists.
+- **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
+- **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
+- **Renewals.** `ACCESS_REQUEST_TYPE.RENEWAL` and `previous_grant_ids` are in the schema, the route rejects anything but `NEW`, and the renewal-context endpoint is commented out.
+- **Notifications on access decisions.** Use cases 9 and 54 ("no silent access changes") are unmet. Nothing in the grant or access-request services touches the notification system, though the platform has one.
+- **Access history queries** (34). The data is preserved; nothing reconstructs effective access as of a past date from it.
+- **Compliance reporting and least-privilege review** (35, 36). No report generation, no broad-access detection.
+- **Training / DUA preconditions** (45, 46). Named as extensible; no attributes and no policy hooks exist.
+
+### Built but not reachable
+
+Anything seeded, modeled, or exported and never called reads as shipped. Each of these is
+either wiring to finish or code to delete.
+
+- **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
+- **`DATASET:REMOTE_ACCESS`**, **`DATASET:REQUEST_ACCESS`**, and **`COLLECTION:REQUEST_ACCESS`** are seeded access types that no policy or route checks.
+- **`group.add_dataset`, `group.add_collection`, `group.view_audit_logs`** are defined and never passed to `authorize()`.
+- **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
+- **Dataset unarchive.** The archive route exists; the unarchive route is commented out, the service has no counterpart, and the UI has no call. A dataset archived through the UI cannot be brought back through it.
+
+### Enforcement holes
+
+Two remain, and both are live.
+
+- **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always` and the service validates only the *subject*, so a user holding any resource UUID can file against a resource they cannot see. `assertGrantItemsApplicableToResourceType` runs on grant creation but not here, so a request can also name access types that do not apply to the resource type.
+- **`unarchive` binds the wrong policy.** `groupPolicies` defines `unarchive` as platform-admin-only and `archive` as group-admin, but [routes/groups.js:316](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L316) authorizes the unarchive endpoint with `'group', 'archive'`. **Any group admin can unarchive their own group** and reactivate its governance authority. One line.
+
+### Narrower than the design, on purpose
+
+- **`GET /audit/records` is platform admin only.** It previously carried no authorization at all. The design scopes audit visibility to owning-group admins and oversight as well, which needs the query filtered by the caller's authority rather than merely gated. Gating it did not wait for that.
+- **Legacy `/datasets` routes bypass the group model.** They still use the old RBAC `accessControl()` middleware, so "consistency across interfaces" (11, 56) does not hold on them. These retire as the surfaces above them are rebuilt on `/v2`, rather than as a migration of their own.
 
 ---
 
