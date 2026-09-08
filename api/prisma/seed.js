@@ -496,18 +496,10 @@ async function main() {
   });
 
   const group_user = groupData.generateGroupUserMemberships(userIds, systemAdmin.subject_id);
-  await Promise.all(
-    group_user.map((gu) => prisma.group_user.upsert({
-      where: {
-        group_id_user_id: {
-          group_id: gu.group_id,
-          user_id: gu.user_id,
-        },
-      },
-      update: {},
-      create: gu,
-    })),
-  );
+  // group_user has no composite key: a user may hold several memberships of one group over
+  // time, at most one of them open. skipDuplicates relies on the partial unique index over
+  // open rows, so re-seeding never opens a second membership.
+  await prisma.group_user.createMany({ data: group_user, skipDuplicates: true });
 
   // // updates datasets with owner_group_id
   const datasetResourceIds = datasets.map((d) => d.resource_id);
@@ -543,21 +535,10 @@ async function main() {
       });
 
       // upsert collection-dataset associations
-      await Promise.all(
-        _dsIds.map((dataset_id) => tx.collection_dataset.upsert({
-          where: {
-            collection_id_dataset_id: {
-              collection_id: c.id,
-              dataset_id,
-            },
-          },
-          update: {},
-          create: {
-            collection_id: c.id,
-            dataset_id,
-          },
-        })),
-      );
+      await tx.collection_dataset.createMany({
+        data: _dsIds.map((dataset_id) => ({ collection_id: c.id, dataset_id })),
+        skipDuplicates: true,
+      });
     })),
   );
 

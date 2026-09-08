@@ -215,7 +215,7 @@ function createSqlWhere({
     clauses.push(Prisma.sql`
       EXISTS (
         SELECT 1 
-        FROM collection_dataset cd 
+        FROM active_collection_dataset cd 
         WHERE 
           cd.dataset_id = d.resource_id
           AND cd.collection_id = ${collection_id}
@@ -299,7 +299,7 @@ function createAccessibleDatasetIdsCte(user_id, scope = RESOURCE_SCOPES.ALL) {
     parts.push(Prisma.sql`
       SELECT d.resource_id
       FROM "dataset" d
-      JOIN group_user gu ON d.owner_group_id = gu.group_id
+      JOIN active_group_user gu ON d.owner_group_id = gu.group_id
       WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
     `);
   }

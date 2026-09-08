@@ -50,7 +50,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
         SELECT ${dataset_id} AS resource_id
         UNION
         SELECT collection_id
-        FROM collection_dataset
+        FROM active_collection_dataset
         WHERE dataset_id = ${dataset_id}
     )
     SELECT ${select_fields}
@@ -190,7 +190,7 @@ function accessibleDatasetIdsByGrantsQuery(user_id) {
     SELECT DISTINCT cd.dataset_id as resource_id
     FROM valid_grants g
     JOIN collection c ON g.resource_id = c.id
-    JOIN collection_dataset cd ON cd.collection_id = c.id
+    JOIN active_collection_dataset cd ON cd.collection_id = c.id
   `;
 }
 

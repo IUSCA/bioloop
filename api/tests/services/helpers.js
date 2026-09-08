@@ -298,7 +298,37 @@ async function deleteEntity(id) {
   await prisma.resource.deleteMany({ where: { id } }).catch(() => {});
 }
 
+// ─────────────────────────────────────────────
+// Membership
+// ─────────────────────────────────────────────
+
+/**
+ * The membership currently in force for a (group, user) pair, or null.
+ *
+ * group_user has no composite key: a user may hold several memberships of one group over
+ * time, at most one of them open. Tests asking "is this user a member now?" must ask for the
+ * open row rather than for any row.
+ */
+async function activeMembership(group_id, user_id) {
+  return prisma.group_user.findFirst({
+    where: { group_id, user_id, removed_at: null },
+  });
+}
+
+/**
+ * Every membership row for a (group, user) pair, open and closed, oldest first.
+ * Use this to assert that history survived a removal.
+ */
+async function membershipHistory(group_id, user_id) {
+  return prisma.group_user.findMany({
+    where: { group_id, user_id },
+    orderBy: { assigned_at: 'asc' },
+  });
+}
+
 module.exports = {
+  activeMembership,
+  membershipHistory,
   createTestUser,
   createTestGroup,
   createTestChildGroup,

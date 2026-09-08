@@ -447,7 +447,7 @@ async function listExpiringGrantsForAdmin({
   const sql = Prisma.sql`
       WITH admin_groups AS (
         SELECT gu.group_id
-        FROM group_user gu
+        FROM active_group_user gu
         WHERE gu.user_id = ${user_id}
           AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
       ),

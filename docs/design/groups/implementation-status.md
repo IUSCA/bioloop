@@ -43,10 +43,10 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Design concept | Schema | API surface | Service | UI |
 |---|---|---|---|---|
 | Group + hierarchy | `group`, `group_closure` | `routes/groups.js` | `services/groups.js` | `pages/v2/groups/`, `components/v2/groups/` |
-| Membership + roles | `group_user`, `GROUP_MEMBER_ROLE` | `/groups/:id/members`, `/admins/:userId` | `services/groups.js` | `GroupMembersTab.vue` |
-| Membership transitivity | view `effective_user_groups` | — | `hydrators/user.js` → `effective_group_ids` | — |
+| Membership + roles | `group_user` (validity columns), `GROUP_MEMBER_ROLE`, view `active_group_user` | `/groups/:id/members`, `/admins/:userId` | `services/groups.js` | `GroupMembersTab.vue` |
+| Membership transitivity | view `effective_user_groups` over `active_group_user` | — | `hydrators/user.js` → `effective_group_ids` | — |
 | Oversight visibility | view `effective_user_oversight_groups` | — | `hydrators/user.js` → `oversight_group_ids` | — |
-| Collections | `collection`, `collection_dataset` | `routes/collections.js` | `services/collections.js` | `pages/v2/collections/` |
+| Collections | `collection`, `collection_dataset` (validity columns), view `active_collection_dataset` | `routes/collections.js` | `services/collections.js` | `pages/v2/collections/` |
 | Grants | `grant`, `grant_access_type`, view `valid_grants` | `routes/grants.js` | `services/grants/` | `components/v2/grants/` |
 | Grant presets | `grant_preset`, `grant_preset_item` | `/grants/presets` | seeded from `src/constants.js` | `useGrantPresets.js` |
 | Access requests | `access_request`, `access_request_item` | `routes/access_requests.js` | `services/access_requests/` | `pages/v2/access-requests/` |
@@ -95,6 +95,16 @@ by group admins, and refusal of on-behalf-of-another-user requests.
 **Zero-default listing.** Enforced at the query layer, not in the UI. Dataset, collection,
 and group searches build a CTE of what the caller can reach (owner-group admin, oversight,
 or grant) and filter inside SQL. Attribute filters then strip fields per caller role.
+
+**Membership and collection history.** `group_user` and `collection_dataset` rows are closed,
+never deleted. Each carries `removed_at` and `removed_by`, and `group_user` also carries
+`valid_until` for a membership with a scheduled end. A partial unique index permits at most
+one open row per pair, so re-adding a removed member opens a second row and leaves the gap
+visible. Every "who is a member now?" read goes through the `active_group_user` and
+`active_collection_dataset` views, including the `group_memberships` attribute the policies
+evaluate; the raw relation is named `group_membership_history` so an unfiltered read has to
+be asked for deliberately. See
+[decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved).
 
 **Audit.** Every material event writes through `AuditBuilder` inside the same transaction
 as the change, with name snapshots so records stay readable after renames.
@@ -151,6 +161,7 @@ decision before more actions depend on it.
 - **Visibility presets.** The design's `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
 - **Renewals.** `ACCESS_REQUEST_TYPE.RENEWAL` and `previous_grant_ids` are in the schema, but the route rejects anything but `NEW` and the renewal-context endpoint is commented out.
 - **Notifications on access decisions.** Use cases 9 and 54 ("no silent access changes") are unmet: nothing in `services/grants/` or `services/access_requests/` touches the notification system, even though the platform has one.
+- **Access history queries** (use case 34). The data is now preserved, but nothing reconstructs effective access as of a past date from it.
 - **Compliance reporting / least-privilege review** (use cases 35, 36). No report generation or broad-access detection.
 - **Training / DUA preconditions** (use cases 45, 46). Named as extensible in the design; no attributes or policy hooks exist.
 
@@ -174,7 +185,8 @@ decision before more actions depend on it.
 
 ## Suggested order of work
 
-Roughly by risk, then by how much the design depends on it:
+Superseded by the [MVP Implementation Plan](./mvp-plan.md), whose phase 1 is complete. The
+list below predates it and is kept for the items the plan does not cover:
 
 1. Authorize `GET /audit/records`; fix the `unarchive` policy binding.
 2. Gate access-request creation on resource visibility and `REQUEST_ACCESS`; validate item applicability.

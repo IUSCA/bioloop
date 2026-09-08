@@ -22,6 +22,20 @@ userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
   return rows.map((row) => row.roles.name);
 });
 
+userHydrator.registerVirtualAttribute('group_memberships', async ({ id, hydrator }) => {
+  // Direct memberships that are currently in force. Reads active_group_user, so a membership
+  // that was removed or has passed its valid_until confers nothing, even though its row
+  // survives for history. The unfiltered rows are reachable as `group_membership_history`.
+  // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
+  const dbClient = hydrator.prisma;
+  const sql = Prisma.sql`
+    SELECT id, group_id, user_id, role, assigned_at, assigned_by, valid_until
+    FROM active_group_user
+    WHERE user_id = ${id}
+  `;
+  return dbClient.$queryRaw(sql);
+});
+
 userHydrator.registerVirtualAttribute('effective_group_ids', async ({ id, hydrator }) => {
   // ids of all groups the use is a member of, and all ancestor groups of those groups
 

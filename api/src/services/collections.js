@@ -286,7 +286,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
       INSERT INTO collection_dataset (collection_id, dataset_id, added_by)
       SELECT ${collection_id}, dataset_id, ${actor_id}
       FROM UNNEST(${dataset_ids}::text[]) AS dataset_id
-      ON CONFLICT DO NOTHING
+      ON CONFLICT (collection_id, dataset_id) WHERE removed_at IS NULL DO NOTHING
       RETURNING collection_id, dataset_id;
      `;
 
@@ -335,10 +335,16 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
       throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
+    // Close the row rather than deleting it. A collection grant conferred access to whatever
+    // the collection held at the time, so deleting the row would destroy one of the three
+    // inputs to "who could read this dataset on date X?".
+    // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
     const removedRecords = await tx.$queryRaw`
-      DELETE FROM collection_dataset
+      UPDATE collection_dataset
+      SET removed_at = CURRENT_TIMESTAMP, removed_by = ${actor_id}
       WHERE collection_id = ${collection_id}
       AND dataset_id = ANY(${dataset_ids}::text[])
+      AND removed_at IS NULL
       RETURNING collection_id, dataset_id;
      `;
 
@@ -399,7 +405,7 @@ function buildAccessibleCollectionIdsCte(user_id, scope) {
     parts.push(Prisma.sql`
       SELECT c.id
       FROM "collection" c
-      JOIN group_user gu ON c.owner_group_id = gu.group_id
+      JOIN active_group_user gu ON c.owner_group_id = gu.group_id
       WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
     `);
   }
@@ -482,7 +488,7 @@ async function searchCollectionsForUser({
     datasetClause = Prisma.sql`
       EXISTS (
         SELECT 1
-        FROM collection_dataset cd
+        FROM active_collection_dataset cd
         WHERE cd.collection_id = c.id AND cd.dataset_id = ${dataset_id}
       )
     `;
@@ -496,7 +502,7 @@ async function searchCollectionsForUser({
     ${cte_query}
     SELECT 
       c.*, 
-      (SELECT COUNT(*) FROM collection_dataset cd WHERE cd.collection_id = c.id) AS "dataset_count",
+      (SELECT COUNT(*) FROM active_collection_dataset cd WHERE cd.collection_id = c.id) AS "dataset_count",
       (
         SELECT json_build_object('id', g.id, 'name', g.name, 'metadata', g.metadata) 
         FROM "group" g 
@@ -641,6 +647,7 @@ async function listDatasetsInCollection({
       collections: {
         some: {
           collection_id,
+          removed_at: null,
         },
       },
     },
@@ -653,6 +660,7 @@ async function listDatasetsInCollection({
   const total = await prisma.collection_dataset.count({
     where: {
       collection_id,
+      removed_at: null,
     },
   });
   return { metadata: { total, limit, offset }, data: datasets };

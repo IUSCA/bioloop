@@ -63,32 +63,47 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
   return createError.BadRequest('Not a valid user');
 }));
 
+// Development login. Signs in as any active user by username, with no credential of any
+// kind, so that a developer or an agent driving a browser can exercise a platform admin, a
+// group admin, and an ordinary member in turn without CAS.
+//
+// The route is not registered at all when env is production or test, which is the whole of
+// its safety. Do not add a credential check and relax that guard: the guard is what makes
+// the absence of a credential acceptable.
+//
+// @see docs/guides/dev-servers.md — Logging in without CAS
 if (!['production', 'test'].includes(config.get('env'))) {
   router.post(
     '/test_login',
     asyncHandler(async (req, res, next) => {
       // #swagger.tags = ['Auth']
-      if (req.body?.username === 'test_user') {
-        const user = await userService.findActiveUserBy('username', 'test_user');
-        const resObj = await authService.onLogin({ user });
-        if (user.roles.includes('admin')) {
-          // set cookie
-          res.cookie('grafana_token', authService.issueGrafanaToken(user), {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'Strict',
-          });
-        } else {
-          // if user is not an admin, clear the cookie
-          res.clearCookie('grafana_token', {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'Strict',
-          });
-        }
-        return res.json(resObj);
+      const { username } = req.body || {};
+      if (!username) {
+        return next(createError.BadRequest('username is required'));
       }
-      return next(createError.Forbidden());
+
+      const user = await userService.findActiveUserBy('username', username);
+      if (!user) {
+        return next(createError.NotFound(`No active user named '${username}'`));
+      }
+
+      const resObj = await authService.onLogin({ user, method: 'test_login' });
+      if (user.roles.includes('admin')) {
+        // set cookie
+        res.cookie('grafana_token', authService.issueGrafanaToken(user), {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Strict',
+        });
+      } else {
+        // if user is not an admin, clear the cookie
+        res.clearCookie('grafana_token', {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Strict',
+        });
+      }
+      return res.json(resObj);
     }),
   );
 }

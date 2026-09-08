@@ -1,4 +1,4 @@
-const { Prisma } = require('@prisma/client');
+const { Prisma, SUBJECT_TYPE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const usernameRegex = require('regex-username')();
 const usernameBlacklist = require('the-big-username-blacklist');
@@ -95,6 +95,12 @@ function findActiveUserBy(key, value) {
 }
 
 async function updateLastLogin({ id, method }) {
+  // user_login.method is NOT NULL. Without this check the call fails inside Prisma with
+  // "explicitly undefined values are not allowed", which names the argument but not the
+  // caller that left it out.
+  if (!method) {
+    throw new Error('updateLastLogin requires a login method');
+  }
   return prisma.user_login.upsert({
     where: {
       user_id: id,
@@ -168,6 +174,14 @@ async function createUser(data) {
   const user = await prisma.user.create({
     data: {
       ...userData,
+      // Every user is an authorization subject. user.subject_id is a required FK, and the
+      // subject row must be created with the user rather than backfilled, so that a user can
+      // never exist that grants cannot name.
+      subject: {
+        create: {
+          type: SUBJECT_TYPE.USER,
+        },
+      },
       ...(roleObjs && {
         user_role: {
           create: roleObjs.map((r) => ({ role_id: r.id })),

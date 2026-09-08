@@ -164,12 +164,12 @@ describe('createAuthorizationMiddlewareFunction() - middleware', () => {
     expect(next).toHaveBeenCalledWith(/* no args */);
   });
 
-  it('extracts userId from req.user.id by default', async () => {
+  it('extracts the caller subject_id from req.user by default', async () => {
     authorizeWithFilters.mockResolvedValue({ granted: true, filter: null });
-    const { req, res, next } = makeReqResNext({ user: { id: 77 } });
+    const { req, res, next } = makeReqResNext({ user: { id: 77, subject_id: 'subject-77' } });
     await middleware(req, res, next);
     const callArgs = authorizeWithFilters.mock.calls[0][0];
-    expect(callArgs.identifiers.user).toBe(77);
+    expect(callArgs.identifiers.user).toBe('subject-77');
   });
 
   it('extracts resourceId from req.params.id by default', async () => {
@@ -183,11 +183,13 @@ describe('createAuthorizationMiddlewareFunction() - middleware', () => {
   it('uses custom requesterFn to extract userId', async () => {
     authorizeWithFilters.mockResolvedValue({ granted: true, filter: null });
     const authorize = createAuthorizationMiddlewareFunction(policyRegistry, stubHydrationRegistry, {});
-    const customMiddleware = authorize('post', 'view', { requesterFn: (r) => ({ id: r.user.adminId }) });
-    const { req, res, next } = makeReqResNext({ user: { id: 1, adminId: 99 } });
+    const customMiddleware = authorize('post', 'view', {
+      requesterFn: (r) => ({ subject_id: r.user.adminSubjectId }),
+    });
+    const { req, res, next } = makeReqResNext({ user: { id: 1, adminSubjectId: 'subject-99' } });
     await customMiddleware(req, res, next);
     const callArgs = authorizeWithFilters.mock.calls[0][0];
-    expect(callArgs.identifiers.user).toBe(99);
+    expect(callArgs.identifiers.user).toBe('subject-99');
   });
 
   it('uses custom resourceIdFn to extract resourceId', async () => {
@@ -281,12 +283,14 @@ describe('createAuthorizationMiddlewareFunction() - edge cases', () => {
     expect(callArgs.preFetched.resource).toBeUndefined();
   });
 
-  it('passes null as policyExecutionContext when req.policyContext is null', async () => {
+  it('creates a fresh hydration cache when req.policyContext is null', async () => {
     authorizeWithFilters.mockResolvedValue({ granted: true, filter: null });
     const { req, res, next } = makeReqResNext({ policyContext: null });
     await middleware(req, res, next);
     const callArgs = authorizeWithFilters.mock.calls[0][0];
-    expect(callArgs.policyExecutionContext).toBeNull();
+    expect(callArgs.policyExecutionContext.cache.user).toBeInstanceOf(Map);
+    expect(callArgs.policyExecutionContext.cache.resource).toBeInstanceOf(Map);
+    expect(callArgs.policyExecutionContext.cache.context).toBeInstanceOf(Map);
   });
 
   it('passes undefined as userId when req.user is undefined', async () => {

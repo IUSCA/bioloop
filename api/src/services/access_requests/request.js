@@ -43,6 +43,7 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
         group_id: subject_id,
         user_id: requester_id,
         role: GROUP_MEMBER_ROLE.ADMIN,
+        removed_at: null,
       },
     });
 

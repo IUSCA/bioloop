@@ -37,6 +37,31 @@ session. Nothing in the harness's cleanup path reaches it.
 `setsid` is not available on macOS, which is why the script uses `python3` rather than the
 one-line shell form.
 
+## Logging in without CAS
+
+Chrome DevTools MCP cannot complete a CAS login, and a minted token pushed into
+`localStorage` is both fragile and refused by the permission classifier. Use the dev-only
+login page instead:
+
+```
+https://localhost/dev-login                    # test_user, a seeded platform admin
+https://localhost/dev-login?username=user-013  # an ordinary member of a seeded group
+https://localhost/dev-login?username=<any>&next=/v2/datasets
+```
+
+It calls `POST /auth/test_login`, which accepts any active username with no credential and
+is not registered when the API's `env` is `production` or `test`. That environment guard is
+the entire protection; do not weaken it.
+
+Switching users this way is how to check a page as a platform admin, a group admin, and a
+plain member without three browsers.
+
+**A stale session after a database reset looks like a bug in your change.** `prisma migrate
+reset` re-seeds with new `subject_id` values. The browser keeps the old one, reads keep
+working because an unknown subject simply resolves to nothing, and then a write fails with
+a foreign-key violation on a column like `group_user.removed_by`. The fix is to visit
+`/dev-login`, not to debug the write path. This cost a session once.
+
 ## Restart only when reload cannot cover it
 
 Both servers reload on file changes: `nodemon` for the API, Vite HMR for the UI. Editing a

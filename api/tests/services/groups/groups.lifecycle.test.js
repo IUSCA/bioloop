@@ -20,6 +20,8 @@ const {
   createTestGroup,
   deleteUser,
   deleteGroup,
+  activeMembership,
+  membershipHistory,
 } = require('../helpers');
 
 let actor;
@@ -154,9 +156,7 @@ describe('groups - lifecycle', () => {
       const parent = await newGroup('_auto_admin_parent');
       const child = await newChildGroup(parent.id, '_auto_admin_child', true);
 
-      const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: child.id, user_id: actor.subject_id } },
-      });
+      const membership = await activeMembership(child.id, actor.subject_id);
       expect(membership).not.toBeNull();
       expect(membership.role).toBe(GROUP_MEMBER_ROLE.ADMIN);
     });
@@ -260,9 +260,7 @@ describe('groups - lifecycle', () => {
       const g = await newGroup('_add_member');
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
-      const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
-      });
+      const membership = await activeMembership(g.id, memberUser.subject_id);
       expect(membership).not.toBeNull();
       expect(membership.role).toBe(GROUP_MEMBER_ROLE.MEMBER);
     });
@@ -274,7 +272,7 @@ describe('groups - lifecycle', () => {
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
       const count = await prisma.group_user.count({
-        where: { group_id: g.id, user_id: memberUser.subject_id },
+        where: { group_id: g.id, user_id: memberUser.subject_id, removed_at: null },
       });
       expect(count).toBe(1);
     });
@@ -290,15 +288,61 @@ describe('groups - lifecycle', () => {
       expect(userIds).toContain(memberUser.subject_id);
     });
 
-    it('removeGroupMembers removes the user', async () => {
+    it('removeGroupMembers ends the membership', async () => {
       const g = await newGroup('_rm_member');
       await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
       await groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
 
-      const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
-      });
+      const membership = await activeMembership(g.id, memberUser.subject_id);
       expect(membership).toBeNull();
+    });
+
+    it('removeGroupMembers closes the row rather than deleting it', async () => {
+      const g = await newGroup('_rm_history');
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+
+      const history = await membershipHistory(g.id, memberUser.subject_id);
+      expect(history).toHaveLength(1);
+      expect(history[0].removed_at).not.toBeNull();
+      expect(history[0].removed_by).toBe(actor.subject_id);
+      // The interval is still readable: it opened when assigned and closed when removed.
+      expect(history[0].removed_at.getTime()).toBeGreaterThanOrEqual(history[0].assigned_at.getTime());
+    });
+
+    it('re-adding a removed member opens a new row and leaves the gap visible', async () => {
+      const g = await newGroup('_rm_readd');
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.removeGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+
+      const history = await membershipHistory(g.id, memberUser.subject_id);
+      expect(history).toHaveLength(2);
+      // Exactly one is open — the partial unique index permits no more.
+      expect(history.filter((row) => row.removed_at === null)).toHaveLength(1);
+      expect(history[0].removed_at).not.toBeNull();
+    });
+
+    it('an expired membership confers nothing even though the row is open', async () => {
+      const g = await newGroup('_rm_expired');
+      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      const membership = await activeMembership(g.id, memberUser.subject_id);
+      await prisma.group_user.update({
+        where: { id: membership.id },
+        data: { valid_until: new Date(Date.now() - 1000) },
+      });
+
+      // The row is still open, so it is not history; but it has passed its end date, so the
+      // active view — and therefore every effective-access query — must ignore it.
+      const stillOpen = await prisma.group_user.findFirst({
+        where: { id: membership.id, removed_at: null },
+      });
+      expect(stillOpen).not.toBeNull();
+
+      const effective = await prisma.$queryRaw`
+        SELECT group_id FROM effective_user_groups WHERE user_id = ${memberUser.subject_id}
+      `;
+      expect(effective.map((r) => r.group_id)).not.toContain(g.id);
     });
 
     it('listGroupMembers total is correct after add and remove', async () => {

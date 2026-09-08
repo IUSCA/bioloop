@@ -17,14 +17,18 @@ const path = require('path');
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
+const { GROUP_MEMBER_ROLE } = require('@prisma/client');
+
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
+const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 const { EVERYONE_GROUP_ID } = require('@/constants');
 const {
   createTestUser,
   createTestGroup,
   deleteUser,
   deleteGroup,
+  activeMembership,
 } = require('../helpers');
 
 let actor;
@@ -135,10 +139,48 @@ describe('groups - invariants', () => {
       ).rejects.toMatchObject({ status: 409 });
 
       // Confirm the membership was NOT removed
-      const membership = await prisma.group_user.findUnique({
-        where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
-      });
+      const membership = await activeMembership(g.id, memberUser.subject_id);
       expect(membership).not.toBeNull();
+    });
+  });
+
+  describe('a closed membership confers no authority', () => {
+    // Policies read `user.group_memberships` to decide owning-group admin authority. That
+    // attribute is hydrated from the active view, so a removed admin must stop passing the
+    // check immediately. Reading the raw group_user rows would keep them an admin forever,
+    // because the row survives for history.
+    // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
+    it('group_memberships drops the row as soon as the member is removed', async () => {
+      const g = await newGroup('_closed_authority');
+      await groupsService.addGroupMembers(g.id, {
+        user_ids: [memberUser.subject_id], actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: memberUser.subject_id, actor_id: actor.subject_id,
+      });
+
+      const before = await userHydrator.hydrate({
+        id: memberUser.subject_id, attributes: ['group_memberships'], cache: new Map(),
+      });
+      expect(before.group_memberships.some(
+        (m) => m.group_id === g.id && m.role === GROUP_MEMBER_ROLE.ADMIN,
+      )).toBe(true);
+
+      await groupsService.removeGroupMembers(g.id, {
+        user_ids: [memberUser.subject_id], actor_id: actor.subject_id,
+      });
+
+      const after = await userHydrator.hydrate({
+        id: memberUser.subject_id, attributes: ['group_memberships'], cache: new Map(),
+      });
+      expect(after.group_memberships.some((m) => m.group_id === g.id)).toBe(false);
+
+      // The row itself is still there — history was preserved, authority was not.
+      const history = await prisma.group_user.findMany({
+        where: { group_id: g.id, user_id: memberUser.subject_id },
+      });
+      expect(history).toHaveLength(1);
+      expect(history[0].removed_at).not.toBeNull();
     });
   });
 

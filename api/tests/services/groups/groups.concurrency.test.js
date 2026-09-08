@@ -22,6 +22,7 @@ const {
   createTestGroup,
   deleteUser,
   deleteGroup,
+  activeMembership,
 } = require('../helpers');
 
 let actor;
@@ -178,9 +179,7 @@ describe('groups - concurrency', () => {
           actor_id: actor.subject_id,
         })),
         async (results, g) => {
-          const membership = await prisma.group_user.findUnique({
-            where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
-          });
+          const membership = await activeMembership(g.id, memberUser.subject_id);
           expect(membership).toBeNull();
         },
       );
@@ -249,9 +248,7 @@ describe('groups - concurrency', () => {
           groupsService.demoteAdminToMember(g.id, { user_id: memberUser.subject_id, actor_id: actor.subject_id }),
         ],
         async (results, g) => {
-          const membership = await prisma.group_user.findUnique({
-            where: { group_id_user_id: { group_id: g.id, user_id: memberUser.subject_id } },
-          });
+          const membership = await activeMembership(g.id, memberUser.subject_id);
           expect([GROUP_MEMBER_ROLE.ADMIN, GROUP_MEMBER_ROLE.MEMBER]).toContain(membership.role);
         },
       );

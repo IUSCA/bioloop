@@ -27,7 +27,7 @@ primitive and exactly one consumer of it, deliberately leaving the second consum
 
 ---
 
-## Phase 1 — Membership and collection history
+## Phase 1 — Membership and collection history — **done**
 
 Implements [decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved).
 Satisfies use cases 19 and 34, and unblocks 43.
@@ -41,7 +41,13 @@ Satisfies use cases 19 and 34, and unblocks 43.
 - Membership removal and collection-content removal close rows instead of deleting them.
   Re-adding opens a new row rather than reviving the old one, so the gap stays visible.
 - Tests: history survives removal, re-adding produces a second row, an expired membership
-  confers no access, and the partial index rejects a second open row.
+  confers no access, and a closed membership stops conferring admin authority.
+
+Two things surfaced during implementation that the plan did not anticipate. Prisma relations
+cannot be filtered, so `user.group_memberships` — which the owning-group-admin policies read —
+would have kept returning closed rows and left a removed admin in authority; the raw relation
+is now named `group_membership_history` and the filtered read keeps the obvious name. And
+`listDatasetsInCollection` matched removed rows through a relation filter for the same reason.
 
 ## Phase 2 — Every dataset has an owning group
 

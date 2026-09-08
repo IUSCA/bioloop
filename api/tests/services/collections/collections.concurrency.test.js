@@ -197,10 +197,17 @@ describe('collections - concurrency', () => {
             expect(r.status).toBe('fulfilled');
           });
 
-          const count = await prisma.collection_dataset.count({
+          // The row is closed rather than deleted, so the dataset must be gone from the
+          // collection while its membership record survives for history.
+          const openCount = await prisma.collection_dataset.count({
+            where: { collection_id: c.id, dataset_id: dsA.resource_id, removed_at: null },
+          });
+          expect(openCount).toBe(0);
+
+          const historyCount = await prisma.collection_dataset.count({
             where: { collection_id: c.id, dataset_id: dsA.resource_id },
           });
-          expect(count).toBe(0);
+          expect(historyCount).toBe(1);
         },
       );
     });

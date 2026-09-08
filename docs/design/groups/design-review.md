@@ -48,7 +48,7 @@ table says where each one landed.
 | 4. Collections cannot cross group boundaries | **Option 2 taken.** Collections stay single-owner. A separate non-authorization concept for describing a set of datasets comes later, and the symmetry argument in design.md should be corrected. |
 | 5. The no-overlap rule does not do what it claims | **Not taken up.** The exclusion constraint stays for now. Finding 7 in this review depends on nothing here, and dropping the constraint can be revisited without a migration penalty. |
 | 6. Access types claim to be orthogonal | **Accepted.** A seeded partial order, closed over at evaluation time. Presets stop being load-bearing. |
-| 7. Membership and collection history are deleted | **Accepted, first.** This was the only finding where delay destroyed data that no later migration recovers. |
+| 7. Membership and collection history are deleted | **Accepted, and implemented.** This was the only finding where delay destroyed data that no later migration recovers, so it was built first. Rows are now closed rather than deleted. |
 | 8. Oversight is a privilege nobody granted | **Not taken up.** Follows finding 1, which was rejected. Oversight stays structural. |
 
 Of the requirements questions at the end of this page: the use-cases document was

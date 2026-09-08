@@ -208,21 +208,27 @@ model user {
   // created_datasets           dataset_create_log[]
   alerts_created            alert[]
 
-  group_memberships         group_user[]                @relation("user_memberships")
-  memberships_assigned      group_user[]                @relation("membership_assignor")
-  collection_datasets_added collection_dataset[]        @relation("collection_dataset_adder")
-  grants_created            grant[]                     @relation("grants_created")
-  grants_revoked            grant[]                     @relation("grants_revoked")
-  access_requests           access_request[]            @relation("access_requests_created")
-  access_requests_reviewed  access_request[]            @relation("access_requests_reviewed")
-  authorization_audits      authorization_audit[]
-  contributions             user_dataset_contribution[]
-  subject_id                String                      @unique
+  // Every membership row, open and closed. Named for what it is: policies must not read this
+  // directly, because a closed row still confers nothing. The hydrator exposes the filtered
+  // view under the attribute `group_memberships`.
+  // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
+  group_membership_history    group_user[]                @relation("user_memberships")
+  memberships_assigned        group_user[]                @relation("membership_assignor")
+  memberships_removed         group_user[]                @relation("membership_remover")
+  collection_datasets_added   collection_dataset[]        @relation("collection_dataset_adder")
+  collection_datasets_removed collection_dataset[]        @relation("collection_dataset_remover")
+  grants_created              grant[]                     @relation("grants_created")
+  grants_revoked              grant[]                     @relation("grants_revoked")
+  access_requests             access_request[]            @relation("access_requests_created")
+  access_requests_reviewed    access_request[]            @relation("access_requests_reviewed")
+  authorization_audits        authorization_audit[]
+  contributions               user_dataset_contribution[]
+  subject_id                  String                      @unique
   // Restrict: prevents deleting a subject row directly while this user still references it.
   // Reverse cascade (user deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "user" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.subject_id
-  subject                   subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
-  owned_import_sources      import_source[]
+  subject                     subject                     @relation(fields: [subject_id], references: [id], onDelete: Restrict)
+  owned_import_sources        import_source[]
 
   @@index([subject_id])
 }
@@ -519,20 +525,41 @@ model group_closure {
   @@index([ancestor_id, depth])
 }
 
-// Group membership with roles
+// Group membership with roles.
+//
+// Rows are closed, never deleted, so that effective access can be reconstructed for a past
+// date. `assigned_at` opens the interval; it closes at the earlier of `valid_until` (the
+// membership was scheduled to end) and `removed_at` (an admin ended it). Both may be set.
+// This mirrors the grant model, where valid_until and revoked_at play the same two roles.
+//
+// At most one open row may exist per (group_id, user_id). Enforced by the partial unique
+// index `group_user_one_open_membership`, defined in the migration SQL because Prisma
+// cannot express a partial index. Re-adding a removed member opens a new row rather than
+// reviving the old one, so the gap in membership stays visible.
+//
+// Read through the `active_group_user` view rather than this table wherever the question is
+// "who is a member now?". The view applies both closing conditions.
+//
+// @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model group_user {
+  id          String            @id @default(uuid())
   group_id    String
   user_id     String
   role        GROUP_MEMBER_ROLE @default(MEMBER)
   assigned_at DateTime          @default(now()) @db.Timestamp(6)
   assigned_by String?
+  valid_until DateTime?         @db.Timestamp(6) // null means "no scheduled end"
+  removed_at  DateTime?         @db.Timestamp(6) // null means "still open"
+  removed_by  String?
 
   group    group @relation(fields: [group_id], references: [id], onDelete: Cascade)
   user     user  @relation("user_memberships", fields: [user_id], references: [subject_id], onDelete: Cascade)
   assignor user? @relation("membership_assignor", fields: [assigned_by], references: [subject_id], onDelete: SetNull)
+  remover  user? @relation("membership_remover", fields: [removed_by], references: [subject_id], onDelete: SetNull)
 
-  @@id([group_id, user_id])
   @@index([user_id])
+  @@index([group_id, user_id])
+  @@index([removed_at])
 }
 
 enum GROUP_MEMBER_ROLE {
@@ -592,18 +619,34 @@ model collection {
   @@index([is_archived])
 }
 
+// Collection membership.
+//
+// Closed rather than deleted, for the same reason as group_user: a collection grant confers
+// access to whatever the collection held at the time, so removing a dataset silently would
+// destroy one of the three inputs to "who could read this on a given date?".
+//
+// At most one open row per (collection_id, dataset_id), enforced by the partial unique index
+// `collection_dataset_one_open_membership` in the migration SQL. Read through the
+// `active_collection_dataset` view wherever the question is "what is in this collection now?".
+//
+// @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model collection_dataset {
+  id            String    @id @default(uuid())
   collection_id String
   dataset_id    String
-  added_at      DateTime @default(now()) @db.Timestamp(6)
+  added_at      DateTime  @default(now()) @db.Timestamp(6)
   added_by      String?
+  removed_at    DateTime? @db.Timestamp(6) // null means "still in the collection"
+  removed_by    String?
 
   collection collection @relation(fields: [collection_id], references: [id], onDelete: Cascade)
   dataset    dataset    @relation(fields: [dataset_id], references: [resource_id], onDelete: Cascade)
   adder      user?      @relation("collection_dataset_adder", fields: [added_by], references: [subject_id], onDelete: SetNull)
+  remover    user?      @relation("collection_dataset_remover", fields: [removed_by], references: [subject_id], onDelete: SetNull)
 
-  @@id([collection_id, dataset_id])
   @@index([dataset_id])
+  @@index([collection_id, dataset_id])
+  @@index([removed_at])
 }
 
 // ============================================================================

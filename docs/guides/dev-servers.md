@@ -56,6 +56,39 @@ The API listens on `http://localhost:3030`. The UI listens on `https://localhost
 443, behind the self-signed certificate you generated during setup. Your browser will warn
 about that certificate the first time.
 
+## Logging in without CAS
+
+The app normally signs you in through Indiana University's CAS. In development that is
+inconvenient, and for an agent driving a browser it is impossible. Two dev-only pieces
+replace it.
+
+Visit `/dev-login` and you are signed in as `test_user`, a seeded platform admin, then sent
+to the groups page. To sign in as somebody else, name them:
+
+```
+https://localhost/dev-login
+https://localhost/dev-login?username=user-013
+https://localhost/dev-login?username=svc_tasks
+https://localhost/dev-login?username=test_user&next=/v2/datasets
+```
+
+Any active user works, so this is the way to see a page as a platform admin, a group admin,
+and an ordinary member in turn. `user-013` and the other `user-0NN` accounts are seeded
+members of the sample groups and hold no elevated role.
+
+**Why this is safe.** The page calls `POST /auth/test_login`, and that route is not
+registered at all when the API's `env` is `production` or `test`. The absence of the route
+is the whole of the protection — the route deliberately accepts a username with no
+credential. Do not add a password check and relax the environment guard; that trade is
+strictly worse than what is there now. The page additionally refuses to act unless Vite is
+running in dev mode.
+
+**After a database reset, log in again.** `prisma migrate reset` re-seeds with fresh
+`subject_id` values, so a browser session from before the reset points at a user that no
+longer exists. Reads mostly keep working, which is what makes this confusing; writes fail
+with a foreign-key error on a column such as `group_user.removed_by`. Visiting `/dev-login`
+fixes it. Do not go hunting for a bug in the write path until you have re-logged in.
+
 ## When to restart
 
 Both servers reload on file changes. `nodemon` restarts the API when a `.js` file under

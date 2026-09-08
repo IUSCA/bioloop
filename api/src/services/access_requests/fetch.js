@@ -116,7 +116,7 @@ async function getRequestsPendingReviewForUser({
   const dataSql = Prisma.sql`
     WITH reviewer_admin_groups AS (
       SELECT gu.group_id
-      FROM group_user gu
+      FROM active_group_user gu
       WHERE gu.user_id = ${reviewer_id}
         AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
     ),
@@ -146,7 +146,7 @@ async function getRequestsPendingReviewForUser({
   const countSql = Prisma.sql`
     WITH reviewer_admin_groups AS (
       SELECT gu.group_id
-      FROM group_user gu
+      FROM active_group_user gu
       WHERE gu.user_id = ${reviewer_id}
         AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
     ),

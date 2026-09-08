@@ -20,6 +20,14 @@ const admins = [
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
+  {
+    // Development login account. The /auth/test_login route accepts this username and no
+    // other, and that route does not exist when env is production or test. Seeded as an
+    // admin so a developer or an agent can reach every surface without CAS.
+    // @see docs/guides/dev-servers.md — Logging in without CAS
+    name: 'Test User',
+    username: 'test_user',
+  },
 ];
 
 const operators = [

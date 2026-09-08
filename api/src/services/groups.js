@@ -273,7 +273,7 @@ async function createGroup({
           SELECT ${_group.id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.MEMBER)}
           FROM "user" u
           WHERE u.subject_id = ANY(${memberIds}::text[])
-          ON CONFLICT (group_id, user_id) DO NOTHING
+          ON CONFLICT (group_id, user_id) WHERE removed_at IS NULL DO NOTHING
           RETURNING user_id;
         `;
         const createdMemberUserIds = createdMemberRecords.map((record) => record.user_id);
@@ -296,7 +296,7 @@ async function createGroup({
           SELECT ${_group.id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
           FROM "user" u
           WHERE u.subject_id = ANY(${admins}::text[])
-          ON CONFLICT (group_id, user_id) DO NOTHING
+          ON CONFLICT (group_id, user_id) WHERE removed_at IS NULL DO NOTHING
           RETURNING user_id;
         `;
         const createdAdminUserIds = createdAdminRecords.map((record) => record.user_id);
@@ -527,7 +527,7 @@ async function listGroupMembers(group_id, {
           u.name as user_name
         from group_closure gc 
         join "group" g on g.id = gc.descendant_id
-        join group_user gu on gu.group_id = gc.descendant_id
+        join active_group_user gu on gu.group_id = gc.descendant_id
         join "user" u on u.subject_id = gu.user_id
         ${whereClause}
         order by gu.user_id, gc.depth asc, gu."role" desc, gu.assigned_at asc
@@ -584,7 +584,7 @@ async function listGroupMembers(group_id, {
     // Step 6: Get total count for pagination
     const totalRows = await tx.$queryRaw`
       SELECT count(distinct gu.user_id) as count
-      FROM group_user gu
+      FROM active_group_user gu
       JOIN group_closure gc ON gc.descendant_id = gu.group_id
       JOIN "user" u on u.subject_id = gu.user_id
       ${whereClause}
@@ -595,6 +595,7 @@ async function listGroupMembers(group_id, {
     const directMembershipCount = await tx.group_user.count({
       where: {
         group_id,
+        removed_at: null,
       },
     });
 
@@ -637,10 +638,15 @@ async function removeGroupMembers(group_id, {
       throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
 
+    // Close the membership rather than deleting it, so that "who was a member on date X?"
+    // stays answerable. Re-adding the user later opens a new row.
+    // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
     const deletedRecords = await tx.$queryRaw`
-      DELETE FROM group_user
+      UPDATE group_user
+      SET removed_at = CURRENT_TIMESTAMP, removed_by = ${actor_id}
       WHERE group_id = ${group_id}
       AND user_id = ANY(${user_ids}::text[])
+      AND removed_at IS NULL
       RETURNING user_id;
     `;
     const deletedUserIds = deletedRecords.map((record) => record.user_id);
@@ -688,7 +694,7 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
       SELECT ${group_id}, u.subject_id, ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.MEMBER)}
       FROM "user" u
       WHERE u.subject_id = ANY(${user_ids}::text[])
-      ON CONFLICT (group_id, user_id) DO NOTHING
+      ON CONFLICT (group_id, user_id) WHERE removed_at IS NULL DO NOTHING
       RETURNING user_id;
     `;
     const createdUserIds = createdRecords.map((record) => record.user_id);
@@ -719,13 +725,8 @@ async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_user.findUnique({
-      where: {
-        group_id_user_id: {
-          group_id,
-          user_id,
-        },
-      },
+    const membership = await tx.group_user.findFirst({
+      where: { group_id, user_id, removed_at: null },
     });
 
     if (!membership) {
@@ -736,12 +737,7 @@ async function promoteGroupMemberToAdmin(group_id, {
     }
 
     const updatedMembership = await tx.group_user.update({
-      where: {
-        group_id_user_id: {
-          group_id,
-          user_id,
-        },
-      },
+      where: { id: membership.id },
       data: {
         role: GROUP_MEMBER_ROLE.ADMIN,
       },
@@ -774,13 +770,8 @@ async function demoteAdminToMember(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_user.findUnique({
-      where: {
-        group_id_user_id: {
-          group_id,
-          user_id,
-        },
-      },
+    const membership = await tx.group_user.findFirst({
+      where: { group_id, user_id, removed_at: null },
     });
 
     if (!membership) {
@@ -791,12 +782,7 @@ async function demoteAdminToMember(group_id, {
     }
 
     const updatedMembership = await tx.group_user.update({
-      where: {
-        group_id_user_id: {
-          group_id,
-          user_id,
-        },
-      },
+      where: { id: membership.id },
       data: {
         role: GROUP_MEMBER_ROLE.MEMBER,
       },
@@ -900,11 +886,11 @@ async function searchGroupsForUser({
         CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
         'TRANSITIVE_MEMBER'
       ) AS user_role,
-      ( select count(*) from group_user where group_id = g.id ) as size,
+      ( select count(*) from active_group_user where group_id = g.id ) as size,
       ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
     FROM "group" g
     -- 1-on-1 join because of unique constraint on (group_id, user_id)
-    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
     LEFT JOIN oversight_groups og ON og.id = g.id -- 1-on-1 join because of distinct in CTE
     LEFT JOIN all_groups ag ON ag.id = g.id -- 1-on-1 join because of distinct in CTE; for where clause
     ${finalWhereClause}
@@ -927,7 +913,7 @@ async function searchGroupsForUser({
     )
     SELECT COUNT(DISTINCT g.id) as total_count
     FROM "group" g
-    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
     LEFT JOIN oversight_groups og ON og.id = g.id
     LEFT JOIN all_groups ag ON ag.id = g.id
     ${finalWhereClause}
@@ -1031,10 +1017,10 @@ async function searchAllGroups({
           gu.role::text,
           CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
         ) AS user_role,
-        ( select count(*) from group_user where group_id = g.id ) as size,
+        ( select count(*) from active_group_user where group_id = g.id ) as size,
         ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
       FROM "group" g
-      LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+      LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
       LEFT JOIN oversight_groups og ON og.id = g.id
       ${finalWhereClause}
       ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
@@ -1049,7 +1035,7 @@ async function searchAllGroups({
     )
     SELECT COUNT(DISTINCT g.id) as total_count
     FROM "group" g
-    LEFT JOIN group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
     LEFT JOIN oversight_groups og ON og.id = g.id
     ${finalWhereClause}
   `;
@@ -1243,7 +1229,7 @@ async function getGroupsWithoutActiveAdmins() {
     WHERE g.is_archived = false
       AND NOT EXISTS (
         SELECT 1
-        FROM group_user gu
+        FROM active_group_user gu
         JOIN "user" u ON u.subject_id = gu.user_id
         WHERE gu.group_id = g.id
           AND gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
@@ -1270,6 +1256,7 @@ async function isGroupAdmin(user_id) {
     where: {
       user_id,
       role: GROUP_MEMBER_ROLE.ADMIN,
+      removed_at: null,
     },
   });
   return row !== null;

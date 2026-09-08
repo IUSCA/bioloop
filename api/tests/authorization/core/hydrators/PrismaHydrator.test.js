@@ -14,9 +14,9 @@ jest.mock('@/authorization/core/hydrators/schemaMap', () => ({
   ]),
 }));
 
-const { PrismaHydrate } = require('@/authorization/core/hydrators/PrismaHydrator');
+const { PrismaHydrator } = require('@/authorization/core/hydrators/PrismaHydrator');
 const { HydrationError } = require('@/authorization/core/hydrators/errors');
-const { Hydrate } = require('@/authorization/core/hydrators/BaseHydrator');
+const { Hydrator } = require('@/authorization/core/hydrators/BaseHydrator');
 
 // ---------------------------------------------------------------------------
 // Helper: build a minimal mock PrismaClient for the 'User' model
@@ -34,25 +34,25 @@ function makePrismaClient(record = {
 // ---------------------------------------------------------------------------
 // Constructor
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate constructor', () => {
+describe('PrismaHydrator constructor', () => {
   it('creates an instance successfully for a known model', () => {
-    const h = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User' });
-    expect(h).toBeInstanceOf(PrismaHydrate);
-    expect(h).toBeInstanceOf(Hydrate);
+    const h = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
+    expect(h).toBeInstanceOf(PrismaHydrator);
+    expect(h).toBeInstanceOf(Hydrator);
   });
 
   it('defaults idAttribute to "id"', () => {
-    const h = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User' });
+    const h = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
     expect(h.idAttribute).toBe('id');
   });
 
   it('accepts a custom idAttribute', () => {
-    const h = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User', idAttribute: 'email' });
+    const h = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User', idAttribute: 'email' });
     expect(h.idAttribute).toBe('email');
   });
 
   it('throws when modelName is not in the schema map', () => {
-    expect(() => new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'NonExistent' })).toThrow(
+    expect(() => new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'NonExistent' })).toThrow(
       'Model NonExistent not found in Prisma schema',
     );
   });
@@ -61,10 +61,10 @@ describe('PrismaHydrate constructor', () => {
 // ---------------------------------------------------------------------------
 // registerVirtualAttribute()
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate.registerVirtualAttribute()', () => {
+describe('PrismaHydrator.registerVirtualAttribute()', () => {
   let hydrator;
   beforeEach(() => {
-    hydrator = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
   });
 
   it('registers a virtual loader and stores it', () => {
@@ -108,10 +108,10 @@ describe('PrismaHydrate.registerVirtualAttribute()', () => {
 // ---------------------------------------------------------------------------
 // _classifyAttributes()
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate._classifyAttributes()', () => {
+describe('PrismaHydrator._classifyAttributes()', () => {
   let hydrator;
   beforeEach(() => {
-    hydrator = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
     hydrator.registerVirtualAttribute('displayName', async () => 'v');
   });
 
@@ -143,10 +143,10 @@ describe('PrismaHydrate._classifyAttributes()', () => {
 // ---------------------------------------------------------------------------
 // hydrate() - input validation
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate.hydrate() - input validation', () => {
+describe('PrismaHydrator.hydrate() - input validation', () => {
   let hydrator;
   beforeEach(() => {
-    hydrator = new PrismaHydrate({ prismaClient: makePrismaClient(), modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
   });
 
   it('throws HydrationError when attributes is not an array', async () => {
@@ -183,7 +183,7 @@ describe('PrismaHydrate.hydrate() - input validation', () => {
 // ---------------------------------------------------------------------------
 // hydrate() - fetching columns and relations
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate.hydrate() - DB fetch', () => {
+describe('PrismaHydrator.hydrate() - DB fetch', () => {
   let prismaClient;
   let hydrator;
 
@@ -191,7 +191,7 @@ describe('PrismaHydrate.hydrate() - DB fetch', () => {
     prismaClient = makePrismaClient({
       id: 1, name: 'Alice', email: 'alice@example.com', posts: [],
     });
-    hydrator = new PrismaHydrate({ prismaClient, modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient, modelName: 'User' });
   });
 
   it('fetches the requested columns from the database', async () => {
@@ -235,13 +235,13 @@ describe('PrismaHydrate.hydrate() - DB fetch', () => {
 // ---------------------------------------------------------------------------
 // hydrate() - preFetched handling
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate.hydrate() - preFetched', () => {
+describe('PrismaHydrator.hydrate() - preFetched', () => {
   let prismaClient;
   let hydrator;
 
   beforeEach(() => {
     prismaClient = makePrismaClient({ id: 1, name: 'DB-Alice' });
-    hydrator = new PrismaHydrate({ prismaClient, modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient, modelName: 'User' });
   });
 
   it('uses preFetched values instead of fetching from the DB', async () => {
@@ -271,13 +271,13 @@ describe('PrismaHydrate.hydrate() - preFetched', () => {
 // ---------------------------------------------------------------------------
 // hydrate() - virtual attributes
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate.hydrate() - virtual attributes', () => {
+describe('PrismaHydrator.hydrate() - virtual attributes', () => {
   let prismaClient;
   let hydrator;
 
   beforeEach(() => {
     prismaClient = makePrismaClient({ id: 1, name: 'Alice' });
-    hydrator = new PrismaHydrate({ prismaClient, modelName: 'User' });
+    hydrator = new PrismaHydrator({ prismaClient, modelName: 'User' });
   });
 
   it('resolves a virtual attribute using its loader', async () => {
@@ -326,18 +326,18 @@ describe('PrismaHydrate.hydrate() - virtual attributes', () => {
 // ---------------------------------------------------------------------------
 // Edge cases
 // ---------------------------------------------------------------------------
-describe('PrismaHydrate - edge cases', () => {
+describe('PrismaHydrator - edge cases', () => {
   describe('falsy but valid id = 0', () => {
     it('treats id=0 as a valid non-null identifier (not treated like null)', async () => {
       const pc = makePrismaClient({ id: 0, name: 'Zero' });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       await h.hydrate({ id: 0, attributes: ['name'], cache: new Map() });
       expect(pc.User.findUniqueOrThrow).toHaveBeenCalledTimes(1);
     });
 
     it('uses id=0 correctly in the Prisma where clause', async () => {
       const pc = makePrismaClient({ id: 0, name: 'Zero' });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       await h.hydrate({ id: 0, attributes: ['name'], cache: new Map() });
       const payload = pc.User.findUniqueOrThrow.mock.calls[0][0];
       expect(payload.where).toEqual({ id: 0 });
@@ -347,7 +347,7 @@ describe('PrismaHydrate - edge cases', () => {
   describe('falsy attribute values in preFetched', () => {
     it('preserves an empty string preFetched value without re-fetching from DB', async () => {
       const pc = makePrismaClient({ id: 1, name: 'Alice' });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       const result = await h.hydrate({
         id: 1,
         attributes: ['name'],
@@ -364,7 +364,7 @@ describe('PrismaHydrate - edge cases', () => {
       'numeric id 1 and string id "1" map to the same cache key, producing a cache hit on the second call',
       async () => {
         const pc = makePrismaClient({ id: 1, name: 'Alice' });
-        const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+        const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
         const cache = new Map();
 
         await h.hydrate({ id: 1, attributes: ['name'], cache });
@@ -381,7 +381,7 @@ describe('PrismaHydrate - edge cases', () => {
     it('propagates errors thrown by findUniqueOrThrow directly', async () => {
       const pc = makePrismaClient();
       pc.User.findUniqueOrThrow.mockRejectedValue(new Error('Record not found'));
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       await expect(
         h.hydrate({ id: 999, attributes: ['name'], cache: new Map() }),
       ).rejects.toThrow('Record not found');
@@ -391,7 +391,7 @@ describe('PrismaHydrate - edge cases', () => {
   describe('custom idAttribute', () => {
     it('uses the custom idAttribute in the Prisma where clause', async () => {
       const pc = makePrismaClient({ email: 'a@b.com', name: 'Alice', id: undefined });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User', idAttribute: 'email' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User', idAttribute: 'email' });
       await h.hydrate({ id: 'a@b.com', attributes: ['name'], cache: new Map() });
       const payload = pc.User.findUniqueOrThrow.mock.calls[0][0];
       expect(payload.where).toEqual({ email: 'a@b.com' });
@@ -399,7 +399,7 @@ describe('PrismaHydrate - edge cases', () => {
 
     it('always includes the custom idAttribute in the select clause', async () => {
       const pc = makePrismaClient({ email: 'a@b.com', name: 'Alice', id: undefined });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User', idAttribute: 'email' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User', idAttribute: 'email' });
       await h.hydrate({ id: 'a@b.com', attributes: ['name'], cache: new Map() });
       const payload = pc.User.findUniqueOrThrow.mock.calls[0][0];
       expect(payload.select).toHaveProperty('email', true);
@@ -411,7 +411,7 @@ describe('PrismaHydrate - edge cases', () => {
   describe('virtual loader receives up-to-date recordCache', () => {
     it('virtual loader runs after DB fetch and can read DB-fetched columns from the same hydrate() call', async () => {
       const pc = makePrismaClient({ id: 1, name: 'Alice' });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       let capturedCache;
       h.registerVirtualAttribute('greeting', async ({ recordCache }) => {
         capturedCache = { ...recordCache };
@@ -425,7 +425,7 @@ describe('PrismaHydrate - edge cases', () => {
 
     it('two virtual attributes requested together are both resolved', async () => {
       const pc = makePrismaClient({ id: 1 });
-      const h = new PrismaHydrate({ prismaClient: pc, modelName: 'User' });
+      const h = new PrismaHydrator({ prismaClient: pc, modelName: 'User' });
       h.registerVirtualAttribute('v1', async () => 'value1');
       h.registerVirtualAttribute('v2', async () => 'value2');
       const result = await h.hydrate({ id: 1, attributes: ['v1', 'v2'], cache: new Map() });

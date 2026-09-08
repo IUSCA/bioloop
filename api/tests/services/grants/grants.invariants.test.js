@@ -320,7 +320,7 @@ describe('grants - invariants', () => {
 
   describe('grant presets resource_type behavior', () => {
     it('lists dataset-only presets when resource_type=DATASET', async () => {
-      const presets = await grantsService.listPresets('DATASET');
+      const presets = await grantsService.listPresets({ resource_type: 'DATASET' });
       expect(presets.length).toBeGreaterThanOrEqual(1);
       expect(presets.every((preset) => preset.resource_types.includes('DATASET'))).toBe(true);
     });

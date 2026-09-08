@@ -1,8 +1,8 @@
 /* eslint-disable no-param-reassign */
-const { authorize, authorizeWithFilters } = require('@/authorization/core/authorize');
+const { authorizeWithFilters } = require('@/authorization/core/authorize');
 const Policy = require('@/authorization/core/policies/Policy');
 const { HydratorRegistry } = require('@/authorization/core/hydrators/HydratorRegistry');
-const { Hydrate } = require('@/authorization/core/hydrators/BaseHydrator');
+const { Hydrator } = require('@/authorization/core/hydrators/BaseHydrator');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -12,7 +12,7 @@ const { Hydrate } = require('@/authorization/core/hydrators/BaseHydrator');
  * A simple in-memory hydrator that returns whatever `store` has keyed by id,
  * supplemented with any preFetched attributes. If id is null it returns {}.
  */
-class StubHydrator extends Hydrate {
+class StubHydrator extends Hydrator {
   constructor(store = {}) {
     super();
     this.store = store;
@@ -73,72 +73,43 @@ function makePolicy(overrides = {}) {
 // ---------------------------------------------------------------------------
 // authorize()
 // ---------------------------------------------------------------------------
-describe('authorize()', () => {
-  describe('input validation', () => {
-    it('throws AuthorizationError when policy is null', async () => {
-      const { registry } = makeRegistry({ 1: { id: 1 } });
-      await expect(authorize({ policy: null, identifiers: { user: 1 }, registry })).rejects.toThrow(
-        'Invalid policy',
-      );
-    });
-
-    it('throws AuthorizationError when policy is not a Policy instance', async () => {
-      const { registry } = makeRegistry({ 1: { id: 1 } });
-      await expect(authorize({ policy: {}, identifiers: { user: 1 }, registry })).rejects.toThrow(
-        'Invalid policy',
-      );
-    });
-
-    it('throws AuthorizationError when identifiers is not an object', async () => {
-      const { registry } = makeRegistry();
-      const policy = makePolicy();
-      await expect(authorize({ policy, identifiers: 'bad', registry })).rejects.toThrow(
-        'Invalid identifiers',
-      );
-    });
-
-    it('throws AuthorizationError when registry is not a HydratorRegistry', async () => {
-      const policy = makePolicy();
-      await expect(authorize({ policy, identifiers: { user: 1 }, registry: {} })).rejects.toThrow(
-        'Invalid registry',
-      );
-    });
-
-    it('throws AuthorizationError when user identifier is missing', async () => {
-      const { registry } = makeRegistry();
-      const policy = makePolicy();
-      await expect(authorize({ policy, identifiers: { user: null }, registry })).rejects.toThrow(
-        'User identifier is required',
-      );
-    });
-  });
-
+// authorize() was consolidated into authorizeWithFilters(); these cases cover the
+// hydration behaviour shared by both, which the block below does not exercise.
+describe('authorizeWithFilters() - hydration', () => {
   describe('authorization decision', () => {
     it('returns true when policy.evaluate resolves to true', async () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => true });
-      const result = await authorize({ policy, identifiers: { user: 1 }, registry });
-      expect(result).toBe(true);
+      const result = await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry,
+      });
+      expect(result.granted).toBe(true);
     });
 
     it('returns false when policy.evaluate resolves to false', async () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => false });
-      const result = await authorize({ policy, identifiers: { user: 1 }, registry });
-      expect(result).toBe(false);
+      const result = await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry,
+      });
+      expect(result.granted).toBe(false);
     });
 
     it('calls userHydrator.hydrate once', async () => {
       const { registry, userHydrator } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy();
-      await authorize({ policy, identifiers: { user: 1 }, registry });
+      await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry,
+      });
       expect(userHydrator.hydrateSpy).toHaveBeenCalledTimes(1);
     });
 
     it('calls contextHydrator.hydrate once', async () => {
       const { registry, contextHydrator } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy();
-      await authorize({ policy, identifiers: { user: 1 }, registry });
+      await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry,
+      });
       expect(contextHydrator.hydrateSpy).toHaveBeenCalledTimes(1);
     });
 
@@ -152,7 +123,9 @@ describe('authorize()', () => {
       registry.register('post', resourceHydrator);
 
       const policy = makePolicy({ resourceType: null });
-      await authorize({ policy, identifiers: { user: 1 }, registry });
+      await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry,
+      });
       expect(resourceHydrator.hydrateSpy).not.toHaveBeenCalled();
     });
 
@@ -170,8 +143,10 @@ describe('authorize()', () => {
         requires: { user: ['id'], resource: ['ownerId'] },
         evaluate: async (u, r) => u.id === r.ownerId,
       });
-      const result = await authorize({ policy, identifiers: { user: 1, resource: 10 }, registry });
-      expect(result).toBe(true);
+      const result = await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1, resource: 10 }, registry,
+      });
+      expect(result.granted).toBe(true);
       expect(resourceHydrator.hydrateSpy).toHaveBeenCalledTimes(1);
     });
   });
@@ -182,8 +157,9 @@ describe('authorize()', () => {
       const policy = makePolicy();
       const userCache = new Map();
       const contextCache = new Map();
-      await authorize({
+      await authorizeWithFilters({
         policy,
+        attributeRules: [],
         identifiers: { user: 1 },
         registry,
         policyExecutionContext: { cache: { user: userCache, resource: new Map(), context: contextCache } },
@@ -196,8 +172,8 @@ describe('authorize()', () => {
       const { registry, userHydrator } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy();
       const preFetchedUser = { id: 1, role: 'admin' };
-      await authorize({
-        policy, identifiers: { user: 1 }, registry, preFetched: { user: preFetchedUser },
+      await authorizeWithFilters({
+        policy, attributeRules: [], identifiers: { user: 1 }, registry, preFetched: { user: preFetchedUser },
       });
       const callArgs = userHydrator.hydrateSpy.mock.calls[0][0];
       expect(callArgs.preFetched).toBe(preFetchedUser);
@@ -393,11 +369,13 @@ describe('authorizeWithFilters()', () => {
 // ---------------------------------------------------------------------------
 // Edge cases: error propagation
 // ---------------------------------------------------------------------------
-describe('authorize() - error propagation', () => {
+describe('authorizeWithFilters() - policy error propagation', () => {
   it('propagates an error thrown inside policy.evaluate', async () => {
     const { registry } = makeRegistry({ 1: { id: 1 } });
     const policy = makePolicy({ evaluate: async () => { throw new Error('policy eval crash'); } });
-    await expect(authorize({ policy, identifiers: { user: 1 }, registry })).rejects.toThrow(
+    await expect(authorizeWithFilters({
+      policy, attributeRules: [], identifiers: { user: 1 }, registry,
+    })).rejects.toThrow(
       'policy eval crash',
     );
   });
