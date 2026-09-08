@@ -2,6 +2,57 @@ import api from "@/services/api";
 
 export default {
   /**
+   * Groups the current user may give a new dataset to.
+   * Each row carries `admitted_by`: PLATFORM_ADMIN, ADMIN, or CONTRIBUTOR.
+   */
+  eligibleOwnerGroups() {
+    return api.get("/v2/datasets/eligible-owner-groups");
+  },
+
+  /**
+   * Whether a name is free for a new dataset of this type in one group.
+   * Scoped: it says nothing about names any other group holds.
+   */
+  nameAvailable({ name, type, owner_group_id }) {
+    return api.get("/v2/datasets/name-available", {
+      params: { name, type, owner_group_id },
+    });
+  },
+
+  /**
+   * Register a directory that already exists on disk as a dataset. Nothing is copied.
+   */
+  import(data) {
+    return api.post("/v2/datasets/imports", data);
+  },
+
+  /**
+   * Register a dataset that is about to be uploaded from this browser.
+   * Returns the upload log; the transfer itself goes to the TUS server.
+   */
+  registerUpload(data) {
+    return api.post("/v2/datasets/uploads", data);
+  },
+
+  /**
+   * The upload log for one dataset.
+   */
+  uploadLog(id) {
+    return api.get(`/v2/datasets/${id}/upload-log`);
+  },
+
+  /**
+   * Tell the API a transfer has finished, so it moves the files and starts verification.
+   *
+   * Deliberately the existing endpoint: everything after registration keys on the numeric
+   * dataset id and the upload log, never on which route created the dataset, so there is no
+   * v2 equivalent to build. Takes the numeric dataset id, not the resource id.
+   */
+  completeUpload(datasetId, data) {
+    return api.post(`/datasets/uploads/${datasetId}/complete`, data);
+  },
+
+  /**
    * Search datasets accessible to the current user.
    * Returns {metadata: {total, offset, limit}, data: [datasets]}.
    */
