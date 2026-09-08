@@ -15,7 +15,8 @@ Reading a class string tells you what the author intended. It does not tell you 
 user sees. Four defects in this codebase were invisible to source reading and obvious in
 one `getComputedStyle` call.
 
-The app runs at `https://localhost` behind a self-signed certificate. Chrome DevTools MCP
+The app runs at `https://localhost` behind a self-signed certificate. Start it with
+`bin/devserver.sh up`; the `dev-servers` skill covers the rest. Chrome DevTools MCP
 cannot get past the certificate interstitial on its own, so ask the user to open the page
 and log in inside the MCP-controlled browser, then drive the existing page rather than
 opening a new one.

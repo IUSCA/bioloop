@@ -66,7 +66,7 @@ npx prisma db push
 npx prisma db seed
 ```
 
-Start the server: `npm run start`
+Start the server: `npm run dev`
 
 ## Steps to setup UI and run natively on development machine (not using docker)
 
@@ -91,6 +91,9 @@ VITE_API_REDIRECT_URL=http://localhost:3030
 ```
 
 Start the vite server: `npm run dev`
+
+Once both servers run by hand, you can manage them as background services with
+`bin/devserver.sh`. See [Running the dev servers](./dev-servers.md).
 
 
 ## Set Up Workers locally
@@ -162,7 +165,7 @@ poetry run dev
 
 ```bash
 cd <app_name>/api
-npm run start
+npm run dev
 ```
 
 ```bash
