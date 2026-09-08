@@ -19,6 +19,8 @@ const prisma = require('@/db');
 const {
   listImportSourcesForUser,
   resolveImportSourceForUser,
+  verifyImportSourcePaths,
+  AUTOMATIC_SUSPENSION_REASON,
 } = require('@/services/import_sources');
 const { browseImportSource } = require('@/services/fs_v2');
 const {
@@ -203,5 +205,74 @@ describe('browseImportSource', () => {
     });
 
     expect(entries).toEqual([]);
+  });
+});
+
+describe('verifyImportSourcePaths', () => {
+  test('suspends a source whose path has gone away', async () => {
+    // The source seeded at <tmp>/gone was never created on disk.
+    const vanished = await prisma.import_source.create({
+      data: {
+        path: path.join(tmpRoot, 'vanished'),
+        label: '_is Vanished Lab',
+        owner_group_id: ownGroup.id,
+        status: 'ACTIVE',
+      },
+    });
+    sourcesToDelete.push(vanished.id);
+
+    await verifyImportSourcePaths();
+
+    const after = await prisma.import_source.findUnique({ where: { id: vanished.id } });
+    expect(after.status).toBe('SUSPENDED');
+    expect(after.status_reason).toBe(AUTOMATIC_SUSPENSION_REASON);
+  });
+
+  test('restores a source it suspended once the path is back', async () => {
+    const flaky = await prisma.import_source.create({
+      data: {
+        path: path.join(tmpRoot, 'flaky'),
+        label: '_is Flaky Lab',
+        owner_group_id: ownGroup.id,
+        status: 'SUSPENDED',
+        status_reason: AUTOMATIC_SUSPENSION_REASON,
+      },
+    });
+    sourcesToDelete.push(flaky.id);
+    await fsp.mkdir(path.join(tmpRoot, 'flaky'), { recursive: true });
+
+    await verifyImportSourcePaths();
+
+    const after = await prisma.import_source.findUnique({ where: { id: flaky.id } });
+    expect(after.status).toBe('ACTIVE');
+    expect(after.path_verified_at).not.toBeNull();
+  });
+
+  test('leaves a suspension a person made alone, even when readable', async () => {
+    // A human decision is not undone by a scheduled job noticing the path works.
+    const held = await prisma.import_source.create({
+      data: {
+        path: path.join(tmpRoot, 'held'),
+        label: '_is Held Lab',
+        owner_group_id: ownGroup.id,
+        status: 'SUSPENDED',
+        status_reason: 'Suspended pending review by the data office',
+      },
+    });
+    sourcesToDelete.push(held.id);
+    await fsp.mkdir(path.join(tmpRoot, 'held'), { recursive: true });
+
+    await verifyImportSourcePaths();
+
+    const after = await prisma.import_source.findUnique({ where: { id: held.id } });
+    expect(after.status).toBe('SUSPENDED');
+    expect(after.status_reason).toBe('Suspended pending review by the data office');
+  });
+
+  test('stamps path_verified_at on a healthy source', async () => {
+    await verifyImportSourcePaths();
+
+    const after = await prisma.import_source.findUnique({ where: { id: ownSource.id } });
+    expect(after.path_verified_at).not.toBeNull();
   });
 });

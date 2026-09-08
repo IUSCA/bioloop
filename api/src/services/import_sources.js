@@ -1,4 +1,12 @@
+const fsp = require('node:fs/promises');
+const { constants: fsConstants } = require('node:fs');
+
 const prisma = require('@/db');
+const logger = require('@/services/logger');
+
+// Written into status_reason by the scheduled check, and the marker it uses to tell its own
+// suspensions from a person's. Only its own are ever restored automatically.
+const AUTOMATIC_SUSPENSION_REASON = 'Path is not readable by the application';
 
 const SOURCE_SELECT = {
   id: true,
@@ -100,7 +108,84 @@ async function resolveImportSourceForUser(user, resolvedPath) {
   return { ...match, mounted_path };
 }
 
+/**
+ * Confirm every ACTIVE source's path is readable, and suspend the ones that are not.
+ *
+ * An unmounted or renamed path returns an empty directory listing, which a user reads as
+ * "my data is gone". Suspending the source says what actually happened instead, and the
+ * listing shows the reason rather than nothing.
+ *
+ * A source that recovers is restored, because the common cause is a mount that came back.
+ * Only sources this function suspended are restored: a SUSPENDED source with no
+ * `status_reason` was suspended by a person and stays that way.
+ *
+ * Reads through mounted_path, which is where the API process actually sees the directory.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — B1a
+ * @returns {Promise<{checked, suspended, restored}>}
+ */
+async function verifyImportSourcePaths() {
+  const sources = await prisma.import_source.findMany({
+    where: { status: { in: ['ACTIVE', 'SUSPENDED'] } },
+    select: {
+      id: true, path: true, mounted_path: true, label: true, status: true, status_reason: true,
+    },
+  });
+
+  const suspended = [];
+  const restored = [];
+
+  for (const source of sources) {
+    const target = source.mounted_path || source.path;
+    // eslint-disable-next-line no-await-in-loop
+    const readable = await isReadableDirectory(target);
+
+    if (source.status === 'ACTIVE' && !readable) {
+      // eslint-disable-next-line no-await-in-loop
+      await prisma.import_source.update({
+        where: { id: source.id },
+        data: { status: 'SUSPENDED', status_reason: AUTOMATIC_SUSPENSION_REASON },
+      });
+      suspended.push(source.label || source.path);
+      logger.warn('[IMPORT SOURCES] suspended, path is not readable', { id: source.id, target });
+    } else if (
+      source.status === 'SUSPENDED'
+      && readable
+      && source.status_reason === AUTOMATIC_SUSPENSION_REASON
+    ) {
+      // eslint-disable-next-line no-await-in-loop
+      await prisma.import_source.update({
+        where: { id: source.id },
+        data: { status: 'ACTIVE', status_reason: null, path_verified_at: new Date() },
+      });
+      restored.push(source.label || source.path);
+      logger.info('[IMPORT SOURCES] restored, path is readable again', { id: source.id, target });
+    } else if (readable) {
+      // eslint-disable-next-line no-await-in-loop
+      await prisma.import_source.update({
+        where: { id: source.id },
+        data: { path_verified_at: new Date() },
+      });
+    }
+  }
+
+  return { checked: sources.length, suspended, restored };
+}
+
+async function isReadableDirectory(target) {
+  try {
+    const stat = await fsp.stat(target);
+    if (!stat.isDirectory()) return false;
+    await fsp.access(target, fsConstants.R_OK | fsConstants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 module.exports = {
+  verifyImportSourcePaths,
+  AUTOMATIC_SUSPENSION_REASON,
   listImportSourcesForUser,
   resolveImportSourceForUser,
   reachableGroupIds,
