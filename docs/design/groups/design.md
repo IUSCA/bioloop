@@ -3,11 +3,15 @@ title: Hierarchical Groups
 order: 1
 status: active
 implemented: partial
-last_verified: 2026-09-02
+last_verified: 2026-09-08
 ---
 
 ::: warning Design record — active
-This is the design record for the groups, collections, and grants system. Substantial parts of it have shipped — `group`, `group_closure`, `grant`, `access_request`, and `authorization_audit` all exist in `api/prisma/schema.prisma` — but the document describes more than the code does. Verify against the schema and `api/src/services/` before relying on any detail here.
+This is the design record for the groups, collections, and grants system. It describes the
+target state. Much of it has shipped; the parts that have not are marked where they appear,
+and [Implementation Status](./implementation-status.md) maps each concept to the code that
+implements it. The reasoning behind the shape of the system, and the alternatives that were
+rejected, are in [Decisions](./decisions.md).
 :::
 
 # Hierarchical Groups, Collections, and Data Access – Unified Design
@@ -43,9 +47,26 @@ Ownership and access are **intentionally distinct**:
 * **Ownership** defines *authority*
 * **Access** defines *permission to act*
 
-Every dataset and collection has exactly one **owning group**.
+Every dataset and collection has exactly one **owning group**. `dataset.owner_group_id` is
+`NOT NULL`, so a dataset outside the ownership model cannot exist. Datasets that predated the
+constraint were moved into an archived `Unassigned Datasets` system group, whose contents are a list for
+platform admins to work through rather than a fallback anything writes to.
+
+@see [decision 2](./decisions.md#_2-every-dataset-has-an-owning-group)
 
 ---
+
+### History Is Preserved, Not Deleted
+
+Removing a member and removing a dataset from a collection both **close** the row rather than
+deleting it. Each carries validity columns, and the current state is read through a view that
+filters on them.
+
+Deleting the row would make the audit record the only evidence that access ever existed, which
+is the one thing a later migration cannot recover. "Who could see this last March?" has to be
+answerable from the data, not inferred from an event log.
+
+@see [decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved)
 
 ## Hierarchical Groups
 
@@ -487,17 +508,23 @@ Implicit permissions are explicitly forbidden.
 
 ---
 
-### Grants are atomic
+### Grants are atomic, and access types carry a partial order
 
-If a data steward want to give a subject read and download access, two separate grants must be created:
-1. Grant(subject, resource, read)
-2. Grant(subject, resource, download)
+Each grant is a single fact: one subject, one resource, one access type. A grant is audited,
+explained, and revoked on its own.
 
-`download` access type does not imply `read`. All access types are treated as orthogonal and must be explicitly granted. Even though `download` logically requires `read`, the system does not infer this. Each grant is a single, atomic fact.
+Atomic storage does not mean the access types are unrelated. They carry a partial order, held
+in `grant_access_type_implication` and closed over transitively once at startup. Holding a
+wider type satisfies a check for a narrower one, so `DOWNLOAD` satisfies `LIST_FILES`, which
+satisfies `VIEW_METADATA`. Giving somebody download access is therefore one grant, not three.
 
-Reasoning:
-* Each grant is a single, atomic fact that can be audited, explained, and revoked independently.
-* This avoids combinatorial explosion of access types and simplifies policy logic.
+The order is a property of the access types, not of any grant. Two rows are still two facts,
+each revocable alone; the evaluator widens the requirement rather than writing extra rows.
+
+**File listing is the read plane.** There is no `DATASET:READ_DATA` access type, and the
+`read_data` policy action checks `DATASET:LIST_FILES` on purpose.
+
+@see [decision 7](./decisions.md#_7-access-types-imply-one-another)
 
 
 ### Critical Constraint: No Overlapping Grants
@@ -584,7 +611,7 @@ This separation prevents:
 
 ### Grant Presets
 
-The system's grant model is deliberately atomic: each access type requires an explicit grant, and even logically related capabilities (like `read_data` and `download`) must be granted separately. While this atomicity provides precise control and clear audit trails, it imposes cognitive overhead on data stewards who simply want to make a dataset "public" or "downloadable by my lab."
+The system's grant model is atomic: each grant names one subject, one resource, and one access type. That gives precise control and a clear audit trail, and it imposes cognitive overhead on data stewards who simply want to make a dataset "public" or "downloadable by my lab."
 
 **Grant presets** bridge this gap by mapping familiar governance concepts to the underlying grant primitives. They allow administrators and users to reason about access using natural, domain-appropriate terminology rather than understanding the technical mechanics of grant atomicity and composition.
 
@@ -594,7 +621,7 @@ Presets exist to:
 
 * **Reduce Cognitive Load**: Data stewards think in terms of "make this discoverable" or "share with my institution," not "grant `view_metadata` access type to subject X."
 * **Encode Policy Patterns**: Common access patterns (public datasets, lab-internal data, institutional resources) can be captured as reusable templates.
-* **Ensure Consistency**: Presets prevent inconsistent grant combinations (e.g., granting `download` without `read_data`) by encoding correct patterns.
+* **Ensure Consistency**: Presets encode access patterns an organization has agreed on. They are no longer what stops an incoherent combination — the access-type partial order does that, and a grant of `DOWNLOAD` satisfies a check for `LIST_FILES` whether or not a preset was involved.
 * **Simplify UI/UX**: User interfaces can present governance options as familiar concepts rather than exposing raw grant mechanics.
 * **Maintain Auditability**: Presets expand into explicit atomic grants, preserving full audit trails and explainability.
 
@@ -631,7 +658,7 @@ Presets may be composed for common workflows. For example:
 
 * **`OWNING_GROUP:DOWNLOADABLE`**: Applies `DOWNLOADABLE` access to the `OWNING_GROUP`. Creates grants for `view_metadata`, `read_data`, and `download` targeting the owning group and its descendants.
 * **`INSTITUTION:DISCOVERABLE`**: Applies `DISCOVERABLE` access to `INSTITUTION`. Makes dataset searchable across the entire organization.
-* **`EVERYONE:READABLE`**: Public dataset with in-browser viewing but no download rights.
+* **`PUBLIC:READABLE`**: Public dataset with in-browser viewing but no download rights.
 
 When a composite preset is applied:
 
@@ -668,6 +695,57 @@ Presets are a **convenience layer**—they do not change authorization semantics
 This ensures that even as preset definitions evolve, the authorization model remains stable and explainable.
 
 
+## Restrictions
+
+Grants only ever add. Nothing in a purely additive model can say "no", so a governance
+decision that has to stop access — a lab closing, a hold pending review — has nowhere to live.
+
+A **restriction** is that missing half. It is a durable row, like a grant, and it composes with
+grants by AND:
+
+> allowed = no restriction blocks this action AND some grant permits it
+
+The two halves never negotiate. A restriction cannot grant anything, and no grant can overcome
+a restriction. This is deliberately not a negative grant: negative grants make effective access
+depend on the order rules are evaluated in, and the reason somebody cannot reach a dataset
+stops being answerable.
+
+### What a restriction attaches to
+
+A restriction attaches to exactly one of a group or a resource, and reaches:
+
+* the group it names, and every descendant group
+* every dataset and collection those groups govern
+* or, when it names a resource directly, that resource alone
+
+So archiving a lab freezes the lab, its sub-labs, and everything any of them owns, from one row.
+
+### What it blocks
+
+Each restriction type names the actions it blocks. Every registered policy action is classified
+as mutating or reading, and the classification is asserted to be exhaustive by a test, so an
+action added later cannot quietly fall outside every restriction type.
+
+`ARCHIVED` is the only type that ships. It blocks every mutating action, and exempts only the
+three `unarchive` actions — otherwise an archived group could never be reopened.
+
+### Restrictions apply to platform admins
+
+The platform-admin short-circuit runs **after** the restriction check. An archived group is
+archived for a platform admin too. This is the point of a governance boundary: it is not a
+permission level that seniority passes through.
+
+### Archiving is expressed through it
+
+`is_archived` remains as a denormalised column, because listings, filters, and badges read it
+on every page and a join through the restriction view would be the wrong shape for that. The
+restriction row is the authority; the column is a cache of it, and a test asserts the two agree
+for every group and collection.
+
+@see [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive)
+
+---
+
 --- 
 
 ## Access Requests Workflow
@@ -702,12 +780,15 @@ stateDiagram-v2
 
 Access to any resource requires explicit authority:
 
-**Access is granted IF and ONLY IF:**
+**Access is granted IF AND ONLY IF** no restriction blocks the action, AND:
 
 * User is platform admin, OR
 * User is admin of the resource's owning group, OR
 * User has oversight authority over the resource's owning group, OR
-* User has an active grant for the requested access type
+* User has an active grant for the requested access type, or for one that implies it
+
+The two halves compose by AND. A restriction can only ever subtract, and grants only ever add.
+See [Restrictions](#restrictions) below.
 
 **Corollary: Resource existence is access-controlled.**
 
@@ -717,6 +798,18 @@ A user with no grants and no structural authority cannot:
 * Know the resource exists
 
 This must be enforced at the query layer—not as a UI concern.
+
+#### Platform Admin Is One Check, In The Engine
+
+A platform admin is allowed every action. The engine consults the role once, before any action
+policy runs, and no policy names it. Repeating the term in every policy meant a route whose
+author forgot it had a hole rather than a stricter rule.
+
+The check runs after the restriction check, so a restriction still applies. An action nobody
+qualifies for on their own is written `platformAdminOnly`, which says that plainly rather than
+leaving an empty combinator behind.
+
+@see [decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-engine)
 
 #### Grant Transitivity Through Group Hierarchy
 
@@ -740,20 +833,26 @@ The authorization model has two distinct evaluation paths:
 
 Evaluation order:
 
-1. Platform overrides (incident freeze)
-2. Ownership membership (subject is member of owning group or ancestor)
-3. Explicit active grants to dataset
-4. Explicit active grants to collection containing dataset
-5. Deny
+1. Restrictions. A restriction blocking this action refuses it outright, whatever follows.
+2. Platform admin. Allowed every action, checked once in the engine.
+3. Explicit active grants to the dataset.
+4. Explicit active grants to a collection containing the dataset.
+5. Deny.
 
 **Example**: `dataset.read_data`
 
-Allowed if **any** of:
+Allowed if no restriction blocks it, and **any** of:
 
-* Subject belongs (directly or transitively) to the dataset's owning group
-* Subject has an active `read_data` grant to the dataset
-* Subject has an active `read_data` grant to a collection containing the dataset
-* Subject belongs to a group (directly or transitively) that has an active `read_data` grant to the dataset or collection
+* Subject has an active `LIST_FILES` grant to the dataset, or a grant of a type that implies it
+* Subject has such a grant to a collection containing the dataset
+* Subject belongs (directly or transitively) to a group holding such a grant on either
+
+**Membership of the owning group is not itself an allow condition.** Creating a dataset or a
+collection writes a grant to the owning group in the same transaction, so members read through
+a row that can be listed and revoked rather than through a rule that exists only in the source.
+An ordinary member of the owning group is a grant holder, not a special case.
+
+@see [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-grant-not-structural-read)
 
 This rule is monotonic and explainable.
 
@@ -1011,6 +1110,45 @@ Every access path remains **monotonic** (no grant = no access), **explainable** 
 
 ---
 
+## Dataset Facts That Are Not Authorization Inputs
+
+Three things are recorded about a dataset that no policy, filter, or grant check reads. Each is
+listed here because the natural assumption is that it must feed the access decision, and in
+each case that assumption is wrong by decision rather than by omission.
+
+### Provenance does not constrain access
+
+`dataset_hierarchy` records which dataset came from which. It drives the Sources and Derivatives
+views and answers provenance questions. **It is not an authorization edge.**
+
+A derived dataset's access is decided on the derivative alone. A derivative may be shared more
+widely than the data it came from — an aggregate, a summary statistic, or a de-identified
+product of restricted input is the ordinary output of this platform — and a source may be shared
+more widely than anything derived from it. Neither constrains the other.
+
+@see [decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent)
+
+### Consent codes are captured, not enforced
+
+`dataset_use_condition` records the conditions donors consented to, as machine-readable codes
+with the vocabulary they came from. Nothing checks them.
+
+They are captured because the information decays. The conditions sit on a consent form near the
+people who ran the study, and reconstructing them later means going through review paperwork
+study by study. Capturing at ingest is a metadata field; reconstructing is a project.
+
+@see [decision 9](./decisions.md#_9-consent-codes-are-captured-not-enforced)
+
+### Attribution is separate from ownership
+
+`dataset_funding` and `dataset_affiliation` record who to credit and who paid for the work.
+`owner_group_id` means governance and nothing else, and must never be widened to carry credit as
+well. Crediting a group says who did the work, not who may read it.
+
+@see [decision 13](./decisions.md#_13-attribution-is-its-own-relationship)
+
+---
+
 ## Explainability and Effective Access
 
 Every authorization decision must be explainable as:
@@ -1205,7 +1343,7 @@ allow dataset.read_data if:
 
 ## Summary
 
-This design establishes a **minimal but complete authorization core** built on three critical separations:
+This design establishes a **minimal but complete authorization core** built on four critical separations:
 
 1. **Organizational Hierarchy vs Governance Authority**
    * Hierarchy determines membership and oversight visibility
@@ -1220,9 +1358,17 @@ This design establishes a **minimal but complete authorization core** built on t
    * Ancestor admins have **read-only oversight** visibility over descendants
    * Only owning group admins exercise **governance authority**
 
+4. **Permission vs Prohibition**
+   * **Grants** only ever add; **restrictions** only ever subtract
+   * They compose by AND, and neither can overcome the other
+   * A restriction applies to platform admins too, because a governance boundary is not a permission level
+
 ### Implementation Foundations
 
 * Closure tables for efficient transitive authorization queries
 * ABAC policies for dynamic, hierarchical rule evaluation
+* A partial order over access types, so one grant covers what it implies
+* Restrictions checked ahead of every policy, and a single platform-admin check in the engine
+* Validity columns rather than deletion, so membership and collection history survives
 * Immutable audit trails coupled to all material events
 * Mandatory explainability for every authorization decision
