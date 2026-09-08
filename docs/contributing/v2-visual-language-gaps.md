@@ -16,6 +16,10 @@ the code and have not been reproduced on screen.
 
 Items are ordered by what a user loses, not by effort.
 
+Tiers 1, 2, and 3 were applied on 2026-09-08. Each item below keeps its original finding
+as the evidence record and ends with a **Shipped** line saying what changed. Tier 4 is
+still open.
+
 ## Tier 1 — Users see something wrong today
 
 ### 1. `ModernAlert` discards the body of every message it is given
@@ -44,6 +48,11 @@ only when no slot content is passed. One file, roughly four lines. Then add `tit
 
 **Does not change.** Colors, spacing, or any other call site's markup.
 
+**Shipped.** `ModernAlert.vue` was rewritten. The default slot renders whenever it or
+`description` has content, and `title` and `actions` slots were added. Measured on the
+Create Subgroup form, the two governance callouts now render 269 and 144 characters where
+they previously rendered 22 and 20.
+
 ### 2. `ModernAlert` renders errors in success green
 
 **Verified.** `classMap` in `ModernAlert.vue` defines `slate`, `emerald`, `indigo`,
@@ -61,6 +70,17 @@ in development instead of silently going green. One file.
 
 **Does not change.** The five existing color names or any call site.
 
+**Shipped.** Wider than the minimal fix. The `color` prop now takes a meaning —  `info`,
+`success`, `warning`, `danger`, or `neutral` — with a `validator` that refuses anything
+else, and all seven call sites were migrated. This follows
+[V2 design system](./v2-design-system.md#do-not-name-a-raw-hue-at-a-call-site) rather than
+aliasing hue names, and it removes the fallback that produced the green error box. The
+oversight callout on Create Subgroup measures `rgb(239, 246, 255)`, which is `blue-50`.
+
+One deliberate color change came with it. The Authority Boundary callout in
+`CollectionCreateModal.vue` was emerald and is now `info` blue, because it explains a
+constraint rather than reporting a success.
+
 ### 3. `ModernAlert` borders never render
 
 **Verified.** The `background` entry of each `classMap` color sets `border-{hue}-200` and
@@ -72,6 +92,9 @@ already records that trap.
 **Minimal fix.** Add `border border-solid` to the container class. One line. Decide first
 whether the alert is meant to have a border at all; if not, delete the border color
 classes instead, which is equally minimal and removes the misleading code.
+
+**Shipped.** The border was kept. The container carries `border border-solid`, and
+computed `border-top-width` is now `1px` with the tone's own color.
 
 ### 4. The `ActionButton` hover accent has never worked
 
@@ -94,6 +117,10 @@ affordance. One file, about eight lines removed.
 
 **Does not change.** How any action button looks, because the overlay is invisible.
 
+**Shipped.** The overlay `<div>` and the `overlayGradient` computed property are gone. The
+four action buttons on the dataset overview now hold two child elements rather than three,
+and all six remaining hover classes resolve to real generated rules.
+
 ### 5. The collection detail page renders the archived chip twice
 
 **Static.** `pages/v2/collections/[id]/index.vue` contains two `ModernChip` blocks with
@@ -102,6 +129,10 @@ and one in a sibling `div` under a comment reading `archived badge`.
 
 **Minimal fix.** Delete the second block. Match the group detail page, which keeps the
 chip beside the name.
+
+**Shipped.** The second block is deleted. This one is confirmed by diff only: the
+development database holds no archived collection, so the chip could not be brought on
+screen.
 
 ### 6. `ResourceRoleBadge` ignores its own `size` prop for the icon
 
@@ -114,6 +145,9 @@ prop takes `small`, `medium`, and `large` throughout.
 
 **Minimal fix.** Change `iconSize` in `ResourceRoleBadge.vue` to switch on `sm`, `base`,
 and `lg`. One file. Unifying the two vocabularies is Tier 3 below.
+
+**Shipped.** Folded into item 14 rather than patched separately, because the merged
+component has one size vocabulary and the bug cannot survive it.
 
 ## Tier 2 — The accessibility floor
 
@@ -134,6 +168,11 @@ change. One file.
 
 **Does not change.** The card's appearance, provided the link is set to `display: block`
 and inherits color.
+
+**Shipped.** `VaCard` has a `to` prop, so the click handler became `:to` and no wrapper was
+needed. All 11 cards on the browse page now render as `<a>` elements with an `href`, and
+`<main>` holds 20 focusable elements rather than nine. A scoped rule keeps the global
+anchor color and hover underline off the card, and the card carries `.focus-ring`.
 
 ### 8. `va-text-secondary` is below AA in both themes
 
@@ -157,6 +196,10 @@ Note that `gray-500` is not a safe light value here. It measures 4.83:1 on white
 
 **Does not change.** Any component's markup.
 
+**Shipped.** As proposed. `--va-secondary` is `#5A6070` in light and `#9ca3af` in dark.
+Measured in the running app, it reaches 6.28:1 on a white card, 5.80:1 on the page ground,
+and 5.78:1 on a `#1f2937` dark card.
+
 ### 9. Group card metadata is at 2.56:1
 
 **Verified.** `GroupCard.vue` sets `text-slate-400` on the group type, the member count,
@@ -165,6 +208,9 @@ anywhere in v2. It affects the primary metadata of every card on the main Groups
 
 **Minimal fix.** Move those lines to `text-slate-600 dark:text-slate-400`, which measures
 7.58:1 on white. One file, six occurrences of `text-slate-400`.
+
+**Shipped.** Five occurrences, not six; the sixth was `text-slate-300` on the decorative
+arrow and was left alone. Card metadata now measures 7.58:1 in light and 5.72:1 in dark.
 
 ### 10. Icon-only buttons are unlabelled
 
@@ -176,6 +222,12 @@ ring. Vuestic's own controls carry both, so the gap is confined to the hand-roll
 `focus-visible` utility class to `ui/src/styles/main.css` for hand-rolled controls to
 apply. Doing this per component as each is next edited is reasonable; a single sweep is
 about a dozen files.
+
+**Shipped.** Smaller than estimated. `.focus-ring` is defined once in
+`ui/src/styles/main.css`. Auditing the 23 buttons found three genuinely icon-only and
+unlabelled, in `UserChip.vue`, `GroupChip.vue`, and `AutoCompleteSearch.vue`; each now
+names what it removes. `ModernCollapsible.vue` looked unlabelled to a text scan but
+carries `aria-expanded` and a header slot, so it was left alone.
 
 ## Tier 3 — Duplication that is cheap to remove
 
@@ -189,6 +241,9 @@ about a dozen files.
 delete the four scoped blocks, and update the sentence in
 [V2 page patterns](./v2-page-patterns.md). Six files, all deletions but one.
 
+**Shipped.** As proposed. Verified on the group detail, collection detail, dataset detail,
+and access requests pages, in both themes.
+
 ### 12. Vuestic density overrides are copied into thirteen files
 
 **Static.** `--va-data-table-cell-padding: 8px` appears in seven files and
@@ -199,6 +254,19 @@ and card headers are denser than the Vuestic default.
 single `.v2-dense` class that pages opt into, or globally if the density is wanted
 everywhere. Then delete the thirteen local blocks.
 
+**Shipped.** The two variables were split rather than treated as one decision. The card
+header selector `.card.header` is already identical everywhere, so that rule moved to
+`ui/src/styles/overrides.css` unchanged and seven local blocks went away with no template
+edit. The table selector differed per file, so the eight v2 tables now carry a shared
+`.v2-table` class instead of `.datasets-table` and its siblings.
+
+Six v1 files still set `--va-data-table-cell-padding` locally and were left alone. Four of
+them use a different value, so they are not copies of one decision.
+
+`GroupSubgroupsTab.vue` has a data table that never carried the override and still does
+not. Making it match its sibling tabs is a visual change nobody asked for, so it is left
+for whoever next edits that file.
+
 ### 13. `ReviewRequestModal.vue` redefines the global transitions
 
 **Static.** The file carries its own `fade-slide` and `list` keyframes. Both are already
@@ -206,6 +274,8 @@ defined in `ui/src/styles/main.css`, with different timings, so the same named t
 behaves differently in this one modal.
 
 **Minimal fix.** Delete the local block. One file.
+
+**Shipped.** As proposed. The modal now uses the global `fade-slide` timing.
 
 ### 14. Two role badges are the same component twice
 
@@ -217,6 +287,15 @@ they cover, in their `size` vocabulary, and in one shade: `OVERSIGHT` is
 **Minimal fix.** Keep one component with the union of both role maps and one size
 vocabulary, and re-export the other name until call sites are migrated. Two files plus a
 find-and-replace.
+
+**Shipped.** No re-export was needed, because there were only six call sites. Both files
+are replaced by `components/v2/RoleBadge.vue`, which carries all six roles, the `sm`,
+`base`, `lg` vocabulary from [V2 design system](./v2-design-system.md#the-primitive-set),
+and a `validator` on `size`. `OVERSIGHT` settled on `text-emerald-700`, and every role now
+uses the `bg-{hue}-500/10` tint the design system states.
+
+The fallback tone stayed on `slate` rather than moving to `gray`. That is the Tier 4 ramp
+decision and it should be taken once, for the whole tree.
 
 ## Tier 4 — Convergence, worth planning rather than patching
 
@@ -236,10 +315,12 @@ argued in [V2 Design System](./v2-design-system.md).
 - **Ten heading recipes.** 26 `<h2>` elements across ten class combinations spanning
   `text-sm` to `text-xl`.
 
-## Suggested order
+## What is left
 
-Tier 1 first, because every item is a bug with a one-file fix and item 1 is withholding
-governance text the design record requires. Then items 8 and 9, which are two files and
-lift contrast everywhere. Then item 7, which restores keyboard access to the main browse
-page. Tier 3 is safe cleanup to fold into whatever work touches those files next. Tier 4
-needs a decision before any code moves.
+Tier 4 is open, and each of its five items needs a decision before any code moves.
+
+Two contrast failures found on 2026-09-07 are also still open, because neither has a fix
+that stops at a shade. `--va-primary` on the dark page ground measures 4.49:1, one
+hundredth below the floor, and changing it moves every link, active tab, and focus ring in
+both themes. Avatar initials measure 3.40:1 against a generated background, which needs
+the generator to pick from a fixed, checked palette rather than from a hash.

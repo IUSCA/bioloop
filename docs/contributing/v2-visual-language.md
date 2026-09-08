@@ -104,7 +104,8 @@ Four mappings hold everywhere they appear.
 
 - **Role color.** `PLATFORM_ADMIN` is red, `ADMIN` is amber, `MEMBER` is sky,
   `TRANSITIVE_MEMBER` is indigo, `OVERSIGHT` is emerald, and `GRANT_HOLDER` is violet.
-  Both `GroupMemberRoleBadge.vue` and `ResourceRoleBadge.vue` implement this.
+  `RoleBadge.vue` implements this for group membership roles and resource caller roles
+  alike.
 - **Group type color.** `GroupIcon.vue` maps `lab` to teal, `project` to violet, `center`
   to orange, `core` to rose, and everything else to blue.
 - **Revoked grant.** `GrantRow.vue` applies `opacity-60` to the row and `line-through` to
@@ -116,7 +117,7 @@ Four mappings hold everywhere they appear.
 
 A small colored label is written three different ways.
 
-**Tinted-transparent**, in `GroupMemberRoleBadge.vue` and `ResourceRoleBadge.vue`:
+**Tinted-transparent**, in `RoleBadge.vue`:
 
 ```
 text-{hue}-700 bg-{hue}-500/10 dark:text-{hue}-400 dark:bg-{hue}-400/10
@@ -152,8 +153,8 @@ Two consequences follow. A `VaButton color="success"` is a different green from 
 `#3b82f6`, which is Tailwind's `blue-500` rather than the preset primary.
 
 Attributed `color` props inside v2 split across both vocabularies. Vuestic semantic names
-account for 25 uses. Tailwind hue names account for 10, all on `ModernButtonToggle` and
-`ModernAlert`.
+account for 25 uses. Tailwind hue names account for the rest, all on
+`ModernButtonToggle`. `ModernAlert` takes meanings rather than hues.
 
 ### Icon color through CSS variables
 
@@ -278,10 +279,12 @@ to `dark:bg-gray-800` or `dark:bg-gray-900`. Tinted panels step from `bg-{hue}-5
 Vuestic's dark theme is corrected in `ui/src/styles/overrides.css` for shadows, list item
 labels, and input borders.
 
-One Vuestic variable is not corrected. `--va-secondary` resolves to `rgb(118, 124, 136)`
-in both themes, and the `va-text-secondary` class that carries it appears 49 times in v2.
-Measured against the surfaces it actually sits on, it reaches 4.19:1 on a white card,
-3.87:1 on the `#F4F6F8` page ground, and 3.50:1 on a `#1f2937` dark card.
+`--va-secondary` is corrected per preset. The `va-text-secondary` class that carries it
+appears 49 times in v2. It is `#5A6070` in light and `#9ca3af` in dark, measuring 6.28:1
+on a white card, 5.80:1 on the `#F4F6F8` page ground, and 5.78:1 on a `#1f2937` dark card.
+
+Before that correction the variable resolved to `rgb(118, 124, 136)` in both themes and
+measured 4.19:1, 3.87:1, and 3.50:1 on those same three surfaces.
 
 ## Interaction
 
@@ -290,17 +293,22 @@ action buttons raise a border color and add `hover:-translate-y-0.5` with
 `hover:shadow-md`. Transition classes appear 30 times, split between `transition-all`,
 bare `transition`, and `transition-colors`.
 
-Focus is thinner. `focus-visible` appears 6 times, all in `ModernButtonToggle.vue` and
-`DatasetDownloadModalV2.vue`. No v2 file uses a `focus:` ring. Vuestic components carry
-their own focus styling, so the gap is limited to the 23 hand-rolled `<button>` elements.
+Focus is carried by a shared utility. `.focus-ring` in `ui/src/styles/main.css` paints a
+two-pixel `--va-primary` outline on `:focus-visible`, and hand-rolled controls apply it.
+`ModernButtonToggle.vue` and `DatasetDownloadModalV2.vue` still style `focus-visible`
+themselves. Vuestic components carry their own focus styling.
 
-Of those 23 buttons, 9 carry an `aria-label`.
+Icon-only hand-rolled buttons carry an `aria-label`. The remove buttons on `UserChip.vue`
+and `GroupChip.vue` name the chip they remove, and the one in `AutoCompleteSearch.vue`
+names the search term.
 
-Card navigation is click-only. `GroupCard.vue` is a `VaCard` with
-`@click="router.push(...)"`, so it renders as a `<div>`. On the groups browse page all 11
-result cards are non-focusable, carry no `role`, and contain no focusable child. The
-accessibility tree lists the group names as headings rather than links. Nine focusable
-elements exist in `<main>` on that page, and none of them is a group.
+Card navigation is a link. `GroupCard.vue` is a `VaCard` with a `:to` binding, so it
+renders as an `<a>` carrying an `href`. On the groups browse page all 11 result cards are
+focusable and appear in the accessibility tree as links, and `<main>` holds 20 focusable
+elements. A scoped rule keeps the global anchor color and hover underline off the card.
+
+Before that change the card was a `<div>` with a click handler. None of the 11 cards was
+focusable, and `<main>` held nine focusable elements, none of them a group.
 
 Responsive prefixes are sparse. `lg:` appears 11 times, `md:` 9, and `sm:` 8, mostly on
 the dashboard grid and a few header rows. The layout survives the narrowing anyway. At a
@@ -310,37 +318,44 @@ grid stacks, and `VaTabs` scrolls its own strip behind arrows.
 ### Measured contrast
 
 Ratios below are computed against the resolved background, blending every translucent
-layer, and compared to the WCAG AA floor for the text's own size and weight.
+layer, and compared to the WCAG AA floor for the text's own size and weight. The first
+column of ratios was measured on 2026-09-07, the second on 2026-09-08 after the two
+contrast fixes.
 
-| Text | Color | On | Ratio | Needs |
+| Text | On | Was | Now | Needs |
 |---|---|---|---|---|
-| Group card type, member count, hierarchy label | `text-slate-400` | white card | 2.56 | 4.5 |
-| Field labels, section headings, helper text | `va-text-secondary` | page ground | 3.87 | 4.5 |
-| Same, on a card | `va-text-secondary` | white card | 4.19 | 4.5 |
-| Same, dark theme | `va-text-secondary` | `#1f2937` card | 3.50 | 4.5 |
-| Active tab, links, breadcrumbs (dark theme) | `--va-primary` | `#060c17` ground | 4.49 | 4.5 |
-| Avatar initials | white | generated avatar color | 3.40 | 4.5 |
+| Group card type, member count, hierarchy label | white card | 2.56 | 7.58 | 4.5 |
+| Same, dark theme | `#1f2937` card | — | 5.72 | 4.5 |
+| Field labels, section headings, helper text | page ground | 3.87 | 5.80 | 4.5 |
+| Same, on a card | white card | 4.19 | 6.28 | 4.5 |
+| Same, dark theme | `#1f2937` card | 3.50 | 5.78 | 4.5 |
+| Active tab, links, breadcrumbs (dark theme) | `#060c17` ground | 4.49 | 4.49 | 4.5 |
+| Avatar initials | generated avatar color | 3.40 | 3.40 | 4.5 |
+
+The last two rows are unchanged and still below the floor. Both are listed in
+[V2 visual language gaps](./v2-visual-language-gaps.md).
 
 Vuestic buttons report a false failure under this method, because they paint their fill
 on a child element rather than the element carrying the label. Those rows are excluded.
 
 ## Local CSS
 
-Eighteen v2 files carry a `<style>` block. Four kinds of rule appear.
+Five v2 files carry a `<style>` block, down from eighteen. The three rules that were copied between files are now defined once.
 
-**`.tab-count-badge`** is defined identically in four files: the three detail pages and
-the access requests page. It is 16 lines of plain CSS with hardcoded `rgb()` values.
-[V2 page patterns](./v2-page-patterns.md) tells the reader to copy it.
+**`.tab-count-badge`** is defined once, in `ui/src/styles/main.css` under
+`@layer components`. Four pages use it and none of them redefines it.
 
-**`--va-data-table-cell-padding: 8px`** narrows Vuestic table rows in seven files.
+**`--va-data-table-cell-padding: 8px`** is defined once in `ui/src/styles/overrides.css`
+under `.v2-table`, and eight v2 tables carry that class. Six v1 files still set the
+variable locally, four of them to a different value.
 
-**`.card.header { --va-card-padding: 0.8rem }`** narrows Vuestic card padding in six
-files.
+**`.card.header { --va-card-padding: 0.8rem }`** is defined once in
+`ui/src/styles/overrides.css`.
 
-**Component-local rules** cover the rest: an `@apply` block in
+**Component-local rules** are what remains in those five files: an `@apply` block in
 `DatasetDownloadModalV2.vue`, an input height override in `ExpirySelector.vue`, a switch
-track shadow in `GroupAllowMemberContribSwitch.vue`, and a duplicate copy of the global
-`fade-slide` and `list` transitions in `ReviewRequestModal.vue`.
+track shadow in `GroupAllowMemberContribSwitch.vue`, a dropdown padding override in
+`CollectionDatasetsTab.vue`, and the card padding and anchor reset in `GroupCard.vue`.
 
 ## Measuring this again
 

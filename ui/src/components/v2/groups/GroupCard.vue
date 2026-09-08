@@ -1,7 +1,7 @@
 <template>
   <VaCard
-    class="group cursor-pointer shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
-    @click="router.push(`/v2/groups/${props.group.id}`)"
+    class="group focus-ring shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 dark:hover:border-slate-600"
+    :to="`/v2/groups/${props.group.id}`"
   >
     <VaCardContent class="h-full">
       <div class="flex flex-col gap-2.5 h-full">
@@ -20,14 +20,14 @@
             </h3>
             <p
               v-if="props.group.metadata?.type"
-              class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 capitalize"
+              class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 capitalize"
             >
               {{ props.group.metadata?.type }}
             </p>
           </div>
 
           <!-- Role badge -->
-          <GroupMemberRoleBadge
+          <RoleBadge
             :role-name="props.group.user_role"
             v-if="props.group.user_role"
           />
@@ -48,7 +48,7 @@
         >
           <!-- Member count -->
           <span
-            class="inline-flex items-center gap-1 text-sm text-slate-400 dark:text-slate-500"
+            class="inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400"
           >
             <i-mdi-account-multiple class="text-sm" />
             {{
@@ -61,14 +61,14 @@
           <!-- Top-level vs subgroup -->
           <span
             v-if="group.depth === 0"
-            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500"
+            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
           >
             <i-mdi-star-outline class="text-xs" />
             Top-level group
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500"
+            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
           >
             <i-mdi-layers-outline class="text-xs" />
             Subgroup
@@ -77,7 +77,7 @@
           <!-- Contributions status -->
           <span
             v-if="group.is_archived"
-            class="inline-flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-600"
+            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
           >
             <i-mdi-lock-outline class="text-xs" />
             Archived
@@ -96,8 +96,6 @@
 <script setup>
 import { maybePluralize } from "@/services/utils";
 
-const router = useRouter();
-
 const props = defineProps({
   /** A group object from the API. */
   group: { type: Object, required: true },
@@ -109,5 +107,13 @@ const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 <style scoped>
 .group {
   --va-card-padding: 1rem;
+}
+
+/* The card is a router link, so the global anchor rule in main.css would paint the
+ * whole card in the primary color and underline it on hover. */
+.group,
+.group:hover {
+  color: inherit;
+  text-decoration: none;
 }
 </style>

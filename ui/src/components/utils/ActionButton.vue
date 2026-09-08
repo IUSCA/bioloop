@@ -27,15 +27,6 @@
         {{ props.description }}
       </p>
     </div>
-
-    <!-- Hover overlay effect -->
-    <div
-      :class="[
-        'absolute inset-0 rounded-lg bg-gradient-to-r opacity-0 transition-opacity duration-200',
-        config.overlayGradient,
-        { 'group-hover:opacity-5': !disabled },
-      ]"
-    />
   </button>
 </template>
 
@@ -101,6 +92,5 @@ const config = computed(() => ({
   icon: props.icon,
   iconColor: props.iconColor,
   hoverBorderColor: props.hoverTheme,
-  overlayGradient: `from-${props.hoverTheme}-500/0 via-${props.hoverTheme}-500/0 to-${props.hoverTheme}-500/0`,
 }));
 </script>

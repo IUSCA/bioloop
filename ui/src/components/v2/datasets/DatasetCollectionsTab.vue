@@ -59,7 +59,7 @@
               <VaDataTable
                 :items="collections"
                 :columns="columns"
-                class="collections-table"
+                class="v2-table"
                 hoverable
                 striped
                 v-model:sort-by="sortBy"
@@ -270,12 +270,3 @@ onMounted(() => {
   fetchCollections();
 });
 </script>
-
-<style scoped>
-.collections-table {
-  --va-data-table-cell-padding: 8px;
-}
-.card.header {
-  --va-card-padding: 0.8rem;
-}
-</style>

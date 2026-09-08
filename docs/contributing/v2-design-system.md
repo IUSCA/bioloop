@@ -79,8 +79,8 @@ the difference carries no information.
 A component's `color` prop takes a meaning, not a hue. `color="danger"`, not
 `color="rose"`. The hue is the primitive's business.
 
-This is the rule `ModernButtonToggle` and `ModernAlert` break today, and it is why
-`color="blue"` silently renders green.
+`ModernAlert` follows this rule. `ModernButtonToggle` still takes hue names and is the
+remaining exception.
 
 ### Refuse an unknown color rather than falling back
 
@@ -106,10 +106,14 @@ hue.
 Body text meets WCAG AA: 4.5:1 for normal text, 3:1 at 24px or at 18.66px bold. This
 holds in both themes and against the surface the text actually sits on, not against white.
 
-Three shades fail that floor on the surfaces v2 puts them on, and they should not be used
-for light-mode text: `text-gray-400` at 2.54:1 on white, `text-slate-400` at 2.56:1, and
-Vuestic's `va-text-secondary` at 4.19:1. Use `text-gray-600 dark:text-gray-400` for muted
-text instead, which measures 7.56:1 on white and 5.78:1 on a `gray-800` card.
+Two shades fail that floor on the surfaces v2 puts them on, and they should not be used
+for light-mode text: `text-gray-400` at 2.54:1 on white and `text-slate-400` at 2.56:1.
+Use `text-gray-600 dark:text-gray-400` for muted text instead, which measures 7.56:1 on
+white and 5.78:1 on a `gray-800` card.
+
+`va-text-secondary` now clears the floor. `ui/vuestic.config.js` sets `secondary` per
+preset, at `#5A6070` in light and `#9ca3af` in dark, which measures 6.28:1 on white,
+5.80:1 on the page ground, and 5.78:1 on a `gray-800` card.
 
 `text-gray-500` is the borderline case. It clears the floor on a white card at 4.83:1 and
 misses it on the `#F4F6F8` page ground at 4.46:1, so it is safe inside a card and not
@@ -123,7 +127,8 @@ decorative.
 Four components, and adding a fifth needs an argument.
 
 **`Badge`** replaces the three recipes in use. One recipe: tinted-transparent, because it
-reads on both themes without a second color decision.
+reads on both themes without a second color decision. `RoleBadge.vue` is the first
+component built to it and covers every ABAC role.
 
 ```
 text-{hue}-700 bg-{hue}-500/10 dark:text-{hue}-400 dark:bg-{hue}-400/10
@@ -131,12 +136,14 @@ inline-flex items-center gap-1 rounded-md px-1.5 py-0.5
 text-[11px] font-semibold uppercase tracking-wide
 ```
 
-It takes a meaning, a size from `sm`, `base`, `lg`, and an optional icon. The two role
-badges become configuration passed to it rather than two components.
+It takes a meaning, a size from `sm`, `base`, `lg`, and an optional icon. The remaining
+work is folding the solid-tint and gradient recipes into it.
 
-**`Alert`** takes a meaning, a title, and body content through its default slot. It
-renders the slot unconditionally. It carries `border border-solid` so its border color
-classes do something.
+**`Alert`** is `ModernAlert.vue`. It takes a meaning from `info`, `success`, `warning`,
+`danger`, and `neutral`, a title through a prop or the `title` slot, body content through
+its default slot, and buttons through the `actions` slot. It renders every slot
+unconditionally and carries `border border-solid` so its border color classes do
+something.
 
 **`Card`** is `VaCard`. Hand-rolled panels stop existing. Where a card needs a titled
 header, that is a slot on a wrapper, not a second card implementation with its own radius

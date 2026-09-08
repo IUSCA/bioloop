@@ -187,7 +187,7 @@
               <!-- Membership Propagation Warning -->
               <ModernAlert
                 icon="mdi-information"
-                color="amber"
+                color="warning"
                 title="Membership propagation"
               >
                 Members of this subgroup are automatically implicit members of
@@ -202,7 +202,7 @@
               <!-- Oversight Chain Info -->
               <ModernAlert
                 icon="mdi-information"
-                color="blue"
+                color="info"
                 title="Oversight visibility"
               >
                 Admins of

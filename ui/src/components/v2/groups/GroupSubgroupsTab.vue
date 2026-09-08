@@ -224,9 +224,3 @@ function handleSubgroupCreated() {
 
 onMounted(() => fetchSubgroups());
 </script>
-
-<style scoped>
-.card.header {
-  --va-card-padding: 0.8rem;
-}
-</style>

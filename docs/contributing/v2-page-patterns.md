@@ -107,8 +107,8 @@ The template wraps the three states in one transition:
 - A tab component emits `count-changed` when it mutates its own collection, and the page
   refreshes that count.
 - Render a count as `<span v-if="counts.grants !== null" class="tab-count-badge">`. The
-  `.tab-count-badge` rule lives in each page's scoped style block; copy it from
-  `pages/v2/datasets/[id]/index.vue`.
+  `.tab-count-badge` rule is defined once in `ui/src/styles/main.css`; do not copy it into
+  a page's scoped style block.
 
 ## Optimistic concurrency on update
 

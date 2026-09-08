@@ -298,37 +298,3 @@ watch(
 // Expose control methods
 defineExpose({ show, hide });
 </script>
-
-<style scoped>
-/* Smooth fade/slide transitions for alerts */
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.3s ease;
-}
-
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-/* List transitions for items */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(-10px);
-}
-
-.list-move {
-  transition: transform 0.3s ease;
-}
-</style>

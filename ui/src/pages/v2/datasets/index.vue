@@ -66,7 +66,7 @@
               <VaDataTable
                 :items="datasets"
                 :columns="columns"
-                class="datasets-table"
+                class="v2-table"
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
                 disable-client-side-sorting
@@ -289,9 +289,3 @@ meta:
   title: Datasets
   nav: [{ label: "Datasets" }]
 </route>
-
-<style scoped>
-.datasets-table {
-  --va-data-table-cell-padding: 8px;
-}
-</style>

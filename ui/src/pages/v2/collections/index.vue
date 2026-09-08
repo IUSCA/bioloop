@@ -67,7 +67,7 @@
               <VaDataTable
                 :items="collections"
                 :columns="columns"
-                class="collections-table"
+                class="v2-table"
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
                 disable-client-side-sorting
@@ -347,9 +347,3 @@ meta:
   title: Collections
   nav: [{ label: "Collections" }]
 </route>
-
-<style scoped>
-.collections-table {
-  --va-data-table-cell-padding: 8px;
-}
-</style>

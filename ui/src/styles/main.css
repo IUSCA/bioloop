@@ -3,18 +3,17 @@
 @tailwind utilities;
 
 h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
-
 a {
-    color: var(--va-primary);
-    text-decoration: none;
+  color: var(--va-primary);
+  text-decoration: none;
 }
 
 a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .path {
@@ -52,6 +51,42 @@ a:hover {
 
 .list-move {
   transition: transform 210ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer components {
+  /* Count pill shown beside a tab label on the v2 detail pages.
+   * Defined once here because four pages render the same pill.
+   * @see docs/contributing/v2-page-patterns.md
+   */
+  .tab-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.375rem;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    background-color: rgb(219 234 254);
+    color: rgb(29 78 216);
+  }
+
+  .dark .tab-count-badge {
+    background-color: rgb(30 58 138 / 0.5);
+    color: rgb(147 197 253);
+  }
+}
+
+@layer utilities {
+  /* Keyboard focus ring for hand-rolled controls. Vuestic's own controls carry
+   * their own; this is for bare <button>, <a>, and card links.
+   * @see docs/contributing/v2-design-system.md - Accessibility floor
+   */
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--va-primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer utilities {

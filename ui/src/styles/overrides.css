@@ -17,7 +17,7 @@
 
 div.inner-loading__overlay {
   z-index: 1;
-  background-color: rgba(255,255,255,0.6);
+  background-color: rgba(255, 255, 255, 0.6);
 }
 
 div.va-modal__title {
@@ -42,7 +42,7 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
  * Override the list item text color with general text color and it does change when switched to dark mode.
 */
 .va-list-item-label {
-  color: var(--va-text-primary)
+  color: var(--va-text-primary);
 }
 
 /* 
@@ -51,5 +51,18 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
  * the same color as the label.
 */
 .va-list-item-label--caption {
-  color: var(--va-list-item-label-caption-color)
+  color: var(--va-list-item-label-caption-color);
+}
+
+/* v2 density. The v2 screens carry more rows and more panels per page than the
+ * Vuestic defaults assume, so tables and card headers are tighter than stock.
+ * Kept here rather than in each tab so the two numbers are decided once.
+ * @see docs/contributing/v2-design-system.md - Spacing
+ */
+.v2-table {
+  --va-data-table-cell-padding: 8px;
+}
+
+.card.header {
+  --va-card-padding: 0.8rem;
 }

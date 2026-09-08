@@ -9,7 +9,7 @@
       {{ message }}
     </p>
   </div> -->
-  <ModernAlert :title="message" color="amber"></ModernAlert>
+  <ModernAlert :title="message" color="warning"></ModernAlert>
 </template>
 
 <script setup>

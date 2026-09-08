@@ -54,11 +54,7 @@
             </div>
 
             <div v-else-if="members.length > 0">
-              <VaDataTable
-                :items="members"
-                :columns="columns"
-                class="group-membership-table"
-              >
+              <VaDataTable :items="members" :columns="columns" class="v2-table">
                 <template #cell(name)="{ rowData }">
                   <div class="flex items-center gap-3 text-sm">
                     <UserAvatar
@@ -79,7 +75,7 @@
                 </template>
 
                 <template #cell(effective_role)="{ value }">
-                  <GroupMemberRoleBadge :role-name="value" />
+                  <RoleBadge :role-name="value" />
                 </template>
 
                 <template #cell(membership_via)="{ source }">
@@ -423,12 +419,3 @@ defineExpose({
   openAddMemberModal,
 });
 </script>
-
-<style scoped>
-.group-membership-table {
-  --va-data-table-cell-padding: 8px;
-}
-.card.header {
-  --va-card-padding: 0.8rem;
-}
-</style>

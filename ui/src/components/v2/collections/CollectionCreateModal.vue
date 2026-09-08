@@ -98,7 +98,7 @@
               <!-- Authority Boundary Information Message -->
               <ModernAlert
                 icon="mdi-information"
-                color="emerald"
+                color="info"
                 title="Authority Boundary"
               >
                 Only admins of
@@ -118,7 +118,7 @@
 
         <ModernCard :icon="getIcon('dataset')" title="Dataset Selection">
           <div class="space-y-3" v-if="formData.selectedOwnerGroup">
-            <ModernAlert icon="mdi-warning-outline" color="amber">
+            <ModernAlert icon="mdi-warning-outline" color="warning">
               Only datasets owned by
               <span class="font-semibold italic">
                 {{ formData.selectedOwnerGroup?.name }}

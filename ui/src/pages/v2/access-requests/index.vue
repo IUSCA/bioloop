@@ -232,27 +232,6 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-.tab-count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 600;
-  background-color: rgb(219 234 254);
-  color: rgb(29 78 216);
-}
-
-.dark .tab-count-badge {
-  background-color: rgb(30 58 138 / 0.5);
-  color: rgb(147 197 253);
-}
-</style>
-
 <route lang="yaml">
 meta:
   title: Access Requests

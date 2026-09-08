@@ -280,7 +280,7 @@
               <!-- <VaChip color="primary" size="small" class="shrink-0" square>
                 Admin
               </VaChip> -->
-              <GroupMemberRoleBadge role-name="ADMIN" class="shrink-0" />
+              <RoleBadge role-name="ADMIN" class="shrink-0" />
             </div>
           </div>
           <div v-else class="flex flex-col items-center py-4 gap-1 text-center">
