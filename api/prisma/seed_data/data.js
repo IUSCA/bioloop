@@ -17,6 +17,8 @@ const roles = [{
 
 const admins = [
   {
+    // Created at pinned ids by ensureSvcTasksAccount() before this list is walked; the
+    // upsert here finds it by email and leaves it alone.
     name: 'svc_tasks',
     username: 'svc_tasks',
   },

@@ -194,6 +194,14 @@ const AUTHENTICATED_USERS_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 const PUBLIC_GROUP_ID = 'ffffffff-0000-4000-8000-000000000002';
 const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID];
 
+// The service account every unattended write is credited to: the watch script, the workers,
+// and any row the system issues rather than a person. Both ids are pinned so a reseed does
+// not invalidate the workers' APP_API_TOKEN, which carries them as claims and is never
+// reissued automatically.
+// @see .claude/skills/workers-dev/SKILL.md — Environment
+const SVC_TASKS_USER_ID = 1;
+const SVC_TASKS_SUBJECT_ID = 'ffffffff-0000-4000-8000-000000000003';
+
 // Archived system group holding datasets that have no owning group. Datasets land here
 // only through the backfill that made dataset.owner_group_id NOT NULL; nothing writes to
 // it at runtime. Its contents are a list for platform admins to work through.
@@ -359,6 +367,8 @@ module.exports = {
   PUBLIC_GROUP_ID,
   SYSTEM_PRINCIPAL_GROUP_IDS,
   UNASSIGNED_DATASETS_GROUP_ID,
+  SVC_TASKS_USER_ID,
+  SVC_TASKS_SUBJECT_ID,
   GRANT_ACCESS_TYPES,
   GRANT_ACCESS_TYPE_IMPLICATIONS,
   GRANT_PRESETS,

@@ -21,8 +21,10 @@ const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
 const {
   GRANT_ACCESS_TYPES, GRANT_ACCESS_TYPE_IMPLICATIONS, GRANT_PRESETS, UNASSIGNED_DATASETS_GROUP_ID,
+  SVC_TASKS_SUBJECT_ID, SVC_TASKS_USER_ID,
 } = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
+const { ensureSvcTasksAccount } = require('../src/services/system_accounts');
 
 const prisma = new PrismaClient();
 
@@ -149,6 +151,10 @@ async function main() {
   // Create default admins
   const additional_admins = readUsersFromJSON('admins.json');
   const admin_data = insert_random_dates(data.admins.concat(additional_admins));
+  // svc_tasks first, at its pinned ids. The loop below then finds it by email and leaves it
+  // alone, because upsert's update is empty.
+  await ensureSvcTasksAccount(prisma);
+
   for (const admin of admin_data) {
     await prisma.user.upsert({
       where: { email: `${admin.username}@iu.edu` },

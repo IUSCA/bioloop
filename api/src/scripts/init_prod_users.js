@@ -6,6 +6,7 @@ const path = require('path');
 const { PrismaClient, SUBJECT_TYPE } = require('@prisma/client');
 const { readUsersFromJSON } = require('../utils');
 const { GRANT_ACCESS_TYPES, GRANT_PRESETS } = require('../constants');
+const { ensureSvcTasksAccount } = require('../services/system_accounts');
 
 global.__basedir = path.join(__dirname, '..', '..');
 
@@ -85,6 +86,9 @@ async function main() {
   console.log(`created ${roles.length} roles`);
 
   // Create default admins
+  // svc_tasks first, at its pinned ids. The loop below finds it by email and leaves it be.
+  await ensureSvcTasksAccount(prisma);
+
   const _admins = [
     {
       name: 'svc_tasks',

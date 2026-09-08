@@ -71,8 +71,11 @@ gitignored. Two fields cause most of the trouble:
   default, it is a broken config: `common.py` ships placeholder paths like
   `/path/to/source/raw_data`, and the watch script will happily poll them forever.
 - **`APP_API_TOKEN`** is a never-expiring JWT for the seeded `svc_tasks` account, minted
-  with `cd api && node src/scripts/issue_token.js svc_tasks`. Reissue it after
-  `prisma migrate reset`, which gives `svc_tasks` a new `subject_id`.
+  with `cd api && node src/scripts/issue_token.js svc_tasks`. It survives a
+  `prisma migrate reset`: `ensureSvcTasksAccount()` creates the account at pinned ids, so
+  the `profile.id` and `profile.subject_id` in the token stay valid across reseeds. A token
+  minted before that pinning landed still has the old generated `subject_id` and must be
+  reissued once.
 
   **Every `/v2` route needs `subject_id` in that token, and an old one does not carry it.**
   The claim was added to the JWT profile after the groups work started, so a token minted
