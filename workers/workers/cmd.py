@@ -83,7 +83,14 @@ def read_popen_pipes(p, blocking_delay: float = 0.5):
             time.sleep(blocking_delay)
 
 
-def register_process(celery_task, process, process_start_time):
+def register_process(celery_task, pid, args, process_start_time):
+    """Create the worker_process row that logs are later posted against.
+
+    Takes a pid and an args list rather than a Popen, so a task that does its
+    work in-process can register itself with os.getpid().
+
+    Returns the new row's id, or None when the API could not be reached.
+    """
     try:
         hostname = socket.getfqdn()
         # WorkflowTask exposes .workflow_id, .step, and .id as properties.
@@ -92,11 +99,11 @@ def register_process(celery_task, process, process_start_time):
             'workflow_id': getattr(celery_task, 'workflow_id', None),
             'step': getattr(celery_task, 'step', celery_task.name),
             'task_id': getattr(celery_task, 'id', celery_task.request.id),
-            'pid': process.pid,
+            'pid': pid,
             'hostname': hostname,
             'start_time': process_start_time,
             'tags': {
-                'args': process.args
+                'args': args
             }
         })
         return worker_process['id']
@@ -120,13 +127,13 @@ def execute_with_log_tracking(cmd: list[str], celery_task: WorkflowTask, cwd: st
                           bufsize=1,
                           universal_newlines=True) as p:
         process_start_time = utils.current_time_iso8601()
-        worker_process_id = register_process(celery_task, p, process_start_time)
+        worker_process_id = register_process(celery_task, p.pid, p.args, process_start_time)
         for lines in read_popen_pipes(p, blocking_delay):
 
             data = [log_object(line) for line in lines]
             try:
                 if not worker_process_id:
-                    worker_process_id = register_process(celery_task, p, process_start_time)
+                    worker_process_id = register_process(celery_task, p.pid, p.args, process_start_time)
                 api.post_worker_logs(worker_process_id, data)
             except Exception as e:
                 logger.warning(f'Unable to send worker logs', exc_info=e)

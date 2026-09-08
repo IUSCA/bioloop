@@ -114,8 +114,8 @@ typeahead only searches while its dropdown is open.
 finish the stepper. The dataset appears immediately in `UPLOADING`; the
 `manage_upload_workflows` cron then moves it through `UPLOADED`, `VERIFYING`, `VERIFIED`,
 `PROCESSING`, and `COMPLETE`, which takes a minute or two because the cron runs once a
-minute. `/datasets/uploads/:id` shows the current status and the verification subprocess's
-own logs.
+minute. `/datasets/uploads/:id` shows the current status and the verification task's own
+logs.
 
 Both features are gated to the `admin` role in `ui/src/config.js` under `enabledFeatures`.
 

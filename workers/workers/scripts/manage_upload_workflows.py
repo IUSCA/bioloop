@@ -494,9 +494,9 @@ def handle_verifying_status(dataset_id, dataset_name, upload_log, metadata, dry_
             logger.error("="*80)
 
             if not dry_run:
-                # The subprocess normally writes VERIFICATION_FAILED itself before exiting.
-                # If the API was unreachable at that moment, the status stays VERIFYING
-                # indefinitely.  Re-fetch and apply a fallback write as a safety net.
+                # The task normally writes VERIFICATION_FAILED itself on its last
+                # attempt. If the API was unreachable at that moment, the status stays
+                # VERIFYING indefinitely.  Re-fetch and apply a fallback as a safety net.
                 current_upload_log = api.get_dataset_upload_log(dataset_id)
                 if current_upload_log.get('status') == UPLOAD_STATUS['VERIFYING']:
                     logger.warning(f"Status still VERIFYING after task FAILURE — applying fallback VERIFICATION_FAILED")

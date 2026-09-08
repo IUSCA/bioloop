@@ -12,7 +12,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - **API** hosts TUS server and upload routes (`/datasets/uploads/*`).
 - **Worker cron** (`manage_upload_workflows.py`) drives status transitions.
 - **Worker cron** (`purge_stale_uploaded.py`) cleans TUS artifacts + upload payload leftovers.
-- **Celery task** (`verify_upload_integrity.py`) performs async verification.
+- **Celery task** (`workers/workers/tasks/verify_upload.py`) performs async verification.
 - **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
 ![Upload architecture components](../diagrams/upload/architecture_components.png)

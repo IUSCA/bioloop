@@ -234,19 +234,28 @@ pid file already existing.
 
 **A task that spawns a subprocess must use `sys.executable`, never `'python'`.** A bare
 `python` is resolved from PATH, and under pm2 that is whatever interpreter the shell
-offers rather than `workers/.venv/bin/python`. `verify_upload.py` did this, so every
+offers rather than `workers/.venv/bin/python`. Upload verification once did this, so every
 upload stalled in VERIFYING while the subprocess died on
 `ModuleNotFoundError: No module named 'glom'` at the first `from workers import ...`.
 
-The failure is easy to misread. Celery only reports `SubprocessError` with a return code;
-the traceback is captured by `execute_with_log_tracking` into the `log` table and shown on
-`/datasets/uploads/:id` under "Verification Task Logs". Read it there, or:
+The failure was hard to read because `cmd.execute_with_log_tracking` reports only
+`SubprocessError` with a return code, and the real traceback goes to the `log` table.
+Verification now runs in-process and raises its own exception type, but every remaining
+`cmd.execute` call still runs an external binary, so the rule stands for those.
+
+**Do not reach for a subprocess to get logs into the UI.** `log_tracking.track_task_logs`
+attaches a logging handler that posts to the same `workflows/processes/<id>/logs` endpoint
+`execute_with_log_tracking` uses, so in-process work shows up on `/datasets/uploads/:id`
+without losing the exception type. `cmd.execute_with_log_tracking` is for a genuinely
+external command whose stdout is the only thing to read.
+
+To read the captured lines directly:
 
 ```sql
 SELECT level, message FROM log WHERE worker_process_id = <id> ORDER BY id;
 ```
 
-The same mistake in a different costume is the `poetry run pytest` trap below.
+The `poetry run pytest` trap below is the same PATH mistake in a different costume.
 
 **Names must match on both sides of the queue.** The celery queue is
 `<app_id>.q`, and `app_id` is `bioloop-dev.sca.iu.edu` in both `api/config/default.json`
