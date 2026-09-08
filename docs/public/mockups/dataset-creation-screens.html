@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dataset Creation — Import and Upload</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+  :root {
+    --bg:         #0c1420;
+    --surface:    #111d2e;
+    --panel:      #172030;
+    --raised:     #1e2d42;
+    --hover:      #243549;
+    --border:     #243448;
+    --border-hi:  #2e4160;
+    --border-focus: #3b82f6;
+
+    --text:       #dde6f0;
+    --text-muted: #7a90a8;
+    --text-dim:   #3d5470;
+
+    --blue:       #3b82f6;
+    --blue-dim:   #1e3a5f;
+    --blue-soft:  #2563eb;
+    --amber:      #f59e0b;
+    --amber-dim:  #3d2a05;
+    --teal:       #0d9488;
+    --teal-dim:   #063330;
+    --red:        #ef4444;
+    --red-dim:    #3b0f0f;
+    --violet:     #8b5cf6;
+    --violet-dim: #2e1b5e;
+    --green:      #22c55e;
+    --green-dim:  #0d2e1a;
+
+    --radius:     6px;
+    --radius-lg:  10px;
+    --radius-xl:  14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #060c17;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── SHOWCASE NAV ──────────────────────────────────────────── */
+  .showcase-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #040912;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    display: flex; align-items: center; gap: 0;
+    height: 44px; overflow-x: auto;
+  }
+  .showcase-nav-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 2px;
+    padding-right: 20px; border-right: 1px solid var(--border);
+    margin-right: 16px; white-space: nowrap;
+  }
+  .nav-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px; padding: 0 16px; height: 44px;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .nav-btn:hover { color: var(--text); }
+  .nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: block; }
+  .fade-in { animation: fade .2s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none; } }
+
+  /* ── APP CHROME ────────────────────────────────────────────── */
+  .topnav {
+    height: 48px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 24px; padding: 0 20px;
+  }
+  .logo { display: flex; align-items: center; gap: 8px; }
+  .logo-mark { color: var(--blue); font-size: 15px; }
+  .logo-text { font-weight: 600; letter-spacing: .3px; }
+  .topnav-links { display: flex; gap: 4px; }
+  .topnav-link { color: var(--text-muted); padding: 4px 10px; border-radius: var(--radius); font-size: 12.5px; }
+  .topnav-link.active { color: var(--text); background: var(--raised); }
+  .avatar-btn { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: #fff;
+  }
+  .role-badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9.5px;
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 3px 8px; border-radius: 20px;
+  }
+  .role-badge.admin  { background: var(--violet-dim); color: #c4b5fd; }
+  .role-badge.member { background: var(--teal-dim);   color: #5eead4; }
+
+  .page-content { max-width: 1080px; margin: 0 auto; padding: 20px 24px 60px; }
+  .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+  .breadcrumb a { color: var(--blue); text-decoration: none; }
+  .breadcrumb-sep { color: var(--text-dim); }
+
+  /* ── DIMMED PAGE BEHIND A MODAL ────────────────────────────── */
+  .behind { position: relative; }
+  .behind::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(4,9,18,.72); backdrop-filter: blur(1.5px);
+  }
+  .tab-strip { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab { padding: 8px 14px; font-size: 12.5px; color: var(--text-muted); border-bottom: 2px solid transparent; }
+  .tab.active { color: var(--text); border-bottom-color: var(--blue); }
+  .fake-table { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .fake-row { display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .fake-row:last-child { border-bottom: none; }
+  .fake-row.head { background: var(--panel); color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .8px; }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .search-fake { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 12px; color: var(--text-dim); font-size: 12.5px; }
+
+  /* ── MODAL ─────────────────────────────────────────────────── */
+  .modal-layer { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 70px 20px 40px; z-index: 50; pointer-events: none; }
+  .modal {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border-hi); border-radius: var(--radius-xl);
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    pointer-events: auto; overflow: hidden;
+  }
+  .modal.sm { max-width: 520px; }
+  .modal.md { max-width: 620px; }
+  .modal.lg { max-width: 720px; }
+  .modal-header { display: flex; gap: 14px; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); }
+  .modal-header-icon {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .mh-blue   { background: var(--blue-dim);   color: #93c5fd; }
+  .mh-teal   { background: var(--teal-dim);   color: #5eead4; }
+  .mh-violet { background: var(--violet-dim); color: #c4b5fd; }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-sub { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; max-width: 52ch; }
+  .modal-body { padding: 20px 22px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border); background: var(--panel); }
+
+  /* ── CHOICE CARDS ──────────────────────────────────────────── */
+  .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .choice {
+    border: 1px solid var(--border); background: var(--panel);
+    border-radius: var(--radius-lg); padding: 18px;
+    cursor: pointer; transition: border-color .15s, background .15s, transform .15s;
+  }
+  .choice:hover { border-color: var(--border-focus); background: var(--raised); transform: translateY(-2px); }
+  .choice.sel { border-color: var(--blue); background: var(--raised); box-shadow: 0 0 0 1px var(--blue) inset; }
+  .choice-icon {
+    width: 40px; height: 40px; border-radius: var(--radius-lg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 12px;
+  }
+  .choice-title { font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+  .choice-desc { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+  .choice-meta { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; }
+  .choice-meta span::before { content: '· '; color: var(--text-dim); }
+
+  /* ── FORM ──────────────────────────────────────────────────── */
+  .form-group { margin-bottom: 16px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-label { display: block; font-size: 11.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin-bottom: 6px; }
+  .form-label .req { color: var(--blue); }
+  .form-input {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 11px; color: var(--text);
+    font-family: inherit; font-size: 13px;
+  }
+  .form-input.focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+  .form-input.ph { color: var(--text-dim); }
+  .form-hint { font-size: 11.5px; color: var(--text-dim); margin-top: 5px; }
+  .form-hint.ok { color: #86efac; }
+  .form-hint.warn { color: #fcd34d; }
+
+  .typeahead { position: relative; }
+  .typeahead-menu {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5;
+    background: var(--raised); border: 1px solid var(--border-hi);
+    border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: 0 14px 34px rgba(0,0,0,.5);
+  }
+  .ta-item { padding: 8px 12px; display: flex; align-items: center; gap: 9px; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+  .ta-item:last-child { border-bottom: none; }
+  .ta-item.hl { background: var(--hover); }
+  .ta-path { color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-left: auto; }
+
+  /* ── OWNING GROUP PICKER ───────────────────────────────────── */
+  .owner-group-option {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border); background: var(--panel);
+    border-radius: var(--radius-lg); padding: 10px 12px;
+  }
+  .owner-group-option.sel { border-color: var(--blue); background: var(--raised); }
+  .ogo-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--teal-dim); color: #5eead4; }
+  .ogo-text { flex: 1; }
+  .ogo-name { font-size: 13px; font-weight: 500; }
+  .ogo-path { font-size: 11px; color: var(--text-dim); font-family: 'IBM Plex Mono', monospace; }
+  .ogo-role { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; padding: 3px 7px; border-radius: 20px; background: var(--violet-dim); color: #c4b5fd; }
+  .ogo-role.contrib { background: var(--teal-dim); color: #5eead4; }
+
+  /* ── FILE LIST ─────────────────────────────────────────────── */
+  .dropzone {
+    border: 1px dashed var(--border-hi); border-radius: var(--radius-lg);
+    padding: 22px; text-align: center; background: var(--panel);
+  }
+  .dropzone-icon { font-size: 26px; color: var(--text-dim); margin-bottom: 8px; }
+  .file-list { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 12px; }
+  .file-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .file-row:last-child { border-bottom: none; }
+  .file-name { flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; }
+  .file-size { color: var(--text-dim); font-size: 11.5px; }
+  .file-state { font-size: 14px; }
+
+  .progress-track { height: 6px; background: var(--panel); border-radius: 20px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: var(--blue); border-radius: 20px; }
+  .progress-fill.green { background: var(--green); }
+
+  /* ── STEPS / CALLOUTS ──────────────────────────────────────── */
+  .callout { display: flex; gap: 10px; padding: 11px 13px; border-radius: var(--radius-lg); font-size: 12.5px; line-height: 1.55; }
+  .callout.info  { background: var(--blue-dim);  color: #bfdbfe; border: 1px solid #2b4f7e; }
+  .callout.warn  { background: var(--amber-dim); color: #fcd34d; border: 1px solid #6b4a10; }
+  .callout.good  { background: var(--green-dim); color: #86efac; border: 1px solid #17512f; }
+  .callout-icon { flex: 0 0 auto; }
+
+  .stage-list { display: flex; flex-direction: column; gap: 0; }
+  .stage {
+    display: flex; align-items: flex-start; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stage:last-child { border-bottom: none; }
+  .stage-dot {
+    width: 20px; height: 20px; flex: 0 0 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    background: var(--panel); border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .stage-dot.done { background: var(--green-dim); border-color: #17512f; color: #86efac; }
+  .stage-dot.now  { background: var(--blue-dim);  border-color: #2b4f7e; color: #bfdbfe; }
+  .stage-name { font-size: 13px; }
+  .stage-note { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+  .stage-time { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); }
+
+  /* ── BUTTONS ───────────────────────────────────────────────── */
+  .btn {
+    font-family: inherit; font-size: 12.5px; padding: 7px 14px;
+    border-radius: var(--radius); border: 1px solid transparent; cursor: pointer;
+  }
+  .btn-primary { background: var(--blue-soft); color: #fff; }
+  .btn-secondary { background: transparent; color: var(--text-muted); border-color: var(--border-hi); }
+  .btn-primary.disabled { background: var(--raised); color: var(--text-dim); }
+
+  /* ── ANNOTATION ────────────────────────────────────────────── */
+  .note {
+    max-width: 1080px; margin: 0 auto; padding: 0 24px 26px;
+    font-size: 12.5px; color: var(--text-muted);
+  }
+  .note h4 { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  .note ul { margin-left: 16px; }
+  .note li { margin-bottom: 5px; }
+  .note code { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #93c5fd; }
+</style>
+</head>
+<body>
+
+<nav class="showcase-nav">
+  <span class="showcase-nav-label">Dataset Creation</span>
+  <button class="nav-btn active" onclick="show('chooser')">1 · Add Dataset</button>
+  <button class="nav-btn" onclick="show('import')">2 · Import</button>
+  <button class="nav-btn" onclick="show('upload')">3 · Upload</button>
+  <button class="nav-btn" onclick="show('transfer')">4 · Transfer</button>
+  <button class="nav-btn" onclick="show('progress')">5 · After Upload</button>
+  <button class="nav-btn" onclick="show('blocked')">6 · Blocked States</button>
+</nav>
+
+<!-- ═══ SCREEN 1: THE CHOOSER ═══════════════════════════════════ -->
+<div class="screen active" id="screen-chooser">
+  <div class="behind">
+    <nav class="topnav">
+      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+      <div class="topnav-links">
+        <a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a><a class="topnav-link">Collections</a>
+      </div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+        <span class="role-badge admin">Group Admin</span>
+        <div class="avatar-btn"><div class="avatar" style="background:linear-gradient(135deg,var(--teal),#0f766e)">M</div> Maya Okonkwo ▾</div>
+      </div>
+    </nav>
+    <div class="page-content">
+      <div class="breadcrumb"><a href="#">Groups</a><span class="breadcrumb-sep">/</span><span>Genomics Core</span></div>
+      <div class="tab-strip">
+        <div class="tab">Overview</div><div class="tab active">Datasets</div><div class="tab">Collections</div>
+        <div class="tab">Members</div><div class="tab">Grants</div><div class="tab">Audit</div>
+      </div>
+      <div class="toolbar">
+        <div class="search-fake">Search datasets…</div>
+        <button class="btn btn-primary">＋ Add Dataset</button>
+      </div>
+      <div class="fake-table">
+        <div class="fake-row head"><span>Name</span><span>Type</span><span>Size</span><span>Created</span></div>
+        <div class="fake-row"><span>cohort-2026-batch-14</span><span>RAW_DATA</span><span>412 GB</span><span>2 days ago</span></div>
+        <div class="fake-row"><span>cohort-2026-batch-13</span><span>RAW_DATA</span><span>388 GB</span><span>6 days ago</span></div>
+        <div class="fake-row"><span>alignment-summary-q3</span><span>DATA_PRODUCT</span><span>2.1 GB</span><span>3 weeks ago</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-layer">
+    <div class="modal md fade-in">
+      <div class="modal-header">
+        <div class="modal-header-icon mh-blue">＋</div>
+        <div>
+          <div class="modal-title">Add a dataset to Genomics Core</div>
+          <div class="modal-sub">Genomics Core will own it. The group's admins control who
+            else can see it, and that does not change later.</div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="choice-grid">
+          <div class="choice sel">
+            <div class="choice-icon" style="background:var(--teal-dim); color:#5eead4;">🗂</div>
+            <div class="choice-title">Import</div>
+            <div class="choice-desc">Register a folder that is already on the storage system.
+              Nothing is copied and nothing is moved.</div>
+            <div class="choice-meta">
+              <span>For data an instrument or pipeline already wrote</span>
+              <span>Takes seconds</span>
+              <span>You browse folders your group can reach</span>
+            </div>
+          </div>
+          <div class="choice">
+            <div class="choice-icon" style="background:var(--violet-dim); color:#c4b5fd;">⬆</div>
+            <div class="choice-title">Upload</div>
+            <div class="choice-desc">Send files from this computer. They are checksummed here,
+              then transferred and verified.</div>
+            <div class="choice-meta">
+              <span>For data on your own machine</span>
+              <span>Takes minutes to hours by size</span>
+              <span>Resumes if the connection drops</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 1</h4>
+  <ul>
+    <li>The owning group is stated in the subtitle, not asked for. The user is on the group's
+      own page, so it is preselected. A picker appears only when the context does not settle it.</li>
+    <li>The two cards answer "which one am I?" by <em>where the data is</em>, not by mechanism.
+      Time-to-finish is on the card because it is the difference users actually feel.</li>
+    <li>Entry point: <code>AddDatasetModal.vue</code>, opened from
+      <code>GroupDatasetsTab.vue</code> and <code>CollectionDatasetsTab.vue</code>.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 2: IMPORT ════════════════════════════════════════ -->
+<div class="screen" id="screen-import">
+  <div class="behind">
+    <nav class="topnav">
+      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+      <div class="topnav-links"><a class="topnav-link active">Groups</a><a class="topnav-link">Datasets</a></div>
+    </nav>
+    <div class="page-content"><div style="height:340px;"></div></div>
+  </div>
+
+  <div class="modal-layer">
+    <div class="modal lg fade-in">
+      <div class="modal-header">
+        <div class="modal-header-icon mh-teal">🗂</div>
+        <div>
+          <div class="modal-title">Import a folder</div>
+          <div class="modal-sub">Registers a folder that already exists on storage. The files
+            stay exactly where they are.</div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Source <span class="req">*</span></label>
+          <div class="owner-group-option sel">
+            <div class="ogo-icon">🖴</div>
+            <div class="ogo-text">
+              <div class="ogo-name">Genomics Core — instrument drop</div>
+              <div class="ogo-path">/N/project/genomics/instrument_drop</div>
+            </div>
+            <span class="ogo-role contrib">2 of 2</span>
+          </div>
+          <div class="form-hint">You see the sources your groups own. Other groups' drop
+            folders are not listed and cannot be browsed.</div>
+        </div>
+
+        <div class="form-group typeahead">
+          <label class="form-label">Folder <span class="req">*</span></label>
+          <input class="form-input focus" value="run_2026_09_" />
+          <div class="typeahead-menu">
+            <div class="ta-item hl">📁 run_2026_09_04_novaseq <span class="ta-path">412 GB · 1,284 files</span></div>
+            <div class="ta-item">📁 run_2026_09_02_novaseq <span class="ta-path">388 GB · 1,190 files</span></div>
+            <div class="ta-item">📁 run_2026_09_01_miseq <span class="ta-path">·  18 GB · 96 files</span></div>
+          </div>
+        </div>
+
+        <div style="height:118px;"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dataset name <span class="req">*</span></label>
+            <input class="form-input" value="run-2026-09-04-novaseq" />
+            <div class="form-hint ok">✓ Available in Genomics Core</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type <span class="req">*</span></label>
+            <input class="form-input" value="Raw Data" />
+            <div class="form-hint">Unprocessed output from an instrument.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Owned by</label>
+          <div class="owner-group-option sel">
+            <div class="ogo-icon">◈</div>
+            <div class="ogo-text">
+              <div class="ogo-name">Genomics Core</div>
+              <div class="ogo-path">Center for Genomics and Bioinformatics / Genomics Core</div>
+            </div>
+            <span class="ogo-role">Admin</span>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">ℹ</span>
+          <span>After importing, bioloop reads the folder, archives it, and stages a copy for
+            download. That runs on its own and takes a few minutes.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Import folder</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 2</h4>
+  <ul>
+    <li>The source list is scoped to the caller's groups, and <code>GET /v2/fs</code> resolves
+      the typed path against that same scoped set. Scoping the list alone would leave the
+      contents readable at a guessed path.</li>
+    <li>Name availability is checked against a scoped endpoint. It never reports that another
+      group holds the name — only that this one may or may not use it.</li>
+    <li>No project or instrument fields. Both are global concepts today and would leak one
+      group's records to another; attaching them after creation still works.</li>
+    <li>The folder row shows size and file count, which is what tells a user they picked the
+      right run.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 3: UPLOAD ════════════════════════════════════════ -->
+<div class="screen" id="screen-upload">
+  <div class="behind">
+    <nav class="topnav">
+      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+      <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Collections</a></div>
+    </nav>
+    <div class="page-content"><div style="height:340px;"></div></div>
+  </div>
+
+  <div class="modal-layer">
+    <div class="modal lg fade-in">
+      <div class="modal-header">
+        <div class="modal-header-icon mh-violet">⬆</div>
+        <div>
+          <div class="modal-title">Upload files</div>
+          <div class="modal-sub">Sends files from this computer. Keep the tab open until the
+            transfer finishes; it resumes if the connection drops.</div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <div class="dropzone">
+            <div class="dropzone-icon">⬆</div>
+            <div style="font-size:13px; margin-bottom:4px;">Drop files or a folder here</div>
+            <div style="font-size:11.5px; color:var(--text-dim);">
+              or <span style="color:var(--blue);">choose files</span> ·
+              <span style="color:var(--blue);">choose a folder</span>
+            </div>
+          </div>
+          <div class="file-list">
+            <div class="file-row"><span class="file-state" style="color:var(--text-dim);">○</span>
+              <span class="file-name">alignment_q3/summary.tsv</span><span class="file-size">14.2 MB</span></div>
+            <div class="file-row"><span class="file-state" style="color:var(--text-dim);">○</span>
+              <span class="file-name">alignment_q3/metrics.json</span><span class="file-size">2.1 MB</span></div>
+            <div class="file-row"><span class="file-state" style="color:var(--text-dim);">○</span>
+              <span class="file-name">alignment_q3/coverage.bw</span><span class="file-size">1.8 GB</span></div>
+          </div>
+          <div class="form-hint">3 files · 1.82 GB total</div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dataset name <span class="req">*</span></label>
+            <input class="form-input" value="alignment-summary-q3" />
+            <div class="form-hint warn">⚠ Not available in Immunology Lab. Try another name.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type <span class="req">*</span></label>
+            <input class="form-input" value="Data Product" />
+            <div class="form-hint">Processed output derived from raw data.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Owned by <span class="req">*</span></label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="owner-group-option sel">
+              <div class="ogo-icon">◈</div>
+              <div class="ogo-text">
+                <div class="ogo-name">Immunology Lab</div>
+                <div class="ogo-path">Dr. Carla Patel Lab / Immunology Lab</div>
+              </div>
+              <span class="ogo-role contrib">Contributor</span>
+            </div>
+            <div class="owner-group-option">
+              <div class="ogo-icon">◈</div>
+              <div class="ogo-text">
+                <div class="ogo-name">Unified Immune Signature</div>
+                <div class="ogo-path">Cross-lab project</div>
+              </div>
+              <span class="ogo-role contrib">Contributor</span>
+            </div>
+          </div>
+          <div class="form-hint">You are a member of both, and both accept contributions.
+            The group you pick governs the dataset from then on.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary disabled">Start upload</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 3</h4>
+  <ul>
+    <li>This user is a plain member of two groups that set
+      <code>allow_user_contributions</code>. That is the case
+      <code>dataset.create</code> refuses today, and why the plan adds a
+      <code>contribute</code> action.</li>
+    <li>The name conflict is reported as "not available in Immunology Lab" — a fact about this
+      group, not a disclosure that some other group holds the name.</li>
+    <li>Submit stays disabled until the name resolves. Nothing is created and no bytes move
+      until then, so a rejected name costs nothing.</li>
+    <li>One eligible group would auto-select and this block would collapse to a single line.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 4: TRANSFER IN FLIGHT ════════════════════════════ -->
+<div class="screen" id="screen-transfer">
+  <div class="behind">
+    <nav class="topnav">
+      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+    </nav>
+    <div class="page-content"><div style="height:340px;"></div></div>
+  </div>
+
+  <div class="modal-layer">
+    <div class="modal md fade-in">
+      <div class="modal-header">
+        <div class="modal-header-icon mh-violet">⬆</div>
+        <div>
+          <div class="modal-title">Uploading alignment-summary-q3</div>
+          <div class="modal-sub">Keep this tab open. You can close it once the transfer
+            finishes — the rest happens on the server.</div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="stage-list" style="margin-bottom:18px;">
+          <div class="stage">
+            <div class="stage-dot done">✓</div>
+            <div><div class="stage-name">Dataset registered</div>
+              <div class="stage-note">Owned by Immunology Lab</div></div>
+            <div class="stage-time">0:01</div>
+          </div>
+          <div class="stage">
+            <div class="stage-dot done">✓</div>
+            <div><div class="stage-name">Checksums computed</div>
+              <div class="stage-note">BLAKE3, in this browser, so the server can prove nothing changed</div></div>
+            <div class="stage-time">0:23</div>
+          </div>
+          <div class="stage">
+            <div class="stage-dot now">●</div>
+            <div><div class="stage-name">Transferring files</div>
+              <div class="stage-note">2 of 3 · 1.14 GB of 1.82 GB · about 4 minutes left</div></div>
+            <div class="stage-time">4:12</div>
+          </div>
+        </div>
+
+        <div class="progress-track" style="margin-bottom:14px;">
+          <div class="progress-fill" style="width:63%"></div>
+        </div>
+
+        <div class="file-list">
+          <div class="file-row"><span class="file-state" style="color:#86efac;">✓</span>
+            <span class="file-name">alignment_q3/summary.tsv</span><span class="file-size">14.2 MB</span></div>
+          <div class="file-row"><span class="file-state" style="color:#86efac;">✓</span>
+            <span class="file-name">alignment_q3/metrics.json</span><span class="file-size">2.1 MB</span></div>
+          <div class="file-row"><span class="file-state" style="color:#93c5fd;">◐</span>
+            <span class="file-name">alignment_q3/coverage.bw</span><span class="file-size">1.12 / 1.8 GB</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Cancel upload</button>
+        <button class="btn btn-primary disabled">Transferring…</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 4</h4>
+  <ul>
+    <li>Three named stages rather than one bar, because the checksum pass is slow and silent
+      and users otherwise read it as a hang.</li>
+    <li>The modal closes when the bytes are up. Verification and the archive workflow take
+      minutes more and belong on the dataset page, not behind a modal nobody can leave.</li>
+    <li>The transfer is resumable (TUS), so cancelling and returning is safe. That is worth
+      saying in the copy rather than leaving users to guess.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 5: AFTER UPLOAD ══════════════════════════════════ -->
+<div class="screen" id="screen-progress">
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+    <div class="topnav-links"><a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a></div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span class="role-badge member">Member</span>
+      <div class="avatar-btn"><div class="avatar" style="background:linear-gradient(135deg,var(--violet),#6d28d9)">R</div> Riya Chandra ▾</div>
+    </div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb"><a href="#">Datasets</a><span class="breadcrumb-sep">/</span><span>alignment-summary-q3</span></div>
+    <h2 style="font-size:19px; font-weight:600; margin-bottom:3px;">alignment-summary-q3</h2>
+    <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:18px;">
+      Data Product · 1.82 GB · owned by Immunology Lab
+    </div>
+
+    <div class="tab-strip">
+      <div class="tab active">Overview</div><div class="tab">Files</div><div class="tab">Collections</div>
+      <div class="tab">Grants</div><div class="tab">Workflows</div><div class="tab">Audit</div>
+    </div>
+
+    <div class="callout good" style="margin-bottom:18px;">
+      <span class="callout-icon">✓</span>
+      <span><strong>All files uploaded.</strong> You can close this page — the remaining
+        steps run on the server and the dataset will be ready shortly.</span>
+    </div>
+
+    <div style="border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;">
+      <div style="padding:12px 16px; background:var(--panel); border-bottom:1px solid var(--border);
+                  font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--text-muted);">
+        Upload progress
+      </div>
+      <div style="padding:6px 16px 12px;">
+        <div class="stage-list">
+          <div class="stage"><div class="stage-dot done">✓</div>
+            <div><div class="stage-name">Files received</div>
+              <div class="stage-note">3 files · 1.82 GB</div></div>
+            <div class="stage-time">14:02</div></div>
+          <div class="stage"><div class="stage-dot done">✓</div>
+            <div><div class="stage-name">Checksums verified</div>
+              <div class="stage-note">Server hash matched the browser's manifest</div></div>
+            <div class="stage-time">14:06</div></div>
+          <div class="stage"><div class="stage-dot now">●</div>
+            <div><div class="stage-name">Archiving</div>
+              <div class="stage-note">Writing to long-term storage</div></div>
+            <div class="stage-time">running</div></div>
+          <div class="stage"><div class="stage-dot">4</div>
+            <div><div class="stage-name">Staging a downloadable copy</div>
+              <div class="stage-note">Not started</div></div>
+            <div class="stage-time">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 5</h4>
+  <ul>
+    <li>Replaces <code>/datasets/uploads/:id</code>. Upload state becomes a panel on the
+      dataset's own page, so there is one place a dataset lives rather than two.</li>
+    <li>Reads <code>GET /v2/datasets/:id/upload-log</code>, which is authorized by the policy
+      engine. The v1 read routes are RBAC-gated and a contributor is not an administrator.</li>
+    <li>The panel disappears once the dataset reaches its ready state. It is a transient
+      surface, not a permanent tab.</li>
+    <li>Stage names describe outcomes, not internal task names.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 6: BLOCKED STATES ════════════════════════════════ -->
+<div class="screen" id="screen-blocked">
+  <div class="page-content fade-in" style="padding-top:32px;">
+    <h2 style="font-size:17px; font-weight:600; margin-bottom:6px;">Refusals, stated plainly</h2>
+    <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:22px; max-width:70ch;">
+      Each of these replaces a case where the system would otherwise guess, fail silently, or
+      say something about a group the user cannot see.
+    </p>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+      <div class="modal sm" style="position:static; box-shadow:none;">
+        <div class="modal-header">
+          <div class="modal-header-icon mh-blue">＋</div>
+          <div><div class="modal-title">Add a dataset</div></div>
+        </div>
+        <div class="modal-body">
+          <div class="callout warn">
+            <span class="callout-icon">⚠</span>
+            <span><strong>No group can hold a new dataset for you.</strong> You are a member of
+              Neuroimaging Lab, but it does not accept member contributions. Ask an admin of
+              that group to create the dataset, or to turn contributions on.</span>
+          </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary">Close</button></div>
+      </div>
+
+      <div class="modal sm" style="position:static; box-shadow:none;">
+        <div class="modal-header">
+          <div class="modal-header-icon mh-teal">🗂</div>
+          <div><div class="modal-title">Import a folder</div></div>
+        </div>
+        <div class="modal-body">
+          <div class="callout warn">
+            <span class="callout-icon">⚠</span>
+            <span><strong>No import sources are configured for your groups.</strong> A platform
+              admin registers a drop folder and assigns it to a group before it can be
+              imported from.</span>
+          </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary">Close</button></div>
+      </div>
+
+      <div class="modal sm" style="position:static; box-shadow:none;">
+        <div class="modal-header">
+          <div class="modal-header-icon mh-teal">🗂</div>
+          <div><div class="modal-title">Import a folder</div></div>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Folder</label>
+            <input class="form-input" value="/N/project/genomics/instrument_drop/run_2026_09_04_novaseq" />
+          </div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠</span>
+            <span><strong>That folder is already registered.</strong> Pick a different folder.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary">Cancel</button>
+          <button class="btn btn-primary disabled">Import folder</button>
+        </div>
+      </div>
+
+      <div class="modal sm" style="position:static; box-shadow:none;">
+        <div class="modal-header">
+          <div class="modal-header-icon mh-violet">⬆</div>
+          <div><div class="modal-title">Upload files</div></div>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Dataset name</label>
+            <input class="form-input" value="cohort-2026-batch-14" />
+            <div class="form-hint warn">⚠ Not available in Immunology Lab. Try another name.</div>
+          </div>
+          <div class="callout info">
+            <span class="callout-icon">ℹ</span>
+            <span>Names are checked only against what you can see. This says nothing about
+              datasets in other groups.</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary">Cancel</button>
+          <button class="btn btn-primary disabled">Start upload</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 6</h4>
+  <ul>
+    <li>Every refusal names the thing that is missing and what would fix it. None of them
+      falls back to a default group, a guessed source, or a generated name.</li>
+    <li>"That folder is already registered" does not say which dataset holds it or which group
+      owns that dataset. The user learns only that this path is unavailable to them.</li>
+    <li>The last card carries the reasoning in the interface itself, because a user who knows
+      a name is free elsewhere would otherwise read the refusal as a bug.</li>
+  </ul>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('active'); });
+    document.getElementById('screen-' + id).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(function (b) { b.classList.remove('active'); });
+    event.currentTarget.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+</script>
+
+</body>
+</html>

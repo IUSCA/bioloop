@@ -134,6 +134,102 @@ about groups.
 to be rewritten is the call that decides ownership. The transfer, the verification, and the
 workflows carry over untouched.
 
+## What groups break that was safe when everything was global
+
+Creation was written when every authenticated user could see everything. Groups make that
+assumption wrong in six places. Each is stated with the failure it allows and the fix this
+design takes.
+
+### Import sources are visible to everyone
+
+`GET /datasets/imports/sources` returns every row of `import_source` with no filter, and
+`GET /fs` resolves a requested path against every row as well. The `fs` and `import_sources`
+permissions are granted to the `user`, `operator`, and `admin` roles alike. Any authenticated
+user can therefore list every configured drop directory and read the names of everything
+inside it.
+
+`import_source` has an `owner_id` column pointing at a `user`, and no route reads it.
+
+**The fix.** `import_source` gains `owner_group_id`. New v2 routes serve only the sources
+owned by a group the caller belongs to, has oversight of, or administers, with a platform
+admin seeing all. The `owner_group_id` is nullable, so a source with no group stays reachable
+through the legacy routes and invisible to the v2 ones.
+
+**Scoping the list is not enough on its own.** The v2 filesystem route must resolve a
+requested path against the caller's own sources rather than against all of them. Hiding a
+source from a list while still serving its contents to a guessed path is decoration.
+
+Sharing a source between groups is deferred. `import_source` could become a `resource` and be
+granted like a dataset, and that is the consistent answer, but no requirement asks for it yet.
+
+### Importing registers a directory somebody else already owns
+
+`dataset.origin_path` is not unique, and no code checks it. Import registers a path that
+already exists on disk, so one group can import a directory another group already imported.
+Both groups then own a dataset over the same bytes, and each set of grants exposes the
+other's files.
+
+**The fix.** The v2 import service refuses when a live dataset already holds that
+`origin_path`. The refusal says the directory is already registered and names neither the
+dataset nor its group.
+
+A database constraint would be stronger, and it is not safe to add yet: the legacy routes
+write the same column, and nothing has audited whether duplicates already exist. Audit first,
+constrain afterwards.
+
+### Dataset names are unique across the whole system
+
+`dataset` carries `@@unique([name, type, is_deleted])`. Two things follow.
+
+A member of one group can discover another group's dataset names.
+`GET /datasets/:type/:name/exists` answers yes or no for any name, and every `user` role may
+call it. The v2 create route's 409 says a dataset with that name already exists, which
+confirms the same fact.
+
+A group can also deny a name to every other group forever, by taking it first.
+
+**The fix, in two parts.** The v2 creation routes must not confirm a dataset the caller
+cannot see. They answer 409 saying the name is unavailable, without asserting that a dataset
+holds it. A v2 name-availability endpoint scoped the same way as the creation routes gives
+the interface something safe to call, and the legacy `exists` route is not reused.
+
+Making the name unique per owning group is the real fix and it is blocked, for the reason
+below.
+
+### Worker paths are keyed by dataset name
+
+`get_archive_path` builds `<archive dir>/<name>.tar`, `get_bundle_name` builds
+`<name>.<type>.tar`, and the QC task builds `<qc dir>/<name>/qc`. None includes the dataset
+id. Staging is the exception: `compute_staging_path` salts its alias with the id already.
+
+Today the global name constraint hides this. Relax the name to per-group uniqueness and two
+same-named datasets in different groups write the same archive bundle, so one silently
+overwrites the other. That is data loss rather than a disclosure.
+
+**The fix.** Key those three paths by dataset id before relaxing the name. The change is
+cheap and safe, because `dataset.archive_path` is stored per dataset: an existing dataset
+reads its recorded path, and only newly archived datasets use the new formula.
+
+### The creation dialogs would expose projects and instruments
+
+`instrument.name` is globally unique and `project.owner_id` points at a user. The legacy
+steppers let a user attach either to a new dataset, which under groups means one group
+browsing another's projects.
+
+**The fix.** The v2 creation dialogs do not offer project or instrument assignment. Dropping
+the field removes the leak outright, and neither concept has been reconciled with groups yet.
+Attachment after creation stays available through the existing routes.
+
+### What is already safe, and should stay that way
+
+The upload directory is keyed by dataset id: `<upload dir>/<type>/<id>/<name>`. Two groups
+uploading the same name never collide, and no scoping work is needed.
+
+`POST /v2/datasets/bulk` returns a `conflicted` list of names and types. Those are the
+caller's own inputs echoed back, so the response tells the caller nothing they did not send.
+It does confirm that the name is taken somewhere, which is the same oracle as above, and it
+is acceptable here because the only caller is the service account.
+
 ## What still has to change
 
 None of the three routes records an owning group. They all succeed anyway, because
@@ -152,16 +248,25 @@ still run through the legacy service, which has no concept of an owning group. V
 
 ### Two new creation routes
 
-Upload and import each need one new route and one new service. Neither touches the existing
-upload or import code. `POST /v2/datasets/uploads` creates the dataset through the v2 pair,
-computes the same deterministic `origin_path`, and creates the `dataset_upload_log` row in
-one transaction. `POST /v2/datasets/imports` re-checks `origin_path` against the registered
-import sources, then creates through the v2 pair and starts the `integrated` workflow.
+Upload and import each need one new route and one new service, and neither touches the
+existing upload or import code. `POST /v2/datasets/uploads` creates the dataset through the
+v2 pair, computes the same deterministic `origin_path`, and creates the `dataset_upload_log`
+row in one transaction. `POST /v2/datasets/imports` re-checks `origin_path` against the
+registered import sources, then creates through the v2 pair and starts the `integrated`
+workflow.
+
+Upload needs one more read route. The v1 upload-log reads are gated by the RBAC
+`accessControl('datasets')` middleware, and a contributor is not an administrator, so
+`GET /v2/datasets/:id/upload-log` authorizes the same data through the policy engine.
 
 Two small pieces are copied rather than shared. The `origin_path` format and the
 import-source prefix check both sit inline in legacy route bodies rather than in services.
 The format is fixed by data already on disk, so the copies cannot drift in a way that
 matters. Cut-over deletes the legacy copy.
+
+**The workers need no new code.** Import starts a workflow through a v2 route that already
+exists, and upload post-processing is driven by the upload log rather than by the creation
+path.
 
 ### Contribution needs a policy, not a comment
 
@@ -174,19 +279,70 @@ A new `contribute` action resolves this. It reads
 `Policy.or([isDatasetOwningGroupAdmin, isMemberOfContributingGroup])`, and the two v2
 creation routes authorize against it. The rule then lives in the policy engine, where every
 other access decision already lives. `dataset.create` keeps its current meaning, so
-`POST /v2/datasets` is unaffected.
+`POST /v2/datasets` and `POST /v2/datasets/bulk` are unaffected.
 
 ### Choosing the group
 
-`GET /v2/datasets/eligible-owner-groups` answers one question for the stepper: which groups
-may this user own a new dataset in? A platform admin sees every active group, a group admin
-sees the groups they administer, and a member sees groups where `allow_user_contributions`
-is true. Each entry says which of the three rules admitted it. The rules themselves are set
-out in [Design — Dataset Creation and Initial Ownership Assignment](./design.md).
+`GET /v2/datasets/eligible-owner-groups` answers one question for the creation dialog: which
+groups may this user own a new dataset in? A platform admin sees every active group, a group
+admin sees the groups they administer, and a member sees groups where
+`allow_user_contributions` is true. Each entry says which of the three rules admitted it. The
+rules themselves are set out in
+[Design — Dataset Creation and Initial Ownership Assignment](./design.md).
 
-One eligible group auto-assigns and the stepper says which. Several require an explicit
+One eligible group auto-assigns and the dialog says which. Several require an explicit
 choice. None blocks submission with a plain message. The endpoint is the single
-implementation of the three rules, so the UI and the policy cannot disagree.
+implementation of the three rules, so the interface and the policy cannot disagree.
+
+### Where a user starts
+
+Creation begins on the datasets tab of a group or a collection, from the button those tabs
+already carry. The group whose page the user is on is the natural owning group, so it is
+preselected, and a user with one eligible group never sees a group picker at all. Creating
+from a collection also adds the new dataset to that collection.
+
+The two tabs need different treatment. A group's datasets tab has one action, so its button
+opens a chooser offering import or upload. A collection's tab has two unrelated actions:
+adding a dataset that already exists, and creating one. Today a single button labelled "New
+Dataset" opens the add-existing dialog, which is the wrong action under that label.
+
+### What the creation dialogs look like
+
+The screens are drawn in
+[`docs/public/mockups/dataset-creation-screens.html`](/mockups/dataset-creation-screens.html):
+the chooser, both dialogs, the transfer in flight, the panel that replaces the upload page,
+and the refusals each dialog can show.
+
+Both are modals rather than full-page steppers, following the pattern the rest of the v2
+screens use: the component owns its own network calls, loading, and errors, exposes only
+`show` and `hide`, and emits one event when it succeeds. `CollectionCreateModal` is the
+closest existing example, down to the owning-group picker.
+
+The chooser distinguishes the two by where the data already is, rather than by mechanism,
+and states how long each takes. That is the difference a user feels. It also names the owning
+group in its subtitle rather than asking for it, because the user reached it from that
+group's own page.
+
+**Import** asks for a source, a directory under it, a name, a type, and an owning group. The
+directory field is a typeahead over the filesystem route, which only ever serves paths inside
+a registered import source the caller's groups own. Nothing is copied, so the dialog closes
+as soon as the dataset exists.
+
+**Upload** asks for files or a directory, a name, a type, and an owning group. It then does
+three things in order: registers the dataset, hashes the files in the browser, and transfers
+them. Progress belongs on the dataset's own page afterwards rather than in the dialog,
+because verification and the workflow take minutes and nobody should hold a modal open.
+
+The v2 dataset page shows nothing about upload state today, so it gains a surface for it.
+
+### What carries over from the existing screens
+
+The existing import and upload screens are full-page steppers written against the v1
+services, and they are replaced rather than adapted. What survives is logic rather than
+markup: the resumable-transfer loop, the browser-side checksum service, the directory
+typeahead's behaviour, and the vocabulary of upload statuses. The checksum service in
+particular already abstains cleanly when hashing fails, which is the behaviour the
+verification step expects.
 
 ### The watch script
 

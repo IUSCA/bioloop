@@ -87,6 +87,22 @@ Every v2 table that a legacy route writes to needs an answer for the rows v1 pro
 - **`grant`** — a dataset created through v2 gets a seeded grant seating its owning group.
   A legacy dataset gets none, which is consistent: it has no owning group to seat.
 
+## Shared UI components need a v1 story
+
+Some Vue components serve both halves. `components/filebrowser/` is the clearest case: the
+legacy dataset and project pages use it, and so does the v2 `DatasetFilesTab`.
+
+`FileBrowser` already handles this. It takes `listFiles` and `searchFiles` as function props
+that default to the v1 service, so a legacy page passes nothing and behaves as it always did,
+while `DatasetFilesTab` passes the v2 functions. **Extend that pattern rather than forking a
+component or repointing it.** A new prop with a v1 default leaves every legacy caller
+byte-identical in behaviour.
+
+`FileTable`, one level below, does not follow the pattern: it imports the v1 dataset service
+directly and calls `get_file_download_data`. That is why file downloads run through the legacy
+route even on a v2 page, and so are not grant-checked. Giving it a `downloadFileInfo` prop with
+a v1 default closes that hole for v2 without touching v1's path.
+
 ## The cut-over
 
 **Step 1 — stop the legacy routes.** Remove them from `api/src/routes/index.js`. They become
@@ -104,10 +120,48 @@ once no route can write a row without it, and drop the throw from
 
 ### Before step 1 can happen
 
-The legacy routes are still the only way a dataset gets created in production, so v2 has to
-cover all three creation paths first. `POST /v2/datasets` covers the single-dataset case.
-Bulk registration and the upload flow do not have v2 routes yet, and the workers still call
-the legacy endpoints, so they need a coordinated release.
+The legacy routes are still the only way most datasets get created in production, so v2 has
+to cover every creation path first. `POST /v2/datasets` covers the single-dataset case, and
+`POST /v2/datasets/bulk` covers scanned registration. Import and upload do not have v2 routes
+yet.
+
+**Both halves run in parallel until then, and neither is touched to help the other.** The
+legacy steppers, the `/datasets/imports/new` and `/datasets/uploads/new` pages, and the
+routes behind them keep working unchanged while the v2 equivalents are built beside them. A
+user can create a dataset either way, and the two produce rows that differ only in whether an
+owning group and a seeded grant are present.
+
+### What only the cut-over may do
+
+Some fixes the v2 work identifies cannot be applied while v1 is live, because v1 writes the
+same tables. They wait for step 1, and they are listed here so they are not attempted early.
+
+- **A unique constraint on `dataset.origin_path`.** The v2 import service refuses a duplicate
+  in application code. The database cannot enforce it while the legacy routes can still
+  insert one, and nothing has audited whether duplicates already exist.
+- **Per-group dataset names.** `@@unique([name, type, is_deleted])` is global. Scoping it to
+  the owning group requires every legacy row to have one, which is step 2. It also requires
+  the worker archive, bundle, and QC paths to be keyed by dataset id rather than by name;
+  that part is independent and may be done at any time.
+- **Retiring the legacy `exists` route.** `GET /datasets/:type/:name/exists` answers for any
+  name in the system. The v2 dialogs call a scoped endpoint instead, and the legacy route
+  stays until the legacy steppers stop calling it.
+- **Making `import_source.owner_group_id` required.** It is nullable so a source with no
+  group remains reachable through the legacy browse routes.
+- **Retiring the legacy download routes.** `GET /datasets/:id/files/:file_id/download_info`
+  and the bundle equivalent authorize through the old RBAC middleware, so a download taken
+  there is not grant-checked. They stay until the legacy file browser pages stop calling them.
+  The v2 routes enforce the `dataset.download` grant, and shared components reach them through
+  a prop rather than by being repointed.
+- **Restricting `/workflows`.** The global run list requires the v1 `operator` and `admin`
+  roles. At cut-over that becomes a platform-admin check like every other v2 surface.
+- **Fixing `api/src/scripts/delete_datasets.js`.** It hard-deletes datasets and now fails the
+  foreign key, because creating a resource through v2 seeds an owning-group grant and
+  `grant.resource` is `ON DELETE RESTRICT`. The fix is to delete grants first. It is a legacy
+  developer script, so it waits rather than being repaired inside a v2 change.
+
+@see docs/design/groups/dataset-creation.md — What groups break that was safe when everything
+was global
 
 ## Related
 

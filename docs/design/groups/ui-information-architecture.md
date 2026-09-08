@@ -22,7 +22,9 @@ model rather than from per-page judgement.
 Visual mockups of these screens are vendored at
 [`docs/public/mockups/`](https://github.com/IUSCA/bioloop/tree/main/docs/public/mockups) —
 `ui-design.html` is the design spec, and the others show the portal, dashboards, grant
-views, and creation flows. They are snapshots of intent, not of shipped UI.
+views, and creation flows. `dataset-creation-screens.html` covers the import and upload
+dialogs, their in-flight states, and the refusals each one can show. They are snapshots of
+intent, not of shipped UI.
 
 ## Top-level pages
 
