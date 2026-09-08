@@ -18,9 +18,9 @@ function normalize_name(name) {
  * Turns a request body into a Prisma dataset create query.
  *
  * Requires an owning group: v2 refuses to create a dataset no group governs rather than
- * falling back to the quarantine group. The column itself is nullable so the legacy
- * creation paths keep working until cut-over.
- * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
+ * falling back to the seeded quarantine group. The column has a database default naming
+ * that group, which is what keeps the legacy creation paths working; v2 never reaches it.
+ * @see docs/design/groups/dataset-storage.md — What group scoping changed
  */
 const buildDatasetCreateQuery = (data) => {
   const {
@@ -185,6 +185,7 @@ async function createAssociations(pairs) {
 }
 
 module.exports = {
+  normalize_name,
   buildDatasetCreateQuery,
   createDataset,
   bulkCreateDatasets,

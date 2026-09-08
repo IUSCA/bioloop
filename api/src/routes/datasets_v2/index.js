@@ -41,6 +41,53 @@ router.get(
   }),
 );
 
+/**
+ * Is a name free for a new dataset of this type in this group?
+ *
+ * Scoped to one group, and the caller must be permitted to contribute to it, so the answer
+ * says nothing about names any other group holds. The legacy
+ * `GET /datasets/:type/:name/exists` answers for any name in the system and is open to
+ * every `user` role; that is a global existence oracle and this deliberately is not one.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — A3
+ */
+router.get(
+  '/name-available',
+  validate([
+    query('name').isString().trim().notEmpty(),
+    query('type').isIn(config.get('dataset_types')),
+    query('owner_group_id').isUUID(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Whether a dataset name is free within one group'
+    const { name, type, owner_group_id } = req.query;
+
+    const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
+    if (!group) return next(createError.NotFound('Group not found'));
+
+    const decision = await authorizeAction('dataset', 'contribute', {
+      identifiers: { user: req.user?.subject_id, resource: null },
+      policyExecutionContext: req.policyContext,
+      preFetched: {
+        user: req.user,
+        resource: {
+          owner_group_id: group.id,
+          owner_group_allows_contributions: group.allow_user_contributions,
+        },
+        context: { req },
+      },
+    });
+    if (!decision.granted) {
+      return next(createError.Forbidden(
+        `Not permitted to create datasets owned by group ${owner_group_id}`,
+      ));
+    }
+
+    return res.json(await datasetService.isDatasetNameAvailable({ name, type, owner_group_id }));
+  }),
+);
+
 // ── List & search ────────────────────────────────────────────────────────────
 
 // Open to any authenticated user; service-layer ownership filtering is applied separately

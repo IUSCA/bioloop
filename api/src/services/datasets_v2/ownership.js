@@ -1,4 +1,5 @@
 const prisma = require('@/db');
+const { normalize_name } = require('./create');
 
 /**
  * Which groups may own a dataset this user is about to create.
@@ -77,4 +78,45 @@ async function listEligibleOwnerGroups(user) {
     .filter(Boolean);
 }
 
-module.exports = { listEligibleOwnerGroups };
+/**
+ * The owning group's contribution flag, for authorizing against a group that owns nothing
+ * yet. Returns null when the group does not exist or is archived.
+ */
+async function getOwnerGroupForAuthorization(owner_group_id) {
+  return prisma.group.findFirst({
+    where: { id: owner_group_id, is_archived: false },
+    select: { id: true, allow_user_contributions: true },
+  });
+}
+
+/**
+ * Is this name free for a new dataset of this type in this group?
+ *
+ * Scoped to one group, and the caller must be permitted to contribute to that group, so it
+ * answers nothing about names held elsewhere. The legacy `GET /datasets/:type/:name/exists`
+ * answers for any name in the system and is open to every `user` role; it is a global
+ * existence oracle and this deliberately is not one.
+ *
+ * The name is normalised the same way creation normalises it, so the answer is about the
+ * name that would actually be stored.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — A3
+ */
+async function isDatasetNameAvailable({ name, type, owner_group_id }) {
+  const normalized_name = normalize_name(name);
+
+  const existing = await prisma.dataset.findFirst({
+    where: {
+      owner_group_id, name: normalized_name, type, is_deleted: false,
+    },
+    select: { id: true },
+  });
+
+  return { available: !existing, normalized_name };
+}
+
+module.exports = {
+  listEligibleOwnerGroups,
+  getOwnerGroupForAuthorization,
+  isDatasetNameAvailable,
+};
