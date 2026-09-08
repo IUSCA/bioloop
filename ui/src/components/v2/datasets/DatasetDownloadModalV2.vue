@@ -111,7 +111,7 @@
 
 <script setup>
 import config from "@/config";
-import datasetService from "@/services/dataset";
+import datasetService from "@/services/v2/datasets";
 import statisticsService from "@/services/statistics";
 import toast from "@/services/toast";
 import { downloadFile, formatBytes } from "@/services/utils";
@@ -133,7 +133,7 @@ const { copy, copied: pathCopied } = useClipboard({ copiedDuring: 2500 });
 const archiveLoading = ref(false);
 
 const hasBundleName = computed(
-  () => !!datasetService.get_bundle_name(props.dataset),
+  () => !!datasetService.getBundleName(props.dataset),
 );
 
 const downloadPath = computed(
@@ -160,8 +160,9 @@ function handleCopyPath() {
 
 const initiate_dataset_download = () => {
   archiveLoading.value = true;
+  // The v2 endpoint enforces the dataset.download grant; the legacy one does not.
   datasetService
-    .get_file_download_data({ dataset_id: props.dataset.id })
+    .getBundleDownloadInfo(props.dataset.resource_id)
     .then((res) => {
       const url = new URL(res.data.url);
       url.searchParams.set("token", res.data.bearer_token);

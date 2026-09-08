@@ -5,6 +5,7 @@
     :show-download="canDownload"
     :list-files="datasetService.listFiles"
     :search-files="datasetService.searchFiles"
+    :download-file-info="datasetService.getFileDownloadInfo"
   />
 
   <VaCard v-else>

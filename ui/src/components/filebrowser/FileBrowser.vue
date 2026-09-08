@@ -26,6 +26,11 @@
           :show-download="props.showDownload"
           :files="files"
           :dataset-id="props.datasetId"
+          v-bind="
+            props.downloadFileInfo
+              ? { downloadFileInfo: props.downloadFileInfo }
+              : {}
+          "
           @search="search_files"
         />
       </va-inner-loading>
@@ -54,6 +59,12 @@ const props = defineProps({
   searchFiles: {
     type: Function,
     default: datasetService.search_files,
+  },
+  // Passed straight through to FileTable. Left undefined so FileTable's own v1 default
+  // applies for legacy callers rather than being overridden with null.
+  downloadFileInfo: {
+    type: Function,
+    default: undefined,
   },
 });
 

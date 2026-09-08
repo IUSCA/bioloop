@@ -171,4 +171,22 @@ export default {
   runWorkflow({ id, workflow_type } = {}) {
     return api.post(`/v2/datasets/${id}/workflows/run/${workflow_type}`);
   },
+
+  /**
+   * List the workflow runs associated with a dataset.
+   * Requires the view_workflows capability; the API returns 403 otherwise.
+   * @param {string} id - dataset resource_id
+   */
+  listWorkflows(id, params = {}) {
+    return api.get(`/v2/datasets/${id}/workflows`, { params });
+  },
+
+  /**
+   * The file name a downloaded bundle is saved as. The last segment of the path the API
+   * serves it from, kept in step with getBundleDownloadPath in the v2 files service.
+   * @see docs/design/groups/dataset-storage.md — Download
+   */
+  getBundleName(dataset) {
+    return `${dataset?.name}.tar`;
+  },
 };

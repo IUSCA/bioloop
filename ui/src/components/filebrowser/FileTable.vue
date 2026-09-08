@@ -103,6 +103,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // Where the download URL and token come from. Defaults to the v1 service so every legacy
+  // caller behaves exactly as before; v2 pages pass the grant-checked v2 endpoint.
+  // @see docs/design/v2-cutover.md — Shared UI components need a v1 story
+  downloadFileInfo: {
+    type: Function,
+    default: ({ id, file_id }) =>
+      datasetService.get_file_download_data({ dataset_id: id, file_id }),
+  },
 });
 
 const emit = defineEmits(["search"]);
@@ -189,11 +197,8 @@ function initiate_file_download(row) {
   // and trigger file download through browser
 
   data_loading.value = true;
-  datasetService
-    .get_file_download_data({
-      dataset_id: props.datasetId,
-      file_id: row.id,
-    })
+  props
+    .downloadFileInfo({ id: props.datasetId, file_id: row.id })
     .then((res) => {
       const url = new URL(res.data.url);
       url.searchParams.set("token", res.data.bearer_token);

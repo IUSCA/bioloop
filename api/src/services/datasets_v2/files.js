@@ -6,6 +6,7 @@ const config = require('config');
 const prisma = require('@/db');
 const FileGraph = require('@/services/fileGraph');
 const authService = require('@/services/auth');
+const logger = require('@/services/logger');
 
 /**
  * Adds files to a dataset.
@@ -330,9 +331,10 @@ async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
     };
   });
 
-  // Log the data access attempt first.
-  // Catch errors to ensure that logging does not get in the way of a token
-  // being returned.
+  // A download that is not recorded is still a download, so a logging failure does not
+  // withhold the token. It is loud, because "downloads are logged" is a claim the audit
+  // trail makes and a silent catch quietly stops it being true.
+  // @see .todo/issues/06-dataset-actions-workflows.md — Decisions taken
   try {
     await prisma.data_access_log.create({
       data: {
@@ -343,7 +345,7 @@ async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
       },
     });
   } catch (e) {
-    // console.log();
+    logger.error(`Unable to record a file download for dataset ${dataset_id}: ${e.message}`);
   }
 
   return val;
@@ -395,9 +397,7 @@ async function getBundleDownloadInfo({ dataset_id, actor_id }) {
     };
   });
 
-  // Log the data access attempt first.
-  // Catch errors to ensure that logging does not get in the way of a token
-  // being returned.
+  // Loud but non-blocking, as above.
   try {
     await prisma.data_access_log.create({
       data: {
@@ -407,7 +407,7 @@ async function getBundleDownloadInfo({ dataset_id, actor_id }) {
       },
     });
   } catch (e) {
-    // console.log();
+    logger.error(`Unable to record a bundle download for dataset ${dataset_id}: ${e.message}`);
   }
 
   return val;
