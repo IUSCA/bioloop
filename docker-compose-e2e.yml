@@ -66,13 +66,18 @@ services:
         condition: service_healthy
 
   postgres:
-    image: postgres:14.5
+    image: postgres:18
     expose:
       - 5432
     ports:
       - 127.0.0.1:5433:5432
     env_file:
       - db/postgres/.env.default # For Postgres connection settings
+    environment:
+      # PostgreSQL 18 moved the image's default PGDATA to
+      # /var/lib/postgresql/<major>/docker. Pinning it back keeps the mount below
+      # working and keeps the path stable across future major upgrades.
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - ./db/postgres/data:/var/lib/postgresql/data # Setting the data to a volume. This is where the postgres data is stored.
       - ./db/postgres/aux_scripts:/opt/sca/scripts # Setting the data to a volume. This is where the postgres data is stored.
@@ -275,12 +280,17 @@ services:
 
   # For ease of startup we just do another postgres container for signet.  You can use the same one as the api if you want, but this is easier to manage.
   signet_db:
-    image: postgres:14.5
+    image: postgres:18
     expose:
       - 5432
     restart: unless-stopped
     env_file:
       - signet/.env.default # For Postgres connection settings
+    environment:
+      # PostgreSQL 18 moved the image's default PGDATA to
+      # /var/lib/postgresql/<major>/docker. Pinning it back keeps the mount below
+      # working and keeps the path stable across future major upgrades.
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - signet_db:/var/lib/postgresql/data
     healthcheck:

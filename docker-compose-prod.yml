@@ -99,12 +99,16 @@ services:
 
 
   postgres:
-    image: postgres:14.5
+    image: postgres:18
     restart: unless-stopped
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # PostgreSQL 18 moved the image's default PGDATA to
+      # /var/lib/postgresql/<major>/docker. Pinning it back keeps the mount below
+      # working and keeps the path stable across future major upgrades.
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - ./db/prod/db_postgres:/var/lib/postgresql/data
       - ./db/postgres/scripts:/docker-entrypoint-initdb.d
@@ -118,7 +122,7 @@ services:
 
   # sudo docker compose -f "docker-compose-prod.yml" run --rm pgbackup
   pgbackup:
-    image: postgres:14.5
+    image: postgres:18
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}

@@ -68,6 +68,7 @@ db/backups/*.sql
 db/backups/*.psql
 db/db_postgres
 db/postgres/data/
+db/postgres/data.pg14.bak
 db/mongo/data
 
 # Local (non-docker) dev data root: worker landing dirs, import drops, uploads.
