@@ -48,6 +48,9 @@ const MUTATING_ACTIONS = new Set([
 
   // dataset
   'dataset.create',
+  // Ingestion into a group. Mutating, so an archived group accepts no new datasets by
+  // either route: a group under restriction should not keep growing.
+  'dataset.contribute',
   'dataset.edit_metadata',
   'dataset.edit',
   'dataset.archive',

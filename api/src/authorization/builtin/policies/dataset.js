@@ -51,6 +51,25 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
   evaluate: (user, dataset) => user.oversight_group_ids.includes(dataset.owner_group_id),
 });
 
+/**
+ * User is an ordinary member of the owning group, and that group accepts contributions.
+ *
+ * Membership is effective rather than direct, so a member of a descendant group counts, the
+ * same way `isGroupMember` treats it. This is the only policy that lets somebody who is not
+ * an admin put a dataset into a group.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — A1
+ */
+const isDatasetOwningGroupContributor = new DatasetPolicy({
+  name: 'isDatasetOwningGroupContributor',
+  requires: {
+    user: ['effective_group_ids'],
+    resource: ['owner_group_id', 'owner_group_allows_contributions'],
+  },
+  evaluate: (user, dataset) => dataset.owner_group_allows_contributions === true
+    && user.effective_group_ids.includes(dataset.owner_group_id),
+});
+
 // ============================================================================
 // GRANT-BASED POLICIES
 // These are derived strictly from the presence of a durable grant row.
@@ -117,12 +136,21 @@ datasetPolicies
 
     // ------------------------------------------------------------------
     // CREATION
-    // Group admins can create datasets owned by their group.
-    // Normal users cannot create datasets directly — they contribute via
-    // the upload pathway which is gated by group.allow_user_contributions
-    // and enforced at the service layer, not the policy layer.
+    // `create` is the governance action: only the owning group's admins.
+    //
+    // `contribute` is the ingestion action, and it is what the import and
+    // upload routes check. It additionally admits an ordinary member of a
+    // group that has allow_user_contributions set. The rule used to be
+    // described as service-layer, and nothing enforced it anywhere; it lives
+    // in the engine now, with every other access decision.
+    // @see docs/design/groups/dataset-creation-plan.md — A1
     // ------------------------------------------------------------------
     create: isDatasetOwningGroupAdmin,
+
+    contribute: Policy.or([
+      isDatasetOwningGroupAdmin,
+      isDatasetOwningGroupContributor,
+    ]),
 
     // ------------------------------------------------------------------
     // EXISTENCE / METADATA VISIBILITY
