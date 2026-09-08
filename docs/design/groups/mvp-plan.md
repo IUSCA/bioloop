@@ -104,17 +104,34 @@ sentinels now carry a `ffffffff` prefix, which the generator can never produce. 
 migration was corrected in place rather than by a follow-up, because it had run nowhere
 but a disposable development database.
 
-## Phase 4 — Access type implication
+## Phase 4 — Access type implication — **done**
 
 Implements [decision 7](./decisions.md#_7-access-types-imply-one-another).
 Resolves deviation 3.
 
-- Seed an implication table over the existing access types.
-- Compute the transitive closure once at startup and cache it.
-- Apply the closure where grant access types are resolved, which is the single choke point
-  both the policy engine and the direct grant checks pass through.
-- Tests: the graph is acyclic, every seeded access type appears in it, a download grant
-  satisfies a metadata check, and the closure is not recomputed per request.
+- `grant_access_type_implication` holds the order as ten edges over the twelve existing
+  access types. The rows are seeded from `GRANT_ACCESS_TYPE_IMPLICATIONS`, alongside the
+  access types they reference.
+- `services/grants/accessTypeClosure.js` builds the transitive closure once per process
+  and caches it. Startup builds it eagerly, so a cyclic graph stops the process rather
+  than one request, and anything outside the server builds it on first use.
+- The closure is read in both directions at the two places grant access types are
+  resolved. `userHasGrant` widens the *requirement*, so a check for `VIEW_METADATA` also
+  matches a grant of `DOWNLOAD`, in one query. `getGrantAccessTypesForUser` widens the
+  *holding*, so a user granted `DOWNLOAD` is reported as having `LIST_FILES` and
+  `VIEW_METADATA` too.
+- Tests: the graph is acyclic, every seeded access type appears in it, the seeded rows
+  match the constant, the closure is the same cached object on a second call, a download
+  grant satisfies a metadata check but not a compute check, and a user with no grant is
+  unaffected.
+
+**Deviation 3 is resolved as "file listing is the read plane."** There is no
+`DATASET:READ_DATA` access type. The `read_data` policy action checks `DATASET:LIST_FILES`
+on purpose rather than as a stand-in, and the order carries the rest: `DOWNLOAD`,
+`COMPUTE`, and `REMOTE_ACCESS` all imply `LIST_FILES`. Decision 7's original diagram
+included `READ_DATA` and has been corrected. This also settles `.todo` L1 T6.
+
+Nobody's effective access narrowed. The order only widens what a grant satisfies.
 
 ## Phase 5 — Restriction layer and archiving
 

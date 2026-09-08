@@ -174,6 +174,11 @@ datasetPolicies
     // Structural access (admin, oversight) does NOT confer data access.
     // Oversight is read-only over governance metadata — not data-plane.
     // ------------------------------------------------------------------
+    // File listing is the read plane. There is no DATASET:READ_DATA access type, and this
+    // checks DATASET:LIST_FILES on purpose rather than as a stand-in for one. The access
+    // type order carries the rest: DOWNLOAD, COMPUTE, and REMOTE_ACCESS all imply
+    // LIST_FILES, so any of them satisfies this check.
+    // @see docs/design/groups/decisions.md — 7. Access types imply one another
     read_data: Policy.or([
       isPlatformAdmin,
       isDatasetOwningGroupAdmin,

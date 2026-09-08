@@ -21,9 +21,10 @@ Run everything from `api/`.
    rather than generating one.
 5. **Read what it printed.** If it says it *created* a migration as well as applying yours,
    the schema and the database still disagree and Prisma has written SQL to close the gap.
-   That SQL is usually wrong — see "Prisma reads a database default as drift" below. Delete
-   the generated directory, fix the schema so it describes what the database actually has,
-   and reset rather than layering a correction on top.
+   That SQL is usually wrong. Delete the generated directory, fix the schema so it
+   describes what the database actually has, and reset rather than layering a correction on
+   top. The two causes seen here are a client-side default Prisma wants to drop and a
+   default written with different parenthesisation; both are below.
 6. `npx prisma generate`.
 7. **Restart the API before anything else touches it** — see the crash below.
 
@@ -76,6 +77,36 @@ field, so the rename has to come first.
 `prisma/seed.js` used `upsert({ where: { group_id_user_id: ... } })`. Dropping the composite
 primary key breaks seeding, which only surfaces at the end of a reset. `createMany({ data,
 skipDuplicates: true })` works against a partial unique index and is the smaller change.
+
+## Lookup rows come from the seed, not from a migration
+
+`grant_access_type`, `grant_preset`, and the roles are populated by `prisma/seed.js`, which
+runs **after** every migration. A migration that inserts into a table joined against one of
+those writes nothing, silently, because the table it joins to is still empty at that point.
+
+The symptom is a migration that applies without error and leaves the table empty. Check the
+row count after a reset rather than assuming the `INSERT` worked.
+
+Put new lookup data in `constants.js` next to `GRANT_ACCESS_TYPES`, seed it in `seed.js`
+right after the rows it references, and let the migration create only the table. A test
+asserting the seeded rows match the constant catches the two drifting apart.
+
+## Prisma's rendering of a database default has to match Postgres exactly
+
+`@default(dbgenerated("gen_random_uuid()::text"))` and the column default Postgres reports,
+`(gen_random_uuid())::text`, are the same expression written differently, and Prisma treats
+the difference as drift. Every `migrate dev` then generates a migration that sets the
+default to what it already is.
+
+Copy the parenthesisation from the database:
+
+```
+\d group_user            -- or: select column_default from information_schema.columns ...
+```
+
+To confirm no drift is left, `migrate reset` and then
+`npx prisma migrate dev --name drift_check --create-only`. A file containing
+`-- This is an empty migration.` means the schema and the database agree; delete it.
 
 ## Sentinel ids have to be real UUIDs
 

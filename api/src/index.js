@@ -18,6 +18,7 @@ const config = require('config');
 const app = require('./app');
 const logger = require('./services/logger');
 const { validateGrantAccessTypes } = require('./scripts/validateGrantAccessTypes');
+const { getAccessTypeClosure } = require('./services/grants/accessTypeClosure');
 const { registerHandlers } = require('./notification/notificationBus');
 const { closeAllQueues } = require('./notification/queue/queues');
 
@@ -36,6 +37,10 @@ const host = config.get('express.host');
 
 async function init() {
   await validateGrantAccessTypes();
+  // Build the access-type closure before serving, so the first request does not pay for it
+  // and a cyclic graph stops the process rather than one request.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  await getAccessTypeClosure();
 
   const server = app.listen(port, () => {
     const end = performance.now();

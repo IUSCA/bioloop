@@ -19,7 +19,9 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
-const { GRANT_ACCESS_TYPES, GRANT_PRESETS, UNASSIGNED_DATASETS_GROUP_ID } = require('../src/constants');
+const {
+  GRANT_ACCESS_TYPES, GRANT_ACCESS_TYPE_IMPLICATIONS, GRANT_PRESETS, UNASSIGNED_DATASETS_GROUP_ID,
+} = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
 
 const prisma = new PrismaClient();
@@ -400,6 +402,18 @@ async function main() {
       create: gat,
     })),
   );
+
+  // upsert the access type partial order. Has to follow the access types themselves, since
+  // the edges are written by name and resolved to ids here.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  const accessTypeIdByName = new Map(GRANT_ACCESS_TYPES.map((gat) => [gat.name, gat.id]));
+  await prisma.grant_access_type_implication.createMany({
+    data: GRANT_ACCESS_TYPE_IMPLICATIONS.map(([implying, implied]) => ({
+      implying_id: accessTypeIdByName.get(implying),
+      implied_id: accessTypeIdByName.get(implied),
+    })),
+    skipDuplicates: true,
+  });
 
   // upsert grant presets
   await Promise.all(

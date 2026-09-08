@@ -277,6 +277,34 @@ const GRANT_ACCESS_TYPES = [
   },
 ];
 
+// The partial order over access types. Each pair reads "implying implies implied": holding
+// the first satisfies any check for the second. Evaluation closes over these transitively,
+// so DOWNLOAD satisfies VIEW_METADATA through LIST_FILES without an edge between them.
+//
+// Seeded into grant_access_type_implication. The engine reads the table, never this list,
+// so adding an access type means a migration rather than a code change.
+//
+// File listing is the read plane: there is no DATASET:READ_DATA, and the dataset
+// `read_data` policy action checks DATASET:LIST_FILES on purpose.
+// @see docs/design/groups/decisions.md — 7. Access types imply one another
+const GRANT_ACCESS_TYPE_IMPLICATIONS = [
+  // Any way of using the bytes implies being able to see what the bytes are.
+  ['DATASET:DOWNLOAD', 'DATASET:LIST_FILES'],
+  ['DATASET:COMPUTE', 'DATASET:LIST_FILES'],
+  ['DATASET:REMOTE_ACCESS', 'DATASET:LIST_FILES'],
+
+  // Anything you can do to a dataset implies knowing the dataset exists.
+  ['DATASET:LIST_FILES', 'DATASET:VIEW_METADATA'],
+  ['DATASET:VIEW_SENSITIVE_METADATA', 'DATASET:VIEW_METADATA'],
+  ['DATASET:REQUEST_ACCESS', 'DATASET:VIEW_METADATA'],
+  ['DATASET:LIST_DERIVED_DATASETS', 'DATASET:VIEW_METADATA'],
+  ['DATASET:LIST_SOURCE_DATASETS', 'DATASET:VIEW_METADATA'],
+
+  // The same shape one level up, for collections.
+  ['COLLECTION:LIST_CONTENTS', 'COLLECTION:VIEW_METADATA'],
+  ['COLLECTION:REQUEST_ACCESS', 'COLLECTION:VIEW_METADATA'],
+];
+
 const GRANT_PRESETS = [
   {
     id: 1,
@@ -332,6 +360,7 @@ module.exports = {
   SYSTEM_PRINCIPAL_GROUP_IDS,
   UNASSIGNED_DATASETS_GROUP_ID,
   GRANT_ACCESS_TYPES,
+  GRANT_ACCESS_TYPE_IMPLICATIONS,
   GRANT_PRESETS,
   JWT_COOKIE_NAME,
   GRAFANA_COOKIE_NAME,

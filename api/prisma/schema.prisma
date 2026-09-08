@@ -549,7 +549,7 @@ model group_user {
   // gen_random_uuid() in the database, not uuid() in the client: raw SQL INSERTs on this
   // table would otherwise violate NOT NULL. Declared as dbgenerated so Prisma does not
   // read the database default as drift and generate a migration dropping it.
-  id          String            @id @default(dbgenerated("gen_random_uuid()::text"))
+  id          String            @id @default(dbgenerated("(gen_random_uuid())::text"))
   group_id    String
   user_id     String
   role        GROUP_MEMBER_ROLE @default(MEMBER)
@@ -641,7 +641,7 @@ model collection_dataset {
   // gen_random_uuid() in the database, not uuid() in the client: raw SQL INSERTs on this
   // table would otherwise violate NOT NULL. Declared as dbgenerated so Prisma does not
   // read the database default as drift and generate a migration dropping it.
-  id            String    @id @default(dbgenerated("gen_random_uuid()::text"))
+  id            String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   collection_id String
   dataset_id    String
   added_at      DateTime  @default(now()) @db.Timestamp(6)
@@ -758,8 +758,29 @@ model grant_access_type {
   grants               grant[]
   access_request_items access_request_item[]
   presets              grant_preset_item[]
+  implies              grant_access_type_implication[] @relation("implying")
+  implied_by           grant_access_type_implication[] @relation("implied")
 
   @@unique([name])
+}
+
+/// The partial order over access types. A row reads "implying implies implied": holding
+/// implying satisfies any check for implied. Evaluation closes over the table transitively
+/// and caches the result, so DATASET:DOWNLOAD satisfies DATASET:VIEW_METADATA through
+/// DATASET:LIST_FILES with no edge between them.
+///
+/// Seeded, and effectively immutable after initial config. The graph must stay acyclic;
+/// a test asserts that.
+/// @see docs/design/groups/decisions.md — 7. Access types imply one another
+model grant_access_type_implication {
+  implying_id Int
+  implied_id  Int
+
+  implying grant_access_type @relation("implying", fields: [implying_id], references: [id], onDelete: Cascade)
+  implied  grant_access_type @relation("implied", fields: [implied_id], references: [id], onDelete: Cascade)
+
+  @@id([implying_id, implied_id])
+  @@index([implied_id])
 }
 
 // Platform-seeded, effectively immutable after initial config.

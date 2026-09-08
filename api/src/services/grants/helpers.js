@@ -6,6 +6,7 @@ const createError = require('http-errors');
 
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const prisma = require('@/db');
+const accessTypeClosure = require('./accessTypeClosure');
 
 // The system principals every user belongs to, as a SQL VALUES-style union arm. A grant to
 // either is honoured for any signed-in user: `Public` is the wider audience of the two, so
@@ -235,7 +236,11 @@ async function getGrantAccessTypesForUser(user_id, resource_id, resource_type) {
 
   // console.log(sql.sql, sql.values); // log the generated SQL and values for debugging
   const results = await prisma.$queryRaw(sql);
-  return new Set(results.map((r) => r.access_type));
+
+  // Widen the holding: somebody granted DATASET:DOWNLOAD also has DATASET:LIST_FILES and
+  // DATASET:VIEW_METADATA, and the caller is asking what this user can do.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  return accessTypeClosure.expand(results.map((r) => r.access_type));
 }
 
 /**
@@ -249,9 +254,15 @@ async function getGrantAccessTypesForUser(user_id, resource_id, resource_type) {
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,
 }) {
+  // Widen the requirement, not the holding: a check for DATASET:VIEW_METADATA is satisfied
+  // by a grant of DATASET:DOWNLOAD, so the SQL filter asks for every type that implies one
+  // of the requested ones. One query, no extra round trip.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  const satisfying = await accessTypeClosure.satisfiedBy(access_types);
+
   const sql = resource_type === RESOURCE_TYPE.COLLECTION
-    ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types', access_types })
-    : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types });
+    ? userCollectionsQuery(user_id, resource_id, { return_type: 'access_types', access_types: satisfying })
+    : userDatasetsQuery(user_id, resource_id, { return_type: 'access_types', access_types: satisfying });
 
   // console.log(sql.sql, sql.values); // log the generated SQL and values for debugging
   const results = await prisma.$queryRaw(sql);
@@ -354,6 +365,7 @@ async function assertGrantItemsApplicableToResourceType(tx, resourceType, items)
 
 module.exports = {
   userHasGrant,
+  ...accessTypeClosure,
   // grants to a user for a dataset
   getUserDatasetGrants,
   getGrantAccessTypesForUser,

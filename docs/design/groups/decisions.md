@@ -166,8 +166,17 @@ rather than to design for speculatively now.
 closes over it.
 
 ```
-DOWNLOAD   → READ_DATA → LIST_FILES → VIEW_METADATA
-VIEW_SENSITIVE_METADATA → VIEW_METADATA
+DOWNLOAD ──────────────┐
+COMPUTE ───────────────┼──> LIST_FILES ──┐
+REMOTE_ACCESS ─────────┘                 │
+                                         v
+VIEW_SENSITIVE_METADATA ───────> VIEW_METADATA
+REQUEST_ACCESS ────────────────────────^
+LIST_DERIVED_DATASETS ─────────────────^
+LIST_SOURCE_DATASETS ──────────────────^
+
+COLLECTION:LIST_CONTENTS ──> COLLECTION:VIEW_METADATA
+COLLECTION:REQUEST_ACCESS ─────────────^
 ```
 
 Nothing previously stopped a grant of `DATASET:DOWNLOAD` without
@@ -176,9 +185,16 @@ Presets hid this at issue time, but a hand-issued grant sidestepped them, and ed
 preset never repaired grants already issued. A preset is a convention; an order is an
 invariant.
 
-It also makes an existing hack honest. `read_data` was implemented as
+It also settles what `read_data` means. That action was implemented as
 `userHasGrant('DATASET:LIST_FILES')` inside a policy file, with no `DATASET:READ_DATA` type
-seeded — an implication written by hand where nobody would find it.
+seeded, and it was unclear whether that was the intent or a leftover. **File listing is the
+read plane.** No `DATASET:READ_DATA` type is added; the check on `DATASET:LIST_FILES` is
+deliberate, and the order supplies what the hand-written implication was standing in for,
+since every way of using the bytes implies being able to see what the bytes are.
+
+An earlier draft of this decision put `READ_DATA` between `DOWNLOAD` and `LIST_FILES`. That
+would have narrowed access for anyone holding only `LIST_FILES`, since implication travels
+one way, and it added a concept for no gain. The diagram above is the order as built.
 
 Three constraints:
 

@@ -53,6 +53,7 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | Audit | `authorization_audit` (monthly partitions) | `routes/audit.js` | `services/audit.js`, `authorization/builtin/audit/` | `pages/v2/audit-logs.vue` |
 | ABAC engine | — | `authorize()` middleware | `authorization/core/`, `authorization/builtin/policies/` | capability flags on responses |
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
+| Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 
@@ -141,6 +142,22 @@ Every route still requires authentication, so a grant to `Public` reaches the sa
 as one to `Authenticated Users` today. Serving pages to people who are not signed in is
 separate work and is not started.
 
+### Access types imply one another
+
+`grant_access_type_implication` holds a partial order over the twelve access types as ten
+edges, seeded from `GRANT_ACCESS_TYPE_IMPLICATIONS` in `constants.js`.
+`services/grants/accessTypeClosure.js` builds the transitive closure once per process and
+caches it; startup builds it eagerly, so a cyclic graph stops the process rather than one
+request.
+
+The closure is read in both directions at the two places access types are resolved.
+`userHasGrant` widens the requirement, so a check for `VIEW_METADATA` matches a grant of
+`DOWNLOAD` within the same query. `getGrantAccessTypesForUser` widens the holding, so a
+user granted `DOWNLOAD` is reported as also having `LIST_FILES` and `VIEW_METADATA`.
+
+The order only widens what a grant satisfies. Restrictions, when they arrive, only narrow;
+the two are kept apart on purpose.
+
 ## Deviations
 
 Places where the code and the design disagree. Each is a decision to make, not
@@ -165,13 +182,19 @@ that reactivating governance authority is platform-admin-only. The route at
 [api/src/routes/groups.js:316](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L316) authorizes with
 `'group', 'archive'` instead, so **any group admin can unarchive their own group.**
 
-### 3. `dataset.read_data` checks the wrong access type
+### 3. `dataset.read_data` checks the wrong access type — **resolved**
 
 [dataset.js](https://github.com/IUSCA/bioloop/blob/main/api/src/authorization/builtin/policies/dataset.js) implements
 `read_data` as `userHasGrant('DATASET:LIST_FILES')`. There is no `DATASET:READ_DATA`
 access type seeded, so `read_data` and `list_files` are currently the same permission.
 Either intentional (file listing *is* the read plane today) or a leftover — worth a
 decision before more actions depend on it.
+
+**Resolved as intentional.** File listing is the read plane. No `DATASET:READ_DATA` type is
+added, the check is deliberate rather than a stand-in, and the access type order supplies
+what the hand-written implication was standing in for: `DOWNLOAD`, `COMPUTE`, and
+`REMOTE_ACCESS` all imply `LIST_FILES`. See
+[decision 7](./decisions.md#_7-access-types-imply-one-another).
 
 ---
 
