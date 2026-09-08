@@ -36,6 +36,62 @@ Take a screenshot afterwards to confirm the thing looks right, but let the numbe
 the claim. A screenshot led to one wrong conclusion this way: three panels looked like
 three different dark surfaces and measured identical.
 
+### A `va-select` cannot be driven by clicks or keys
+
+This is the single biggest time sink when exercising a v2 form from the MCP browser.
+`va-select` ignores a synthetic click on its rendered option, and it ignores ArrowDown
+plus Enter after the listbox opens. The `take_snapshot` a11y tree does not enumerate the
+options either, so there is nothing to pass to the `click` tool. Every combination of
+`pointerdown`/`mousedown`/`pointerup`/`mouseup`/`click` dispatched at the option's centre
+was tried and none of them changed the bound value.
+
+Reach the component instance instead and set its state:
+
+```js
+() => {
+  let c = document.querySelector('.va-modal').__vueParentComponent;
+  while (c && c.type?.__name !== 'ImportDatasetModal') c = c.parent;
+  window.__imp = c;                      // keep the handle for later calls
+  return Object.keys(c.setupState);      // the refs `<script setup>` exposed
+}
+```
+
+`setupState` is a proxy that unwraps refs, so assign the plain value —
+`c.setupState.form.sourceId = 2`, never `.value = 2`, which throws because the property
+is already unwrapped. Walk `c.subTree` recursively to reach a child component such as
+`OwnerGroupSelect`, and set its `selectedId` the same way. The component's own watchers
+then fire, so everything downstream — availability checks, `canSubmit`, emitted events —
+runs exactly as it would for a real click.
+
+Plain `<input>` elements are fine and take the `fill` tool. When `fill` is not available,
+go through the native value setter so Vue's listener sees the change:
+
+```js
+const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+setter.call(input, 'RUN_UI');
+input.dispatchEvent(new Event('input', { bubbles: true }));
+```
+
+Buttons rendered by the app respond to a plain `.click()`, including the suggestion
+buttons in a typeahead list.
+
+### A stale JWT fails as a foreign key, not as a 401
+
+After `prisma migrate reset` the seeded users get new `subject_id` values, and the browser
+is still holding a token minted against the old ones. `authenticate` verifies the
+signature and trusts the payload, so the request is authorized and then dies inside the
+write on `grant_granted_by_fkey`, surfacing as a 409 reading "Request could not be
+processed due to a constraint violation". Nothing in the response names the session.
+
+Navigate to `https://localhost/dev-login`, which logs in and redirects on its own, then
+confirm the new token before retrying:
+
+```js
+() => JSON.parse(atob(localStorage.getItem('token').split('.')[1])).profile.subject_id
+```
+
+It is filed as T9 in `.todo/local/L1-authorization-enforcement.md`.
+
 ### Confirm a class actually generated a rule
 
 Tailwind scans source text for complete class names. A class built by interpolation —
