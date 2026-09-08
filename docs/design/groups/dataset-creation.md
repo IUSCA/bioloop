@@ -257,14 +257,13 @@ That is correct rather than broken. `dataset.archive_path` is written once by
 path on tape says what was true when the archive was written, which is the question a recovery
 actually asks.
 
-Two things follow. `dataset` gains `archive_group_key`, stamped beside `archive_path` at
-archive time, so the owning group at the moment of writing is recorded rather than inferred.
-And the bundle carries a manifest as its first member, holding the dataset id, name, type,
-owning group name, `archive_key`, and timestamp. An administrator reading the tape system
-reads facts instead of parsing a filename.
+`dataset` therefore gains `archive_group_key`, stamped beside `archive_path` when the archive
+is written, so the owning group at that moment is recorded rather than inferred. Both columns
+live in the database, and the live system reads them rather than parsing the path.
 
-The manifest goes inside the tar rather than beside it. SDA limits the number of files it
-stores, so a sidecar per archive would halve the number of datasets the system can ever hold.
+Nothing is added to the bundle. It is downloaded by end users, so its contents are published
+to everyone who can read the dataset. The path is what a recovery reads, and it carries the
+group and the name already.
 
 #### Transferring a dataset moves no bytes
 
@@ -301,10 +300,16 @@ Naming the archive `<name>.<id>.tar` keeps one flat directory and is unique, but
 nothing to a person reading the tape system during a recovery, which is the case the naming
 exists for.
 
-A sidecar manifest written next to each archive would let a recovery read facts rather than
-parse a path. SDA limits the number of files it stores, so one sidecar per archive halves the
-number of datasets the system can ever hold. The manifest became the first member of the
-bundle instead, which costs no additional object.
+A manifest recording the dataset id, name, type, and owning group would let a recovery read
+facts rather than parse a path. Neither place it could go works. Written beside the archive it
+costs one extra object per dataset, and SDA limits the number of files it stores, so that
+halves the number of datasets the system can ever hold. Written inside the bundle it reaches
+every downloader, because `stage_dataset` extracts the bundle into the staging directory and
+`setup_dataset_download` symlinks the tar into the download directory.
+
+The path carries the group and the name, which is what a recovery needs. Anything further
+belongs in the tape filename, which is rebuilt as `{name}.{type}.tar` before a user ever sees
+it, and not in the bundle.
 
 #### Order of work
 

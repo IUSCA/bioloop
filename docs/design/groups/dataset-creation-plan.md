@@ -116,12 +116,7 @@ One piece of work, because doing half of it loses data. Three changes:
 4. `dataset` gains `archive_group_key`, stamped from the owning group when the archive is
    written and never recomputed. `archive_path` is already write-once, so this makes the pair
    a complete record of where the bytes went and who owned them at the time.
-5. `make_tarfile` writes a manifest as the **first member** of the bundle, carrying the
-   dataset id, name, type, owning group name, `archive_key`, and archive timestamp. The
-   manifest goes inside the tar rather than beside it, because SDA limits the number of files
-   it holds and a sidecar per archive would halve that budget. `check_files` in
-   `tasks/validate.py` iterates the database's file list and never scans the staged directory
-   for extras, so an added member does not fail validation.
+   Nothing is added to the bundle itself. See *Recovery reads the path* below.
 
 **Order matters.** The paths must carry the group before the constraint is relaxed. Reversed,
 two groups register the same name and the second archive overwrites the first.
@@ -133,8 +128,8 @@ here, for the reasons in
 *Verify:* that `searchDatasetsForUser` still hides `Unassigned Datasets` rows from
 non-admins, which it should, because nobody is a member of that group.
 
-*New:* one migration, two columns, three worker path functions, one manifest member.
-*Untouched:* every v1 route.
+*New:* one migration, two columns, three worker path functions. *Untouched:* every v1 route,
+and the contents of the bundle.
 
 ### A4a — Ownership transfer does not move bytes
 
@@ -158,21 +153,34 @@ nothing and stays on tape forever, because `tasks/delete.py` only ever removes t
 *Note:* no ownership transfer route exists yet. This phase is the rules a transfer must obey,
 written down before one is built.
 
-### A4b — Renames make any path scheme stale, and that is fine
+### A4b — Recovery reads the path, and nothing is added to the bundle
 
-`PATCH /v2/datasets/:id` accepts `body('name')`, and the upload tombstone renames outright, so
-the filename on tape stops matching the dataset's current name. The flat layout has the same
-problem today, and no path scheme fixes it, because anything written to tape records what was
-true when it was written.
+`<archive dir>/<archive_key>/<name>.tar` already answers the two questions a recovery asks:
+which group owned this, and what was it called. Nothing further is written to tape.
 
-That is the correct behaviour rather than a defect, and the in-tar manifest is what makes it
-usable: an administrator reads the archive-time facts from the manifest and correlates them to
-whatever the database now says. Nothing renames objects on tape.
+**The bundle carries no metadata**, because end users download it. `stage_dataset` extracts
+the bundle into the staging directory and `setup_dataset_download` symlinks the tar itself
+into the download directory, so any member added to the bundle appears in the file tree a user
+browses and in the tar they receive. A field that helps an administrator during a recovery
+would be published to everyone who can read the dataset.
 
-The one gap the manifest closes that the path cannot is the mapping from `archive_key` back to
-a group. `archive_key` is immutable, so a group renamed from Genomics Core to Center for
-Genomics keeps archiving under `genomics-core`. The manifest records the group's name at
-archive time, so the directory never has to be re-read as a current fact.
+**Where metadata may go instead is the tape filename**, which no user ever sees. The tape
+object is named by `get_archive_bundle_name` as `{name}.tar`, while `get_bundle_staged_path`
+and `get_bundle_download_path` both rebuild it as `{name}.{type}.tar`. Staging renames the
+file on the way in. If machine correlation to a database row is ever wanted, the dataset id
+belongs there and nowhere else.
+
+**Renames make the path stale, and that is correct.** `PATCH /v2/datasets/:id` accepts a new
+name and the upload tombstone renames outright, so the filename on tape stops matching the
+current name. Anything written to tape records what was true when it was written. The live
+system never reads the path back; it reads `archive_path` and `archive_group_key` from the
+database.
+
+The one thing the path cannot carry is the mapping from `archive_key` to the group's current
+name. `archive_key` is immutable, so a group renamed from Genomics Core to Center for Genomics
+keeps archiving under `genomics-core`. An administrator recovering from a total database loss
+reads the older name. That is a legibility cost with no data loss, and it is accepted rather
+than solved.
 
 ### A5 — The owning-group picker
 
