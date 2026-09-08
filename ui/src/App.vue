@@ -8,10 +8,19 @@
     By default, the component is not unmounted, only the props change and the setup code is not run again.
   -->
     <RouterView :key="$route.path" />
+
+    <!--
+      Outside RouterView on purpose. RouterView remounts on every path change, so a transfer
+      indicator inside a page would vanish the moment the user navigated — which is the very
+      thing uploads are meant to survive. The store holds the transfers; this only shows them.
+      @see docs/design/groups/dataset-creation-plan.md — C3
+    -->
+    <UploadTray v-if="auth.loggedIn" />
   </va-inner-loading>
 </template>
 
 <script setup>
+import UploadTray from "@/components/v2/datasets/create/UploadTray.vue";
 import router from "@/router";
 import envService from "@/services/env";
 import { useAuthStore } from "@/stores/auth";
