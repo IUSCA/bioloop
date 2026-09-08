@@ -153,20 +153,39 @@ A dataset that reaches `REGISTERED` and stops means the API could not start the 
 check the rhythm port. A dataset that never appears means the watch script is polling a
 placeholder path; check `APP_ENV`.
 
+## Tests
+
+```
+cd workers
+poetry install --with dev                       # pytest is in the dev group
+poetry run pytest tests/upload                  # 8 unit tests, needs nothing running
+poetry run pytest tests/watch -m "not slow"     # 5 integration tests, ~1s
+poetry run pytest tests/watch -m slow           # full integrated workflow, ~20s
+```
+
+`tests/watch` drives the real `Register` and `Observer` from `workers/scripts/watch.py`,
+publishes to the real queue, and asserts on what the API and rhythm recorded. It does not
+start a worker of its own: it needs one already subscribed to `<app_id>.q`, which is the
+pm2 `celery_worker`. There used to be a `tests/scripts/start_worker.sh` that started a
+second worker on that same queue with a different task registry. Do not bring that back —
+two workers on one queue split the tasks between them at random.
+
+Each test creates its isolation directory as `_testObservedPath_<uuid>` inside the same
+`source_dir` the long-running pm2 `watch` process polls. That prefix is in the `rejects`
+list of `dev.py` and `docker.py`, which is the only thing stopping `watch` from
+registering the test's datasets as real ones. Keep it there.
+
+`tests/register_ondemand` holds nine standalone scripts, not pytest tests, and
+`pytest.ini` excludes the directory with `norecursedirs`. See the README beside them.
+
 ## Traps
 
-**`poetry run pytest` runs the wrong pytest.** The dev dependency group is not installed by
-a plain `poetry install`, so no pytest exists in `workers/.venv`. `poetry run` then falls
-through to whatever is on PATH, which on this machine is conda's pytest, which cannot import
-the venv's packages. The failure reads as twelve collection errors saying
-`No module named 'glom'` and looks like a broken checkout. Install the group first:
-
-```
-poetry install --with dev
-```
-
-Note that group pulls jupyterlab and diagrams. The suite is written to run against the
-docker services in any case; `pytest.ini` says so.
+**`poetry run pytest` can run the wrong pytest.** A plain `poetry install` skips the dev
+group, so no pytest exists in `workers/.venv`. `poetry run` then falls through to whatever
+is on PATH — conda's pytest here — which cannot import the venv's packages. The failure
+reads as a dozen collection errors saying `No module named 'glom'` and looks like a broken
+checkout. Run `poetry install --with dev`, or install just what the suite needs
+(`pytest`, `pytest-timeout`, `pytest-asyncio`) to avoid pulling jupyterlab and diagrams.
 
 **pm2 and the celery pid file.** The deployed `ecosystem.config.js` passes
 `--pidfile celery_worker.pid`, and `workers/bin/entrypoint.sh` clears a stale one before

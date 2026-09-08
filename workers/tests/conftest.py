@@ -1,8 +1,13 @@
 """
 Pytest Configuration and Shared Fixtures
 
-Provides reusable hooks for all worker integration tests.
-Tests run against Docker services (API, Postgres, Redis, Celery).
+Provides reusable hooks for all worker tests.
+
+The unit tests under tests/upload need nothing running. The integration tests under
+tests/watch need the API, Postgres, RabbitMQ, MongoDB, rhythm, and a celery worker
+subscribed to the app's queue. That worker can be the docker `celery_worker` service
+or the pm2 process from workers/ecosystem.dev.config.js; the tests do not care which,
+because they reach it through the queue.
 """
 
 import logging
@@ -11,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-# Log output: pytest.ini log_file + per-run file. Container-only; tests run in Docker only.
+# Log output: pytest.ini log_file + per-run file. /tmp works in the container and on a laptop.
 TEST_LOGS_DIR: Path = Path('/tmp/bioloop_test_logs')
 
 logging.getLogger().setLevel(logging.DEBUG)
@@ -20,7 +25,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    """Send pytest log_file to container /tmp (tests run in Docker only)."""
+    """Send pytest log_file to /tmp, which exists in the container and on a developer machine."""
     log_dir = Path('/tmp/bioloop_test_logs')
     log_dir.mkdir(exist_ok=True)
     config.option.log_file = str(log_dir / 'watch_tests.log')
@@ -30,7 +35,7 @@ def pytest_configure(config: pytest.Config) -> None:
 def pytest_sessionstart(session: pytest.Session) -> None:
     """
     Pytest hook: Add a per-run timestamped FileHandler to the root logger.
-    Log dir is TEST_LOGS_DIR (/tmp in container).
+    Log dir is TEST_LOGS_DIR.
     """
     TEST_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     timestamp: str = datetime.now().strftime('%Y%m%d_%H%M%S')

@@ -30,44 +30,34 @@ How it works:
     This is the deterministic equivalent of one polling cycle in watch.py.
 
 Markers:
-    integration       - requires running Docker stack
+    integration       - requires the surrounding services, not just this process
     watch_script      - tests specific to the watch.py script behavior
-    requires_celery   - Celery worker must be running (workflow tasks are queued)
+    requires_celery   - a celery worker must be subscribed to the app's queue
 
 -------------------------------------------------------------------------------
 Running these tests
 -------------------------------------------------------------------------------
 
-Prerequisites:
-    Docker stack must be running and healthy (api, celery_worker, rhythm, postgres).
+Prerequisites: the API, Postgres, RabbitMQ, MongoDB, rhythm, and a celery worker.
+Natively that is `bin/devserver.sh up api` plus the pm2 processes:
 
-        docker compose up -d
-        docker compose ps       # confirm api, rhythm, signet are healthy
+    cd workers && pm2 start ecosystem.dev.config.js
 
-Run commands (from the repo root, inside the celery_worker container):
+In the container it is `docker compose up -d`. The tests reach the worker through
+the queue, so either one serves.
 
-    # All tests in this file
-    docker compose exec celery_worker pytest tests/watch/test_watch_registration.py
+Run commands, from the workers/ directory:
 
-    # Skip the slow workflow-completion test
-    docker compose exec celery_worker pytest tests/watch/test_watch_registration.py -m "not slow"
+    poetry run pytest tests/watch/test_watch_registration.py
+    poetry run pytest tests/watch -m "not slow"      # skip the workflow-completion test
+    poetry run pytest tests/watch -m slow            # only that test, ~20s
+    poetry run pytest -m "watch_script and not requires_celery"
 
-    # Only the slow test
-    docker compose exec celery_worker pytest tests/watch/test_watch_registration.py -m slow
+    poetry run pytest tests/watch/test_watch_registration.py::test_dataset_type_is_set_correctly
 
-    # Single test
-    docker compose exec celery_worker pytest tests/watch/test_watch_registration.py::TestWatchRegistration::test_observer_creates_dataset_with_correct_attributes
-    docker compose exec celery_worker pytest tests/watch/test_watch_registration.py::test_dataset_type_is_set_correctly
+Inside the container, prefix with `docker compose exec celery_worker`.
 
-    # By marker
-    docker compose exec celery_worker pytest -m watch_script
-    docker compose exec celery_worker pytest -m "watch_script and not requires_celery"
-
-    # From inside the container (after: docker compose exec celery_worker bash)
-    pytest tests/watch/test_watch_registration.py
-    pytest tests/watch/test_watch_registration.py -x -v
-
-Test logs: /tmp/bioloop_test_logs/ in container.
+Test logs: /tmp/bioloop_test_logs/.
 -------------------------------------------------------------------------------
 """
 

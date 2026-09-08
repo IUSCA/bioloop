@@ -175,19 +175,10 @@ def get_dataset(
         }
         r = s.get(f'datasets/{dataset_id}', params=payload)
         r.raise_for_status()
-        dataset = dataset_getter(r.json())
-
-        if include_audit_logs:
-            # Flatten create_method from the creation audit entry onto the dataset
-            # so callers can access dataset['create_method'] directly.
-            create_entry = next(
-                (log for log in (dataset.get('audit_logs') or []) if log.get('action') == 'create'),
-                None,
-            )
-            if create_entry:
-                dataset['create_method'] = create_entry.get('create_method')
-
-        return dataset
+        # create_method is a column on dataset and the API returns it at the top
+        # level. Do not read it off an audit-log entry: dataset_audit has no such
+        # column, so that lookup silently yields None.
+        return dataset_getter(r.json())
 
 
 def get_workflows_for_dataset(

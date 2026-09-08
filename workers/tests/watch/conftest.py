@@ -1,12 +1,17 @@
 """
 Fixtures for watch.py integration tests.
 
-These tests run against real Docker services (API, Postgres, Redis, Celery).
-They test the full Observer -> Register -> API -> Rhythm chain.
+These tests run against real services. They exercise the full
+Observer -> Register -> API -> Rhythm -> Celery chain.
 
 Requirements:
-    - APP_ENV=docker (or equivalent) in workers/.env
-    - Docker stack running: api, postgres, redis, celery worker, rhythm
+    - APP_ENV set in workers/.env: `docker` in the container, `dev` on a laptop
+    - Running: api, postgres, RabbitMQ, MongoDB, rhythm, and a celery worker
+      subscribed to <app_id>.q
+
+The celery worker can be the docker service or the pm2 process from
+workers/ecosystem.dev.config.js. The tests reach it through the queue and do not
+care which one is listening.
 
 Fixture chains
 --------------
@@ -29,9 +34,10 @@ for registered datasets takes the form:
 
     source_dir/_testObservedPath_<uuid>/testDataset_<uuid>
 
-The _testObservedPath_* prefix is listed in the `rejects` config
-(workers/workers/config/docker.py) so the production watch service does not
-auto-register test isolation directories as real datasets.
+The _testObservedPath_* prefix is listed in the `rejects` config of every
+environment module that these tests run under (workers/workers/config/docker.py
+and dev.py), so the long-running watch process does not also register the test
+isolation directories as real datasets. Both processes poll the same source_dir.
 
 Session-level cleanup
 ---------------------
@@ -71,7 +77,7 @@ logger = logging.getLogger(__name__)
 # Override via env var: WATCH_TEST_RECENCY_THRESHOLD=10 poetry run pytest ...
 _RECENCY_THRESHOLD: int = int(os.getenv('WATCH_TEST_RECENCY_THRESHOLD', '5'))
 
-# Container-only path; these tests run in Docker only.
+# /tmp exists both in the worker container and on a developer machine.
 FIXTURES_DIR: Path = Path('/tmp/bioloop_watch_test_fixtures')
 
 # Fixture directory name per dataset type. Created on first use if missing.
@@ -101,8 +107,8 @@ _ensure_fixture_dirs()
 _TEST_DATASET_PREFIX: str = 'testDataset_'
 
 # Prefix for per-test isolation directories inside source_dir.
-# Directories with this prefix are excluded from production watch.py
-# registration (see `rejects` in workers/workers/config/docker.py).
+# Directories with this prefix are excluded from watch.py registration
+# (see `rejects` in workers/workers/config/docker.py and dev.py).
 _TEST_OBSERVED_PATH_PREFIX: str = '_testObservedPath_'
 
 # IDs of every dataset registered by this test session.
@@ -224,7 +230,8 @@ def _watched_dir_gen(dataset_type: str) -> Generator[Path, None, None]:
         logger.warning(
             f'source_dir {source_dir} not found. '
             f'Falling back to {test_session_dir}. '
-            f'Celery tasks that access origin_path may fail outside Docker.'
+            f'Celery tasks that access origin_path will fail: the worker cannot '
+            f'see this path. Check APP_ENV and run setup_dirs.'
         )
 
     test_session_dir.mkdir(parents=True, exist_ok=True)

@@ -286,7 +286,10 @@
     "domcontentloaded",
     "unbookmark",
     "weakcb",
-    "zenodo"
+    "zenodo",
+    "norecursedirs",
+    "subdirs",
+    "virtualenv"
   ],
   "ignorePaths": [
     "**/__pycache__/**",
@@ -329,7 +332,7 @@
     ".claude/",
     ".githooks/",
     ".github",
-    ".gitignore"    
+    ".gitignore"
   ],
   "ignoreRegExpList": [
     "mdi-.*"

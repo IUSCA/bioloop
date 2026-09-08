@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import workers.api as api
 
 from tests.register_ondemand.setup.generate_test_datasets import create_dataset_directory
-from tests.register_ondemand.setup import logs_dir, data_dir
+from tests.register_ondemand.setup import logs_dir, data_dir, workers_root
 
 
 load_dotenv()
@@ -89,7 +89,7 @@ def run_test():
     ]
     
     logger.info(f"Executing command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd='/opt/sca/app')
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(workers_root))
     
     # Log results
     logger.info("Command output:")

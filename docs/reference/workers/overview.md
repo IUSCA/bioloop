@@ -104,43 +104,46 @@ pm2 start ecosystem.config.js
 pm2 save
 ```
 
-## Testing with workers running on local machine
+## Running the workers on a local machine
 
-Start mongo and queue
-
-```bash
-cd <rhythm_api>
-docker-compose up queue mongo -d
-```
-
-Start Workers
+See [Workers (local)](../../guides/workers-local.md) for the full procedure. In short:
+start RabbitMQ, MongoDB, and rhythm, then
 
 ```bash
-python -m celery -A tests.celery_app worker --loglevel INFO -O fair --pidfile celery_worker.pid --hostname 'bioloop-celery-w1@%h' --autoscale=2,1 --queues 'bioloop-dev.sca.iu.edu.q'
+cd workers
+pm2 start ecosystem.dev.config.js
 ```
 
-`--concurrency 1`: number of worker processed to pre-fork
+`ecosystem.dev.config.js` runs `celery_worker`, `watch`, and `manage_upload_workflows`
+against the poetry virtualenv, with paths rooted at the repository's `./data`.
 
-`-O fair`: Optimization profile, disables prefetching of tasks. Guarantees child processes will only be allocated tasks
-when they are actually available.
+The celery flags it passes are worth understanding:
 
-Use `--hostname '<app_name>-celery-<worker_name>@%h'` to distinguish multiple workers running on the same machine either
-for the same app or different apps.
+`-O fair`: optimization profile, disables prefetching of tasks. Guarantees child processes
+will only be allocated tasks when they are actually available.
 
-- replace `<app_name>` with app name (ex: bioloop)
-- replace `<worker_name>` with worker name (ex: w1)
+`--hostname '<app_name>-celery-<worker_name>@%h'` distinguishes multiple workers running on
+the same machine, either for the same app or for different apps.
 
-Auto-scaling - max_concurrency,min_concurrency
-`--autoscale=10,3` (always keep 3 processes, but grow to 10 if necessary).
+- replace `<app_name>` with the app name (ex: bioloop)
+- replace `<worker_name>` with the worker name (ex: w1)
 
-`--queues '<app_name>-dev.sca.iu.edu'` comma separated queue names. worker will subscribe to these queues for accepting tasks.
-Configured in `workers/config/celeryconfig.py` with `task_routes`, `task_default_queue`
+`--autoscale=<max_concurrency>,<min_concurrency>`, so `--autoscale=10,3` always keeps 3
+processes and grows to 10 if necessary.
 
-Run test
+`--queues '<app_id>.q'` is a comma separated list of queue names the worker subscribes to.
+It is configured in `workers/config/celeryconfig.py` with `task_routes` and
+`task_default_queue`, and it must match the API's `app_id`.
+
+### Checking it works
 
 ```bash
-python -m tests.test
+poetry run pytest tests/watch -m "not slow"
 ```
+
+Those tests register a dataset through the real watch code and assert the API and rhythm
+saw it. `-m slow` adds one test that waits for every step of the `integrated` workflow to
+reach SUCCESS.
 
 ## Testing with workers running on COLO node and Rhythm API
 
