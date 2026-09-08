@@ -8,6 +8,18 @@
             <div class="flex-1">
               <Searchbar v-model="searchTerm" placeholder="Search datasets…" />
             </div>
+
+            <!--
+              The group is selectable here, unlike on a group's own page, because this list
+              spans every group the user can reach.
+              @see docs/design/groups/dataset-creation-plan.md — A7
+            -->
+            <VaButton v-if="canCreate" @click="openAddDataset">
+              <div class="flex items-center justify-between gap-2 mx-1">
+                <i-mdi-plus class="text-sm" />
+                New Dataset
+              </div>
+            </VaButton>
           </div>
 
           <!-- Filters -->
@@ -146,12 +158,23 @@
       </VaCardContent>
     </VaCard>
   </div>
+
+  <AddDatasetModal ref="addDatasetModal" @created="fetchDatasets" />
 </template>
 
 <script setup>
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
+import AddDatasetModal from "@/components/v2/datasets/create/AddDatasetModal.vue";
 import DatasetService from "@/services/v2/datasets";
+
+const addDatasetModal = ref(null);
+
+// Whether to offer the button at all. The list of groups the user may create in is fetched
+// by the picker inside the modal; asking here as well would be a second round trip to show
+// or hide one button, so the button is always offered and the picker explains when there is
+// no group to choose. A user with no eligible group sees the reason rather than a dead end.
+const canCreate = ref(true);
 
 const datasets = ref([]);
 const error = ref(null);
@@ -169,6 +192,10 @@ const sortBy = ref("updated_at");
 const sortOrder = ref("desc");
 
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
+
+function openAddDataset() {
+  addDatasetModal.value?.show();
+}
 
 const scopeFilters = [
   { label: "All", value: "all" },

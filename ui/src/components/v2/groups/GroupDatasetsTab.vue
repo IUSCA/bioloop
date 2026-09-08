@@ -163,21 +163,35 @@
       </VaCard>
     </div>
   </VaInnerLoading>
+
+  <!--
+    The owning group is fixed here: the user is on that group's page, so there is nothing to
+    choose. The modal still shows which group it will be.
+    @see docs/design/groups/dataset-creation-plan.md — A7
+  -->
+  <AddDatasetModal
+    ref="addDatasetModal"
+    :group="props.group"
+    @created="onDatasetCreated"
+  />
 </template>
 
 <script setup>
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
+import AddDatasetModal from "@/components/v2/datasets/create/AddDatasetModal.vue";
 import DatasetService from "@/services/v2/datasets";
 import { VaCardContent } from "vuestic-ui/web-components";
 
 const props = defineProps({
   groupId: { type: String, required: true },
+  group: { type: Object, required: false, default: null },
   canCreate: { type: Boolean, required: true },
 });
 
 // const emit = defineEmits(["count-changed"]);
 
+const addDatasetModal = ref(null);
 const datasets = ref([]);
 const error = ref(null);
 const loading = ref(true);
@@ -266,8 +280,13 @@ async function fetchDatasets() {
 }
 
 function navigateToCreateDataset() {
-  // TODO: Route to create dataset page or open modal
-  // For now, this placeholder can be connected to your navigation/modal logic
+  addDatasetModal.value?.show();
+}
+
+function onDatasetCreated() {
+  // An import lands immediately; an upload has only been registered at this point, and its
+  // transfer is reported by the tray. Refetching covers both.
+  fetchDatasets();
 }
 
 function resetFilters() {

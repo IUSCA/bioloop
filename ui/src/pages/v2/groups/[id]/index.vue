@@ -133,6 +133,7 @@
         <GroupDatasetsTab
           v-else-if="activeTab === 'datasets'"
           :group-id="props.id"
+          :group="group"
           :can-create="can('add_dataset') && !group.is_archived"
           @count-changed="handleDatasetsUpdate"
         />
