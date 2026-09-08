@@ -1,13 +1,20 @@
+"""Archive backend backed by SDA, IU's tape system, through the hsi tools.
+
+The interface is mirrored by workers/storage/posix.py; see
+workers/storage/__init__.py for how a backend is chosen. Paths here name
+locations in the SDA namespace, not on the local filesystem.
+"""
+
 from __future__ import annotations
 
 import workers.cmd as cmd
 
 
-def put(local_file: str, sda_file: str, verify_checksum: bool = True):
+def put(local_file: str, archive_file: str, verify_checksum: bool = True):
     """
     Transfer a local file to SDA
 
-    If sda_file exists, it will be overwritten
+    If archive_file exists, it will be overwritten
 
     The checksum algorithms that are used are very CPU-intensive.
     Although the checksum code is compiled with a high level of compiler optimization,
@@ -17,17 +24,17 @@ def put(local_file: str, sda_file: str, verify_checksum: bool = True):
     """
     # -c flag enables checksum creation
     put_cmd = 'put -c on' if verify_checksum else 'put'
-    command = ['hsi', '-P', f'{put_cmd} {local_file} : {sda_file}']
+    command = ['hsi', '-P', f'{put_cmd} {local_file} : {archive_file}']
     return cmd.execute(command)
 
 
-def get_size(sda_path: str):
-    command = ['hsi', '-P', f'ls -s1 {sda_path}']
+def get_size(archive_path: str):
+    command = ['hsi', '-P', f'ls -s1 {archive_path}']
     stdout, stderr = cmd.execute(command)
     return int(stdout.strip().split()[0])
 
 
-def get(sda_file: str, local_file: str, verify_checksum=True):
+def get(archive_file: str, local_file: str, verify_checksum: bool = True):
     """
     Transfer a file from SDA to local disk.
 
@@ -42,12 +49,12 @@ def get(sda_file: str, local_file: str, verify_checksum=True):
     network transfer speed, and speed of the local filesystem.
     """
     get_cmd = 'get -c on' if verify_checksum else 'get'
-    command = ['hsi', '-P', f'{get_cmd} {local_file} : {sda_file}']
+    command = ['hsi', '-P', f'{get_cmd} {local_file} : {archive_file}']
     return cmd.execute(command)
 
 
-def get_hash(sda_path: str, missing_ok: bool = False) -> str | None:
-    command = ['hsi', '-P', f'hashlist {sda_path}']
+def get_hash(archive_path: str, missing_ok: bool = False) -> str | None:
+    command = ['hsi', '-P', f'hashlist {archive_path}']
     try:
         stdout, stderr = cmd.execute(command, encoding_errors='ignore')
         checksum = stdout.strip().split()[0]

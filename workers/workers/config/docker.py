@@ -5,6 +5,11 @@ YEAR = datetime.datetime.now().year
 TEN_MEGABYTES = 10 * 1024 * 1024
 
 config = {
+    # The archive is a directory on the shared data volume. hsi is not
+    # installed in the worker image.
+    'storage': {
+        'backend': 'posix',
+    },
     'paths': {
         'scratch': '/opt/sca/data/scratch',
         'RAW_DATA': {

@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from celery import Celery
 
 import workers.api as api
 import workers.config.celeryconfig as celeryconfig
-import workers.sda as sda
-from workers.config import app_env
+from workers import storage
 
 app = Celery("tasks")
 app.config_from_object(celeryconfig)
@@ -13,17 +10,11 @@ app.config_from_object(celeryconfig)
 
 def delete_dataset(celery_task, dataset_id, **kwargs):
     dataset = api.get_dataset(dataset_id=dataset_id)
-    sda_path = dataset['archive_path']
+    archive_path = dataset['archive_path']
 
-    if app_env == 'docker':
-        # In Docker mode, remote archive storage is not available — delete the
-        # locally-archived file directly.
-        if sda_path:
-            archive_file = Path(sda_path)
-            if archive_file.exists():
-                archive_file.unlink()
-    else:
-        sda.delete(sda_path)
+    # archive_path is null for a dataset that never reached the archive step.
+    if archive_path:
+        storage.delete(archive_path)
 
     # id is appended to name to make it unique (database constraint) to allow new datasets to have this same name
     update_data = {

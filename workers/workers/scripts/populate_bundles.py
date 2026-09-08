@@ -3,7 +3,7 @@ import logging
 import fire
 
 import workers.api as api
-import workers.sda as sda
+from workers import storage
 from workers.config import config
 
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +55,7 @@ class BundleSyncManager:
     def populate_bundle_metadata(self, dataset: dict) -> bool:
         logger.info(f'populating dataset {dataset["id"]}')
 
-        bundle_md5 = sda.get_hash(dataset['archive_path'])
+        bundle_md5 = storage.get_hash(dataset['archive_path'])
         bundle_metadata = {
             'name': f'{dataset["name"]}.tar',
             'size': dataset['du_size'],

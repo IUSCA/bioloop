@@ -76,6 +76,12 @@ config = {
         'poll_interval_seconds': 10,
         'full_scan_every_n_scans': 90  # every 90th scan will be a full scan / full scan every 15 minutes
     },
+    # Backend for the archive tier, resolved by workers/storage/__init__.py.
+    # 'sda' shells out to the hsi command line tools; 'posix' uses ordinary
+    # filesystem calls, for machines where hsi is not installed.
+    'storage': {
+        'backend': 'sda',
+    },
     'service_user': 'bioloopuser',
     'stage': {
         'purge': {

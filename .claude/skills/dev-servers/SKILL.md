@@ -12,6 +12,10 @@ can restart a server and read its logs.
 The user-facing version of this page is
 [docs/guides/dev-servers.md](../../../docs/guides/dev-servers.md).
 
+It does not manage the Python workers. Those are three pm2 processes, and celery, the
+watch script, and the upload cron are covered by
+[.claude/skills/workers-dev](../workers-dev/SKILL.md).
+
 ## Commands
 
 ```

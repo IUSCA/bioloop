@@ -37,9 +37,21 @@ def main(create=False):
         'paths.DATA_PRODUCT.stage',
         'paths.RAW_DATA.upload',
         'paths.DATA_PRODUCT.upload',
+        'paths.RAW_DATA.qc',
         'paths.download_dir',
         'registration.RAW_DATA.source_dir',
-        'registration.DATA_PRODUCT.source_dir'
+        'registration.DATA_PRODUCT.source_dir',
+        'register_ondemand.RAW_DATA.source_dir',
+        'register_ondemand.DATA_PRODUCT.source_dir',
+        # The bundle and archive directories are otherwise created only as a
+        # side effect of running the archive step, so a fresh checkout has
+        # nowhere to write until the first workflow gets that far.
+        'paths.RAW_DATA.bundle.generate',
+        'paths.RAW_DATA.bundle.stage',
+        'paths.DATA_PRODUCT.bundle.generate',
+        'paths.DATA_PRODUCT.bundle.stage',
+        'paths.RAW_DATA.archive',
+        'paths.DATA_PRODUCT.archive',
     ]
 
     keys_dirs = {k: glom(config, k, default=None) for k in keys}

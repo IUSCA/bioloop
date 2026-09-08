@@ -7,6 +7,7 @@ import subprocess
 import time
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from email.message import EmailMessage
 from pathlib import Path
 from queue import Queue
@@ -154,18 +155,51 @@ def execute_old(cmd, cwd=None):
         return p.pid, stdout_lines, p.returncode
 
 
-def total_size(dir_path: Path | str):
+def total_size(dir_path: Path | str) -> int:
+    """Apparent size in bytes of a directory tree, the root directory included.
+
+    This walks the tree in Python rather than shelling out to `du -sb`, whose
+    -b flag is GNU-only and absent from the BSD du on macOS.
+
+    Symlinks are measured, never followed, which is what du does. Unlike du, a
+    file with several hard links is counted once per link; no dataset in this
+    system uses hard links.
+
+    can throw OSError - if dir_path does not exist or cannot be read
     """
-    can throw CalledProcessError
-    can throw IndexError: list index out of range - if the stdout is not in expected format
-    can throw ValueError - invalid literal for int() with base 10 - if the stdout is not in expected format
+    root = Path(dir_path)
+    total = root.lstat().st_size
+    pending = [str(root)]
+
+    while pending:
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                total += entry.stat(follow_symlinks=False).st_size
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(entry.path)
+
+    return total
+
+
+@lru_cache(maxsize=1)
+def tar_supports_sparse() -> bool:
+    """Whether the tar on PATH accepts --sparse.
+
+    GNU tar does; the bsdtar shipped with macOS rejects the option outright and
+    would fail every archive step on a developer machine. The flag only changes
+    how holes in sparse files are stored, and no dataset in this system is
+    sparse, so dropping it costs nothing where it is unavailable.
     """
-    completed_proc = subprocess.run(['du', '-sb', str(dir_path)], capture_output=True, check=True, text=True)
-    return int(completed_proc.stdout.split()[0])
+    probe = subprocess.run(['tar', '--sparse', '--version'],
+                           capture_output=True, text=True)
+    return probe.returncode == 0
 
 
 def tar(tar_path: Path | str, source_dir: Path | str) -> None:
-    command = ['tar', 'cf', str(tar_path), '--sparse', '-C', str(source_dir), '.']
+    command = ['tar', 'cf', str(tar_path)]
+    if tar_supports_sparse():
+        command.append('--sparse')
+    command += ['-C', str(source_dir), '.']
     execute(command)
 
 

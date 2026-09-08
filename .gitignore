@@ -70,6 +70,10 @@ db/db_postgres
 db/postgres/data/
 db/mongo/data
 
+# Local (non-docker) dev data root: worker landing dirs, import drops, uploads.
+# Created by workers/workers/scripts/setup_dirs.py --create=True
+/data
+
 todo.md
 
 .pm2

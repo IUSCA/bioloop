@@ -116,18 +116,22 @@ route yet, so the workers and the upload stepper still call the legacy endpoints
 
 ## What still has to change
 
-Migration `20260908010000_dataset_owner_group_required` made `dataset.owner_group_id`
-`NOT NULL`, which broke all three legacy routes at once — none of them sends an owning
-group. Migration `20260909010000_dataset_owner_group_nullable` reversed it. The requirement
-now sits in the v2 service and route rather than on the column, so the legacy routes work
-and v2 creation still refuses without an owning group.
+None of the three routes records an owning group. They all succeed anyway, because
+`dataset.owner_group_id` is nullable. Migration `20260908010000_dataset_owner_group_required`
+made the column `NOT NULL`, and `20260909010000_dataset_owner_group_nullable` put it back,
+because a constraint only v2 needs cannot sit on a column the legacy routes write. The
+requirement moved up a layer instead: `buildDatasetCreateQuery` in
+`api/src/services/datasets_v2/create.js` throws without an owning group, and
+`POST /v2/datasets` validates it.
+@see docs/design/v2-cutover.md — What v2 requires that the schema does not
 
-A dataset created through a legacy route therefore has no owning group and no seeded grant.
-It is outside the ownership path until somebody assigns one, which is what the archived
-`Unassigned Datasets` group is for. Creation refuses rather than falling back to that group;
-it holds the rows the migration moved, not a resting place for new ones.
+So the gap is not a missing field on the legacy routes. It is that all three creation
+paths still run through the legacy service, which has no concept of an owning group.
+Verified on 2026-09-08: the watch script registered a dataset through `POST /datasets/bulk`
+and the whole `integrated` workflow ran to completion, with `owner_group_id` left null.
 
-Each remaining route needs a different answer to the same question.
+The work is to move each route onto the v2 creation path, `POST /v2/datasets` and
+`bulkCreateDatasets`. Each route needs a different answer to the same question.
 
 **Upload and import** ask the user. The ownership rules are in
 [Design — Dataset Creation and Initial Ownership Assignment](./design.md). A platform
@@ -139,11 +143,8 @@ nothing enforces it.
 
 **The watch script** has no user to ask, so the group has to come from the source. The
 configured directory is the only signal it has, which makes ownership a property of the
-watched location rather than of the run.
-
-Bulk registration and upload each need a v2 route that returns 400 naming
-`owner_group_id` when it is absent. The workers ship separately from the API, so the release
-that requires the field and the release that sends it have to be coordinated.
+watched location rather than of the run. The workers ship separately from the API, so the
+release that requires the field and the release that sends it have to be coordinated.
 
 Two smaller gaps sit alongside this work. The Owner column on `/v2/datasets` is empty for
 every row, because `GET /v2/datasets` never sets the `includes.owner_group` flag its
