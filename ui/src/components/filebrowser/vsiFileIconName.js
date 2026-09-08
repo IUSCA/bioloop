@@ -1349,3 +1349,23 @@ export const vsiFileNamesToIcons = {
   "vercel.json": "zeit",
   ".vercelignore": "zeit",
 };
+
+export function getVsiFileIconName(filename) {
+  const fileName = (filename || "").toLowerCase();
+  const splitName = fileName.split(".");
+
+  while (splitName.length) {
+    const currentName = splitName.join(".");
+
+    if (vsiFileNamesToIcons[currentName]) {
+      return vsiFileNamesToIcons[currentName];
+    }
+    if (vsiFileExtensionsToIcons[currentName]) {
+      return vsiFileExtensionsToIcons[currentName];
+    }
+
+    splitName.shift();
+  }
+
+  return "file";
+}
