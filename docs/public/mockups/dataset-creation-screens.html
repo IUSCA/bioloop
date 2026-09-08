@@ -266,6 +266,21 @@
   .btn-secondary { background: transparent; color: var(--text-muted); border-color: var(--border-hi); }
   .btn-primary.disabled { background: var(--raised); color: var(--text-dim); }
 
+  /* ── BACKGROUND TRANSFER TRAY ──────────────────────────────── */
+  .tray {
+    position: fixed; right: 20px; bottom: 20px; width: 320px; z-index: 60;
+    background: var(--surface); border: 1px solid var(--border-hi);
+    border-radius: var(--radius-lg); box-shadow: 0 18px 44px rgba(0,0,0,.55);
+    overflow: hidden;
+  }
+  .tray-head {
+    display: flex; align-items: center; gap: 9px; padding: 10px 13px;
+    background: var(--panel); border-bottom: 1px solid var(--border); font-size: 12.5px;
+  }
+  .tray-body { padding: 11px 13px; }
+  .tray-row { font-size: 12px; margin-bottom: 7px; }
+  .tray-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+
   /* ── ANNOTATION ────────────────────────────────────────────── */
   .note {
     max-width: 1080px; margin: 0 auto; padding: 0 24px 26px;
@@ -285,9 +300,10 @@
   <button class="nav-btn active" onclick="show('chooser')">1 · Add Dataset</button>
   <button class="nav-btn" onclick="show('import')">2 · Import</button>
   <button class="nav-btn" onclick="show('upload')">3 · Upload</button>
-  <button class="nav-btn" onclick="show('transfer')">4 · Transfer</button>
+  <button class="nav-btn" onclick="show('transfer')">4 · Transfer (background)</button>
   <button class="nav-btn" onclick="show('progress')">5 · After Upload</button>
   <button class="nav-btn" onclick="show('blocked')">6 · Blocked States</button>
+  <button class="nav-btn" onclick="show('listentry')">7 · From /v2/datasets</button>
 </nav>
 
 <!-- ═══ SCREEN 1: THE CHOOSER ═══════════════════════════════════ -->
@@ -493,8 +509,8 @@
         <div class="modal-header-icon mh-violet">⬆</div>
         <div>
           <div class="modal-title">Upload files</div>
-          <div class="modal-sub">Sends files from this computer. Keep the tab open until the
-            transfer finishes; it resumes if the connection drops.</div>
+          <div class="modal-sub">Sends files from this computer. You can close this and keep
+            working — the transfer continues. Reloading the page stops it.</div>
         </div>
       </div>
       <div class="modal-body">
@@ -577,63 +593,55 @@
   </ul>
 </div>
 
-<!-- ═══ SCREEN 4: TRANSFER IN FLIGHT ════════════════════════════ -->
+<!-- ═══ SCREEN 4: TRANSFER RUNS IN THE BACKGROUND ═══════════════ -->
 <div class="screen" id="screen-transfer">
-  <div class="behind">
-    <nav class="topnav">
-      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
-    </nav>
-    <div class="page-content"><div style="height:340px;"></div></div>
+  <nav class="topnav">
+    <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+    <div class="topnav-links">
+      <a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+      <span class="role-badge member">Member</span>
+      <div class="avatar-btn"><div class="avatar" style="background:linear-gradient(135deg,var(--violet),#6d28d9)">R</div> Riya Chandra ▾</div>
+    </div>
+  </nav>
+  <div class="page-content fade-in">
+    <div class="breadcrumb"><span>Datasets</span></div>
+    <h2 style="font-size:19px; font-weight:600; margin-bottom:14px;">Datasets</h2>
+    <div class="toolbar">
+      <div class="search-fake">Search datasets…</div>
+      <button class="btn btn-primary">＋ New Dataset</button>
+    </div>
+    <div class="fake-table">
+      <div class="fake-row head"><span>Name</span><span>Group</span><span>Type</span><span>State</span></div>
+      <div class="fake-row"><span>alignment-summary-q3</span><span>Immunology Lab</span><span>DATA_PRODUCT</span><span style="color:#93c5fd;">Uploading</span></div>
+      <div class="fake-row"><span>cohort-2026-batch-14</span><span>Genomics Core</span><span>RAW_DATA</span><span>Ready</span></div>
+      <div class="fake-row"><span>cohort-2026-batch-13</span><span>Genomics Core</span><span>RAW_DATA</span><span>Ready</span></div>
+      <div class="fake-row"><span>tcell-panel-v2</span><span>Immunology Lab</span><span>RAW_DATA</span><span>Ready</span></div>
+    </div>
+    <div class="callout info" style="margin-top:18px; max-width:64ch;">
+      <span class="callout-icon">ℹ</span>
+      <span>The user closed the upload dialog and navigated here. The transfer kept running,
+        because it lives in a store rather than in the dialog.</span>
+    </div>
   </div>
 
-  <div class="modal-layer">
-    <div class="modal md fade-in">
-      <div class="modal-header">
-        <div class="modal-header-icon mh-violet">⬆</div>
-        <div>
-          <div class="modal-title">Uploading alignment-summary-q3</div>
-          <div class="modal-sub">Keep this tab open. You can close it once the transfer
-            finishes — the rest happens on the server.</div>
-        </div>
+  <div class="tray fade-in">
+    <div class="tray-head">
+      <span style="color:#93c5fd;">⬆</span>
+      <span style="flex:1;">Uploading 1 dataset</span>
+      <span style="color:var(--text-dim); font-size:15px;">⌄</span>
+    </div>
+    <div class="tray-body">
+      <div class="tray-row">alignment-summary-q3</div>
+      <div class="progress-track"><div class="progress-fill" style="width:63%"></div></div>
+      <div class="tray-meta">
+        <span>2 of 3 files · 1.14 / 1.82 GB</span>
+        <span>about 4 min left</span>
       </div>
-      <div class="modal-body">
-        <div class="stage-list" style="margin-bottom:18px;">
-          <div class="stage">
-            <div class="stage-dot done">✓</div>
-            <div><div class="stage-name">Dataset registered</div>
-              <div class="stage-note">Owned by Immunology Lab</div></div>
-            <div class="stage-time">0:01</div>
-          </div>
-          <div class="stage">
-            <div class="stage-dot done">✓</div>
-            <div><div class="stage-name">Checksums computed</div>
-              <div class="stage-note">BLAKE3, in this browser, so the server can prove nothing changed</div></div>
-            <div class="stage-time">0:23</div>
-          </div>
-          <div class="stage">
-            <div class="stage-dot now">●</div>
-            <div><div class="stage-name">Transferring files</div>
-              <div class="stage-note">2 of 3 · 1.14 GB of 1.82 GB · about 4 minutes left</div></div>
-            <div class="stage-time">4:12</div>
-          </div>
-        </div>
-
-        <div class="progress-track" style="margin-bottom:14px;">
-          <div class="progress-fill" style="width:63%"></div>
-        </div>
-
-        <div class="file-list">
-          <div class="file-row"><span class="file-state" style="color:#86efac;">✓</span>
-            <span class="file-name">alignment_q3/summary.tsv</span><span class="file-size">14.2 MB</span></div>
-          <div class="file-row"><span class="file-state" style="color:#86efac;">✓</span>
-            <span class="file-name">alignment_q3/metrics.json</span><span class="file-size">2.1 MB</span></div>
-          <div class="file-row"><span class="file-state" style="color:#93c5fd;">◐</span>
-            <span class="file-name">alignment_q3/coverage.bw</span><span class="file-size">1.12 / 1.8 GB</span></div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary">Cancel upload</button>
-        <button class="btn btn-primary disabled">Transferring…</button>
+      <div class="tray-meta" style="margin-top:9px; padding-top:9px; border-top:1px solid var(--border);">
+        <span style="color:var(--amber);">Reloading this page stops the transfer</span>
+        <span style="color:var(--blue); cursor:pointer;">Cancel</span>
       </div>
     </div>
   </div>
@@ -641,12 +649,18 @@
 <div class="note">
   <h4>Notes — screen 4</h4>
   <ul>
-    <li>Three named stages rather than one bar, because the checksum pass is slow and silent
-      and users otherwise read it as a hang.</li>
-    <li>The modal closes when the bytes are up. Verification and the archive workflow take
-      minutes more and belong on the dataset page, not behind a modal nobody can leave.</li>
-    <li>The transfer is resumable (TUS), so cancelling and returning is safe. That is worth
-      saying in the copy rather than leaving users to guess.</li>
+    <li><strong>The dialog is closed and the transfer continues.</strong> It runs from
+      <code>stores/v2/upload.js</code>, so a route change does not touch it. This is a
+      single-page application; navigating does not reload the document.</li>
+    <li>The legacy stepper blocks navigation with <code>onBeforeRouteLeave</code> and a browser
+      confirm. That is a consequence of keeping every <code>tus.Upload</code> in component
+      state, not a browser limit. A full page would have blocked exactly the same way.</li>
+    <li>The tray states the one real limit: a <em>reload</em> ends the transfer. A
+      <code>File</code> handle cannot outlive the document, and
+      <code>storeFingerprintForResuming</code> is off because large sessions exceeded the
+      browser's storage quota. Saying so beats implying a resumability that is not there.</li>
+    <li>The list shows the dataset already, in an <em>Uploading</em> state. There is no
+      separate uploads page — one filterable list, not two that can disagree.</li>
   </ul>
 </div>
 
@@ -818,6 +832,121 @@
       owns that dataset. The user learns only that this path is unavailable to them.</li>
     <li>The last card carries the reasoning in the interface itself, because a user who knows
       a name is free elsewhere would otherwise read the refusal as a bug.</li>
+  </ul>
+</div>
+
+<!-- ═══ SCREEN 7: ENTRY FROM /v2/datasets ═══════════════════════ -->
+<div class="screen" id="screen-listentry">
+  <div class="behind">
+    <nav class="topnav">
+      <div class="logo"><div class="logo-mark">◈</div><span class="logo-text">bioloop</span></div>
+      <div class="topnav-links">
+        <a class="topnav-link">Groups</a><a class="topnav-link active">Datasets</a><a class="topnav-link">Collections</a>
+      </div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+        <span class="role-badge admin">Group Admin</span>
+        <div class="avatar-btn"><div class="avatar" style="background:linear-gradient(135deg,var(--teal),#0f766e)">M</div> Maya Okonkwo ▾</div>
+      </div>
+    </nav>
+    <div class="page-content">
+      <div class="breadcrumb"><span>Datasets</span></div>
+      <h2 style="font-size:19px; font-weight:600; margin-bottom:14px;">Datasets</h2>
+      <div class="toolbar">
+        <div class="search-fake">Search datasets…</div>
+        <button class="btn btn-primary">＋ New Dataset</button>
+      </div>
+      <div class="fake-table">
+        <div class="fake-row head"><span>Name</span><span>Group</span><span>Type</span><span>State</span></div>
+        <div class="fake-row"><span>cohort-2026-batch-14</span><span>Genomics Core</span><span>RAW_DATA</span><span>Ready</span></div>
+        <div class="fake-row"><span>run-2026-09-02-novaseq</span><span>Genomics Core</span><span>RAW_DATA</span><span>Ready</span></div>
+        <div class="fake-row"><span>cohort-2026-batch-14</span><span>Imaging Core</span><span>RAW_DATA</span><span>Ready</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-layer">
+    <div class="modal md fade-in">
+      <div class="modal-header">
+        <div class="modal-header-icon mh-blue">＋</div>
+        <div>
+          <div class="modal-title">Add a dataset</div>
+          <div class="modal-sub">Choose how the data gets here, then which group will own it.</div>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="choice-grid" style="margin-bottom:18px;">
+          <div class="choice sel">
+            <div class="choice-icon" style="background:var(--teal-dim); color:#5eead4;">🗂</div>
+            <div class="choice-title">Import</div>
+            <div class="choice-desc">Register a folder that is already on the storage system.
+              Nothing is copied and nothing is moved.</div>
+            <div class="choice-meta">
+              <span>For data an instrument or pipeline already wrote</span>
+              <span>Takes seconds</span>
+            </div>
+          </div>
+          <div class="choice">
+            <div class="choice-icon" style="background:var(--violet-dim); color:#c4b5fd;">⬆</div>
+            <div class="choice-title">Upload</div>
+            <div class="choice-desc">Send files from this computer. They are checksummed here,
+              then transferred and verified.</div>
+            <div class="choice-meta">
+              <span>For data on your own machine</span>
+              <span>Takes minutes to hours by size</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Owned by <span class="req">*</span></label>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="owner-group-option sel">
+              <div class="ogo-icon">◈</div>
+              <div class="ogo-text">
+                <div class="ogo-name">Genomics Core</div>
+                <div class="ogo-path">Center for Genomics and Bioinformatics / Genomics Core</div>
+              </div>
+              <span class="ogo-role">Admin</span>
+            </div>
+            <div class="owner-group-option">
+              <div class="ogo-icon">◈</div>
+              <div class="ogo-text">
+                <div class="ogo-name">Imaging Core</div>
+                <div class="ogo-path">Center for Genomics and Bioinformatics / Imaging Core</div>
+              </div>
+              <span class="ogo-role">Admin</span>
+            </div>
+            <div class="owner-group-option">
+              <div class="ogo-icon">◈</div>
+              <div class="ogo-text">
+                <div class="ogo-name">NeuroSeq Atlas</div>
+                <div class="ogo-path">Dr. Alice Wong Lab / NeuroSeq Atlas</div>
+              </div>
+              <span class="ogo-role contrib">Contributor</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="note">
+  <h4>Notes — screen 7</h4>
+  <ul>
+    <li>Same modal as screen 1, opened from <code>/v2/datasets</code> instead of a group page.
+      The only difference is that no group is implied, so the picker is shown rather than
+      stated in the subtitle.</li>
+    <li>The "New Dataset" button matches "Create Collection" on the collections list, which
+      already carries a create action of the same shape.</li>
+    <li>Two rows in the list behind are both named <code>cohort-2026-batch-14</code>, owned by
+      different groups. That is the per-group name constraint, and it is why the list shows a
+      Group column.</li>
+    <li>Collections have no such button. A collection holds datasets that already exist, and
+      its page cannot answer which group should own a new one.</li>
   </ul>
 </div>
 

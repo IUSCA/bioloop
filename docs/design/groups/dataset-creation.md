@@ -152,15 +152,50 @@ inside it.
 
 **The fix.** `import_source` gains `owner_group_id`. New v2 routes serve only the sources
 owned by a group the caller belongs to, has oversight of, or administers, with a platform
-admin seeing all. The `owner_group_id` is nullable, so a source with no group stays reachable
-through the legacy routes and invisible to the v2 ones.
+admin seeing all.
 
 **Scoping the list is not enough on its own.** The v2 filesystem route must resolve a
 requested path against the caller's own sources rather than against all of them. Hiding a
 source from a list while still serving its contents to a guessed path is decoration.
 
-Sharing a source between groups is deferred. `import_source` could become a `resource` and be
-granted like a dataset, and that is the consistent answer, but no requirement asks for it yet.
+#### An import source has a lifecycle, so it has a status
+
+A source is not a row that exists or does not. It is registered, used for months, and one day
+the underlying mount is decommissioned. Deleting the row is wrong, because datasets imported
+from it still hold paths underneath it and their provenance would be lost.
+
+`import_source` therefore carries a status rather than being created and destroyed.
+
+- **`ACTIVE`** — listed and browsable by its owning group.
+- **`SUSPENDED`** — temporarily unavailable, still listed, and it says so. Import is refused
+  with a reason rather than the source silently vanishing.
+- **`RETIRED`** — not listed and not browsable. Datasets already imported from it are
+  untouched, and the row survives so their origin can still be explained.
+
+The row also records who asked for it, who approved it, and when. Those columns are filled in
+by hand today and are the seam an approval workflow slots into later.
+
+#### An unreadable source must say so
+
+The API and the workers must both be able to read a source's path. When the mount is gone,
+the browse route returns an empty listing today, which is indistinguishable from an empty
+directory. A user reads that as "my data is missing".
+
+The source therefore records when its path was last confirmed readable. A check on a schedule
+updates it, and a source that fails moves to `SUSPENDED` and reports the failure rather than
+returning nothing. Omitting a defective answer beats showing one.
+
+#### How a source gets registered, for now
+
+A group administrator emails a platform administrator. The platform administrator confirms
+the path exists and is readable by both the API and the workers, then inserts the row against
+the requesting group with status `ACTIVE`.
+
+A request and approval flow inside the application is the intended end state and is deferred.
+The schema above is shaped so that adding it later means adding a `PENDING` status and a
+review screen, and changing nothing else. Sharing one source between several groups is
+deferred on the same terms: `import_source` could become a `resource` and be granted like a
+dataset, and no requirement asks for it yet.
 
 ### Importing registers a directory somebody else already owns
 
@@ -188,37 +223,108 @@ confirms the same fact.
 
 A group can also deny a name to every other group forever, by taking it first.
 
-**The fix, in two parts.** The v2 creation routes must not confirm a dataset the caller
-cannot see. They answer 409 saying the name is unavailable, without asserting that a dataset
-holds it. A v2 name-availability endpoint scoped the same way as the creation routes gives
-the interface something safe to call, and the legacy `exists` route is not reused.
+The constraint is not arbitrary. Archives on the tape system are named after the dataset so
+that an administrator can find data by name when the database is gone. That readability is
+the reason the names must not collide, and it is worth keeping.
 
-Making the name unique per owning group is the real fix and it is blocked, for the reason
-below.
+#### The constraint becomes per group, and the archive layout gains a directory
 
-### Worker paths are keyed by dataset name
+Three changes, and they only work together.
 
-`get_archive_path` builds `<archive dir>/<name>.tar`, `get_bundle_name` builds
-`<name>.<type>.tar`, and the QC task builds `<qc dir>/<name>/qc`. None includes the dataset
-id. Staging is the exception: `compute_staging_path` salts its alias with the id already.
+**`dataset.owner_group_id` becomes `NOT NULL` with a database default.** The default is a
+seeded `Unassigned Datasets` group that has no members and accepts no contributions. A legacy
+insert that names no group silently lands there, so **no legacy code changes and no legacy
+behaviour changes**. Every legacy dataset shares one group, so they stay mutually unique on
+name and type exactly as they are today. `datasets_v2/create.js` still throws without an
+explicit group, so v2 never falls into the default by accident.
 
-Today the global name constraint hides this. Relax the name to per-group uniqueness and two
-same-named datasets in different groups write the same archive bundle, so one silently
-overwrites the other. That is data loss rather than a disclosure.
+**The unique key becomes `[owner_group_id, name, type, is_deleted]`.** Two groups may now
+hold a dataset of the same name, and neither can see that the other does. Exactly one line in
+the codebase reads the old compound key, the legacy `exists` route, so the swap is cheap.
 
-**The fix.** Key those three paths by dataset id before relaxing the name. The change is
-cheap and safe, because `dataset.archive_path` is stored per dataset: an existing dataset
-reads its recorded path, and only newly archived datasets use the new formula.
+**The archive path gains a group directory**: `<archive dir>/<group key>/<name>.tar`, and the
+staged bundle and QC directory follow the same shape. The name stays readable, the path stays
+unique, and an administrator reading the tape system sees which group owned what. That is
+more recoverable than today, not less.
+
+#### The path records custody at archive time, not current custody
+
+Both parts of the path are mutable. `PATCH /v2/datasets/:id` accepts a new name, and a dataset
+can move between groups. Neither event rewrites anything on tape.
+
+That is correct rather than broken. `dataset.archive_path` is written once by
+`archive_dataset` and read thereafter, so the database always knows where the bytes are. The
+path on tape says what was true when the archive was written, which is the question a recovery
+actually asks.
+
+Two things follow. `dataset` gains `archive_group_key`, stamped beside `archive_path` at
+archive time, so the owning group at the moment of writing is recorded rather than inferred.
+And the bundle carries a manifest as its first member, holding the dataset id, name, type,
+owning group name, `archive_key`, and timestamp. An administrator reading the tape system
+reads facts instead of parsing a filename.
+
+The manifest goes inside the tar rather than beside it. SDA limits the number of files it
+stores, so a sidecar per archive would halve the number of datasets the system can ever hold.
+
+#### Transferring a dataset moves no bytes
+
+A transfer changes `owner_group_id` and leaves `archive_path` and `archive_group_key` alone.
+It has to check that the name is free in the target group first, because the unique key can
+reject it. Archiving again after a transfer must delete the object at the recorded path before
+writing the new one, or the old object is referenced by nothing and stays on tape forever.
+
+#### The group key must not change when a group is renamed
+
+`group.slug` is regenerated whenever the group's name changes. An archive layout built on the
+slug would fragment the moment somebody renames a group, which defeats the one purpose the
+readable layout serves.
+
+The group therefore gains an `archive_key`: derived from the slug at creation, never updated.
+Renaming a group leaves its archives where they are. Existing archives are unaffected in any
+case, because `dataset.archive_path` is recorded per dataset and is read rather than
+recomputed.
+
+#### Alternatives considered
+
+A partial unique index per group, with a second index covering the null-group rows, works on
+this server but cannot be expressed in the Prisma schema, and it breaks `findUnique` on the
+compound key.
+
+`NULLS NOT DISTINCT` states the intent directly. It needs PostgreSQL 15, and the deployment
+now runs 18, so it is available. It is still not the choice here. It only helps while
+`owner_group_id` stays nullable, and the recommendation above makes the column `NOT NULL`
+with a default. A non-null column keeps every downstream query simpler, Prisma can express
+the plain `@@unique`, and the seeded group gives the cut-over a concrete place to put the
+legacy rows.
+
+Naming the archive `<name>.<id>.tar` keeps one flat directory and is unique, but the id means
+nothing to a person reading the tape system during a recovery, which is the case the naming
+exists for.
+
+A sidecar manifest written next to each archive would let a recovery read facts rather than
+parse a path. SDA limits the number of files it stores, so one sidecar per archive halves the
+number of datasets the system can ever hold. The manifest became the first member of the
+bundle instead, which costs no additional object.
+
+#### Order of work
+
+The archive, bundle, and QC paths must carry the group before the name constraint is relaxed.
+Reversed, two groups can register the same name and the second archive silently overwrites
+the first. That is data loss rather than a disclosure, and it is the reason these are one
+piece of work rather than two.
 
 ### The creation dialogs would expose projects and instruments
 
 `instrument.name` is globally unique and `project.owner_id` points at a user. The legacy
 steppers let a user attach either to a new dataset, which under groups means one group
-browsing another's projects.
+browsing another's records.
 
-**The fix.** The v2 creation dialogs do not offer project or instrument assignment. Dropping
-the field removes the leak outright, and neither concept has been reconciled with groups yet.
-Attachment after creation stays available through the existing routes.
+**Projects do not exist in v2.** The concept is not carried over, so the field is simply
+absent from the creation dialogs and nothing needs scoping.
+
+**Instruments are deferred.** They are likely to survive into v2 in some form, and how they
+relate to groups has not been designed. The creation dialogs omit the field until it has
+been. Attaching an instrument after creation stays available through the existing routes.
 
 ### What is already safe, and should stay that way
 
@@ -296,15 +402,17 @@ implementation of the three rules, so the interface and the policy cannot disagr
 
 ### Where a user starts
 
-Creation begins on the datasets tab of a group or a collection, from the button those tabs
-already carry. The group whose page the user is on is the natural owning group, so it is
-preselected, and a user with one eligible group never sees a group picker at all. Creating
-from a collection also adds the new dataset to that collection.
+Two entry points, and they differ only in whether the owning group is already known.
 
-The two tabs need different treatment. A group's datasets tab has one action, so its button
-opens a chooser offering import or upload. A collection's tab has two unrelated actions:
-adding a dataset that already exists, and creating one. Today a single button labelled "New
-Dataset" opens the add-existing dialog, which is the wrong action under that label.
+**A group's datasets tab.** The group is the one whose page the user is on, so it is
+preselected and the dialog states it rather than asking. This is the common path.
+
+**The datasets list at `/v2/datasets`.** No group is implied, so the dialog asks for one. The
+button matches the collections list, which already carries a create action of the same shape.
+
+Collections are not an entry point. A collection contains datasets that already exist, so its
+tab offers adding an existing dataset and nothing else. Creating a dataset there would ask
+the user to answer a question the page cannot help with, namely which group should own it.
 
 ### What the creation dialogs look like
 
@@ -334,6 +442,59 @@ them. Progress belongs on the dataset's own page afterwards rather than in the d
 because verification and the workflow take minutes and nobody should hold a modal open.
 
 The v2 dataset page shows nothing about upload state today, so it gains a surface for it.
+
+### The transfer does not live in the dialog
+
+An upload of several hundred gigabytes runs for hours. Nothing that runs for hours may hold
+the interface hostage, and that constraint decides the shape more than the choice between a
+modal and a page does.
+
+**The current screens already block navigation, and they do it by choice.** The legacy
+stepper registers `onBeforeRouteLeave` and answers with a browser confirm saying that leaving
+cancels the upload, and `onBeforeUnmount` marks the upload cancelled. It blocks because every
+piece of upload state, the `tus.Upload` objects included, lives in the component. A route
+change unmounts the component and the state goes with it.
+
+Nothing about the browser requires that. This is a single-page application, so moving between
+routes does not reload the page or discard JavaScript state. State held outside the component
+survives a route change untouched.
+
+**So the transfer runs from a store, and the dialog only starts it.** The dialog collects the
+files and the metadata, registers the dataset, and hands the work to an upload store. Closing
+the dialog does not stop anything. A small persistent indicator, of the kind a browser's own
+download manager uses, reports progress from anywhere in the application and offers to cancel.
+
+This is better than either alternative rather than a compromise between them. A full page
+would block navigation exactly as the modal would, because the blocking never came from the
+container.
+
+**A reload still ends the transfer, and that is a browser limit.** A `File` handle obtained
+from a file input cannot outlive the document, so no amount of state management survives a
+refresh or a closed tab. The legacy code also sets `storeFingerprintForResuming: false`, which
+turns off the resumable-across-reload behaviour outright, because large sessions exceeded the
+browser's storage quota. Resumability today therefore means retrying a failed request within
+one session, across roughly sixteen minutes of backoff, and not resuming after a reload.
+
+The interface says so plainly instead of implying otherwise, and `beforeunload` still warns
+before a reload throws the work away.
+
+### Watching an upload afterwards
+
+Transfer is the short part. Verification, archiving, and staging run for minutes afterwards,
+and the user should be free to leave.
+
+**Per dataset**, progress appears on the dataset's own page. The legacy
+`/datasets/uploads/:id` page shows the same information at a second address, which splits a
+dataset across two places for no gain.
+
+**Across datasets**, the datasets list carries an upload state filter. The legacy
+`/datasets/uploads/` page is a parallel list of the same rows, and one filterable list is
+better than two lists that can disagree.
+
+One case needs care. An upload that fails terminally is tombstoned: the dataset is renamed
+and marked deleted so its name is freed. Those rows fall out of a normal dataset listing, and
+the person who uploaded still needs to find out what happened. The filter therefore has to
+reach them, which is the one place the single-list approach costs something.
 
 ### What carries over from the existing screens
 

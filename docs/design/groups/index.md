@@ -22,6 +22,7 @@ to file. When two pages disagree, Decisions is the record of intent.
 ## Supporting records
 
 - [Dataset creation](./dataset-creation.md) — the routes a dataset arrives by
+- [Dataset creation plan](./dataset-creation-plan.md) — the ordered work for group import and upload
 - [v2 cut-over](../v2-cutover.md) — how v2 is built alongside v1, and how the legacy half retires
 - [Access presets](./access-presets.md) — the preset layer over atomic grants
 - [Group invitations](./invitations.md) — designed, not built
