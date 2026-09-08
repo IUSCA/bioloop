@@ -1,6 +1,6 @@
 ---
 name: api-tests
-description: Operational technique for the api/ Jest suites - how they use the real database, how to tell a failure you caused from one that was already there, the git stash trap that must never be repeated, and the suites that are known stale or flaky. Use when running or writing anything under api/tests, or when a change makes tests fail and the cause is not obvious.
+description: Operational technique for the api/ Jest suites - how they use the real database, how to tell a failure you caused from one that was already there, the git stash trap that must never be repeated, why the concurrency suites need their own timeout, and the suites that are known stale or flaky. Use when running or writing anything under api/tests, or when a change makes tests fail and the cause is not obvious.
 ---
 
 # Running and fixing the API tests
@@ -53,6 +53,12 @@ Before assuming a failure is yours, check the cheap signals in this order.
    `X is not a function` are import-name drift, not behaviour.
 3. Run the suite alone. Several concurrency suites pass in isolation and fail in a full
    run.
+4. Check the API is actually up. The route suites (`tests/routes/`) call the running
+   server, and a wall of bare `AggregateError` with no message is a refused connection, not
+   a behaviour change. `bin/devserver.sh status` reports the **nodemon** process, which
+   stays alive after the app inside it crashes — read `logs/api.log` or check the listening
+   port instead. A `prisma migrate reset` crashes the API mid-run, because access types
+   briefly do not exist; restart it after the reset finishes.
 
 ## Known-stale patterns this repository has already hit
 
@@ -73,13 +79,29 @@ The ABAC work renamed things without updating tests, so these shapes recur:
 In each case the production code was right and the test was stale. Check the caller in
 `src/routes` before changing either.
 
+## The concurrency suites need their own timeout
+
+Every test that calls `runRace()` does `RACE_RUNS` (8) sequential iterations, each
+provisioning fixtures, firing several concurrent writes, and tearing down. That is well
+past Jest's 5 second default, so these tests pass against a warm database and time out
+against a cold one — which is what a `prisma migrate reset` leaves behind.
+
+The `beforeAll` hooks always had explicit timeouts; the `it` blocks did not. Each
+concurrency file now calls `jest.setTimeout(RACE_TIMEOUT_MS)`, exported from
+`tests/services/concurrency-utils.js` and derived from `RACE_RUNS`, so raising the run
+count from the environment raises the budget with it.
+
+A new file under `tests/services/<area>/*.concurrency.test.js` needs the same line. A race test
+that times out is almost always this and not a hang.
+
 ## Known flaky
 
-`tests/services/grants/grants.concurrency.test.js` intermittently fails in a full run with
-`deadlock detected` from Postgres, and passes every time in isolation. The race is real —
-two transactions contending for the same exclusion constraint — and a deadlock is a valid
-way for Postgres to resolve it. The test asserts on a conflict message and does not accept
-a deadlock as one. Not yet fixed.
+`tests/services/grants/grants.concurrency.test.js` and
+`tests/services/grants/issueGrants.concurrency.test.js` each occasionally fail in a full
+run and pass in isolation. Both race real transactions against real constraints, so timing
+under a loaded database changes which contender wins and how Postgres resolves it — a
+`deadlock detected` where the test expected a conflict message, or an assertion on which
+grant survived. Re-run the suite alone before treating one of these as a regression.
 
 ## Test helpers
 

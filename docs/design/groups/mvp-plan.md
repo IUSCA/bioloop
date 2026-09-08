@@ -49,15 +49,31 @@ would have kept returning closed rows and left a removed admin in authority; the
 is now named `group_membership_history` and the filtered read keeps the obvious name. And
 `listDatasetsInCollection` matched removed rows through a relation filter for the same reason.
 
-## Phase 2 — Every dataset has an owning group
+## Phase 2 — Every dataset has an owning group — **done**
 
 Implements [decision 2](./decisions.md#_2-every-dataset-has-an-owning-group).
 Satisfies use case 59.
 
-- Seed an archived system group to hold datasets that have no owner.
-- Backfill, then apply `NOT NULL` to `dataset.owner_group_id`.
-- Tests: the constraint holds, and the quarantine group is listable so its contents can be
-  worked through.
+- Migration: seeds `Unassigned Datasets`, an archived system group with a fixed id, then
+  backfills every orphan into it and applies `NOT NULL` to `dataset.owner_group_id`.
+- The group has no members, so only platform admins reach it. A `DO INSTEAD NOTHING` rule
+  blocks deleting it, so the next batch of orphans still has somewhere to go.
+- Tests: the constraint is enforced by the database rather than only by the client, an
+  owning group cannot be deleted while it owns datasets, and the group is listable and
+  openable so its contents can be worked through.
+
+Creation refuses rather than falling back. A dataset created without an owning group is an
+error, not a candidate for quarantine — the exception in decision 2 covers the migration,
+which cannot ask a human, and not a live API call, which can. The three creation paths do
+not send an owning group yet and now fail at the database level; making them return a
+useful error, and updating the workers that call them, is tracked as `.todo` epic 3 T4.
+
+Two things surfaced that the plan did not anticipate. The first sentinel id was
+zero-filled, which is not a syntactically valid UUID, so `express-validator`'s `isUUID()`
+rejected it and the group was listable but its detail page returned 400; the id now sets
+the version and variant nibbles. And `@default(uuid())` in the Prisma schema is
+client-side only, so Prisma read phase 1's database defaults as drift and generated a
+migration dropping them — the two surrogate keys are now declared `dbgenerated`.
 
 ## Phase 3 — Public principal
 
@@ -128,7 +144,7 @@ Implements [decision 9](./decisions.md#_9-consent-codes-are-captured-not-enforce
 
 Every phase ends with the same four steps, in order: tests pass, the affected surface is
 exercised from the UI where one exists, [Implementation Status](./implementation-status.md)
-and [Design Review](./design-review.md) are updated to match, and the work is committed.
+and [Design Review](./design-review.md) are updated to match, update or create new skill based on operational lessons learned, and the work is committed.
 
 Phases 1, 2, 4, 6, and 7 have no user-visible surface of their own. Their UI check is that
 the surfaces built on top of them — the members tab, the grant subject picker, the dataset

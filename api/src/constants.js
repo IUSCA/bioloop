@@ -170,6 +170,15 @@ const ALERT_TYPES = {
 
 const EVERYONE_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 
+// Archived system group holding datasets that have no owning group. Datasets land here
+// only through the backfill that made dataset.owner_group_id NOT NULL; nothing writes to
+// it at runtime. Its contents are a list for platform admins to work through.
+// @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
+// The version (4) and variant (8) nibbles are set so this parses as an RFC 4122 UUID.
+// Route params are validated with express-validator's isUUID(), which rejects a
+// zero-filled sentinel, and the group detail page addresses a group by id.
+const UNASSIGNED_DATASETS_GROUP_ID = '00000000-0000-4000-8000-000000000001';
+
 // need to specify ids to have deterministic seeding
 const GRANT_ACCESS_TYPES = [
   {
@@ -298,6 +307,7 @@ module.exports = {
   DATASET_STATES,
   INCLUDE_PROJECTS,
   EVERYONE_GROUP_ID,
+  UNASSIGNED_DATASETS_GROUP_ID,
   GRANT_ACCESS_TYPES,
   GRANT_PRESETS,
   JWT_COOKIE_NAME,

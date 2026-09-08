@@ -19,7 +19,7 @@ const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
 const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
-const { GRANT_ACCESS_TYPES, GRANT_PRESETS } = require('../src/constants');
+const { GRANT_ACCESS_TYPES, GRANT_PRESETS, UNASSIGNED_DATASETS_GROUP_ID } = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
 
 const prisma = new PrismaClient();
@@ -250,6 +250,14 @@ async function main() {
         type: RESOURCE_TYPE.DATASET,
       },
     };
+
+    // owner_group_id is NOT NULL, and the groups are not seeded until further down this
+    // file. Park each dataset in the quarantine group the migration created, the same way
+    // a dataset with no resolvable owner would be. generateDatasetOwnerships() below
+    // reassigns every one of them to a real group.
+    // `resource: { create: ... }` above selects the relation form of the create input,
+    // which rejects a scalar foreign key, so connect the group rather than setting the id.
+    dataset_obj.owner_group = { connect: { id: UNASSIGNED_DATASETS_GROUP_ID } };
 
     await prisma.dataset.upsert({
       where: {

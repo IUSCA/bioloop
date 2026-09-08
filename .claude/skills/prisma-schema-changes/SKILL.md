@@ -1,6 +1,6 @@
 ---
 name: prisma-schema-changes
-description: Operational technique for changing the Prisma schema in this repository - writing a migration by hand, the defaults and constraints Prisma cannot express, how a validity column silently breaks relation reads, and how to reset the dev database. Use when editing api/prisma/schema.prisma, adding a migration under api/prisma/migrations, changing api/prisma/seed.js, or touching anything that reads group_user, collection_dataset, or the effective-access views.
+description: Operational technique for changing the Prisma schema in this repository - writing a migration by hand, the defaults and constraints Prisma cannot express, how a validity column silently breaks relation reads, why a seeded sentinel id has to parse as a real UUID, and how to reset the dev database. Use when editing api/prisma/schema.prisma, adding a migration under api/prisma/migrations, changing api/prisma/seed.js, or touching anything that reads group_user, collection_dataset, or the effective-access views.
 ---
 
 # Changing the Prisma schema
@@ -19,10 +19,15 @@ Run everything from `api/`.
 3. Write `prisma/migrations/<timestamp>_<name>/migration.sql` by hand.
 4. `npx prisma migrate dev --name <name> --skip-generate` — applies the file you wrote
    rather than generating one.
-5. `npx prisma generate`.
-6. **Restart the API before anything else touches it** — see the crash below.
+5. **Read what it printed.** If it says it *created* a migration as well as applying yours,
+   the schema and the database still disagree and Prisma has written SQL to close the gap.
+   That SQL is usually wrong — see "Prisma reads a database default as drift" below. Delete
+   the generated directory, fix the schema so it describes what the database actually has,
+   and reset rather than layering a correction on top.
+6. `npx prisma generate`.
+7. **Restart the API before anything else touches it** — see the crash below.
 
-## Four things Prisma will not do for you
+## Five things Prisma will not do for you
 
 **`@default(uuid())` is generated in the client, not the database.** Any row inserted by raw
 SQL gets no default, so a `NOT NULL` surrogate key fails. Every table this repository writes
@@ -34,6 +39,18 @@ ALTER TABLE "group_user" ALTER COLUMN "id" SET DEFAULT gen_random_uuid()::text;
 
 Membership, collection contents, and grants are all written with raw SQL. Check before
 assuming a Prisma default is enough.
+
+**Prisma reads that database default as drift.** Having added it, the next `migrate dev`
+sees a default in the database that `@default(uuid())` does not account for and generates
+`ALTER COLUMN "id" DROP DEFAULT` — quietly undoing the fix one phase later. Declare what
+the database actually has, so the two agree:
+
+```prisma
+id String @id @default(dbgenerated("gen_random_uuid()::text"))
+```
+
+The client then stops generating ids and the database supplies them, which is what the raw
+inserts needed in the first place.
 
 **A partial unique index must be named in `ON CONFLICT`.** After replacing a composite
 primary key with a partial unique index, `ON CONFLICT (a, b) DO NOTHING` no longer infers
@@ -59,6 +76,38 @@ field, so the rename has to come first.
 `prisma/seed.js` used `upsert({ where: { group_id_user_id: ... } })`. Dropping the composite
 primary key breaks seeding, which only surfaces at the end of a reset. `createMany({ data,
 skipDuplicates: true })` works against a partial unique index and is the smaller change.
+
+## Sentinel ids have to be real UUIDs
+
+A seeded system row with a memorable id — a quarantine group, a system principal — is
+tempting to write as `00000000-0000-0000-0000-000000000001`. Postgres stores it happily,
+because the column is `text`. Route validation does not: `express-validator`'s `isUUID()`
+checks the version and variant nibbles, so a zero-filled id fails `param('id').isUUID()`
+and the row is listable but its detail page returns 400.
+
+Set both nibbles. `00000000-0000-4000-8000-000000000001` reads as a sentinel and parses as
+a version 4 UUID. `EVERYONE_GROUP_ID` predates this and is all zeros; it survives only
+because nothing addresses it by route parameter.
+
+The test worth writing is one line, next to the seeded row's other assertions:
+
+```js
+expect(validator.isUUID(UNASSIGNED_DATASETS_GROUP_ID)).toBe(true);
+```
+
+## A nested relation create rejects a scalar foreign key
+
+`prisma.dataset.create({ data: { resource: { create: {...} }, owner_group_id: '...' } })`
+fails with `Argument 'owner_group' is missing`. Once one relation is written in nested form,
+the whole create uses the relation input variant, and a sibling scalar FK is not accepted.
+Connect the relation instead:
+
+```js
+owner_group: { connect: { id: UNASSIGNED_DATASETS_GROUP_ID } }
+```
+
+This bites in `prisma/seed.js`, where rows are built up as plain objects and the shape is
+not obvious until it fails at the end of a reset.
 
 ## Views are the choke point for "currently in force"
 

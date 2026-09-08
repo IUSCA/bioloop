@@ -117,6 +117,18 @@ lifecycle, invariants, and concurrency suites. The ABAC core has its own tests.
 
 ---
 
+### Every dataset has an owning group
+
+`dataset.owner_group_id` is `NOT NULL`. Datasets that had no owner were moved into
+`Unassigned Datasets`, an archived system group with a fixed id
+(`constants.UNASSIGNED_DATASETS_GROUP_ID`) that has no members, so only platform admins
+reach it. A `DO INSTEAD NOTHING` rule blocks deleting the group.
+
+Creation does not fall back to that group. The three dataset creation paths do not send an
+owning group yet, so they now fail at the database level rather than returning an error
+that names the missing field; that work, and the worker release it needs, is tracked as
+`.todo` epic 3 T4.
+
 ## Deviations
 
 Places where the code and the design disagree. Each is a decision to make, not
@@ -179,13 +191,12 @@ decision before more actions depend on it.
 - **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always`, and the service validates only the *subject*. A user who knows any resource UUID can file a request against a resource they cannot see, and nothing checks `REQUEST_ACCESS`. `assertGrantItemsApplicableToResourceType` is called on grant creation but not here, so a request can also name access types that do not apply to the resource type.
 - **Archive prohibitions are partial.** The design forbids, on an archived group: creating grants on its resources, creating datasets or collections owned by it, and creating child groups. None of those are checked — only metadata, membership, and collection-content mutations are.
 - **Legacy `/datasets` routes bypass ABAC entirely.** They still use the old RBAC `accessControl()` middleware. The group model only governs `/v2/datasets`. Until the legacy surface is retired or migrated, the "consistency across interfaces" expectation (use cases 11, 56) does not hold.
-- **`dataset.owner_group_id` is nullable.** Pre-existing datasets with no owning group fall outside the ownership-based authorization path.
 
 ---
 
 ## Suggested order of work
 
-Superseded by the [MVP Implementation Plan](./mvp-plan.md), whose phase 1 is complete. The
+Superseded by the [MVP Implementation Plan](./mvp-plan.md), whose phases 1 and 2 are complete. The
 list below predates it and is kept for the items the plan does not cover:
 
 1. Authorize `GET /audit/records`; fix the `unarchive` policy binding.

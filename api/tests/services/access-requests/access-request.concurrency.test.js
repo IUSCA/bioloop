@@ -24,7 +24,10 @@ require('module-alias/register');
 const prisma = require('@/db');
 const arService = require('@/services/access_requests');
 const Expiry = require('@/utils/expiry');
-const { runRace, fanOut } = require('../concurrency-utils');
+const { runRace, fanOut, RACE_TIMEOUT_MS } = require('../concurrency-utils');
+
+// Every test here drives runRace, which is far slower than Jest's 5s default.
+jest.setTimeout(RACE_TIMEOUT_MS);
 const {
   createTestUser,
   createTestGroup,

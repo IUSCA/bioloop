@@ -55,10 +55,15 @@ A nullable owning group means a dataset that no group governs, which falls outsi
 ownership-based authorization path entirely. The problem grows with every dataset created.
 
 The quarantine group is a deliberate exception to the project's preference for refusing
-rather than defaulting. A migration cannot ask a human what each row should be, and the
-alternative — blocking the migration until every row is assigned by hand — stops the
-constraint landing at all. The group is archived and platform-admin-visible, so its
-contents are a list somebody works through, not a silent default that gets forgotten.
+rather than defaulting, and the exception is limited to the migration. A migration cannot
+ask a human what each row should be, and the alternative — blocking it until every row is
+assigned by hand — stops the constraint landing at all. A live creation call can ask, so
+creating a dataset without an owning group is refused rather than quarantined. Otherwise
+the list grows on its own and nobody is accountable for draining it.
+
+The group is archived and has no members, so only platform admins reach it, and its
+contents are a list somebody works through rather than a silent default that gets
+forgotten.
 
 ## 3. A public principal exists, and `Everyone` is renamed
 

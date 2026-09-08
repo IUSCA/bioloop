@@ -27,7 +27,11 @@ model dataset {
   is_staged         Boolean  @default(false)
   metadata          Json?
   src_instrument_id Int?
-  owner_group_id    String?
+  // Every dataset is governed by exactly one group. NOT NULL since the
+  // 20260908010000_dataset_owner_group_required migration; datasets with no owner were
+  // moved into the archived 'Unassigned Datasets' group (constants.UNASSIGNED_DATASETS_GROUP_ID).
+  // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
+  owner_group_id    String
 
   workflows        workflow[]
   files            dataset_file[]
@@ -41,7 +45,7 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group   group?                      @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  owner_group   group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collections   collection_dataset[]
   contributions user_dataset_contribution[]
   resource_id   String                      @unique
@@ -542,7 +546,10 @@ model group_closure {
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model group_user {
-  id          String            @id @default(uuid())
+  // gen_random_uuid() in the database, not uuid() in the client: raw SQL INSERTs on this
+  // table would otherwise violate NOT NULL. Declared as dbgenerated so Prisma does not
+  // read the database default as drift and generate a migration dropping it.
+  id          String            @id @default(dbgenerated("gen_random_uuid()::text"))
   group_id    String
   user_id     String
   role        GROUP_MEMBER_ROLE @default(MEMBER)
@@ -631,7 +638,10 @@ model collection {
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model collection_dataset {
-  id            String    @id @default(uuid())
+  // gen_random_uuid() in the database, not uuid() in the client: raw SQL INSERTs on this
+  // table would otherwise violate NOT NULL. Declared as dbgenerated so Prisma does not
+  // read the database default as drift and generate a migration dropping it.
+  id            String    @id @default(dbgenerated("gen_random_uuid()::text"))
   collection_id String
   dataset_id    String
   added_at      DateTime  @default(now()) @db.Timestamp(6)

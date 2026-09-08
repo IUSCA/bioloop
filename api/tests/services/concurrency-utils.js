@@ -13,6 +13,17 @@
 const RACE_RUNS = parseInt(process.env.RACE_RUNS ?? '8', 10);
 
 /**
+ * Timeout for a test that calls runRace(), in milliseconds.
+ *
+ * A race test does RACE_RUNS sequential iterations, each provisioning fixtures, firing
+ * several concurrent writes, and tearing down again. Jest's 5s default is under that
+ * budget, so these tests pass on a warm database and time out on a cold one. Two seconds
+ * per iteration is measured against the slowest suite (grants) with room to spare, and it
+ * scales when RACE_RUNS is raised from the environment.
+ */
+const RACE_TIMEOUT_MS = RACE_RUNS * 2_000;
+
+/**
  * Run a race scenario RACE_RUNS times.
  * Each iteration:
  *   1. Calls setup() to provision fresh fixtures
@@ -58,4 +69,6 @@ function fanOut(n, opFactory) {
   return Array.from({ length: n }, (_, i) => opFactory(i));
 }
 
-module.exports = { runRace, fanOut, RACE_RUNS };
+module.exports = {
+  runRace, fanOut, RACE_RUNS, RACE_TIMEOUT_MS,
+};

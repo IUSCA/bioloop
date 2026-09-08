@@ -123,6 +123,17 @@ curl -s  -o /dev/null -w "%{http_code}\n" http://localhost:3030/   # expect 401
 A `401` from the API means it is running and asking for authentication. That is a healthy
 response, not an error.
 
+`status` prints the pid from the pidfile, and that pid is nodemon rather than the API
+itself. Nodemon stays alive after the process it supervises crashes, so `status` can report
+`api running` while every request is refused. The port column is the reliable part: an
+`api` row with no port next to it means the app inside nodemon has died. `logs/api.log`
+says why, and `bin/devserver.sh restart api` clears it.
+
+Resetting the database is the usual cause. `npx prisma migrate reset` empties the
+grant-access-type table for a moment, the API validates those at startup, and it exits with
+`Grant access types missing from database`. The seed restores them, but nodemon has already
+stopped. Restart the API after any reset.
+
 ## Running in the foreground instead
 
 The script is a convenience, not a requirement. To watch a single server's output directly,

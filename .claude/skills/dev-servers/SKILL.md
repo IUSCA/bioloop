@@ -85,6 +85,37 @@ curl -s  -o /dev/null -w "%{http_code}\n" http://localhost:3030/      # expect 4
 A `401` from the API means it is alive and demanding authentication. Treat it as success,
 not as a failure to reach the server.
 
+## `status` reports nodemon, not the app
+
+`bin/devserver.sh status` reads the pidfile, which holds the **nodemon** process. Nodemon
+survives a crash of the app it supervises and sits waiting for a file change, so `status`
+happily prints `api running pid 924` while every request is refused. The listening-port
+column is the honest signal: an api row with no port is a crashed app.
+
+Read `logs/api.log`. `Listening: http://localhost:3030` is the last line of a good boot;
+`[nodemon] app crashed` is the last line of a bad one. `bin/devserver.sh restart api`
+clears it.
+
+The common cause is a database change underneath a running server. `prisma migrate reset`
+truncates the access-type table for a moment, and the API validates those at startup —
+`Grant access types missing from database: ...` and it exits. The seed puts them back, but
+nodemon has already given up. Restart after any reset.
+
+## Talking to the database directly
+
+`api/.env` holds the credentials, and there is no `psql` alias:
+
+```sh
+cd api && set -a && . ./.env && set +a
+PGPASSWORD="$DATABASE_PASSWORD" psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" \
+  -U "$DATABASE_USER" -d "$DATABASE_DB"
+```
+
+`docker compose exec postgres psql -U postgres` does not work — that role does not exist.
+
+`psql -c` prints only the last statement's result when several are passed in one string,
+so run one `-c` per query when you want to see them all.
+
 ## Traps
 
 - `lsof` ORs its filters unless you pass `-a`. `lsof -nP -p "$pid" -iTCP` prints every

@@ -59,6 +59,10 @@ glossary's ownership disagreement was resolved as governance-only, with attribut
 deferred; and the GA4GH question was answered by capturing consent codes at ingest without
 enforcing them.
 
+Phases 1 and 2 of that plan are built. Membership and collection rows are closed rather
+than deleted, and `dataset.owner_group_id` is `NOT NULL` with the datasets that had no
+owner held in an archived system group.
+
 The member-access contradiction (deviation 1) is **still open.** No decision was taken on
 whether owning-group members get structural read or a seeded grant.
 
