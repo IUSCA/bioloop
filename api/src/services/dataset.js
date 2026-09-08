@@ -48,7 +48,7 @@ function normalize_name(name) {
  * @returns {string} The absolute path where the uploaded dataset should be stored.
  */
 const getUploadedDatasetPath = ({ datasetId = null, datasetType = null } = {}) => path.join(
-  config.upload.path,
+  config.upload.api_dir,
   datasetType.toLowerCase(),
   `${datasetId}`,
   'processed',

@@ -5,8 +5,22 @@
  *
  * Configuration (api/config/default.json → upload.*)
  * ---------------------------------------------------
- *   upload.path               — filesystem directory where TUS stores in-progress
- *                               uploads.
+ * Two settings name the same upload directory seen from two places. They differ
+ * only where the API process reaches the filesystem by a different path than
+ * everyone else does, which is the usual case in a container.
+ *
+ *   upload.api_dir            — the directory as THIS API PROCESS sees it. TUS
+ *                               stages here, and finished files are moved here.
+ *                               Every filesystem call in this file uses it.
+ *                               Env: UPLOAD_API_DIR.
+ *   upload.host_dir           — the same directory as EVERY OTHER PROCESS sees
+ *                               it, the workers above all. It is recorded as the
+ *                               prefix of dataset.origin_path so a worker can
+ *                               open the files later. Optional: when empty,
+ *                               api_dir is recorded instead. In production it is
+ *                               the bind-mount source in docker-compose-prod.yml.
+ *                               Env: UPLOAD_HOST_DIR.
+ *
  *   upload.max_file_size_bytes — hard per-file size cap enforced by TUS before any
  *                               data is written.  Overridable via
  *                               UPLOAD_MAX_FILE_SIZE_BYTES env var.
@@ -91,29 +105,33 @@ function isLockAcquiredError(err) {
 }
 
 /**
- * Convert a host-visible dataset origin path to the equivalent container path
- * used by this API process for local filesystem writes.
+ * Rebase a stored origin_path from the host's view of the upload directory onto
+ * this API process's view, so the path can actually be written to here.
+ *
+ * origin_path is recorded under upload.host_dir for the workers' benefit; this is
+ * the inverse of that. A path that is not inside host_dir is returned untouched,
+ * because it belongs to some other tree the API has no mapping for.
  */
-function resolveWritableOriginPath(originPath, uploadHostPath, uploadPath) {
-  if (!uploadHostPath) return originPath;
+function toApiUploadPath(originPath, hostUploadDir, apiUploadDir) {
+  if (!hostUploadDir) return originPath;
 
-  const rel = path.relative(uploadHostPath, originPath);
-  const isInsideHostBase = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  const rel = path.relative(hostUploadDir, originPath);
+  const isInsideHostDir = rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 
-  if (!isInsideHostBase) return originPath;
-  if (!rel) return uploadPath;
-  return path.join(uploadPath, rel);
+  if (!isInsideHostDir) return originPath;
+  if (!rel) return apiUploadDir;
+  return path.join(apiUploadDir, rel);
 }
 
 class UploadService {
   constructor() {
-    const uploadPath = config.get('upload.path');
-    const uploadHostPath = config.get('upload.host_path');
+    const apiUploadDir = config.get('upload.api_dir');
+    const hostUploadDir = config.get('upload.host_dir');
     const maxFileSizeBytes = config.get('upload.max_file_size_bytes');
 
     logger.info('Initializing TUS UploadService', {
-      uploadPath,
-      uploadHostPath,
+      apiUploadDir,
+      hostUploadDir,
       maxFileSizeBytes,
       expiryMs: UPLOAD_EXPIRY_MS,
     });
@@ -132,7 +150,7 @@ class UploadService {
       relativeLocation: true,
 
       datastore: new DataStore({
-        directory: uploadPath,
+        directory: apiUploadDir,
         expirationPeriodInMilliseconds: UPLOAD_EXPIRY_MS,
       }),
 
@@ -204,8 +222,8 @@ class UploadService {
        * Fires once TUS has received all bytes for a single file upload.
        *
        * TUS stores two staging artifacts per upload ID:
-       *   1) payload file:  <upload.path>/<process_id>
-       *   2) sidecar JSON:  <upload.path>/<process_id>.json
+       *   1) payload file:  <upload.api_dir>/<process_id>
+       *   2) sidecar JSON:  <upload.api_dir>/<process_id>.json
        *
        * The sidecar carries upload metadata (dataset_id, filename,
        * selection_mode, relative_path, etc). We read it first, then:
@@ -237,7 +255,7 @@ class UploadService {
           throw tusError(404, 'No upload log found for this dataset');
         }
 
-        const uploadDir = config.get('upload.path');
+        const uploadDir = config.get('upload.api_dir');
         const tusFilePath = path.join(uploadDir, process_id);
         const tusInfoPath = `${tusFilePath}.json`;
 
@@ -255,11 +273,12 @@ class UploadService {
           processId: process_id,
         });
 
-        // locate the containerized path (as opposed to the host path) for the uploaded file
-        const writableOriginPath = resolveWritableOriginPath(
+        // origin_path is stored under host_dir; rebase it onto this process's view
+        // before writing.
+        const writableOriginPath = toApiUploadPath(
           uploadLog.dataset.origin_path,
-          uploadHostPath,
-          uploadPath,
+          hostUploadDir,
+          apiUploadDir,
         );
 
         moveTusFileToDestination({

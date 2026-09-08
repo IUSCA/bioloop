@@ -21,7 +21,7 @@ const path = require('path');
  *   the current request lifecycle.
  *
  * @param {Object} params
- * @param {string} params.uploadDir - Base TUS staging directory (upload.path).
+ * @param {string} params.uploadDir - Base TUS staging directory (upload.api_dir).
  * @param {number|string} params.datasetId - Dataset ID used for sidecar subdirectory naming.
  * @param {string} params.processId - TUS upload ID for this file (without .json suffix).
  * @returns {{

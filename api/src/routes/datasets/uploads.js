@@ -508,13 +508,16 @@ router.post(
         // This is deterministic and doesn't depend on the upload having been marked as
         // finished and/or the post-upload processing having been triggered.
         //
-        // Format: /uploads/{raw_data|data_products}/{id}/{name}
-        // Persist host-visible path in DB when provided (UPLOAD_HOST_DIR),
-        // otherwise fall back to container upload path.
-        const uploadBasePath = config.get('upload.host_path') || config.get('upload.path');
+        // Format: <upload dir>/{raw_data|data_products}/{id}/{name}
+        //
+        // Recorded under upload.host_dir, the upload directory as the workers see
+        // it, because a worker archives from origin_path later. It falls back to
+        // upload.api_dir when host_dir is empty, which is every deployment where
+        // the API and the workers reach the filesystem by the same path.
+        const originPathBase = config.get('upload.host_dir') || config.get('upload.api_dir');
         const uploadTypeSubdir = UPLOAD_SUBDIR_BY_TYPE[type];
         const datasetOriginPath = path.join(
-          uploadBasePath,
+          originPathBase,
           uploadTypeSubdir,
           `${createdDataset.id}`,
           createdDataset.name,

@@ -83,21 +83,24 @@ The workers and the API share a filesystem, and two paths have to name the same 
 both. Both are absolute, and both are set in `api/.env`, which is gitignored:
 
 ```
-UPLOAD_DIR=<repo>/data/uploads
+UPLOAD_API_DIR=<repo>/data/uploads
 UPLOAD_HOST_DIR=<repo>/data/uploads
 IMPORT_SOURCES_DIR=<repo>/data/import
 ```
 
-`UPLOAD_DIR` is `upload.path`, where TUS stages a file and where the API then moves it,
-under `<type subdirectory>/<dataset id>/<name>`. `UPLOAD_HOST_DIR` is `upload.host_path`,
-the prefix the API records in `dataset.origin_path`. Natively they are the same value;
-they differ only where the API sees a mount at a different path than the host does.
+`UPLOAD_API_DIR` is `upload.api_dir`, the upload directory as the API process sees it:
+TUS stages there and the API moves finished files under
+`<type subdirectory>/<dataset id>/<name>`. `UPLOAD_HOST_DIR` is `upload.host_dir`, the same
+directory as every other process sees it, recorded as the prefix of `dataset.origin_path`
+so a worker can open the files later. Natively they are the same value, and `host_dir` may
+be left empty; they differ only where the API reaches the filesystem by a different path,
+which is the usual case in a container.
 
 `IMPORT_SOURCES_DIR` is where `api/prisma/seed.js` puts the seeded `import_source` rows.
 Those rows are an allowlist: `GET /fs` refuses to browse outside them, and
 `POST /datasets` refuses an `origin_path` outside them.
 
-**A relative path here looks like it works and does not.** `upload.path` was once the
+**A relative path here looks like it works and does not.** `upload.api_dir` was once the
 relative `data/uploads`, which resolves against the *process* working directory — one
 place for the API, a different place for a worker. The API writes the file, records the
 relative path, and the worker then cannot find it. Keep both absolute.

@@ -69,8 +69,8 @@
     }
   },
   "upload": {
-    "path": "/opt/sca/data/uploads",
-    "host_path": "",
+    "api_dir": "/opt/sca/data/uploads",
+    "host_dir": "",
     "max_file_size_bytes": 107374182400
   },
   "import": {

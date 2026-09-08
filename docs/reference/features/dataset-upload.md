@@ -71,7 +71,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 ## API staging paths and file moves
 
 During upload, `@tus/file-store` keeps **per-upload-ID** artifacts under the API’s
-configured staging root (`upload.path` in config, typically the container mount
+configured staging root (`upload.api_dir` in config, typically the container mount
 such as `/opt/sca/data/uploads`):
 
 | Artifact | Path | Role |
@@ -95,8 +95,8 @@ When a single file finishes, `onUploadFinish` (in `UploadService`):
      post-create checks; an empty destination file is still created as needed.
 
 `origin_path` is chosen at registration time and may be a **host-visible** path
-when `UPLOAD_HOST_DIR` / `upload.host_path` is set, while the API process writes
-through the **mounted** tree (`upload.path`). The API code resolves a writable
+when `UPLOAD_HOST_DIR` / `upload.host_dir` is set, while the API process writes
+through the **mounted** tree (`upload.api_dir`). The API code resolves a writable
 container path for renames/copies so workers and DB metadata stay consistent
 with deployment layout (see **Volume Mounts** under Deployment Notes).
 
@@ -485,7 +485,7 @@ VITE_UPLOAD_API_BASE_PATH=https://...
 # Remove these properties:
 OAUTH_UPLOAD_CLIENT_ID=xxx
 OAUTH_UPLOAD_CLIENT_SECRET=xxx
-UPLOAD_DIR=/x/y/z
+UPLOAD_API_DIR=/x/y/z
 
 # ---
 

@@ -43,15 +43,18 @@ using absolute paths, and restart the API afterwards — nodemon does not reload
 variables:
 
 ```
-UPLOAD_DIR=/absolute/path/to/bioloop/data/uploads
+UPLOAD_API_DIR=/absolute/path/to/bioloop/data/uploads
 UPLOAD_HOST_DIR=/absolute/path/to/bioloop/data/uploads
 IMPORT_SOURCES_DIR=/absolute/path/to/bioloop/data/import
 ```
 
-`UPLOAD_DIR` is where uploaded files land. `IMPORT_SOURCES_DIR` is where the seeded import
-sources point, and the import UI can only browse inside them. Relative paths do not work
-here: they resolve against each process's own working directory, so the API and a worker
-would disagree about where a file is.
+`UPLOAD_API_DIR` and `UPLOAD_HOST_DIR` name the same upload directory from two vantage
+points: the first as the API process sees it, the second as the workers see it. They differ
+only inside a container, so natively they are the same value. `IMPORT_SOURCES_DIR` is where
+the seeded import sources point, and the import UI can only browse inside them.
+
+Relative paths do not work here: they resolve against each process's own working directory,
+so the API and a worker would disagree about where a file is.
 
 Then install dependencies and create the data directories:
 
