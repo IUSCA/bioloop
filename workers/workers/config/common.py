@@ -62,6 +62,13 @@ config = {
         'root': '/path/to/root'
     },
     'registration': {
+        # Each entry under 'ingestion' is one watched directory, named by its key.
+        # The dataset type is a property of the directory rather than the other way
+        # round, so several directories may feed the same type. Read only by
+        # scripts/watch_v2.py; every entry needs source_dir, dataset_type, and
+        # owner_group_id, and no value here is guessed when one is missing.
+        # @see docs/design/groups/dataset-creation.md — The watch script
+        'ingestion': {},
         'RAW_DATA': {
             'source_dir': '/path/to/source/raw_data',
             'rejects': ['.snapshots'],

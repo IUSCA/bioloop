@@ -48,9 +48,12 @@ module.exports = {
       kill_timeout: 10000,
     },
     {
+      // watch_v2, not watch: every dataset it registers gets the owning group
+      // configured for its watched directory. Never run both — they poll the same
+      // directories and would race to register the same new subdirectory.
       ...common,
       name: 'watch',
-      args: '-u -m workers.scripts.watch',
+      args: '-u -m workers.scripts.watch_v2',
       error_file: path.join(logs, 'watch.err'),
       out_file: path.join(logs, 'watch.log'),
     },

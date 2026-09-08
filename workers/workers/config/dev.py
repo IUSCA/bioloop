@@ -21,6 +21,11 @@ YEAR = datetime.datetime.now().year
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DATA = REPO_ROOT / 'data'
 
+# Named once because two config shapes point at them: 'registration.ingestion',
+# keyed by ingestion directory, and the legacy 'registration.<TYPE>' blocks.
+RAW_DATA_DIR = DATA / 'origin' / 'raw_data'
+DATA_PRODUCT_DIR = DATA / 'origin' / 'data_products'
+
 ONE_MEGABYTE = 1024 * 1024
 
 config = {
@@ -53,13 +58,33 @@ config = {
         'root': str(DATA),
     },
     'registration': {
+        # The two ingestion directories watch_v2.py polls. The owning groups are the
+        # seeded Genomics Core and Bioinformatics Core, whose ids are hard-coded in
+        # api/prisma/seed_data/groups.js and so survive a re-seed.
+        # @see docs/design/groups/dataset-creation.md — The watch script
+        'ingestion': {
+            'raw_data': {
+                'source_dir': str(RAW_DATA_DIR),
+                'dataset_type': 'RAW_DATA',
+                'owner_group_id': '83101409-fa05-44be-abca-c91fff4f9754',
+                # Directories that should never be auto-registered as datasets.
+                'rejects': ['.snapshots', '_testObservedPath_*'],
+            },
+            'data_products': {
+                'source_dir': str(DATA_PRODUCT_DIR),
+                'dataset_type': 'DATA_PRODUCT',
+                'owner_group_id': '79606964-2385-4c72-8f5f-6d3412049a1c',
+                'rejects': ['.snapshots', '_testObservedPath_*'],
+            },
+        },
+        # The legacy watch.py, the watch tests, and setup_dirs still key on the
+        # dataset type. Both shapes name the same directories.
         'RAW_DATA': {
-            'source_dir': str(DATA / 'origin' / 'raw_data'),
-            # Directories that should never be auto-registered as datasets.
+            'source_dir': str(RAW_DATA_DIR),
             'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         'DATA_PRODUCT': {
-            'source_dir': str(DATA / 'origin' / 'data_products'),
+            'source_dir': str(DATA_PRODUCT_DIR),
             'rejects': ['.snapshots', '_testObservedPath_*'],
         },
         # A dataset copied into ./data/origin should register within a minute,

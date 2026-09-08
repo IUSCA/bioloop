@@ -11,7 +11,9 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
+const {
+  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+} = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
@@ -180,6 +182,77 @@ router.post(
       return next(createError.Conflict('A dataset with this name and type already exists'));
     }
     res.status(201).json(dataset);
+  }),
+);
+
+// ── Bulk create ──────────────────────────────────────────────────────────────
+
+/**
+ * Creates many datasets, each under its own owning group. Used by the watch script.
+ *
+ * A dataset body here is the same shape as the single-create body above, `owner_group_id`
+ * included, so a caller never reshapes its payloads to send them in bulk. The caller must
+ * be permitted to create under every group the batch names; the check runs once per
+ * distinct group rather than once per dataset.
+ * @see docs/design/groups/dataset-creation.md — The watch script
+ *
+ * Responds with { created, conflicted, errored }. A name and type already held by a live
+ * dataset is a conflict rather than an error, because a scan sees the same directory on
+ * every pass.
+ */
+router.post(
+  '/bulk',
+  validate([
+    body('datasets').isArray({ min: 1, max: 100 }),
+    body('datasets.*.name').notEmpty(),
+    body('datasets.*.type').isIn(config.get('dataset_types')),
+    body('datasets.*.owner_group_id').isUUID(),
+    body('datasets.*.origin_path').isString().trim().notEmpty(),
+    body('datasets.*.description').optional().isString(),
+    body('datasets.*.metadata').optional().isObject(),
+    body('datasets.*.du_size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('datasets.*.src_instrument_id').optional().isInt().toInt(),
+    body('datasets.*.src_dataset_id').optional().isInt().toInt(),
+    body('datasets.*.workflow_id').optional().isString(),
+    body('datasets.*.state').optional().isString(),
+    body('datasets.*.create_method').optional().isString(),
+  ]),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create many datasets, each owned by a group'
+
+    // Authorized here rather than by the authorize() middleware, which evaluates one
+    // resource per request. The policy context is shared across the calls, so the caller
+    // is hydrated once however many groups the batch names.
+    const ownerGroupIds = [...new Set(req.body.datasets.map((d) => d.owner_group_id))];
+    for (const owner_group_id of ownerGroupIds) {
+      // eslint-disable-next-line no-await-in-loop
+      const decision = await authorizeAction('dataset', 'create', {
+        identifiers: { user: req.user?.subject_id, resource: null },
+        policyExecutionContext: req.policyContext,
+        preFetched: { user: req.user, resource: { owner_group_id }, context: { req } },
+      });
+      if (!decision.granted) {
+        return next(createError.Forbidden(
+          `Not permitted to create datasets owned by group ${owner_group_id}`,
+        ));
+      }
+    }
+
+    const datasets = req.body.datasets.map(_.pick([
+      'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
+      'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+      'workflow_id', 'state', 'create_method',
+    ]));
+
+    const result = await datasetService.bulkCreateDatasets(
+      datasets,
+      req.user.id,
+      req.user.subject_id,
+    );
+    return res.json(result);
   }),
 );
 

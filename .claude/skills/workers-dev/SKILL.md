@@ -19,7 +19,8 @@ Always from the `workers/` directory, because the ecosystem file uses relative p
 ```
 cd workers
 pm2 start ecosystem.dev.config.js     # start all three
-pm2 restart celery_worker             # restart one
+pm2 restart celery_worker             # restart one, KEEPS ITS OLD ARGS
+pm2 delete watch && pm2 start ecosystem.dev.config.js --only watch   # pick up new args
 pm2 stop all                          # stop, keep in the list
 pm2 delete ecosystem.dev.config.js    # remove from pm2 entirely
 pm2 list                              # status
@@ -73,6 +74,20 @@ gitignored. Two fields cause most of the trouble:
   with `cd api && node src/scripts/issue_token.js svc_tasks`. Reissue it after
   `prisma migrate reset`, which gives `svc_tasks` a new `subject_id`.
 
+  **Every `/v2` route needs `subject_id` in that token, and an old one does not carry it.**
+  The claim was added to the JWT profile after the groups work started, so a token minted
+  before then authenticates fine and then fails inside the policy engine. The API answers
+  500 and logs `AuthorizationError: [policy:isPlatformAdmin] User identifier is required to
+  evaluate policy`; the worker sees only `500 Server Error`. Decode the payload before
+  guessing:
+
+  ```
+  python3 -c "import base64,json,sys;p=sys.argv[1].split('.')[1];p+='='*(-len(p)%4);print(json.loads(base64.urlsafe_b64decode(p)))" "$APP_API_TOKEN"
+  ```
+
+  A good token has `profile.subject_id` and a `profile.id` matching the current
+  `svc_tasks` row. Reissue whenever either is missing or stale.
+
 A missing `API_BASE_URL` fails at import with a bare `KeyError: 'API_BASE_URL'` from
 `common.py`, before any logging is set up. Every worker dies instantly and pm2 shows three
 restarts. Check `workers/.env` before reading anything else.
@@ -115,6 +130,55 @@ upserts on `path` and would otherwise add rows rather than move them:
 ```sql
 UPDATE import_source SET path = replace(path, '/opt/sca/data/imports', '<repo>/data/import');
 ```
+
+## Watched ingestion directories
+
+`watch_v2.py` polls one directory per entry under `registration.ingestion` in
+`workers/workers/config/<env>.py`. The key names the observer; the entry carries everything
+else:
+
+```python
+'ingestion': {
+    'raw_data': {
+        'source_dir': str(RAW_DATA_DIR),
+        'dataset_type': 'RAW_DATA',
+        'owner_group_id': '83101409-...',
+        'rejects': ['.snapshots', '_testObservedPath_*'],
+    },
+},
+```
+
+`source_dir`, `dataset_type`, and `owner_group_id` are required and raise at start-up when
+absent. `rejects`, `workflow`, `poll_interval_seconds`, `full_scan_every_n_scans`, and
+`max_retries` are optional. **Every other key becomes the dataset's metadata**, so adding an
+instrument or intake tag to a directory needs no code change.
+
+Each optional value has exactly one fallback, so no default is written twice. `workflow`
+falls back to `DEFAULT_WORKFLOW` in `watch_v2.py`, and `RegisterV2` requires `wf_name` rather
+than defaulting it, which is what keeps that literal single. `poll_interval_seconds` and
+`full_scan_every_n_scans` fall back to the shared `registration` settings. `rejects` and
+`batch_size` are passed through so `RegisterV2`'s defaults apply, and `max_retries` is not
+passed at all unless configured, so `Observer`'s default applies. Put a new default in
+whichever of the three owns that concern; do not add a second copy at the call site.
+
+The dataset type is a property of the directory rather than the key, so two directories can
+feed `RAW_DATA` under different owning groups.
+
+```
+python -m workers.scripts.watch_v2                    # every configured directory
+python -m workers.scripts.watch_v2 --only raw_data    # one, repeatable
+python -m workers.scripts.watch_v2 --dry-run          # log the payloads, create nothing
+```
+
+`--dry-run` is the fastest way to check a new entry: it prints the exact bulk request each
+directory would send, including the owning group.
+
+**Run `watch_v2.py` or `watch.py`, never both.** They poll the same directories and race to
+register the same new subdirectory. The dev pm2 list runs `watch_v2`.
+
+The legacy `registration.<TYPE>` blocks still exist because `scripts/watch.py`,
+`tests/watch/`, and `setup_dirs` read them. In `dev.py` both shapes point at the same
+`RAW_DATA_DIR` and `DATA_PRODUCT_DIR` locals, so they cannot drift.
 
 ## Directories
 
@@ -218,6 +282,25 @@ registering the test's datasets as real ones. Keep it there.
 `pytest.ini` excludes the directory with `norecursedirs`. See the README beside them.
 
 ## Traps
+
+**`pm2 restart` does not re-read the ecosystem file.** pm2 stores each app's script path
+and arguments when it first starts it, and `restart` replays what it stored. `--update-env`
+refreshes environment variables only, not `args`. So changing a process's module in
+`ecosystem.dev.config.js` and restarting silently keeps running the old module.
+
+This cost a session on 2026-09-08: `watch` was pointed at `workers.scripts.watch_v2`, pm2
+restarted, and the v1 `watch` kept registering datasets with no owning group. The evidence
+is one command:
+
+```
+pm2 describe watch | grep "script args"
+```
+
+To actually apply a changed `args`, delete and start:
+
+```
+pm2 delete watch && pm2 start ecosystem.dev.config.js --only watch
+```
 
 **`poetry run pytest` can run the wrong pytest.** A plain `poetry install` skips the dev
 group, so no pytest exists in `workers/.venv`. `poetry run` then falls through to whatever

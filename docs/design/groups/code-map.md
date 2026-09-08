@@ -37,9 +37,11 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Platform admin | — | one engine check ahead of every action policy | `authorization/index.js`, `authorization/core/middlewares.js` | `PLATFORM ADMIN` caller-role badge |
-| Owning-group grant | seeded `grant` row per resource, `SYSTEM_BOOTSTRAP` | written with the resource, backfilled for older rows | `services/grants/issue.js`, `services/collections.js`, `services/dataset.js` | listed in the Access tab like any grant |
+| Owning-group grant | seeded `grant` row per resource, `SYSTEM_BOOTSTRAP` | written with the resource, backfilled for older rows | `services/grants/issue.js`, `services/collections.js`, `services/datasets_v2/create.js` | listed in the Access tab like any grant |
 | Attribution | `dataset_funding`, `dataset_affiliation` | none yet | `services/datasets_v2/attribution.js` | none yet |
-| Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
+| Consent codes | `dataset_use_condition` | accepted by `POST /v2/datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
+| Dataset creation | `dataset.owner_group_id`, `dataset.create_method` | `POST /v2/datasets`, `POST /v2/datasets/bulk` | `services/datasets_v2/create.js` | none yet |
+| Scanned ingestion | `registration.ingestion` config, `create_method: 'SCAN'` | `POST /v2/datasets/bulk`, one authorization check per distinct group | `workers/workers/services/registration_v2.py`, `workers/workers/scripts/watch_v2.py` | — |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
 

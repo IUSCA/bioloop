@@ -256,6 +256,24 @@ def bulk_create_datasets(datasets):
         return r.json()
 
 
+def bulk_create_datasets_v2(datasets: list[dict]) -> dict:
+    """Create datasets through the v2 API. Each carries its own owner_group_id.
+
+    A dataset here has the same shape the single-create route takes, so nothing is
+    reshaped to send it in bulk. At most a hundred per request.
+
+    Returns {'created': [...], 'conflicted': [...], 'errored': [...]}, where a name
+    and type already held by a live dataset counts as conflicted rather than errored.
+
+    @see docs/design/groups/dataset-creation.md — The watch script
+    """
+    with APIServerSession() as s:
+        # not using dataset_setter because each dataset only has name, type, and origin_path
+        r = s.post('v2/datasets/bulk', json={'datasets': datasets})
+        r.raise_for_status()
+        return r.json()
+
+
 def update_dataset(dataset_id, update_data):
     with APIServerSession() as s:
         r = s.patch(f'datasets/{dataset_id}', json=dataset_setter(update_data))

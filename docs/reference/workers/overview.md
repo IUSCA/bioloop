@@ -115,7 +115,9 @@ pm2 start ecosystem.dev.config.js
 ```
 
 `ecosystem.dev.config.js` runs `celery_worker`, `watch`, and `manage_upload_workflows`
-against the poetry virtualenv, with paths rooted at the repository's `./data`.
+against the poetry virtualenv, with paths rooted at the repository's `./data`. The `watch`
+process runs `workers.scripts.watch_v2`, which polls one directory per entry under
+`registration.ingestion` and registers each dataset under that entry's owning group.
 
 The celery flags it passes are worth understanding:
 
@@ -219,7 +221,7 @@ colo23> python -m celery -A workers.celery_app worker --loglevel INFO -O fair --
 
 Dataset Name:
 - taken from the name of the directory ingested
-- used in watch.py to filter out registered datasets
+- used by the registration services to filter out already-registered datasets
 - used to compute the staging path `staging_dir / alias / dataset['name']`
 - used to compute the qc path `Path(config['paths'][dataset_type]['qc']) / dataset['name'] / 'qc'`
 - used to compute the scratch tar path while downloading the tar file from SDA `Path(f'{str(compute_staging_path(dataset)[0].parent)}/{dataset["name"]}.tar')`

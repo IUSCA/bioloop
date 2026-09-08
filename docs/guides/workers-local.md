@@ -98,8 +98,16 @@ The watch script polls every ten seconds, then `await_stability` waits for the d
 stop changing. About forty seconds later the dataset should have walked `REGISTERED`,
 `READY`, `ARCHIVED`, `FETCHED`, and `STAGED`, and be visible in the UI.
 
+The `watch` process runs `workers.scripts.watch_v2`, which registers through
+`POST /v2/datasets/bulk`. Every dataset it creates carries the owning group configured for
+its ingestion directory under `registration.ingestion`, so a scanned dataset arrives already
+governed. `python -m workers.scripts.watch_v2 --dry-run` prints the request each directory
+would send without creating anything.
+
 If it stops at `REGISTERED`, the API could not reach rhythm. If it never appears at all,
-`APP_ENV` is not `dev` and the watch script is polling a placeholder path.
+`APP_ENV` is not `dev` and the watch script is polling a placeholder path. If the API answers
+500, check that `APP_API_TOKEN` carries a `subject_id`: every `/v2` route reads it, and a
+token minted before the groups work does not have one.
 
 ## Import and upload
 
