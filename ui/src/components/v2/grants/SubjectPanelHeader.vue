@@ -32,7 +32,7 @@
         v-for="grant in previewGrants"
         :key="grant.id"
         :class="[
-          'text-xs px-2 py-0.5 rounded-full border whitespace-nowrap flex-shrink-0 border-solid',
+          'text-xs px-2 py-0.5 rounded-full border border-solid whitespace-nowrap flex-shrink-0 border-solid',
           isGrantExpiring(grant)
             ? 'border-amber-400 dark:border-amber-600 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300'
             : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300',

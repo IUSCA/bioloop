@@ -16,9 +16,9 @@ the code and have not been reproduced on screen.
 
 Items are ordered by what a user loses, not by effort.
 
-Tiers 1, 2, and 3 were applied on 2026-09-08. Each item below keeps its original finding
-as the evidence record and ends with a **Shipped** line saying what changed. Tier 4 is
-still open.
+Tiers 1, 2, and 3 were applied on 2026-09-08, and Tier 4 followed the same day. Each item
+below keeps its original finding as the evidence record and ends with a **Shipped** line
+saying what changed.
 
 ## Tier 1 — Users see something wrong today
 
@@ -294,33 +294,106 @@ are replaced by `components/v2/RoleBadge.vue`, which carries all six roles, the 
 and a `validator` on `size`. `OVERSIGHT` settled on `text-emerald-700`, and every role now
 uses the `bg-{hue}-500/10` tint the design system states.
 
-The fallback tone stayed on `slate` rather than moving to `gray`. That is the Tier 4 ramp
+The fallback tone stayed on `slate` rather than moving to `gray`. That is the Tier 4 palette
 decision and it should be taken once, for the whole tree.
 
-## Tier 4 — Convergence, worth planning rather than patching
+## Tier 4 — Convergence
 
-These are the items where the minimal change is not obviously the right change. Each is
+These were the items where the minimal change was not obviously the right change. Each is
 argued in [V2 Design System](./v2-design-system.md).
 
-- **Two neutral ramps.** 62 files are gray-dominant and 46 slate-dominant, with six
-  mixing both. The slate side is mostly the audit subsystem and the dashboard, so
-  converging is a mechanical rename across a contiguous part of the tree rather than a
-  scattered one.
-- **Three badge recipes.** Tinted-transparent, solid-tint, and gradient variants appear
-  next to each other on the same header.
-- **Two card languages.** `VaCard` at 6px with no border, hand-rolled panels at 8px with
-  a border, side by side in one column.
-- **Four page shells.** The five top-level pages differ in width, title treatment,
-  loading strategy, and filter control.
-- **Ten heading recipes.** 26 `<h2>` elements across ten class combinations spanning
-  `text-sm` to `text-xl`.
+### 15. Two neutral palettes
+
+62 files are gray-dominant and 46 slate-dominant, with six mixing both. The slate side is
+mostly the audit subsystem and the dashboard.
+
+**Shipped as a rule, not a rewrite.** The measured difference between the two is small:
+4 of 255 in the blue channel between `slate-800` and `gray-800`, about 9 in the mid-tones.
+The cost of the split is that a developer opening a new file has no rule telling them
+which to use, and that cost is paid by a sentence rather than by 46 files. The design
+system now says `gray` for new work and says plainly that it does not oblige anyone to
+convert an existing file.
+
+`gray` is the tie-break because Vuestic's dark preset paints every `VaCard` at `#1f2937`,
+which is `gray-800` exactly, so `slate` sits permanently a few points off the framework's
+own value.
+
+### 16. Three badge recipes
+
+Tinted-transparent, solid-tint, and gradient variants appeared next to each other on the
+same header.
+
+**Shipped.** `components/v2/Badge.vue` owns the one recipe. `ModernChip.vue` is deleted
+and its 20 call sites migrated, the six inline solid-tint spans in `GrantRow.vue` are
+`Badge`s, and `RoleBadge.vue` composes `Badge` rather than repeating its classes.
+Measured on the group members tab, all 34 badges now share one radius, one weight, and
+one tint rule.
+
+Two deliberate changes came with it. Archived and deleted chips were a rose gradient in
+three places and are now `neutral`, which is what the semantic table says. And `Badge`
+uppercases, so the two labels that carry a proper noun — a preset name and a group name —
+pass `:uppercase="false"` rather than shouting somebody's group at them.
+
+### 17. Two card languages
+
+`VaCard` at 6px with no border sat beside hand-rolled panels at 8px with a border.
+
+**Shipped.** `--va-card-border-radius: 0.5rem` in `ui/src/styles/overrides.css` moves
+`VaCard` to 8px, and the seven `rounded-xl` and `rounded-2xl` panels move to `rounded-lg`.
+Measured on the group detail page, every card and every panel is now 8px.
+
+This turned up a defect the audit had missed. Twelve panels named a border color without
+a border ever rendering, the same trap as item 3 above. `border` alone is not enough
+either: Vuestic's reset lands after Tailwind's preflight and zeroes both the width and the
+style, so only `border border-solid` paints a line. All twelve are corrected.
+
+### 18. Four page shells
+
+The five top-level pages differed in width, title treatment, loading strategy, and filter
+control.
+
+**Shipped.** The four list pages share one shell: `max-w-7xl mx-auto`, a one-line
+description under the breadcrumb, a `VaCard class="header card"` holding search and
+filters and the page action, and a skeleton first paint inside the existing
+`fade-slide` transition. `home.vue` keeps its own shell, because a dashboard is a landing
+surface rather than a list.
+
+Three things changed as a consequence. `access-requests/index.vue` no longer repeats its
+own name as an `<h1>` under a breadcrumb that already says it. The two pages that used
+`VaInnerLoading` for a first paint now use a skeleton, verified by observing eight
+skeletons appear before the rows arrive. And the six `VaChip` filter groups became
+`ModernButtonToggle`, which carries `role="group"`, `aria-pressed`, and a focus ring that
+the chips never had.
+
+### 19. Ten heading recipes
+
+29 heading elements across fourteen class combinations, including one `text` class that
+does not exist in Tailwind.
+
+**Shipped.** Three sizes remain: `text-xl font-semibold` for a page or modal title,
+`text-lg font-semibold` for a panel title, `text-sm font-semibold` for a card title or
+section heading. The only modifiers left are spacing, `va-text-secondary`, and the red on
+a Danger Zone heading. Ten of the eleven hand-rolled empty-state blocks that carried their
+own heading are now `EmptyState`, which owns the size.
 
 ## What is left
 
-Tier 4 is open, and each of its five items needs a decision before any code moves.
+Two contrast failures found on 2026-09-07 are still open, because neither has a fix that
+stops at a shade. `--va-primary` on the dark page ground measures 4.49:1, one hundredth
+below the floor, and changing it moves every link, active tab, and focus ring in both
+themes. Avatar initials measure 3.40:1 against a generated background, which needs the
+generator to pick from a fixed, checked palette rather than from a hash.
 
-Two contrast failures found on 2026-09-07 are also still open, because neither has a fix
-that stops at a shade. `--va-primary` on the dark page ground measures 4.49:1, one
-hundredth below the floor, and changing it moves every link, active tab, and focus ring in
-both themes. Avatar initials measure 3.40:1 against a generated background, which needs
-the generator to pick from a fixed, checked palette rather than from a hash.
+Three things outside this audit were found while working through it and left alone.
+
+`pages/v2/home.vue` renders nothing. Its template reads `dashboard.loading` and
+`dashboard.isGroupAdmin`, and its `<script setup>` never defines `dashboard`, so the render
+function throws. This is true at the commit before any of this work and the file does not
+exist on `main`, so it is unfinished work on this branch rather than a regression.
+
+`AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub", which is
+visible on the access requests page.
+
+`GroupSubgroupsTab.vue` and the six v1 files under `components/utils/` and
+`components/filebrowser/` still set `--va-data-table-cell-padding` locally. Four of the six
+use a different value, so they are not copies of one decision and were left as they are.

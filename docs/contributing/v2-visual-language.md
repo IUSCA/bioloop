@@ -43,26 +43,31 @@ loads every Tailwind hue as a Vuestic color variable, so `color="blue"` and
 `color="amber"` are legal Vuestic props alongside `color="primary"` and `color="danger"`.
 The v2 screens use both vocabularies. Tailwind hue classes are the dominant form.
 
-**A `Modern*` component family sits between Vuestic and the pages.** Five components in
-`ui/src/components/utils/` carry the custom visual language, and all 54 of their call
-sites are inside v2.
+**A small primitive set sits between Vuestic and the pages.** These carry the custom
+visual language, and every call site is inside v2.
 
-| Component | Call sites | What it renders |
-|---|---|---|
-| `ModernChip` | 21 | Gradient status pill with border |
-| `ModernCard` | 15 | Bordered panel with an uppercase title bar |
-| `ModernButtonToggle` | 10 | Segmented filter control |
-| `ModernAlert` | 7 | Tinted inline message box |
-| `ModernCollapsible` | 1 | Disclosure section |
+| Component | Where | Call sites | What it renders |
+|---|---|---|---|
+| `ErrorState` | `components/utils/` | 33 | Centered failure block with a retry |
+| `EmptyState` | `components/utils/` | 29 | Centered empty block with a filter reset or an action |
+| `Badge` | `components/v2/` | 28 | Tinted-transparent label |
+| `ModernButtonToggle` | `components/utils/` | 17 | Segmented filter control |
+| `ModernCard` | `components/utils/` | 15 | Bordered panel with an uppercase title bar |
+| `ModernAlert` | `components/utils/` | 7 | Tinted inline message box |
+| `RoleBadge` | `components/v2/` | 6 | A `Badge` configured for one ABAC role |
+| `ModernCollapsible` | `components/utils/` | 1 | Disclosure section |
 
 ## Color
 
-### Two neutral ramps, split by feature area
+### Two neutral palettes, split by feature area
+
+A palette here means one of Tailwind's named color sets, such as `gray` or `slate`, each
+running from shade 50 through shade 900.
 
 The v2 code uses `gray` and `slate` for the same jobs. The split follows feature area
 rather than date.
 
-| Area | Ramp | Files |
+| Area | Palette | Files |
 |---|---|---|
 | Audit log templates, tokens, and page | `slate` | 35 |
 | Dashboard (`home.vue`, `components/v2/dashboard/`) | `slate` | 5 |
@@ -70,14 +75,16 @@ rather than date.
 | Groups, collections, datasets, grants, access requests | `gray` | 62 |
 | Same areas, slate-dominant exceptions | `slate` | 3 |
 
-Counting a file by whichever ramp it uses more, 62 are gray-dominant and 46 are
+Counting a file by whichever palette it uses more, 62 are gray-dominant and 46 are
 slate-dominant. Six files mix both: `DatasetSearchSelect.vue`, `GroupMembersTab.vue`,
 `AddGroupMemberModal.vue`, and the three per-resource audit tabs. The audit tabs mix
 because they embed slate audit templates in a gray page.
 
-Across all v2 files, `gray` classes outnumber `slate` classes 613 to 250. The two ramps
-differ enough to be visible when a slate audit row sits inside a gray card, because
-`slate` is cooler than `gray` at every step.
+Across all v2 files, `gray` classes outnumber `slate` classes 571 to 236. `slate` is
+cooler than `gray` at every step, but the gap is small. It is widest in the mid-tones, at
+9 of 255 in the blue channel between `slate-400` and `gray-400`, and narrowest in the
+darks, at 4 between `slate-800` and `gray-800`. The cost of the split is that a developer
+opening a new file has no rule telling them which to use, rather than a visible defect.
 
 ### Hues and what they mean
 
@@ -113,33 +120,22 @@ Four mappings hold everywhere they appear.
 - **Expiring grant.** `GrantRow.vue` switches the expiry line to red at fourteen days or
   fewer.
 
-### Three badge recipes
+### One badge recipe
 
-A small colored label is written three different ways.
-
-**Tinted-transparent**, in `RoleBadge.vue`:
+Every small colored label is a `Badge`, and `Badge` has one recipe:
 
 ```
 text-{hue}-700 bg-{hue}-500/10 dark:text-{hue}-400 dark:bg-{hue}-400/10
-text-[11px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wide
+inline-flex items-center gap-1 rounded-md px-1.5 py-0.5
+text-[11px] font-semibold uppercase tracking-wide
 ```
 
-**Solid-tint**, written inline in `GrantRow.vue` and repeated in several tabs:
+The tone comes from a closed map of five meanings — `primary`, `success`, `warning`,
+`danger`, `neutral` — plus six reserved identity tones. `:uppercase="false"` is the one
+exception, used where the label is a proper noun such as a group or preset name.
 
-```
-bg-{hue}-100 text-{hue}-800 dark:bg-{hue}-900/40 dark:text-{hue}-300
-text-xs font-medium px-2 py-0.5 rounded-sm
-```
-
-**Gradient**, in `ModernChip.vue`:
-
-```
-bg-gradient-to-r from-{hue}-100 to-{hue2}-100 text-{hue}-800 border-{hue}-200 …
-px-2.5 py-0.5 rounded-md text-xs font-medium border border-solid
-```
-
-The three recipes differ in radius, in padding, in weight, and in whether they carry a
-border. They appear next to each other on the group and collection detail headers.
+Two other recipes existed before: a solid-tint variant written inline in `GrantRow.vue`,
+and a gradient chip in `ModernChip.vue`. Both are gone.
 
 ### The Vuestic color bridge
 
@@ -180,10 +176,15 @@ The scale is narrow and consistent.
 Only two weights carry the design: `font-medium` at 130 uses and `font-semibold` at 114.
 `font-normal` appears 4 times and `font-mono` 7.
 
-Heading elements are less settled. Six `<h1>`, 26 `<h2>`, and 18 `<h3>` elements appear
-across v2. The four detail pages all use `<h1 class="text-xl font-semibold">`. The
-dashboard uses `text-3xl sm:text-4xl`. The `<h2>` elements use ten distinct class
-combinations across `text-sm`, `text-lg`, and `text-xl`.
+Headings use three sizes. Across v2 there are 29 heading elements carrying a class, in
+six combinations that reduce to `text-xl font-semibold` for a page or modal title,
+`text-lg font-semibold` for a panel title, and `text-sm font-semibold` for a card title or
+section heading. The only modifiers are spacing, `va-text-secondary`, and the red on a
+Danger Zone heading. The dashboard hero remains the deliberate exception at
+`text-3xl sm:text-4xl`.
+
+Before this convergence the same 29 headings used fourteen combinations, including one
+`text` class that does not exist in Tailwind.
 
 The global stylesheet sets `h1 { font-size: 3.2em }` in `ui/src/styles/main.css`. Every
 v2 heading overrides it with a utility class.
@@ -243,18 +244,24 @@ while the dataset and collection pages read `constants.icons` through `<Icon>`.
 
 ## Page shells
 
-The five top-level v2 pages use four different shells.
+The four list pages use one shell. The dashboard is a landing surface and keeps its own.
 
 | Page | Width | Title | Loading | Filters | Body |
 |---|---|---|---|---|---|
-| `groups/index.vue` | full | none | `VaSkeleton` | `VaChip` | `GroupCard` grid |
-| `collections/index.vue` | `max-w-7xl` | none | `VaInnerLoading` | `ModernButtonToggle` | `VaDataTable` |
-| `datasets/index.vue` | `max-w-7xl` | none | `VaInnerLoading` | `ModernButtonToggle` | `VaDataTable` |
-| `access-requests/index.vue` | full | `<h1>` | none | `VaTabs` | card list |
-| `home.vue` | `max-w-7xl` | `DashboardHero` | `VaSkeleton` | none | sections |
+| `groups/index.vue` | `max-w-7xl` | breadcrumb | `VaSkeleton` | `ModernButtonToggle` | `GroupCard` grid |
+| `collections/index.vue` | `max-w-7xl` | breadcrumb | `VaSkeleton` | `ModernButtonToggle` | `VaDataTable` |
+| `datasets/index.vue` | `max-w-7xl` | breadcrumb | `VaSkeleton` | `ModernButtonToggle` | `VaDataTable` |
+| `access-requests/index.vue` | `max-w-7xl` | breadcrumb | `VaSkeleton` | `VaTabs` | card list |
+| `home.vue` | full | `DashboardHero` | `VaSkeleton` | none | sections |
 
-The layout at `ui/src/layouts/default.vue` sets no maximum width, so the `max-w-7xl`
-choice is per page.
+Each list page opens with a one-line description under the breadcrumb, then a
+`<VaCard class="header card">` holding search, filters, and the one page-level action,
+then a results card. The layout at `ui/src/layouts/default.vue` sets no maximum width, so
+the `max-w-7xl` choice is per page.
+
+`VaChip` no longer appears as a filter control anywhere in v2. It survives in
+`DatasetGrantsTab.vue` and `CollectionGrantsTab.vue` as a removable selection token, which
+is what it is for.
 
 The three detail pages agree closely. Each opens with a `<Transition name="fade-slide"
 mode="out-in">` wrapping a skeleton state, an `ErrorState`, and the loaded content. Each
@@ -262,9 +269,9 @@ renders a header row, then `<VaTabs class="border-b border-solid border-blue-500
 then one panel gated by `v-if="activeTab === '…'"`. This is the shape that
 [V2 page patterns](./v2-page-patterns.md) documents.
 
-Archived status is shown three ways. The group and collection pages render a
-`ModernChip color="accent"`. The dataset page renders a `VaAlert color="warning"` for
-deletion. The list pages rely on a status filter instead of a per-row mark.
+Archived status is shown as a `Badge color="neutral"` on the group, collection, and
+dataset surfaces alike. The dataset page also renders a `VaAlert color="warning"` for
+deletion. The list pages carry a status column and a status filter.
 
 ## Dark mode
 
@@ -346,8 +353,11 @@ Five v2 files carry a `<style>` block, down from eighteen. The three rules that 
 `@layer components`. Four pages use it and none of them redefines it.
 
 **`--va-data-table-cell-padding: 8px`** is defined once in `ui/src/styles/overrides.css`
-under `.v2-table`, and eight v2 tables carry that class. Six v1 files still set the
+under `.v2-table`, and nine v2 tables carry that class. Six v1 files still set the
 variable locally, four of them to a different value.
+
+**`--va-card-border-radius: 0.5rem`** is set once in `ui/src/styles/overrides.css`, so
+`VaCard` paints the same 8px as a `rounded-lg` panel beside it.
 
 **`.card.header { --va-card-padding: 0.8rem }`** is defined once in
 `ui/src/styles/overrides.css`.
@@ -356,6 +366,19 @@ variable locally, four of them to a different value.
 `DatasetDownloadModalV2.vue`, an input height override in `ExpirySelector.vue`, a switch
 track shadow in `GroupAllowMemberContribSwitch.vue`, a dropdown padding override in
 `CollectionDatasetsTab.vue`, and the card padding and anchor reset in `GroupCard.vue`.
+
+## Borders need two classes
+
+A border color alone renders nothing, and so does `border` alone. Measured in the running
+app: an element carrying `border border-gray-200` computes to `border-style: none` and
+`border-top-width: 0px`, and only `border border-solid border-gray-200` computes to
+`1px solid`.
+
+Tailwind's preflight does set `border-style: solid` with `border-width: 0`. Vuestic's own
+reset lands after it and zeroes both again, and it wins over the `.border` utility. That
+is why [UI coding standards](./ui-coding-standards.md#use-tailwind-css-over-custom-styles)
+insists on the pair, and why twelve panels that named a border color were drawing nothing
+until they were corrected.
 
 ## Measuring this again
 
@@ -376,7 +399,7 @@ xargs -0 grep -ohE '\btext-(xs|sm|base|lg|xl|2xl|3xl|4xl)\b' < /tmp/v2files.z | 
 xargs -0 grep -ohE '\brounded(-[a-z0-9]+)*\b'                 < /tmp/v2files.z | sort | uniq -c | sort -rn
 xargs -0 grep -ohE '\bgap-[0-9.]+\b'                          < /tmp/v2files.z | sort | uniq -c | sort -rn
 
-# which neutral ramp each file prefers (see below for the rendered-value recipe)
+# which neutral palette each file prefers (see below for the rendered-value recipe)
 for f in $(find pages/v2 components/v2 -name '*.vue'); do
   s=$(grep -c -- '-slate-' "$f"); g=$(grep -c -- '-gray-' "$f")
   [ "$s" -gt "$g" ] && echo "SLATE $f" || { [ "$g" -gt 0 ] && echo "GRAY  $f"; }

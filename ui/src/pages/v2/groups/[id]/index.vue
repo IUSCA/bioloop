@@ -31,9 +31,9 @@
             </h1>
           </div>
           <div>
-            <ModernChip v-if="group.is_archived" color="accent" class="ml-2">
+            <Badge v-if="group.is_archived" color="neutral" class="ml-2">
               Archived
-            </ModernChip>
+            </Badge>
           </div>
         </div>
 

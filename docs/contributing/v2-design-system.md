@@ -40,19 +40,30 @@ a third file, it becomes a primitive or a rule in `main.css`.
 
 ## Color
 
-### One neutral ramp: `gray`
+### One neutral palette: `gray`
 
-Use `gray` for every neutral. Do not use `slate`, `zinc`, `neutral`, or `stone`.
+Use `gray` for every neutral in new code. Do not use `slate`, `zinc`, `neutral`, or
+`stone`.
+
+This rule governs new work only. It does not oblige anyone to convert the 46 existing
+slate-dominant files, and a change whose only purpose is to swap `slate` for `gray` is
+not worth reviewing on its own. Convert a file when you are already editing it for
+another reason, and convert the lines you are touching rather than the whole file.
 
 The reason is not preference. Vuestic's dark preset in `ui/vuestic.config.js` already sits
-on the `gray` ramp: `backgroundSecondary` and `backgroundCardPrimary` are both `#1f2937`,
-which is `gray-800` exactly. Every `VaCard` in dark mode therefore paints `gray-800`. A
-`slate` panel placed on it is a cooler tone on a warmer ground, and the mismatch is
-structural rather than a shade away from correct.
+on the `gray` palette: `backgroundSecondary` and `backgroundCardPrimary` are both `#1f2937`,
+which is `gray-800` exactly. Every `VaCard` in dark mode therefore paints `gray-800`, so
+`gray` needs no justification at a call site and `slate` always sits slightly off the
+framework's own value.
 
-Converging is also the contained migration. 62 v2 files are gray-dominant and 46
-slate-dominant, and the slate side is almost entirely the audit subsystem and the
-dashboard, so the rename touches a contiguous part of the tree.
+The visible difference between the two is small. `slate-800` is `#1e293b` against
+`gray-800` at `#1f2937`, a gap of 4 of 255 in the blue channel, and the mid-tones differ
+by about 9. Converging is worth doing because it answers "which neutral do I use here",
+not because the current mix looks broken.
+
+62 v2 files are gray-dominant and 46 slate-dominant, and the slate side is almost entirely
+the audit subsystem and the dashboard, so the rename touches a contiguous part of the tree
+rather than a scattered one.
 
 ### Semantic meaning is fixed
 
@@ -79,8 +90,9 @@ the difference carries no information.
 A component's `color` prop takes a meaning, not a hue. `color="danger"`, not
 `color="rose"`. The hue is the primitive's business.
 
-`ModernAlert` follows this rule. `ModernButtonToggle` still takes hue names and is the
-remaining exception.
+`ModernAlert` and `ModernButtonToggle` both follow this rule. `Badge` follows it too,
+with the reserved identity tones named alongside the meanings so a caller cannot invent
+a hue.
 
 ### Refuse an unknown color rather than falling back
 
@@ -126,9 +138,8 @@ decorative.
 
 Four components, and adding a fifth needs an argument.
 
-**`Badge`** replaces the three recipes in use. One recipe: tinted-transparent, because it
-reads on both themes without a second color decision. `RoleBadge.vue` is the first
-component built to it and covers every ABAC role.
+**`Badge`** is `components/v2/Badge.vue`, and it is the only badge. One recipe:
+tinted-transparent, because it reads on both themes without a second color decision.
 
 ```
 text-{hue}-700 bg-{hue}-500/10 dark:text-{hue}-400 dark:bg-{hue}-400/10
@@ -136,8 +147,12 @@ inline-flex items-center gap-1 rounded-md px-1.5 py-0.5
 text-[11px] font-semibold uppercase tracking-wide
 ```
 
-It takes a meaning, a size from `sm`, `base`, `lg`, and an optional icon. The remaining
-work is folding the solid-tint and gradient recipes into it.
+It takes a meaning or a reserved identity tone, a size from `sm`, `base`, `lg`, and an
+optional icon. It uppercases its label, and `:uppercase="false"` is the one documented
+exception, for content that is a proper noun such as a group or preset name.
+
+`RoleBadge.vue` composes it and owns the role-to-tone, role-to-icon, and role-to-label
+maps.
 
 **`Alert`** is `ModernAlert.vue`. It takes a meaning from `info`, `success`, `warning`,
 `danger`, and `neutral`, a title through a prop or the `title` slot, body content through
@@ -145,13 +160,20 @@ its default slot, and buttons through the `actions` slot. It renders every slot
 unconditionally and carries `border border-solid` so its border color classes do
 something.
 
-**`Card`** is `VaCard`. Hand-rolled panels stop existing. Where a card needs a titled
-header, that is a slot on a wrapper, not a second card implementation with its own radius
-and border.
+**`Card`** is `VaCard`. Where a card needs a titled header, that is a slot on a wrapper,
+not a second card implementation with its own radius and border. Inline panels inside a
+card — a tinted callout, a summary strip — stay as Tailwind utilities at `rounded-lg`,
+which is the same radius `VaCard` now paints.
 
-**`SegmentedToggle`** is today's `ModernButtonToggle`, which is the best-built component
-in the set: it has a token map, `role="group"`, `aria-pressed`, and a `focus-visible`
-ring. Keep it, and change its `color` prop to take meanings.
+**`SegmentedToggle`** is `ModernButtonToggle`, the best-built component in the set: it
+has a token map, `role="group"`, `aria-pressed`, and a `focus-visible` ring. Its `color`
+prop takes a meaning.
+
+**`EmptyState`** and **`ErrorState`** own the centered block a region shows when it has
+nothing to display or when a fetch failed. `EmptyState` takes an `icon`, a `title`, a
+`message` prop or slot, and either the clear-filters affordance for a filtered region or
+an `actions` slot for a create-the-first-one region. Pass `:show-clear-filters="false"`
+when nothing is filtered, so the button is not offered with nothing to clear.
 
 ## Typography
 
@@ -159,12 +181,18 @@ One scale, and headings do not improvise.
 
 | Role | Class |
 |---|---|
-| Page title | `text-xl font-semibold` |
-| Section heading | `text-sm font-semibold uppercase tracking-wide` |
-| Card title | `text-sm font-semibold` |
+| Page or modal title | `text-xl font-semibold` |
+| Panel title | `text-lg font-semibold` |
+| Empty or error state title | `text-base font-semibold` |
+| Card title, section heading | `text-sm font-semibold` |
 | Body | `text-sm` |
 | Caption, helper, tag | `text-xs` |
 | Metric value | `text-2xl font-semibold` |
+
+A heading carries a size and a weight and nothing else. Spacing utilities are fine, and
+so is a color that means something, such as the red on a Danger Zone heading. An explicit
+`text-gray-900 dark:text-gray-100` on a heading is not: that is the inherited color
+written out again, and it is one more thing to keep in step.
 
 Two weights only: `font-medium` for emphasis inside body text, `font-semibold` for
 headings and labels. Nothing else.
@@ -177,10 +205,10 @@ landing surface, not a resource page.
 
 ## Radius and elevation
 
-One radius: `8px`. Set `--va-card-border-radius: 0.5rem` in
-`ui/src/styles/overrides.css` so Vuestic's `6px` default matches `rounded-lg`, then use
+One radius: `8px`. `--va-card-border-radius: 0.5rem` is set in
+`ui/src/styles/overrides.css` so Vuestic's `6px` default matches `rounded-lg`. Use
 `rounded-lg` for every panel, `rounded-md` for badges and small controls, and
-`rounded-full` for avatars and pills.
+`rounded-full` for avatars and pills. Do not use `rounded-xl` or `rounded-2xl`.
 
 Depth comes from a border and a background step, not from a shadow. `shadow-sm` is the
 ceiling for a resting surface and `shadow-md` for a hovered one. This is already how the
@@ -205,11 +233,15 @@ Every top-level v2 page uses the same shell. The five that exist today use four.
 
 - Width is `max-w-7xl mx-auto`, set once in the page.
 - The page title comes from the breadcrumb trail, and a list page adds a one-line
-  description below it. A list page does not repeat its own name as an `<h1>`.
+  description below it in `text-sm va-text-secondary`. A list page does not repeat its
+  own name as an `<h1>`.
+- Search, filters, and the one page-level action sit in a `<VaCard class="header card">`
+  above the results card.
 - Loading is a skeleton inside `<Transition name="fade-slide" mode="out-in">`, matching
   the detail pages. `VaInnerLoading` is for a region that reloads inside an already-drawn
   page, not for a first paint.
-- Filters are `SegmentedToggle`. `VaChip` is not a filter control.
+- Filters are `SegmentedToggle`. `VaChip` is not a filter control; it is a removable
+  selection token, which is what `DatasetGrantsTab` and `CollectionGrantsTab` use it for.
 - Empty and error states are `EmptyState` and `ErrorState`. A hand-rolled `py-12
   text-center` block is not.
 
@@ -225,7 +257,8 @@ A `<div>` with a click handler is not navigable by keyboard, has no focus ring, 
 be opened in a new tab. Card grids are the common offender.
 
 **Every interactive element is focusable and shows focus.** Prefer a Vuestic control,
-which handles this. A hand-rolled control carries a `focus-visible` ring.
+which handles this. A hand-rolled control carries the shared `.focus-ring` class from
+`ui/src/styles/main.css`.
 
 **Every icon-only control has an accessible name**, through `aria-label` or
 `aria-labelledby`.
@@ -240,7 +273,10 @@ archived resource carries a labelled chip, not only a muted tone.
 - Does every `color` prop take a meaning, with a `validator` that refuses anything else?
 - Is every class name a complete literal, never built by interpolation? Tailwind cannot
   see `bg-${hue}-500`, and the class will be missing with no error.
-- Is every border paired with `border-solid`?
+- Is every border paired with `border-solid`? A border color alone renders nothing, and
+  so does `border` alone. Vuestic's reset lands after Tailwind's preflight and zeroes
+  both the width and the style, so only `border border-solid` paints a line. This was
+  measured in the running app, not inferred.
 - Do slots render unconditionally, so a caller's content cannot be silently dropped?
 - Is the radius `rounded-lg`, the body text `text-sm`, and muted text at least
   `text-gray-600` in light mode?
@@ -259,5 +295,5 @@ tabs with counts, one panel per tab — is well settled across three resource ty
 mode coverage is already high. Density is right for the amount of information these
 screens carry, and the flat, border-led surface treatment suits it.
 
-The visual language does not need replacing. It needs one neutral ramp, one badge, one
-alert, one card, and one page shell.
+The visual language did not need replacing. It needed one neutral palette, one badge, one
+alert, one card, and one page shell, and it now has all but the first.

@@ -81,7 +81,7 @@
     <!-- Footer with submit state info -->
     <div
       v-if="formState.submitDisableReason"
-      class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3"
+      class="rounded-lg border border-solid border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3"
     >
       <p
         class="text-xs text-amber-700 dark:text-amber-300 flex items-start gap-2"
@@ -93,7 +93,7 @@
 
     <!-- Stats footer -->
     <div
-      class="text-xs text-gray-500 dark:text-gray-400 space-y-1 pt-2 border-t border-gray-200 dark:border-gray-700"
+      class="text-xs text-gray-500 dark:text-gray-400 space-y-1 pt-2 border-t border-solid border-gray-200 dark:border-gray-700"
     >
       <p>
         <strong>{{ formState.approvedCount }}</strong> approved,

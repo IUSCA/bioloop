@@ -30,13 +30,9 @@
             <h1 class="text-xl font-semibold">{{ collection.name }}</h1>
           </div>
           <div>
-            <ModernChip
-              v-if="collection.is_archived"
-              color="accent"
-              class="ml-2"
-            >
+            <Badge v-if="collection.is_archived" color="neutral" class="ml-2">
               Archived
-            </ModernChip>
+            </Badge>
           </div>
         </div>
 

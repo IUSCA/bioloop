@@ -18,7 +18,7 @@
         <VaInput
           v-if="isEditing.type === 'key' && isEditing.index === i"
           v-model="editableKeys[i]"
-          class="border rounded px-1 py-0.5 key-input key-col-separator"
+          class="border border-solid rounded px-1 py-0.5 key-input key-col-separator"
           @blur="toggleKeyEdit(i, key, vKey)"
           @keyup.enter="toggleKeyEdit(i, key, vKey)"
           ref="keyInputs"
@@ -40,7 +40,7 @@
         <VaInput
           v-if="isEditing.type === 'value' && isEditing.index === i"
           v-model="localObject[key]"
-          class="border rounded px-1 py-0.5 value-input"
+          class="border border-solid rounded px-1 py-0.5 value-input"
           @blur="stopEdit(vVal)"
           @keyup.enter="stopEdit(vVal)"
           ref="valueInputs"
@@ -72,12 +72,12 @@
       <VaInput
         v-model="newKey"
         :placeholder="props.keyPlaceholder"
-        class="border rounded px-1 py-0.5 key-input key-col-separator"
+        class="border border-solid rounded px-1 py-0.5 key-input key-col-separator"
       />
       <VaInput
         v-model="newValue"
         :placeholder="props.valuePlaceholder"
-        class="border rounded px-1 py-0.5 value-input"
+        class="border border-solid rounded px-1 py-0.5 value-input"
       />
       <VaButton
         icon="add"

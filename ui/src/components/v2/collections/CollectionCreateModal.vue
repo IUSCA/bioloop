@@ -15,9 +15,7 @@
           <Icon icon="mdi-folder-plus" />
         </div>
         <div>
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Create Collection
-          </h2>
+          <h2 class="text-xl font-semibold">Create Collection</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Collections group datasets for scalable access management. One grant
             on a collection extends to all its datasets and to all members of

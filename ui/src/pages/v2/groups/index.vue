@@ -1,48 +1,47 @@
 <template>
-  <div class="flex flex-col gap-5">
-    <!-- Page header -->
-    <div class="flex items-center justify-between flex-wrap gap-3">
-      <div>
-        <p class="">Browse and manage organizational groups.</p>
-      </div>
-      <!-- Create Group — platform admin only -->
-      <VaButton
-        v-if="auth.canAdmin"
-        preset="primary"
-        icon="add"
-        @click="openCreateGroupModal"
-      >
-        Create Group
-      </VaButton>
-    </div>
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <p class="text-sm va-text-secondary">
+      Browse and manage organizational groups.
+    </p>
 
-    <!-- ── Filters ──────────────────────────────────────────────────── -->
-    <div class="flex flex-wrap items-center gap-3">
-      <!-- Search input -->
-      <div class="flex-1">
-        <Searchbar
-          v-model="searchTerm"
-          placeholder="Search groups…"
-          :disabled="loading"
-        />
-      </div>
+    <!-- Search, filters, and the one page-level action -->
+    <VaCard class="header card">
+      <VaCardContent>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-5">
+            <div class="flex-1">
+              <Searchbar
+                v-model="searchTerm"
+                placeholder="Search groups…"
+                :disabled="loading"
+              />
+            </div>
 
-      <!-- Scope filter chips -->
-      <div class="flex items-center gap-2">
-        <VaChip
-          v-for="f in scopeFilters"
-          :key="f.value"
-          :color="activeScope === f.value ? 'primary' : 'secondary'"
-          class="cursor-pointer"
-          size="small"
-          :outline="activeScope !== f.value"
-          :disabled="loading"
-          @click="!loading && setScope(f.value)"
-        >
-          {{ f.label }}
-        </VaChip>
-      </div>
-    </div>
+            <VaButton
+              v-if="auth.canAdmin"
+              preset="primary"
+              icon="add"
+              @click="openCreateGroupModal"
+            >
+              Create Group
+            </VaButton>
+          </div>
+
+          <div class="flex items-center gap-5 flex-wrap">
+            <ModernButtonToggle
+              :model-value="activeScope"
+              label="Show"
+              :options="scopeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+              @update:model-value="setScope"
+            />
+          </div>
+        </div>
+      </VaCardContent>
+    </VaCard>
 
     <!-- ── Results ──────────────────────────────────────────────────── -->
 

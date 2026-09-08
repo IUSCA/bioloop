@@ -18,9 +18,7 @@
             <i-mdi-clipboard-check-outline class="text-2xl" />
           </div>
           <div>
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Review Access Request
-            </h2>
+            <h2 class="text-xl font-semibold">Review Access Request</h2>
             <span class="text-sm text-gray-600 dark:text-gray-400">
               Submitted {{ submittedTimeAgo }} ·
               <va-chip size="small" :color="statusColor">
@@ -58,7 +56,7 @@
 
         <!-- Right panel: Preview (1 col) -->
         <div
-          class="col-span-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+          class="col-span-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-solid border-gray-200 dark:border-gray-700"
         >
           <ReviewEffectiveGrantsPreview
             v-if="request && formState?.value"

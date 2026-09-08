@@ -4,7 +4,7 @@
       <div class="min-h-[350px]">
         <!-- Header -->
         <div class="flex flex-wrap items-baseline gap-3">
-          <h2 class="text-lg font-semibold tracking-tight">
+          <h2 class="text-lg font-semibold">
             {{ headerTitle }}
           </h2>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -39,38 +39,26 @@
           </div>
 
           <!-- no data -->
-          <div
-            v-else
-            class="flex flex-col items-center justify-center gap-5 py-12 px-6"
-          >
-            <!-- Icon -->
-            <div class="flex items-center justify-center">
-              <i-mdi-account-question-outline
-                class="text-5xl text-gray-400 dark:text-gray-500"
-              />
-            </div>
-
-            <!-- Content -->
-            <div
-              class="text-center max-w-md space-y-2 text-gray-900 dark:text-gray-100"
+          <div v-else class="py-12 px-6">
+            <EmptyState
+              icon="mdi-account-question-outline"
+              :title="noDataTitle"
+              :message="noDataMessage"
             >
-              <h3 class="font-semibold tracking-tight">{{ noDataTitle }}</h3>
-              <p class="text-sm leading-relaxed va-text-secondary">
-                {{ noDataMessage }}
-              </p>
-            </div>
-
-            <!-- Call to action -->
-            <VaButton
-              v-if="!props.canReview"
-              color="primary"
-              @click="openRequestModal"
-            >
-              <div class="flex items-center gap-3 px-2">
-                <i-mdi-account-question-outline class="text-lg" />
-                <span class="font-medium">Request access</span>
-              </div>
-            </VaButton>
+              <template #actions>
+                <!-- Call to action -->
+                <VaButton
+                  v-if="!props.canReview"
+                  color="primary"
+                  @click="openRequestModal"
+                >
+                  <div class="flex items-center gap-3 px-2">
+                    <i-mdi-account-question-outline class="text-lg" />
+                    <span class="font-medium">Request access</span>
+                  </div>
+                </VaButton>
+              </template>
+            </EmptyState>
           </div>
         </div>
       </div>

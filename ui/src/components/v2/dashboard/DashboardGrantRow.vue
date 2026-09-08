@@ -1,7 +1,7 @@
 <template>
   <button
     type="button"
-    class="w-full text-left rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 p-4 hover:shadow-md transition"
+    class="w-full text-left rounded-lg border border-solid border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/50 p-4 hover:shadow-md transition"
     @click="onClick"
   >
     <div class="flex items-start justify-between gap-4">

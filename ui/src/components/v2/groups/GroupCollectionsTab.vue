@@ -13,20 +13,16 @@
               />
             </div>
 
-            <!-- Status filter chips -->
-            <div class="flex items-center gap-2">
-              <VaChip
-                v-for="f in statusFilters"
-                :key="f.value"
-                :color="activeStatus === f.value ? 'primary' : 'secondary'"
-                class="cursor-pointer"
-                size="small"
-                :outline="activeStatus !== f.value"
-                @click="setStatus(f.value)"
-              >
-                {{ f.label }}
-              </VaChip>
-            </div>
+            <ModernButtonToggle
+              :model-value="activeStatus"
+              label="Status"
+              :options="statusFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+              @update:model-value="setStatus"
+            />
 
             <VaButton
               size="small"
@@ -105,13 +101,9 @@
                 </template>
 
                 <template #cell(status)="{ rowData }">
-                  <ModernChip
-                    :color="rowData.is_archived ? 'secondary' : 'success'"
-                    size="small"
-                    outline
-                  >
+                  <Badge :color="rowData.is_archived ? 'neutral' : 'success'">
                     {{ rowData.is_archived ? "Archived" : "Active" }}
-                  </ModernChip>
+                  </Badge>
                 </template>
               </VaDataTable>
 
@@ -135,23 +127,13 @@
             </div>
 
             <!-- no data state -->
-            <div
-              v-else-if="!loading && !areFiltersActive"
-              class="flex flex-col items-center justify-center gap-8 py-12 px-6"
-            >
-              <div class="flex items-center justify-center">
-                <i-mdi-folder-multiple
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
-
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+            <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
+              <EmptyState
+                icon="mdi-folder-multiple"
+                title="No collections available"
+                :show-clear-filters="false"
               >
-                <h3 class="font-semibold tracking-tight">
-                  No collections available
-                </h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
+                <template #message>
                   <template v-if="props.canCreate">
                     This group has no collections yet. Add the first collection
                     to get started.
@@ -162,18 +144,16 @@
                     granted access. Contact your group administrator for
                     assistance.
                   </template>
-                </p>
-              </div>
-
-              <VaButton
-                v-if="props.canCreate"
-                @click="navigateToCreateCollection"
-              >
-                <div class="flex items-center gap-3 px-2">
-                  <i-mdi-plus class="text-lg" />
-                  <span class="font-medium">Create Collection</span>
-                </div>
-              </VaButton>
+                </template>
+                <template v-if="props.canCreate" #actions>
+                  <VaButton @click="navigateToCreateCollection">
+                    <div class="flex items-center gap-3 px-2">
+                      <i-mdi-plus class="text-lg" />
+                      <span class="font-medium">Create Collection</span>
+                    </div>
+                  </VaButton>
+                </template>
+              </EmptyState>
             </div>
           </Transition>
         </VaCardContent>

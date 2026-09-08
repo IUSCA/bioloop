@@ -5,9 +5,7 @@
         icon="mdi-clipboard-outline"
         class="text-xl text-gray-600 dark:text-gray-400"
       />
-      <h3 class="text-base font-medium text-gray-900 dark:text-gray-100">
-        You have existing drafts
-      </h3>
+      <h3 class="text-sm font-semibold">You have existing drafts</h3>
     </div>
 
     <!-- List of drafts -->

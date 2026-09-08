@@ -346,7 +346,7 @@ that would settle direction does not exist: who are the first three users, and w
 things do they need this quarter?
 
 **One core assumption has no mechanism behind it.**
-[Core assumptions](./use-cases.md#_0-core-assumptions-explicit-so-the-use-cases-make-sense)
+[Core assumptions](./use-cases.md#_0-what-users-assume)
 says permissions flow transitively "unless explicitly broken". Nothing in the design can
 break them. Either build finding 2, or delete the assumption.
 

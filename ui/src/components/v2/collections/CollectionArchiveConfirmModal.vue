@@ -24,7 +24,7 @@
         <!-- Unarchive variant -->
         <template v-if="props.isArchived">
           <div
-            class="rounded-xl border border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
+            class="rounded-lg border border-solid border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
           >
             <div class="flex items-start gap-3">
               <div
@@ -60,7 +60,7 @@
 
           <div class="grid gap-4 md:grid-cols-2">
             <div
-              class="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/40"
+              class="rounded-lg border border-solid border-emerald-200 bg-emerald-50/70 p-4 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/40"
             >
               <div class="flex items-start gap-3">
                 <div
@@ -102,7 +102,7 @@
             </div>
 
             <div
-              class="rounded-xl border border-rose-200 bg-rose-50/70 p-4 shadow-sm dark:border-rose-700 dark:bg-rose-950/40"
+              class="rounded-lg border border-solid border-rose-200 bg-rose-50/70 p-4 shadow-sm dark:border-rose-700 dark:bg-rose-950/40"
             >
               <div class="flex items-start gap-3">
                 <div
@@ -153,7 +153,7 @@
 
           <div
             v-if="affectedItems.length > 0"
-            class="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300 border border-solid border-gray-300 dark:border-gray-700"
+            class="rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900 dark:text-gray-300 border border-solid border-gray-300 dark:border-gray-700"
           >
             <div class="mb-2 font-semibold text-gray-700 dark:text-gray-200">
               Affected

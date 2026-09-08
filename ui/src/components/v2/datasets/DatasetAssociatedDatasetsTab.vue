@@ -18,24 +18,21 @@
         <VaCardContent>
           <Transition name="fade-slide" mode="out-in">
             <!-- Not permitted to list -->
-            <div
-              v-if="!props.canList"
-              class="flex flex-col items-center justify-center gap-6 py-12 px-6"
-            >
-              <div class="text-center max-w-md space-y-3">
-                <h3 class="font-semibold tracking-tight">Access Restricted</h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
-                  You don't have permission to view
-                  {{ props.type === "source" ? "source" : "derived" }}
-                  datasets. Request access to view this information.
-                </p>
-              </div>
-              <VaButton preset="primary" @click="handleRequestAccess">
-                <div class="flex items-center gap-2 mx-1">
-                  <i-mdi-hand-okay class="text-sm" />
-                  Request Access
-                </div>
-              </VaButton>
+            <div v-if="!props.canList" class="py-12 px-6">
+              <EmptyState
+                icon="mdi-lock-outline"
+                title="Access Restricted"
+                message="You don't have permission to view {{ props.type === 'source' ? 'source' : 'derived' }} datasets. Request access to view this information."
+              >
+                <template #actions>
+                  <VaButton preset="primary" @click="handleRequestAccess">
+                    <div class="flex items-center gap-2 mx-1">
+                      <i-mdi-hand-okay class="text-sm" />
+                      Request Access
+                    </div>
+                  </VaButton>
+                </template>
+              </EmptyState>
             </div>
 
             <!-- Error state -->
@@ -68,13 +65,9 @@
                 </template>
 
                 <template #cell(type)="{ row }">
-                  <ModernChip
-                    v-if="row.rowData.type"
-                    color="secondary"
-                    size="small"
-                  >
+                  <Badge v-if="row.rowData.type" color="neutral">
                     {{ row.rowData.type }}
-                  </ModernChip>
+                  </Badge>
                   <span v-else class="text-sm va-text-secondary">—</span>
                 </template>
 
@@ -103,12 +96,9 @@
                 </template>
 
                 <template #cell(status)="{ rowData }">
-                  <ModernChip
-                    :color="rowData.is_deleted ? 'secondary' : 'success'"
-                    size="small"
-                  >
+                  <Badge :color="rowData.is_deleted ? 'neutral' : 'success'">
                     {{ rowData.is_deleted ? "Archived" : "Active" }}
-                  </ModernChip>
+                  </Badge>
                 </template>
               </VaDataTable>
 
@@ -132,36 +122,21 @@
             </div>
 
             <!-- No data available -->
-            <div
-              v-else-if="!loading && !areFiltersActive"
-              class="flex flex-col items-center justify-center gap-8 py-12 px-6"
-            >
-              <!-- Icon -->
-              <div class="flex items-center justify-center">
-                <Icon
-                  :icon="getIcon('dataset')"
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
-
-              <!-- Content -->
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+            <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
+              <EmptyState
+                :icon="getIcon('dataset')"
+                title="No {{ props.type === 'source' ? 'source' : 'derived' }} datasets"
+                :show-clear-filters="false"
               >
-                <h3 class="font-semibold tracking-tight">
-                  No
-                  {{ props.type === "source" ? "source" : "derived" }}
-                  datasets
-                </h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
+                <template #message>
                   <template v-if="props.type === 'source'">
                     This dataset was not derived from any other datasets.
                   </template>
                   <template v-else>
                     No datasets have been derived from this dataset yet.
                   </template>
-                </p>
-              </div>
+                </template>
+              </EmptyState>
             </div>
           </Transition>
         </VaCardContent>

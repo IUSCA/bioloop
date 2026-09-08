@@ -25,9 +25,9 @@
                 Type
               </dt>
               <dd>
-                <ModernChip size="small" outline class="capitalize">
+                <Badge>
                   <DatasetType :type="props.dataset.type" />
-                </ModernChip>
+                </Badge>
               </dd>
             </div>
 
@@ -37,16 +37,10 @@
                 Status
               </dt>
               <dd>
-                <ModernChip
-                  v-if="props.dataset.is_deleted"
-                  color="accent"
-                  size="small"
-                >
+                <Badge v-if="props.dataset.is_deleted" color="neutral">
                   Deleted
-                </ModernChip>
-                <ModernChip v-else color="success" size="small">
-                  Active
-                </ModernChip>
+                </Badge>
+                <Badge v-else color="success"> Active </Badge>
               </dd>
             </div>
 

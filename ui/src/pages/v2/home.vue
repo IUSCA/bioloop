@@ -188,13 +188,13 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <router-link class="group" to="/v2/groups">
                 <VaCard
-                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60"
+                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-solid border-slate-200/60 dark:border-slate-700/60"
                 >
                   <VaCardContent class="flex flex-col gap-4 h-full">
                     <div class="flex items-start justify-between gap-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex items-center justify-center w-12 h-12 rounded-2xl bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
+                          class="flex items-center justify-center w-12 h-12 rounded-lg bg-sky-500/15 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
                         >
                           <i-mdi-account-group-outline class="text-2xl" />
                         </div>
@@ -239,13 +239,13 @@
               </router-link>
               <router-link class="group" to="/v2/collections">
                 <VaCard
-                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60"
+                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-solid border-slate-200/60 dark:border-slate-700/60"
                 >
                   <VaCardContent class="flex flex-col gap-4 h-full">
                     <div class="flex items-start justify-between gap-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                          class="flex items-center justify-center w-12 h-12 rounded-lg bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
                         >
                           <i-mdi-folder-multiple-outline class="text-2xl" />
                         </div>
@@ -290,13 +290,13 @@
               </router-link>
               <router-link class="group" to="/v2/access">
                 <VaCard
-                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-700/60"
+                  class="h-full transition-transform duration-300 group-hover:-translate-y-1 group-hover:shadow-xl bg-white/80 dark:bg-slate-900/70 border border-solid border-slate-200/60 dark:border-slate-700/60"
                 >
                   <VaCardContent class="flex flex-col gap-4 h-full">
                     <div class="flex items-start justify-between gap-4">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200"
+                          class="flex items-center justify-center w-12 h-12 rounded-lg bg-amber-500/15 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200"
                         >
                           <i-mdi-key-outline class="text-2xl" />
                         </div>

@@ -13,20 +13,16 @@
               />
             </div>
 
-            <!-- Scope filter chips -->
-            <div class="flex items-center gap-2">
-              <VaChip
-                v-for="f in scopeFilters"
-                :key="f.value"
-                :color="activeScope === f.value ? 'primary' : 'secondary'"
-                class="cursor-pointer"
-                size="small"
-                :outline="activeScope !== f.value"
-                @click="setScope(f.value)"
-              >
-                {{ f.label }}
-              </VaChip>
-            </div>
+            <ModernButtonToggle
+              :model-value="activeScope"
+              label="Membership"
+              :options="scopeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+              @update:model-value="setScope"
+            />
 
             <VaButton
               v-if="props.canAdd"
@@ -86,10 +82,7 @@
                     >
                       ● Direct
                     </span>
-                    <span
-                      v-else
-                      class="text-[11px] text-slate-700 bg-slate-100 border border-solid border-slate-300 rounded-sm px-1.5 py-px inline-flex items-center gap-1 dark:text-slate-400 dark:bg-slate-900 dark:border-slate-700"
-                    >
+                    <Badge v-else color="neutral" border :uppercase="false">
                       <span class="font-mono"> ↗ </span>
                       <span> via </span>
                       <RouterLink
@@ -98,7 +91,7 @@
                       >
                         {{ source.name }}
                       </RouterLink>
-                    </span>
+                    </Badge>
                   </div>
                 </template>
 
@@ -169,36 +162,27 @@
             </div>
 
             <!-- no data -->
-            <div
-              v-else-if="!loading && !areFiltersActive"
-              class="flex flex-col items-center justify-center gap-4 py-12 px-6"
-            >
-              <div class="flex items-center justify-center">
-                <i-mdi-account-multiple
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
-
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
+            <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
+              <EmptyState
+                icon="mdi-account-multiple"
+                title="Group is currently empty"
+                :show-clear-filters="false"
               >
-                <h3 class="text font-semibold tracking-tight">
-                  Group is currently empty
-                </h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
+                <template #message>
                   <template v-if="props.canAdd">
                     This group currently has no members. Add the first member to
                     get started.
                   </template>
-                </p>
-              </div>
-
-              <VaButton v-if="props.canAdd" @click="openAddMemberModal">
-                <div class="flex items-center gap-3 px-2">
-                  <i-mdi-plus class="text-lg" />
-                  <span class="font-medium">Add Member</span>
-                </div>
-              </VaButton>
+                </template>
+                <template v-if="props.canAdd" #actions>
+                  <VaButton @click="openAddMemberModal">
+                    <div class="flex items-center gap-3 px-2">
+                      <i-mdi-plus class="text-lg" />
+                      <span class="font-medium">Add Member</span>
+                    </div>
+                  </VaButton>
+                </template>
+              </EmptyState>
             </div>
           </Transition>
         </VaCardContent>

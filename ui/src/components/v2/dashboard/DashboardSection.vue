@@ -3,7 +3,7 @@
     <VaCardContent>
       <div class="flex items-start justify-between gap-4">
         <div>
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
+          <h2 class="text-lg font-semibold">
             {{ title }}
           </h2>
           <p v-if="subtitle" class="text-sm text-slate-500 dark:text-slate-400">

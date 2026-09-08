@@ -22,19 +22,16 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  /**
+   * What the selected segment means, never a raw hue. A control uses `primary` where a
+   * message uses `info`; both are blue.
+   * @see docs/contributing/v2-design-system.md - Semantic meaning is fixed
+   */
   color: {
     type: String,
-    default: "blue",
+    default: "primary",
     validator: (v) =>
-      [
-        "blue",
-        "indigo",
-        "violet",
-        "emerald",
-        "rose",
-        "amber",
-        "slate",
-      ].includes(v),
+      ["primary", "success", "warning", "danger", "neutral"].includes(v),
   },
   size: {
     type: String,
@@ -102,41 +99,34 @@ const sizeMap = {
 };
 
 // ─── Color tokens ─────────────────────────────────────────────
-// active button bg + text, ring for focus
+// Active button background and text, plus the focus ring. Class strings are complete
+// literals so Tailwind's scanner can see them.
 const colorMap = {
-  blue: {
+  primary: {
     active: "bg-blue-600 text-white dark:bg-blue-500",
     ring: "focus-visible:ring-blue-500/50",
   },
-  indigo: {
-    active: "bg-indigo-600 text-white dark:bg-indigo-500",
-    ring: "focus-visible:ring-indigo-500/50",
-  },
-  violet: {
-    active: "bg-violet-600 text-white dark:bg-violet-500",
-    ring: "focus-visible:ring-violet-500/50",
-  },
-  emerald: {
+  success: {
     active: "bg-emerald-600 text-white dark:bg-emerald-500",
     ring: "focus-visible:ring-emerald-500/50",
   },
-  rose: {
-    active: "bg-rose-600 text-white dark:bg-rose-500",
-    ring: "focus-visible:ring-rose-500/50",
-  },
-  amber: {
+  warning: {
     active: "bg-amber-500 text-white dark:bg-amber-400 dark:text-amber-950",
     ring: "focus-visible:ring-amber-500/50",
   },
-  slate: {
-    active: "bg-slate-700 text-white dark:bg-slate-500",
-    ring: "focus-visible:ring-slate-500/50",
+  danger: {
+    active: "bg-red-600 text-white dark:bg-red-500",
+    ring: "focus-visible:ring-red-500/50",
+  },
+  neutral: {
+    active: "bg-gray-700 text-white dark:bg-gray-500",
+    ring: "focus-visible:ring-gray-500/50",
   },
 };
 
 const tokens = computed(() => ({
   size: sizeMap[props.size],
-  color: colorMap[props.color] ?? colorMap.blue,
+  color: colorMap[props.color],
 }));
 </script>
 

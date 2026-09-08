@@ -91,6 +91,7 @@
               message="Grant access to specific users or groups to give them permission to use this dataset."
               @reset="fetchGrants"
               :showClearFilters="false"
+              :show-clear-filters="false"
             />
           </div>
 

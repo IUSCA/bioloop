@@ -42,11 +42,9 @@
                 Status
               </dt>
               <dd>
-                <ModernChip
-                  :color="props.group.is_archived ? 'accent' : 'success'"
-                >
+                <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
                   {{ props.group.is_archived ? "Archived" : "Active" }}
-                </ModernChip>
+                </Badge>
               </dd>
             </div>
             <div class="py-2.5 flex items-center gap-4">

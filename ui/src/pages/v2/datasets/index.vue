@@ -1,165 +1,151 @@
 <template>
-  <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-3 max-w-7xl mx-auto">
-      <!-- Header -->
-      <VaCard class="header card">
-        <VaCardContent>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between gap-5">
-              <div class="flex-1">
-                <Searchbar
-                  v-model="searchTerm"
-                  placeholder="Search datasets…"
-                />
-              </div>
-            </div>
-
-            <!-- Filters -->
-            <div class="flex items-center gap-5 flex-wrap">
-              <ModernButtonToggle
-                v-model="activeScope"
-                label="Access via"
-                :options="scopeFilters"
-                text-by="label"
-                value-by="value"
-                color="blue"
-                size="sm"
-              />
-
-              <ModernButtonToggle
-                v-model="activeStatus"
-                label="Status"
-                :options="statusFilters"
-                text-by="label"
-                value-by="value"
-                color="blue"
-                size="sm"
-              />
-
-              <ModernButtonToggle
-                v-model="activeType"
-                label="Type"
-                :options="typeFilters"
-                text-by="label"
-                value-by="value"
-                color="blue"
-                size="sm"
-              />
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <!-- Header -->
+    <VaCard class="header card">
+      <VaCardContent>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-5">
+            <div class="flex-1">
+              <Searchbar v-model="searchTerm" placeholder="Search datasets…" />
             </div>
           </div>
-        </VaCardContent>
-      </VaCard>
 
-      <!-- Results -->
-      <VaCard class="min-h-[360px]">
-        <VaCardContent>
-          <Transition name="fade-slide" mode="out-in">
-            <div v-if="error" class="py-12 px-6">
-              <ErrorState
-                title="Failed to load datasets"
-                :message="error?.message"
-                @retry="fetchDatasets"
-              />
-            </div>
+          <!-- Filters -->
+          <div class="flex items-center gap-5 flex-wrap">
+            <ModernButtonToggle
+              v-model="activeScope"
+              label="Access via"
+              :options="scopeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+            />
 
-            <div v-else-if="datasets.length > 0">
-              <VaDataTable
-                :items="datasets"
-                :columns="columns"
-                class="v2-table"
-                v-model:sort-by="sortBy"
-                v-model:sorting-order="sortOrder"
-                disable-client-side-sorting
-              >
-                <template #cell(name)="{ row }">
-                  <RouterLink
-                    :to="`/v2/datasets/${row.rowData.resource_id}`"
-                    class="text-sm font-medium hover:underline"
-                    style="color: var(--va-primary)"
-                  >
-                    {{ row.rowData.name }}
-                  </RouterLink>
-                </template>
+            <ModernButtonToggle
+              v-model="activeStatus"
+              label="Status"
+              :options="statusFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+            />
 
-                <template #cell(type)="{ value }">
-                  <ModernChip size="small" outline>{{ value }}</ModernChip>
-                </template>
+            <ModernButtonToggle
+              v-model="activeType"
+              label="Type"
+              :options="typeFilters"
+              text-by="label"
+              value-by="value"
+              color="primary"
+              size="sm"
+            />
+          </div>
+        </div>
+      </VaCardContent>
+    </VaCard>
 
-                <template #cell(owner_group)="{ rowData }">
-                  <RouterLink
-                    v-if="rowData.owner_group"
-                    :to="`/v2/groups/${rowData.owner_group.id}`"
-                    class="text-sm hover:underline va-text-secondary"
-                  >
-                    {{ rowData.owner_group.name }}
-                  </RouterLink>
-                </template>
+    <!-- Results -->
+    <VaCard class="min-h-[360px]">
+      <VaCardContent>
+        <Transition name="fade-slide" mode="out-in">
+          <div v-if="loading" class="flex flex-col gap-2 py-2">
+            <VaSkeleton
+              v-for="n in 8"
+              :key="n"
+              variant="rounded"
+              height="40px"
+            />
+          </div>
 
-                <template #cell(size)="{ value }">
-                  <span class="text-sm">{{ formatBytes(value) }}</span>
-                </template>
+          <div v-else-if="error" class="py-12 px-6">
+            <ErrorState
+              title="Failed to load datasets"
+              :message="error?.message"
+              @retry="fetchDatasets"
+            />
+          </div>
 
-                <template #cell(updated_at)="{ value }">
-                  <span class="text-sm va-text-secondary">{{
-                    datetime.fromNowShort(value)
-                  }}</span>
-                </template>
-
-                <template #cell(status)="{ rowData }">
-                  <ModernChip
-                    :color="rowData.is_deleted ? 'secondary' : 'success'"
-                    size="small"
-                    outline
-                  >
-                    {{ rowData.is_deleted ? "Archived" : "Active" }}
-                  </ModernChip>
-                </template>
-              </VaDataTable>
-
-              <Pagination
-                class="mt-5 px-5"
-                v-model:page="currentPage"
-                v-model:page_size="itemsPerPage"
-                :total_results="total"
-                :curr_items="datasets.length"
-                :page_size_options="ITEMS_PER_PAGE_OPTIONS"
-              />
-            </div>
-
-            <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
-              <EmptyState
-                title="No results found"
-                message="Try adjusting your filters."
-                @reset="resetFilters"
-              />
-            </div>
-
-            <div
-              v-else-if="!loading && !areFiltersActive"
-              class="flex flex-col items-center justify-center gap-8 py-12 px-6"
+          <div v-else-if="datasets.length > 0">
+            <VaDataTable
+              :items="datasets"
+              :columns="columns"
+              class="v2-table"
+              v-model:sort-by="sortBy"
+              v-model:sorting-order="sortOrder"
+              disable-client-side-sorting
             >
-              <div class="flex items-center justify-center">
-                <i-mdi-database-off
-                  class="text-5xl text-gray-400 dark:text-gray-500"
-                />
-              </div>
-              <div
-                class="text-center max-w-md space-y-3 text-gray-900 dark:text-gray-100"
-              >
-                <h3 class="font-semibold tracking-tight">
-                  No datasets available
-                </h3>
-                <p class="text-sm leading-relaxed va-text-secondary">
-                  No datasets are currently available to you. Contact your group
-                  administrator for access.
-                </p>
-              </div>
-            </div>
-          </Transition>
-        </VaCardContent>
-      </VaCard>
-    </div>
-  </VaInnerLoading>
+              <template #cell(name)="{ row }">
+                <RouterLink
+                  :to="`/v2/datasets/${row.rowData.resource_id}`"
+                  class="text-sm font-medium hover:underline"
+                  style="color: var(--va-primary)"
+                >
+                  {{ row.rowData.name }}
+                </RouterLink>
+              </template>
+
+              <template #cell(type)="{ value }">
+                <Badge outline>{{ value }}</Badge>
+              </template>
+
+              <template #cell(owner_group)="{ rowData }">
+                <RouterLink
+                  v-if="rowData.owner_group"
+                  :to="`/v2/groups/${rowData.owner_group.id}`"
+                  class="text-sm hover:underline va-text-secondary"
+                >
+                  {{ rowData.owner_group.name }}
+                </RouterLink>
+              </template>
+
+              <template #cell(size)="{ value }">
+                <span class="text-sm">{{ formatBytes(value) }}</span>
+              </template>
+
+              <template #cell(updated_at)="{ value }">
+                <span class="text-sm va-text-secondary">{{
+                  datetime.fromNowShort(value)
+                }}</span>
+              </template>
+
+              <template #cell(status)="{ rowData }">
+                <Badge :color="rowData.is_deleted ? 'neutral' : 'success'">
+                  {{ rowData.is_deleted ? "Archived" : "Active" }}
+                </Badge>
+              </template>
+            </VaDataTable>
+
+            <Pagination
+              class="mt-5 px-5"
+              v-model:page="currentPage"
+              v-model:page_size="itemsPerPage"
+              :total_results="total"
+              :curr_items="datasets.length"
+              :page_size_options="ITEMS_PER_PAGE_OPTIONS"
+            />
+          </div>
+
+          <div v-else-if="!loading && areFiltersActive" class="py-12 px-6">
+            <EmptyState
+              title="No results found"
+              message="Try adjusting your filters."
+              @reset="resetFilters"
+            />
+          </div>
+
+          <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
+            <EmptyState
+              icon="mdi-database-off"
+              title="No datasets available"
+              message="No datasets are currently available to you. Contact your group administrator for access."
+            />
+          </div>
+        </Transition>
+      </VaCardContent>
+    </VaCard>
+  </div>
 </template>
 
 <script setup>

@@ -38,7 +38,7 @@
           <button
             v-for="group in quickGroups"
             :key="group.id"
-            class="rounded-xl px-3 py-1 text-xs ring-1 flex items-center gap-1"
+            class="rounded-lg px-3 py-1 text-xs ring-1 flex items-center gap-1"
             :class="QUICK_GROUP_CLASSES[group.tag]"
             @click="onSelectGroup(group)"
             :title="group.help ?? group.description"

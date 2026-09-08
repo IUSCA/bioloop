@@ -1,11 +1,8 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="flex flex-col gap-2">
-      <h1 class="text-xl font-semibold">Access Requests</h1>
-      <p class="text-sm text-gray-600 dark:text-gray-300">
-        Review and manage access requests you are responsible for.
-      </p>
-    </div>
+  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+    <p class="text-sm va-text-secondary">
+      Review and manage access requests you are responsible for.
+    </p>
 
     <VaTabs
       v-model="activeTab"
@@ -52,6 +49,7 @@
             title="No access requests pending review"
             message="Requests that need your review will appear here."
             @reset="fetchPendingRequests"
+            :show-clear-filters="false"
           />
         </div>
 
@@ -99,6 +97,7 @@
             title="No reviewed access requests"
             message="Requests you reviewed will appear here."
             @reset="fetchReviewedRequests"
+            :show-clear-filters="false"
           />
         </div>
 

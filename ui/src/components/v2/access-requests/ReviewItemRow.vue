@@ -16,7 +16,7 @@
         <div class="flex-1">
           <!-- Title and description -->
           <div class="space-y-1 mb-2">
-            <h3 class="font-semibold text-gray-900 dark:text-gray-100">
+            <h3 class="text-sm font-semibold">
               {{ itemName }}
             </h3>
             <p
@@ -87,7 +87,7 @@
       <Transition name="fade-slide">
         <div
           v-if="props.decision === 'APPROVED'"
-          class="pt-2 border-t border-gray-200 dark:border-gray-700"
+          class="pt-2 border-t border-solid border-gray-200 dark:border-gray-700"
         >
           <p
             class="text-xs font-medium uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-2"

@@ -41,9 +41,9 @@
                 class="text-sm text-gray-600 dark:text-gray-400"
               />
             </div>
-            <!-- <ModernChip v-if="dataset.is_deleted" color="accent" class="ml-2">
+            <!-- <Badge v-if="dataset.is_deleted" color="neutral" class="ml-2">
             Deleted
-          </ModernChip> -->
+          </Badge> -->
           </div>
 
           <!-- Owner Group -->
