@@ -20,6 +20,27 @@ const { RESOURCE_SCOPES } = require('@/services/resources');
 
 const router = express.Router();
 
+// ── Creation support ─────────────────────────────────────────────────────────
+
+/**
+ * Groups this caller may give a new dataset to.
+ *
+ * Open to any authenticated user; the answer is scoped to them. Each row carries
+ * `admitted_by`, so the creation dialog can say why a group is offered rather than showing
+ * an unexplained list. The creation routes still authorize — this is a convenience.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — A2
+ */
+router.get(
+  '/eligible-owner-groups',
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Groups the caller may create a dataset in'
+    const groups = await datasetService.listEligibleOwnerGroups(req.user);
+    res.json(groups);
+  }),
+);
+
 // ── List & search ────────────────────────────────────────────────────────────
 
 // Open to any authenticated user; service-layer ownership filtering is applied separately

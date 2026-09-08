@@ -17,6 +17,7 @@ const fetchModule = require('./fetch');
 const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
 const attributionModule = require('./attribution');
+const ownershipModule = require('./ownership');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -327,4 +328,5 @@ module.exports = {
   ...createModule,
   ...useConditionsModule,
   ...attributionModule,
+  ...ownershipModule,
 };
