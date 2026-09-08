@@ -2,7 +2,7 @@
 title: Implementation Status
 order: 8
 status: reference
-last_verified: 2026-09-03
+last_verified: 2026-09-08
 ---
 
 ::: warning Code map, not a design record
@@ -15,7 +15,9 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`,
 `api/src/authorization/`, and `api/src/services/` before relying on any line here.
 
 For an argument about whether the design itself is right, see
-[Design Review](./design-review.md).
+[Design Review](./design-review.md). For what was decided in response, see
+[Decisions](./decisions.md), and for the work that follows from it, see the
+[MVP Implementation Plan](./mvp-plan.md).
 :::
 
 # Groups — Implementation Status
