@@ -38,13 +38,14 @@ This review was written on 2026-09-03. On 2026-09-08 its questions were answered
 answers are recorded in [Decisions](./decisions.md) with the work sequenced in the
 [MVP Implementation Plan](./mvp-plan.md). The findings below are left as written, because a
 review that is edited to match the outcome stops being evidence of what was argued. This
-table says where each one landed.
+table says where each one landed. Two rows changed after the first seven phases were
+built, and both changes are noted in the row itself.
 
 | Finding | Outcome |
 |---|---|
-| 1. Governance authority is not a grant | **Rejected.** Roles stay an enum and groups do not become resources. Too large for the first release. Validity columns on `group_user` recover the membership-expiry half of the benefit. |
+| 1. Governance authority is not a grant | **Rejected, except for one part.** Roles stay an enum and groups do not become resources; too large for the first release. Validity columns on `group_user` recover the membership-expiry half of the benefit. The platform-admin short-circuit was taken separately as decision 11. |
 | 2. Nothing in the model can say "no" | **Accepted, narrowly, and implemented.** A restriction layer composing by AND ahead of grants, with archiving as its only type, propagating down the group tree and to governed resources. Negative grants rejected outright. |
-| 3. Access does not follow data provenance | **Accepted, half built, and that half implemented.** A grant-time check walks `dataset_hierarchy` and stops a derived dataset being granted more widely than its narrowest source. Restrictions travelling down the derivation graph waits for a second restriction type. |
+| 3. Access does not follow data provenance | **Rejected on reconsideration.** The grant-time check was built, then removed. A derivative may legitimately be shared more widely than its source, so the source's audience is not a ceiling. `dataset_hierarchy` stays lineage for display and is not an authorization edge. See decision 10. |
 | 4. Collections cannot cross group boundaries | **Option 2 taken.** Collections stay single-owner. A separate non-authorization concept for describing a set of datasets comes later, and the symmetry argument in design.md should be corrected. |
 | 5. The no-overlap rule does not do what it claims | **Not taken up.** The exclusion constraint stays for now. Finding 7 in this review depends on nothing here, and dropping the constraint can be revisited without a migration penalty. |
 | 6. Access types claim to be orthogonal | **Accepted, and implemented.** A seeded partial order over the twelve existing access types, closed over once at startup and read at both grant-check sites. Presets stop being load-bearing. |
@@ -55,21 +56,23 @@ Of the requirements questions at the end of this page: the use-cases document wa
 restructured around what the first release needs and what the design must not foreclose;
 the "unless explicitly broken" assumption is now backed by finding 2's restriction layer; a
 public principal is being added and `Everyone` renamed to `Authenticated Users`; the
-glossary's ownership disagreement was resolved as governance-only, with attribution
-deferred; and the GA4GH question was answered by capturing consent codes at ingest without
-enforcing them.
+glossary's ownership disagreement was resolved as governance-only, with attribution first
+deferred and then taken up as decision 13; and the GA4GH question was answered by capturing
+consent codes at ingest without enforcing them.
 
 All seven phases of that plan are built. Membership and collection rows are closed rather
 than deleted, `dataset.owner_group_id` is `NOT NULL` with the datasets that had no owner
 held in an archived system group, and a `Public` principal sits alongside the renamed
 `Authenticated Users`. Access types now carry a partial order, so a grant of `DOWNLOAD`
 satisfies a check for `VIEW_METADATA`. A restriction layer composes by AND ahead of
-grants, with archiving as its only type. A derived dataset can no longer be granted to a
-wider audience than its sources. Datasets carry machine-readable consent codes, recorded at
-registration and read by nothing.
+grants, with archiving as its only type. Datasets carry machine-readable consent codes,
+recorded at registration and read by nothing.
 
-The member-access contradiction (deviation 1) is **still open.** No decision was taken on
-whether owning-group members get structural read or a seeded grant.
+Four further decisions followed, and the work is sequenced as phases 8 to 11. The
+derived-dataset rule built in phase 6 is reversed. Platform admin becomes one check in the
+engine rather than 77 hand-written policy terms. The member-access contradiction
+(deviation 1) is settled: members get a grant seeded at creation, not structural read.
+Attribution gets a model of its own.
 
 ---
 

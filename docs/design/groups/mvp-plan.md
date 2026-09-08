@@ -175,29 +175,15 @@ The service-level `is_archived` checks that predate this phase are kept. They co
 three operations they always covered, and they still fire when a service is called outside
 a route. The restriction layer is what covers the other fifty-odd actions.
 
-## Phase 6 — Derived datasets are never more open than their sources — **done**
+## Phase 6 — Derived datasets are never more open than their sources — **reversed**
 
-Implements the buildable half of use case 58.
+Built, then removed in phase 8. `services/grants/derivedOpenness.js` ran inside
+`_createGrant` and refused a grant that would make a derived dataset reachable by a wider
+audience than any of its sources.
 
-- `services/grants/derivedOpenness.js` runs inside `_createGrant`, the single point every
-  grant passes through, and before anything is written, so a refused grant leaves no trace.
-- Openness is ordered: public, then authenticated, then group or user. Every dataset is
-  reachable by its owning group's admins whether or not a grant says so, so a scoped grant
-  is the floor and can never be too open. That makes the two system principals the only
-  subjects this check can refuse, which keeps the rule to one sentence.
-- The walk is transitive. A recursive query over `dataset_hierarchy` collects every source,
-  directly or through a chain, using `UNION` so a cycle terminates. Direct sources alone
-  would be enough if the rule had held at every earlier issue, but the check runs at issue
-  time only and a source's grants can be widened or revoked afterwards.
-- The refusal names the source that is too narrow, so the message says what to do about it.
-- Tests: 9, covering refusal for both principals, the message naming the source, nothing
-  written on refusal, allowing once the source is widened, a wider source satisfying a
-  narrower grant but not the reverse, a multi-source derivative taking the narrowest, a
-  grandchild not escaping through a public parent, and an unrelated dataset being
-  unaffected.
-
-The other half — restrictions travelling from source to derivative — waits for the second
-restriction type, per decision 6.
+[Decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent) reversed
+it. A derivative may legitimately be shared more widely than the data it came from, so the
+source's audience is not a ceiling. Use case 58 is withdrawn.
 
 ## Phase 7 — Consent codes — **done**
 
@@ -230,12 +216,68 @@ Implements [decision 9](./decisions.md#_9-consent-codes-are-captured-not-enforce
 
 ---
 
+## Phase 8 — Remove the derived-dataset openness rule
+
+Implements [decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent).
+
+- Delete `services/grants/derivedOpenness.js`, its call in `_createGrant`, and its tests.
+  Removal rather than a disabled flag, because the rule is wrong and not merely unwanted.
+- `dataset_hierarchy` stays. It drives the Sources and Derivatives tabs and answers
+  provenance questions, and no query may treat it as an authorization edge.
+- Tests: a derived dataset can be granted to `Public` while its source stays scoped. The
+  reversal is pinned by a test rather than left as an absence, so a later change that
+  reintroduces the coupling fails rather than passing quietly.
+
+## Phase 9 — Platform admin is one check in the engine
+
+Implements [decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-engine).
+
+- The engine short-circuits for a platform admin before any policy runs, and the 77
+  `isPlatformAdmin` terms come out of the built-in policies.
+- Restrictions still apply. The short-circuit sits after the restriction check, not before
+  it, so an archived group stays archived for a platform admin.
+- `GET /audit/records` gains the authorization it never had, which is the hole this change
+  exists to close.
+- Tests: a platform admin reaches every action a policy could gate; a non-admin is
+  unaffected; an archived resource still refuses a platform admin's mutations; and a
+  coverage test asserts no built-in policy still names the role.
+
+## Phase 10 — Creating a resource seeds a grant to its owning group
+
+Implements [decision 12](./decisions.md#_12-owning-group-members-get-a-seeded-grant-not-structural-read).
+
+- Dataset and collection creation write a grant to the owning group in the same transaction
+  as the resource, so a resource is never briefly unreachable by the group that governs it.
+- Settles [deviation 1](./implementation-status.md#deviations). Membership confers no read
+  by itself; the seeded row is what members hold, and it is listed and revocable like any
+  other grant.
+- Existing resources get the same grant through a backfill, so the rule holds for rows that
+  predate it.
+- Tests: creation writes the grant; a member reads through it; revoking it removes the
+  member's access while leaving group admins' structural access intact; the backfill is
+  idempotent.
+
+## Phase 11 — Attribution
+
+Implements [decision 13](./decisions.md#_13-attribution-is-its-own-relationship).
+
+- Datasets record funding sources and affiliated groups separately from `owner_group_id`,
+  which keeps meaning governance and nothing else.
+- Nothing reads these rows for an authorization decision, and a test asserts that adding an
+  affiliation does not widen who can reach a dataset.
+- Answers use case 13, which asks researchers to cite ownership correctly using data that
+  currently has nowhere to live except the `metadata` column.
+- Tests: attribution round-trips through the dataset record, several sources and
+  affiliations coexist on one dataset, and access is unchanged by any of it.
+
+---
+
 ## After each phase
 
 Every phase ends with the same four steps, in order: tests pass, the affected surface is
 exercised from the UI where one exists, [Implementation Status](./implementation-status.md)
 and [Design Review](./design-review.md) are updated to match, update or create new skill based on operational lessons learned, and the work is committed.
 
-Phases 1, 2, 4, 6, and 7 have no user-visible surface of their own. Their UI check is that
+Phases 1, 2, 4, 7, 8, and 9 have no user-visible surface of their own. Their UI check is that
 the surfaces built on top of them — the members tab, the grant subject picker, the dataset
 pages — still behave.

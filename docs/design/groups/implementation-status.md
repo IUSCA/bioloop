@@ -55,7 +55,6 @@ or accidentally departs from the written design — see [Deviations](#deviations
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
-| Derived dataset openness | checked in `_createGrant`, recursive walk of `dataset_hierarchy` | refuses a grant wider than the narrowest source | `services/grants/derivedOpenness.js` | refusal shown in the grant dialog |
 | Consent codes | `dataset_use_condition` | accepted by `POST /datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
 | Invitations | none | none | none | none |
@@ -184,20 +183,21 @@ remains as the denormalisation the listings, the archived filter, and the UI bad
 test asserts the two agree for every group and collection. The service-level `is_archived`
 checks that predate this are kept, so a service called outside a route is still guarded.
 
-### Derived datasets are never more open than their sources
+### Derived and source dataset access are independent
 
-`services/grants/derivedOpenness.js` runs inside `_createGrant` and refuses a grant that
-would make a derived dataset reachable by a wider audience than any of its sources. Openness
-is ordered public, then authenticated, then group or user; every dataset is already
-reachable by its owning group's admins, so a scoped grant is the floor and only the two
-system principals can be refused.
+A derived dataset's access is decided on the derivative alone. A derivative may be shared
+more widely than the data it came from, and a source may be shared more widely than
+anything derived from it. Neither constrains the other.
 
-The walk over `dataset_hierarchy` is transitive, because the check runs at issue time only
-and a source's grants can change afterwards. The refusal names the source that is too
-narrow.
+A grant-time rule refusing a derivative wider than its narrowest source was built and then
+removed, per
+[decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent). The
+absence is asserted rather than left implicit: `tests/services/grants/derivedIndependence.test.js`
+fails if the coupling is reintroduced.
 
-Restrictions travelling from source to derivative, the other half of use case 58, waits for
-the second restriction type.
+`dataset_hierarchy` still records which dataset came from which. It drives the Sources and
+Derivatives tabs and answers provenance questions, and no query treats it as an
+authorization edge.
 
 ### Consent codes are captured, not enforced
 

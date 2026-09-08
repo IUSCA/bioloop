@@ -425,10 +425,9 @@ Users will not report these, because users cannot see them.
     * Outcome: owning-group admins, oversight admins, and platform admins can read audit records, and nobody else can.
     * Today: `GET /audit/records` carries no authorization at all, so any authenticated user can read actors, subjects, resource names, and decisions for the whole platform.
 
-58. **A derived dataset is never more open than its sources** — `MVP` · **foundation**
-    * Outcome: a dataset produced from restricted input cannot be granted to a wider audience than the input allowed.
-    * Today: `dataset_hierarchy` records which dataset came from which, and nothing connects it to authorization. A derivative of restricted data can be granted to everyone, and no design record mentions the problem.
-    * Why foundation: this is a restriction that travels down a graph, which is the same primitive items 45 to 47 need. The first release does not need a general engine, but it does need the rule written down and one check that enforces it, because the platform exists to produce derived datasets and this is the failure a user is most likely to be harmed by.
+58. **A derived dataset is never more open than its sources** — **withdrawn**
+    * Withdrawn by [decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent). A derivative may legitimately be shared more widely than the data it came from, so the source's audience is not a ceiling. A grant-time check enforcing this was built and then removed.
+    * `dataset_hierarchy` remains lineage for display and for provenance questions. No query treats it as an authorization edge.
 
 59. **A dataset always has an owning group** — `MVP` · **foundation**
     * Outcome: every dataset is governed by exactly one group.
@@ -472,11 +471,11 @@ constraint that keeps it possible. The plan is in [MVP Implementation Plan](./mv
 | 59 — non-null owning group | **Building now**, phase 2. |
 | A.1 — a principal for people who are not logged in | **Building the principal**, phase 3. The route path is deferred. |
 | 43 — time-bound membership | **Unblocked** by phase 1, which adds `valid_until`. Now a service and UI change with no migration. |
-| 17, 39, 45, 46, 47, 58 — a way to say no | **Primitive built** in phase 5, with archiving as its only consumer. The rest become a seed row each. |
+| 17, 39, 45, 46, 47 — a way to say no | **Primitive built** in phase 5, with archiving as its only consumer. The rest become a seed row each. |
 | 38 — an order over access types | **Building now**, phase 4. |
 | 4, 55 — explanation from the deciding query | **Constraint accepted.** The closure in phase 4 and the restriction check in phase 5 both run inside the deciding query. |
-| 58 — derived datasets no more open than their sources | **Half built** in phase 6, as a grant-time check. The other half waits for a second restriction type. |
-| 13 — attribution | **Deferred**, constrained only by not overloading `owner_group_id`. |
+| 58 — derived datasets no more open than their sources | **Withdrawn.** Built in phase 6, removed in phase 8. Derived and source access are independent, per decision 10. |
+| 13 — attribution | **Building**, phase 11. Funding and affiliation get their own relationship, per decision 13. |
 | 25, 50 — cross-group collections | **Deferred by decision.** Collections stay single-owner; a non-authorization concept covers the rest later. |
 | 51 — grants attaching to a dataset or a version | **Still open.** No decision taken, and nothing in the plan forecloses one. |
 

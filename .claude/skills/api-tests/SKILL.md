@@ -221,6 +221,21 @@ A test that needs a dataset row and not the legacy project machinery should buil
 with `buildDatasetCreateQuery` and hand it to `prisma.dataset.create` directly. Supply
 `owner_group_id` and `resource_id`, because both are `NOT NULL` and the route sends neither.
 
+## Pin a reversal with tests, do not just delete the old ones
+
+When a rule is removed because it was wrong rather than merely unwanted, deleting its test
+file leaves nothing behind. The next person to read the review that argued for the rule sees
+a gap and fills it, and the suite stays green while the reversal is undone.
+
+Replace the deleted suite with one that asserts the new freedom directly. For the derived
+dataset rule this meant `tests/services/grants/derivedIndependence.test.js`, which grants a
+derivative to `Public` while its source stays scoped, walks a chain and several sources, and
+checks the reverse direction too. Say in the file header that it pins a reversal and name the
+decision, so its purpose is legible without the history.
+
+The same applies to a constraint that was considered and declined. An absence nobody asserted
+is indistinguishable from an oversight.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

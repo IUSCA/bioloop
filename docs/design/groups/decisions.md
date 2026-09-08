@@ -7,8 +7,9 @@ last_verified: 2026-09-08
 
 ::: tip A decision record
 Nine questions raised by the [design review](./design-review.md) and collected in the
-[use cases](./use-cases.md) were settled on 2026-09-08. This page records what was decided
-and why. It supersedes the open-question wording in those pages.
+[use cases](./use-cases.md) were settled on 2026-09-08, and four more were settled later
+that day after the first nine were built. This page records what was decided and why. It
+supersedes the open-question wording in those pages.
 :::
 
 # Groups — Decisions
@@ -257,6 +258,82 @@ That is the same split GA4GH makes between REMS and a visa.
 
 ---
 
+## 10. Derived and source dataset access are independent
+
+**Decision.** A dataset produced from another dataset carries no access relationship to it.
+Who may reach the derivative is decided on the derivative alone.
+
+A derivative may legitimately be shared more widely than the data it came from. An
+aggregate, a summary statistic, or a de-identified product of restricted input is the
+ordinary output of this platform, and treating the source's audience as a ceiling would
+refuse exactly the sharing the platform exists to enable.
+
+The review's finding 3 argued the opposite, reasoning from Terra's authorization domains
+and Synapse's inherited access requirements. Those systems propagate restrictions down a
+copy or containment tree, where the derivative is the same data. A derived dataset here is
+new data, and whether it is safe to share is a judgement about that new data, not an
+arithmetic consequence of its inputs.
+
+**What this leaves in place.** `dataset_hierarchy` still records which dataset came from
+which. That lineage drives the Sources and Derivatives tabs and answers provenance
+questions. It is not an authorization edge, and no query should treat it as one.
+
+**Reversed a built rule.** A grant-time check refusing a derivative wider than its narrowest
+source was built and committed before this decision. It is removed rather than disabled.
+
+## 11. Platform admin is one check in the engine
+
+**Decision.** The engine short-circuits for a platform admin before any policy runs. Policies
+stop naming the role.
+
+Every built-in policy currently carries its own `isPlatformAdmin` term, 77 of them. They all
+mean the same thing and they are all written by hand, so a route whose author forgets one
+has a hole rather than a stricter rule. `GET /audit/records` was that hole.
+
+Moving the check to a single place makes the rule true by construction instead of by
+repetition, and it deletes the terms rather than adding a layer. This was the one part of
+the review's finding 1 worth taking; the rest of that finding, making groups resources, was
+rejected as decision 4.
+
+**What a short-circuit must not skip.** Restrictions still apply. An archived group is
+archived for a platform admin too, which is already how the restriction layer behaves and
+must stay that way.
+
+## 12. Owning-group members get a seeded grant, not structural read
+
+**Decision.** Membership of the owning group confers no read by itself. Creating a dataset or
+a collection writes a real grant to the owning group in the same transaction.
+
+The design records contradicted themselves, saying in two places that members can read
+without a grant and in two others that they cannot. The code gave structural access to group
+admins only. This settles it in the direction the model already points: grants are the only
+source of consumption rights, so the default becomes a visible, explainable, revocable row
+rather than an invisible rule.
+
+The same shape the system principals already use. A row that can be listed in the Access tab
+and revoked is better than a behaviour that can only be read out of the source.
+
+**Consequence to accept.** Revoking that grant leaves members of the owning group unable to
+read a dataset their own group governs. That is correct and it is the point: the row says
+what is true, and an admin who removes it meant to.
+
+## 13. Attribution is its own relationship
+
+**Decision.** Datasets record funding and affiliation separately from the owning group.
+
+Decision 8 settled that `owner_group_id` means governance only, and deferred attribution
+with one constraint: do not widen that column to carry credit as well. This takes the
+deferred half. A dataset may name several funding sources and several affiliated groups,
+none of which decides access.
+
+Use case 13 asks researchers to cite ownership correctly, and the data to do that has
+nowhere to live except the `metadata` column, where nothing can query it.
+
+**Not an authorization input.** No policy, filter, or grant check reads these rows. Adding an
+affiliation must not widen who can reach a dataset.
+
+---
+
 ## What was not decided
 
 **Ownership transfer, reparenting, invitations, and identity federation** remain deferred.
@@ -268,5 +345,4 @@ route path does not.
 
 **The second restriction type** is deferred by decision 6. Only `ARCHIVED` ships.
 
-**Attribution and funding** are deferred by decision 8, constrained only by not overloading
-`owner_group_id`.
+**Attribution and funding** were deferred by decision 8 and taken up by decision 13.

@@ -398,7 +398,7 @@ Even “public” access is now durable, auditable, and revocable.
 
 ## Collections
 
-Collections are **first‑class authorization containers**, symmetric to groups.
+Collections are **first‑class authorization containers**, owned by exactly one group.
 
 * Groups contain users
 * Collections contain datasets
