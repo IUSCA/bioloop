@@ -27,11 +27,12 @@ model dataset {
   is_staged         Boolean  @default(false)
   metadata          Json?
   src_instrument_id Int?
-  // Every dataset is governed by exactly one group. NOT NULL since the
-  // 20260908010000_dataset_owner_group_required migration; datasets with no owner were
-  // moved into the archived 'Unassigned Datasets' group (constants.UNASSIGNED_DATASETS_GROUP_ID).
+  // The group that governs this dataset. Nullable at the column, required by v2: the legacy
+  // creation routes write rows without one until cut-over, so the constraint lives in
+  // datasets_v2 rather than in the schema.
+  // @see docs/design/v2-cutover.md — What v2 requires that the schema does not
   // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
-  owner_group_id    String
+  owner_group_id    String?
 
   workflows        workflow[]
   files            dataset_file[]
@@ -45,7 +46,7 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  owner_group    group?                      @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collections    collection_dataset[]
   contributions  user_dataset_contribution[]
   resource_id    String                      @unique

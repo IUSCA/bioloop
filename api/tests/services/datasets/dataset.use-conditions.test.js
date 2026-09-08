@@ -15,7 +15,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const datasetService = require('@/services/datasets_v2');
-const { buildDatasetCreateQuery } = require('@/services/dataset');
+const { buildDatasetCreateQuery, createDataset } = require('@/services/datasets_v2');
 const grantService = require('@/services/grants');
 const {
   createTestUser,
@@ -41,6 +41,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   for (const id of datasetsToDelete) {
+    // Creation seeds an owning-group grant and grant.resource is ON DELETE RESTRICT.
+    const d = await prisma.dataset.findUnique({ where: { id }, select: { resource_id: true } });
+    if (d) await prisma.grant.deleteMany({ where: { resource_id: d.resource_id } });
     await prisma.dataset.deleteMany({ where: { id } });
   }
   for (const id of [...groupsToDelete].reverse()) {
@@ -51,30 +54,19 @@ afterAll(async () => {
 }, 30_000);
 
 /**
- * Register a dataset the way POST /datasets does: build the create query, then create.
- *
- * owner_group_id and resource_id are added here because the route sends neither and so
- * cannot currently create a dataset at all.
- * @see .todo/issues/epic-3-*.md — dataset creation paths broken by the NOT NULL owner_group_id
- *
- * The built query goes to prisma.dataset.create rather than datasetService.create so the
- * test does not drag in the legacy auto-create-project path, which has nothing to do with
- * consent codes and throws for a plain `user`.
+ * Register a dataset the way POST /v2/datasets does: build the create query, then create.
+ * The v2 service creates the resource row and seeds the owning group's grant itself.
  */
 async function register(tag, use_conditions) {
-  const resource_id = randomUUID();
-  await prisma.resource.create({ data: { id: resource_id, type: RESOURCE_TYPE.DATASET } });
-
   const query = buildDatasetCreateQuery({
     name: `Test Dataset ${Date.now()}${tag}`,
     type: 'RAW_DATA',
+    owner_group_id: group.id,
     user_id: actor.id,
     use_conditions,
     recorded_by: actor.subject_id,
   });
-  const dataset = await prisma.dataset.create({
-    data: { ...query, owner_group_id: group.id, resource_id },
-  });
+  const dataset = await createDataset({ data: query, actor_id: actor.subject_id });
   datasetsToDelete.push(dataset.id);
   return dataset;
 }

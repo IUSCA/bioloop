@@ -30,6 +30,10 @@ frontmatter, and repeats them in a banner at the top.
 
 ## Active work
 
+[v2 cut-over](./v2-cutover.md) covers how the new access-control layer is built alongside
+the legacy code, and what has to be true before the legacy half can be switched off. Read it
+before changing anything under `api/src/services` or `api/src/routes`.
+
 The groups records answer four different questions, and each has one page.
 
 - [Hierarchical groups, collections, and access control](./groups/design.md) — **how it works.** `active`, partially shipped

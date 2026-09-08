@@ -1,10 +1,12 @@
 /**
  * dataset.owner-group.test.js
  *
- * Every dataset is governed by exactly one group. Covers the NOT NULL constraint on
- * dataset.owner_group_id and the archived quarantine group that holds the datasets which
- * had no owner when the constraint landed.
+ * Every dataset v2 creates is governed by exactly one group. The requirement lives in the
+ * v2 service rather than in the column, because the legacy creation routes still write rows
+ * without an owning group until cut-over. Also covers the archived quarantine group that
+ * holds the datasets which had no owner when the groups work started.
  *
+ * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
  * @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
  */
 
@@ -17,6 +19,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
+const { buildDatasetCreateQuery } = require('@/services/datasets_v2');
 const { UNASSIGNED_DATASETS_GROUP_ID } = require('@/constants');
 const {
   createTestUser,
@@ -51,7 +54,7 @@ afterAll(async () => {
   await prisma.$disconnect();
 }, 30_000);
 
-describe('dataset.owner_group_id is required', () => {
+describe('v2 requires an owning group, the column does not', () => {
   test('a dataset can be created with an owning group', async () => {
     const dataset = await createTestDataset(group.id, '_dog_ok');
     datasetsToDelete.push(dataset.id);
@@ -59,21 +62,30 @@ describe('dataset.owner_group_id is required', () => {
     expect(dataset.owner_group_id).toBe(group.id);
   });
 
-  test('the database rejects a dataset with no owning group', async () => {
-    // Go around Prisma's own required-argument check to prove the constraint is in the
-    // database, not only in the generated client.
+  test('the v2 service refuses to create a dataset with no owning group', () => {
+    // The refusal is here rather than in the database, so v1 keeps working until cut-over.
+    expect(() => buildDatasetCreateQuery({ name: 'Orphan', type: 'RAW_DATA' }))
+      .toThrow(/owner_group_id/);
+  });
+
+  test('the database still accepts one, so legacy creation keeps working', async () => {
+    // Migration 20260908010000 made this column NOT NULL and broke the legacy routes, which
+    // send no owning group. 20260909010000 dropped the constraint again. This pins the
+    // reversal: the column has to stay permissive while v1 still writes datasets.
     const resource_id = randomUUID();
     await prisma.resource.create({ data: { id: resource_id, type: RESOURCE_TYPE.DATASET } });
+    const name = `Orphan Dataset ${Date.now()}`;
 
-    const insert = prisma.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO "dataset" ("name", "type", "is_deleted", "resource_id", "owner_group_id")
-      VALUES (${`Orphan Dataset ${Date.now()}`}, 'RAW_DATA', false, ${resource_id}, NULL)
+      VALUES (${name}, 'RAW_DATA', false, ${resource_id}, NULL)
     `;
 
-    // 23502 is Postgres not_null_violation. Prisma renders the failing row rather than the
-    // column name, so match the code.
-    await expect(insert).rejects.toThrow(/23502/);
+    const orphan = await prisma.dataset.findFirst({ where: { name } });
+    expect(orphan).not.toBeNull();
+    expect(orphan.owner_group_id).toBeNull();
 
+    await prisma.dataset.deleteMany({ where: { id: orphan.id } });
     await prisma.resource.deleteMany({ where: { id: resource_id } });
   });
 

@@ -120,10 +120,68 @@ router.get(
 
 // ── Create ───────────────────────────────────────────────────────────────────
 
-// router.post(
-//   '/',
-//   ...
-// );
+/**
+ * Creates a dataset under an owning group.
+ *
+ * `owner_group_id` is required here even though the column is nullable, because the legacy
+ * creation routes still write rows without one until cut-over.
+ * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
+ */
+router.post(
+  '/',
+  validate([
+    body('name').isString().notEmpty(),
+    body('type').isIn(config.get('dataset_types')),
+    body('owner_group_id').isUUID(),
+    body('origin_path').isString().trim().notEmpty(),
+    body('description').optional().isString(),
+    body('metadata').optional().isObject(),
+    body('du_size').optional().notEmpty().customSanitizer(BigInt),
+    body('size').optional().notEmpty().customSanitizer(BigInt),
+    body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
+    body('src_instrument_id').optional().isInt().toInt(),
+    body('src_dataset_id').optional().isInt().toInt(),
+    body('workflow_id').optional().isString(),
+    body('state').optional().isString(),
+    body('create_method').optional().isString(),
+    // Conditions the donors consented to, captured and never enforced.
+    // @see docs/design/groups/decisions.md — 9. Consent codes are captured, not enforced
+    body('use_conditions').optional().isArray(),
+    body('use_conditions.*.system').notEmpty().isString(),
+    body('use_conditions.*.code').notEmpty().isString(),
+    body('use_conditions.*.label').optional().isString(),
+    body('use_conditions.*.note').optional().isString(),
+  ]),
+  authorize('dataset', 'create', {
+    resourceIdFn: () => null,
+    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
+  }),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Create a dataset owned by a group'
+
+    const createQuery = datasetService.buildDatasetCreateQuery({
+      ..._.pick([
+        'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
+        'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+        'workflow_id', 'state', 'create_method', 'use_conditions',
+      ])(req.body),
+      user_id: req.user.id,
+      recorded_by: req.user.subject_id,
+    });
+
+    // Idempotent: a live dataset with the same name and type is a conflict, not a duplicate.
+    const dataset = await datasetService.createDataset({
+      data: createQuery,
+      actor_id: req.user.subject_id,
+    });
+
+    if (!dataset) {
+      return next(createError.Conflict('A dataset with this name and type already exists'));
+    }
+    res.status(201).json(dataset);
+  }),
+);
 
 // ── Patch (metadata) ─────────────────────────────────────────────────────────
 
