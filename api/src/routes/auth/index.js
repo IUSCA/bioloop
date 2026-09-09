@@ -9,6 +9,7 @@ const { accessControl } = require('@/middleware/auth');
 const userService = require('@/services/user');
 const authService = require('@/services/auth');
 const constants = require('@/constants');
+const { isDevelopment } = require('@/utils/environment');
 
 const isPermittedTo = accessControl('auth');
 const router = express.Router();
@@ -68,12 +69,14 @@ router.post('/refresh_token', authenticate, asyncHandler(async (req, res, next) 
 // kind, so that a developer or an agent driving a browser can exercise a platform admin, a
 // group admin, and an ordinary member in turn without CAS.
 //
-// The route is not registered at all when env is production or test, which is the whole of
-// its safety. Do not add a credential check and relax that guard: the guard is what makes
-// the absence of a credential acceptable.
+// The route is registered only in a recognised development mode, which is the whole of its
+// safety. Do not add a credential check and relax that guard: the guard is what makes the
+// absence of a credential acceptable. `isDevelopment` is an allowlist and fails closed for a
+// mode it does not recognise, so a misspelled NODE_ENV removes this route rather than
+// exposing it.
 //
 // @see docs/guides/dev-servers.md — Logging in without CAS
-if (!['production', 'test'].includes(config.get('env'))) {
+if (isDevelopment()) {
   router.post(
     '/test_login',
     asyncHandler(async (req, res, next) => {

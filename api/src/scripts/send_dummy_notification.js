@@ -7,8 +7,8 @@ global.__basedir = path.join(__dirname, '..', '..');
 
 require('dotenv-safe').config({ example: '.env.default' });
 
-const config = require('config');
 const notify = require('@/notification/NotificationService');
+const { isDevelopment, mode } = require('@/utils/environment');
 const { closeAllQueues } = require('@/notification/queue/queues');
 const alertFixtures = require('../notification/email-preview/fixtures/alert.json');
 const workflowFixtures = require('../notification/email-preview/fixtures/workflow.json');
@@ -131,8 +131,10 @@ async function main(argv) {
     return;
   }
 
-  if (config.get('env') === 'production') {
-    throw new Error('Refusing to send dummy notifications while running with production config.');
+  // Refuse unless this is positively a development environment. The script sends real mail,
+  // so an unrecognised mode is a reason to stop rather than to assume it is safe to proceed.
+  if (!isDevelopment()) {
+    throw new Error(`Refusing to send dummy notifications in mode '${mode()}'.`);
   }
 
   // Determine if arg2 is a recipient email or a fixture name

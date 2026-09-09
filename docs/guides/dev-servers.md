@@ -130,12 +130,18 @@ Any active user works, so this is the way to see a page as a platform admin, a g
 and an ordinary member in turn. `user-013` and the other `user-0NN` accounts are seeded
 members of the sample groups and hold no elevated role.
 
-**Why this is safe.** The page calls `POST /auth/test_login`, and that route is not
-registered at all when the API's `env` is `production` or `test`. The absence of the route
-is the whole of the protection — the route deliberately accepts a username with no
-credential. Do not add a password check and relax the environment guard; that trade is
-strictly worse than what is there now. The page additionally refuses to act unless Vite is
-running in dev mode.
+**Why this is safe.** The page calls `POST /auth/test_login`, and that route is registered
+only when the API is running in a recognised development mode: `localhost`, `docker`, or
+`ci`. The absence of the route is the whole of the protection — the route deliberately
+accepts a username with no credential. Do not add a password check and relax the environment
+guard; that trade is strictly worse than what is there now. The page additionally refuses to
+act unless Vite is running in dev mode.
+
+The check is `isDevelopment()` in `api/src/utils/environment.js`, and it is an allowlist on
+purpose. A deployment whose `NODE_ENV` is misspelled — `prod` rather than `production` —
+loads no environment config file, so a rule phrased as "not production" would hold and the
+route would appear. Phrased as an allowlist, the same misspelling removes the route instead.
+An unset `NODE_ENV` throws at startup rather than picking a side.
 
 `/dev-login` also spends an invitation token the browser is holding, so the whole
 invitation flow can be walked in development: send one, take the link from MailHog, clear

@@ -5,7 +5,6 @@ const cookieParser = require('cookie-parser');
 const requestLogger = require('morgan');
 const compression = require('compression');
 const swaggerUi = require('swagger-ui-express');
-const config = require('config');
 
 const indexRouter = require('./routes/index');
 const {
@@ -20,6 +19,7 @@ const { initializePolicyContext } = require('./authorization');
 const createTusMiddleware = require('./middleware/tus');
 const uploadService = require('./services/upload');
 const logger = require('./services/logger');
+const { isDevelopment } = require('./utils/environment');
 
 // Wires the lifecycle hooks. Required for its side effect, before any request can be served:
 // a handler nobody registered fails silently.
@@ -40,10 +40,10 @@ app.use(createTusMiddleware(tusServer));
 logger.info('TUS server mounted at /uploads/files');
 
 // request logger - https://github.com/expressjs/morgan
-if (config.get('env') === 'production') {
-  app.use(requestLogger('combined', { skip: (req, res) => res.statusCode < 400 }));
-} else {
+if (isDevelopment()) {
   app.use(requestLogger('dev'));
+} else {
+  app.use(requestLogger('combined', { skip: (req, res) => res.statusCode < 400 }));
 }
 
 // request parsing middleware
@@ -59,7 +59,7 @@ app.use(cookieParser());
 // compress all responses
 app.use(compression());
 
-if (!['production', 'test'].includes(config.get('env'))) {
+if (isDevelopment()) {
   // mount swagger ui
   try {
     const swaggerFile = JSON.parse(fs.readFileSync('./swagger_output.json'));

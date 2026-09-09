@@ -38,6 +38,7 @@ require('dotenv-safe').config({ example: '.env.default' });
 
 const config = require('config');
 const logger = require('@/services/logger');
+const { mode } = require('@/utils/environment');
 const { getQueue, closeAllQueues } = require('./queue/queues');
 const { QUEUE_NAMES } = require('./types');
 const {
@@ -169,7 +170,7 @@ process.on('unhandledRejection', (reason) => {
 
 async function start() {
   logger.info('[Worker] Starting notification worker', {
-    nodeEnv: config.get('env'),
+    mode: mode(),
     concurrency: config.get('notify.worker.concurrency'),
     queues: QUEUE_NAMES,
     smtpHost: config.get('smtp.host'),

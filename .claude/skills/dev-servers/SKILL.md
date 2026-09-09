@@ -107,9 +107,15 @@ https://localhost/dev-login?username=user-013  # an ordinary member of a seeded 
 https://localhost/dev-login?username=<any>&next=/v2/datasets
 ```
 
-It calls `POST /auth/test_login`, which accepts any active username with no credential and
-is not registered when the API's `env` is `production` or `test`. That environment guard is
-the entire protection; do not weaken it.
+It calls `POST /auth/test_login`, which accepts any active username with no credential and is
+registered only in a recognised development mode — `localhost`, `docker`, or `ci`. That
+environment guard is the entire protection; do not weaken it.
+
+The guard is `isDevelopment()` in `api/src/utils/environment.js`, an allowlist over
+`config.get('mode')`. It reads `mode` rather than `env` because `env` was a fixed string in
+`default.json` that no environment file overrode, so every guard built on it stood open in
+production. An allowlist also closes the route for a misspelled `NODE_ENV` such as `prod`,
+where "not production" would have opened it. An unset `NODE_ENV` throws at startup.
 
 Switching users this way is how to check a page as a platform admin, a group admin, and a
 plain member without three browsers.

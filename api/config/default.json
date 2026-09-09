@@ -1,5 +1,4 @@
 {
-  "env": "default",
   "app_id": "bioloop-dev.sca.iu.edu",
   "express": {
     "port": 3030,

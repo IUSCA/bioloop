@@ -154,7 +154,7 @@ cast to reuse. Center is the parent of three cores and three labs; each lab is t
 one project group. `NeuroSeq Atlas → Dr. Alice Wong Lab → Center` is the depth-2 chain the
 transitivity flows need, with the project group standing in for the sub-lab.
 
-### F3 — There is a credential-free login route, and its stated guard does not work
+### F3 — The credential-free login route is the right primitive, and its guard now works
 
 `POST /auth/test_login` signs in as any active user by username with no credential at all.
 `ui/src/pages/dev-login.vue` wraps it, so `https://localhost/dev-login?username=user-084&next=/v2/groups`
@@ -162,33 +162,25 @@ gets past both the certificate interstitial and the login in one navigation. Thi
 right primitive for a v2 suite: one call per persona, no browser needed for setup, no CAS
 mock, and no `NODE_ENV=ci` requirement.
 
-**Its guard is broken, and this must be fixed before the plan proceeds.** The route is wrapped
-in `if (!['production', 'test'].includes(config.get('env')))` at
-[api/src/routes/auth/index.js:76](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/auth/index.js#L76).
-`config.get('env')` reads the `env` key, and that key is set to the literal string `default`
-in `api/config/default.json` and is overridden in no other config file.
-`api/config/production.json` sets `mode`, not `env`, and `custom-environment-variables.json`
-maps `NODE_ENV` onto `mode` as well. So `config.get('env')` is `"default"` in every
-deployment, and the condition is true everywhere.
+**Its guard did not work when this plan was written, and was fixed before any of it was
+built.** The route, the Swagger UI mount, and the production request-logging switch were all
+gated on `config.get('env')`. That key was the literal string `default` in
+`api/config/default.json` and was overridden in no other config file, because the setting
+that actually tracks the environment is `mode`. So all three guards stood open in every
+deployment, including production.
 
-Three blocks depend on that expression: verbose request logging in
-[api/src/app.js:43](https://github.com/IUSCA/bioloop/blob/main/api/src/app.js#L43), the Swagger
-UI mount at line 62, and this login route. The comment on the login route says the guard "is
-the whole of its safety".
+The fix removed `env` from the config entirely and put one predicate behind all three:
+`isDevelopment()` in `api/src/utils/environment.js`, an allowlist over `mode` covering
+`localhost`, `docker`, and `ci`. It is an allowlist rather than a check for "not production"
+so that a misspelled `NODE_ENV` such as `prod` closes the surfaces instead of opening them,
+and an unset `NODE_ENV` throws at startup rather than guessing. The three documents that
+repeated the false claim — the route comment, the dev-servers skill, and the dev-servers
+guide — were corrected in the same change.
 
-**The false claim is recorded in three places, so the fix is three edits and not one.** The
-route's own comment says the guard "is the whole of its safety". The
-[dev-servers skill](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/dev-servers/SKILL.md)
-repeats it as "not registered when the API's `env` is `production` or `test`. That
-environment guard is the entire protection; do not weaken it." So does the user-facing
-[dev-servers guide](../../guides/dev-servers.md). A reader of any of the three would conclude
-the route is safe, and a reader of all three would conclude it twice over.
-
-This is a finding of this analysis, not a change made by it. It belongs in the backlog under
-the authorization epic, and the code fix is one line: compare against `mode`, or set `env` in
-the environment-specific config files. **The test plan should not be started until it is
-fixed, because the plan makes this route load-bearing and would otherwise be an argument for
-keeping it.**
+**What this means for the plan.** The suite may rely on `/auth/test_login` in `localhost`,
+`docker`, and `ci`, and must not assume it exists anywhere else. A CI job that forgets to set
+`NODE_ENV` will fail at API startup, which is the intended behaviour and is worth
+recognising when it happens.
 
 ### F4 — The seed already grants to the system principals
 
@@ -664,10 +656,11 @@ names what would settle it.
    modal and picks a subject. The v2-ui-changes skill says synthetic events cannot; Playwright
    sends real ones. If it turns out it cannot either, the `setupState` escape hatch goes into
    a page-object helper and the component work in phases 3 and 4 grows.
-2. **Does `POST /auth/test_login` survive the F3 fix?** The fix should keep the route in
-   development and remove it from production. Confirm the corrected guard still admits the
-   compose stack, whatever `NODE_ENV` it runs under, and amend the two documents that repeat
-   the false claim.
+2. ~~**Does `POST /auth/test_login` survive the F3 fix?**~~ **Settled.** The route is
+   registered under `localhost`, `docker`, and `ci`, and absent under `production`, `test`,
+   and any unrecognised mode. Verified by enumerating the auth router's stack once per mode,
+   and by calling the route and `/doc` against a running dev server. The e2e compose stack
+   runs `NODE_ENV=ci`, so it keeps the route.
 3. **How long does building the world take?** Time the builder end to end. If it exceeds
    roughly thirty seconds it belongs in global setup once per run rather than per worker, and
    the specs then have to tolerate a shared world.
@@ -824,8 +817,8 @@ The two stale rows are an amendment due to
 not a change this plan makes. They are recorded here so phase 3 does not begin by looking for
 a stub that is gone.
 
-The dev-servers skill needs the F3 amendment, and so does
-[docs/guides/dev-servers.md](../../guides/dev-servers.md).
+The dev-servers skill and [docs/guides/dev-servers.md](../../guides/dev-servers.md) both
+carried the F3 claim and were corrected with the fix itself.
 
 ## Open questions
 
