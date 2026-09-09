@@ -67,7 +67,7 @@
     </VaCardContent>
   </VaCard>
 
-  <RequestAccessModalWithoutDrafts
+  <RequestAccessModal
     ref="requestAccessModalRef"
     :resource="collectionResource"
     @submitted="onRequestSubmitted"

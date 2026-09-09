@@ -239,6 +239,10 @@ rendered.
 lines and are imported by nothing. The decision that the UI shows no drafts is already taken,
 and B1 removes the last reason a draft could appear.
 
+`RequestAccessModalWithoutDrafts.vue` then takes the name `RequestAccessModal.vue`, because
+with the drafts variant gone the qualifier names a distinction that no longer exists. Its
+dead `@saved` handler goes with it: `RequestAccessForm` declares no emits.
+
 ### B6 — The two resource tabs, and the form's state wiring
 
 `DatasetRequestsTab` gets the request-access modal and exposes the opener the dataset page
@@ -424,7 +428,7 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B4, C1, C2, and C3 are built. B5, B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1 to B5, C1, C2, and C3 are built. B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to
