@@ -167,6 +167,30 @@
         />
       </div>
 
+      <!-- Staging status.
+           Two audiences. Someone who can open the Workflows tab sees the runs still going.
+           A grant holder cannot open that tab — a run carries paths and error traces — so
+           they get the one fact they need, derived from the dataset itself.
+           @see .todo/issues/06-dataset-actions-workflows.md — Who sees the tab -->
+      <div v-if="activeRuns.length || stageNotice">
+        <h2 class="text-sm font-semibold mb-3 va-text-secondary">STATUS</h2>
+
+        <div
+          v-for="run in activeRuns"
+          :key="run.id"
+          class="flex items-center gap-2 text-sm mb-1"
+        >
+          <VaIcon name="mdi-progress-clock" class="text-blue-500" />
+          <span class="capitalize">{{ run.name }}</span>
+          <span class="va-text-secondary">{{ run.status?.toLowerCase() }}</span>
+        </div>
+
+        <div v-if="stageNotice" class="flex items-center gap-2 text-sm">
+          <VaIcon :name="stageNotice.icon" :class="stageNotice.color" />
+          <span>{{ stageNotice.text }}</span>
+        </div>
+      </div>
+
       <!-- Quick Actions -->
       <div>
         <h2 class="text-sm font-semibold mb-3 va-text-secondary">
@@ -267,6 +291,9 @@ const props = defineProps({
   // Staging is its own authority. Being able to download a dataset that is already staged
   // does not imply being able to ask for it to be staged again.
   canRequestStage: { type: Boolean, default: false },
+  // Whether the viewer may open the Workflows tab. Decides which of the two status views
+  // below they get.
+  canViewWorkflows: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -300,13 +327,57 @@ function openDownloadModal() {
 }
 
 const staging = ref(false);
+const requested = ref(false);
+const activeRuns = ref([]);
+
+const DONE = ["SUCCESS", "FAILURE", "REVOKED"];
+
+// A grant holder sees this instead of the runs. is_staged is on the dataset they can already
+// read, so it needs no endpoint they are not allowed to call.
+const stageNotice = computed(() => {
+  if (props.canViewWorkflows) return null;
+  if (requested.value && !props.dataset.is_staged) {
+    return {
+      icon: "mdi-progress-clock",
+      color: "text-blue-500",
+      text: "Staging requested. This page will show it as ready once it finishes.",
+    };
+  }
+  if (props.dataset.is_staged) {
+    return {
+      icon: "mdi-check-circle-outline",
+      color: "text-emerald-500",
+      text: "Staged and ready to download.",
+    };
+  }
+  return null;
+});
+
+async function fetchActiveRuns() {
+  if (!props.canViewWorkflows) return;
+  try {
+    const { data } = await datasetService.listWorkflows(
+      props.dataset.resource_id,
+      {
+        only_active: true,
+      },
+    );
+    activeRuns.value = (data || []).filter((run) => !DONE.includes(run.status));
+  } catch {
+    activeRuns.value = [];
+  }
+}
+
+onMounted(fetchActiveRuns);
 
 function handleStageRequest() {
   staging.value = true;
   datasetService
     .runWorkflow({ id: props.dataset.resource_id, workflow_type: "stage" })
     .then(() => {
-      toast.success("Staging requested. It will appear in Workflows shortly.");
+      requested.value = true;
+      toast.success("Staging requested.");
+      fetchActiveRuns();
       emit("update");
     })
     .catch((err) => {

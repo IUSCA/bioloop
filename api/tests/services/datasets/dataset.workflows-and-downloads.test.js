@@ -113,6 +113,57 @@ describe('listing a dataset\'s runs', () => {
   });
 });
 
+describe('finding one run of a dataset', () => {
+  let otherDataset;
+  let wf_id;
+
+  beforeAll(async () => {
+    otherDataset = await createTestDataset(group.id, '_wfd_other');
+    datasetsToDelete.push(otherDataset.id);
+    wf_id = randomUUID();
+    await prisma.workflow.create({ data: { id: wf_id, dataset_id: dataset.id } });
+  });
+
+  afterAll(async () => {
+    await prisma.workflow.deleteMany({ where: { id: wf_id } });
+  });
+
+  test('returns the run when it belongs to the dataset', async () => {
+    jest.spyOn(wfService, 'getAll').mockResolvedValue({
+      data: { results: [{ id: wf_id, name: 'stage', status: 'FAILURE' }] },
+    });
+
+    const run = await workflowService.findDatasetRun(dataset.resource_id, wf_id);
+    expect(run).toMatchObject({ id: wf_id, name: 'stage', status: 'FAILURE' });
+  });
+
+  test('refuses a run reached through a different dataset', async () => {
+    // The legacy routes authorize on the workflow alone and never mention the dataset, so
+    // holding rights on one dataset lets you act on any run. This is that hole closed: the
+    // run exists and the caller may well be an admin of otherDataset, and it is still null.
+    const getAll = jest.spyOn(wfService, 'getAll');
+
+    await expect(
+      workflowService.findDatasetRun(otherDataset.resource_id, wf_id),
+    ).resolves.toBeNull();
+
+    // Refused before the workflow service is consulted at all.
+    expect(getAll).not.toHaveBeenCalled();
+  });
+
+  test('an unknown run and an unknown dataset are both null', async () => {
+    expect(await workflowService.findDatasetRun(dataset.resource_id, randomUUID())).toBeNull();
+    expect(await workflowService.findDatasetRun(randomUUID(), wf_id)).toBeNull();
+  });
+
+  test('a run the workflow service cannot describe is null, not a half-built object', async () => {
+    jest.spyOn(wfService, 'getAll').mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(
+      workflowService.findDatasetRun(dataset.resource_id, wf_id),
+    ).resolves.toBeNull();
+  });
+});
+
 describe('download info resolves the dataset by resource id', () => {
   test('the bundle route reaches the dataset and stops at "not staged"', async () => {
     // Reaching this message proves the resource UUID resolved to the integer row: the

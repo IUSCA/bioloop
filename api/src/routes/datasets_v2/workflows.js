@@ -9,10 +9,11 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
 const prisma = require('@/db');
 const logger = require('@/services/logger');
 const CONSTANTS = require('@/constants');
+const wfService = require('@/services/workflow');
 const workflowService = require('@/services/datasets_v2/workflows');
 const datasetService = require('@/services/datasets_v2');
 
@@ -103,6 +104,43 @@ router.post(
     res.json(wf);
   }),
 );
+
+/**
+ * Stop or resume one run.
+ *
+ * Authorized in the handler rather than by the middleware, because which action gates the
+ * act depends on the run's name, and that has to be fetched first. Acting on a run needs the
+ * same authority as starting one: resuming a failed stage run is starting a stage run.
+ * @see .todo/issues/06-dataset-actions-workflows.md — Who sees the tab, and who can act
+ */
+const runControl = (verb) => asyncHandler(async (req, res, next) => {
+  const { dataset_id, workflow_id } = req.params;
+
+  const run = await workflowService.findDatasetRun(dataset_id, workflow_id);
+  if (!run) return next(createError(404, 'Workflow not found for this dataset'));
+
+  const action = workflowService.policyActionFor(run.name);
+  if (!action) {
+    return next(createError(400, `No policy action is defined for workflow ${run.name}`));
+  }
+
+  const decision = await authorizeAction('dataset', action, {
+    identifiers: { user: req.user?.subject_id, resource: dataset_id },
+    policyExecutionContext: req.policyContext,
+    preFetched: { user: req.user, context: { req } },
+  });
+  if (!decision.granted) {
+    return next(createError.Forbidden(`Not permitted to ${verb} runs on this dataset`));
+  }
+
+  logger.info(`${verb} workflow ${workflow_id} on dataset ${dataset_id}`);
+  const result = await wfService[verb === 'stop' ? 'pause' : 'resume'](workflow_id);
+  return res.json(result.data);
+});
+
+// #swagger.tags = ['datasets']
+router.post('/:workflow_id/pause', runControl('stop'));
+router.post('/:workflow_id/resume', runControl('resume'));
 
 // Associate an existing workflow ID with a dataset
 router.put(

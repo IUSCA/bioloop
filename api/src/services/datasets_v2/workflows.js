@@ -71,6 +71,35 @@ async function enrichWorkflows(rows, {
 }
 
 /**
+ * One run, confirmed to belong to the given dataset.
+ *
+ * The association lives in Postgres and the run's name lives in the workflow service, and
+ * both are needed: the first stops a caller acting on another dataset's run through a
+ * dataset they can reach, the second decides which policy action gates the act.
+ *
+ * @param {string} resource_id - the dataset's resource UUID
+ * @param {string} workflow_id
+ * @returns {Promise<{id: string, name: string, status: string}|null>} null when the run does
+ *   not exist, does not belong to this dataset, or the workflow service cannot be reached
+ */
+async function findDatasetRun(resource_id, workflow_id) {
+  const dataset = await prisma.dataset.findUnique({
+    where: { resource_id },
+    select: { id: true },
+  });
+  if (!dataset) return null;
+
+  const row = await prisma.workflow.findFirst({
+    where: { id: workflow_id, dataset_id: dataset.id },
+    select: { id: true },
+  });
+  if (!row) return null;
+
+  const [run] = await enrichWorkflows([row]);
+  return run ?? null;
+}
+
+/**
  * Every run associated with a dataset, addressed by its resource id.
  *
  * @param {string} resource_id - the dataset's resource UUID
@@ -137,6 +166,7 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
 
 module.exports = {
   createWorkflow,
+  findDatasetRun,
   runnableWorkflows,
   policyActionFor,
   enrichWorkflows,

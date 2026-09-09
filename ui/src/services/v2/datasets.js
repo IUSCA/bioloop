@@ -182,6 +182,15 @@ export default {
   },
 
   /**
+   * Stop or resume one of a dataset's runs.
+   * Needs the same capability as launching that workflow type.
+   * @param {{ id: string, workflow_id: string, verb: 'pause'|'resume' }}
+   */
+  controlWorkflow({ id, workflow_id, verb } = {}) {
+    return api.post(`/v2/datasets/${id}/workflows/${workflow_id}/${verb}`);
+  },
+
+  /**
    * The file name a downloaded bundle is saved as. The last segment of the path the API
    * serves it from, kept in step with getBundleDownloadPath in the v2 files service.
    * @see docs/design/groups/dataset-storage.md — Download

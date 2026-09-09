@@ -162,6 +162,7 @@
           :can-issue-grants="can('manage_grants')"
           :can-download="can('download')"
           :can-request-stage="can('request_stage')"
+          :can-view-workflows="can('view_workflows')"
           @update="fetchDatasetData"
           @delete="openDeleteModal"
           @action-requested="handleActionRequested"
@@ -212,8 +213,9 @@
 
         <DatasetWorkflowsTab
           v-else-if="activeTab === 'workflows'"
-          :workflows="dataset.workflows || []"
-          :loading="false"
+          :dataset="dataset"
+          :can-act="can('request_stage') || can('compute')"
+          @count-changed="(n) => (counts.workflows = n)"
         />
 
         <DatasetUploadTab
@@ -303,7 +305,6 @@ async function fetchDatasetData() {
     dataset.value = data;
     setNavBreadcrumbs(data);
     counts.value.files = data.num_files;
-    counts.value.workflows = (data.workflows || []).length;
     await fetchCounts();
   } catch (err) {
     error.value = err?.response?.data?.message ?? "Failed to load dataset.";
@@ -323,7 +324,17 @@ async function fetchCounts() {
     can("view_derived_datasets")
       ? fetchDerivedDatasetsCount()
       : Promise.resolve(),
+    can("view_workflows") ? fetchWorkflowsCount() : Promise.resolve(),
   ]);
+}
+
+async function fetchWorkflowsCount() {
+  try {
+    const { data } = await DatasetService.listWorkflows(props.id);
+    counts.value.workflows = (data || []).length;
+  } catch {
+    counts.value.workflows = null;
+  }
 }
 
 async function fetchGrantsCount() {
