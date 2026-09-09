@@ -46,9 +46,11 @@
         <!-- Left panel: Form (2 cols) -->
         <div class="col-span-2 flex flex-col overflow-hidden">
           <ReviewRequestForm
-            v-if="request && formState?.value"
+            v-if="request && formState"
             :request="request"
-            :form-state="formState.value"
+            :form-state="formState"
+            :resource-type="resourceType"
+            :subject-type="subjectType"
             @submit="submit"
             @cancel="hide"
           />
@@ -59,9 +61,10 @@
           class="col-span-1 flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-solid border-gray-200 dark:border-gray-700"
         >
           <ReviewEffectiveGrantsPreview
-            v-if="request && formState?.value"
+            v-if="request && formState"
             :request="request"
-            :approved-items-payload="formState.value.approvedItemsPayload"
+            :resource-type="resourceType"
+            :approved-items-payload="formState.approvedItemsPayload"
             :access-type-map="accessTypeMap"
           />
         </div>
@@ -88,15 +91,15 @@
         class="w-full flex items-center justify-between gap-4 border-t border-solid border-gray-200 dark:border-gray-600 pt-4"
       >
         <p class="text-xs text-gray-400 dark:text-gray-500">
-          <strong>{{ formState?.value?.approvedCount }}</strong> approved,
-          <strong>{{ formState?.value?.rejectedCount }}</strong> rejected
+          <strong>{{ formState?.approvedCount }}</strong> approved,
+          <strong>{{ formState?.rejectedCount }}</strong> rejected
         </p>
 
         <div class="flex items-center justify-end gap-3">
           <VaButton preset="secondary" @click="hide">Cancel</VaButton>
           <VaButton
             :loading="submitting"
-            :disabled="!formState?.value?.isSubmitEnabled || conflictError"
+            :disabled="!formState?.isSubmitEnabled || conflictError"
             @click="submit"
           >
             <i-mdi-check class="mr-1.5" />
@@ -114,7 +117,7 @@ import ModernAlert from "@/components/utils/ModernAlert.vue";
 import * as datetime from "@/services/datetime";
 import accessRequestsService from "@/services/v2/access-requests";
 import grantsService from "@/services/v2/grants";
-import { computed, ref, watch } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import ReviewEffectiveGrantsPreview from "./ReviewEffectiveGrantsPreview.vue";
 import ReviewRequestForm from "./ReviewRequestForm.vue";
 import { useReviewRequestForm } from "./useReviewRequestForm";
@@ -148,19 +151,21 @@ const request = ref(null);
 const accessTypes = ref([]);
 const presets = ref([]);
 
-// Form state composable (will be initialized when request loads)
-const formState = ref(null);
+// The composable returns a reactive object; a shallowRef holds it without re-wrapping it.
+const formState = shallowRef(null);
 
 // Initialize formState with default structure
 const initializeFormState = () => {
   if (request.value && !formState.value) {
-    formState.value = useReviewRequestForm(
-      request.value,
-      accessTypes.value,
-      presets.value,
-    );
+    formState.value = useReviewRequestForm(request.value);
   }
 };
+
+// The API returns the resource as a row with its own `type`; there is no flat
+// `resource_type` on a request. Four readers assumed there was, so it is derived once here
+// and passed down.
+const resourceType = computed(() => request.value?.resource?.type ?? null);
+const subjectType = computed(() => request.value?.subject?.type ?? null);
 
 // Computed: access type map for preview
 const accessTypeMap = computed(() => {
@@ -212,15 +217,13 @@ const loadRequestData = async () => {
 
 // Load access types
 const loadAccessTypes = async () => {
-  if (!request.value?.resource_type) return;
+  if (!resourceType.value) return;
 
   accessTypesLoading.value = true;
   accessTypesError.value = null;
 
   try {
-    const response = await grantsService.listAccessTypes(
-      request.value.resource_type,
-    );
+    const response = await grantsService.listAccessTypes(resourceType.value);
     accessTypes.value = response.data || [];
   } catch (err) {
     console.error("Failed to load access types:", err);
@@ -232,15 +235,13 @@ const loadAccessTypes = async () => {
 
 // Load presets
 const loadPresets = async () => {
-  if (!request.value?.resource_type) return;
+  if (!resourceType.value) return;
 
   presetsLoading.value = true;
   presetsError.value = null;
 
   try {
-    const response = await grantsService.listGrantPresets(
-      request.value.resource_type,
-    );
+    const response = await grantsService.listGrantPresets(resourceType.value);
     presets.value = response.data || [];
   } catch (err) {
     console.error("Failed to load presets:", err);
@@ -277,6 +278,8 @@ const submit = async () => {
 // Modal control
 const show = async () => {
   visible.value = true;
+  // A second open must not inherit the previous review's decisions.
+  formState.value = null;
   await loadRequestData();
   await Promise.all([loadAccessTypes(), loadPresets()]);
 };

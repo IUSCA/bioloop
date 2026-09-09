@@ -204,12 +204,34 @@ oversight holder can both read a request neither may decide.
 `ReviewRequestModal.vue` is wired into `pages/v2/access-requests/index.vue` and both resource
 tabs. `AccessRequestReviewModal.vue`, the eighteen-line stub, is deleted.
 
-The modal takes `requestId` as a required prop and exposes `show()`, while the queue calls
-`reviewModal.value?.show?.(request, action)` with arguments the modal ignores. The page holds
-a `selectedRequestId` ref and renders the modal under `v-if`, so each request gets a fresh
-instance rather than a stale one.
+The modal takes `requestId` as a required prop and exposes `show()`, while the queue called
+`reviewModal.value?.show?.(request, action)` with arguments the modal ignores. Each surface
+now holds a `reviewingId` ref and renders the modal under `v-if`, so each request gets a
+fresh instance rather than a stale one.
 
-*Files:* the queue page, both resource tabs, one deletion.
+Wiring it was not enough, because the modal did not work. Four defects sat behind the stub,
+and every one of them was invisible while nothing rendered it.
+
+`useReviewRequestForm` returned its refs inside a plain object, the same shape B6 fixes on
+the request side. The modal held that object in a `ref` and read `formState.value`, which
+resolved to `undefined`, so `v-if="request && formState?.value"` was never true and neither
+the decision form nor the preview ever rendered. The composable returns `reactive()` now.
+
+`ReviewRequestForm` kept the decision reason in a local ref and never wrote it back, so
+`isSubmitEnabled` stayed false however much the reviewer typed.
+
+Four readers expected a flat `request.resource_type`, which the API does not return: the
+resource arrives as a row carrying its own `type`. The modal derives `resourceType` and
+`subjectType` once and passes them down. Without it the access-type and preset fetches
+returned early, so the preview showed ids with no names.
+
+`ReviewItemRow` read `preset.access_types`, and a preset's types arrive as
+`preset.access_type_items` join rows, so the pills naming what a preset covers never
+rendered.
+
+*Files:* the queue page, both resource tabs, `ReviewRequestModal.vue`,
+`ReviewRequestForm.vue`, `ReviewItemRow.vue`, `ReviewEffectiveGrantsPreview.vue`,
+`useReviewRequestForm.js`, one deletion.
 
 ### B5 — The drafts UI is deleted
 
@@ -402,7 +424,7 @@ seeded data by design.
 
 ## Status
 
-A1, B1, B2, B3, C1, C2, and C3 are built. B4 to B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1 to B4, C1, C2, and C3 are built. B5, B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

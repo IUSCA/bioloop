@@ -34,6 +34,7 @@
                 :key="request.id"
                 :request="request"
                 :can-act="props.canReview"
+                @review="openReviewModal"
                 @view="viewRequest"
               />
             </TransitionGroup>
@@ -71,9 +72,17 @@
     :resource="collectionResource"
     @submitted="onRequestSubmitted"
   />
+
+  <ReviewRequestModal
+    v-if="reviewingId"
+    ref="reviewModal"
+    :request-id="reviewingId"
+    @reviewed="onReviewed"
+  />
 </template>
 
 <script setup>
+import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
 import AccessRequestService from "@/services/v2/access-requests";
 
 const props = defineProps({
@@ -162,6 +171,19 @@ function openRequestModal() {
 
 function viewRequest(request) {
   router.push(`/v2/access-requests/${request.id}`).catch(() => {});
+}
+
+const reviewModal = ref(null);
+const reviewingId = ref(null);
+
+function openReviewModal(request) {
+  reviewingId.value = request.id;
+  nextTick(() => reviewModal.value?.show?.());
+}
+
+function onReviewed() {
+  reviewingId.value = null;
+  fetchRequests();
 }
 
 function onRequestSubmitted() {

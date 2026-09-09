@@ -74,8 +74,9 @@
 
     <!-- Grant Scope Message -->
     <GrantScopeMessage
-      :subject-type="props.request?.subject_type"
-      :resource-type="props.request?.resource_type"
+      v-if="props.subjectType && props.resourceType"
+      :subject-type="props.subjectType"
+      :resource-type="props.resourceType"
     />
 
     <!-- Footer with submit state info -->
@@ -118,6 +119,16 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  /** USER or GROUP. Derived by the modal from the request's subject row. */
+  subjectType: {
+    type: String,
+    default: null,
+  },
+  /** DATASET or COLLECTION. Derived by the modal from the request's resource row. */
+  resourceType: {
+    type: String,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["submit", "cancel"]);
@@ -131,8 +142,12 @@ const validateReason = () => {
   }
 };
 
+// The reason is what makes the review submittable, so it has to reach the composable. The
+// local copy was never written back, which left `isSubmitEnabled` false however much the
+// reviewer typed.
 const updateDecisionReason = (value) => {
   decisionReasonValue.value = value;
+  props.formState.decisionReason = value;
   validateReason();
 };
 

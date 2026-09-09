@@ -29,11 +29,11 @@
 
           <!-- If preset: show covered access types as pills -->
           <div
-            v-if="isPreset && props.item?.preset?.access_types?.length"
+            v-if="isPreset && presetAccessTypes.length"
             class="mt-2 flex flex-wrap gap-1"
           >
             <va-chip
-              v-for="accessType in props.item.preset.access_types"
+              v-for="accessType in presetAccessTypes"
               :key="accessType.id"
               size="small"
               color="secondary"
@@ -125,6 +125,14 @@ const props = defineProps({
 const emit = defineEmits(["update:decision", "update:approvedExpiry"]);
 
 const isPreset = computed(() => !!props.item?.preset_id);
+
+// A preset's access types arrive as `access_type_items` join rows, each holding the access
+// type itself. Reading `preset.access_types` found nothing, so the pills never rendered.
+const presetAccessTypes = computed(() =>
+  (props.item?.preset?.access_type_items ?? [])
+    .map((joinRow) => joinRow.access_type)
+    .filter(Boolean),
+);
 
 const itemName = computed(() => {
   if (isPreset.value) {

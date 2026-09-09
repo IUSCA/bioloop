@@ -122,13 +122,19 @@
       </Transition>
     </div>
 
-    <AccessRequestReviewModal ref="reviewModal" @update="refreshAll" />
+    <!-- Mounted only while a review is open, so a fresh instance loads each request. -->
+    <ReviewRequestModal
+      v-if="reviewingId"
+      ref="reviewModal"
+      :request-id="reviewingId"
+      @reviewed="onReviewed"
+    />
   </div>
 </template>
 
 <script setup>
 import AccessRequestCard from "@/components/v2/access-requests/AccessRequestCard.vue";
-import AccessRequestReviewModal from "@/components/v2/access-requests/AccessRequestReviewModal.vue";
+import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
 import AccessRequestService from "@/services/v2/access-requests";
 import { useNavStore } from "@/stores/nav";
 
@@ -151,6 +157,7 @@ const reviewedLoading = ref(true);
 const reviewedError = ref(null);
 
 const reviewModal = ref(null);
+const reviewingId = ref(null);
 
 function setNav() {
   nav.setNavItems([{ label: "Access Requests" }]);
@@ -208,11 +215,17 @@ function refreshAll() {
 }
 
 function viewRequest(request) {
-  router.push({ path: `/access-requests/${request.id}` }).catch(() => {});
+  router.push(`/v2/access-requests/${request.id}`).catch(() => {});
 }
 
-function openReviewModal(request, action) {
-  reviewModal.value?.show?.(request, action);
+function openReviewModal(request) {
+  reviewingId.value = request.id;
+  nextTick(() => reviewModal.value?.show?.());
+}
+
+function onReviewed() {
+  reviewingId.value = null;
+  refreshAll();
 }
 
 watch([pendingPage, itemsPerPage], () => {

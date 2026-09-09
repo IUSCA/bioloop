@@ -80,6 +80,11 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  /** DATASET or COLLECTION. Derived by the modal from the request's resource row. */
+  resourceType: {
+    type: String,
+    default: null,
+  },
 });
 
 const loading = ref(false);
@@ -120,7 +125,7 @@ const buildPayload = () => {
   return {
     subject_id: props.request?.subject_id,
     resource_id: props.request?.resource_id,
-    resource_type: props.request?.resource_type,
+    resource_type: props.resourceType,
     items,
     justification: "",
   };

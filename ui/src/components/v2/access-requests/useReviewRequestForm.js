@@ -4,8 +4,18 @@
  */
 
 import accessRequestsService from "@/services/v2/access-requests";
-import { computed, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 
+/**
+ * Review state for one request: a decision and an expiry per item, plus the reason.
+ *
+ * Returns `reactive()` rather than a plain object of refs. A plain object is not tracked, so
+ * a template reading `formState.decisions` got the ref itself and a caller writing
+ * `formState.decisionReason` replaced a ref nothing was watching. `reactive` unwraps the refs
+ * on read and writes through on assignment, which is what every consumer already assumed.
+ *
+ * @see docs/design/groups/access-requests-plan.md — B4
+ */
 export function useReviewRequestForm(request) {
   // Per-item decision state: Map<itemId, 'APPROVED' | 'REJECTED' | null>
   const decisions = ref(new Map());
@@ -181,7 +191,7 @@ export function useReviewRequestForm(request) {
     { immediate: true },
   );
 
-  return {
+  return reactive({
     decisions,
     expiries,
     decisionReason,
@@ -197,5 +207,5 @@ export function useReviewRequestForm(request) {
     rejectAll,
     submit,
     initializeItemStates,
-  };
+  });
 }
