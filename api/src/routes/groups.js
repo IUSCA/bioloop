@@ -220,6 +220,9 @@ router.get(
     res.json({
       ...req.permission.filter(group),
       // ...group,
+      // Derived from the name, the year, and the public URL, so it carries nothing the
+      // caller could not already see. @see docs/design/groups/profiles.md — Schema
+      citation: profileService.resolveCitation(group, 'groups'),
       _meta: {
         caller_role: req.permission.callerRole,
         capabilities: toCapabilitiesArray(req.permission.capabilities),

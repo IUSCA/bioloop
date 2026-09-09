@@ -1,112 +1,36 @@
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3 items-start">
-    <!-- Left column -->
+    <!-- Left column: the profile, which is what this tab is for -->
     <div class="flex flex-col gap-3">
-      <!-- Group Details panel -->
-      <VaCard>
-        <VaCardContent>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-sm font-semibold">GROUP DETAILS</h2>
-          </div>
+      <ProfileAbout :about-md="props.group.about_md" />
+      <ProfileCitation :citation="props.group.citation" kind="group" />
+      <ProfilePublications :publications="props.group.metadata?.publications" />
 
-          <dl
-            class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
+      <!--
+        A group with no profile written yet gets one prompt rather than three empty cards.
+      -->
+      <VaCard v-if="profileIsEmpty">
+        <VaCardContent
+          class="py-8 text-center flex flex-col items-center gap-2"
+        >
+          <Icon
+            icon="mdi-card-account-details-outline"
+            class="text-3xl"
+            style="color: var(--va-secondary)"
+          />
+          <p class="text-sm font-medium">This group has no profile yet</p>
+          <p class="text-sm max-w-md" style="color: var(--va-secondary)">
+            A profile says what the group does, how to cite it, and where to
+            find it. It stays private until you publish it.
+          </p>
+          <VaButton
+            v-if="props.canEdit"
+            size="small"
+            class="mt-2"
+            @click="openProfileModal"
           >
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Name
-              </dt>
-              <dd class="text-sm text-gray-800 dark:text-gray-200">
-                {{ props.group.name }}
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Description
-              </dt>
-              <dd class="text-sm line-clamp-2">
-                {{ props.group.description || "—" }}
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Status
-              </dt>
-              <dd>
-                <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
-                  {{ props.group.is_archived ? "Archived" : "Active" }}
-                </Badge>
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Member Contrib.
-              </dt>
-              <dd class="text-sm">
-                <div class="flex items-center gap-1">
-                  <i-mdi-check-circle-outline
-                    v-if="props.group.allow_user_contributions"
-                    class="text-green-600"
-                  />
-                  <i-mdi-close-circle-outline
-                    v-else
-                    class="text-red-600 dark:text-red-400"
-                  />
-
-                  <span>
-                    {{
-                      props.group.allow_user_contributions
-                        ? "Enabled"
-                        : "Disabled"
-                    }}
-                  </span>
-                </div>
-              </dd>
-            </div>
-            <div v-if="nearestAncestor" class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Parent Group
-              </dt>
-              <dd class="text-sm">
-                <RouterLink
-                  :to="`/v2/groups/${nearestAncestor.id}`"
-                  class="hover:underline"
-                  style="color: var(--va-primary)"
-                >
-                  {{ nearestAncestor.name }}
-                </RouterLink>
-              </dd>
-            </div>
-            <div
-              v-if="props.group.created_at"
-              class="py-2.5 flex items-center gap-4"
-            >
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Created
-              </dt>
-              <dd class="text-sm">
-                {{ datetime.displayDateTime(props.group.created_at) }}
-              </dd>
-            </div>
-          </dl>
+            Write a profile
+          </VaButton>
         </VaCardContent>
       </VaCard>
 
@@ -243,13 +167,120 @@
           :value="props.counts.collections"
           :loading="props.counts.collections === null"
         />
-        <!-- <MetricCard
-          label="Active Grants"
-          :icon="getIcon('grant', { outlined: true })"
-          color="warning"
-          :value="null"
-        /> -->
       </div>
+
+      <ProfileLinks :links="props.group.metadata?.links" />
+
+      <!--
+        The definition list that used to be the whole tab. It is still the fastest way to
+        read the group's settings, so it keeps its content and gives up the main column.
+      -->
+      <VaCard>
+        <VaCardContent>
+          <h2 class="text-sm font-semibold mb-1">DETAILS</h2>
+
+          <dl
+            class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
+          >
+            <div class="py-2.5 flex items-start gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Description
+              </dt>
+              <dd class="text-sm">
+                {{ props.group.description || "—" }}
+              </dd>
+            </div>
+            <div class="py-2.5 flex items-center gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Status
+              </dt>
+              <dd>
+                <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
+                  {{ props.group.is_archived ? "Archived" : "Active" }}
+                </Badge>
+              </dd>
+            </div>
+            <div class="py-2.5 flex items-center gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Profile
+              </dt>
+              <dd>
+                <ProfileVisibilityBadge
+                  :visibility="props.group.profile_visibility"
+                />
+              </dd>
+            </div>
+            <div class="py-2.5 flex items-center gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Member Contrib.
+              </dt>
+              <dd class="text-sm">
+                <div class="flex items-center gap-1">
+                  <i-mdi-check-circle-outline
+                    v-if="props.group.allow_user_contributions"
+                    class="text-green-600"
+                  />
+                  <i-mdi-close-circle-outline
+                    v-else
+                    class="text-red-600 dark:text-red-400"
+                  />
+
+                  <span>
+                    {{
+                      props.group.allow_user_contributions
+                        ? "Enabled"
+                        : "Disabled"
+                    }}
+                  </span>
+                </div>
+              </dd>
+            </div>
+            <div v-if="nearestAncestor" class="py-2.5 flex items-center gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Parent Group
+              </dt>
+              <dd class="text-sm">
+                <RouterLink
+                  :to="`/v2/groups/${nearestAncestor.id}`"
+                  class="hover:underline"
+                  style="color: var(--va-primary)"
+                >
+                  {{ nearestAncestor.name }}
+                </RouterLink>
+              </dd>
+            </div>
+            <div
+              v-if="props.group.created_at"
+              class="py-2.5 flex items-center gap-4"
+            >
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Created
+              </dt>
+              <dd class="text-sm">
+                {{ datetime.displayDateTime(props.group.created_at) }}
+              </dd>
+            </div>
+          </dl>
+        </VaCardContent>
+      </VaCard>
 
       <!-- Admins panel -->
       <VaCard>
@@ -275,9 +306,6 @@
                   {{ admin.email }}
                 </p>
               </div>
-              <!-- <VaChip color="primary" size="small" class="shrink-0" square>
-                Admin
-              </VaChip> -->
               <RoleBadge role-name="ADMIN" class="shrink-0" />
             </div>
           </div>
@@ -298,6 +326,16 @@
           QUICK ACTIONS
         </h2>
         <div class="grid grid-cols-2 gap-3">
+          <ActionButton
+            v-if="props.canEdit"
+            icon="mdi-card-account-details-outline"
+            icon-color="text-blue-500"
+            title="Edit Profile"
+            description="About, links, citation, visibility"
+            hover-theme="blue"
+            @click="openProfileModal"
+          />
+
           <ActionButton
             v-if="props.canAddMember"
             icon="mdi-account-plus"
@@ -337,6 +375,7 @@
       </div>
     </div>
   </div>
+
   <GroupEditMetadataModal
     ref="editModalRef"
     :group-id="props.group.id"
@@ -346,9 +385,30 @@
     :version="props.group.version"
     @update="emit('update')"
   />
+
+  <EditProfileModal
+    v-if="props.canEdit"
+    ref="profileModalRef"
+    kind="group"
+    :id="props.group.id"
+    :name="props.group.name"
+    :version="props.group.version"
+    :tagline="props.group.tagline"
+    :about-md="props.group.about_md"
+    :profile-visibility="props.group.profile_visibility"
+    :metadata="props.group.metadata"
+    :avatar-key="props.group.avatar_key"
+    @update="emit('update')"
+  />
 </template>
 
 <script setup>
+import EditProfileModal from "@/components/v2/profiles/EditProfileModal.vue";
+import ProfileAbout from "@/components/v2/profiles/ProfileAbout.vue";
+import ProfileCitation from "@/components/v2/profiles/ProfileCitation.vue";
+import ProfileLinks from "@/components/v2/profiles/ProfileLinks.vue";
+import ProfilePublications from "@/components/v2/profiles/ProfilePublications.vue";
+import ProfileVisibilityBadge from "@/components/v2/profiles/ProfileVisibilityBadge.vue";
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
@@ -390,9 +450,26 @@ const nearestAncestor = computed(
   () => sortedAncestors.value[sortedAncestors.value.length - 1] ?? null,
 );
 
+/**
+ * Whether anything an admin wrote is present. The citation is excluded, because the API
+ * always resolves one — a generated citation is not evidence that somebody wrote a profile.
+ */
+const profileIsEmpty = computed(
+  () =>
+    !props.group.about_md?.trim() &&
+    !props.group.tagline &&
+    !props.group.metadata?.links?.length &&
+    !props.group.metadata?.publications?.length,
+);
+
 const editModalRef = ref(null);
 function openEditModal() {
   editModalRef.value?.show();
+}
+
+const profileModalRef = ref(null);
+function openProfileModal() {
+  profileModalRef.value?.show();
 }
 
 function emitAction(actionName, tabName, modalName) {

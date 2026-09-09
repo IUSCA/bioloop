@@ -369,6 +369,77 @@ that fires into the void, which reads as a second failure. Bind it:
 `@retry="fetchWhatever"`. Confirm by watching the network panel rather than the screen —
 nothing visible changes either way.
 
+## `VaButton`'s `icon` prop takes a Material Symbols name, not an `mdi-` one
+
+Two icon vocabularies are live in this UI and they are not interchangeable. The `Icon`
+component takes Iconify MDI names — `<Icon icon="mdi-close" />` — and so do the props that
+feed it, such as `MetricCard`'s `icon` and `ActionButton`'s. `VaButton`'s own `icon` prop
+goes to Vuestic's icon config, which resolves Material Symbols ligatures: `add`, `close`,
+`remove_circle_outline`. `pages/v2/groups/index.vue` uses `icon="add"` and
+`GrantsBySubjectPanel.vue` uses `icon="remove_circle_outline"`.
+
+An `mdi-` name on a `VaButton` does not fail. It renders **the literal string `mdi-close`**
+inside the button, which reads as a layout bug rather than a wrong prop and passes eslint and
+`npm run build`. It was caught by reading `modal.innerText` in the browser and finding
+`mdi-close` in it — worth a `innerText.match(/mdi-[a-z-]+/g)` check after any icon change.
+
+## A layout applies only to a TOP-LEVEL route, so a page two directories deep gets `default`
+
+This cost the public profile pages a whole verification pass, and it is silent: the page
+rendered correctly *inside* the application sidebar.
+
+`setupLayouts` in `vite-plugin-vue-layouts` wraps every top-level route with
+`layouts[route.meta?.layout || 'default']`, then recurses and wraps any deeper route that has
+its own `meta.layout`. A page at `pages/public/groups/[id].vue` has `/public` as its
+top-level record — an intermediate directory route with no meta of its own — so it takes the
+default layout, and the page's own layout nests inside it. The matched chain shows two
+records carrying `meta.isLayout`.
+
+There is one escape hatch, and `pages/auth/` uses it without saying so. The plugin skips the
+top-level wrap when a top-level route has no component and has a child with `path === ''`
+that the inner pass already wrapped. An `index.vue` in the directory, carrying the same
+`meta.layout`, produces exactly that child.
+
+**So a directory of pages that needs a non-default layout needs an `index.vue` carrying that
+layout, even when nothing links to it.** `pages/public/index.vue` says so in its own
+docblock, because the file otherwise looks deletable.
+
+To check which layout actually applied, read the matched chain rather than the screen:
+
+```js
+() => document.querySelector('#app').__vue_app__.config.globalProperties.$router
+  .currentRoute.value.matched.map(r => `${r.path} ${r.meta?.isLayout ? '[layout]' : ''}`)
+```
+
+One `[layout]` entry is right. Two means the default layout is wrapping yours.
+
+## `Badge` refuses Vuestic's `info` tone
+
+`Badge.vue` validates `color` against its own list — `primary`, `success`, `warning`,
+`danger`, `neutral`, `violet`, `sky`, `indigo`, `teal`, `orange`, `rose` — and that list has
+no `info`, even though `info` is a normal Vuestic colour and `MetricCard` takes it. A badge
+written as `<Badge color="info">` logs a prop-validation warning and falls back to the
+default rather than rendering the tone you asked for. Use `sky` for the same reading.
+
+The validator is deliberate: `Badge` refuses an unrecognised tone rather than resolving it.
+Check the list in `components/v2/Badge.vue` before picking a colour, rather than assuming
+the Vuestic palette applies.
+
+## A page reachable without a token cannot use `@/services/api`
+
+That client attaches a bearer token and, on any 401, calls `router.push("/auth/logout")`.
+On a page written for signed-out readers — the public group and collection profiles — that
+turns an ordinary refusal into an ejection from the page. `services/v2/publicProfiles.js` is
+the pattern: a bare `axios.create({ baseURL: config.apiBasePath })` with no interceptors, and
+the page renders its own error state instead of a toast.
+
+Two things follow for any future public page. Give it `requiresAuth: false` and a layout with
+no sidebar (`layouts/public.vue`), because `layouts/default.vue` mounts the sidebar and the
+alert poller, both of which assume a session. And remember that an `<img>` cannot carry an
+Authorization header: the group avatar is served by the public router precisely so the same
+URL works for an anonymous reader and, through the `jwt` cookie, for a signed-in admin
+looking at a profile that is still private.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a new trap, a

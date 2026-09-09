@@ -28,6 +28,13 @@
           />
           <div>
             <h1 class="text-xl font-semibold">{{ collection.name }}</h1>
+            <p
+              v-if="collection.tagline"
+              class="text-sm mt-0.5 max-w-3xl"
+              style="color: var(--va-secondary)"
+            >
+              {{ collection.tagline }}
+            </p>
           </div>
           <div>
             <Badge v-if="collection.is_archived" color="neutral" class="ml-2">

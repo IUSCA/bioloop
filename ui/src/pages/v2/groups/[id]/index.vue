@@ -21,7 +21,15 @@
       <!-- Page header -->
       <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
+          <!-- The picture stands in for the icon only once a group has one. -->
+          <ProfileAvatar
+            v-if="group.avatar_key"
+            :name="group.name"
+            :avatar-url="avatarUrl"
+            :size="40"
+          />
           <i-mdi-account-group
+            v-else
             class="text-2xl shrink-0"
             style="color: var(--va-primary)"
           />
@@ -29,6 +37,13 @@
             <h1 class="text-xl font-semibold">
               {{ group.name }}
             </h1>
+            <p
+              v-if="group.tagline"
+              class="text-sm mt-0.5 max-w-3xl"
+              style="color: var(--va-secondary)"
+            >
+              {{ group.tagline }}
+            </p>
           </div>
           <div>
             <Badge v-if="group.is_archived" color="neutral" class="ml-2">
@@ -203,9 +218,11 @@
 </template>
 
 <script setup>
+import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
+import ProfileService from "@/services/v2/profiles";
 import { useNavStore } from "@/stores/nav";
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -255,6 +272,10 @@ const collectionsTabRef = ref(null);
 
 // ── Derived ───────────────────────────────────────────────────────────────
 const ancestors = computed(() => group.value?.ancestors ?? []);
+
+const avatarUrl = computed(() =>
+  ProfileService.groupAvatarUrl(props.id, group.value?.avatar_key),
+);
 
 const callerRole = computed(() => group.value?._meta?.caller_role);
 // const isOversight = computed(() => callerRole.value === "OVERSIGHT");

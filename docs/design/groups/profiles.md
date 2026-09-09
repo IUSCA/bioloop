@@ -2,15 +2,14 @@
 title: Profiles
 order: 8
 status: active
-implemented: partial
-last_verified: 2026-09-08
+implemented: yes
+last_verified: 2026-09-09
 ---
 
-::: warning Design record — active
-**Partly built.** Everything on the API side has shipped: the profile columns, the
-`view_profile` action, the anonymous principal, the grant subject-set fix, the profile and
-avatar routes, and the public router. The UI has not, so a published profile is reachable
-only by calling the API directly. This record continues
+::: tip Design record — active
+**Built.** The profile columns, the `view_profile` action, the anonymous principal, the
+grant subject-set fix, the profile and avatar routes, the public router, and the UI have all
+shipped. This record continues
 [Decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
 the `Public` principal and deferred the serving half to a separate piece of work.
 :::

@@ -1,36 +1,124 @@
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4 items-start">
-    <!-- Left column -->
+    <!-- Left column: the profile, which is what this tab is for -->
     <div class="flex flex-col gap-4">
+      <ProfileAbout :about-md="props.collection.about_md" />
+      <ProfileCitation
+        :citation="props.collection.citation"
+        kind="collection"
+      />
+      <ProfilePublications
+        :publications="props.collection.metadata?.publications"
+      />
+
+      <VaCard v-if="profileIsEmpty">
+        <VaCardContent
+          class="py-8 text-center flex flex-col items-center gap-2"
+        >
+          <Icon
+            icon="mdi-card-account-details-outline"
+            class="text-3xl"
+            style="color: var(--va-secondary)"
+          />
+          <p class="text-sm font-medium">This collection has no profile yet</p>
+          <p class="text-sm max-w-md" style="color: var(--va-secondary)">
+            A profile says what the collection holds and how to cite it. It
+            stays private until you publish it.
+          </p>
+          <VaButton
+            v-if="props.canEdit"
+            size="small"
+            class="mt-2"
+            @click="openProfileModal"
+          >
+            Write a profile
+          </VaButton>
+        </VaCardContent>
+      </VaCard>
+
+      <VaCard
+        v-if="props.canArchive || props.canUnarchive"
+        class="border border-solid border-red-200 dark:border-red-800"
+      >
+        <VaCardContent>
+          <h2 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
+            Danger Zone
+          </h2>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-medium">
+                {{
+                  props.collection.is_archived
+                    ? "Unarchive this collection"
+                    : "Archive this collection"
+                }}
+              </p>
+              <p class="text-xs mt-0.5" style="color: var(--va-secondary)">
+                {{
+                  props.collection.is_archived
+                    ? "Unfreezes datasets and restores edit access."
+                    : "Freezes datasets and blocks new changes."
+                }}
+              </p>
+            </div>
+            <VaButton color="danger" size="small" @click="openArchiveModal">
+              {{ props.collection.is_archived ? "Unarchive" : "Archive" }}
+            </VaButton>
+          </div>
+        </VaCardContent>
+      </VaCard>
+    </div>
+
+    <!-- Right column -->
+    <div class="flex flex-col gap-4">
+      <!-- Stat cards (2×2 grid) -->
+      <div class="grid grid-cols-2 gap-3">
+        <MetricCard
+          label="Datasets"
+          :icon="getIcon('dataset', { outlined: true })"
+          color="success"
+          :value="props.counts.datasets"
+          :loading="props.counts.datasets === null"
+        />
+
+        <MetricCard
+          :label="props.canReview ? 'Pending Requests' : 'My Requests'"
+          :icon="getIcon('request', { outlined: true })"
+          color="info"
+          :value="props.counts.requests"
+          :loading="props.counts.requests === null"
+        />
+
+        <MetricCard
+          :label="props.canIssueGrants ? 'Access' : 'My Access'"
+          :icon="getIcon('grant', { outlined: true })"
+          color="warning"
+          :value="props.counts.grants"
+          :loading="props.counts.grants === null"
+        />
+      </div>
+
+      <ProfileLinks :links="props.collection.metadata?.links" />
+
+      <!--
+        The definition list that used to be the whole tab. It keeps its content and gives
+        up the main column to the profile.
+      -->
       <VaCard>
         <VaCardContent>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-sm font-semibold">COLLECTION DETAILS</h2>
-          </div>
+          <h2 class="text-sm font-semibold mb-1">DETAILS</h2>
 
           <dl
             class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
           >
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Name
-              </dt>
-              <dd class="text-sm text-gray-800 dark:text-gray-200">
-                {{ props.collection.name }}
-              </dd>
-            </div>
-
-            <div class="py-2.5 flex items-center gap-4">
+            <div class="py-2.5 flex items-start gap-4">
               <dt
                 class="w-28 shrink-0 text-xs font-medium"
                 style="color: var(--va-secondary)"
               >
                 Description
               </dt>
-              <dd class="text-sm line-clamp-2">
+              <dd class="text-sm">
                 {{ props.collection.description || "—" }}
               </dd>
             </div>
@@ -70,6 +158,20 @@
               </dd>
             </div>
 
+            <div class="py-2.5 flex items-center gap-4">
+              <dt
+                class="w-28 shrink-0 text-xs font-medium"
+                style="color: var(--va-secondary)"
+              >
+                Profile
+              </dt>
+              <dd>
+                <ProfileVisibilityBadge
+                  :visibility="props.collection.profile_visibility"
+                />
+              </dd>
+            </div>
+
             <div
               v-if="props.collection.created_at"
               class="py-2.5 flex items-center gap-4"
@@ -103,74 +205,22 @@
         </VaCardContent>
       </VaCard>
 
-      <VaCard
-        v-if="props.canArchive || props.canUnarchive"
-        class="border border-solid border-red-200 dark:border-red-800"
-      >
-        <VaCardContent>
-          <h2 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
-            Danger Zone
-          </h2>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium">
-                {{
-                  props.collection.is_archived
-                    ? "Unarchive this collection"
-                    : "Archive this collection"
-                }}
-              </p>
-              <p class="text-xs mt-0.5" style="color: var(--va-secondary)">
-                {{
-                  props.collection.is_archived
-                    ? "Unfreezes datasets and restores edit access."
-                    : "Freezes datasets and blocks new changes."
-                }}
-              </p>
-            </div>
-            <VaButton color="danger" size="small" @click="openArchiveModal">
-              {{ props.collection.is_archived ? "Unarchive" : "Archive" }}
-            </VaButton>
-          </div>
-        </VaCardContent>
-      </VaCard>
-    </div>
-
-    <!-- Right column: stats -->
-    <div class="flex flex-col gap-6">
-      <!-- Stat cards (2×2 grid) -->
-      <div class="grid grid-cols-2 gap-3">
-        <MetricCard
-          label="Datasets"
-          :icon="getIcon('dataset', { outlined: true })"
-          color="success"
-          :value="props.counts.datasets"
-          :loading="props.counts.datasets === null"
-        />
-
-        <MetricCard
-          :label="props.canReview ? 'Pending Requests' : 'My Requests'"
-          :icon="getIcon('request', { outlined: true })"
-          color="info"
-          :value="props.counts.requests"
-          :loading="props.counts.requests === null"
-        />
-
-        <MetricCard
-          :label="props.canIssueGrants ? 'Access' : 'My Access'"
-          :icon="getIcon('grant', { outlined: true })"
-          color="warning"
-          :value="props.counts.grants"
-          :loading="props.counts.grants === null"
-        />
-      </div>
-
       <!-- Quick Actions -->
       <div>
         <h2 class="text-sm font-semibold mb-3 va-text-secondary">
           QUICK ACTIONS
         </h2>
         <div class="grid grid-cols-2 gap-3">
+          <ActionButton
+            v-if="props.canEdit"
+            icon="mdi-card-account-details-outline"
+            icon-color="text-blue-500"
+            title="Edit Profile"
+            description="About, links, citation, visibility"
+            hover-theme="blue"
+            @click="openProfileModal"
+          />
+
           <ActionButton
             v-if="props.canIssueGrants"
             icon="mdi-key"
@@ -223,9 +273,29 @@
     :version="props.collection.version"
     @update="emit('update')"
   />
+
+  <EditProfileModal
+    v-if="props.canEdit"
+    :id="props.collection.id"
+    ref="profileModalRef"
+    kind="collection"
+    :name="props.collection.name"
+    :version="props.collection.version"
+    :tagline="props.collection.tagline"
+    :about-md="props.collection.about_md"
+    :profile-visibility="props.collection.profile_visibility"
+    :metadata="props.collection.metadata"
+    @update="emit('update')"
+  />
 </template>
 
 <script setup>
+import EditProfileModal from "@/components/v2/profiles/EditProfileModal.vue";
+import ProfileAbout from "@/components/v2/profiles/ProfileAbout.vue";
+import ProfileCitation from "@/components/v2/profiles/ProfileCitation.vue";
+import ProfileLinks from "@/components/v2/profiles/ProfileLinks.vue";
+import ProfilePublications from "@/components/v2/profiles/ProfilePublications.vue";
+import ProfileVisibilityBadge from "@/components/v2/profiles/ProfileVisibilityBadge.vue";
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
@@ -245,6 +315,18 @@ const props = defineProps({
 
 const emit = defineEmits(["update", "toggle-archive", "action-requested"]);
 
+/**
+ * Whether anything an admin wrote is present. The citation is excluded, because the API
+ * always resolves one — a generated citation is not evidence that somebody wrote a profile.
+ */
+const profileIsEmpty = computed(
+  () =>
+    !props.collection.about_md?.trim() &&
+    !props.collection.tagline &&
+    !props.collection.metadata?.links?.length &&
+    !props.collection.metadata?.publications?.length,
+);
+
 function emitAction(actionName, tabName, modalName) {
   emit("action-requested", {
     actionName,
@@ -256,6 +338,11 @@ function emitAction(actionName, tabName, modalName) {
 const editModalRef = ref(null);
 function openEditModal() {
   editModalRef.value?.show();
+}
+
+const profileModalRef = ref(null);
+function openProfileModal() {
+  profileModalRef.value?.show();
 }
 
 function openArchiveModal() {
