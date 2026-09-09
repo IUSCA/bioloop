@@ -93,7 +93,7 @@ router.get(
   // #swagger.tags = ['Groups']
   // #swagger.summary = 'Get groups without an active admin'
 
-    const groups = await groupService.getGroupsWithoutActiveAdmin();
+    const groups = await groupService.getGroupsWithoutActiveAdmins();
     const filteredGroups = groups.map((g) => req.permission.filter(g));
     res.json(filteredGroups);
   }),

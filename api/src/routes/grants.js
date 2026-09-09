@@ -253,6 +253,75 @@ router.post(
   }),
 );
 
+// Two static paths that must stay above `/:id`. Express matches in registration
+// order, so `/:id` below would otherwise claim them and reject the literal segment
+// as a malformed UUID.
+// list expiring grants - scoped by caller's authority
+router.get(
+  '/expiring-soon',
+  validate([
+    query('within_days').default(30).isInt({ min: 1 }).toInt(),
+  ]),
+  authorize('grant', 'list'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List grants that are expiring soon (grouped by resource and source)'
+
+    const {
+      within_days,
+    } = req.query;
+
+    let grantsGrouped;
+    if (isPlatformAdmin(req)) {
+      // if platform admin, list all expiring grants
+      grantsGrouped = await grantService.listExpiringGrants({
+        within_days,
+      });
+    } else {
+      grantsGrouped = await grantService.listExpiringGrantsForAdmin({
+        within_days,
+        user_id: req.user.subject_id, // scope by caller's authority
+      });
+    }
+    // The service groups by subject and resource. Destructuring `source` here dropped the
+    // subject from every row and added an undefined key, so a caller could not say who
+    // held the access that is about to lapse.
+    const filteredGrants = grantsGrouped.map(({ subject, resource, grants }) => ({
+      subject,
+      resource,
+      grants: grants.map((g) => req.permission.filter(g)),
+    }));
+    res.json(filteredGrants);
+  }),
+);
+
+// list my grants - grouped by resource - optionally filter by active/inactive, resource id
+router.get(
+  '/mine',
+  validate([
+    query('is_active').optional().isBoolean().toBoolean(),
+    query('resource_id').optional().isUUID(),
+    query('expiring_within_days').optional().isInt({ min: 1 }).toInt(),
+  ]),
+  authorize('grant', 'list'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'List my grants'
+
+    const { is_active, resource_id, expiring_within_days } = req.query;
+    const rows = await grantService.listMyGrants({
+      user_id: req.user.subject_id,
+      is_active,
+      resource_id,
+      expiring_within_days,
+    });
+
+    const filteredData = rows.map((g) => req.permission.filter(g));
+
+    res.json(filteredData);
+  }),
+);
+
 // Get grant by id
 router.get(
   '/:id',
@@ -426,69 +495,6 @@ router.get(
     });
 
     res.json({ count });
-  }),
-);
-
-// list expiring grants - scoped by caller's authority
-router.get(
-  '/expiring-soon',
-  validate([
-    query('within_days').default(30).isInt({ min: 1 }).toInt(),
-  ]),
-  authorize('grant', 'list'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Grants']
-    // #swagger.summary = 'List grants that are expiring soon (grouped by resource and source)'
-
-    const {
-      within_days,
-    } = req.query;
-
-    let grantsGrouped;
-    if (isPlatformAdmin(req)) {
-      // if platform admin, list all expiring grants
-      grantsGrouped = await grantService.listExpiringGrants({
-        within_days,
-      });
-    } else {
-      grantsGrouped = await grantService.listExpiringGrantsForAdmin({
-        within_days,
-        user_id: req.user.subject_id, // scope by caller's authority
-      });
-    }
-    const filteredGrants = grantsGrouped.map(({ resource, source, grants }) => ({
-      resource,
-      source,
-      grants: grants.map((g) => req.permission.filter(g)),
-    }));
-    res.json(filteredGrants);
-  }),
-);
-
-// list my grants - grouped by resource - optionally filter by active/inactive, resource id
-router.get(
-  '/mine',
-  validate([
-    query('is_active').optional().isBoolean().toBoolean(),
-    query('resource_id').optional().isUUID(),
-    query('expiring_within_days').optional().isInt({ min: 1 }).toInt(),
-  ]),
-  authorize('grant', 'list'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Grants']
-    // #swagger.summary = 'List my grants'
-
-    const { is_active, resource_id, expiring_within_days } = req.query;
-    const rows = await grantService.listMyGrants({
-      user_id: req.user.subject_id,
-      is_active,
-      resource_id,
-      expiring_within_days,
-    });
-
-    const filteredData = rows.map((g) => req.permission.filter(g));
-
-    res.json(filteredData);
   }),
 );
 

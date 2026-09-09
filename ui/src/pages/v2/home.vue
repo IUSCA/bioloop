@@ -80,6 +80,100 @@
         </ModernAlert>
 
         <!--
+          Platform sections sit on top for a platform admin. Two signals, both with a
+          query behind them; the rest of the mockup's alert panel had none.
+        -->
+        <template v-if="persona.isPlatformAdmin">
+          <p
+            class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
+          >
+            Platform
+          </p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <DashboardSection
+              title="Groups with no active admin"
+              subtitle="Nobody can govern the data these groups own"
+              :count="groupsWithoutAdmin.length"
+              :count-color="
+                groupsWithoutAdmin.length > 0 ? 'warning' : 'neutral'
+              "
+              to="/v2/groups"
+              link-label="All groups →"
+            >
+              <EmptyState
+                v-if="groupsWithoutAdmin.length === 0"
+                icon="mdi-shield-check-outline"
+                title="Every group has an admin"
+                message="A group left without an active admin appears here, because the data it owns then has nobody to govern it."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col gap-2">
+                <DashboardListRow
+                  v-for="group in groupsMissingAdminRows"
+                  :key="group.id"
+                  :title="group.name"
+                  :subtitle="groupSubtitle(group)"
+                  :to="`/v2/groups/${group.id}`"
+                >
+                  <template #leading>
+                    <GroupIcon :group="group" size="sm" />
+                  </template>
+                  <template #right>
+                    <Badge v-if="group.is_archived" color="neutral">
+                      Archived
+                    </Badge>
+                    <Badge color="warning">No admin</Badge>
+                  </template>
+                </DashboardListRow>
+                <p
+                  v-if="
+                    groupsWithoutAdmin.length > groupsMissingAdminRows.length
+                  "
+                  class="text-xs va-text-secondary mt-1"
+                >
+                  {{
+                    groupsWithoutAdmin.length - groupsMissingAdminRows.length
+                  }}
+                  more.
+                </p>
+              </div>
+            </DashboardSection>
+
+            <DashboardSection
+              title="Recent activity"
+              subtitle="Platform-wide audit events"
+              to="/v2/audit-logs"
+              link-label="Audit log →"
+            >
+              <EmptyState
+                v-if="recentActivity.length === 0"
+                icon="mdi-book-open-outline"
+                title="No events recorded yet"
+                message="Every material action lands here as it happens."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col">
+                <div
+                  v-for="record in recentActivity"
+                  :key="record.id"
+                  class="flex items-start justify-between gap-3 py-2 border-b border-solid border-gray-200 dark:border-gray-700 last:border-b-0"
+                >
+                  <AuditLog :record="record" class="text-sm min-w-0" />
+                  <span
+                    class="text-xs va-text-secondary whitespace-nowrap shrink-0"
+                  >
+                    {{ datetime.fromNowShort(record.timestamp) }}
+                  </span>
+                </div>
+              </div>
+            </DashboardSection>
+          </div>
+        </template>
+
+        <!--
           Governance sits above the personal sections for an admin, because the review
           queue is the thing that needs them today.
         -->
@@ -150,21 +244,19 @@
           </div>
 
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <!--
+              Omitted rather than shown empty. A platform admin governs every group by
+              role and is usually a member of none, so "you administer no groups" would
+              be true of the membership table and false of what they can do.
+            -->
             <DashboardSection
+              v-if="governedGroups.length > 0"
               title="Groups I administer"
               subtitle="Oversight is read-only, and labelled as such"
               to="/v2/groups"
               link-label="All groups →"
             >
-              <EmptyState
-                v-if="governedGroups.length === 0"
-                icon="mdi-account-group-outline"
-                title="You administer no groups"
-                message="A platform admin makes someone an admin of a group."
-                :show-clear-filters="false"
-                class="py-8"
-              />
-              <div v-else class="flex flex-col gap-2">
+              <div class="flex flex-col gap-2">
                 <DashboardListRow
                   v-for="group in governedGroups"
                   :key="group.id"
@@ -363,6 +455,7 @@ import AccessRequestCard from "@/components/v2/access-requests/AccessRequestCard
 import GroupIcon from "@/components/v2/groups/GroupIcon.vue";
 import * as datetime from "@/services/datetime";
 import AccessRequestService from "@/services/v2/access-requests";
+import AuditLogsService from "@/services/v2/audit-logs";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantsService from "@/services/v2/grants";
@@ -409,6 +502,7 @@ const oversightGroups = ref(null);
 const governedGroups = ref([]);
 const expiringGrants = ref([]);
 
+const recentActivity = ref([]);
 const platformGroups = ref(null);
 const platformDatasets = ref(null);
 const platformCollections = ref(null);
@@ -549,6 +643,16 @@ async function load() {
         const { data } = await GroupService.withoutActiveAdmin();
         groupsWithoutAdmin.value = data ?? [];
       }),
+      // Platform admin only, by design: these records span the whole platform.
+      // @see docs/design/groups/use-cases.md - 57
+      attempt("Recent activity", async () => {
+        const { data } = await AuditLogsService.getAuditRecords({
+          limit: PANEL_ROWS,
+          sortBy: "timestamp",
+          sortOrder: "desc",
+        });
+        recentActivity.value = data ?? [];
+      }),
     );
   }
 
@@ -596,6 +700,10 @@ function governedGroupSubtitle(group) {
 }
 
 const expiringRows = computed(() => expiringGrants.value.slice(0, PANEL_ROWS));
+
+const groupsMissingAdminRows = computed(() =>
+  groupsWithoutAdmin.value.slice(0, PANEL_ROWS),
+);
 
 const heroMeta = computed(() => {
   if (!isAdmin.value) return [];
