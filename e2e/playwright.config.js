@@ -4,6 +4,10 @@ const { defineConfig } = require('@playwright/test');
 // @see docs/design/groups/e2e-test-plan.md — Phase 0
 module.exports = defineConfig({
   testDir: './src/specs',
+  // Compiles the first UI route and checks the API answers, once, before any test. Without
+  // it the first browser-driven test absorbs a cold Vite compile and fails on a timeout that
+  // has nothing to do with what it asserts.
+  globalSetup: require.resolve('./src/global-setup'),
   fullyParallel: false,
   // Local runs do not retry: a half-completed test that clicked a toggle once is worth
   // diagnosing, and a retry would click it a second time and turn it back off.
