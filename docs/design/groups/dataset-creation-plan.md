@@ -54,8 +54,8 @@ task, and the `integrated` workflow are all reused unchanged.
 visual language. Logic carries over and markup does not: the tus-js-client loop, the BLAKE3
 checksum service, the directory-typeahead behaviour, and the upload status vocabulary.
 `CollectionCreateModal.vue` is the structural template.
-[V2 design system](../contributing/v2-design-system.md) and
-[V2 page patterns](../contributing/v2-page-patterns.md) govern the rest. The screens are
+[V2 design system](../../contributing/v2-design-system.md) and
+[V2 page patterns](../../contributing/v2-page-patterns.md) govern the rest. The screens are
 drawn in [the mockups](/mockups/dataset-creation-screens.html).
 
 **Two pieces get copied rather than shared.** The `origin_path` format

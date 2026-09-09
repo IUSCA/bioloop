@@ -2,7 +2,7 @@
 title: Code Map
 order: 4
 status: reference
-last_verified: 2026-09-08
+last_verified: 2026-09-09
 ---
 
 ::: warning Where the code is, not what it does
@@ -43,7 +43,9 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Dataset creation | `dataset.owner_group_id`, `dataset.create_method` | `POST /v2/datasets`, `POST /v2/datasets/bulk` | `services/datasets_v2/create.js` | none yet |
 | Scanned ingestion | `registration.ingestion` config, `create_method: 'SCAN'` | `POST /v2/datasets/bulk`, one authorization check per distinct group | `workers/workers/services/registration_v2.py`, `workers/workers/scripts/watch_v2.py` | — |
 | Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
-| Invitations | none | none | none | none |
+| Invitations | `group_invitation`, `INVITATION_STATUS`, partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` | `/groups/:id/invitations`, `POST /auth/invite/check` and `/apply` | `services/invitations/` | `pages/invite.vue`, `GroupInvitationsTab.vue`, `AddGroupMemberModal.vue` |
+| Invitation email | — | — | `notification/types.js` `TYPES.INVITE`, `notification/templates/invite.mjml.hbs`, `services/invitations/notify.js` | — |
+| Lifecycle hooks | — | — | `services/hooks/` — a generic `USER_CREATED` registry `createUser` runs, wired in `services/hooks/subscribers.js` | — |
 
 Key entry points:
 

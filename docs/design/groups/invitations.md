@@ -2,12 +2,23 @@
 title: Group Invitations
 order: 7
 status: active
-implemented: none
-last_verified: 2026-09-02
+implemented: partial
+last_verified: 2026-09-09
 ---
 
-::: warning Design record — active
-**No code exists for this yet.** There is no `group_invitation` model in `api/prisma/schema.prisma` and no invitation route or service. This supersedes an earlier draft that signed the invite link as a JWT; this version uses an opaque random token stored in the database.
+::: tip Built, with one part outstanding
+The flow works end to end: a group admin invites an address, the recipient gets an email, and
+the link puts them in the group whether or not they had an account. Schema, service, routes,
+email, and UI all exist.
+
+**Outstanding:** the signup-time mismatch dialog. The signup page does not yet warn, before it
+submits, when the account someone signed in with differs from the address the invitation went
+to. The server still refuses at `/apply` and the person is told, so nothing is unsafe — only
+the earlier and friendlier warning is missing.
+
+Three things below describe a shape the implementation deliberately does not have, and each
+says so where it appears: `userService.provision()`, a standalone `api/src/services/email.js`,
+and a single `invite` capability.
 :::
 
 # Group Invitations – Design Specification
@@ -115,11 +126,33 @@ This is not a security bypass. The backend independently enforces `normalizeEmai
 
 ---
 
-### Why centralize all user creation behind one service function?
+### Why a lifecycle hook, and not a wrapper function?
 
-The invariant "every new user account must have pending invitations applied" is currently encoded in the signup route and called out as a requirement for the admin create-user route. As the system grows, any path that creates a user record — import, recovery, provisioning, merge — must remember to also call `applyPendingInvitations`. This is a DRY failure point: the invariant lives in documentation and code review attention, not in code.
+The invariant is that every new account has its address's pending invitations applied, in the
+same transaction. Any path that creates a user — signup, the admin endpoint, auto-signup,
+import, recovery, merge — has to honour it, and an invariant that lives in documentation and
+code-review attention is one that will eventually be forgotten.
 
-The fix is structural: introduce `userService.provision({ user_data, tx })`, which runs `createUser` and `applyPendingInvitations` in a single transaction. All user-creation paths call `provision`. The invariant cannot be forgotten because there is no separate `createUser` call that could omit the follow-up.
+A wrapper is the obvious fix and the weaker one. `userService.provision()` running `createUser`
+and `applyPendingInvitations` together leaves `createUser` still callable, so it creates a
+wrong path that has to be guarded by convention.
+
+**The hook goes inside `createUser` instead.** It opens a transaction, creates the row, and
+runs whatever handlers are registered for `USER_CREATED`, passing the row and the transaction
+client. There is no wrong path, because there is no second entry point. `services/user.js`
+names nothing about invitations: `services/hooks/` is a generic registry, and
+`services/invitations/hook.js` registers itself through `services/hooks/subscribers.js`, which
+`app.js` requires once at startup.
+
+Two consequences. No call site was edited, and all of them gained the behaviour — including
+the auto-signup branch in `services/auth.js`, which a wrapper would have left silently
+skipping invitations. And a handler that throws propagates rather than being swallowed,
+because handlers share the caller's transaction and a failure has to take the account down
+with it.
+
+The risk a hook introduces is silence: a handler nobody registered does nothing and says
+nothing. Registration is therefore one file rather than scattered, and a test asserts that
+loading it registers the handler.
 
 ---
 
@@ -192,7 +225,18 @@ Two anticipated extensions are pre-accommodated without speculative code:
 
 ## Email Normalization
 
-**Rule:** `validator.normalizeEmail(email)` from the [`validator`](https://github.com/validatorjs/validator.js) library.
+**Rule:** `normalizeEmail` from `api/src/utils/email.js`, wrapping
+[`validator`](https://github.com/validatorjs/validator.js).
+
+`validator.normalizeEmail` is never called on its own. Given a string that is not an address it
+returns a mangled string rather than failing — `'not-an-email'` comes back as `'@not-an-email'`
+— which would then be stored and compared as though it were real. The wrapper checks validity
+first and returns `null` for a non-address.
+
+**The browser's version is deliberately weaker.** `ui/src/services/email.js` trims and
+lowercases and nothing more; `validator` is an API dependency and is not in the UI bundle. The
+difference shows in one place, and it is bounded: see [the signup mismatch
+dialog](#signup--oauth-email-mismatch-detection).
 
 This function is applied at every point where an email is stored or compared:
 - Invite creation — before writing `invited_email` to the DB
@@ -286,11 +330,20 @@ No signing key. No JWT library. Token validity is purely a DB lookup: if the row
 ```json
 // config/default.json
 {
-  "invitations": {
-    "ttl_days": 7
-  }
+  "invitations": { "ttl_days": 7 },
+  "portal": { "base_url": "" }
 }
 ```
+
+`portal.base_url` is where the `/invite` page lives, and there is no other setting in the API
+that knows it. Empty by default like the other outward URLs, mapped to `PORTAL_BASE_URL` in
+`custom-environment-variables.json`, and set to `https://localhost` in `localhost.json`.
+
+**Unset, the message is refused rather than sent with a link that goes nowhere**, and the log
+names the setting. A relative link in an email is inert and says nothing about why.
+
+There is no `email.*` block. SMTP configuration already exists under `smtp`, read by
+`api/src/notification/email/mailer.js`.
 
 ---
 
@@ -298,15 +351,28 @@ No signing key. No JWT library. Token validity is purely a DB lookup: if the row
 
 ### Authorization
 
-| Action | Authorized roles |
-|--------|-----------------|
-| Create invitation | Group admin, Platform admin |
-| List invitations | Group admin, Platform admin |
-| Cancel invitation | Group admin, Platform admin |
-| Check invite token | Public (unauthenticated) |
-| Apply invite token | Authenticated user (email must match invite) |
+| Action | Policy action | Authorized roles |
+|--------|---------------|-----------------|
+| Create invitation | `group.invite` | Group admin, Platform admin |
+| Cancel invitation | `group.invite` | Group admin, Platform admin |
+| List invitations | `group.view_invitations` | Group admin, Platform admin |
+| Check invite token | — | Public (unauthenticated) |
+| Apply invite token | — | Authenticated user, email must match the invitation |
 
-Add `invite` as a new capability in the group authorization config.
+**Two policy actions rather than one, and not because different people hold them.** Both are
+`isGroupAdmin`. They are separate because the restriction layer sorts every action into
+mutating or reading, and these fall on opposite sides.
+
+`group.invite` is in `MUTATING_ACTIONS`, so an archived group takes no new invitations — the
+same reasoning that puts `dataset.contribute` there. That does more than change a status code:
+a blocked capability is absent from the capability map, so the UI never offers the button on an
+archived group rather than offering it and failing.
+
+`group.view_invitations` is in `READING_ACTIONS` and survives archiving. The admin explaining
+why nobody can join is exactly the person who needs to see what is outstanding.
+
+The test is not whether the two want the same rule today. It is whether an argument for
+changing one is an argument for changing the other, and here it is not.
 
 ---
 
@@ -403,45 +469,65 @@ Applies the invitation to the authenticated user's account.
 2. `SELECT group_invitation WHERE token = ? AND status = 'PENDING' AND expires_at > now() FOR UPDATE`
 3. If not found: respond `404`
 4. Assert `normalizeEmail(row.invited_email) === normalizeEmail(req.user.email)` → `403 This invitation is for a different email address`
-5. Check `group.is_archived` → if archived, mark `CANCELLED` with `reason: 'group_archived'`, respond `409 The group has been archived since this invitation was sent`
-6. Check user is not already a direct member → if already a member, mark `ACCEPTED`, respond `200` (idempotent)
-7. Add user to `group_user` with the invited `role`
-8. Update `group_invitation` → `status = ACCEPTED`, `accepted_at = now()`
-9. Respond `200 { group_name, role }`
+5. Check `group.is_archived` → if archived, return the condition rather than throwing
+6. Insert into `group_user` with the invited `role`, `ON CONFLICT ... DO NOTHING`
+7. Update `group_invitation` → `status = ACCEPTED`, `accepted_at = now()`
+8. Respond `200 { group_id, group_name, role }`
 
-The `SELECT FOR UPDATE` in step 2 serializes concurrent requests on the same token — see [Security Analysis](#security-analysis).
+Then, **outside the transaction**, an archived group is marked `CANCELLED` with
+`reason: 'group_archived'` and the response is `409 The group has been archived since this
+invitation was sent`.
+
+**The cancellation cannot happen inside the transaction.** Writing `CANCELLED` and then
+throwing rolls the write back with everything else, leaving the invitation `PENDING` forever
+on a group nobody can join. This is not a hypothetical; it shipped that way and a test caught
+it.
+
+Step 4 is checked before the group is read, so somebody holding a forwarded link learns
+nothing about the group it points at.
+
+Step 6 is `ON CONFLICT` against `group_user_one_open_membership` rather than a read-then-write,
+which also makes the already-a-member case idempotent: the insert does nothing, the invitation
+still closes, and **an existing membership is never upgraded** — an invitation is not a way to
+change somebody's role.
+
+The `SELECT FOR UPDATE` in step 2 serializes concurrent requests on the same token — see
+[Security Analysis](#security-analysis).
 
 ---
 
-### User provisioning — `userService.provision()`
+### User provisioning — the `USER_CREATED` hook
 
-All paths that create a user account call `userService.provision()`. This is the single place where the "create user + apply invitations" invariant is encoded:
+Every path that creates an account goes through `userService.createUser`, and that is where the
+invariant lives. See [Why a lifecycle hook, and not a wrapper
+function?](#why-a-lifecycle-hook-and-not-a-wrapper-function) for the reasoning.
 
 ```javascript
-// userService.provision({ user_data, tx? })
-async function provision({ user_data, tx: outerTx }) {
-  const run = async (tx) => {
-    const user = await createUser(user_data, tx);
-    await invitationService.applyPendingInvitations({
-      email: user.email,
-      user_subject_id: user.subject_id,
-      tx,
-    });
-    return user;
-  };
-
-  // If an outer transaction is already open (e.g. from signup route), join it.
-  // Otherwise open a new one.
-  return outerTx ? run(outerTx) : prisma.$transaction(run);
-}
+// services/user.js — the whole of what it knows
+const user = await prisma.$transaction(async (tx) => {
+  const created = await tx.user.create({ /* ... */ });
+  await hooks.run(hooks.USER_CREATED, { user: created, tx });
+  return created;
+});
 ```
 
-**Callers:**
-- `POST /auth/signup` — passes its own `prisma.$transaction` context
-- Admin user-creation endpoint — calls `provision` directly (creates its own transaction)
-- Any future import / recovery / provisioning path — must call `provision`, not `createUser` directly
+```javascript
+// services/hooks/subscribers.js — required once by app.js, for its side effect
+hooks.on(hooks.USER_CREATED, applyInvitationsForNewUser);
+```
 
-The function is intentionally not exported alongside `createUser` to make the "right path" obvious: if you are writing code that creates a portal user, you call `provision`.
+`services/user.js` names nothing about invitations, and would read the same if the feature were
+deleted. `services/hooks/index.js` is a generic registry: handlers run in registration order,
+and one that throws stops the rest and propagates.
+
+**No call site was edited.** `routes/users.js`, `routes/auth/signup.js`, and the auto-signup
+branch in `services/auth.js` all call `createUser` and all gained the behaviour. None of them
+holds an open transaction, so `createUser` opening its own is safe and no `tx` parameter has to
+be threaded through. A future import, recovery, or merge path gets it by construction.
+
+The auto-signup branch is worth naming: it creates an account the first time somebody arrives
+through the institution's identity provider, and under a wrapper it would have kept silently
+skipping invitations.
 
 #### Failure taxonomy inside `applyPendingInvitations`
 
@@ -466,7 +552,8 @@ Signup succeeds regardless of Category B failures. The `cancellation_reason` fie
 
 ### `/invite` page
 
-Route: `ui/src/pages/auth/invite.vue` — `requiresAuth: false`
+Route: `ui/src/pages/invite.vue` — `requiresAuth: false`. At `/invite`, not `/auth/invite`:
+the path is baked into every link already sent.
 
 ```
 /invite?token=<43-char-opaque-token>
@@ -537,6 +624,20 @@ Clearing on transient errors would silently orphan the invite from the user's pe
 
 ### Signup — OAuth email mismatch detection
 
+::: warning Not built
+This is the one part of the flow that does not exist. It needs a real OAuth round trip to
+exercise, and the path it guards already ends correctly without it: `/apply` refuses the
+mismatch server-side, the auth store clears the held token on 403, and the person is told the
+invitation was sent to a different address. What is missing is only the earlier, friendlier
+warning. The rest of this section describes the intended shape.
+:::
+
+This is also the only place where the browser's weaker `normalizeEmail` is visible. The
+comparison happens before the person is authenticated, so no server-side answer exists at that
+moment and the browser has to make it. Two addresses differing only by Gmail dots would see the
+dialog when the server would have accepted them; the "continue without joining" path is the way
+out, and the invitation stays `PENDING`.
+
 After OAuth returns the pending user's email (`auth.pendingUser.email`), if `inviteToken` is set, the signup page detects a mismatch before form submission:
 
 ```javascript
@@ -584,12 +685,26 @@ All user-supplied values (group name, inviter name) must be HTML-escaped in the 
 
 ### Email service
 
-New file: `api/src/services/email.js` — thin wrapper over `nodemailer`.
+**No new email service.** `api/src/notification/` already holds a pooled, rate-limited mailer,
+three Bull priority queues, MJML and Handlebars templates, and a worker process. Adding an
+invitation is the four steps that subsystem's own `INTEGRATION.md` describes: a constant in
+`types.js`, a routing entry, a `send*` method, and a template.
 
-- `sendEmail({ to, subject, html, text })` — single reusable function
-- Transport configured from `config.email` (SMTP host/port/auth)
-- If `email.enabled` is `false`: log email content to stdout and resolve without error (dev-friendly)
-- On send failure in production: log the error, resolve without throwing — the invite record is already committed; the admin can resend
+- `TYPES.INVITE`, routed to `email:high`. An invitation is time-limited and the recipient is
+  usually waiting: somebody told them to expect it before it was sent.
+- `notify.sendInvite({ to, subject, groupName, inviterName, role, acceptUrl, expiresInDays })`.
+- `templates/invite.mjml.hbs`. Handlebars auto-escapes, which is the HTML-injection mitigation
+  above — no explicit encode call is needed, and a test asserts a group name containing markup
+  comes out escaped.
+
+**`sendInvite` takes no `userId`, and that is the point.** `_enqueue` writes an in-app
+notification as a dual write whenever a `userId` comes with the call, and an invited address
+usually has no account to read one.
+
+`api/src/services/invitations/notify.js` builds the link and calls it. Sending happens after
+the transaction commits and cannot fail it: the row is already there, an admin can see it
+pending, and the link works whenever the message arrives. Asking twice sends one message,
+because only a fresh invitation is announced.
 
 ### Config
 
@@ -643,7 +758,7 @@ New file: `api/src/services/email.js` — thin wrapper over `nodemailer`.
 | **Privilege escalation via invite role** | Role field validated server-side; only `MEMBER` or `ADMIN` accepted; only group/platform admins can create invitations |
 | **Invite to archived group** | `POST /groups/:id/invitations` rejects at creation; `/apply` cancels with `reason: 'group_archived'` and returns `409` |
 | **ID-based access issue on invitation cancel** | `DELETE` WHERE clause includes both `id` and `group_id` — Prisma throws `RecordNotFound` if the invite doesn't belong to the authorized group |
-| **Duplicate memberships** | `group_user` PK `(group_id, user_id)` — DB constraint enforces at write layer |
+| **Duplicate memberships** | `group_user_one_open_membership`, a partial unique index on `(group_id, user_id) WHERE removed_at IS NULL` — DB constraint enforces at write layer. Not the primary key, which is a surrogate `id`, because membership is soft-deleted and a closed row must be able to sit beside an open one |
 | **Duplicate PENDING invites** | Partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` — DB-enforced, race-safe |
 | **Email header injection** | nodemailer's structured API — no raw header string interpolation |
 | **HTML injection in email body** | All user-supplied values (group name, inviter name) HTML-escaped before template rendering |
@@ -675,10 +790,16 @@ If the recipient opens the invite link in multiple tabs simultaneously:
 1. All tabs call `POST /auth/invite/apply` with the same token
 2. `SELECT FOR UPDATE` inside the serializable transaction serializes the requests
 3. **First request:** finds `status = PENDING`, adds to `group_user`, transitions to `ACCEPTED`, commits
-4. **Subsequent requests:** find the row is no longer `PENDING` → treated as idempotent (user already a member) → return `200`
-5. All tabs show "You've been added to [group]" — no error, no inconsistency
+4. **Subsequent requests:** find the row is no longer `PENDING` → `404 This invitation is no longer valid`
+5. One tab shows "You've been added to [group]"; the others say the link is spent
 
-No duplicate `group_user` row is possible: the DB PK `(group_id, user_id)` enforces this at the write layer regardless.
+No duplicate `group_user` row is possible regardless: the insert is `ON CONFLICT` against
+`group_user_one_open_membership`, the partial unique index on `(group_id, user_id) WHERE
+removed_at IS NULL`.
+
+A losing tab reports the link as spent rather than reporting success. The alternative — telling
+every tab it worked — cannot distinguish "your other tab did this a moment ago" from "somebody
+else spent your link", and the second is worth showing.
 
 ---
 
@@ -708,36 +829,62 @@ If email change is ever implemented:
 
 ---
 
-## Implementation Checklist
+## What was built
+
+Six phases, one commit each, `invitations-phase-1` through `-6`, on 2026-09-09.
 
 ### Backend
 
-- [ ] **DB migration:** `INVITATION_STATUS` enum (`PENDING`, `ACCEPTED`, `CANCELLED`), `group_invitation` table with `token varchar(43) UNIQUE`, partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'`, `invitations_sent` relation on `user` model
-- [ ] **`api/src/utils/email.js`:** `normalizeEmail(email)` wrapping `validator.normalizeEmail()`; import and use everywhere an email is stored or compared
-- [ ] **`api/src/services/invitations.js`:** `generateInviteToken()`, `createInvitation`, `applyPendingInvitations`, `cancelInvitation`
-- [ ] **`api/src/services/email.js`:** `sendEmail` (nodemailer, config-driven, dev console fallback)
-- [ ] **`api/src/services/users.js`:** `provision({ user_data, tx? })` — `createUser` + `applyPendingInvitations` in one transaction; retire direct `createUser` calls from all user-creation paths
-- [ ] **`api/src/routes/groups.js`:** `POST /:id/invitations`, `GET /:id/invitations`, `DELETE /:id/invitations/:inviteId` (with `group_id` in WHERE clause)
-- [ ] **`api/src/routes/auth/invite.js`:** `POST /check` (returns `valid`/`invalid` only; logs reason server-side), `POST /apply`
-- [ ] **`api/src/routes/auth/index.js`:** Mount invite router
-- [ ] **`api/src/routes/auth/signup.js`:** Replace `createUser` call with `userService.provision()`
-- [ ] **Admin user-creation endpoint:** Replace `createUser` call with `userService.provision()`
-- [ ] **`api/config/default.json`:** `invitations.*` and `email.*` config blocks
-- [ ] **`api/config/custom-environment-variables.json`:** `EMAIL_*` env var mappings
-- [ ] **Authorization config:** Add `invite` capability to group authorization rules
-- [ ] **Email HTML escaping:** Escape group name and inviter name in HTML email template
-- [ ] *(No expiry cron needed — expiry is computed from `expires_at` at query time)*
+| Piece | Where |
+|---|---|
+| `INVITATION_STATUS` enum, `group_invitation` table, both indexes, `invitations_sent` relation | `prisma/migrations/20260912010000_group_invitations/` |
+| `normalizeEmail`, refusing a non-address rather than mangling it | `api/src/utils/email.js` |
+| `generateInviteToken`, `createInvitation`, `listInvitations`, `cancelInvitation`, `applyPendingInvitations`, `checkInvitationToken`, `acceptInvitationByToken` | `api/src/services/invitations/index.js` |
+| The invitation email, best-effort and after commit | `api/src/services/invitations/notify.js` |
+| `TYPES.INVITE`, `sendInvite`, `invite.mjml.hbs` | `api/src/notification/` |
+| The generic `USER_CREATED` registry and its one subscriber | `api/src/services/hooks/`, `api/src/services/invitations/hook.js` |
+| The transaction and one `hooks.run` call — the whole legacy edit | `api/src/services/user.js` |
+| `POST`, `GET`, `DELETE /groups/:id/invitations` | `api/src/routes/groups.js` |
+| `POST /auth/invite/check` and `/apply` | `api/src/routes/auth/invite.js` |
+| `group.invite` and `group.view_invitations`, sorted into the restriction sets | `authorization/builtin/policies/group.js`, `authorization/builtin/restrictions.js` |
+| `invitations.ttl_days`, `portal.base_url`, `PORTAL_BASE_URL` | `api/config/` |
+
+No expiry cron. Expiry is `PENDING AND expires_at < now()`, computed at query time.
 
 ### Frontend
 
-- [ ] **`ui/src/utils/email.js`:** `normalizeEmail(email)` wrapping `validator.normalizeEmail()`; `validator` is already a project dependency
-- [ ] **`ui/src/pages/auth/invite.vue`:** New route (`requiresAuth: false`); strip `?token=` immediately on mount; call `/check`; store `inviteToken` in sessionStorage if not logged in; handle valid/invalid states
-- [ ] **`ui/src/stores/auth.js`:** `inviteToken` (sessionStorage-backed), `clearInviteData`; post-login `/apply` hook in `withHandledVerifyResponse` with selective token clearing (retain on transient errors)
-- [ ] **`ui/src/pages/auth/signup.vue`:** On mount, if `inviteToken` set, call `/check` to get `inviteEmail`, compare `normalizeEmail(auth.pendingUser.email)` to `normalizeEmail(inviteEmail)`; show blocking mismatch dialog on mismatch with "go back" (preserve token) and "continue without invitation" (clear token) options
-- [ ] **`ui/src/services/v2/groups.js`:** `createInvitation`, `listInvitations`, `cancelInvitation`
-- [ ] **`ui/src/services/auth.js`:** `checkInvite`, `applyInvite`
-- [ ] **`ui/src/components/v2/groups/AddGroupMemberModal.vue`:** "Invite by email" section shown when user search returns no results
-- [ ] **`ui/src/components/v2/groups/GroupInvitationsTab.vue`:** Pending invitations table with cancel action and `is_expired` badge (group admins only)
-- [ ] **Nginx config:** `Referrer-Policy: no-referrer` on the `/invite` location block
-- [ ] **Router:** Register `/invite` with `requiresAuth: false`
-- [ ] **Support docs:** Document cross-browser / cross-device sessionStorage limitation and the "click the link again" recovery path
+| Piece | Where |
+|---|---|
+| Trim-and-lowercase `normalizeEmail` | `ui/src/services/email.js` |
+| The `/invite` page: strips the token on mount, then checks, redirects, or applies | `ui/src/pages/invite.vue` |
+| `inviteToken` in sessionStorage, `clearInviteData`, and the post-login apply with selective clearing | `ui/src/stores/auth.js` |
+| `createInvitation`, `listInvitations`, `cancelInvitation` | `ui/src/services/v2/groups.js` |
+| `checkInvite`, `applyInvite` | `ui/src/services/auth.js` |
+| The invite-by-email section | `ui/src/components/v2/groups/AddGroupMemberModal.vue` |
+| The invitations table, with a status badge that reads `status` and `is_expired` together | `ui/src/components/v2/groups/GroupInvitationsTab.vue` |
+| `Referrer-Policy: no-referrer` on the `/invite` location | `nginx/conf/app.conf` |
+
+The invite-by-email section is always shown, not revealed when a user search comes back empty.
+The search only finds people who have already signed in, so an empty result is the normal case
+for a new colleague, and a section that appears and disappears reads as an error.
+
+### Verified
+
+Against the running system, with tokens read out of MailHog as a recipient would. The emailed
+43-character token is byte-identical to the row. `/check` unauthenticated answers `valid` and
+then `invalid` once spent. The wrong-account screen appears without naming the invited address.
+`POST /users` put a brand-new account straight into the group as `ADMIN` through a call that
+mentions no invitation. Withdraw empties the list and returns the tab badge to zero.
+
+`Referrer-Policy` is the one thing not verified here: development serves the UI from Vite and
+never reaches `nginx/conf/app.conf`. The page's own token-stripping is verified — the address
+bar reads `https://localhost/invite` after every visit.
+
+### Still open
+
+- **The signup mismatch dialog.** See [Signup — OAuth email mismatch
+  detection](#signup--oauth-email-mismatch-detection).
+- **Support docs** for the sessionStorage limitation: an invitation held before signing in
+  belongs to the tab it was opened in, so opening the link on a phone and finishing on a laptop
+  loses it. The recovery is to open the link again once signed in, and nobody has written that
+  down anywhere a user would find it.

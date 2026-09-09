@@ -489,12 +489,17 @@ Sequencing lives in the local backlog rather than here.
 
 ### Not started
 
-- **Invitations.** No `group_invitation` model, route, service, or UI. [The design record](./invitations.md) is complete and carries its own checklist.
+- **Invitations — built 2026-09-09, one part outstanding.** The flow works end to end; only the
+  signup-time email mismatch dialog is missing, and the server refuses that case anyway. See
+  [the design record](./invitations.md).
 - **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Either build it or drop the table, so the schema stops implying it exists.
 - **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
 - **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
 - **Renewals.** `ACCESS_REQUEST_TYPE.RENEWAL` and `previous_grant_ids` are in the schema, the route rejects anything but `NEW`, and the renewal-context endpoint is commented out.
-- **Notifications on access decisions.** Use cases 9 and 54 ("no silent access changes") are unmet. Nothing in the grant or access-request services touches the notification system, though the platform has one.
+- **Notifications on access decisions — built 2026-09-08.** Submitting an access request
+  notifies the reviewers and deciding notifies the requester, both in app, through
+  `services/access_requests/notify.js`. Use cases 9 and 54 are met for access requests. Grant
+  issue and revoke still notify nobody.
 - **Access history queries** (34). The data is preserved; nothing reconstructs effective access as of a past date from it.
 - **Compliance reporting and least-privilege review** (35, 36). No report generation, no broad-access detection.
 - **Training / DUA preconditions** (45, 46). Named as extensible; no attributes and no policy hooks exist.

@@ -148,9 +148,30 @@ That made the change safe to apply while v1 is live, and it is applied. The stor
 moved with it, because a name-keyed archive path loses data the moment two groups share a
 name. [Dataset storage](./groups/dataset-storage.md) is the record.
 
-This is the one place the groups work has edited legacy code, and the reason is that storage
-layout and the naming constraint are shared substrate rather than a v2 feature. Legacy
-behaviour is unchanged.
+One of two places the groups work has edited legacy code, and the reason is that storage layout
+and the naming constraint are shared substrate rather than a v2 feature. Legacy behaviour is
+unchanged.
+
+### Done ahead of the cut-over: a lifecycle hook in `createUser`
+
+Group invitations need one thing from v1: when an account is created, that address's pending
+invitations must be applied in the same transaction. There is one signup flow in the system and
+no v2 equivalent, so "write it in the v2 module" has no meaning here. Building a second signup
+would mean duplicating OAuth.
+
+The edit is deliberately generic. `services/user.js` wraps its existing work in a transaction
+and runs whatever handlers are registered for `USER_CREATED`, passing the row and the
+transaction client. It names nothing about invitations, imports nothing from the v2 tree, and
+reads the same whether the feature exists or not. The invitation handler registers itself from
+the v2 side, in `services/hooks/subscribers.js`.
+
+**No legacy call site was edited.** `routes/users.js`, `routes/auth/signup.js`, and the
+auto-signup branch in `services/auth.js` are unchanged and all three gained the behaviour. With
+no invitations in the table the handler does nothing, so legacy behaviour is unchanged.
+
+This is the shape a granted carve-out should take: an extension point in the old code, and the
+feature itself somewhere else. It is not a precedent for editing v1 generally.
+[Invitations](./groups/invitations.md) is the record.
 
 ### What only the cut-over may do
 

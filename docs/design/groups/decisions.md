@@ -397,9 +397,14 @@ rejected as decision 4. Oversight stays structural, and it stays outside the gra
 
 ## What was not decided
 
-**Ownership transfer, reparenting, invitations, and identity federation** remain deferred.
-Decision 4 keeps membership as an enum-bearing row rather than a grant, so each of these
-stays its own piece of work rather than collapsing into the access-request machinery.
+**Ownership transfer, reparenting, and identity federation** remain deferred. Decision 4 keeps
+membership as an enum-bearing row rather than a grant, so each of these stays its own piece of
+work rather than collapsing into the access-request machinery.
+
+**Invitations were in that list and are now built.** They confirm the decision rather than
+strain it: an invitation is a standing offer of a `group_user` row with a role, so it needed
+its own table and lifecycle and borrowed nothing from grants or access requests. See
+[Invitations](./invitations.md).
 
 **Serving unauthenticated requests** is deferred by decision 3. The principal exists; the
 route path does not.
