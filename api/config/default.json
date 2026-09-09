@@ -191,6 +191,9 @@
       "address": "notifications@bioloop.sca.iu.edu"
     }
   },
+  "invitations": {
+    "ttl_days": 7
+  },
   "notify": {
     "worker": {
       "concurrency": 5

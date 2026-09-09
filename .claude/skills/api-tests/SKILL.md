@@ -236,6 +236,32 @@ decision, so its purpose is legible without the history.
 The same applies to a constraint that was considered and declined. An absence nobody asserted
 is indistinguishable from an oversight.
 
+## The all-zeros UUID is a real group
+
+`00000000-0000-0000-0000-000000000000` looks like the obvious "definitely does not exist"
+identifier and it is the seeded **Authenticated Users** group. A test asserting that an
+unknown group is a 404 passed the check and created the row instead, which then failed on
+something unrelated three assertions later. Use `randomUUID()` for an identifier that must
+not resolve. The same caution applies to `ffffffff-0000-4000-8000-000000000001`, which the
+restriction suite treats as a real seeded group.
+
+## Archive a group through the service, never by writing `is_archived`
+
+`group.is_archived` and `collection.is_archived` are denormalisations of an open `ARCHIVED`
+restriction, written in the same transaction, and
+`tests/services/restrictions/restrictions.test.js` asserts the column and the restriction
+table agree across every row in the database. A test that sets the column directly leaves a
+group that satisfies neither side, and the failure surfaces in that unrelated suite rather
+than in the test that caused it — and it persists, because the row outlives the run whenever
+cleanup swallows its error.
+
+Call `groupsService.archiveGroup(group_id, actor_subject_id)`. It is a transaction and it
+writes both. The same goes for collections.
+
+Two habits that make this recoverable: give every helper-created group a distinctive tag so a
+leaked row is identifiable by name, and when the invariant suite fails, read the ids it
+reports rather than the assertion — the set difference names the exact rows to delete.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

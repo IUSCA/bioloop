@@ -219,6 +219,7 @@ model user {
   project_datasets_assigned project_dataset[]
   project_contacts_assigned project_contact[]
   initiated_workflows       workflow[]          @relation("initiated_workflows")
+  invitations_sent          group_invitation[]  @relation("invitations_sent")
   notifications             notification[]
   owned_projects            project[]
   // created_datasets           dataset_create_log[]
@@ -545,6 +546,7 @@ model group {
 
   affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
   import_sources      import_source[]
+  groupInvitations    group_invitation[]
 }
 
 // Closure table for efficient hierarchy traversal
@@ -601,9 +603,52 @@ model group_user {
   @@index([removed_at])
 }
 
+/// An invitation for an email address to join a group, whether or not that address has an
+/// account yet. The invited email lives in the row rather than in the token, so the server
+/// decides who a link belongs to and the token itself decodes to nothing.
+///
+/// @see docs/design/groups/invitations.md
+model group_invitation {
+  id       String @id @default(uuid())
+  // 256 bits of randomness, base64url. Not a JWT: there is nothing to verify offline, so
+  // validity is a row lookup and revocation is a column write.
+  token    String @unique @db.VarChar(43)
+  group_id String
+
+  // Normalised on write, and compared only against a normalised address.
+  invited_email String            @db.VarChar(254)
+  role          GROUP_MEMBER_ROLE @default(MEMBER)
+  invited_by    String
+
+  status              INVITATION_STATUS @default(PENDING)
+  created_at          DateTime          @default(now()) @db.Timestamp(6)
+  expires_at          DateTime          @db.Timestamp(6)
+  accepted_at         DateTime?         @db.Timestamp(6)
+  cancelled_at        DateTime?         @db.Timestamp(6)
+  // Why an invitation was not honoured: 'admin_cancelled', 'group_archived'.
+  cancellation_reason String?
+
+  group   group @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  // Restrict, not SetNull: invited_by is the record of who vouched for this person, and an
+  // invitation whose inviter is gone still has to say who sent it.
+  inviter user  @relation("invitations_sent", fields: [invited_by], references: [subject_id], onDelete: Restrict)
+
+  @@index([group_id, status])
+  @@index([invited_email, status])
+}
+
 enum GROUP_MEMBER_ROLE {
   MEMBER
   ADMIN
+}
+
+// No EXPIRED member. Expiry is the computed condition `status = 'PENDING' AND expires_at <
+// now()`, so expires_at stays the only thing that decides, and no job has to catch up with it.
+// @see docs/design/groups/invitations.md — Data Model
+enum INVITATION_STATUS {
+  PENDING
+  ACCEPTED
+  CANCELLED
 }
 
 model user_dataset_contribution {
