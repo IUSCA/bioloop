@@ -50,6 +50,8 @@ Supporting records:
 - [Group invitations](./groups/invitations.md) — `active`, built (signup mismatch dialog outstanding)
 - [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
+- [End-to-end test flows](./groups/e2e-test-flows.md) — `active`, not started
+- [End-to-end test plan](./groups/e2e-test-plan.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
 
 ## Ideas

@@ -33,6 +33,8 @@ to file. When two pages disagree, Decisions is the record of intent.
 - [Group invitations](./invitations.md) — built, except the signup mismatch dialog
 - [UI information architecture](./ui-information-architecture.md) — how the pages are organised
 - [Trust and communication](./trust-and-communication.md) — where the model is right and the surface misleads
+- [End-to-end test flows](./e2e-test-flows.md) — what a browser-driven suite must prove, written from the design alone
+- [End-to-end test plan](./e2e-test-plan.md) — the ordered work to build that suite
 - [Domain glossary](./glossary.md) — the vocabulary
 
 ## History
