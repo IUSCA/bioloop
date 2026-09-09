@@ -16,9 +16,10 @@
 //   /dev-login                     -> test_user, a platform admin
 //   /dev-login?username=user-013   -> an ordinary member of a seeded group
 //
-// The API route this calls, POST /auth/test_login, is not registered when the API's env is
-// production or test, so this page cannot sign anybody in outside development. The page
-// also refuses to act unless Vite is running in dev mode.
+// The API route this calls, POST /auth/test_login, is registered only in a recognised
+// development mode — localhost, docker, or ci — so this page cannot sign anybody in outside
+// development. The check is an allowlist and fails closed for a mode it does not recognise.
+// The page additionally refuses to act unless Vite is running in dev mode.
 //
 // @see docs/guides/dev-servers.md — Logging in without CAS
 import { ref, onMounted } from "vue";

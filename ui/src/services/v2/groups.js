@@ -22,6 +22,14 @@ export default {
     return api.post("/groups/search", params);
   },
 
+  /**
+   * Groups that no active admin governs. Platform admin only.
+   * Returns a plain array of groups, not a paginated envelope.
+   */
+  withoutActiveAdmin() {
+    return api.get("/groups/without-active-admin");
+  },
+
   /** Get group details by ID. */
   get(id) {
     return api.get(`/groups/${id}`);

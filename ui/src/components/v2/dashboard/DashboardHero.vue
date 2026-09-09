@@ -1,52 +1,80 @@
 <template>
   <div class="flex flex-col gap-4">
     <div
-      class="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      class="flex flex-col md:flex-row md:items-start md:justify-between gap-4"
     >
-      <div>
+      <div class="min-w-0">
         <p
-          class="text-sm tracking-widest text-slate-500 dark:text-slate-400 uppercase"
+          v-if="props.eyebrow"
+          class="text-xs font-medium uppercase tracking-widest va-text-secondary"
         >
-          {{ subtitle }}
+          {{ props.eyebrow }}
         </p>
         <h1
-          class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 dark:text-white"
+          class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight"
+          :class="props.eyebrow ? '' : 'mt-0'"
         >
-          {{ title }}
+          {{ props.title }}
         </h1>
-        <p
-          v-if="description"
-          class="mt-2 text-sm text-slate-600 dark:text-slate-300"
-        >
-          {{ description }}
+        <p v-if="props.description" class="mt-2 text-sm va-text-secondary">
+          {{ props.description }}
         </p>
-      </div>
 
-      <div class="flex flex-wrap gap-2 items-center">
-        <span
-          v-if="roleLabel"
-          class="inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        <div
+          v-if="slots.meta"
+          class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm va-text-secondary"
         >
-          {{ roleLabel }}
-        </span>
-        <slot name="meta" />
+          <slot name="meta" />
+        </div>
       </div>
-    </div>
 
-    <div
-      v-if="$slots.descriptionExtra"
-      class="text-sm text-slate-600 dark:text-slate-300"
-    >
-      <slot name="descriptionExtra" />
+      <div class="flex flex-wrap gap-2 items-center shrink-0">
+        <RoleBadge
+          v-if="props.roleName"
+          :role-name="props.roleName"
+          size="base"
+        />
+        <slot name="actions" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-const { title, subtitle, description, roleLabel } = defineProps({
+/**
+ * DashboardHero
+ *
+ * Purpose:
+ * The greeting block at the top of `/v2/home`: who the caller is, what the page is
+ * about, and the governance standing they hold.
+ *
+ * Why it exists:
+ * The dashboard is a landing surface rather than a resource page, and it is the one
+ * place the type scale goes above 20px. Keeping that exception in a component stops it
+ * spreading to the list pages.
+ *
+ * Responsibilities:
+ * - Own the landing-page heading treatment and the placement of the role badge.
+ *
+ * Not responsible for:
+ * - Deciding which role the caller holds. The page maps a persona to a role name.
+ * - The meta line's content, which differs per persona and arrives through the slot.
+ *
+ * @see docs/design/groups/dashboard-plan.md - Phase 1
+ * @see docs/contributing/v2-design-system.md - Typography
+ */
+import { useSlots } from "vue";
+
+const props = defineProps({
+  /** Main heading, for example `Hello, Erin`. */
   title: { type: String, required: true },
-  subtitle: { type: String, default: "" },
+  /** Small uppercase label above the title. */
+  eyebrow: { type: String, default: "" },
+  /** One sentence under the title saying what the page shows. */
   description: { type: String, default: "" },
-  roleLabel: { type: String, default: "" },
+  /** A role name `RoleBadge` understands, for example `ADMIN`. Omit to draw no badge. */
+  roleName: { type: String, default: "" },
 });
+
+const slots = useSlots();
 </script>
