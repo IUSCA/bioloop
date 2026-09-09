@@ -172,7 +172,12 @@ emits `review` and `view`. All three call sites move to it, and the two prop nam
 today, `canAct` and `canReview`, collapse into the first.
 
 The card carries the requester, the subject, the resource, the status, and the item count. It
-is a list row, so the decision detail belongs on B3's page rather than here.
+is a list row, so the decision detail belongs on B3's page rather than here. The whole row
+opens the request; the Review button is offered only when the viewer may act and the request
+is `UNDER_REVIEW`.
+
+Both resource tabs bind `view` here and pick up `review` in B4, when there is a modal for it
+to open. The queue page already had an opener.
 
 *Files:* `components/v2/access-requests/AccessRequestCard.vue`, and its three call sites.
 
@@ -391,7 +396,7 @@ seeded data by design.
 
 ## Status
 
-A1, B1, C1, C2, and C3 are built. B2 to B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1, B2, C1, C2, and C3 are built. B3 to B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

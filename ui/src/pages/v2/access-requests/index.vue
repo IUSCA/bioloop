@@ -60,8 +60,7 @@
               :key="req.id"
               :request="req"
               :can-act="true"
-              @approve="openReviewModal(req, 'approve')"
-              @reject="openReviewModal(req, 'reject')"
+              @review="openReviewModal"
               @view="viewRequest"
             />
           </div>

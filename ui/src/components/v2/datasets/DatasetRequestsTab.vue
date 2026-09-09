@@ -62,8 +62,8 @@
             v-for="request in requests"
             :key="request.id"
             :request="request"
-            :can-review="props.canReview"
-            @updated="fetchRequests"
+            :can-act="props.canReview"
+            @view="viewRequest"
           />
         </div>
 
@@ -84,6 +84,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["count-changed"]);
+
+const router = useRouter();
 
 const requests = ref([]);
 const loading = ref(false);
@@ -114,6 +116,10 @@ async function fetchRequests() {
   } finally {
     loading.value = false;
   }
+}
+
+function viewRequest(request) {
+  router.push(`/v2/access-requests/${request.id}`).catch(() => {});
 }
 
 onMounted(() => {

@@ -33,7 +33,8 @@
                 v-for="request in requests"
                 :key="request.id"
                 :request="request"
-                :can-review="props.canReview"
+                :can-act="props.canReview"
+                @view="viewRequest"
               />
             </TransitionGroup>
           </div>
@@ -80,6 +81,8 @@ const props = defineProps({
   canReview: { type: Boolean, default: false },
 });
 const emit = defineEmits(["count-changed"]);
+
+const router = useRouter();
 
 const requests = ref([]);
 const loading = ref(true);
@@ -155,6 +158,10 @@ function fetchRequests() {
 const requestAccessModalRef = ref(null);
 function openRequestModal() {
   requestAccessModalRef.value?.show();
+}
+
+function viewRequest(request) {
+  router.push(`/v2/access-requests/${request.id}`).catch(() => {});
 }
 
 function onRequestSubmitted() {
