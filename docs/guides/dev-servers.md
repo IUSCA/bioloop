@@ -158,16 +158,30 @@ fixes it. Do not go hunting for a bug in the write path until you have re-logged
 <!-- cspell:ignore ajohnson sdavis ethompson -->
 
 A platform admin sees every dataset, group, and collection whether or not a grant says so,
-so checking an access-control change as `test_user` proves nothing. The seed ships three
-ordinary users who hold the `user` role and belong to no group: `ajohnson`, `sdavis`, and
-`ethompson`. Anything one of them can see, they can see because of a grant.
+so checking an access-control change as `test_user` proves nothing. Sign in as somebody who
+belongs to no group instead. Anything they can see, they can see because of a grant.
+
+The seed decides memberships by hashing, so the accounts that belong to nothing change
+whenever the seed changes, and naming one here would go stale. Ask the database:
+
+```sql
+SELECT u.username FROM "user" u
+ WHERE u.is_deleted = false
+   AND u.subject_id NOT IN (SELECT user_id FROM group_user WHERE removed_at IS NULL)
+ ORDER BY u.username LIMIT 5;
+```
 
 ```
-https://localhost/dev-login?username=ajohnson&next=/v2/datasets
+https://localhost/dev-login?username=<the account that query returned>&next=/v2/datasets
 ```
 
-The `user-0NN` accounts are members of the sample groups, so use one of those to check
-access that comes from membership rather than from a grant.
+That list mixes seeded `user-0NN` accounts with the real developer accounts the seed also
+creates. Either works locally; the seeded ones are the safer habit, because a name that means
+something to a colleague reads as a mistake in a screenshot.
+
+Most `user-0NN` accounts belong to a sample group, so one of those is the way to check access
+that comes from membership rather than from a grant — but a third of them belong to no group,
+so confirm rather than assume.
 
 **A platform admin short-circuits the policy engine, not just the data filters.** `test_user`
 is allowed every action before any policy runs, so a page checked as `test_user` exercises no
@@ -201,6 +215,18 @@ proxy has nothing to forward to, so `logs/ui.log` fills with `ECONNREFUSED` erro
 ```
 
 These are normal. They stop once the API logs `Listening: http://localhost:3030`.
+
+## A long automated run has to tolerate a restart
+
+Reloading is a convenience for a person and a hazard for a run that lasts minutes. Nodemon
+restarts the API whenever anybody saves a file under `api/`, including another session sharing
+the checkout, and the API refuses connections for a second or two each time. Vite compiles a
+route the first time it is asked for, so the first page load of a run can take tens of seconds
+while every later one takes under a second.
+
+A test suite or any other automated run should therefore warm both servers once before it
+starts and retry the API heartbeat rather than treat one refused connection as a server that
+is down. If a run must not be disturbed, avoid editing `api/` while it is going.
 
 ## Checking that a server is really up
 

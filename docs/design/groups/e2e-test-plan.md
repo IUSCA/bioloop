@@ -252,6 +252,11 @@ page-object layer grows past about a thousand lines.
 
 ### Authentication: one storage state per persona, minted through the API
 
+> Phase 1 built something else. The fixture navigates to `/dev-login` and lets the application
+> sign itself in, for the reasons given under [Phase 1](#phase-1-the-harness). This section
+> stays because minting is the answer if a run ever gets slow enough to need it, and because
+> the two traps below apply either way.
+
 The v1 suite drives a browser through a mocked CAS ticket. The new suite calls
 `POST /auth/test_login` directly from a Playwright `APIRequestContext`, reads the token out of
 the response, and writes a `storageState` file with `token` and `user` in `localStorage` —
@@ -669,9 +674,9 @@ names what would settle it.
    and any unrecognised mode. Verified by enumerating the auth router's stack once per mode,
    and by calling the route and `/doc` against a running dev server. The e2e compose stack
    runs `NODE_ENV=ci`, so it keeps the route.
-3. **How long does building the world take?** Time the builder end to end. If it exceeds
-   roughly thirty seconds it belongs in global setup once per run rather than per worker, and
-   the specs then have to tolerate a shared world.
+3. ~~**How long does building the world take?**~~ **Settled: 288ms to build, 64ms to tear
+   down.** Two orders of magnitude under the thirty-second threshold, so each worker builds
+   its own world and no spec has to tolerate a shared one.
 4. **Can a spec see an SSE notification reliably, and does the run then exit?** Drive one
    in-app notification end to end. Two precedents say the exit is the risk rather than the
    delivery: the SSE manager opened two Redis connections and never closed them until
@@ -691,6 +696,42 @@ spec.
 
 Done when `npx playwright test` builds a world, signs in as three personas, asserts one true
 thing, and leaves the database as it found it.
+
+**Built.** Five specs in `e2e/src/specs/harness.spec.js` pass, six consecutive two-worker runs
+are clean, and a census of eleven tables shows no drift across a full run. Three things differ
+from what this page proposed, and each is a change made while building.
+
+**Sign-in is a navigation, not a minted `storageState`.** The section above proposes writing
+`token` and `user` into `localStorage` from an `APIRequestContext`. The fixture instead
+navigates to `/dev-login`, which runs the application's own `onLogin`. The suite then never
+has to know which keys the auth store persists or how it shapes them, and the stale-state trap
+that section warns about cannot arise, because no state is reused. It costs about a second per
+persona. Minting is still the right answer if a run ever gets slow enough to care, and it
+belongs in one place rather than reproduced across specs.
+
+**Builds are serialised by a Postgres advisory lock.** A worker chooses its accounts by asking
+which seeded users belong to no group. Two workers building at once both read that list before
+either writes to it, so both borrow the same six people: Alice in one world is also Alice in
+the other, administering two labs, and every later assertion about what she can reach has two
+explanations. Measured rather than predicted — two builds started together returned identical
+casts, and three under the lock return disjoint ones. Serialising is affordable precisely
+because of spike 3: a build costs a third of a second.
+
+**A `globalSetup` warms both servers before any test runs.** A run against cold servers failed
+two browser-driven tests while both servers were healthy. The first navigation waits for Vite
+to compile a route, which can take tens of seconds, and the development API restarts whenever
+anybody saves a file under `api/`, refusing connections for a second or two each time. The
+warm-up compiles the first route once and retries the API heartbeat for a minute, so a restart
+window is absorbed and the cost is a visible one-time wait rather than a timeout inside an
+unrelated assertion. A server that is genuinely down still fails, naming which one.
+
+Two defects in the fixture cast were found by the specs and are worth recording, because both
+would have made later phases assert the opposite of what they intended. The borrowable pool
+was ordered by username and `ajohnson` sorted first, so the zero-access user's account was
+lent to the centre admin and every refusal that user exists to demonstrate read as an allow.
+The pool now excludes the fixed accounts by name and is restricted to the seed's own
+`user-0NN` rows. The world spec asserts that no two people share an account, which names that
+cause directly; the spec that first caught it reported a wrong persona, which is the symptom.
 
 ### Phase 2 — the refusal spine
 

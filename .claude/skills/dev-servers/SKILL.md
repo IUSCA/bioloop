@@ -138,24 +138,48 @@ a foreign-key violation on a column like `group_user.removed_by`. The fix is to 
 ## Seeing a page as somebody with no privileges
 
 A platform admin sees every dataset, group, and collection regardless of grants, so
-checking an access-control change while signed in as `test_user` proves nothing. The seed
-ships three ordinary users who hold the `user` role and belong to no group at all:
-`ajohnson`, `sdavis`, and `ethompson`. Anything one of them can see, they can see because
-of a grant.
+checking an access-control change while signed in as `test_user` proves nothing. Sign in as
+somebody who belongs to no group instead: anything they can see, they can see because of a
+grant.
+
+**Find that account, do not memorise it.** The seed assigns memberships by hashing, so which
+accounts belong to nothing moves whenever the seed changes. This page named `ajohnson`,
+`sdavis`, and `ethompson`; checked against a freshly seeded database, only `ajohnson` still
+belonged to no group, and the other two had picked up memberships. A stale name here is
+worse than no name, because the page then looks like it is proving something it is not.
+
+```sql
+-- someone with no group at all: anything they see comes from a grant
+SELECT u.username FROM "user" u
+ WHERE u.is_deleted = false
+   AND u.subject_id NOT IN (SELECT user_id FROM group_user WHERE removed_at IS NULL)
+ ORDER BY u.username LIMIT 5;
+
+-- someone who administers a group: use for governance actions
+SELECT u.username, g.name FROM "user" u
+  JOIN group_user gu ON gu.user_id = u.subject_id AND gu.removed_at IS NULL
+  JOIN "group" g ON g.id = gu.group_id
+ WHERE gu.role = 'ADMIN' ORDER BY u.username LIMIT 5;
+```
 
 ```
-https://localhost/dev-login?username=ajohnson&next=/v2/datasets
+https://localhost/dev-login?username=<the account the query returned>&next=/v2/datasets
 ```
 
-The `user-0NN` accounts are members of the sample groups, so use those to check
-membership-derived access instead. Do not hand-insert a user for this; the seed already
-covers both shapes and a hand-made row disappears at the next reset.
+That list mixes seeded `user-0NN` accounts with the real developer accounts the seed also
+creates. Either works locally; the seeded ones are the safer habit, because a name that means
+something to a colleague reads as a mistake in a screenshot.
+
+Most `user-0NN` accounts are members of a sample group, but not all — 63 of 100 were on the
+database this was checked against — so pick one from the query rather than assuming. Do not
+hand-insert a user for this; the seed already covers both shapes and a hand-made row
+disappears at the next reset.
 
 **A platform admin short-circuits the policy engine, not just the data filters.** `test_user`
 is allowed every action before any policy runs, so a page checked as `test_user` exercises no
 policy path at all. A 500 raised inside a policy's hydration is invisible to them and hits
 every group admin. Check governance actions — issuing a grant, revoking one, reviewing a
-request — as a group admin such as `user-054`.
+request — as a group admin found by the second query above.
 
 **Chrome DevTools MCP cannot attach while another Chrome holds its profile.** It reports
 "The browser is already running for `~/.cache/chrome-devtools-mcp/chrome-profile`" and cannot
@@ -183,6 +207,24 @@ curl -s  -o /dev/null -w "%{http_code}\n" http://localhost:3030/      # expect 4
 
 A `401` from the API means it is alive and demanding authentication. Treat it as success,
 not as a failure to reach the server.
+
+## A long automated run has to tolerate a restart
+
+Both servers reload on a file change, which is a convenience for a person and a hazard for a
+run that lasts minutes. Nodemon restarts the API whenever **anybody** saves a file under
+`api/`, including another agent session working in the same checkout, and the API refuses
+connections for a second or two each time. A Playwright suite that checks the API once at
+startup died on four consecutive runs this way while the server itself was healthy: `curl`
+answered `200` throughout, and the pid seen by `lsof` had already been replaced seconds later.
+
+Vite is the other half. It compiles a route the first time somebody asks for it, so the first
+navigation of a run can take tens of seconds while every later one takes under a second. That
+cost lands on whichever test runs first and reads as that test being slow.
+
+So an automated run should warm both servers once before it starts, and should retry the API
+heartbeat rather than take a single refusal as proof the server is down. A run that must not
+be disturbed at all is the case for `bin/devserver.sh` over an editor-driven reload: stop
+editing `api/` while it runs.
 
 ## `status` reports nodemon, not the app
 

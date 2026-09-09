@@ -11,6 +11,13 @@ npx jest --runInBand                       # everything
 npx jest --runInBand tests/services/groups # one directory
 ```
 
+A backgrounded run inherits the **session** working directory, not the one a previous
+command `cd`-ed into. Started from the repository root, `npx jest` picks up the root config
+and tries to run the UI and e2e suites too: 102 suites "fail" while 0 tests fail, because
+they failed to *run*. Read the `Tests:` line before the `Suites:` line — `0 failed` with a
+wall of red suites means the invocation was wrong, not the code. Put the `cd api` in the
+same command.
+
 `--runInBand` is not optional. The service suites talk to the **real development database**
 on `localhost:5432` and the concurrency suites deliberately race transactions against real
 constraints. Running them in parallel produces failures that mean nothing.

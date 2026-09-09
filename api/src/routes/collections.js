@@ -8,6 +8,7 @@ const _ = require('lodash/fp');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const collectionService = require('@/services/collections');
+const profileService = require('@/services/profiles');
 const datasetService = require('@/services/datasets_v2');
 const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
@@ -160,6 +161,33 @@ router.patch(
       },
     );
     res.json(req.permission.filter(updatedCollection));
+  }),
+);
+
+// Update the collection profile.
+// @see docs/design/groups/profiles.md — API
+router.patch(
+  '/:id/profile',
+  validate([
+    param('id').isUUID(),
+    body('version').isInt({ min: 1 }).toInt(),
+    body('tagline').optional({ nullable: true }),
+    body('about_md').optional({ nullable: true }),
+    body('profile_visibility').optional().isString(),
+    body('links').optional({ nullable: true }).isArray(),
+    body('citation').optional({ nullable: true }),
+    body('publications').optional({ nullable: true }).isArray(),
+  ]),
+  authorize('collection', 'edit_metadata'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Update the collection profile'
+    const updated = await profileService.updateCollectionProfile(req.params.id, {
+      data: req.body,
+      actor_id: req.user.subject_id,
+      expected_version: req.body.version,
+    });
+    res.json(req.permission.filter(updated));
   }),
 );
 

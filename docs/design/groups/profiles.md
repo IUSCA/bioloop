@@ -7,10 +7,10 @@ last_verified: 2026-09-08
 ---
 
 ::: warning Design record — active
-**Partly built.** The profile columns, the `view_profile` action, the anonymous principal,
-and the grant subject-set fix have shipped. The routes, the services, and the UI have not:
-there is still no public router and no unauthenticated path through the middleware, so
-nothing here is reachable without a token yet. This record continues
+**Partly built.** Everything on the API side has shipped: the profile columns, the
+`view_profile` action, the anonymous principal, the grant subject-set fix, the profile and
+avatar routes, and the public router. The UI has not, so a published profile is reachable
+only by calling the API directly. This record continues
 [Decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
 the `Public` principal and deferred the serving half to a separate piece of work.
 :::
@@ -297,8 +297,9 @@ This is worth fixing before any route can be reached without a token, not after.
 
 ### Rate limiting and caching
 
-The public router carries `express-rate-limit`, which is a new dependency. The limit is 60
-requests per minute per address. A person reading one profile issues a handful of requests, so
+The public router carries `express-rate-limit`, pinned at 7.5.1 because that line has no
+runtime dependencies of its own and peers Express 4. The limit is 60 requests per minute per
+address. A person reading one profile issues a handful of requests, so
 the limit sits two orders of magnitude above ordinary use, and far below the rate a scraper
 enumerating ids would need.
 

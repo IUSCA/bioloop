@@ -61,6 +61,44 @@ function authenticate(req, res, next) {
   next();
 }
 
+/**
+ * Authenticate when a token is present, and fall back to the anonymous principal when one
+ * is not.
+ *
+ * Only the public router uses this. Everything mounted after `authenticate` in
+ * `routes/index.js` still refuses a request with no token, and that guarantee stays
+ * easy to check by eye: one line, one middleware, everything below it authenticated.
+ *
+ * An expired or malformed token degrades to anonymous rather than raising a 401. A public
+ * page is exactly where somebody arrives with a stale session, and the anonymous caller
+ * sees strictly less than a signed-in one, so degrading is safe and 401-ing is not useful.
+ *
+ * The principal is seeded into the policy-context cache here rather than left to the
+ * hydrator, so capability derivation cannot reach the database for a user row that does
+ * not exist.
+ *
+ * @see docs/design/groups/profiles.md — The anonymous principal
+ */
+function optionalAuthenticate(req, res, next) {
+  try {
+    req.user = authenticateWithHeader(req);
+  } catch {
+    try {
+      req.user = authenticateWithCookie(req);
+    } catch {
+      req.user = constants.ANONYMOUS_PRINCIPAL;
+    }
+  }
+
+  if (req.policyContext?.cache?.user) {
+    // A shallow copy, because the hydrator writes the id back onto whatever object it
+    // finds in the cache and the principal is frozen. req.user stays the frozen shared
+    // object, so nothing downstream can mutate the principal every anonymous request uses.
+    req.policyContext.cache.user.set(req.user.subject_id, { ...req.user });
+  }
+  next();
+}
+
 function buildActions(action) {
   const actions = {};
 
@@ -199,6 +237,7 @@ const loginHandler = asyncHandler(async (req, res, next) => {
 
 module.exports = {
   authenticate,
+  optionalAuthenticate,
   accessControl,
   rbacAccessControl: accessControl, // alias for backward compatibility
   getPermission,

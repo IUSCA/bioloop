@@ -43,11 +43,11 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@tus/file-store": "^1.4.0",
-    "@tus/server": "^1.6.0",
     "@badgateway/oauth2-client": "^2.2.3",
     "@iusca/iulogin-helper": "^0.1.4",
     "@prisma/client": "^6.19.2",
+    "@tus/file-store": "^1.4.0",
+    "@tus/server": "^1.6.0",
     "accesscontrol": "^2.2.1",
     "axios": "^1.5.0",
     "bull": "^4.16.5",
@@ -60,6 +60,7 @@
     "dotenv-safe": "^8.2.0",
     "eslint-plugin-local-rules": "^3.0.2",
     "express": "^4.18.2",
+    "express-rate-limit": "7.5.1",
     "express-validator": "^7.0.1",
     "handlebars": "^4.7.8",
     "he": "^1.2.0",

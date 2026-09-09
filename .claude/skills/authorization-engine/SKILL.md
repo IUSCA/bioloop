@@ -63,6 +63,27 @@ pre-fetching that entity. `authorizeAction` from a service or a test is the usua
 When changing a hydrator, write the test that calls `authorizeAction` with only
 `identifiers`, or the change is untested.
 
+## Whatever you put in the user cache must be mutable
+
+`PrismaHydrator.hydrate` writes into the cached record: it assigns
+`recordCache[idAttribute] = id` when a policy needs no columns, and `Object.assign`s the
+row when it does. So the object a caller seeds into `req.policyContext.cache.user` is
+written to, not just read.
+
+Seeding a frozen object there fails with
+`TypeError: Cannot assign to read only property 'subject_id'`, from inside `hydrate`, on
+every request. Nothing catches it before the 500.
+
+This bites the anonymous principal specifically. `ANONYMOUS_PRINCIPAL` is frozen on
+purpose — it is shared by every unauthenticated request and nothing should mutate it — so
+`optionalAuthenticate` puts a shallow copy in the cache and leaves `req.user` pointing at
+the frozen original.
+
+`preFetched` has no such problem: `hydrate` runs `structuredClone` over it first, and a
+clone is never frozen. So the failure appears only when something seeds the cache directly.
+`initializePolicyContext` does exactly that, which is why the shape is worth knowing, and
+it never bit before because a JWT profile is an ordinary mutable object.
+
 ## Reading a policy container
 
 `PolicyContainer` exposes `getActionNames()`, `getPolicy(action)`, `getAttributeRules(action)`,

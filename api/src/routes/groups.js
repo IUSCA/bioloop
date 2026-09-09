@@ -1,4 +1,6 @@
 const express = require('express');
+const multer = require('multer');
+const fsPromises = require('fs/promises');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
@@ -9,6 +11,8 @@ const { GROUP_MEMBER_ROLE, INVITATION_STATUS } = require('@prisma/client');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
+const profileService = require('@/services/profiles');
+const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
 const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
@@ -287,6 +291,102 @@ router.patch(
       },
     );
     res.json(req.permission.filter(updatedGroup));
+  }),
+);
+
+// Update the group profile. Same authority as any other metadata edit — a profile is
+// informational, so publishing one is not a governance action.
+// @see docs/design/groups/profiles.md — API
+router.patch(
+  '/:id/profile',
+  validate([
+    param('id').isUUID(),
+    body('version').isInt({ min: 1 }).toInt(),
+    body('tagline').optional({ nullable: true }),
+    body('about_md').optional({ nullable: true }),
+    body('profile_visibility').optional().isString(),
+    body('links').optional({ nullable: true }).isArray(),
+    body('citation').optional({ nullable: true }),
+    body('publications').optional({ nullable: true }).isArray(),
+  ]),
+  authorize('group', 'edit_metadata'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Update the group profile'
+    const updated = await profileService.updateGroupProfile(req.params.id, {
+      data: req.body,
+      actor_id: req.user.subject_id,
+      expected_version: req.body.version,
+    });
+    res.json(req.permission.filter(updated));
+  }),
+);
+
+const avatarUpload = multer({
+  storage: multer.diskStorage({
+    async destination(req, file, cb) {
+      try {
+        await fsPromises.mkdir(avatarService.avatarDir(), { recursive: true });
+        cb(null, avatarService.avatarDir());
+      } catch (e) {
+        cb(e);
+      }
+    },
+    filename(req, file, cb) {
+      try {
+        cb(null, avatarService.newAvatarKey(file.originalname));
+      } catch (e) {
+        cb(e);
+      }
+    },
+  }),
+  limits: { fileSize: avatarService.AVATAR_MAX_BYTES, files: 1 },
+});
+
+// Replace the group's profile picture.
+router.put(
+  '/:id/avatar',
+  validate([param('id').isUUID()]),
+  authorize('group', 'edit_metadata'),
+  avatarUpload.single('avatar'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Replace the group profile picture'
+    if (!req.file) return next(createError.BadRequest('No image was uploaded.'));
+
+    const current = await prisma.group.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { avatar_key: true },
+    });
+    const updated = await prisma.group.update({
+      where: { id: req.params.id },
+      data: { avatar_key: req.file.filename },
+      select: { id: true, avatar_key: true },
+    });
+    // Only after the new key is committed, so a failure leaves the old picture serving.
+    await avatarService.removeAvatar(current.avatar_key);
+    return res.json(updated);
+  }),
+);
+
+// Remove the group's profile picture. The profile falls back to a monogram.
+router.delete(
+  '/:id/avatar',
+  validate([param('id').isUUID()]),
+  authorize('group', 'edit_metadata'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Remove the group profile picture'
+    const current = await prisma.group.findUniqueOrThrow({
+      where: { id: req.params.id },
+      select: { avatar_key: true },
+    });
+    await prisma.group.update({
+      where: { id: req.params.id },
+      data: { avatar_key: null },
+    });
+    await avatarService.removeAvatar(current.avatar_key);
+    res.json({ id: req.params.id, avatar_key: null });
   }),
 );
 

@@ -94,3 +94,7 @@ signet/signet
 .cspellcache
 # local build/todo tracking (not tracked)
 /.todo
+
+# Uploaded group profile pictures. Runtime data, not source.
+# @see docs/design/groups/profiles.md — Schema
+api/data/avatars/

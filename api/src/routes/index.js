@@ -15,6 +15,10 @@ router.use('/auth', require('./auth/index'));
 router.use('/reports', require('./reports'));
 router.use('/about', require('./about'));
 router.use('/env', require('./env'));
+// Profiles that have been published. The only routes reachable without a token, and every
+// one of them a GET authorizing `view_profile`.
+// @see docs/design/groups/profiles.md — API
+router.use('/public', require('./public'));
 
 // From this point on, all routes require authentication.
 router.use(authenticate);
