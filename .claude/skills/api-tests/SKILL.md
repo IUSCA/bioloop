@@ -42,6 +42,20 @@ Pure unit suites — anything under `tests/authorization/core` — need no datab
 there directly. Service suites do not, because the worktree would share the migrated
 database with your branch.
 
+## Restoring a file you mutated on purpose is where the run gets stuck
+
+Checking that a new test actually fails without its fix means breaking the fix, running the
+test, and putting it back. The putting-back is the step that goes wrong.
+
+`cp` is interactive in this environment. `cp /tmp/keep.js src/....js` asks
+`overwrite src/...? (y/n [n])`, and a prompt inside a tool call that has already been moved
+to the background waits forever — leaving the mutated file in the tree, which is the worst
+possible place to stop.
+
+Restore with the same edit script run in reverse, or with `cp -f`. Either way, put the
+restore in its own call rather than chaining it after a jest run that may outlive the
+foreground timeout, and confirm with `git diff` that only the intended change is left.
+
 ## Telling your failure from an existing one
 
 Before assuming a failure is yours, check the cheap signals in this order.

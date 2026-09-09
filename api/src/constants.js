@@ -226,6 +226,27 @@ const AUTHENTICATED_USERS_GROUP_ID = '00000000-0000-0000-0000-000000000000';
 const PUBLIC_GROUP_ID = 'ffffffff-0000-4000-8000-000000000002';
 const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID];
 
+// The caller of an unauthenticated request. A subject with no memberships, no grants, and
+// no roles, so every membership policy and the platform-admin check evaluate false against
+// it without a special case anywhere in the engine.
+//
+// Its subject_id is the `Public` principal itself. That is what makes the grant subject-set
+// builder able to tell an anonymous caller from a signed-in one, and it is why frozen
+// matters: nothing may mutate a principal that is shared by every anonymous request.
+//
+// Every user attribute the group and collection policies declare is present, so the engine
+// hydrates none of them and reads no user row.
+// @see docs/design/groups/profiles.md — The anonymous principal
+const ANONYMOUS_PRINCIPAL = Object.freeze({
+  subject_id: PUBLIC_GROUP_ID,
+  is_anonymous: true,
+  roles: Object.freeze([]),
+  group_memberships: Object.freeze([]),
+  effective_group_ids: Object.freeze([]),
+  oversight_group_ids: Object.freeze([]),
+  accessible_owner_group_ids: Object.freeze([]),
+});
+
 // The service account every unattended write is credited to: the watch script, the workers,
 // and any row the system issues rather than a person. Both ids are pinned so a reseed does
 // not invalidate the workers' APP_API_TOKEN, which carries them as claims and is never
@@ -400,6 +421,7 @@ module.exports = {
   AUTHENTICATED_USERS_GROUP_ID,
   PUBLIC_GROUP_ID,
   SYSTEM_PRINCIPAL_GROUP_IDS,
+  ANONYMOUS_PRINCIPAL,
   UNASSIGNED_DATASETS_GROUP_ID,
   SVC_TASKS_USER_ID,
   SVC_TASKS_SUBJECT_ID,

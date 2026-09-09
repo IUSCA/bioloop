@@ -4,17 +4,46 @@ const {
 } = require('@prisma/client');
 const createError = require('http-errors');
 
-const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
+const { SYSTEM_PRINCIPAL_GROUP_IDS, PUBLIC_GROUP_ID } = require('@/constants');
 const prisma = require('@/db');
 const accessTypeClosure = require('./accessTypeClosure');
 
-// The system principals every user belongs to, as a SQL VALUES-style union arm. A grant to
-// either is honoured for any signed-in user: `Public` is the wider audience of the two, so
-// it includes the authenticated one.
+// The system principals every signed-in user belongs to, as a SQL VALUES-style union arm.
+// A grant to either is honoured for any signed-in user: `Public` is the wider audience of
+// the two, so it includes the authenticated one.
 // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
 const SYSTEM_PRINCIPALS_SQL = Prisma.raw(
   SYSTEM_PRINCIPAL_GROUP_IDS.map((id) => `SELECT '${id}'`).join(' UNION '),
 );
+
+/**
+ * The set of subject ids a caller's grants may be addressed to.
+ *
+ * The containment runs one way only. `Public` is the wider audience, so a signed-in caller
+ * holds grants made to `Public` and to `Authenticated Users`. An unauthenticated caller
+ * holds only what was granted to `Public`, and widening the set for them would hand out
+ * every grant an admin meant for signed-in users.
+ *
+ * An unauthenticated caller arrives as the `Public` principal itself, which is a group row
+ * rather than a user, so it has no memberships to expand.
+ * @see docs/design/groups/profiles.md — The anonymous principal
+ *
+ * @param {string} subject_id - a user's subject id, or PUBLIC_GROUP_ID for an anonymous caller
+ * @returns {Prisma.Sql} the body of a `subjects` CTE, selecting one `subject_id` column
+ */
+function subjectSetSql(subject_id) {
+  if (subject_id === PUBLIC_GROUP_ID) {
+    return Prisma.sql`SELECT ${PUBLIC_GROUP_ID} AS subject_id`;
+  }
+  return Prisma.sql`
+      SELECT ${subject_id} AS subject_id
+      UNION
+      SELECT group_id
+      FROM effective_user_groups
+      WHERE user_id = ${subject_id}
+      UNION
+      ${SYSTEM_PRINCIPALS_SQL}`;
+}
 
 /**
  * Helper to build SQL query for fetching grants or access types for a user and dataset, including via group membership and collection-level grants
@@ -45,13 +74,7 @@ function userDatasetsQuery(user_id, dataset_id, { return_type = 'grants', access
   // cSpell: ignore rsrc gat
   return Prisma.sql`
     WITH subjects AS (
-      SELECT ${user_id} AS subject_id
-      UNION
-      SELECT group_id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-      UNION
-      ${SYSTEM_PRINCIPALS_SQL}
+      ${subjectSetSql(user_id)}
     ),
     resources AS (
         SELECT ${dataset_id} AS resource_id
@@ -93,13 +116,7 @@ function userCollectionsQuery(user_id, collection_id, { return_type = 'grants', 
 
   return Prisma.sql`
     WITH subjects AS (
-      SELECT ${user_id} AS subject_id
-      UNION
-      SELECT group_id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-      UNION
-      ${SYSTEM_PRINCIPALS_SQL}
+      ${subjectSetSql(user_id)}
     )
     SELECT ${select_fields}
     FROM valid_grants g
@@ -124,13 +141,7 @@ function userValidGrantsQuery(user_id, access_types = []) {
 
   return Prisma.sql`
     WITH subjects AS (
-      SELECT ${user_id} AS subject_id
-      UNION
-      SELECT group_id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-      UNION
-      ${SYSTEM_PRINCIPALS_SQL}
+      ${subjectSetSql(user_id)}
     )
     SELECT g.*
     FROM valid_grants g
@@ -365,6 +376,7 @@ async function assertGrantItemsApplicableToResourceType(tx, resourceType, items)
 
 module.exports = {
   userHasGrant,
+  subjectSetSql,
   ...accessTypeClosure,
   // grants to a user for a dataset
   getUserDatasetGrants,
