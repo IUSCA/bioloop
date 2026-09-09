@@ -1,5 +1,9 @@
 <template>
-  <VaCard class="h-full">
+  <!--
+    No `h-full`. A percentage height resolves against the grid row, so it defeats the
+    grid's `items-start` and stretches an empty panel to match a full sibling.
+  -->
+  <VaCard>
     <VaCardContent>
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0">

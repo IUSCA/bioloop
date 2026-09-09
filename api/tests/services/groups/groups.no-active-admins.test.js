@@ -13,6 +13,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
+const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const {
   createTestUser,
   createTestGroup,
@@ -94,6 +95,18 @@ describe('groups - getGroupsWithoutActiveAdmins', () => {
     const recipient = results.find((r) => r.id === groupWithMembersOnly.id);
     expect(recipient._count).toBeDefined();
     expect(recipient._count.members).toBeGreaterThanOrEqual(0);
+  });
+
+  it('does not include the system principals, which have no admin by design', async () => {
+    // `Authenticated Users` and `Public` are grant subjects rather than groups anybody
+    // joins or manages, so having no admin is their normal state. Reporting them makes
+    // every real gap harder to see.
+    const results = await groupsService.getGroupsWithoutActiveAdmins();
+    const ids = results.map((r) => r.id);
+
+    for (const systemId of SYSTEM_PRINCIPAL_GROUP_IDS) {
+      expect(ids).not.toContain(systemId);
+    }
   });
 
   it('does not include archived groups even if they lack active admins', async () => {

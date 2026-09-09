@@ -90,7 +90,12 @@
             Platform
           </p>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <!--
+            Stacked at full width rather than paired. An audit message wraps to three
+            lines in a half-width card, which made this panel five times the height of
+            anything beside it.
+          -->
+          <div class="flex flex-col gap-4">
             <DashboardSection
               title="Groups with no active admin"
               subtitle="Nobody can govern the data these groups own"
@@ -155,18 +160,18 @@
                 :show-clear-filters="false"
                 class="py-8"
               />
+              <!--
+                AuditLog lays its own message out across the full width and carries its
+                own timestamp, so the row gives it the width and adds nothing beside it.
+                A second column squeezed the message to one word per line.
+              -->
               <div v-else class="flex flex-col">
                 <div
                   v-for="record in recentActivity"
                   :key="record.id"
-                  class="flex items-start justify-between gap-3 py-2 border-b border-solid border-gray-200 dark:border-gray-700 last:border-b-0"
+                  class="py-2 border-b border-solid border-gray-200 dark:border-gray-700 last:border-b-0"
                 >
-                  <AuditLog :record="record" class="text-sm min-w-0" />
-                  <span
-                    class="text-xs va-text-secondary whitespace-nowrap shrink-0"
-                  >
-                    {{ datetime.fromNowShort(record.timestamp) }}
-                  </span>
+                  <AuditLog :record="record" class="text-sm" />
                 </div>
               </div>
             </DashboardSection>

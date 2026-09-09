@@ -1248,10 +1248,15 @@ async function getGroupHierarchy({
 async function getGroupsWithoutActiveAdmins() {
   // From all non-archived groups, remove groups that have at least one active admin user.
   // An active admin user is defined as a user that is not deleted and has an admin role in the group.
+  // The system principals are grant subjects, not groups anybody joins or manages, so
+  // having no admin is their normal state rather than a gap to report. They are excluded
+  // here for the same reason the group listing excludes them.
+  // @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
   const rows = await prisma.$queryRaw`
     SELECT g.id
     FROM "group" g
     WHERE g.is_archived = false
+      AND g.id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})
       AND NOT EXISTS (
         SELECT 1
         FROM active_group_user gu
