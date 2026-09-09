@@ -400,11 +400,33 @@ name, and the tab renders a "via" label. This is risk 5, which
 [Trust and communication](./trust-and-communication.md) calls a launch requirement rather than
 an enhancement.
 
-Both are raw SQL building a `json_agg` per row, and both already select `source_preset_id`.
-Adding `source_access_request_id` and a left join to `grant_preset` for the name is the whole
-change on the server.
+The plan said the server change was a left join for the preset name. It was not, because
+`source_preset_id` was null on exactly the grants that needed it. `GrantIssueService` refused
+`access_request_id` and `source_preset_id` together, so a grant expanded from an approved
+preset item recorded the request and forgot the preset.
 
-*Files:* `services/grants/fetch.js`, `DatasetGrantsTab.vue`, `CollectionGrantsTab.vue`.
+That constraint is wrong rather than inconvenient: such a grant has both provenances. It is
+removed, and the service now builds an `access_type_id → preset_id` map alongside the expiry
+map it already builds, so each grant records the preset that supplied it. An access type a
+request named directly did not come from a preset and maps to null, whatever else the request
+contained; an access type two presets both supply has no single answer and maps to null too,
+because a label naming one of two presets is worse than none.
+
+Grants issued before this carry no preset and show only the request, which is honest.
+
+Both grouped queries emit `source_preset` and `source_access_request` as nested objects,
+because `GrantRow` and `GrantProvenanceBox` already read that shape. The request link now
+goes to B3's page; before it went nowhere, so it reads "View request" rather than printing a
+UUID.
+
+*Files:* `services/grants/issue.js`, `services/grants/fetch.js`, `GrantProvenanceBox.vue`,
+`DatasetGrantsTab.vue`, `CollectionGrantsTab.vue`.
+
+Checked against the running app. An approved "Standard Research Use (Dataset)" request now
+shows each of its three grants badged with the preset name and captioned "Issued as part of
+'Standard Research Use (Dataset)'", and the request link opens the request, which reads
+"3 LIVE". A revoked grant from an earlier single-access-type request sits beside them with no
+preset badge.
 
 ## Phase D — Close the notification loop
 
@@ -479,8 +501,8 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B6, C1 to C4 are built, and the loop was driven end to end in the browser on both
-resource types. C5, D1, and D2 are planned and not started.
+A1, B1 to B6, and C1 to C5 are built, and the loop was driven end to end in the browser on
+both resource types. D1 and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

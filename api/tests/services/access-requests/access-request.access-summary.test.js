@@ -91,6 +91,50 @@ async function approvedRequest(accessTypeId) {
   return created.id;
 }
 
+describe('grant provenance', () => {
+  // A grant issued from an approved preset item carries both the request and the preset,
+  // so the Access tab can say "via Standard Research Use" rather than listing five access
+  // types with no shape.
+  // @see docs/design/groups/access-requests-plan.md — C5
+  test('a preset request stamps the preset on every grant it expands to', async () => {
+    const preset = await prisma.grant_preset.findFirstOrThrow({
+      where: { is_active: true, resource_types: { has: 'DATASET' } },
+      include: { access_type_items: true },
+    });
+
+    const created = await arService.createAndSubmitAccessRequest({
+      type: 'NEW',
+      resource_id: dataset.resource_id,
+      subject_id: requester.subject_id,
+      purpose: 'preset provenance test',
+      items: [{ preset_id: preset.id }],
+    }, requester.subject_id);
+
+    await arService.submitReview({
+      request_id: created.id,
+      reviewer_id: reviewer.subject_id,
+      options: {
+        decision_reason: 'approved for the test',
+        item_decisions: created.access_request_items.map((item) => ({
+          id: item.id,
+          decision: 'APPROVED',
+          approved_expiry: Expiry.fromJSON({ type: 'never' }),
+        })),
+      },
+    });
+
+    const issued = await prisma.grant.findMany({
+      where: { source_access_request_id: created.id },
+      select: { source_preset_id: true, access_type_id: true },
+    });
+
+    expect(issued.length).toBeGreaterThan(0);
+    for (const g of issued) {
+      expect(g.source_preset_id).toBe(preset.id);
+    }
+  }, 30_000);
+});
+
 describe('access summary', () => {
   test('an approval with a live grant reports one live grant', async () => {
     const requestId = await approvedRequest(downloadTypeId);

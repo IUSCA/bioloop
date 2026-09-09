@@ -8,6 +8,23 @@ const prisma = require('@/db');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
 
+/**
+ * Where a grant came from, in the shape `GrantRow` and `GrantProvenanceBox` already read.
+ *
+ * A grant issued from an approved preset item inside a request has both, so the Access tab
+ * can say "issued as part of Standard Research Use" rather than listing five access types
+ * with no shape. Both are null on grants that predate the provenance work.
+ *
+ * @see docs/design/groups/access-requests-plan.md — C5
+ */
+const PRESET_JSON = Prisma.sql`
+  CASE WHEN gp.id IS NULL THEN NULL
+  ELSE json_build_object('id', gp.id, 'name', gp.name) END`;
+
+const ACCESS_REQUEST_JSON = Prisma.sql`
+  CASE WHEN ar.id IS NULL THEN NULL
+  ELSE json_build_object('id', ar.id, 'purpose', ar.purpose, 'status', ar.status) END`;
+
 const GRANT_INCLUDES = {
   resource: {
     include: {
@@ -148,12 +165,16 @@ async function listGrantsForSubjectGrouped({
         'access_type_name', gat.name,
         'creation_type', g.creation_type,
         'source_preset_id', g.source_preset_id,
+        'source_preset', ${PRESET_JSON},
+        'source_access_request', ${ACCESS_REQUEST_JSON},
         'valid_from', g.valid_from,
         'valid_until', g.valid_until,
         'revoked_at', g.revoked_at
       )) AS grants
     FROM valid_grants g
     JOIN grant_access_type gat ON g.access_type_id = gat.id
+    LEFT JOIN grant_preset gp ON gp.id = g.source_preset_id
+    LEFT JOIN access_request ar ON ar.id = g.source_access_request_id
     WHERE g.subject_id = ${subject_id}
     GROUP BY g.resource_id
     ORDER BY MAX(g.created_at) ASC -- sort groups by most recent grant creation time
@@ -285,11 +306,15 @@ async function listGrantsForResourceGrouped({
         'access_type_id', g.access_type_id,
         'creation_type', g.creation_type,
         'source_preset_id', g.source_preset_id,
+        'source_preset', ${PRESET_JSON},
+        'source_access_request', ${ACCESS_REQUEST_JSON},
         'valid_from', g.valid_from,
         'valid_until', g.valid_until,
         'revoked_at', g.revoked_at
       )) AS grants
     FROM valid_grants g
+    LEFT JOIN grant_preset gp ON gp.id = g.source_preset_id
+    LEFT JOIN access_request ar ON ar.id = g.source_access_request_id
     ${joins}
     ${whereClause}
     GROUP BY g.subject_id

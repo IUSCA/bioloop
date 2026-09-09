@@ -297,13 +297,10 @@ class GrantIssueService {
   constructor({
     subject_id, resource_id, granted_by, source_preset_id, access_request_id, justification,
   } = {}) {
-    // if access_request_id is provided, source_preset_id must not be provided
-    // if source_preset_id is provided, access_request_id must not be provided
-    // both can be null/undefined
-    if (access_request_id && source_preset_id) {
-      throw new Error('Cannot provide both access_request_id and source_preset_id');
-    }
-
+    // Both may be set. An approved preset item inside a request produces a grant that came
+    // from a request *and* from a preset, and the Access tab needs to say so: without the
+    // preset, "Standard Research Use" decays into a flat list of access types.
+    // @see docs/design/groups/access-requests-plan.md — C5
     this.creation_type = access_request_id ? GRANT_CREATION_TYPE.ACCESS_REQUEST : GRANT_CREATION_TYPE.MANUAL;
 
     this.subject_id = subject_id;
@@ -367,7 +364,46 @@ class GrantIssueService {
     return accessTypeExpirations;
   }
 
+  /**
+   * Which preset supplied each access type, for the grants about to be written.
+   *
+   * An access type named directly by an item did not come from a preset, whatever else the
+   * request contained, so it maps to null. An access type supplied by two different presets
+   * in one issuance has no single answer, so it maps to null too: a label that names one of
+   * two presets is worse than no label.
+   *
+   * @see docs/design/groups/access-requests-plan.md — C5
+   */
+  async _buildAccessTypeIdToPresetIdMap(tx) {
+    const presetIds = this.items.filter((i) => i.preset_id).map((i) => i.preset_id);
+    if (presetIds.length === 0) return new Map();
+
+    const presetIdAccessTypeIdsMap = await buildPresetIdToAccessTypeIdsMap(tx, presetIds);
+
+    const directlyNamed = new Set(
+      this.items.filter((i) => i.access_type_id).map((i) => i.access_type_id),
+    );
+
+    const suppliers = new Map(); // access_type_id -> Set of preset ids
+    for (const item of this.items.filter((i) => i.preset_id)) {
+      for (const accessTypeId of presetIdAccessTypeIdsMap.get(item.preset_id) || []) {
+        if (!suppliers.has(accessTypeId)) suppliers.set(accessTypeId, new Set());
+        suppliers.get(accessTypeId).add(item.preset_id);
+      }
+    }
+
+    const result = new Map();
+    for (const [accessTypeId, presets] of suppliers.entries()) {
+      if (!directlyNamed.has(accessTypeId) && presets.size === 1) {
+        result.set(accessTypeId, [...presets][0]);
+      }
+    }
+    return result;
+  }
+
   async _createNewGrant(tx, { valid_from, expiry, access_type_id }) {
+    const source_preset_id = this.accessTypeIdToPresetId?.get(access_type_id)
+      ?? this.source_preset_id;
     const data = {
       subject_id: this.subject_id,
       resource_id: this.resource_id,
@@ -379,7 +415,7 @@ class GrantIssueService {
       justification: this.justification,
       source_access_request_id: this.access_request_id,
       issuing_authority_id: this.metadata.resourceOwnerGroupId,
-      source_preset_id: this.source_preset_id,
+      source_preset_id,
     };
     const auditData = { actor_name: this.metadata.actorName };
     return _createGrant(tx, data, auditData);
@@ -410,6 +446,8 @@ class GrantIssueService {
   }
 
   async _supersedeGrant(tx, existingGrant, { valid_from, expiry, access_type_id }) {
+    const source_preset_id = this.accessTypeIdToPresetId?.get(access_type_id)
+      ?? this.source_preset_id;
     // Revoke the existing grant with revocation_type = SUPERSEDED
     await tx.grant.update({
       where: { id: existingGrant.id },
@@ -432,7 +470,7 @@ class GrantIssueService {
       justification: this.justification,
       source_access_request_id: this.access_request_id,
       issuing_authority_id: this.metadata.resourceOwnerGroupId,
-      source_preset_id: this.source_preset_id,
+      source_preset_id,
     };
     const auditData = {
       actor_name: this.metadata.actorName,
@@ -459,6 +497,7 @@ class GrantIssueService {
   async issue(tx, items) {
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);
     await this._hydrateMetadata(tx);
+    this.accessTypeIdToPresetId = await this._buildAccessTypeIdToPresetIdMap(tx);
 
     const now = new Date(); // use the same timestamp for all grants created in this batch for consistency
 

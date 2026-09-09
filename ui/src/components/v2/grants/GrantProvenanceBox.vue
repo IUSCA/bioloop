@@ -38,7 +38,7 @@
               emit('navigate-to-request', props.grant.source_access_request.id)
             "
           >
-            #{{ props.grant.source_access_request.id }}
+            View request
           </button>
           <template v-if="props.grant.issuing_authority">
             · approved by {{ props.grant.issuing_authority.name }}

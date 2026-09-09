@@ -118,6 +118,7 @@
                   :can-revoke="canRevoke"
                   @revoke="onRevokeGrant"
                   @revoke-all="onRevokeAllGrants"
+                  @navigate-to-request="viewRequest"
                 />
               </div>
             </div>
@@ -162,6 +163,15 @@ import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
 import RevokeAllGrantsModal from "@/components/v2/grants/RevokeAllGrantsModal.vue";
 import RevokeGrantModal from "@/components/v2/grants/RevokeGrantModal.vue";
 import GrantService from "@/services/v2/grants";
+
+const router = useRouter();
+
+// A grant that came from a request links to the request that produced it. The page
+// exists now; before B3 this went to a path that did not.
+// @see docs/design/groups/access-requests-plan.md — C5
+function viewRequest(requestId) {
+  router.push(`/v2/access-requests/${requestId}`).catch(() => {});
+}
 
 const props = defineProps({
   collection: { type: Object, required: true },
