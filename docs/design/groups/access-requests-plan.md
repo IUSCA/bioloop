@@ -110,41 +110,85 @@ The seeded `DATASET:REQUEST_ACCESS` and `COLLECTION:REQUEST_ACCESS` access types
 They exist for a later posture where the right to ask diverges from the right to see, and
 nothing needs that separation yet.
 
-*New:* one policy, one route change. *Reuse:* the engine, and the applicability check.
+The check cannot go in the `authorize()` middleware. The create body carries `resource_id` and
+no `resource_type`, so which policy container applies is not known until the `resource` row is
+read. The route therefore reads the resource, then calls `authorizeAction` inside the handler
+with `dataset` or `collection` and the action `view_metadata`, passing `req.policyContext` so
+the caller is hydrated once. `POST /v2/datasets/bulk` already authorizes this way.
+
+`access_request.create` becomes `Policy.always` no longer, but there is nothing useful for it
+to be: the meaningful check is on the resource, not on the request. It is removed from the
+container and the route owns the decision, with a comment saying why.
+
+*Files:* `authorization/builtin/policies/access_request.js`, `routes/access_requests.js`,
+`services/access_requests/request.js`. *Reuse:* `authorizeAction`, and
+`assertGrantItemsApplicableToResourceType`.
 
 ## Phase B — Close the loop
 
+Six steps, in this order. B5 comes before B6 deliberately: deleting the drafts UI removes six
+of the fifteen `.value` readers B6 has to move, so the form rewiring touches two files rather
+than three.
+
 ### B1 — Creating a request submits it
 
-`POST /access-requests` takes `submit: true` and performs both the create and the
+`POST /access-requests` takes `submit: true` and performs the create and the
 `DRAFT → UNDER_REVIEW` transition inside one transaction. The state machine keeps both states
 and both audit events; only the round trip disappears.
 
 Chaining two calls in the client was the alternative. It is rejected because a failure between
-them strands a `DRAFT` row that no surface can see or resume, now that the drafts UI is going.
+them strands a `DRAFT` row that no surface can see or resume, once the drafts UI is gone.
 
-*New:* one route flag. *Reuse:* `submitRequest`.
+Both service functions open their own transaction today, so the bodies split out first.
+`createAccessRequest` and `submitRequest` each become a thin wrapper over a `tx`-taking
+function, and the route calls one transaction that runs both. `submitRequest` also does two
+pre-flight reads outside its transaction, `_getRequestById` and `_assertNoInFlightRequests`;
+both take a client argument so both move inside.
+
+*Files:* `services/access_requests/request.js`, `routes/access_requests.js`.
 
 ### B2 — One request card
 
 `AccessRequestCard.vue` is rebuilt against one contract: it takes `request` and `canAct`, and
-emits `review` and `view`. All three call sites move to it.
+emits `review` and `view`. All three call sites move to it, and the two prop names in use
+today, `canAct` and `canReview`, collapse into the first.
 
-This is where an approved item says what access it produced, which is the requester-facing half
-of the case-2 explanation described under [Two things settled here](#two-things-settled-here).
+The card carries the requester, the subject, the resource, the status, and the item count. It
+is a list row, so the decision detail belongs on B3's page rather than here.
 
-*Rebuilt:* one component. *Reuse:* the status vocabulary in `UploadStatusBadge.vue` is the
-model for the badge, not the source.
+*Files:* `components/v2/access-requests/AccessRequestCard.vue`, and its three call sites.
 
-### B3 — The review flow is reachable
+### B3 — The request detail page
+
+`pages/v2/access-requests/[id].vue`. Nothing renders one request today: `viewRequest` in the
+queue pushes to `/access-requests/:id`, which is a legacy path that does not exist, so the
+link is a 404.
+
+The page shows the request, its items with their decisions, and the effective-access summary
+C4 adds. It is the surface C3's requester-facing half needs, and the one a notification can
+link to.
+
+*Files:* one page, one route entry. *Reuse:* `RequestContextHeader.vue`, and `GET /access-requests/:id`.
+
+### B4 — The review flow is reachable
 
 `ReviewRequestModal.vue` is wired into `pages/v2/access-requests/index.vue` and both resource
-tabs. `AccessRequestReviewModal.vue` is deleted.
+tabs. `AccessRequestReviewModal.vue`, the eighteen-line stub, is deleted.
 
-*Reuse:* the entire existing modal, its form, its item rows, and its preview. *New:* the
-wiring.
+The modal takes `requestId` as a required prop and exposes `show()`, while the queue calls
+`reviewModal.value?.show?.(request, action)` with arguments the modal ignores. The page holds
+a `selectedRequestId` ref and renders the modal under `v-if`, so each request gets a fresh
+instance rather than a stale one.
 
-### B4 — The two resource tabs work
+*Files:* the queue page, both resource tabs, one deletion.
+
+### B5 — The drafts UI is deleted
+
+`RequestAccessModal.vue`, `DraftRequestPicker.vue`, and `useAccessRequestDrafts.js` total 473
+lines and are imported by nothing. The decision that the UI shows no drafts is already taken,
+and B1 removes the last reason a draft could appear.
+
+### B6 — The two resource tabs, and the form's state wiring
 
 `DatasetRequestsTab` gets the request-access modal and exposes the opener the dataset page
 already calls. `CollectionRequestsTab` loses the `props.collectionId` guard that stops it
@@ -152,25 +196,23 @@ fetching.
 
 The capability name is unified in the same change. `dataset.review_access_requests` and
 `collection.review_requests` name one concept, and the epic's goal is a consistent interface
-across the two resources. The restrictions test catches any call site missed.
+across the two resources. `review_access_requests` wins, because `review_requests` inside a
+collection policy does not say requests for what. Four files hold the two names, and the
+restrictions test catches any call site missed.
 
-B4 also has to fix the request form's state wiring, which is worse than the four breaks above.
+The form's state wiring is fixed here too, and it is worse than the four breaks above.
 `useRequestAccessForm` returns its refs inside a plain object, so `formState.subject` in a
 template is the ref rather than its value. Half the readers know this and write
 `formState.conflictError.value`; the bindings do not, and `v-model="formState.subject"`
 replaces the ref on an object nothing is tracking. The composable never sees the subject, so
-`isFormValidForSubmit` stays false and the form cannot be submitted.
+`isFormValidForSubmit` stays false and the form cannot be submitted at all.
 
-Returning `reactive({...})` fixes the bindings and breaks the fifteen `.value` readers across
-four files, so the two halves move together. One of those files is deleted by B5.
+Returning `reactive({...})` fixes the bindings and breaks every `.value` reader, so the two
+halves move together. After B5 that is nine readers across two files.
 
-*Reuse:* `RequestAccessModalWithoutDrafts` on both sides.
-
-### B5 — The drafts UI is deleted
-
-`RequestAccessModal.vue`, `DraftRequestPicker.vue`, and `useAccessRequestDrafts.js` total 473
-lines and are imported by nothing. The decision that the UI shows no drafts is already taken,
-and B1 removes the last reason a draft could appear.
+*Files:* both resource tabs, `useRequestAccessForm.js`, `RequestAccessForm.vue`,
+`RequestAccessModalWithoutDrafts.vue`, both policy files, `restrictions.js`, both resource
+pages.
 
 ## Phase C — Tell the truth about access
 
@@ -235,6 +277,13 @@ so no client infers it. C1's query answers this too.
 Grants written before this work carry no `source_access_request_id`, so the summary is empty
 for seeded rows and correct for everything issued from now on.
 
+The summary is derived, not stored. For one request it counts the grants naming it as their
+source, split into live, revoked, and expired, and it names the most recent revocation. C1's
+query supplies the live half and distinguishes the case where an approved item wrote nothing
+because a broader grant covers it.
+
+*Files:* `services/access_requests/fetch.js`, `routes/access_requests.js`, B3's page, B2's card.
+
 ### C5 — Every grant row names where it came from
 
 `grant` already carries `source_access_request_id` and `source_preset_id`. Neither reaches the
@@ -245,19 +294,35 @@ name, and the tab renders a "via" label. This is risk 5, which
 [Trust and communication](./trust-and-communication.md) calls a launch requirement rather than
 an enhancement.
 
+Both are raw SQL building a `json_agg` per row, and both already select `source_preset_id`.
+Adding `source_access_request_id` and a left join to `grant_preset` for the name is the whole
+change on the server.
+
+*Files:* `services/grants/fetch.js`, `DatasetGrantsTab.vue`, `CollectionGrantsTab.vue`.
+
 ## Phase D — Close the notification loop
 
 ### D1 — Submission and decision are notified, in app
 
-`EVENTS.REQUEST_RECEIVED` and `EVENTS.REQUEST_COMPLETED` already have handlers registered on
-the notification bus, and nothing emits either. `submitRequest` emits the first and
-`submitReview` emits the second.
-
-In-app delivery only. Email templates, digests, and preference handling belong to the
-notifications epic.
-
 Use case 9 puts this in the first release, because people do not poll a portal and an
 un-notified approval reads as a rejection.
+
+`submitRequest` notifies the reviewers, who are the admins of the resource's owning group.
+`submitReview` notifies the requester. Both write through `InAppNotificationService.create`
+directly.
+
+The bus is deliberately not used. `EVENTS.REQUEST_RECEIVED` and `EVENTS.REQUEST_COMPLETED`
+have handlers registered and nothing emits them, so emitting looked like the obvious wiring.
+But `NotificationService._enqueue` always queues an email job and throws when it has no
+recipients; in-app is a dual-write that happens only when a `userId` comes along too. There is
+no in-app-only path, and adding one changes shared infrastructure that the notifications epic
+owns. So those two events keep having no emitter, and this epic writes the in-app row itself.
+
+Reviewers are found by joining the resource to its owning group and that group to
+`active_group_user` on `role = 'ADMIN'`, which is the same set
+`getRequestsPendingReviewForUser` selects from the other direction.
+
+*Files:* `services/access_requests/request.js`, `services/access_requests/review.js`.
 
 ### D2 — Stale requests expire on a schedule
 
@@ -308,4 +373,9 @@ seeded data by design.
 
 ## Status
 
-Phase C1 through C3 are built. Everything else is planned and not started.
+C1, C2, and C3 are built and checked against the running app. A1, B1 to B6, C4, C5, D1, and
+D2 are planned and not started.
+
+The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
+because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to
+have somewhere to render, and D1 needs B3's page to have somewhere to link to.
