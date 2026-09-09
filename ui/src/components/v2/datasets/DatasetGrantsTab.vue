@@ -279,8 +279,8 @@ async function fetchGrants() {
 //   }
 // }
 
-function onRevokeGrant({ grant, subject }) {
-  revokeGrantModal.value?.show({ grant, subject });
+function onRevokeGrant({ grant, subject, siblingGrants }) {
+  revokeGrantModal.value?.show({ grant, subject, siblingGrants });
 }
 
 function onRevokeAllGrants({ grants, subject, resourceType, resourceId }) {

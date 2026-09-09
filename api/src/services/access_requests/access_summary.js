@@ -126,9 +126,16 @@ async function getAccessSummaryForRequest(request) {
   const summaries = await getGrantCountsForRequests([request.id]);
   const summary = summaries.get(request.id);
 
-  const approvedAccessTypeIds = (request.access_request_items ?? [])
-    .filter((item) => item.decision === 'APPROVED' && item.access_type_id != null)
-    .map((item) => item.access_type_id);
+  // An approved item names either one access type or a preset. A preset item leaves
+  // `access_type_id` null and carries its types under `preset.access_type_items`, so reading
+  // only the direct column answers the coverage question for no preset request at all.
+  const approvedAccessTypeIds = [...new Set(
+    (request.access_request_items ?? [])
+      .filter((item) => item.decision === 'APPROVED')
+      .flatMap((item) => (item.access_type_id != null
+        ? [item.access_type_id]
+        : (item.preset?.access_type_items ?? []).map((i) => i.access_type_id))),
+  )];
 
   if (approvedAccessTypeIds.length === 0) {
     return { ...summary, covered_elsewhere: [] };

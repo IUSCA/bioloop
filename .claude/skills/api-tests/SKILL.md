@@ -279,6 +279,82 @@ it. That isolates the part worth unit-testing, which is Handlebars' auto-escapin
 attacker-supplied values such as a group name, from the mjml conversion. Check that the result
 survives mjml end to end against MailHog, where the worker does it for real.
 
+## `toBeDefined()` passes for `null`, so it asserts almost nothing here
+
+Prisma's `findFirst` returns `null` when nothing matches, and `expect(null).toBeDefined()`
+passes. A test written as
+
+```js
+const g = await fetchActiveGrant(viewMetaId);
+expect(g).toBeDefined();          // passes even when no grant exists
+```
+
+only fails later, where something dereferences `g.valid_until`. Several grant tests were
+silently weak this way, and the weakness surfaced as a confusing partial failure when the
+write path changed.
+
+Use `expect(g).not.toBeNull()` for a row that must exist, and `expect(g).toBeNull()` for one
+that must not. Assert the absence explicitly whenever a change is supposed to stop writing
+something — otherwise nothing distinguishes "correctly skipped" from "never worked".
+
+## Grants accumulate across tests, and the access-type order makes that order-dependent
+
+Several suites grant to the same subject and resource in test after test with no cleanup
+between. That was harmless while every access type was independent. It is not harmless now:
+a `DATASET:DOWNLOAD` grant left by one test covers a later test's `DATASET:LIST_FILES`
+request through the access-type order, the approval writes nothing, and the later test fails
+on a premise the earlier test destroyed.
+
+Add an `afterEach` that clears grants for the resource when a suite grants repeatedly to one
+subject:
+
+```js
+afterEach(async () => {
+  await prisma.grant.deleteMany({ where: { resource_id: dataset.resource_id } });
+});
+```
+
+The same shape bites fixtures. `prisma.grant_access_type.findMany({ take: 3 })` returns
+`VIEW_METADATA`, `VIEW_SENSITIVE_METADATA`, and `REQUEST_ACCESS`, and the last two both imply
+the first — so a preset built from them collapses to one grant and every expansion,
+deduplication, and supersession case has nothing to act on. When a test needs several access
+types to behave independently, name pairwise incomparable ones explicitly:
+`DATASET:VIEW_SENSITIVE_METADATA`, `DATASET:DOWNLOAD`, and `DATASET:LIST_DERIVED_DATASETS`.
+
+@see docs/design/groups/decisions.md — 7. Access types imply one another
+
+## Count assertions become order-dependent when the order can absorb a row
+
+`supports 10 concurrent non-overlapping access_type issues` asserted ten rows for ten distinct
+access types. Distinct is not independent: whichever transaction commits second finds the
+first already covering it and writes nothing, so the row count is nine or ten depending on
+commit order. It failed roughly one full run in two, which reads as flake rather than as a
+wrong assertion.
+
+Assert what does not depend on ordering. Expand the written grants through the closure and
+check every requested type is held:
+
+```js
+const held = await expand(live.map((g) => g.access_type.name));
+for (const type of types) expect(held.has(type.name)).toBe(true);
+```
+
+## A single failure in a full run is usually cross-suite interference
+
+Four consecutive full runs on 2026-09-09 produced three different single-test failures and
+one clean run, in `issueGrants.concurrency`, `coverage`, and `auth.invite`. Each one passed
+on a targeted rerun of its own file, several times over. The suites share one development
+database, and `tests/routes/` additionally shares one running API.
+
+So the order is: rerun the failing file alone, then rerun it a few times. Only if it fails
+there is it worth reading as a defect. Going the other way — assuming a full-run failure is
+real and editing the code — costs a session. The standing instances are filed in
+`.todo/local/misc-carryover.md`.
+
+The exception is a failure that is *reproducible* in a full run and absent from a targeted
+one, which points at real shared state rather than at timing. The concurrency count
+assertion above was exactly that, and it was a genuine bug in the assertion.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

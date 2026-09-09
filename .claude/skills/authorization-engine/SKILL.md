@@ -99,6 +99,34 @@ labelled `GRANT HOLDER`, not `MEMBER`. That is correct: the access came from the
 
 @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
 
+## A policy that requires an unhydratable attribute is a 500, and only for non-admins
+
+A policy's `requires.resource` names attributes the hydrator must supply. When one is neither
+a column on the model nor a registered virtual attribute, hydration throws
+`HydrationError: [<model>] Unknown attributes: <name>` and the request dies with a 500 before
+`evaluate` runs.
+
+Two things make this hard to notice.
+
+**A platform admin never sees it.** The engine allows a platform admin before any policy runs,
+so the hydrator is never reached. A browser pass driven as `test_user` proves nothing about a
+policy path — sign in as a group admin such as `user-054` instead. This is how a 500 on
+`POST /grants/:id/revoke` survived a phase that was driven end to end in the browser.
+
+**A route that pre-fetches hides it too.** `authorize('grant', 'create', { preFetchedResourceFn })`
+supplies the attributes itself, so the same policy works there and fails only on the routes
+that authorize from an id alone.
+
+The fix is a virtual attribute on the model's hydrator. `grant.resource_type` is not a column —
+the type lives on the `resource` row — so `builtin/hydrators/grant.js` resolves it, and
+`access_request.js` does the same for `resource2` after the identical mistake. A model with no
+entry in `hydratorRegistry` gets `createDefaultHydrator`, which has no virtual attributes at
+all, so adding a policy requirement to such a model is where this bites.
+
+`tests/authorization/grantHydrator.test.js` shows the shape: call
+`hydrator.hydrate({ id, attributes })` — an object, not positional arguments — and assert the
+attribute resolves.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

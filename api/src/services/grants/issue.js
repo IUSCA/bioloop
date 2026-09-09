@@ -9,6 +9,7 @@ const Expiry = require('@/utils/expiry');
 const audit = require('@/authorization/builtin/audit');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const prisma = require('@/db');
+const accessTypeClosure = require('./accessTypeClosure');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const {
   getResourceOwnerGroupId,
@@ -282,6 +283,56 @@ async function fetchExistingGrants(tx, { subject_id, resource_id, accessTypeIds 
   return existingGrantMap;
 }
 
+/**
+ * The live grant of a *wider* access type that already covers each requested type.
+ *
+ * Distinct from `fetchExistingGrants`, which matches the exact type because that is the only
+ * grant a write may close. A wider grant is never closed: superseding a DOWNLOAD grant in
+ * order to write a LIST_FILES grant would narrow the subject's access, which approving a
+ * request must never do. It is read only to decide that writing anything is unnecessary.
+ *
+ * @param {object} tx - Prisma transaction
+ * @param {object} params
+ * @param {string} params.subject_id
+ * @param {string} params.resource_id
+ * @param {number[]} params.accessTypeIds - the types about to be granted
+ * @returns {Promise<Map<number, object>>} requested type id → the longest-lived wider grant
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ */
+async function fetchCoveringGrants(tx, { subject_id, resource_id, accessTypeIds }) {
+  const covering = new Map();
+  if (accessTypeIds.length === 0) return covering;
+
+  const widened = await accessTypeClosure.satisfiedByIds(accessTypeIds);
+  const wider = widened.filter((id) => !accessTypeIds.includes(id));
+  if (wider.length === 0) return covering;
+
+  const where = getPrismaGrantValidityFilter(true);
+  where.subject_id = subject_id;
+  where.resource_id = resource_id;
+  where.access_type_id = { in: wider };
+
+  // The access type comes along, because the reviewer's preview names the grant that makes
+  // writing this one unnecessary, and naming it needs more than an id.
+  const grants = await tx.grant.findMany({ where, include: { access_type: true } });
+  if (grants.length === 0) return covering;
+
+  const impliedIds = await accessTypeClosure.impliedIdsByAccessTypeId();
+  for (const grant of grants) {
+    const confers = impliedIds.get(grant.access_type_id) ?? [];
+    for (const requested of accessTypeIds) {
+      if (!confers.includes(requested)) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+      const held = covering.get(requested);
+      // The subject keeps the most favourable coverage, so a later expiry wins.
+      if (!held || Expiry.compare(grant.expiry, held.expiry) > 0) covering.set(requested, grant);
+    }
+  }
+  return covering;
+}
+
 class GrantIssueService {
   /**
    *
@@ -361,7 +412,23 @@ class GrantIssueService {
       }
     }
 
-    return accessTypeExpirations;
+    // Drop what the order already supplies. A grant of DATASET:DOWNLOAD satisfies every check
+    // for DATASET:LIST_FILES and DATASET:VIEW_METADATA, so a preset naming all three describes
+    // one fact and should write one row.
+    //
+    // A wider type only absorbs a narrower one when it lasts at least as long. Approving a
+    // month of DOWNLOAD alongside a year of VIEW_METADATA leaves both, because dropping the
+    // year would end metadata access eleven months early.
+    // @see docs/design/groups/decisions.md — 7. Access types imply one another
+    const keptIds = await accessTypeClosure.reduceToMaximalIds(
+      [...accessTypeExpirations.keys()],
+      (wider, narrower) => Expiry.compare(
+        accessTypeExpirations.get(wider),
+        accessTypeExpirations.get(narrower),
+      ) >= 0,
+    );
+
+    return new Map(keptIds.map((id) => [id, accessTypeExpirations.get(id)]));
   }
 
   /**
@@ -533,12 +600,31 @@ class GrantIssueService {
       accessTypeIds: Array.from(accessTypeExpirations.keys()),
     });
 
+    // access_type_id -> a live grant of a wider type that already confers it
+    const coveringGrantMap = await fetchCoveringGrants(tx, {
+      subject_id: this.subject_id,
+      resource_id: this.resource_id,
+      accessTypeIds: Array.from(accessTypeExpirations.keys()),
+    });
+
     const effectiveGrants = [];
 
     for (const [accessTypeId, expiry] of accessTypeExpirations.entries()) {
       const existingGrant = existingGrantMap.get(accessTypeId);
+      const coveringGrant = coveringGrantMap.get(accessTypeId);
 
-      if (!existingGrant) {
+      if (!existingGrant && coveringGrant && Expiry.compare(coveringGrant.expiry, expiry) >= 0) {
+        // A wider grant already confers this type for at least as long, so writing a narrower
+        // row would add nothing. The item is still approved and the skip is still audited.
+        // @see docs/design/groups/decisions.md — 7. Access types imply one another
+        effectiveGrants.push({
+          type: 'existing',
+          access_type_id: accessTypeId,
+          expiry: coveringGrant.expiry,
+          existingGrant: coveringGrant,
+          covered_by_wider: true,
+        });
+      } else if (!existingGrant) {
       // case-1: no existing grant - new grant would be created
         effectiveGrants.push({
           type: 'new',

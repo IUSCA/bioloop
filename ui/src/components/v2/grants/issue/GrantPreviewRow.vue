@@ -33,7 +33,7 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 const props = defineProps({
-  /** { type: 'new'|'existing'|'supersede', access_type_id, expiry, existing_grant, access_type, source } */
+  /** { type: 'new'|'existing'|'supersede', access_type_id, expiry, existingGrant, access_type, covered_by_wider, source } */
   row: {
     type: Object,
     required: true,
@@ -69,6 +69,16 @@ const note = computed(() => {
     // existing grant with equal or later valid_until than the approved_until - existing grant remains effective
     // Approving this item writes nothing, so the covering grant is the whole explanation.
     // @see docs/design/groups/access-requests-plan.md — C3
+    if (props.row.covered_by_wider) {
+      // The covering grant is a wider access type, which confers this one through the order,
+      // so naming it is the difference between an explanation and an apparent no-op.
+      // @see docs/design/groups/decisions.md — 7. Access types imply one another
+      const wider =
+        existingGrant?.access_type?.description ??
+        existingGrant?.access_type?.name ??
+        "a wider grant";
+      return `Already conferred by “${wider}” expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
+    }
     return `Already covered by a grant expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
   }
   if (type === "supersede") {

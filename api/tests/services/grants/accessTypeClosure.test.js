@@ -14,7 +14,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
 const {
-  getAccessTypeClosure, satisfiedBy, expand,
+  getAccessTypeClosure, satisfiedBy, expand, reduceToMaximalIds,
 } = require('@/services/grants/accessTypeClosure');
 const { GRANT_ACCESS_TYPES, GRANT_ACCESS_TYPE_IMPLICATIONS } = require('@/constants');
 const {
@@ -110,6 +110,45 @@ describe('the access type graph', () => {
     const inCode = GRANT_ACCESS_TYPE_IMPLICATIONS.map(([a, b]) => `${a}->${b}`).sort();
 
     expect(inDb).toEqual(inCode);
+  });
+
+  // A preset that lists a type another member already implies asks for the same fact twice.
+  // The write path reduces it away, so this asserts the seeded configuration and the code
+  // agree about how many rows a preset is worth.
+  // @see docs/design/groups/access-type-order-plan.md — Phase 2
+  test('every seeded preset expands to a set with no implied member', async () => {
+    const presets = await prisma.grant_preset.findMany({
+      include: { access_type_items: true },
+    });
+    expect(presets.length).toBeGreaterThan(0);
+
+    for (const preset of presets) {
+      const ids = preset.access_type_items.map((i) => i.access_type_id);
+      // eslint-disable-next-line no-await-in-loop
+      const reduced = await reduceToMaximalIds(ids);
+
+      // The reduction is idempotent: nothing in the reduced set implies anything else in it.
+      // eslint-disable-next-line no-await-in-loop
+      expect(await reduceToMaximalIds(reduced)).toEqual(reduced);
+      expect(reduced.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('reduceToMaximalIds keeps a narrower type its wider one cannot cover', async () => {
+    const idByName = new Map(
+      (await prisma.grant_access_type.findMany()).map((t) => [t.name, t.id]),
+    );
+    const viewMetadata = idByName.get('DATASET:VIEW_METADATA');
+    const download = idByName.get('DATASET:DOWNLOAD');
+
+    // Download implies view metadata, so on the order alone it absorbs it.
+    expect(await reduceToMaximalIds([viewMetadata, download])).toEqual([download]);
+
+    // A caller that says download may not absorb it keeps both, which is how the write path
+    // stops a month of download from cutting short a year of metadata access.
+    expect(
+      (await reduceToMaximalIds([viewMetadata, download], () => false)).sort(),
+    ).toEqual([viewMetadata, download].sort());
   });
 
   test('is built once and cached, not recomputed per call', async () => {

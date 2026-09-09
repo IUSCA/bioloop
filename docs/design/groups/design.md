@@ -544,8 +544,14 @@ This invariant prevents:
 Having this invariant helps with:
 - Deterministic explainability
 - Simple revocation logic
-- Idempotent preset application
-- Clean mental model: one grant = one permission fact.
+- Idempotent grant issuance: applying the same preset twice creates nothing the second time
+- Clean mental model: one grant = one access type held over one interval
+
+The constraint is per access type, and the order runs across access types. A grant of
+`DOWNLOAD` is one row and satisfies checks for `LIST_FILES` and `VIEW_METADATA` as well, so
+one row is not one capability. It is one authorization fact, and the order says what that
+fact reaches. Issuance reduces a request to the access types the order does not already
+supply, so the two never disagree about how many rows an approval is worth.
 
 ### Critical Constraint: Grants Are Only For Consumption Actions
 
@@ -611,88 +617,51 @@ This separation prevents:
 
 ### Grant Presets
 
-The system's grant model is atomic: each grant names one subject, one resource, and one access type. That gives precise control and a clear audit trail, and it imposes cognitive overhead on data stewards who simply want to make a dataset "public" or "downloadable by my lab."
+A grant names one subject, one resource, and one access type. That is precise and auditable,
+and it asks a data steward to think in access types when they only want to make a dataset
+downloadable by their lab. **Grant presets** are named bundles of access types that close
+that gap.
 
-**Grant presets** bridge this gap by mapping familiar governance concepts to the underlying grant primitives. They allow administrators and users to reason about access using natural, domain-appropriate terminology rather than understanding the technical mechanics of grant atomicity and composition.
+A preset is a convenience and a provenance label. It is not an enforcement boundary, and it
+does not change what authorization evaluates. The design record is
+[Access presets](./access-presets.md).
 
-#### Why Presets?
+#### What a preset expands to
 
-Presets exist to:
+A preset is expanded when a grant is issued, never when a request is submitted. Expansion
+reduces the preset to the access types the order does not already supply, so a preset naming
+`VIEW_METADATA`, `LIST_FILES`, and `DOWNLOAD` writes one grant of `DOWNLOAD`.
 
-* **Reduce Cognitive Load**: Data stewards think in terms of "make this discoverable" or "share with my institution," not "grant `view_metadata` access type to subject X."
-* **Encode Policy Patterns**: Common access patterns (public datasets, lab-internal data, institutional resources) can be captured as reusable templates.
-* **Ensure Consistency**: Presets encode access patterns an organization has agreed on. They are no longer what stops an incoherent combination — the access-type partial order does that, and a grant of `DOWNLOAD` satisfies a check for `LIST_FILES` whether or not a preset was involved.
-* **Simplify UI/UX**: User interfaces can present governance options as familiar concepts rather than exposing raw grant mechanics.
-* **Maintain Auditability**: Presets expand into explicit atomic grants, preserving full audit trails and explainability.
+A wider access type only absorbs a narrower one when it lasts at least as long. Approving a
+month of `DOWNLOAD` beside a year of `VIEW_METADATA` writes both rows, because dropping the
+year would end metadata access eleven months early.
 
-#### Grant Access Presets
+Each issued grant records the preset that supplied it, so the Access tab names
+"Standard Research Use" rather than listing access types with no shape. An access type the
+request named directly, or that two presets both supply, records no preset.
 
-Grant access presets define **what actions** a subject may perform. Each preset expands into one or more atomic grants with specific access types.
+#### The seeded presets
 
-Examples (illustrative, not prescriptive):
+Four presets ship with the platform, two scoped to collections and two to datasets. They are
+platform configuration rather than lifecycle-managed entities: they carry no version, no
+per-group variant, and no owner. `is_active` retires one without deleting it, because
+historical requests reference it.
 
-* **`DISCOVERABLE`**: Grants `view_metadata` only. Dataset appears in search results and listings, but data remains inaccessible.
-* **`VIEWABLE`**: Grants `view_metadata` and `view_sensitive_metadata`. Full metadata visibility without data access.
-* **`READABLE`**: Grants `view_metadata` and `read_data`. Enables in-browser data viewing or API access.
-* **`DOWNLOADABLE`**: Grants `view_metadata`, `read_data`, and `download`. Full consumption rights including local copies.
-* **`COMPUTABLE`**: Grants `view_metadata` and `compute`. Data may be used in computational workflows but not directly accessed.
+#### What presets do not do
 
-Each preset name reflects the **highest-level capability** it enables, with subordinate grants applied automatically.
+* **They do not constrain revocation.** An admin revokes any grant, whatever issued it.
+* **They do not gate authorization.** Evaluation reads grants and the access-type order, and
+  never asks which preset a grant came from.
+* **They do not stop an incoherent combination.** The order does that, and it does it for a
+  hand-issued grant as well.
 
-#### Visibility Presets
+#### Subject selection is explicit
 
-Visibility presets define **who** receives access. Rather than specifying individual users or groups, stewards can reference common organizational boundaries.
+A preset names access types only. It never resolves a subject. Choosing who receives access —
+a user, a group, or a system principal — is a separate, explicit step in every flow.
 
-Examples (illustrative, not prescriptive):
-
-* **`PUBLIC`** and **`AUTHENTICATED_USERS`**: Target the two system principals. Represent open access to everyone, and to everyone signed in, respectively.
-* **`OWNING_GROUP`**: Targets the resource's owning group. Provides lab-internal or team-private access.
-* **`INSTITUTION`**: Targets the root group in the organizational hierarchy. Represents university-wide or organization-wide access.
-* **`PARENT_GROUP`**: Targets the immediate parent of the owning group in the hierarchy. Useful for center-level sharing.
-
-Visibility presets resolve to specific subjects based on the resource's position in the group topology.
-
-#### Composite Presets
-
-Presets may be composed for common workflows. For example:
-
-* **`OWNING_GROUP:DOWNLOADABLE`**: Applies `DOWNLOADABLE` access to the `OWNING_GROUP`. Creates grants for `view_metadata`, `read_data`, and `download` targeting the owning group and its descendants.
-* **`INSTITUTION:DISCOVERABLE`**: Applies `DISCOVERABLE` access to `INSTITUTION`. Makes dataset searchable across the entire organization.
-* **`PUBLIC:READABLE`**: Public dataset with in-browser viewing but no download rights.
-
-When a composite preset is applied:
-
-1. Visibility preset resolves to target subject(s)
-2. Access preset expands into atomic access types
-3. Individual grants are created with full provenance (preset name recorded in metadata)
-4. Audit trail shows: "Preset `OWNING_GROUP:DOWNLOADABLE` applied → created grants X, Y, Z"
-
-#### Extensibility
-
-Preset definitions are configuration, not code. Organizations may define custom presets reflecting their governance policies:
-
-* **`COLLABORATORS_ONLY`**: Grant to specific external collaboration groups
-* **`TRAINING_REQUIRED`**: Grants conditional on training completion
-* **`EMBARGO_UNTIL`**: Grants with future `validFrom` dates
-
-Each preset definition specifies:
-* Name and description
-* Access types included
-* Subject resolution logic
-* Expiration policy (if applicable)
-* Required preconditions (training, DUA, etc.)
-
-#### Relationship to Core Model
-
-Presets are a **convenience layer**—they do not change authorization semantics:
-
-* Presets always expand into atomic grants
-* Authorization evaluation ignores preset provenance
-* Access explanations reference the underlying grants
-* Revocation operates on individual grants, not presets
-* Preset application is idempotent (reapplying creates no duplicate grants)
-
-This ensures that even as preset definitions evolve, the authorization model remains stable and explainable.
+@see [Access type order plan](./access-type-order-plan.md) for how issuance reduces a preset,
+and [decision 7](./decisions.md#_7-access-types-imply-one-another) for the order itself.
 
 
 ## Restrictions

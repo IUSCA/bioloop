@@ -230,11 +230,20 @@ router.post(
         access_type_ids: effectiveGrants.map((g) => g.access_type_id),
       }),
     );
+    // Attach each coverage row to the access types it answers for, not to its own. The
+    // coverage query widens through the order, so a lab's DATASET:DOWNLOAD grant is what
+    // covers a request for DATASET:LIST_FILES, and keying by the row's own type would file
+    // it under a type the reviewer never asked about.
+    // @see docs/design/groups/decisions.md — 7. Access types imply one another
+    const impliedIds = await grantService.impliedIdsByAccessTypeId();
     const indirectByAccessType = new Map();
     for (const row of coverage.filter((c) => c.via !== 'DIRECT')) {
-      const held = indirectByAccessType.get(row.access_type_id) ?? [];
-      held.push(row);
-      indirectByAccessType.set(row.access_type_id, held);
+      const answersFor = [row.access_type_id, ...(impliedIds.get(row.access_type_id) ?? [])];
+      for (const accessTypeId of answersFor) {
+        const held = indirectByAccessType.get(accessTypeId) ?? [];
+        held.push(row);
+        indirectByAccessType.set(accessTypeId, held);
+      }
     }
 
     return res.json(effectiveGrants.map((g) => ({

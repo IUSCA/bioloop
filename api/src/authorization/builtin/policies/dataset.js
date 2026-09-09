@@ -208,6 +208,14 @@ datasetPolicies
       userHasGrant('DATASET:COMPUTE'),
     ]),
 
+    // Reading the dataset in place, from the path the storage layer exposes. The access type
+    // was grantable with nothing checking it, so granting it conferred file listing through
+    // the order and nothing named remote access.
+    remote_access: Policy.or([
+      isDatasetOwningGroupAdmin,
+      userHasGrant('DATASET:REMOTE_ACCESS'),
+    ]),
+
     // ------------------------------------------------------------------
     // STAGING
     // Requesting that a dataset be staged is a data-plane action.
@@ -387,13 +395,11 @@ datasetPolicies
     { policy: isDatasetOwningGroupAdmin, role: callerRoles.ADMIN },
     { policy: hasDatasetOwningGroupOversight, role: callerRoles.OVERSIGHT },
     {
-      policy: Policy.or([
-        userHasGrant('DATASET:VIEW_METADATA'),
-        userHasGrant('DATASET:LIST_FILES'),
-        userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
-        userHasGrant('DATASET:DOWNLOAD'),
-        userHasGrant('DATASET:COMPUTE'),
-      ]),
+      // Every dataset access type implies DATASET:VIEW_METADATA, so one check answers
+      // "does this caller hold any grant on this dataset". Listing the others changed
+      // nothing, because the hydrated set is already closed over the order.
+      // @see docs/design/groups/decisions.md — 7. Access types imply one another
+      policy: userHasGrant('DATASET:VIEW_METADATA'),
       role: callerRoles.GRANT_HOLDER,
     },
   ])

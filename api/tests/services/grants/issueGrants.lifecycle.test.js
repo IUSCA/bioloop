@@ -19,6 +19,10 @@ let group;
 let dataset;
 let viewMetaId;
 let downloadId;
+// DATASET:REQUEST_ACCESS and DATASET:VIEW_SENSITIVE_METADATA both imply DATASET:VIEW_METADATA
+// and neither implies the other, so they give the tests an incomparable pair.
+let requestAccessId;
+let sensitiveMetaId;
 let createdGrantIds = [];
 let createdAccessRequestIds = [];
 
@@ -37,6 +41,8 @@ beforeAll(async () => {
   await deleteGrantsForResource(dataset.resource_id);
   viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
   downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
+  requestAccessId = await getAccessTypeId('DATASET:REQUEST_ACCESS');
+  sensitiveMetaId = await getAccessTypeId('DATASET:VIEW_SENSITIVE_METADATA');
 }, 30000);
 
 afterEach(async () => {
@@ -114,21 +120,25 @@ describe('issueGrants - lifecycle', () => {
     expect(audit).toBeDefined();
   });
 
-  it('expands a preset grant and creates grants for each access type', async () => {
+  // A preset lists DATASET:VIEW_METADATA, DATASET:LIST_FILES, and DATASET:DOWNLOAD. Download
+  // satisfies every check for the other two, so one row records the fact and three would
+  // record it three times.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  it('expands a preset to the access types the order does not already supply', async () => {
     const presetId = BUILTIN_PRESET_STANDARD_RESEARCH;
     const x_expiry = Expiry.at(new Date(Date.now() + 86400000));
     await prisma.$transaction(async (tx) => {
       await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: x_expiry }]);
     });
 
-    const g1 = await fetchActiveGrant(viewMetaId);
-    const g2 = await fetchActiveGrant(downloadId);
-    expect(g1).toBeDefined();
-    expect(g2).toBeDefined();
-    expect(new Date(g1.valid_until).toISOString()).toBe(x_expiry.toValue().toISOString());
-    expect(new Date(g2.valid_until).toISOString()).toBe(x_expiry.toValue().toISOString());
-    expect(g1.source_preset_id).toBe(presetId);
-    expect(g2.source_preset_id).toBe(presetId);
+    const download = await fetchActiveGrant(downloadId);
+    expect(download).not.toBeNull();
+    expect(new Date(download.valid_until).toISOString()).toBe(x_expiry.toValue().toISOString());
+    expect(download.source_preset_id).toBe(presetId);
+
+    // Nothing is written for the types download already confers.
+    expect(await fetchActiveGrant(viewMetaId)).toBeNull();
+    expect(await fetchActiveGrant(await getAccessTypeId('DATASET:LIST_FILES'))).toBeNull();
   });
 
   it('creates two different access_type grants in one call', async () => {
@@ -136,15 +146,44 @@ describe('issueGrants - lifecycle', () => {
     const expB = Expiry.at(new Date(Date.now() + 200000));
     await prisma.$transaction(async (tx) => {
       await grantsService.issueGrants(tx, defaultContext(), [
-        { access_type_id: viewMetaId, approved_expiry: expA },
+        { access_type_id: sensitiveMetaId, approved_expiry: expA },
         { access_type_id: downloadId, approved_expiry: expB },
       ]);
     });
 
-    const g1 = await fetchActiveGrant(viewMetaId);
-    const g2 = await fetchActiveGrant(downloadId);
-    expect(g1).toBeDefined();
-    expect(g2).toBeDefined();
+    expect(await fetchActiveGrant(sensitiveMetaId)).not.toBeNull();
+    expect(await fetchActiveGrant(downloadId)).not.toBeNull();
+  });
+
+  // Reduction is a property of the access types, not of presets, so two types named directly
+  // collapse the same way a preset's do.
+  it('drops a directly named access type another named type already confers', async () => {
+    const expiry = Expiry.at(new Date(Date.now() + 200000));
+    await prisma.$transaction(async (tx) => {
+      await grantsService.issueGrants(tx, defaultContext(), [
+        { access_type_id: viewMetaId, approved_expiry: expiry },
+        { access_type_id: downloadId, approved_expiry: expiry },
+      ]);
+    });
+
+    expect(await fetchActiveGrant(downloadId)).not.toBeNull();
+    expect(await fetchActiveGrant(viewMetaId)).toBeNull();
+  });
+
+  // A wider type that ends sooner does not cover a narrower one for the narrower one's whole
+  // life, so both rows survive.
+  it('keeps a longer narrow grant beside a shorter wider one', async () => {
+    const shortExpiry = Expiry.at(new Date(Date.now() + 100000));
+    const longExpiry = Expiry.at(new Date(Date.now() + 900000));
+    await prisma.$transaction(async (tx) => {
+      await grantsService.issueGrants(tx, defaultContext(), [
+        { access_type_id: viewMetaId, approved_expiry: longExpiry },
+        { access_type_id: downloadId, approved_expiry: shortExpiry },
+      ]);
+    });
+
+    expect(await fetchActiveGrant(downloadId)).not.toBeNull();
+    expect(await fetchActiveGrant(viewMetaId)).not.toBeNull();
   });
 
   it('supersedes an existing grant with earlier expiry', async () => {
@@ -254,15 +293,18 @@ describe('issueGrants - lifecycle', () => {
   });
 
   it('supports preset with single access type', async () => {
-    const presetId = BUILTIN_PRESET_DISCOVERABLE; // has DATASET:VIEW_METADATA and other non-download types
+    // Discoverable lists DATASET:VIEW_METADATA and DATASET:REQUEST_ACCESS, and request access
+    // implies view metadata, so the dataset half of the preset is one grant.
+    const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
     await prisma.$transaction(async (tx) => {
       await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }]);
     });
 
-    const g = await fetchActiveGrant(viewMetaId);
+    const g = await fetchActiveGrant(requestAccessId);
     expect(g.source_preset_id).toBe(presetId);
+    expect(await fetchActiveGrant(viewMetaId)).toBeNull();
   });
 
   it('supports preset with multiple access types', async () => {
@@ -273,12 +315,11 @@ describe('issueGrants - lifecycle', () => {
       await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }]);
     });
 
-    const g1 = await fetchActiveGrant(viewMetaId);
-    const g2 = await fetchActiveGrant(downloadId);
-    expect(g1).toBeDefined();
-    expect(g2).toBeDefined();
-    expect(g1.source_preset_id).toBe(presetId);
-    expect(g2.source_preset_id).toBe(presetId);
+    // The preset spans both resource vocabularies, and each contributes one maximal type.
+    const download = await fetchActiveGrant(downloadId);
+    const listContents = await fetchActiveGrant(await getAccessTypeId('COLLECTION:LIST_CONTENTS'));
+    expect(download.source_preset_id).toBe(presetId);
+    expect(listContents.source_preset_id).toBe(presetId);
   });
 
   it('merges expiries from same preset item and uses latest', async () => {
@@ -293,7 +334,7 @@ describe('issueGrants - lifecycle', () => {
       ]);
     });
 
-    const g = await fetchActiveGrant(viewMetaId);
+    const g = await fetchActiveGrant(requestAccessId);
     expect(new Date(g.valid_until).toISOString()).toBe(expiry2.toValue().toISOString());
   });
 
@@ -395,12 +436,12 @@ describe('issueGrants - lifecycle', () => {
 
     await prisma.$transaction(async (tx) => {
       await grantsService.issueGrants(tx, defaultContext(), [
-        { access_type_id: viewMetaId, approved_expiry: expiry },
+        { access_type_id: sensitiveMetaId, approved_expiry: expiry },
         { access_type_id: downloadId, approved_expiry: expiry },
       ]);
     });
 
-    const g1 = await fetchActiveGrant(viewMetaId);
+    const g1 = await fetchActiveGrant(sensitiveMetaId);
     const g2 = await fetchActiveGrant(downloadId);
     expect(g1.valid_from.getTime()).toBe(g2.valid_from.getTime());
   });

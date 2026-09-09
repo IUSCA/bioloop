@@ -44,6 +44,7 @@ The groups records answer four different questions, and each has one page.
 Supporting records:
 
 - [Access presets](./groups/access-presets.md) — `active`, partially shipped
+- [Access type order plan](./groups/access-type-order-plan.md) — `active`, built
 - [Group invitations](./groups/invitations.md) — `active`, not started
 - [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started

@@ -84,10 +84,12 @@ change.
 dialog can block a doomed request is worth having. A 403 that names what failed covers it once
 phase A1 lands, and the endpoint can follow if the message proves insufficient.
 
-**Intra-preset partial approval.** A reviewer who wants four of a preset's six access types
-must reject the preset and add the four individually. This is risk 6 in
-[Trust and communication](./trust-and-communication.md). Fixing it means approval with
-exclusions, which changes the request item model.
+**Intra-preset partial approval.** A reviewer who wants only part of a preset must reject the
+preset item and add the access types individually. This is risk 6 in
+[Trust and communication](./trust-and-communication.md), and the access-type order shrank it:
+issuance reduces a preset to the types the order does not already supply, so no seeded preset
+is worth more than two grants. Fixing what remains means approval with exclusions, which
+changes the request item model.
 
 **Empty states that distinguish "no access" from "no results".** Risk 8 needs the query layer
 to report that rows were filtered out, which touches every listing rather than this epic.

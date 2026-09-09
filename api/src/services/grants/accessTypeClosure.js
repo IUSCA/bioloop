@@ -77,7 +77,9 @@ async function build() {
     satisfiedByClosure.set(name, new Set([name, ...reachableFrom(name, reverse)]));
   });
 
-  return { impliesClosure, satisfiedByClosure };
+  return {
+    impliesClosure, satisfiedByClosure, nameById, idByName: new Map(types.map((t) => [t.name, t.id])),
+  };
 }
 
 /**
@@ -85,7 +87,7 @@ async function build() {
  * the cost is paid before the server accepts requests, and lazily by anything that runs
  * outside the server, such as a test.
  *
- * @returns {Promise<{impliesClosure: Map<string, Set<string>>, satisfiedByClosure: Map<string, Set<string>>}>}
+ * @returns {Promise<{impliesClosure: Map<string, Set<string>>, satisfiedByClosure: Map<string, Set<string>>, nameById: Map<number, string>, idByName: Map<string, number>}>}
  */
 function getAccessTypeClosure() {
   if (!closurePromise) {
@@ -144,8 +146,97 @@ async function expand(access_types) {
   return expanded;
 }
 
+/**
+ * The same widening as `satisfiedBy`, for callers that hold access type ids.
+ *
+ * The write and preview paths carry ids, because that is what `grant.access_type_id` and
+ * `access_request_item.access_type_id` store. Converting at the boundary keeps the closure
+ * itself keyed by name, where the seed data and the decision record both read.
+ *
+ * @param {number[]} access_type_ids
+ * @returns {Promise<number[]>} the given ids plus every id whose grant satisfies them
+ */
+async function satisfiedByIds(access_type_ids) {
+  if (!access_type_ids || access_type_ids.length === 0) return [];
+  const { nameById, idByName } = await getAccessTypeClosure();
+
+  const names = access_type_ids.map((id) => nameById.get(id)).filter(Boolean);
+  const widened = await satisfiedBy(names);
+
+  const ids = new Set(access_type_ids);
+  widened.forEach((name) => {
+    const id = idByName.get(name);
+    if (id !== undefined) ids.add(id);
+  });
+  return [...ids];
+}
+
+/**
+ * The maximal elements of a set of access type ids: those no other member implies.
+ *
+ * A grant of DATASET:DOWNLOAD already satisfies every check for DATASET:LIST_FILES and
+ * DATASET:VIEW_METADATA, so writing all three records one fact three times. Reducing to the
+ * maximal set writes one row per fact.
+ *
+ * `keeps` decides whether a wider type may absorb a narrower one. The write path passes the
+ * expiry comparison, because a wider type that expires sooner does not cover a narrower one
+ * for the narrower one's whole life. Omit it to reduce on the order alone.
+ *
+ * @param {number[]} access_type_ids
+ * @param {(wider: number, narrower: number) => boolean} [keeps] - true when `wider` may
+ *   absorb `narrower`; defaults to always
+ * @returns {Promise<number[]>} the ids to keep, in the order given
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ */
+async function reduceToMaximalIds(access_type_ids, keeps = () => true) {
+  if (!access_type_ids || access_type_ids.length < 2) return [...(access_type_ids ?? [])];
+  const { impliesClosure, nameById } = await getAccessTypeClosure();
+
+  const present = [...new Set(access_type_ids)];
+
+  // `id` survives unless some other member both implies it and is allowed to absorb it.
+  return present.filter((id) => !present.some((other) => {
+    if (other === id) return false;
+    const otherName = nameById.get(other);
+    const name = nameById.get(id);
+    if (!otherName || !name) return false;
+    const implied = impliesClosure.get(otherName);
+    // `impliesClosure` includes the type itself, and two distinct ids never share a name.
+    if (!implied || !implied.has(name)) return false;
+    return keeps(other, id);
+  }));
+}
+
+/**
+ * What each access type confers, as ids, for a client that has to show the order.
+ *
+ * The selector greys out a type another selection already implies, and the access
+ * explanation names the grant a subject holds it through. Both need the order in the
+ * browser, and neither should hard-code it.
+ *
+ * @returns {Promise<Map<number, number[]>>} access type id → the ids holding it also confers,
+ *   excluding itself
+ */
+async function impliedIdsByAccessTypeId() {
+  const { impliesClosure, idByName } = await getAccessTypeClosure();
+
+  const result = new Map();
+  impliesClosure.forEach((implied, name) => {
+    const id = idByName.get(name);
+    if (id === undefined) return;
+    result.set(
+      id,
+      [...implied].filter((n) => n !== name).map((n) => idByName.get(n)).filter((v) => v !== undefined),
+    );
+  });
+  return result;
+}
+
 module.exports = {
   getAccessTypeClosure,
   satisfiedBy,
+  satisfiedByIds,
   expand,
+  reduceToMaximalIds,
+  impliedIdsByAccessTypeId,
 };

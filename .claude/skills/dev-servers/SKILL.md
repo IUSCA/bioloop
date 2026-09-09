@@ -136,6 +136,16 @@ The `user-0NN` accounts are members of the sample groups, so use those to check
 membership-derived access instead. Do not hand-insert a user for this; the seed already
 covers both shapes and a hand-made row disappears at the next reset.
 
+**A platform admin short-circuits the policy engine, not just the data filters.** `test_user`
+is allowed every action before any policy runs, so a page checked as `test_user` exercises no
+policy path at all. A 500 raised inside a policy's hydration is invisible to them and hits
+every group admin. Check governance actions — issuing a grant, revoking one, reviewing a
+request — as a group admin such as `user-054`.
+
+**Chrome DevTools MCP cannot attach while another Chrome holds its profile.** It reports
+"The browser is already running for `~/.cache/chrome-devtools-mcp/chrome-profile`" and cannot
+launch its own. Quit that Chrome window and the next call starts a fresh browser.
+
 ## Restart only when reload cannot cover it
 
 Both servers reload on file changes: `nodemon` for the API, Vite HMR for the UI. Editing a

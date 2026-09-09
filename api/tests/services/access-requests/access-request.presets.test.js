@@ -54,7 +54,23 @@ beforeAll(async () => {
   presetDataset = await createTestDataset(group.id, '_preset_dataset');
   datasetIds.push(presetDataset.id);
 
-  presetAccessTypes = await prisma.grant_access_type.findMany({ take: 3 });
+  // Three pairwise incomparable access types. The first three by id are not: sensitive
+  // metadata and request access both imply view metadata, so a preset built from them
+  // collapses to one grant and the expansion, deduplication, and supersession cases below
+  // would have nothing to act on. Reduction has its own test at the end of this file.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  presetAccessTypes = await prisma.grant_access_type.findMany({
+    where: {
+      name: {
+        in: [
+          'DATASET:VIEW_SENSITIVE_METADATA',
+          'DATASET:DOWNLOAD',
+          'DATASET:LIST_DERIVED_DATASETS',
+        ],
+      },
+    },
+    orderBy: { id: 'asc' },
+  });
 
   if (presetAccessTypes.length >= 2) {
     testPreset = await prisma.grant_preset.create({

@@ -5,8 +5,10 @@ const {
 } = require('@prisma/client');
 
 const prisma = require('@/db');
+
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
+const accessTypeClosure = require('./accessTypeClosure');
 
 /**
  * Where a grant came from, in the shape `GrantRow` and `GrantProvenanceBox` already read.
@@ -353,13 +355,19 @@ async function listAccessTypes({ resource_type } = {}) {
     },
   });
 
+  // Each type carries what holding it also confers, so the browser can show the order
+  // instead of restating it. The selector greys a type another selection already implies,
+  // and a grant row names what it confers beyond its own name.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  const impliedIds = await accessTypeClosure.impliedIdsByAccessTypeId();
+  const withOrder = accessTypes.map((t) => ({ ...t, implies: impliedIds.get(t.id) ?? [] }));
+
   // for collections, return all access types
   // for datasets, filter out access types that are only applicable to datasets
   if (resource_type && resource_type === RESOURCE_TYPE.DATASET) {
-    const filteredAccessTypes = accessTypes.filter(({ name }) => name.startsWith('DATASET:'));
-    return filteredAccessTypes;
+    return withOrder.filter(({ name }) => name.startsWith('DATASET:'));
   }
-  return accessTypes;
+  return withOrder;
 }
 
 /**

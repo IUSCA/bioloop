@@ -52,6 +52,35 @@
           </div>
         </div>
 
+        <!-- What the access-type order makes this removal mean. Either it changes nothing,
+             because a wider grant still confers it, or it takes more than its own name. -->
+        <div
+          v-if="stillConferredBy"
+          class="flex gap-3 items-start rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-solid border-blue-200 dark:border-blue-700/50 px-4 py-3"
+        >
+          <Icon
+            icon="mdi-information-outline"
+            class="shrink-0 mt-0.5 text-blue-500 dark:text-blue-400 text-lg"
+          />
+          <p class="text-sm text-blue-800 dark:text-blue-300 leading-5">
+            This will not change effective access. “{{ stillConferredBy }}”
+            still confers it.
+          </p>
+        </div>
+
+        <div
+          v-else-if="alsoRemoved.length"
+          class="flex gap-3 items-start rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-solid border-amber-200 dark:border-amber-700/50 px-4 py-3"
+        >
+          <Icon
+            icon="mdi-arrow-expand-down"
+            class="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400 text-lg"
+          />
+          <p class="text-sm text-amber-800 dark:text-amber-300 leading-5">
+            Also removes {{ alsoRemoved.join(", ") }}.
+          </p>
+        </div>
+
         <!-- Grant detail block -->
         <div
           class="rounded-lg border border-solid border-red-200 dark:border-red-800/60 bg-red-50 dark:bg-red-950/20 overflow-hidden"
@@ -180,6 +209,50 @@ const visible = ref(false);
 const loading = ref(false);
 const grant = ref(null);
 const subject = ref(null);
+const siblingGrants = ref([]);
+
+/**
+ * The subject's other live grants on this resource, which decide what removing this one
+ * actually changes. Access types carry a partial order, so a grant can be redundant with a
+ * wider one, and a wider one can be the only source of several narrower capabilities.
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ */
+const otherLiveGrants = computed(() =>
+  (siblingGrants.value ?? []).filter(
+    (g) => g.id !== grant.value?.id && g.revoked_at === null,
+  ),
+);
+
+/** A live grant of a wider type that will still confer this access afterwards. */
+const stillConferredBy = computed(() => {
+  const id = grant.value?.access_type_id;
+  if (id == null) return null;
+  const holder = otherLiveGrants.value.find((g) =>
+    (props.accessTypeMap[g.access_type_id]?.implies ?? []).includes(id),
+  );
+  return holder
+    ? (props.accessTypeMap[holder.access_type_id]?.description ??
+        props.accessTypeMap[holder.access_type_id]?.name)
+    : null;
+});
+
+/** What else goes away, because this grant was the only thing conferring it. */
+const alsoRemoved = computed(() => {
+  const id = grant.value?.access_type_id;
+  if (id == null) return [];
+
+  const suppliedByOthers = new Set();
+  for (const g of otherLiveGrants.value) {
+    suppliedByOthers.add(g.access_type_id);
+    for (const implied of props.accessTypeMap[g.access_type_id]?.implies ?? [])
+      suppliedByOthers.add(implied);
+  }
+
+  return (props.accessTypeMap[id]?.implies ?? [])
+    .filter((implied) => !suppliedByOthers.has(implied))
+    .map((implied) => props.accessTypeMap[implied]?.description)
+    .filter(Boolean);
+});
 
 const subjectName = computed(() => {
   if (!subject.value) return "—";
@@ -209,9 +282,10 @@ const accessTypeDescription = computed(() => {
   );
 });
 
-function show({ grant: g, subject: s }) {
+function show({ grant: g, subject: s, siblingGrants: siblings }) {
   grant.value = g;
   subject.value = s;
+  siblingGrants.value = siblings ?? [];
   visible.value = true;
 }
 

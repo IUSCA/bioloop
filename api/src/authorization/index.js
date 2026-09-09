@@ -69,6 +69,7 @@ const { userHydrator } = require('./builtin/hydrators/user');
 const { contextHydrator } = require('./builtin/hydrators/context');
 const { accessRequestHydrator } = require('./builtin/hydrators/access_request');
 const { datasetHydrator } = require('./builtin/hydrators/dataset');
+const { grantHydrator } = require('./builtin/hydrators/grant');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
@@ -104,6 +105,7 @@ hydratorRegistry.register('user', userHydrator);
 hydratorRegistry.register('context', contextHydrator);
 hydratorRegistry.register('access_request', accessRequestHydrator);
 hydratorRegistry.register('dataset', datasetHydrator);
+hydratorRegistry.register('grant', grantHydrator);
 
 // Register custom hydrators (add yours here in derived apps)
 

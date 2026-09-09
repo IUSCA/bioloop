@@ -8,6 +8,7 @@ require('module-alias/register');
 const prisma = require('@/db');
 const grantsService = require('@/services/grants');
 const Expiry = require('@/utils/expiry');
+const { expand } = require('@/services/grants/accessTypeClosure');
 const {
   runRace, fanOut, RACE_TIMEOUT_MS, RACE_REJECTION_PATTERN,
 } = require('../concurrency-utils');
@@ -24,6 +25,11 @@ let group;
 let dataset;
 let viewMetaId;
 let downloadId;
+// The reduced presets no longer overlap on DATASET:VIEW_METADATA, because a wider type in
+// each supplies it. What they do share is COLLECTION:LIST_CONTENTS.
+// @see docs/design/groups/decisions.md — 7. Access types imply one another
+let listContentsId;
+let requestAccessId;
 
 const createdGrantIds = [];
 const createdAccessRequestIds = [];
@@ -43,6 +49,8 @@ beforeAll(async () => {
   await deleteGrantsForResource(dataset.resource_id);
   viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
   downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
+  listContentsId = await getAccessTypeId('COLLECTION:LIST_CONTENTS');
+  requestAccessId = await getAccessTypeId('DATASET:REQUEST_ACCESS');
 }, 30000);
 
 afterEach(async () => {
@@ -337,15 +345,16 @@ describe('issueGrants - concurrency', () => {
         });
         expect(activeDownload.length).toBeLessThanOrEqual(1);
 
-        const activeView = await prisma.grant.findMany({
+        // Both presets supply this type, so exactly one grant survives the race.
+        const activeShared = await prisma.grant.findMany({
           where: {
-            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: viewMetaId, revoked_at: null,
+            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: listContentsId, revoked_at: null,
           },
         });
-        expect(activeView.length).toBe(1);
+        expect(activeShared.length).toBe(1);
 
         createdGrantIds.push(...activeDownload.map((g) => g.id));
-        createdGrantIds.push(...activeView.map((g) => g.id));
+        createdGrantIds.push(...activeShared.map((g) => g.id));
       },
     );
   });
@@ -382,11 +391,11 @@ describe('issueGrants - concurrency', () => {
         });
         const g2 = await prisma.grant.findFirst({
           where: {
-            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: viewMetaId, revoked_at: null,
+            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: requestAccessId, revoked_at: null,
           },
         });
-        expect(g1).toBeDefined();
-        expect(g2).toBeDefined();
+        expect(g1).not.toBeNull();
+        expect(g2).not.toBeNull();
 
         createdGrantIds.push(g1.id, g2.id);
       },
@@ -418,18 +427,29 @@ describe('issueGrants - concurrency', () => {
     expect(conflict.message).toMatch(RACE_REJECTION_PATTERN);
   });
 
+  // Ten distinct access types are not ten independent facts. Some imply others, so whichever
+  // transaction commits second finds the first already covering it and writes nothing. How
+  // many rows land depends on commit order; what the subject ends up holding does not.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
   it('supports 10 concurrent non-overlapping access_type issues', async () => {
-    const accessTypes = (await prisma.grant_access_type.findMany({ take: 10 })).map((t) => t.id);
-    expect(accessTypes.length).toBeGreaterThanOrEqual(2); // sanity check
+    const types = await prisma.grant_access_type.findMany({ take: 10 });
+    expect(types.length).toBeGreaterThanOrEqual(2); // sanity check
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
-    const work = accessTypes.map((type) => prisma.$transaction((tx) => grantsService.issueGrants(tx, defaultContext(), [{ access_type_id: type, approved_expiry: expiry }])));
+    const work = types.map((type) => prisma.$transaction((tx) => grantsService.issueGrants(tx, defaultContext(), [{ access_type_id: type.id, approved_expiry: expiry }])));
     const results = await Promise.allSettled(work);
 
     expect(results.filter((r) => r.status === 'rejected')).toHaveLength(0);
 
-    const activeCount = await prisma.grant.count({ where: { subject_id: member.subject_id, resource_id: dataset.resource_id, revoked_at: null } });
-    expect(activeCount).toBe(accessTypes.length);
+    const live = await prisma.grant.findMany({
+      where: { subject_id: member.subject_id, resource_id: dataset.resource_id, revoked_at: null },
+      include: { access_type: true },
+    });
+    expect(live.length).toBeLessThanOrEqual(types.length);
+
+    // Every requested type is held, whether by its own row or through a wider one.
+    const held = await expand(live.map((g) => g.access_type.name));
+    for (const type of types) expect(held.has(type.name)).toBe(true);
   });
 
   it('supports 10 concurrent calls with 30% overlap', async () => {

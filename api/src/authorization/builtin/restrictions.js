@@ -106,6 +106,7 @@ const READING_ACTIONS = new Set([
   'dataset.read_data',
   'dataset.download',
   'dataset.compute',
+  'dataset.remote_access',
   'dataset.view_audit_logs',
   'dataset.view_workflows',
   'dataset.view_collections',

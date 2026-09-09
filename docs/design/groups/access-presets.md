@@ -18,7 +18,9 @@ Design decisions and implementation notes — March 2026
 
 ## 1. Purpose
 
-Access types are the atomic unit of permission in this system. Presets are named, curated bundles of access types that represent common, coherent patterns of access — for example, a *Standard Researcher* preset might bundle `read_data`, `browse_metadata`, and `stage_data` together. Presets exist to reduce cognitive load and input friction for the three actor types who initiate or grant access: group admins (preemptive granting), requesters (access requests), and platform admins (configuration).
+Access types are the atomic unit of permission in this system. Presets are named, curated bundles of access types that represent common, coherent patterns of access — the seeded *Standard Research Use* preset bundles `DATASET:VIEW_METADATA`, `DATASET:LIST_FILES`, and `DATASET:DOWNLOAD`. Presets exist to reduce cognitive load and input friction for the three actor types who initiate or grant access: group admins (preemptive granting), requesters (access requests), and platform admins (configuration).
+
+Access types also carry a partial order, so a preset's bundle is usually smaller than its list. `DATASET:DOWNLOAD` satisfies every check for the other two types in *Standard Research Use*, and issuing that preset writes one grant rather than three. Section 2.10 covers what expansion does with the order. The worked examples in section 2.8 use letters for access types that are pairwise incomparable, because that is the case supersession has to resolve.
 
 Presets are a convenience and a provenance mechanism. They are not an enforcement boundary. Individual grants remain the authorization primitive; presets only determine how grants are described and grouped.
 
@@ -64,13 +66,17 @@ The previous design linked each grant back to the `access_request_item` that pro
 
 The link is therefore promoted to the request level: each grant carries a `source_request_id`. Grants can always be traced to the request that authorized them, and from the request to the exact items that were approved.
 
-> **Decision:** Grants do not carry a `source_preset_id` or `source_preset_name`. Preset provenance lives on `access_request_item`, where it was expressed. Grant provenance points to the request.
+> **Decision:** Grant provenance points to the request. `grant.source_access_request_id` is the link, and the request's items say what was approved.
+
+**Reversed.** `grant.source_preset_id` exists and is populated on both paths. The original decision kept preset provenance off the grant, which left the Access tab unable to name the preset without a join the presentation layer never made — risk 5 in [Trust and communication](./trust-and-communication.md). A grant expanded from an approved preset item has both provenances, so it records both. An access type the request named directly, or that two presets both supply, records no preset.
 
 ### 2.5 Name snapshots at write time
 
 `access_request_item` stores `source_preset_name` as a snapshot taken at submission time. This mirrors the existing pattern used throughout the `authorization_audit` table (`actor_name`, `target_name`) and ensures that renaming or retiring a preset does not corrupt historical records.
 
 > **Decision:** Preset names are snapshotted at the item level. The live name in `grant_preset` is the source of truth for the UI; the snapshot is the source of truth for audit and explainability display.
+
+**Not built.** `access_request_item` has no `source_preset_name` column. A preset is retired with `is_active` rather than deleted, so a historical request still resolves the name it referenced, which covers the same risk while presets stay platform configuration. Build the snapshot if anyone but a platform admin ever gains the ability to rename a preset.
 
 ### 2.6 Intra-preset partial approval is not supported
 
@@ -234,6 +240,22 @@ Both views are derivable from the same data. The difference is presentation, not
 When a group admin grants access preemptively (outside the request workflow), there is no `access_request` and no `access_request_item`. The grant has no request lineage. In this case the explanation is the flat access type list with the granting admin as the actor. If preset provenance is also desired on preemptive grants, `source_preset_id` and `source_preset_name` can be carried optionally on the grant for this path only — a narrow addition that does not affect the request workflow.
 
 > **Decision:** Preset provenance for request-derived grants is reconstructed at display time from request lineage, not stored redundantly on the grant. The grant table records authorization facts; the request table records intent. These are read together by the presentation layer.
+
+### 2.10 Expansion reduces a preset through the access-type order
+
+Access types carry a partial order, held in `grant_access_type_implication`. Holding a wider type satisfies a check for a narrower one, so `DATASET:DOWNLOAD` satisfies `DATASET:LIST_FILES`, which satisfies `DATASET:VIEW_METADATA`. A preset that lists all three describes one fact, and writing three rows records it three times.
+
+Approval-time expansion therefore reduces the access type set to its maximal elements before anything is written. *Standard Research Use (Dataset)* writes one grant of `DATASET:DOWNLOAD`. All four seeded presets reduce: fourteen listed access types become six grants.
+
+Reduction is a property of the access types, not of presets. Two access types named directly in one request collapse the same way.
+
+**A wider type only absorbs a narrower one when it lasts at least as long.** Approving a month of `DOWNLOAD` beside a year of `VIEW_METADATA` writes both rows, because dropping the year would end metadata access eleven months early. This is the same comparison supersession makes, applied before the write rather than against an existing grant.
+
+**A wider grant the subject already holds skips the write.** Section 2.8 compares an incoming grant against an existing grant of the *same* access type, because that is the only grant a write may close. A live grant of a wider type is read too, and it produces the Case 2 skip: the item is approved, no row is written, and the audit record names the covering grant. It is never superseded — closing a `DOWNLOAD` grant in order to write a `LIST_FILES` grant would narrow the subject's access, which approving a request must never do.
+
+> **Decision:** Expansion reduces to the maximal access types under the order, subject to expiry. A wider grant already held skips the write and is never closed by a narrower one.
+
+@see [decision 7](./decisions.md#_7-access-types-imply-one-another) and the [Access type order plan](./access-type-order-plan.md).
 
 ---
 

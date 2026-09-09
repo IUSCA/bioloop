@@ -81,31 +81,27 @@ than leaving them to find the admin themselves. Let a group admin see which ance
 admins hold oversight of their group; people generally expect to know who can see their
 work.
 
-### 5. A preset request becomes a flat list of grants
+### 5. A preset request becomes a flat list of grants — closed
 
-A user asks for "Standard Researcher Access" and later asks what access they have. The
-effective-access view shows individual access types and a request id. The preset
-narrative is reconstructable only by joining grant to access request to access request
-item, and the design leaves that join to the presentation layer.
+Each grant now records the preset that supplied it, whether an admin issued it directly or
+an approval expanded it, so the Access tab names the preset rather than listing access
+types with no shape. A grant an item named directly, or that two presets both supply,
+records no preset, because a label naming one of two is worse than none.
 
-**Mitigations.** Do the join on the server and expose an access-explanation endpoint
-that returns grants already grouped by request and annotated with the preset name, so
-every surface inherits it. Even without grouping, every grant row should carry a "via"
-label naming the preset and request it came from. Given how cheap the label is and how
-much of the design rests on explainability, treat this as a launch requirement rather
-than an enhancement.
+### 6. Intra-preset partial approval forces manual decomposition — mostly dissolved
 
-### 6. Intra-preset partial approval forces manual decomposition
+The premise was a preset of six independent access types. Access types carry a partial
+order, and issuance reduces a preset to the types the order does not already supply, so no
+seeded preset is worth more than two grants. A reviewer wanting "four of six" has almost
+nothing left to decompose.
 
-A reviewer who wants four of a preset's six access types must reject the preset item and
-add the four individually. The workflow requires them to know what is inside a preset in
-order to express a common outcome, which undercuts the preset as an abstraction.
+What survives is the narrow case of a preset whose reduced set still holds two incomparable
+types, such as downloading and viewing sensitive metadata. A reviewer who wants one of the
+two must still reject the preset item and add that type individually. The review UI should
+state the constraint inline rather than let a reviewer discover it by failing.
 
-**Mitigations.** Allow approval with exclusions — approve the preset minus named access
-types, expanding the approved subset at write time and recording the exclusions on the
-request item. Failing that, offer conversion: on rejecting a preset, show its
-composition and let the reviewer pick from it, pre-populated. At minimum, state the
-constraint inline in the review UI so reviewers do not discover it by failing.
+@see [decision 7](./decisions.md#_7-access-types-imply-one-another) and the
+[Access type order plan](./access-type-order-plan.md).
 
 ### 7. Membership on an archived group is frozen with no way through
 
@@ -140,13 +136,15 @@ mutated. A user can always see what was decided, by whom, and when, regardless o
 later happened to the grants. This is the anchor the mitigations above hang from.
 
 **Partial states are named rather than hidden.** The design requires surfacing a partial
-outcome explicitly — four of six access types remaining from a preset, for instance —
-instead of blocking or silently narrowing. That posture should be applied to every
-revocation and supersession path.
+outcome explicitly — one of a preset's two remaining access types, for instance — instead
+of blocking or silently narrowing. That posture applies to every revocation and
+supersession path. The revoke dialog carries it too: it says when a removal changes nothing
+because a wider grant still confers the access, and it names what else a removal takes.
 
-**Preset names are snapshotted at write time.** A historical record shows the preset name
-as it was at submission, so renaming or retiring a preset does not corrupt the audit
-trail.
+**A preset is retired rather than deleted.** `grant_preset.is_active` soft-disables one, so
+a historical request still resolves the name it referenced. Snapshotting the name onto the
+request item was designed and is not built; retirement without deletion covers the same
+risk while presets stay platform configuration.
 
 **Supersession is labelled, not silent.** `SUPERSEDED` distinguishes an early closure
 from a deliberate revocation, and the audit record can point at the replacing grant.

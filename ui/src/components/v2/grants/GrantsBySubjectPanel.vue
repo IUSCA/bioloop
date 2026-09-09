@@ -42,7 +42,13 @@
           :access-type-map="props.accessTypeMap"
           :can-revoke="props.canRevoke"
           :can-navigate-to-request="true"
-          @revoke="emit('revoke', { grant: $event, subject: props.subject })"
+          @revoke="
+            emit('revoke', {
+              grant: $event,
+              subject: props.subject,
+              siblingGrants: activeExpandedGrants,
+            })
+          "
           @navigate-to-request="emit('navigate-to-request', $event)"
         />
 

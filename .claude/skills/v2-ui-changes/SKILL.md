@@ -36,6 +36,38 @@ Take a screenshot afterwards to confirm the thing looks right, but let the numbe
 the claim. A screenshot led to one wrong conclusion this way: three panels looked like
 three different dark surfaces and measured identical.
 
+### The MCP browser will not attach while a Chrome holds its profile
+
+`list_pages` fails with *"The browser is already running for
+`~/.cache/chrome-devtools-mcp/chrome-profile`"* whenever a Chrome is already open on that
+profile without a debugging port. The MCP server can neither attach to it nor launch its own,
+and retrying never clears it. Ask the user to quit that Chrome window; the next `list_pages`
+then starts a fresh browser at `about:blank`.
+
+Do not kill the process yourself — it is the user's browser and may hold their work.
+
+Once attached, `https://localhost/dev-login?username=<user>&next=<path>` gets past both the
+certificate interstitial and the login in one navigation, so the interstitial is not the
+obstacle this page once described it as.
+
+**Sign in as a group admin, not `test_user`.** The engine allows a platform admin before any
+policy runs, so a pass driven as `test_user` exercises none of the policy paths. `user-054`
+is a group admin in the seed. A 500 on `POST /grants/:id/revoke` survived an entire phase
+because every browser check had been done as a platform admin.
+
+### Reading state in the same `evaluate_script` that changed it returns the old values
+
+A click handler updates a ref, and Vue re-renders on the next tick. A script that clicks and
+then reads `checked`, `aria-disabled`, or `innerText` in the same call sees the values from
+before the render, which looks exactly like the click having no effect.
+
+Click in one call, read in the next. And remember a click on a checkbox row *toggles* — a
+script that clicks the same row twice while debugging leaves it off, and the stale computed
+state that remains is not a bug in the component.
+
+Plain divs carrying `@click` — the access-type rows, for instance — do respond to `.click()`.
+Only `va-select` needs the component-instance route below.
+
 ### A `va-select` cannot be driven by clicks or keys
 
 This is the single biggest time sink when exercising a v2 form from the MCP browser.
@@ -182,6 +214,29 @@ noise.
   re-`cd` at the start of each call.
 - A newline-joined file list can overflow an argument and produce "File name too long".
   Use `find ... -print0` piped to `xargs -0`.
+
+## Assert a rendered claim by measuring, not by reading the template
+
+The pattern that carried every claim in the access-type order work was one `evaluate_script`
+returning a table of measurements per row:
+
+```js
+() => [...document.querySelectorAll('[role="button"][tabindex="0"]')]
+  .filter(e => e.querySelector('input[type="checkbox"], .va-checkbox'))
+  .map(r => ({
+    label: r.innerText.split('\n')[0],
+    checked: r.querySelector('input[type="checkbox"]')?.checked,
+    disabled: r.getAttribute('aria-disabled'),
+    opacity: getComputedStyle(r).opacity,
+  }));
+```
+
+Two cautions learned doing it. A regex scraping a badge out of `innerText` also matches the
+row's own description — "Path to storage · Access dataset in place **via provided path**"
+looked like a "via" badge until `aria-disabled` and `opacity` said the row was untouched. And
+`innerText.split('\n')[0]` returns the checkbox's `check` glyph rather than the label on rows
+where the checkbox renders first, so read the label from the element that holds it rather
+than from position.
 
 ## Things that are already broken, so do not chase them
 

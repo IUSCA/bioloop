@@ -26,6 +26,17 @@
       {{ props.grant.access_type.description }}
     </span>
 
+    <!-- What the order confers beyond this grant's own name. A grant of Download satisfies
+         every check for Browse file tree and See dataset exists, so a reader looking for
+         those should find them here rather than expect another row.
+         @see docs/design/groups/decisions.md — 7. Access types imply one another -->
+    <span
+      v-if="alsoConfers.length && props.grant.revoked_at === null"
+      class="text-xs text-gray-500 dark:text-gray-500 mt-0.5"
+    >
+      Also confers {{ alsoConfers.join(", ") }}
+    </span>
+
     <!-- Tag Row -->
     <div class="flex flex-wrap gap-1.5 mt-1">
       <Badge
@@ -91,6 +102,20 @@ const props = defineProps({
   accessTypeMap: { type: Object, required: true },
   canRevoke: { type: Boolean, default: false },
   canNavigateToRequest: { type: Boolean, default: false },
+});
+
+/**
+ * The access this grant confers through the access-type order, beyond its own type.
+ *
+ * Names them by description, because that is what the rest of the row shows and what the
+ * selector offered when the grant was issued.
+ */
+const alsoConfers = computed(() => {
+  const implied =
+    props.accessTypeMap[props.grant.access_type_id]?.implies ?? [];
+  return implied
+    .map((id) => props.accessTypeMap[id]?.description)
+    .filter(Boolean);
 });
 
 const emit = defineEmits(["revoke", "navigate-to-request"]);

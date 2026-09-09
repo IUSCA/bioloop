@@ -104,9 +104,10 @@ collectionPolicies
     { policy: isCollectionAdmin, role: CallerRole.ADMIN },
     { policy: hasCollectionOversight, role: CallerRole.OVERSIGHT },
     {
-      policy: Policy.or([
-        userHasGrant('COLLECTION:VIEW_METADATA'),
-        userHasGrant('COLLECTION:LIST_CONTENTS')]),
+      // COLLECTION:LIST_CONTENTS and COLLECTION:REQUEST_ACCESS both imply
+      // COLLECTION:VIEW_METADATA, so one check answers whether the caller holds any grant.
+      // @see docs/design/groups/decisions.md — 7. Access types imply one another
+      policy: userHasGrant('COLLECTION:VIEW_METADATA'),
       role: CallerRole.GRANT_HOLDER,
     },
   ])

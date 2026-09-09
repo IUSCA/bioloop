@@ -3,6 +3,8 @@ const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const prisma = require('@/db');
 
+const accessTypeClosure = require('./accessTypeClosure');
+
 // How a grant reaches the subject it covers. The order is the order a reader should be told
 // them in: what the subject holds itself, then what it inherits, then what everyone has.
 const COVERAGE_VIA = Object.freeze({
@@ -32,7 +34,8 @@ const COVERAGE_VIA = Object.freeze({
  * @param {string} params.subject_id - the user or group the coverage is being computed for
  * @param {string} params.resource_id - the dataset or collection resource id
  * @param {string} params.resource_type - RESOURCE_TYPE.DATASET or RESOURCE_TYPE.COLLECTION
- * @param {number[]} [params.access_type_ids] - restrict to these access types; omit for all
+ * @param {number[]} [params.access_type_ids] - restrict to these access types, widened through
+ *   the access-type order so a wider grant counts as covering a narrower request; omit for all
  * @returns {Promise<Array>} live grants, each with `via`, `via_group_id`, and `access_type_name`
  */
 async function getEffectiveCoverage({
@@ -71,8 +74,13 @@ async function getEffectiveCoverage({
       WHERE dataset_id = ${resource_id}
     `;
 
-  const accessTypeFilter = access_type_ids?.length
-    ? Prisma.sql`WHERE g.access_type_id IN (${Prisma.join(access_type_ids)})`
+  // Widen the requirement before filtering. A caller asking about DATASET:LIST_FILES is
+  // covered by a lab's grant of DATASET:DOWNLOAD, and matching on the exact id would report
+  // that access as new. The rows still carry the access type actually granted.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  const widenedAccessTypeIds = await accessTypeClosure.satisfiedByIds(access_type_ids ?? []);
+  const accessTypeFilter = widenedAccessTypeIds.length
+    ? Prisma.sql`WHERE g.access_type_id IN (${Prisma.join(widenedAccessTypeIds)})`
     : Prisma.empty;
 
   const rows = await prisma.$queryRaw(Prisma.sql`
