@@ -22,8 +22,8 @@ model rather than from per-page judgement.
 Visual mockups of these screens are vendored at
 [`docs/public/mockups/`](https://github.com/IUSCA/bioloop/tree/main/docs/public/mockups) —
 `ui-design.html` is the design spec, and the others show the portal, dashboards, grant
-views, and creation flows. `dashboard-screens.html` covers the landing page and
-names what it deliberately does not draw. `dataset-creation-screens.html` covers the import and upload
+views, and creation flows. `dashboard-screens-mvp.html` covers the landing page and
+names what it deliberately does not draw; `dashboard-screens.html` is the earlier, wider draw of it. `dataset-creation-screens.html` covers the import and upload
 dialogs, their in-flight states, and the refusals each one can show. `profile-screens.html` covers the
 group and collection profile pages, including what a signed-out reader sees. They are snapshots of
 intent, not of shipped UI.

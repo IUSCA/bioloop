@@ -10,7 +10,9 @@ last_verified: 2026-09-09
 The ordered work for the landing page at `/v2/home`. The page structure it sits inside is
 [UI information architecture](./ui-information-architecture.md), and the visual rules are
 [V2 design system](../../contributing/v2-design-system.md). Screens are drawn at
-[`/mockups/dashboard-screens.html`](/mockups/dashboard-screens.html).
+[`/mockups/dashboard-screens-mvp.html`](/mockups/dashboard-screens-mvp.html). The earlier
+[`dashboard-screens.html`](/mockups/dashboard-screens.html) is kept as it was drawn, and it
+shows more than this plan builds.
 :::
 
 # Dashboard plan
