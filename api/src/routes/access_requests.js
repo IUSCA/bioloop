@@ -77,6 +77,8 @@ router.post(
       }
       return true;
     }),
+    // Submitting in the same call is what the UI does; see the handler for why.
+    body('submit').optional().isBoolean().toBoolean(),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
   // The restriction half of authorization. `restrictionTargetFor` follows an access_request
@@ -146,7 +148,14 @@ router.post(
     // - the requester can see the resource, and no restriction blocks filing against it
     // - at least 1 request item and all items are well-formed
     // - request items are unique, and applicable to the resource type
-    const record = await accessRequestsService.createAccessRequest(data, req.user.subject_id);
+    //
+    // `submit: true` creates the request and puts it under review in one transaction. A
+    // DRAFT is invisible — no surface lists one — so two client calls would strand a row
+    // the requester could neither see nor resume if the second failed.
+    // @see docs/design/groups/access-requests-plan.md — B1
+    const record = req.body.submit
+      ? await accessRequestsService.createAndSubmitAccessRequest(data, req.user.subject_id)
+      : await accessRequestsService.createAccessRequest(data, req.user.subject_id);
     return res.status(201).json(req.permission.filter(record));
   }),
 );

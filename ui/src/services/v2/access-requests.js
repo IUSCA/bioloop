@@ -33,7 +33,11 @@ export default {
 
   /**
    * POST /access-requests/ — create a new access request.
-   * @param {{ resource_type: 'DATASET'|'COLLECTION', resource_id, purpose, items: Array }} data
+   *
+   * `submit: true` also puts it under review, in the same transaction. Creating without it
+   * leaves a DRAFT, which no surface lists.
+   *
+   * @param {{ type: 'NEW', resource_id, subject_id, purpose, items: Array, submit?: boolean }} data
    */
   create(data) {
     return api.post("/access-requests/", data);

@@ -1,4 +1,6 @@
-const { createAccessRequest, updateAccessRequest, submitRequest } = require('./request');
+const {
+  createAccessRequest, createAndSubmitAccessRequest, updateAccessRequest, submitRequest,
+} = require('./request');
 const {
   getRequestById,
   getRequestsReviewedByUser,
@@ -39,6 +41,7 @@ const config = {
 
 module.exports = {
   createAccessRequest,
+  createAndSubmitAccessRequest,
   updateAccessRequest,
   submitRequest,
   submitReview,

@@ -55,6 +55,7 @@ let outsider;
 let ownerGroup;
 let dataset;
 let viewMetadataTypeId;
+let downloadTypeId;
 let collectionViewTypeId;
 
 const userIds = [];
@@ -83,8 +84,9 @@ beforeAll(async () => {
   dataset = await createTestDataset(ownerGroup.id, '_arc_ds');
   datasetIds.push(dataset.id);
 
-  [viewMetadataTypeId, collectionViewTypeId] = await Promise.all([
+  [viewMetadataTypeId, downloadTypeId, collectionViewTypeId] = await Promise.all([
     getAccessTypeId('DATASET:VIEW_METADATA'),
+    getAccessTypeId('DATASET:DOWNLOAD'),
     getAccessTypeId('COLLECTION:VIEW_METADATA'),
   ]);
 }, 30_000);
@@ -131,6 +133,22 @@ describe('POST /access-requests is gated on the resource', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('DRAFT');
+    requestIds.push(res.body.id);
+  }, 20_000);
+
+  test('submit: true puts the new request under review in one call', async () => {
+    currentUser = admin;
+
+    const res = await request(app)
+      .post('/access-requests')
+      .send(body({
+        submit: true,
+        items: [{ access_type_id: downloadTypeId, requested_expiry: { type: 'never' } }],
+      }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('UNDER_REVIEW');
+    expect(res.body.submitted_at).not.toBeNull();
     requestIds.push(res.body.id);
   }, 20_000);
 

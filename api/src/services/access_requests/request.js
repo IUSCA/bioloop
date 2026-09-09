@@ -70,52 +70,58 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
  * @param {string} requester_id - UUID of the user creating the request
  * @returns {Promise<Object>} Created access request
  */
-async function createAccessRequest(data, requester_id) {
-  return prisma.$transaction(async (tx) => {
-    await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
+async function _createAccessRequest(tx, data, requester_id) {
+  await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
 
-    // Create the access request
-    const accessRequest = await tx.access_request.create({
-      data: {
-        type: data.type,
-        resource_id: data.resource_id,
-        requester_id,
-        subject_id: data.subject_id,
-        purpose: data.purpose ?? Prisma.skip,
-        previous_grant_ids: data.previous_grant_ids ?? Prisma.skip,
-        status: ACCESS_REQUEST_STATUS.DRAFT,
-      },
-    });
-
-    // Create access request items (each with either access_type_id or preset_id, never both)
-    if (data.items && data.items.length > 0) {
-      await tx.access_request_item.createMany({
-        data: data.items.map((item) => ({
-          access_request_id: accessRequest.id,
-          access_type_id: item.access_type_id ?? Prisma.skip,
-          preset_id: item.preset_id ?? Prisma.skip,
-          requested_until: item.requested_expiry ? item.requested_expiry.toValue() : Prisma.skip,
-          decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
-        })),
-      });
-    }
-
-    // create audit log
-    const builder = new AuditBuilder(tx, { actor_id: requester_id });
-    await builder
-      .setTarget('ACCESS_REQUEST', accessRequest.id)
-      .setSubject(data.subject_id)
-      .setResource(data.resource_id);
-
-    builder.mergeMetadata({
+  // Create the access request
+  const accessRequest = await tx.access_request.create({
+    data: {
+      type: data.type,
+      resource_id: data.resource_id,
+      requester_id,
+      subject_id: data.subject_id,
+      purpose: data.purpose ?? Prisma.skip,
+      previous_grant_ids: data.previous_grant_ids ?? Prisma.skip,
       status: ACCESS_REQUEST_STATUS.DRAFT,
-    });
-
-    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_CREATED);
-
-    // Return updated request with items
-    return _getRequestById(tx, accessRequest.id);
+    },
   });
+
+  // Create access request items (each with either access_type_id or preset_id, never both)
+  if (data.items && data.items.length > 0) {
+    await tx.access_request_item.createMany({
+      data: data.items.map((item) => ({
+        access_request_id: accessRequest.id,
+        access_type_id: item.access_type_id ?? Prisma.skip,
+        preset_id: item.preset_id ?? Prisma.skip,
+        requested_until: item.requested_expiry ? item.requested_expiry.toValue() : Prisma.skip,
+        decision: ACCESS_REQUEST_ITEM_DECISION.PENDING,
+      })),
+    });
+  }
+
+  // create audit log
+  const builder = new AuditBuilder(tx, { actor_id: requester_id });
+  await builder
+    .setTarget('ACCESS_REQUEST', accessRequest.id)
+    .setSubject(data.subject_id)
+    .setResource(data.resource_id);
+
+  builder.mergeMetadata({
+    status: ACCESS_REQUEST_STATUS.DRAFT,
+  });
+
+  await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_CREATED);
+
+  // Return updated request with items
+  return _getRequestById(tx, accessRequest.id);
+}
+
+/**
+ * Create a new access request in its own transaction.
+ * @see _createAccessRequest for the parameters.
+ */
+async function createAccessRequest(data, requester_id) {
+  return prisma.$transaction((tx) => _createAccessRequest(tx, data, requester_id));
 }
 
 /**
@@ -213,13 +219,14 @@ async function updateAccessRequest(request_id, actor_id, data) {
  *
  * This is a pre-flight check for submitting a request, to prevent multiple concurrent requests for the same access types which would cause confusion for reviewers and potential
  *
+ * @param {Object} tx - Prisma client or transaction client
  * @param {Object} request - access_request with access_request_items included
  */
-async function _assertNoInFlightRequests(request) {
+async function _assertNoInFlightRequests(tx, request) {
   const accessTypeIds = request.access_request_items.map((item) => item.access_type_id).filter((id) => id !== null);
   const presetIds = request.access_request_items.map((item) => item.preset_id).filter((id) => id !== null);
 
-  const conflicting = await prisma.access_request.findMany({
+  const conflicting = await tx.access_request.findMany({
     where: {
       id: { not: request.id },
       subject_id: request.subject_id,
@@ -278,9 +285,9 @@ async function _assertNoInFlightRequests(request) {
  * @param {string} actor_id - UUID of the user submitting the request, who can submit is enforced by authorization policies, not this service method
  * @returns {Promise<Object>} Updated access request
  */
-async function submitRequest(request_id, actor_id) {
+async function _submitRequest(tx, request_id, actor_id) {
   // Fetch the request with items for pre-flight validation
-  const request = await _getRequestById(prisma, request_id);
+  const request = await _getRequestById(tx, request_id);
   if (!request || request.status !== ACCESS_REQUEST_STATUS.DRAFT) {
     throw createError.Conflict('Request is no longer in DRAFT status');
   }
@@ -291,40 +298,71 @@ async function submitRequest(request_id, actor_id) {
   }
 
   // Reject if another in-flight request covers any of the same request items
-  await _assertNoInFlightRequests(request);
+  await _assertNoInFlightRequests(tx, request);
 
+  // Update status to UNDER_REVIEW — WHERE status='DRAFT' guards against concurrent submit races
+  const updated = await tx.access_request.updateMany({
+    where: {
+      id: request_id,
+      status: ACCESS_REQUEST_STATUS.DRAFT, // Ensure request is still in DRAFT to prevent race conditions
+    },
+    data: {
+      status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+      submitted_at: new Date(),
+    },
+  });
+  if (updated.count !== 1) {
+    throw createError.Conflict('Request is no longer in DRAFT status');
+  }
+
+  // Use AuditBuilder
+  const builder = new AuditBuilder(tx, { actor_id });
+  await builder
+    .setTarget('ACCESS_REQUEST', request_id)
+    .setSubject(request.subject_id)
+    .setResource(request.resource_id);
+
+  builder.mergeMetadata({
+    from_status: ACCESS_REQUEST_STATUS.DRAFT,
+    to_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
+  });
+
+  await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_SUBMITTED);
+
+  return _getRequestById(tx, request_id);
+}
+
+/**
+ * Submit a DRAFT request for review, in its own transaction.
+ * @see _submitRequest for the parameters.
+ */
+async function submitRequest(request_id, actor_id) {
+  return prisma.$transaction((tx) => _submitRequest(tx, request_id, actor_id));
+}
+
+/**
+ * Create a request and put it under review in one transaction.
+ *
+ * A request that is created and not submitted is invisible: no surface lists DRAFT rows and
+ * no queue holds them, so a failure between two client calls would strand a row the
+ * requester could neither see nor resume. Both states and both audit events are kept — only
+ * the round trip disappears.
+ *
+ * @see docs/design/groups/access-requests-plan.md — B1
+ * @param {Object} data - as for createAccessRequest
+ * @param {string} requester_id - UUID of the user creating the request
+ * @returns {Promise<Object>} the request, UNDER_REVIEW
+ */
+async function createAndSubmitAccessRequest(data, requester_id) {
   return prisma.$transaction(async (tx) => {
-    // Update status to UNDER_REVIEW — WHERE status='DRAFT' guards against concurrent submit races
-    const updated = await tx.access_request.updateMany({
-      where: {
-        id: request_id,
-        status: ACCESS_REQUEST_STATUS.DRAFT, // Ensure request is still in DRAFT to prevent race conditions
-      },
-      data: {
-        status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-        submitted_at: new Date(),
-      },
-    });
-    if (updated.count !== 1) {
-      throw createError.Conflict('Request is no longer in DRAFT status');
-    }
-
-    // Use AuditBuilder
-    const builder = new AuditBuilder(tx, { actor_id });
-    await builder
-      .setTarget('ACCESS_REQUEST', request_id)
-      .setSubject(request.subject_id)
-      .setResource(request.resource_id);
-
-    builder.mergeMetadata({
-      from_status: ACCESS_REQUEST_STATUS.DRAFT,
-      to_status: ACCESS_REQUEST_STATUS.UNDER_REVIEW,
-    });
-
-    await builder.create(tx, AUTH_EVENT_TYPE.REQUEST_SUBMITTED);
-
-    return _getRequestById(tx, request_id);
+    const created = await _createAccessRequest(tx, data, requester_id);
+    return _submitRequest(tx, created.id, requester_id);
   });
 }
 
-module.exports = { createAccessRequest, updateAccessRequest, submitRequest };
+module.exports = {
+  createAccessRequest,
+  createAndSubmitAccessRequest,
+  updateAccessRequest,
+  submitRequest,
+};

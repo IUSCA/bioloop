@@ -148,13 +148,22 @@ and both audit events; only the round trip disappears.
 Chaining two calls in the client was the alternative. It is rejected because a failure between
 them strands a `DRAFT` row that no surface can see or resume, once the drafts UI is gone.
 
-Both service functions open their own transaction today, so the bodies split out first.
-`createAccessRequest` and `submitRequest` each become a thin wrapper over a `tx`-taking
-function, and the route calls one transaction that runs both. `submitRequest` also does two
-pre-flight reads outside its transaction, `_getRequestById` and `_assertNoInFlightRequests`;
-both take a client argument so both move inside.
+Both service functions opened their own transaction, so the bodies split out first.
+`createAccessRequest` and `submitRequest` are each a thin wrapper over a `tx`-taking
+`_createAccessRequest` and `_submitRequest`, and `createAndSubmitAccessRequest` runs both in
+one transaction. `submitRequest` also did two pre-flight reads outside its transaction,
+`_getRequestById` and `_assertNoInFlightRequests`; both take a client argument and both moved
+inside.
 
-*Files:* `services/access_requests/request.js`, `routes/access_requests.js`.
+The form also never sent `type`, which the route requires and only accepts as `NEW`, so the
+create call would have been rejected before it reached the submit gap.
+
+*Files:* `services/access_requests/request.js`, `services/access_requests/index.js`,
+`routes/access_requests.js`, `useRequestAccessForm.js`, `services/v2/access-requests.js`.
+
+Tested by `tests/services/access-requests/access-request.create-and-submit.test.js`: the
+request lands `UNDER_REVIEW`, both audit events are written, and a submit that throws leaves
+no request behind.
 
 ### B2 — One request card
 
@@ -382,7 +391,7 @@ seeded data by design.
 
 ## Status
 
-A1, C1, C2, and C3 are built. B1 to B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1, C1, C2, and C3 are built. B2 to B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

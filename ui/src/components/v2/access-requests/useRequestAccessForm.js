@@ -48,7 +48,13 @@ export function useRequestAccessForm({ resource }) {
   }
 
   /**
-   * Create and submit request for review
+   * Create the request and put it under review, in one call.
+   *
+   * The server performs both steps in one transaction. A DRAFT is invisible — no surface
+   * lists one — so chaining create and submit from here would strand a row the requester
+   * could neither see nor resume if the second call failed.
+   *
+   * @see docs/design/groups/access-requests-plan.md — B1
    */
   async function submit() {
     if (!isFormValidForSubmit.value) {
@@ -60,11 +66,13 @@ export function useRequestAccessForm({ resource }) {
 
     try {
       const data = {
-        resource_type: resource.type,
+        // RENEWAL is not implemented; the route accepts only NEW.
+        type: "NEW",
         resource_id: resource.id,
         subject_id: subject.value.id,
         items: buildItems(),
         purpose: purpose.value,
+        submit: true,
       };
 
       const response = await accessRequestService.create(data);
