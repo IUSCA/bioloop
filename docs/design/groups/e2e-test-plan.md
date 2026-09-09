@@ -358,6 +358,21 @@ dataset names are unique within `[owner_group_id, name, type, is_deleted]` per
 
 ### How it is torn down
 
+**Through SQL, not through the API, because the API deliberately offers no way.** There is no
+`DELETE /groups/:id`, and `DELETE /v2/datasets/:id` is commented out in
+`routes/datasets_v2/index.js`. Groups expose deletes only for members, admins, and
+invitations; collections do have `DELETE /collections/:id`.
+
+That absence is the design working, not a gap. Archiving is not deletion, and history is
+preserved rather than removed — [decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved)
+and the archiving section of [Design](./design.md#archiving-groups) both turn on it. **Adding
+a destructive endpoint so a test suite can tidy up would put a hole in the model to serve the
+tests**, and it would be a hole with no policy anyone had reason to write. The suite gets a
+small Postgres client of its own instead, and deletes its own rows by run identifier.
+
+So the world is **built through the API** — which makes the fixture a check that the creation
+paths work — and **torn down through SQL**, which keeps the teardown out of the product.
+
 **Grants before resources.** `grant.resource` is `ON DELETE RESTRICT`, which
 [the access and requests plan](./access-requests-plan.md#testing) already records as a trap
 for the API suites, and which is the same reason `api/src/scripts/delete_datasets.js` is
@@ -445,33 +460,23 @@ findings transfer to Playwright with one caveat given below.
 | Buttons the app renders, including typeahead suggestions | Respond to a plain click |
 | Plain `<input>` | Takes a normal fill |
 | Plain `<div>` carrying `@click`, such as the access-type rows | Responds to a plain click |
-| `va-select` | Ignored every synthetic click and every ArrowDown-plus-Enter tried |
+| `va-select` | Ignores synthetic clicks and keys — but **takes real Playwright input normally** |
 
-`va-select` is the one that matters, because it appears in the owning-group picker, the
+`va-select` was the open question, because it appears in the owning-group picker, the
 dataset-type picker, the subject selector, and the expiry selector — most of the forms this
 suite has to fill.
 
-**The caveat is that Playwright does not dispatch synthetic events.** It drives real input
-through the Chrome DevTools Protocol, which a component cannot distinguish from a person, so
-the finding may not transfer at all. That is spike 1 of phase 0, and it is the question most
-likely to change the cost of phases 3 and 4.
+**Spike 1 settled it: Playwright drives it.** The skill's finding is about events dispatched
+from `evaluate_script`; Playwright sends real input over the Chrome DevTools Protocol, which
+the component cannot distinguish from a person. A click on the select followed by a click on
+`getByRole('option', { name: … })` changes the bound value. Measured on two selects in
+different components, both green first time. **The `setupState` escape hatch the skill
+describes is for the MCP browser, and this suite does not need it.**
 
-**The escape hatch already exists either way.** The skill's technique reaches the Vue
-component instance and assigns to `setupState`, and `page.evaluate` can do exactly the same
-thing:
-
-```js
-await page.evaluate(() => {
-  let c = document.querySelector('.va-modal').__vueParentComponent;
-  while (c && c.type?.__name !== 'ImportDatasetModal') c = c.parent;
-  c.setupState.form.sourceId = 2;   // not .value — setupState unwraps refs and .value throws
-});
-```
-
-Walking `c.subTree` reaches a child component such as `OwnerGroupSelect`. The component's own
-watchers fire afterwards, so availability checks, `canSubmit`, and emitted events all run as
-they would for a real click. If spike 1 says `va-select` cannot be driven, this goes into one
-page-object helper rather than into every spec.
+One trap surfaced while measuring it, and it will recur. A locator written as `.va-select`
+filtered on the value it *currently* shows stops matching the instant the value changes, and
+Playwright reports "element(s) not found". That reads exactly like the click having failed.
+Hold a select by its position within the modal, and assert on its text.
 
 ### Assert with retrying expectations, never with a read after an action
 
@@ -652,10 +657,13 @@ highest-value flows land before the most expensive component work.
 Nothing here produces a spec. Each item is a question that changes the plan's shape, and each
 names what would settle it.
 
-1. **Can Playwright drive `va-select`?** Write one throwaway spec that opens the issue-grant
-   modal and picks a subject. The v2-ui-changes skill says synthetic events cannot; Playwright
-   sends real ones. If it turns out it cannot either, the `setupState` escape hatch goes into
-   a page-object helper and the component work in phases 3 and 4 grows.
+1. ~~**Can Playwright drive `va-select`?**~~ **Settled: yes.** A plain click on the select
+   followed by a click on `getByRole('option', …)` changes the bound value. Measured on two
+   selects in different components — the role select in `AddGroupMemberModal` and the
+   dataset-type select in `UploadDatasetModal` — both green first time, in
+   `e2e/src/specs/spike/va-select.spec.js`. The skill's finding is about events dispatched
+   from `evaluate_script` and does not transfer to real CDP input. **Phases 3 and 4 are
+   ordinary form-filling, and the `setupState` escape hatch is not needed.**
 2. ~~**Does `POST /auth/test_login` survive the F3 fix?**~~ **Settled.** The route is
    registered under `localhost`, `docker`, and `ci`, and absent under `production`, `test`,
    and any unrecognised mode. Verified by enumerating the auth router's stack once per mode,

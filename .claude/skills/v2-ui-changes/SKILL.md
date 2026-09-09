@@ -68,7 +68,7 @@ state that remains is not a bug in the component.
 Plain divs carrying `@click` — the access-type rows, for instance — do respond to `.click()`.
 Only `va-select` needs the component-instance route below.
 
-### A `va-select` cannot be driven by clicks or keys
+### A `va-select` cannot be driven by *synthetic* clicks or keys
 
 This is the single biggest time sink when exercising a v2 form from the MCP browser.
 `va-select` ignores a synthetic click on its rendered option, and it ignores ArrowDown
@@ -76,6 +76,18 @@ plus Enter after the listbox opens. The `take_snapshot` a11y tree does not enume
 options either, so there is nothing to pass to the `click` tool. Every combination of
 `pointerdown`/`mousedown`/`pointerup`/`mouseup`/`click` dispatched at the option's centre
 was tried and none of them changed the bound value.
+
+**This is a limit of dispatched events, not of the component.** Playwright drives real input
+over the Chrome DevTools Protocol, and a plain `.click()` on the select followed by a
+`.click()` on `getByRole('option', { name: … })` changes the bound value normally. Measured
+2026-09-09 on two selects in different components — the role select in `AddGroupMemberModal`
+and the dataset-type select in `UploadDatasetModal` — both went green first time. So a
+browser-driven test suite needs none of the workaround below; only the MCP browser does.
+
+One trap when checking this by hand: a locator written as
+`.va-select` filtered on the *current* value stops matching the moment the value changes, and
+Playwright reports "element(s) not found". That reads as the click having failed when it is
+the click having worked. Hold the select by position instead, and assert on its text.
 
 Reach the component instance instead and set its state:
 
@@ -328,13 +340,26 @@ filled primary, in a modal footer, it reads correctly and is the established con
 
 ## Things that are already broken, so do not chase them
 
-- `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub". This is a
-  dead file; the modal the access request pages actually mount is `ReviewRequestModal.vue`,
-  which is complete and works.
-- The access requests page logs a `Pagination total_results` prop warning and a 400 on
-  reviewed requests.
-- The request card on a dataset's Requests tab is a `<button>` with no handler, so it does
-  not open the request. The card on `/v2/access-requests` does.
+Re-checked 2026-09-09 against the code. Three entries that were here have gone, because the
+access-requests phases fixed them; they are listed under [Fixed since](#fixed-since) so a
+session holding an older copy of this page does not go looking.
+
+- The access requests page may still log a `Pagination total_results` prop warning.
+  `total_results` is declared `required` and typed `Number` in
+  `components/utils/Pagination.vue`, so the warning would be a transient `undefined` while
+  the first fetch is in flight rather than a missing binding. **Not re-verified in the
+  browser** — confirm in the console before spending time on it.
+
+### Fixed since
+
+- **`AccessRequestReviewModal.vue`, the "Review Modal Stub" file.** Deleted. Nothing under
+  `ui/src` references it. `ReviewRequestModal.vue` is what the pages mount.
+- **A 400 on the reviewed-requests list.** The route now accepts `reviewed_at` as a
+  `sort_by`, which is what that tab sorts by — `routes/access_requests.js`, the
+  `/reviewed-by-me` validator.
+- **The request card on a dataset's Requests tab not opening.** `AccessRequestCard` emits
+  `view` from a click on its root, and `DatasetRequestsTab` binds both `@view` and
+  `@review`.
 
 ## `ErrorState`'s "Try again" does nothing unless you bind `@retry`
 

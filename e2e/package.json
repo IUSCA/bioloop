@@ -1,0 +1,11 @@
+{
+  "name": "bioloop-e2e",
+  "private": true,
+  "description": "Browser-driven tests for the v2 groups and access-control system. Separate from tests/, which covers v1 and is organised around RBAC roles.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
