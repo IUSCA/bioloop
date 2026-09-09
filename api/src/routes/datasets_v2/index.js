@@ -266,6 +266,7 @@ router.get(
     query('include_states').optional().toBoolean(),
     query('include_bundle').optional().toBoolean(),
     query('include_upload_log').optional().toBoolean(),
+    query('include_owner_group').optional().toBoolean(),
     query('id').optional().isInt().toInt(),
     query('resource_id').optional().isUUID(),
     query('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)),
@@ -299,6 +300,7 @@ router.get(
       states: req.query.include_states,
       bundle: req.query.include_bundle,
       upload_log: req.query.include_upload_log,
+      owner_group: req.query.include_owner_group,
     };
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to

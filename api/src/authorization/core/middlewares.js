@@ -103,7 +103,7 @@ function createAuthorizationMiddlewareFunction(
     const policy = policyContainer.getPolicy(action);
     const attributeRules = policyContainer.getAttributeRules(action);
 
-    return asyncHandler(async (req, res, next) => {
+    const middleware = asyncHandler(async (req, res, next) => {
     // extract identifiers from the request
       const user = requesterFn(req);
       const userId = user?.subject_id;
@@ -222,6 +222,14 @@ function createAuthorizationMiddlewareFunction(
 
       next();
     });
+
+    // Which policy this middleware enforces, readable from the router stack. An
+    // `authorize()` call that names the wrong action is a live enforcement hole that reads
+    // as correct, and one did ship: `POST /groups/:id/unarchive` bound `group.archive`, so a
+    // group admin could take back the authority archiving gave up. Nothing at runtime reads
+    // this; it exists so a test can.
+    middleware.authorizes = { resourceType, action };
+    return middleware;
   });
 }
 

@@ -313,7 +313,9 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('group', 'archive'), // same policy as archiving, since both actions are about changing the archived status
+  // Not the same policy as archiving. Archiving gives up authority and a group admin may do
+  // it; unarchiving takes authority back and is platform admin only.
+  authorize('group', 'unarchive'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Unarchive a group'

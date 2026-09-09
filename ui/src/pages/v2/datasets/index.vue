@@ -330,6 +330,8 @@ async function fetchDatasets() {
       upload_status:
         activeUpload.value !== "all" ? activeUpload.value : undefined,
       include_upload_log: activeUpload.value !== "all" ? true : undefined,
+      // The Owner column is always shown, so the join is always wanted.
+      include_owner_group: true,
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       name: searchTerm.value || undefined,
