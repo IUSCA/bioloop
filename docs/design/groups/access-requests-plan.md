@@ -191,7 +191,13 @@ The page shows the request, its items with their decisions, and the effective-ac
 C4 adds. It is the surface C3's requester-facing half needs, and the one a notification can
 link to.
 
-*Files:* one page, one route entry. *Reuse:* `RequestContextHeader.vue`, and `GET /access-requests/:id`.
+The page offers Review when the viewer may decide, and Withdraw when it is the viewer's own
+open request. `GET /access-requests/:id` therefore derives capabilities, because the three
+policies that admit a reader are not the one that admits a reviewer: a requester and an
+oversight holder can both read a request neither may decide.
+
+*Files:* `pages/v2/access-requests/[id].vue`, `routes/access_requests.js`.
+*Reuse:* `RequestContextHeader.vue`, `Badge.vue`, and `GET /access-requests/:id`.
 
 ### B4 — The review flow is reachable
 
@@ -396,7 +402,7 @@ seeded data by design.
 
 ## Status
 
-A1, B1, B2, C1, C2, and C3 are built. B3 to B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1, B2, B3, C1, C2, and C3 are built. B4 to B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

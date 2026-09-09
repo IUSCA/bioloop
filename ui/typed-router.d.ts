@@ -55,6 +55,7 @@ declare module 'vue-router/auto-routes' {
     '/test': RouteRecordInfo<'/test', '/test', Record<never, never>, Record<never, never>>,
     '/users': RouteRecordInfo<'/users', '/users', Record<never, never>, Record<never, never>>,
     '/v2/access-requests/': RouteRecordInfo<'/v2/access-requests/', '/v2/access-requests', Record<never, never>, Record<never, never>>,
+    '/v2/access-requests/[id]': RouteRecordInfo<'/v2/access-requests/[id]', '/v2/access-requests/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/v2/audit-logs': RouteRecordInfo<'/v2/audit-logs', '/v2/audit-logs', Record<never, never>, Record<never, never>>,
     '/v2/collections/': RouteRecordInfo<'/v2/collections/', '/v2/collections', Record<never, never>, Record<never, never>>,
     '/v2/collections/[id]/': RouteRecordInfo<'/v2/collections/[id]/', '/v2/collections/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,

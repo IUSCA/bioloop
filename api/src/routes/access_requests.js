@@ -8,7 +8,9 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const grantService = require('@/services/grants');
-const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
+const {
+  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray,
+} = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
@@ -230,13 +232,21 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_request', 'read'),
+  // The detail page offers a Review control, and the three policies that admit a reader here
+  // are not the one that admits a reviewer: a requester and an oversight holder can both read
+  // a request neither may decide.
+  authorize('access_request', 'read', { shouldDeriveCapabilities: true }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Get access request by ID'
 
     const request = await accessRequestsService.getRequestById(req.params.id);
-    res.json(req.permission.filter(request));
+    res.json({
+      ...req.permission.filter(request),
+      _meta: {
+        capabilities: toCapabilitiesArray(req.permission.capabilities),
+      },
+    });
   }),
 );
 
