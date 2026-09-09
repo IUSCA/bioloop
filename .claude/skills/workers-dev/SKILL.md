@@ -5,9 +5,10 @@ description: How to start, stop, restart, and read the logs of the Python worker
 
 # Running the workers locally
 
-The workers are three Python processes managed by pm2. `bin/devserver.sh` manages the API
-and the UI; it does not manage these. See
-[.claude/skills/dev-servers](../dev-servers/SKILL.md) for that half.
+The workers are three Python processes managed by pm2. `bin/devserver.sh` manages the API,
+the UI, and the Node notification worker; it does not manage these. See
+[.claude/skills/dev-servers](../dev-servers/SKILL.md) for that half. Its `notifications-worker` service is
+the notification email worker, not one of the celery workers on this page.
 
 The user-facing version of this page is
 [docs/guides/workers-local.md](../../../docs/guides/workers-local.md).

@@ -124,7 +124,7 @@ npm run worker       # worker without nodemon
 ```
 
 To start Redis, MailHog, and the worker for local development, see
-[Running the dev servers](../../../guides/dev-servers.md#notifications-need-two-more-processes).
+[Running the dev servers](../../../guides/dev-servers.md#notifications-need-redis-mailhog-and-the-worker).
 
 ## In-App Data Model
 

@@ -369,11 +369,26 @@ Grants written before this work carry no `source_access_request_id`, so the summ
 for seeded rows and correct for everything issued from now on.
 
 The summary is derived, not stored. For one request it counts the grants naming it as their
-source, split into live, revoked, and expired, and it names the most recent revocation. C1's
-query supplies the live half and distinguishes the case where an approved item wrote nothing
-because a broader grant covers it.
+source, split into live, revoked, and expired, and it names the most recent revocation and
+why. The three states are exclusive and exhaustive, so they sum to the number issued.
 
-*Files:* `services/access_requests/fetch.js`, `routes/access_requests.js`, B3's page, B2's card.
+The three listings get the counts from one grouped query for the whole page, so a listing
+costs one round trip rather than one per row. The detail surface additionally runs C1's
+coverage query, which answers the other half: an approved item writes no grant when a broader
+one already covers it, so a request can read as APPROVED with nothing issued while the subject
+still holds the access. That costs a query per request, which is why the listings do not ask
+it.
+
+The card says "No live access from this request" when a decided request has issued grants and
+none survives. It stays silent while a request is under review and when the request issued
+nothing, because the detail page is where the coverage query can explain the second case.
+
+*Files:* `services/access_requests/access_summary.js` (new),
+`services/access_requests/fetch.js`, B3's page, B2's card.
+
+Checked against the running app. An approved `DATASET:DOWNLOAD` read "1 live"; revoking that
+grant left the request `APPROVED` and the page then read "0 live · 1 revoked — Nothing from
+this request is in force any more. The last grant was revoked 4s ago (manual).".
 
 ### C5 — Every grant row names where it came from
 
@@ -464,8 +479,8 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B6, C1, C2, and C3 are built, and the loop was driven end to end in the browser
-on both resource types. C4, C5, D1, and D2 are planned and not started.
+A1, B1 to B6, C1 to C4 are built, and the loop was driven end to end in the browser on both
+resource types. C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

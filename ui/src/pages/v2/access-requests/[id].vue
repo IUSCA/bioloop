@@ -51,6 +51,62 @@
         </div>
       </div>
 
+      <!--
+        What the decision actually produced. An APPROVED request whose grants were revoked
+        reads as access the requester does not have, so the page says which.
+        @see docs/design/groups/access-requests-plan.md — C4
+      -->
+      <VaCard v-if="summary && isDecided">
+        <VaCardContent>
+          <h2 class="text-lg font-semibold mb-3">Access from this request</h2>
+
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <Badge :color="summary.live > 0 ? 'success' : 'danger'">
+              {{ summary.live }} live
+            </Badge>
+            <Badge v-if="summary.revoked > 0" color="warning">
+              {{ summary.revoked }} revoked
+            </Badge>
+            <Badge v-if="summary.expired > 0" color="neutral">
+              {{ summary.expired }} expired
+            </Badge>
+          </div>
+
+          <p v-if="summary.issued === 0" class="text-sm va-text-secondary">
+            This request issued no grants.
+          </p>
+          <p
+            v-else-if="summary.live === 0"
+            class="text-sm text-red-700 dark:text-red-400"
+          >
+            Nothing from this request is in force any more.
+            <span v-if="summary.last_revoked_at">
+              The last grant was revoked
+              {{ datetime.fromNowShort(summary.last_revoked_at)
+              }}<template v-if="summary.last_revocation_type">
+                ({{ summary.last_revocation_type.toLowerCase() }})</template
+              >.
+            </span>
+          </p>
+
+          <!-- Approved access the subject holds by some other path. -->
+          <div v-if="summary.covered_elsewhere?.length" class="mt-3 space-y-1">
+            <p
+              class="text-xs font-semibold uppercase tracking-wider va-text-secondary"
+            >
+              Also reaching this subject
+            </p>
+            <p
+              v-for="row in summary.covered_elsewhere"
+              :key="row.id"
+              class="text-sm va-text-secondary"
+            >
+              {{ row.access_type_name }} — {{ coverageVia(row) }}
+            </p>
+          </div>
+        </VaCardContent>
+      </VaCard>
+
       <!-- Who, what, and why -->
       <VaCard>
         <VaCardContent>
@@ -200,6 +256,25 @@ const canReview = computed(
     capabilities.value.has("review") &&
     request.value?.status === "UNDER_REVIEW",
 );
+
+const summary = computed(() => request.value?.access_summary ?? null);
+
+const isDecided = computed(() =>
+  ["APPROVED", "PARTIALLY_APPROVED", "REJECTED"].includes(
+    request.value?.status,
+  ),
+);
+
+// The same three paths `getEffectiveCoverage` labels, in the reader's words.
+function coverageVia(row) {
+  if (row.via_collection_name) {
+    return `held through the collection ${row.via_collection_name}`;
+  }
+  if (row.via === "PRINCIPAL") return "held via a system principal";
+  if (row.via_group_name) return `held through ${row.via_group_name}`;
+  if (row.via === "GROUP") return "held through a group";
+  return "held directly";
+}
 
 const canWithdraw = computed(
   () =>

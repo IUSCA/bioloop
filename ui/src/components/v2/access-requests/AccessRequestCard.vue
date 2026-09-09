@@ -33,6 +33,15 @@
           <span v-if="timeLabel">{{ timeLabel }}</span>
         </div>
 
+        <!--
+          A decided request is not the same as access the subject still has. Say which,
+          rather than letting APPROVED stand for both.
+          @see docs/design/groups/access-requests-plan.md — C4
+        -->
+        <p v-if="accessNote" class="text-sm" :class="accessNoteClass">
+          {{ accessNote }}
+        </p>
+
         <p
           v-if="props.request.purpose"
           class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2"
@@ -129,5 +138,27 @@ const timeLabel = computed(() => {
 
 const canReviewThis = computed(
   () => props.canAct && props.request.status === "UNDER_REVIEW",
+);
+
+const DECIDED = ["APPROVED", "PARTIALLY_APPROVED"];
+
+// Silent unless the request was decided and produced grants. A request still under review
+// has nothing to say here, and one that produced nothing is explained on the detail page,
+// where the coverage query can say whether the access arrives some other way.
+const accessNote = computed(() => {
+  const summary = props.request.access_summary;
+  if (!summary || !DECIDED.includes(props.request.status)) return null;
+  if (summary.issued === 0) return null;
+  if (summary.live === 0) return "No live access from this request";
+  if (summary.live < summary.issued) {
+    return `${summary.live} of ${summary.issued} grants still live`;
+  }
+  return null;
+});
+
+const accessNoteClass = computed(() =>
+  props.request.access_summary?.live === 0
+    ? "text-red-700 dark:text-red-400"
+    : "text-amber-700 dark:text-amber-400",
 );
 </script>

@@ -7,7 +7,9 @@ order: 5
 
 The workers are three Python processes. They register datasets that appear on disk, run the
 `integrated` workflow, and push uploads through verification. `bin/devserver.sh` runs the
-API and the UI; it does not run these. pm2 does.
+API, the UI, and the Node notification worker; it does not run these. pm2 does. The
+`notifications-worker` service in `bin/devserver.sh` is the notification email worker and is unrelated to
+the celery workers on this page.
 
 The agent-facing version of this page, with the traps and the reasoning, is
 `.claude/skills/workers-dev/SKILL.md`.

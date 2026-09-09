@@ -5,10 +5,10 @@ order: 4
 
 # Running the dev servers
 
-`bin/devserver.sh` starts the API and the UI as background services on your machine. Each
-server runs in its own session, detached from the terminal that launched it. You can close
-that terminal, open a new one, or let a coding agent restart a server, and the processes
-carry on.
+`bin/devserver.sh` starts the API, the UI, and the notification worker as background
+services on your machine. Each one runs in its own session, detached from the terminal that
+launched it. You can close that terminal, open a new one, or let a coding agent restart a
+service, and the processes carry on.
 
 This page assumes the one-time setup in [Install locally](./install-local.md) is done: both
 `.env` files exist, dependencies are installed, the UI certificate is generated, and
@@ -17,19 +17,24 @@ Postgres is running.
 ## Commands
 
 ```bash
-bin/devserver.sh up          # start both servers
+bin/devserver.sh up          # start all three services
 bin/devserver.sh status      # pid and listening port for each
-bin/devserver.sh logs        # follow both log files
+bin/devserver.sh logs        # follow all three log files
 bin/devserver.sh restart     # stop then start
-bin/devserver.sh down        # stop both servers
+bin/devserver.sh down        # stop all three services
 ```
 
-Every command takes an optional second argument, `api` or `ui`, to act on one service:
+Every command takes optional service names — `api`, `ui`, `notifications-worker`, or several — to act on
+a subset:
 
 ```bash
 bin/devserver.sh restart api
-bin/devserver.sh logs ui
+bin/devserver.sh logs notifications-worker
+bin/devserver.sh up api ui
 ```
+
+`notifications-worker` is the notification email worker described below. The Python celery workers are a
+separate system, managed with pm2 rather than this script.
 
 ## The usual working pattern
 
@@ -48,7 +53,8 @@ Ctrl-C stops the tail. It does not stop the servers.
 | --- | --- |
 | API log | `logs/api.log` |
 | UI log | `logs/ui.log` |
-| Process ids | `logs/api.pid`, `logs/ui.pid` |
+| Notification worker log | `logs/notifications-worker.log` |
+| Process ids | `logs/<name>.pid` |
 
 The whole `logs/` directory is gitignored.
 
@@ -56,11 +62,11 @@ The API listens on `http://localhost:3030`. The UI listens on `https://localhost
 443, behind the self-signed certificate you generated during setup. Your browser will warn
 about that certificate the first time.
 
-## Notifications need two more processes
+## Notifications need Redis, MailHog, and the worker
 
-`bin/devserver.sh` starts the API and the UI and nothing else. Neither the notification
-worker nor a mail server is one of them, so email sent from a dev session goes nowhere
-until you start both yourself.
+`bin/devserver.sh up` starts the notification worker along with the API and the UI, but it
+does not touch Docker. Email sent from a dev session goes nowhere until Redis and an SMTP
+server are running as well.
 
 In-app notifications need Redis and the API, and nothing more. The API writes the row and
 publishes it to a per-user Redis channel, and the API process holding your browser's SSE
@@ -74,14 +80,17 @@ default config already points at `localhost:1025`.
 
 ```bash
 docker compose up -d redis mailhog   # SMTP on 1025, MailHog web UI on http://localhost:8025
-bin/devserver.sh up
-cd api && npm run dev:worker         # leave this terminal open
+bin/devserver.sh up                  # all three
 ```
 
-`[Worker] Ready — waiting for jobs` is the last line of a good worker boot, and
-`SMTP connection verified` above it means MailHog is reachable. `npm run dev:all` in `api/`
-runs the API and the worker together in one terminal instead, if you would rather not use
-`devserver.sh` for the API.
+`[Worker] Ready — waiting for jobs` in `logs/notifications-worker.log` is the last line of a good worker
+boot, and `SMTP connection verified` above it means MailHog is reachable. The worker listens
+on no port, so its `status` row shows a pid and nothing else.
+
+`bin/devserver.sh restart notifications-worker` and `bin/devserver.sh logs notifications-worker` act on the worker alone,
+which is what you want when you are editing templates or the send path. `npm run dev:all` in
+`api/` runs the API and the worker together in one terminal instead, if you would rather not
+use `devserver.sh` at all — do not run both, or two workers will compete for the same queues.
 
 Ignore the repeated `This Redis server's default user does not require a password, but a
 password was supplied` warnings. `api/.env` sets `REDIS_PASSWORD` and the dev Redis

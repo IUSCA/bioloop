@@ -2,21 +2,28 @@
 #
 # devserver.sh
 #
-# Starts, stops, and restarts the API and UI dev servers so that both a human
-# terminal and an AI agent session can control the same processes.
+# Starts, stops, and restarts the local dev processes so that both a human
+# terminal and an AI agent session can control the same ones.
 #
-# Each server runs in its own session (setsid), detached from the shell that
+# Each process runs in its own session (setsid), detached from the shell that
 # launched it, writing to logs/<name>.log with its pid in logs/<name>.pid.
 # Nothing dies when the launching terminal or tool call exits.
 #
-#   bin/devserver.sh up [api|ui]        start (no-op if already running)
-#   bin/devserver.sh down [api|ui]      stop
-#   bin/devserver.sh restart [api|ui]   stop then start
-#   bin/devserver.sh status             what is running, on which pid
-#   bin/devserver.sh logs [api|ui]      follow the logs (ctrl-c is safe)
+#   bin/devserver.sh up [name...]        start (no-op if already running)
+#   bin/devserver.sh down [name...]      stop
+#   bin/devserver.sh restart [name...]   stop then start
+#   bin/devserver.sh status [name...]    what is running, on which pid
+#   bin/devserver.sh logs [name...]      follow the logs (ctrl-c is safe)
 #
-# Both servers already reload on file changes, so restart is only for the cases
-# reload does not cover: a changed .env, a new dependency, a wedged process.
+# The names are api, ui, and notifications-worker; all three are the default.
+#
+# "notifications-worker" is api/src/notification/worker.js. It dequeues Bull
+# jobs from Redis and sends the mail, so email goes nowhere while it is stopped.
+# In-app notifications do not need it. The Python celery workers are a different
+# thing entirely and are managed with pm2, not this script.
+#
+# Every process reloads on file changes, so restart is only for the cases reload
+# does not cover: a changed .env, a new dependency, a wedged process.
 
 set -u
 
@@ -24,7 +31,26 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOGDIR="$ROOT/logs"
 mkdir -p "$LOGDIR"
 
-svc_dir()  { case "$1" in api) echo "$ROOT/api";; ui) echo "$ROOT/ui";; esac; }
+ALL_SERVICES="api ui notifications-worker"
+
+# Where each process runs, and the npm script that starts it. A name with no
+# entry here is a typo, not a service; svc_dir refuses it rather than guessing.
+svc_dir() {
+  case "$1" in
+    api|notifications-worker) echo "$ROOT/api";;
+    ui)                      echo "$ROOT/ui";;
+    *)          return 1;;
+  esac
+}
+
+svc_script() {
+  case "$1" in
+    api|ui)              echo "dev";;
+    notifications-worker) echo "dev:worker";;
+    *)                   return 1;;
+  esac
+}
+
 pidfile()  { echo "$LOGDIR/$1.pid"; }
 logfile()  { echo "$LOGDIR/$1.log"; }
 
@@ -45,7 +71,7 @@ start_one() {
   fi
   # start_new_session detaches the child from this shell's process group, so it
   # survives the terminal or agent tool call that started it.
-  python3 - "$(logfile "$name")" "$(pidfile "$name")" "$(svc_dir "$name")" npm run dev <<'PY'
+  python3 - "$(logfile "$name")" "$(pidfile "$name")" "$(svc_dir "$name")" npm run "$(svc_script "$name")" <<'PY'
 import os, subprocess, sys
 log, pidfile, cwd, *cmd = sys.argv[1:]
 out = open(log, "ab", buffering=0)
@@ -90,7 +116,12 @@ status_one() {
 }
 
 cmd="${1:-status}"
-targets="${2:-api ui}"
+shift 2>/dev/null
+targets="${*:-$ALL_SERVICES}"
+
+for s in $targets; do
+  svc_dir "$s" >/dev/null || { echo "unknown service '$s'; expected one of: $ALL_SERVICES" >&2; exit 2; }
+done
 
 case "$cmd" in
   up|start)   for s in $targets; do start_one "$s"; done ;;
@@ -99,5 +130,5 @@ case "$cmd" in
   status)     for s in $targets; do status_one "$s"; done ;;
   logs)       # shellcheck disable=SC2046
               tail -n 50 -f $(for s in $targets; do logfile "$s"; done) ;;
-  *)          echo "usage: bin/devserver.sh {up|down|restart|status|logs} [api|ui]" >&2; exit 2 ;;
+  *)          echo "usage: bin/devserver.sh {up|down|restart|status|logs} [api|ui|notifications-worker ...]" >&2; exit 2 ;;
 esac

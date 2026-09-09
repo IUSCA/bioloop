@@ -4,6 +4,7 @@ const {
 
 const prisma = require('@/db');
 const { enumToSql, buildWhereClause } = require('@/utils/sql');
+const { withGrantCounts, getAccessSummaryForRequest } = require('./access_summary');
 
 const INCLUDES_CONFIG = {
   access_request_items: {
@@ -43,8 +44,17 @@ async function _getRequestById(tx, request_id) {
   });
 }
 
+/**
+ * One request, with the summary of what its approval actually produced.
+ *
+ * `_getRequestById` stays free of the summary, because the transactional callers use it to
+ * return the row they have just written and a derived count is not part of that.
+ * @see docs/design/groups/access-requests-plan.md — C4
+ */
 async function getRequestById(request_id) {
-  return _getRequestById(prisma, request_id);
+  const request = await _getRequestById(prisma, request_id);
+  if (!request) return request;
+  return { ...request, access_summary: await getAccessSummaryForRequest(request) };
 }
 
 /** * Get access requests for a user (as requester)
@@ -73,7 +83,7 @@ async function getRequestsByUser({
       type: resource_type,
     };
   }
-  const data = await prisma.access_request.findMany({
+  const rows = await prisma.access_request.findMany({
     where,
     include: INCLUDES_CONFIG,
     orderBy: {
@@ -89,7 +99,7 @@ async function getRequestsByUser({
       offset,
       limit,
     },
-    data,
+    data: await withGrantCounts(rows),
   };
 }
 
@@ -174,11 +184,11 @@ async function getRequestsPendingReviewForUser({
   const total = Number(countResult[0].total_count);
   const requestIds = result.map((row) => row.id);
 
-  const data = await prisma.access_request.findMany({
+  const rows = await prisma.access_request.findMany({
     where: { id: { in: requestIds } },
     include: INCLUDES_CONFIG,
   });
-  return { metadata: { total, offset, limit }, data };
+  return { metadata: { total, offset, limit }, data: await withGrantCounts(rows) };
 }
 
 /**
@@ -206,7 +216,7 @@ async function getRequestsReviewedByUser({
       type: resource_type,
     };
   }
-  const data = await prisma.access_request.findMany({
+  const rows = await prisma.access_request.findMany({
     where,
     include: INCLUDES_CONFIG,
     orderBy: {
@@ -226,7 +236,7 @@ async function getRequestsReviewedByUser({
       offset,
       limit,
     },
-    data,
+    data: await withGrantCounts(rows),
   };
 }
 

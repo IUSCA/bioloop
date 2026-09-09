@@ -19,17 +19,19 @@ watch script, and the upload cron are covered by
 ## Commands
 
 ```
-bin/devserver.sh up | down | restart | status | logs   [api|ui]
+bin/devserver.sh up | down | restart | status | logs   [api|ui|notifications-worker ...]
 ```
 
-The second argument is optional and defaults to both services.
+The trailing arguments are optional and default to all three services.
+`notifications-worker` is the notification email worker; see below.
 
 - `status` prints each service's pid and its listening port.
 - `logs` follows both log files. Ctrl-C stops the tail and leaves the servers running.
 
-Logs go to `logs/api.log` and `logs/ui.log`, pids to `logs/<name>.pid`. The whole `logs/`
-directory is gitignored. The API listens on `http://localhost:3030` and the UI on
-`https://localhost`, port 443, behind a self-signed certificate.
+Logs go to `logs/<name>.log`, pids to `logs/<name>.pid`. The whole `logs/` directory is
+gitignored. The API listens on `http://localhost:3030` and the UI on `https://localhost`,
+port 443, behind a self-signed certificate. The worker listens on nothing, so its `status`
+row has no port and that is not a fault.
 
 ## Start servers this way, never with a bare `npm run dev`
 
@@ -41,11 +43,11 @@ session. Nothing in the harness's cleanup path reaches it.
 `setsid` is not available on macOS, which is why the script uses `python3` rather than the
 one-line shell form.
 
-## Notifications need two more processes
+## Notifications need Redis, MailHog, and the worker
 
-`bin/devserver.sh` starts the API and the UI and nothing else. Neither the notification
-worker nor a mail server is one of them, so email sent from a dev session goes nowhere
-until you start both by hand.
+`bin/devserver.sh up` starts the worker along with the API and the UI, but no mail server,
+and it does not touch Docker. Email sent from a dev session goes nowhere until Redis and an
+SMTP server are up as well.
 
 **In-app notifications need Redis and the API, and that is all.** The row is written by
 `InAppNotificationService.create`, which then publishes it to a per-user Redis channel.
@@ -58,34 +60,23 @@ enqueues a Bull job. `api/src/notification/worker.js` is the one process that ca
 server, and the API's default config already points at `localhost:1025`.
 
 ```bash
-docker compose up -d redis mailhog          # 6379 and 1025, MailHog UI on 8025
-bin/devserver.sh up
+docker compose up -d redis mailhog   # 6379 and 1025, MailHog UI on 8025
+bin/devserver.sh up                  # all three
 ```
 
-Start the worker detached the same way `devserver.sh` does, because a `nohup ... &` inside
-a tool call is killed when the call ends:
+`bin/devserver.sh up notifications-worker` starts the worker alone, and `restart worker` and `logs worker`
+act on it without touching the API.
 
-```bash
-python3 - logs/notification-worker.log logs/notification-worker.pid api npm run dev:worker <<'PYEOF'
-import subprocess, sys
-log, pidfile, cwd, *cmd = sys.argv[1:]
-out = open(log, "ab", buffering=0)
-p = subprocess.Popen(cmd, cwd=cwd, stdout=out, stderr=subprocess.STDOUT,
-                     stdin=subprocess.DEVNULL, start_new_session=True)
-open(pidfile, "w").write(str(p.pid))
-PYEOF
-```
-
-`[Worker] Ready — waiting for jobs` in `logs/notification-worker.log` is the last line of a
-good boot. `SMTP connection verified` above it means MailHog is reachable. Stop the worker
-with `kill -TERM -"$(cat logs/notification-worker.pid)"`.
+`[Worker] Ready — waiting for jobs` in `logs/notifications-worker.log` is the last line of a good boot.
+`SMTP connection verified` above it means MailHog is reachable.
 
 The repeated `This Redis server's default user does not require a password, but a password
 was supplied` warnings are normal. `api/.env` sets `REDIS_PASSWORD` and the dev container
 runs without auth. They are not a fault.
 
-`npm run dev:all` runs the API and the worker together in one foreground terminal. It is
-the alternative to the two-process setup above, not an addition to it.
+`npm run dev:all` in `api/` runs the API and the worker together in one foreground terminal.
+It is an alternative to `devserver.sh`, not an addition to it; running both gives you two
+workers competing for the same queues.
 
 ## Checking the whole notification path in one command
 
