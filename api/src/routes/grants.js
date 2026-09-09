@@ -215,7 +215,32 @@ router.post(
     const effectiveGrants = await prisma.$transaction(
       (tx) => grantService.buildEffectiveGrants(tx, data, req.body.items),
     );
-    res.json(effectiveGrants);
+
+    // What the subject already holds through some other path — a group it belongs to, an
+    // ancestor of that group, a system principal, or a collection holding the dataset.
+    // `buildEffectiveGrants` matches on the exact subject, because that is what the write path
+    // may supersede, so on its own it would report a brand new grant for access the subject
+    // already has. The reviewer needs to see that before deciding.
+    // @see docs/design/groups/access-requests-plan.md — C2
+    const coverage = await grantService.labelCoverage(
+      await grantService.getEffectiveCoverage({
+        subject_id: data.subject_id,
+        resource_id: data.resource_id,
+        resource_type: data.resource_type,
+        access_type_ids: effectiveGrants.map((g) => g.access_type_id),
+      }),
+    );
+    const indirectByAccessType = new Map();
+    for (const row of coverage.filter((c) => c.via !== 'DIRECT')) {
+      const held = indirectByAccessType.get(row.access_type_id) ?? [];
+      held.push(row);
+      indirectByAccessType.set(row.access_type_id, held);
+    }
+
+    return res.json(effectiveGrants.map((g) => ({
+      ...g,
+      indirect_coverage: indirectByAccessType.get(g.access_type_id) ?? [],
+    })));
   }),
 );
 
@@ -455,6 +480,37 @@ router.get(
     const filteredData = rows.map((g) => req.permission.filter(g));
 
     res.json(filteredData);
+  }),
+);
+
+// Everything that already reaches a subject on a resource, and how each grant arrives.
+// Distinct from the route below, which answers only what the subject holds directly.
+// @see docs/design/groups/access-requests-plan.md — C1
+router.get(
+  '/:subject_type/:subject_id/:resource_type/:resource_id/coverage',
+  validate([
+    param('subject_type').isIn(['USER', 'GROUP']),
+    param('subject_id').isUUID(),
+    param('resource_type').isIn(Object.values(RESOURCE_TYPE)),
+    param('resource_id').isUUID(),
+  ]),
+  authorize('grant', 'list_for_resource', {
+    resourceIdFn: (req) => req.params.resource_id,
+    preFetchedResourceFn: (req) => ({
+      resource_id: req.params.resource_id,
+      resource_type: req.params.resource_type,
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Every grant reaching a subject on a resource, direct or inherited'
+
+    const { subject_id, resource_id, resource_type } = req.params;
+
+    const coverage = await grantService.getEffectiveCoverage({
+      subject_id, resource_id, resource_type,
+    });
+    res.json(await grantService.labelCoverage(coverage));
   }),
 );
 

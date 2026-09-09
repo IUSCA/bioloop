@@ -12,6 +12,7 @@ const prisma = require('@/db');
 const { AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder } = require('@/authorization/builtin/audit');
 const fetchService = require('./fetch');
 const issueService = require('./issue');
+const coverageService = require('./coverage');
 const helpers = require('./helpers');
 
 /**
@@ -140,4 +141,5 @@ module.exports = {
   ...helpers,
   ...fetchService,
   ...issueService,
+  ...coverageService,
 };
