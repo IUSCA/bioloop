@@ -239,6 +239,38 @@ noise.
 - A newline-joined file list can overflow an argument and produce "File name too long".
   Use `find ... -print0` piped to `xargs -0`.
 
+## Exercising a page's API calls without a browser
+
+The MCP browser is often unavailable, because another Chrome holds its profile. A page
+whose job is to compose several endpoints can still be validated properly: mint a token
+per persona and issue the page's exact calls.
+
+```bash
+curl -s -X POST http://localhost:3030/auth/test_login \
+  -H 'Content-Type: application/json' -d '{"username":"user-054"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])"
+```
+
+Then call the API directly with `Authorization: Bearer <token>`. Drive one list per
+persona — `ajohnson` is a standard user, `user-054` a group admin, `test_user` a platform
+admin — and print the status and the shape of each response beside its label.
+
+This found three live defects in one pass that lint, `npm run build`, and reading the
+route file all missed:
+
+- Two routes were unreachable because Express matches in registration order, and
+  `/grants/expiring-soon` and `/grants/mine` sat below `/grants/:id`. Every request to
+  them was rejected as a malformed UUID, and the error names `id`, not the path you
+  called. **When a static path 400s complaining about a param you did not send, look for
+  a parameterised route registered above it.**
+- A route called a service function that does not exist, under a different plural. It
+  returned 500 on every call, and the service's own tests passed the whole time.
+- A route destructured a key the service does not return, silently dropping half of every
+  row and adding an undefined one.
+
+Assert the shape, not just the status. A 200 whose body is missing the field the page
+reads is the failure that reaches a user.
+
 ## Assert a rendered claim by measuring, not by reading the template
 
 The pattern that carried every claim in the access-type order work was one `evaluate_script`
@@ -296,9 +328,6 @@ filled primary, in a modal footer, it reads correctly and is the established con
 
 ## Things that are already broken, so do not chase them
 
-- `pages/v2/home.vue` renders nothing. Its template reads `dashboard.loading` and
-  `dashboard.isGroupAdmin`; its `<script setup>` never defines `dashboard`. Unfinished
-  work on the `abac` branch, not a regression.
 - `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub". This is a
   dead file; the modal the access request pages actually mount is `ReviewRequestModal.vue`,
   which is complete and works.

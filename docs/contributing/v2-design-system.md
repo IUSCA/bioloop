@@ -406,11 +406,11 @@ every link, active tab, and focus ring in both themes. Avatar initials measure 3
 against a background generated from a hash, which needs the generator to pick from a fixed,
 checked palette instead.
 
-Three defects outside the visual layer, found while working through it:
+Two defects outside the visual layer, found while working through it. A third —
+`pages/v2/home.vue` rendering nothing, because its template read `dashboard.loading` and
+its `<script setup>` never defined `dashboard` — was fixed by the
+[dashboard plan](/design/groups/dashboard-plan.md).
 
-- `pages/v2/home.vue` renders nothing. Its template reads `dashboard.loading` and
-  `dashboard.isGroupAdmin`, and its `<script setup>` never defines `dashboard`, so the
-  render function throws.
 - `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub", visible on
   the access requests page.
 - The access requests page logs a `Pagination total_results` prop warning and a 400 on

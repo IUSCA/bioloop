@@ -2,7 +2,7 @@
 title: Dashboard plan
 order: 10
 status: active
-implemented: none
+implemented: partial
 last_verified: 2026-09-09
 ---
 
@@ -24,24 +24,40 @@ reach. Nothing else belongs on it. Every list page in the portal already browses
 filters its own resource, so the dashboard never duplicates a listing. It shows the small
 set of rows a person acts on today, and links to the page that holds the rest.
 
-## The state this plan starts from
+## Status
 
-**`/v2/home` renders nothing.** Its template reads `dashboard.loading` and
-`dashboard.isGroupAdmin`, and its `<script setup>` never defines `dashboard`. The group
-admin dashboard underneath was written, and the role detection that would reach it is
-commented out. So no user of any kind currently sees a dashboard.
+Phases 1 to 4 are built. Phase 5 is the API work the deferred panels wait on, and none of
+it is in the first release.
 
-Three of the five calls that dashboard makes are wrong against today's API.
+Every call the page makes was driven against the running API once per persona, and three
+live defects turned up that no test covered.
+
+- `GET /grants/expiring-soon` and `GET /grants/mine` were unreachable. Express matches in
+  registration order and both sat below `/grants/:id`, so every request to them was
+  rejected as a malformed UUID. Both now sit above it.
+- `GET /groups/without-active-admin` returned 500 on every call. The route asked for
+  `getGroupsWithoutActiveAdmin` and the service exports `getGroupsWithoutActiveAdmins`.
+- `GET /grants/expiring-soon` dropped the subject from every row, because the route
+  destructured `source` where the service returns `subject`.
+
+## The state this plan started from
+
+**`/v2/home` rendered nothing.** Its template read `dashboard.loading` and
+`dashboard.isGroupAdmin`, and its `<script setup>` never defined `dashboard`. The group
+admin dashboard underneath had been written, and the role detection that would reach it
+was commented out. So no user of any kind saw a dashboard.
+
+Three of the five calls that dashboard made were wrong against the API.
 
 - `AuditLogsService.getAuditRecords` returns 403 for anyone but a platform admin. The
   audit route was gated after the dashboard was written. A group admin's activity feed has
   no endpoint behind it at all.
-- `GrantsService.expiringGrants` returns a plain array grouped by subject and resource. The
-  page reads `.data.data` and `.data.metadata.total`, which are both undefined.
-- `/grants/expiring-soon` accepts only `within_days`. The page passes `limit`, `sort_by`,
-  and `sort_order`, and all three are ignored.
+- `GrantsService.expiringGrants` returns a plain array grouped by subject and resource, and
+  the page read `.data.data` and `.data.metadata.total`, which are both undefined.
+- `/grants/expiring-soon` accepts only `within_days`. The page passed `limit`, `sort_by`,
+  and `sort_order`, and all three were ignored.
 
-The page also imports the legacy `@/services/dataset` for `getStats()`. That is a v2 page
+The page also imported the legacy `@/services/dataset` for `getStats()`. That is a v2 page
 calling a v1 domain service, which the [v2 cut-over](../v2-cutover.md) forbids.
 
 ## What changed since the mockup was drawn
