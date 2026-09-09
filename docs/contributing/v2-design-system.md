@@ -283,6 +283,18 @@ layout.
 Card padding is `p-4`. Page-level horizontal padding is `px-6`. Empty and error blocks get
 `py-12`.
 
+A card's own heading is `.v2-card-title`, defined once in `ui/src/styles/main.css`. It is
+uppercase, 12px, and widely tracked, so it reads as a section marker rather than as a second
+title competing with the page's `<h1>`. A card heading is not `text-lg font-semibold`; that
+size belongs to the page title alone.
+
+**`preset="primary"` is the tinted button, not the filled one.** Vuestic's filled button is
+`<VaButton>` with a `color` and no preset, which is what the page-level action on a v2 page
+uses. `preset="primary"` paints a pale tint that reads as a secondary control, and
+`preset="secondary"` paints no background and no border at all in this theme, so it reads as
+plain coloured text. That is right for a modal footer's Cancel beside a filled Submit, and
+wrong for a button standing on its own.
+
 ## The page shell
 
 Every top-level list page uses the same shell.

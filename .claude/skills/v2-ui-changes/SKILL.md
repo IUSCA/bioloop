@@ -124,6 +124,18 @@ confirm the new token before retrying:
 
 It is filed as T9 in `.todo/local/L1-authorization-enforcement.md`.
 
+### A Vuestic checkbox takes a click on its wrapper, not on the input
+
+Unlike `va-select`, `va-checkbox` needs no component-state surgery. The a11y snapshot lists
+each one twice — a `button` carrying the whole label and a `checkbox` inside it. The
+`checkbox` uid times out with "did not become interactive"; the enclosing `button` uid works
+and flips the bound value. Click the button.
+
+The same shape appears in the access-type selector, where a type the order already confers
+renders checked and `disabled` with a "via <wider type>" chip. Reading `input.checked` alone
+therefore over-counts what the user chose; read `disabled` too, and treat a disabled tick as
+implied rather than selected.
+
 ### Confirm a class actually generated a rule
 
 Tailwind scans source text for complete class names. A class built by interpolation —
@@ -238,14 +250,30 @@ looked like a "via" badge until `aria-disabled` and `opacity` said the row was u
 where the checkbox renders first, so read the label from the element that holds it rather
 than from position.
 
+## `preset="primary"` is not the filled button
+
+Measured, not inferred. `<VaButton preset="primary">` computes a pale tint with coloured
+text; `<VaButton preset="secondary">` computes `background: rgba(0,0,0,0)` and
+`border: 0px none`, so it renders as plain coloured text with a hover-only `::before`. The
+filled button every v2 page uses for its one page-level action is `<VaButton color="...">`
+with no preset at all — `DatasetRequestsTab.vue`'s "Request Access" is the reference.
+
+This matters most for a destructive action standing alone in a page header, where
+`preset="secondary" color="danger"` reads as a stray red link rather than a button. Beside a
+filled primary, in a modal footer, it reads correctly and is the established convention.
+
 ## Things that are already broken, so do not chase them
 
 - `pages/v2/home.vue` renders nothing. Its template reads `dashboard.loading` and
   `dashboard.isGroupAdmin`; its `<script setup>` never defines `dashboard`. Unfinished
   work on the `abac` branch, not a regression.
-- `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub".
+- `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub". This is a
+  dead file; the modal the access request pages actually mount is `ReviewRequestModal.vue`,
+  which is complete and works.
 - The access requests page logs a `Pagination total_results` prop warning and a 400 on
   reviewed requests.
+- The request card on a dataset's Requests tab is a `<button>` with no handler, so it does
+  not open the request. The card on `/v2/access-requests` does.
 
 ## Keeping this current
 

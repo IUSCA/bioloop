@@ -1,17 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- Header -->
-    <div class="mb-3">
-      <h3
-        class="text-sm font-medium uppercase tracking-wide text-gray-700 dark:text-gray-300"
-      >
-        Effective Grants Preview
-      </h3>
-      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        What will actually be granted based on your decisions
-      </p>
-    </div>
-
     <!-- Preview content -->
     <div class="flex-1 overflow-auto">
       <!-- No approved items yet -->
@@ -56,6 +44,7 @@
         :rows="responseRows"
         :loading="loading"
         :error="error"
+        description="What will actually be granted based on your decisions"
       />
     </div>
   </div>

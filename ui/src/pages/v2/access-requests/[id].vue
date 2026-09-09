@@ -1,7 +1,11 @@
 <template>
   <Transition name="fade-slide" mode="out-in">
     <!-- Loading -->
-    <div v-if="loading" key="loading" class="flex flex-col gap-4">
+    <div
+      v-if="loading"
+      key="loading"
+      class="max-w-7xl mx-auto flex flex-col gap-4"
+    >
       <VaSkeleton variant="text" height="32px" width="260px" />
       <VaSkeleton variant="squared" height="220px" />
       <VaSkeleton variant="squared" height="220px" />
@@ -17,27 +21,34 @@
     </div>
 
     <!-- Loaded -->
-    <div
-      v-else-if="request"
-      key="loaded"
-      class="flex flex-col gap-4 max-w-4xl mx-auto"
-    >
-      <!-- Header -->
-      <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
-        <div class="flex items-center gap-3">
+    <div v-else-if="request" key="loaded" class="max-w-7xl mx-auto">
+      <!-- Page header. The <h1> names the resource, as it does on every other v2 detail
+           page; "Access request" is the breadcrumb's job and the summary line's. -->
+      <div class="mt-3 flex items-start justify-between flex-wrap gap-3">
+        <div class="flex items-start gap-3 min-w-0">
           <i-mdi-account-question-outline
-            class="text-2xl shrink-0"
+            class="text-2xl shrink-0 mt-0.5"
             style="color: var(--va-primary)"
           />
-          <h1 class="text-xl font-semibold">Access request</h1>
-          <Badge :color="STATUS_TONE[request.status] || 'neutral'" size="base">
-            {{ statusLabel }}
-          </Badge>
+          <div class="min-w-0">
+            <div class="flex items-center flex-wrap gap-2.5">
+              <h1 class="text-xl font-semibold truncate">{{ resourceName }}</h1>
+              <Badge
+                :color="STATUS_TONE[request.status] || 'neutral'"
+                size="base"
+              >
+                {{ statusLabel }}
+              </Badge>
+            </div>
+            <p class="text-sm va-text-secondary">{{ summaryLine }}</p>
+          </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <VaButton v-if="canReview" preset="primary" @click="openReviewModal">
-            Review
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Filled, like the one page-level action on every other v2 page. Vuestic's
+               `primary` preset is the tinted variant and reads as a secondary control. -->
+          <VaButton v-if="canReview" @click="openReviewModal">
+            Review request
           </VaButton>
           <VaButton
             v-if="canWithdraw"
@@ -51,128 +62,41 @@
         </div>
       </div>
 
-      <!--
-        What the decision actually produced. An APPROVED request whose grants were revoked
-        reads as access the requester does not have, so the page says which.
-        @see docs/design/groups/access-requests-plan.md — C4
-      -->
-      <VaCard v-if="summary && isDecided">
-        <VaCardContent>
-          <h2 class="text-lg font-semibold mb-3">Access from this request</h2>
+      <div
+        class="mt-4 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_21rem] gap-4"
+      >
+        <!-- What was asked for, and why -->
+        <div class="flex flex-col gap-4 min-w-0">
+          <RequestedAccessCard
+            :items="request.access_request_items ?? []"
+            :decision-reason="request.decision_reason || ''"
+          />
 
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <Badge :color="summary.live > 0 ? 'success' : 'danger'">
-              {{ summary.live }} live
-            </Badge>
-            <Badge v-if="summary.revoked > 0" color="warning">
-              {{ summary.revoked }} revoked
-            </Badge>
-            <Badge v-if="summary.expired > 0" color="neutral">
-              {{ summary.expired }} expired
-            </Badge>
-          </div>
+          <VaCard>
+            <VaCardContent class="!p-4">
+              <h2 class="v2-card-title">Purpose</h2>
+              <p v-if="request.purpose" class="mt-2 text-sm">
+                {{ request.purpose }}
+              </p>
+              <p v-else class="mt-2 text-sm italic va-text-secondary">
+                No purpose provided
+              </p>
+            </VaCardContent>
+          </VaCard>
+        </div>
 
-          <p v-if="summary.issued === 0" class="text-sm va-text-secondary">
-            This request issued no grants.
-          </p>
-          <p
-            v-else-if="summary.live === 0"
-            class="text-sm text-red-700 dark:text-red-400"
-          >
-            Nothing from this request is in force any more.
-            <span v-if="summary.last_revoked_at">
-              The last grant was revoked
-              {{ datetime.fromNowShort(summary.last_revoked_at)
-              }}<template v-if="summary.last_revocation_type">
-                ({{ summary.last_revocation_type.toLowerCase() }})</template
-              >.
-            </span>
-          </p>
-
-          <!-- Approved access the subject holds by some other path. -->
-          <div v-if="summary.covered_elsewhere?.length" class="mt-3 space-y-1">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider va-text-secondary"
-            >
-              Also reaching this subject
-            </p>
-            <p
-              v-for="row in summary.covered_elsewhere"
-              :key="row.id"
-              class="text-sm va-text-secondary"
-            >
-              {{ row.access_type_name }} — {{ coverageVia(row) }}
-            </p>
-          </div>
-        </VaCardContent>
-      </VaCard>
-
-      <!-- Who, what, and why -->
-      <VaCard>
-        <VaCardContent>
-          <RequestContextHeader :request="request" />
-        </VaCardContent>
-      </VaCard>
-
-      <!-- What was asked for, and what was decided -->
-      <VaCard>
-        <VaCardContent>
-          <h2 class="text-lg font-semibold mb-3">Requested access</h2>
-
-          <div class="space-y-3">
-            <div
-              v-for="item in request.access_request_items"
-              :key="item.id"
-              class="rounded-lg border border-solid border-gray-200 dark:border-gray-700 p-3"
-            >
-              <div class="flex items-start justify-between gap-4">
-                <div class="min-w-0">
-                  <p class="text-sm font-medium">{{ itemName(item) }}</p>
-                  <p
-                    v-if="itemDescription(item)"
-                    class="text-sm va-text-secondary mt-0.5"
-                  >
-                    {{ itemDescription(item) }}
-                  </p>
-
-                  <!-- A preset is a named bundle; name what it covers. -->
-                  <div
-                    v-if="presetAccessTypes(item).length"
-                    class="mt-2 flex flex-wrap gap-1"
-                  >
-                    <Badge
-                      v-for="accessType in presetAccessTypes(item)"
-                      :key="accessType.id"
-                      color="neutral"
-                    >
-                      {{ accessType.name }}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div class="text-right shrink-0">
-                  <Badge :color="DECISION_TONE[item.decision] || 'neutral'">
-                    {{ (item.decision || "PENDING").replaceAll("_", " ") }}
-                  </Badge>
-                  <p class="text-xs va-text-secondary mt-1">
-                    {{ expiryLabel(item) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- The reviewer's own words, which the item decisions do not carry. -->
-          <div v-if="request.decision_reason" class="mt-4">
-            <p
-              class="text-xs font-semibold uppercase tracking-wider va-text-secondary"
-            >
-              Reviewer's note
-            </p>
-            <p class="text-sm mt-1">{{ request.decision_reason }}</p>
-          </div>
-        </VaCardContent>
-      </VaCard>
+        <!-- The rail: what the request produced, what else reaches the subject, and who
+             asked for what. -->
+        <div class="flex flex-col gap-4 min-w-0">
+          <RequestOutcomeCard v-if="summary && isDecided" :summary="summary" />
+          <SubjectCoverageCard
+            v-if="summary?.covered_elsewhere?.length"
+            :rows="summary.covered_elsewhere"
+            :decided="isDecided"
+          />
+          <RequestDetailsCard :request="request" />
+        </div>
+      </div>
     </div>
   </Transition>
 
@@ -188,15 +112,20 @@
 /**
  * The one page that renders a single access request.
  *
- * Nothing rendered one before: the queue's `viewRequest` pushed to a legacy path that does
- * not exist, so every card in every list was a 404. This is the surface a notification links
- * to, and where the effective-access summary sits.
+ * Two columns: what was asked for on the left, and what it means for the subject on the
+ * right. The rail leads with the outcome, because a decided request is read to find out
+ * what access is in force right now, and the status badge alone answers that wrongly
+ * whenever a grant has since been revoked.
  *
- * @see docs/design/groups/access-requests-plan.md — B3
+ * @see docs/design/groups/access-requests-plan.md — B3, C4
+ * @see docs/public/mockups/access-request-screens.html
  */
 import Badge from "@/components/v2/Badge.vue";
-import RequestContextHeader from "@/components/v2/access-requests/RequestContextHeader.vue";
+import RequestDetailsCard from "@/components/v2/access-requests/RequestDetailsCard.vue";
+import RequestOutcomeCard from "@/components/v2/access-requests/RequestOutcomeCard.vue";
+import RequestedAccessCard from "@/components/v2/access-requests/RequestedAccessCard.vue";
 import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
+import SubjectCoverageCard from "@/components/v2/access-requests/SubjectCoverageCard.vue";
 import AccessRequestService from "@/services/v2/access-requests";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
@@ -235,17 +164,18 @@ const STATUS_TONE = {
   EXPIRED: "neutral",
 };
 
-const DECISION_TONE = {
-  PENDING: "neutral",
-  APPROVED: "success",
-  REJECTED: "danger",
-};
-
 const requestId = computed(() => props.id);
 
 const statusLabel = computed(() =>
   (request.value?.status || "").replaceAll("_", " "),
 );
+
+const resourceName = computed(() => {
+  const resource = request.value?.resource;
+  return (
+    resource?.dataset?.name || resource?.collection?.name || "Access request"
+  );
+});
 
 const capabilities = computed(
   () => new Set(request.value?._meta?.capabilities ?? []),
@@ -257,6 +187,12 @@ const canReview = computed(
     request.value?.status === "UNDER_REVIEW",
 );
 
+const canWithdraw = computed(
+  () =>
+    request.value?.requester_id === auth.user?.subject_id &&
+    ["DRAFT", "UNDER_REVIEW"].includes(request.value?.status),
+);
+
 const summary = computed(() => request.value?.access_summary ?? null);
 
 const isDecided = computed(() =>
@@ -265,54 +201,29 @@ const isDecided = computed(() =>
   ),
 );
 
-// The same three paths `getEffectiveCoverage` labels, in the reader's words.
-function coverageVia(row) {
-  if (row.via_collection_name) {
-    return `held through the collection ${row.via_collection_name}`;
+// One line under the title saying what happened last and who did it. A decided request is
+// described by its decision; an open one by its submission.
+const summaryLine = computed(() => {
+  const value = request.value;
+  if (!value) return "";
+  const requesterName = value.requester?.name || value.requester?.username;
+
+  if (isDecided.value && value.reviewed_at) {
+    const verb =
+      {
+        APPROVED: "approved",
+        PARTIALLY_APPROVED: "reviewed",
+        REJECTED: "rejected",
+      }[value.status] || "reviewed";
+    const reviewerName = value.reviewer?.name || value.reviewer?.username;
+    const by = reviewerName ? ` by ${reviewerName}` : "";
+    return `Access request · ${verb} ${datetime.fromNowShort(value.reviewed_at)}${by}`;
   }
-  if (row.via === "PRINCIPAL") return "held via a system principal";
-  if (row.via_group_name) return `held through ${row.via_group_name}`;
-  if (row.via === "GROUP") return "held through a group";
-  return "held directly";
-}
 
-const canWithdraw = computed(
-  () =>
-    request.value?.requester_id === auth.user?.subject_id &&
-    ["DRAFT", "UNDER_REVIEW"].includes(request.value?.status),
-);
-
-function itemName(item) {
-  return (
-    item.preset?.name ||
-    item.access_type?.name ||
-    `Access type ${item.access_type_id}`
-  );
-}
-
-function itemDescription(item) {
-  return item.preset?.description || item.access_type?.description || "";
-}
-
-// A preset's access types arrive as join rows, each carrying the access type itself.
-function presetAccessTypes(item) {
-  return (item.preset?.access_type_items ?? [])
-    .map((joinRow) => joinRow.access_type)
-    .filter(Boolean);
-}
-
-// `approved_until` is what the reviewer settled on; `requested_until` is what was asked
-// for. Both are null when the ask was "never expires".
-function expiryLabel(item) {
-  if (item.decision === "APPROVED") {
-    return item.approved_until
-      ? `Until ${datetime.date(item.approved_until)}`
-      : "No end date";
-  }
-  return item.requested_until
-    ? `Asked until ${datetime.date(item.requested_until)}`
-    : "Asked with no end date";
-}
+  const at = value.submitted_at || value.created_at;
+  const by = requesterName ? ` by ${requesterName}` : "";
+  return `Access request · submitted ${datetime.fromNowShort(at)}${by}`;
+});
 
 async function fetchRequest() {
   loading.value = true;

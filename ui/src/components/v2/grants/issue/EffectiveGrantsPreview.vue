@@ -1,14 +1,19 @@
 <template>
   <div>
-    <div class="mb-2 flex items-center justify-between">
-      <p class="text-sm font-medium uppercase tracking-wide">
-        Effective grants preview
+    <div class="mb-2">
+      <div class="flex items-center justify-between">
+        <p class="text-sm font-medium uppercase tracking-wide">
+          Effective grants preview
+        </p>
+        <i-mdi-loading
+          v-if="props.loading"
+          class="animate-spin text-base va-text-secondary"
+          aria-label="Loading preview"
+        />
+      </div>
+      <p v-if="props.description" class="mt-1 text-xs va-text-secondary">
+        {{ props.description }}
       </p>
-      <i-mdi-loading
-        v-if="props.loading"
-        class="animate-spin text-base va-text-secondary"
-        aria-label="Loading preview"
-      />
     </div>
 
     <div
@@ -86,6 +91,14 @@
 
 <script setup>
 const props = defineProps({
+  /**
+   * One line under the heading saying what this preview answers. Callers that wrap this
+   * component pass it here rather than writing a second heading of their own.
+   */
+  description: {
+    type: String,
+    default: "",
+  },
   /** Array from computeEffectiveGrants API, augmented with access_type */
   rows: {
     type: Array,

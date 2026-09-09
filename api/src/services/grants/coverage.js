@@ -36,7 +36,8 @@ const COVERAGE_VIA = Object.freeze({
  * @param {string} params.resource_type - RESOURCE_TYPE.DATASET or RESOURCE_TYPE.COLLECTION
  * @param {number[]} [params.access_type_ids] - restrict to these access types, widened through
  *   the access-type order so a wider grant counts as covering a narrower request; omit for all
- * @returns {Promise<Array>} live grants, each with `via`, `via_group_id`, and `access_type_name`
+ * @returns {Promise<Array>} live grants, each with `via`, `via_group_id`, `access_type_name`
+ *   and `access_type_description`
  */
 async function getEffectiveCoverage({
   subject_id, resource_id, resource_type, access_type_ids,
@@ -96,6 +97,7 @@ async function getEffectiveCoverage({
       g.source_access_request_id,
       g.source_preset_id,
       gat.name AS access_type_name,
+      gat.description AS access_type_description,
       cs.via,
       CASE WHEN cs.via = ${COVERAGE_VIA.DIRECT} THEN NULL ELSE cs.subject_id END AS via_group_id,
       CASE WHEN g.resource_id = ${resource_id} THEN NULL ELSE g.resource_id END AS via_collection_id

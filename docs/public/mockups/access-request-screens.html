@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Access Request Detail</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111827; -webkit-font-smoothing: antialiased; }
+    a { color: #154EC1; text-decoration: none; }
+    a:hover { color: #0f3a94; text-decoration: underline; }
+    p { margin: 0; }
+    h1, h2, h3 { margin: 0; }
+    ul { margin: 0; }
+    .page { background: #F4F6F8; min-height: 100%; padding: 12px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .muted { color: #5A6070; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 12px; border: 1px solid transparent; cursor: pointer; }
+    .btn-primary { background: #154EC1; color: #ffffff; }
+    .btn-ghost { background: #ffffff; color: #374151; border-color: #d1d5db; }
+    .btn-danger { background: #ffffff; color: #b91c1c; border-color: #fca5a5; }
+    .stack { display: flex; flex-direction: column; }
+
+    /* A left-aligned definition row. The label column is fixed so every value in a card
+       starts at the same x, which is what the right-aligned original could not do. */
+    .dl-row { display: flex; gap: 16px; padding: 9px 0; border-top: 1px solid #f3f4f6; }
+    .dl-row:first-child { border-top: none; padding-top: 0; }
+    .dt { width: 104px; flex-shrink: 0; font-size: 12px; font-weight: 500; color: #5A6070; padding-top: 1px; }
+    .dd { font-size: 14px; min-width: 0; }
+
+    .avatar { width: 26px; height: 26px; border-radius: 9999px; background: #3730a3; color: #fff; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .avatar-group { background: #7c3aed; }
+
+    /* One row per requested access type or preset. */
+    .item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid #f3f4f6; }
+    .item:first-of-type { border-top: none; }
+    .item-name { font-size: 14px; font-weight: 500; }
+    .item-id { font-size: 12px; color: #6b7280; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 6px; padding: 2px 7px; font-size: 12px; color: #374151; }
+    .chip-implied { background: #ffffff; color: #9ca3af; border-style: dashed; }
+
+    /* The outcome rail. A count that is zero when it should not be is the whole point of
+       this card, so the numbers are the largest thing in it. */
+    .stat-row { display: flex; gap: 8px; }
+    .stat { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }
+    .stat-n { font-size: 20px; font-weight: 600; line-height: 1.1; }
+    .stat-l { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5A6070; margin-top: 2px; }
+    .note { border-radius: 8px; padding: 9px 11px; font-size: 13px; line-height: 1.5; }
+    .note-danger { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .note-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+    .note-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+    .coverage-row { display: flex; gap: 9px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #f3f4f6; font-size: 13px; }
+    .coverage-row:first-of-type { border-top: none; padding-top: 0; }
+
+  html { background: #eef1f5; }
+  body { background: #eef1f5; }
+  .showcase-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #ffffff; border-bottom: 1px solid #d8dee6;
+    padding: 0 20px; display: flex; align-items: center; gap: 0;
+    overflow-x: auto;
+  }
+  .showcase-nav .brand {
+    font-size: 13px; font-weight: 600; color: #111827;
+    padding-right: 20px; margin-right: 6px; border-right: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .showcase-nav button {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 500; color: #5A6070;
+    padding: 13px 14px; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .showcase-nav button:hover { color: #111827; }
+  .showcase-nav button[aria-current="true"] { color: #154EC1; font-weight: 600; border-bottom-color: #154EC1; }
+  .showcase-nav button:focus-visible { outline: 2px solid #154EC1; outline-offset: -4px; }
+  .screen { display: none; padding: 20px; }
+  .screen[data-active="true"] { display: block; }
+  .screen-caption {
+    max-width: 1440px; margin: 0 auto 14px; font-size: 13px; line-height: 1.6; color: #4b5563;
+  }
+  .screen-frame {
+    max-width: 1440px; margin: 0 auto; overflow-x: auto;
+    border: 1px solid #d8dee6; border-radius: 10px; background: #F4F6F8;
+  }
+</style>
+</head>
+<body>
+
+<nav class="showcase-nav">
+  <span class="brand">Access request detail</span>
+  <button type="button" data-target="review" aria-current="true">Reviewer, pending</button>
+  <button type="button" data-target="requester" aria-current="false">Requester, pending</button>
+  <button type="button" data-target="approved" aria-current="false">Approved</button>
+  <button type="button" data-target="revoked" aria-current="false">Approved, nothing live</button>
+  <button type="button" data-target="partial" aria-current="false">Partially approved</button>
+  <button type="button" data-target="rejected" aria-current="false">Rejected</button>
+  <button type="button" data-target="preset" aria-current="false">Preset request</button>
+  <button type="button" data-target="fields" aria-current="false">What changed</button>
+</nav>
+
+<section class="screen" id="review" data-active="true">
+  <p class="screen-caption">A reviewer opening a pending request. The two questions a reviewer actually has — what is being asked for, and does the subject already have it — are the two things on the page. The coverage card is the access-type order doing its work: the lab already holds a wider grant, so approving this changes nothing.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #154EC1; background: rgba(21, 78, 193, 0.10); font-size: 12px; padding: 4px 9px;">Under review</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; submitted 19 minutes ago by name-041</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"><button class="btn btn-primary">Review request</button></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Browse file tree</span>
+                <span class="item-id mono">DATASET:LIST_FILES</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Browse file tree and see file names, size.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #4b5563; background: #f3f4f6;">Pending</span>
+              <span style="font-size: 12px;" class="muted">Asked with no end date</span>
+            </div>
+          </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Also reaching this subject</h2>
+        <p style="font-size: 12px; margin-bottom: 10px;" class="muted">Access the subject holds by another path. Approving does not create it, and revoking these grants does not remove it.</p>
+        
+          <div class="coverage-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 3px; flex-shrink: 0;"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <div class="stack" style="gap: 2px;">
+              <span style="font-weight: 500;">Local copy</span>
+              <span style="font-size: 12px;" class="muted">held through NeuroSeq Atlas &mdash; confers Browse file tree</span>
+            </div>
+          </div>
+          <div class="coverage-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 3px; flex-shrink: 0;"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <div class="stack" style="gap: 2px;">
+              <span style="font-weight: 500;">See dataset exists</span>
+              <span style="font-size: 12px;" class="muted">held through NeuroSeq Atlas</span>
+            </div>
+          </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 9 2026, 01:26 AM<br><span class="muted">19 minutes ago</span></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="requester" data-active="false">
+  <p class="screen-caption">The same request seen by the person who filed it. The action is Withdraw rather than Review, and the coverage card tells them why the request may be unnecessary before a reviewer has to.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #154EC1; background: rgba(21, 78, 193, 0.10); font-size: 12px; padding: 4px 9px;">Under review</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; submitted 19 minutes ago</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"><button class="btn btn-danger">Withdraw</button></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Browse file tree</span>
+                <span class="item-id mono">DATASET:LIST_FILES</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Browse file tree and see file names, size.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #4b5563; background: #f3f4f6;">Pending</span>
+              <span style="font-size: 12px;" class="muted">Asked with no end date</span>
+            </div>
+          </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Also reaching this subject</h2>
+        <p style="font-size: 12px; margin-bottom: 10px;" class="muted">Access the subject holds by another path. Approving does not create it, and revoking these grants does not remove it.</p>
+        
+          <div class="coverage-row">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 3px; flex-shrink: 0;"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg>
+            <div class="stack" style="gap: 2px;">
+              <span style="font-weight: 500;">Local copy</span>
+              <span style="font-size: 12px;" class="muted">held through NeuroSeq Atlas &mdash; confers Browse file tree</span>
+            </div>
+          </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 9 2026, 01:26 AM<br><span class="muted">19 minutes ago</span></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="approved" data-active="false">
+  <p class="screen-caption">Approved, with the grant still in force. The outcome card leads the rail because "what does this request actually give me right now" is the question a decided request gets asked.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12); font-size: 12px; padding: 4px 9px;">Approved</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; approved 6 minutes ago by name-054</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Browse file tree</span>
+                <span class="item-id mono">DATASET:LIST_FILES</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Browse file tree and see file names, size.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12);">Approved</span>
+              <span style="font-size: 12px;" class="muted">No end date</span>
+            </div>
+          </div>
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+          <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5A6070; margin-bottom: 5px;">Reviewer's note</h3>
+          <p style="font-size: 14px; line-height: 1.6; color: #374151;">Reasonable for a methods comparison. Renew in a year if still needed.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Access from this request</h2>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-n" style="color: #15803d;">1</div><div class="stat-l">Live</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Revoked</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Expired</div></div>
+        </div>
+        
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 9 2026, 01:26 AM<br><span class="muted">19 minutes ago</span></div></div><div class="dl-row"><div class="dt">Reviewed</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-054</span><span style="font-size: 12px;" class="muted">user-054@iu.edu</span></div></div></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="revoked" data-active="false">
+  <p class="screen-caption">The case the whole outcome card exists for. The request still reads APPROVED, because the approval happened and the record is immutable, but every grant it issued has been revoked. Without this the page claims access the requester does not have.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12); font-size: 12px; padding: 4px 9px;">Approved</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; approved 3 days ago by name-054</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Browse file tree</span>
+                <span class="item-id mono">DATASET:LIST_FILES</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Browse file tree and see file names, size.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12);">Approved</span>
+              <span style="font-size: 12px;" class="muted">No end date</span>
+            </div>
+          </div>
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+          <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5A6070; margin-bottom: 5px;">Reviewer's note</h3>
+          <p style="font-size: 14px; line-height: 1.6; color: #374151;">Reasonable for a methods comparison. Renew in a year if still needed.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Access from this request</h2>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-n" style="color: #b91c1c;">0</div><div class="stat-l">Live</div></div>
+          <div class="stat"><div class="stat-n" style="color: #b45309;">1</div><div class="stat-l">Revoked</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Expired</div></div>
+        </div>
+        <div class="note note-danger" style="margin-top: 10px;">Nothing from this request is in force any more. The last grant was revoked 6 minutes ago (manual).</div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 6 2026, 09:14 AM<br><span class="muted">3 days ago</span></div></div><div class="dl-row"><div class="dt">Reviewed</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-054</span><span style="font-size: 12px;" class="muted">user-054@iu.edu</span></div></div></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="partial" data-active="false">
+  <p class="screen-caption">Three access types asked for, two approved. A per-item decision needs a per-item badge, and the rejected row keeps what was asked so the requester can see the gap without opening a second page.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.14); font-size: 12px; padding: 4px 9px;">Partially approved</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; reviewed 2 days ago by name-054</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Browse file tree</span>
+                <span class="item-id mono">DATASET:LIST_FILES</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Browse file tree and see file names, size.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12);">Approved</span>
+              <span style="font-size: 12px;" class="muted">Until Mar 9 2027</span>
+            </div>
+          </div>
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Local copy</span>
+                <span class="item-id mono">DATASET:DOWNLOAD</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Download individual files or entire bundle for local use</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12);">Approved</span>
+              <span style="font-size: 12px;" class="muted">Until Mar 9 2027</span>
+            </div>
+          </div>
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Paths, infrastructure and lifecycle data</span>
+                <span class="item-id mono">DATASET:VIEW_SENSITIVE_METADATA</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">View sensitive metadata such as file paths, infrastructure details, and lifecycle data</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #b91c1c; background: rgba(239, 68, 68, 0.12);">Rejected</span>
+              <span style="font-size: 12px;" class="muted">Asked until Mar 9 2027</span>
+            </div>
+          </div>
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+          <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5A6070; margin-bottom: 5px;">Reviewer's note</h3>
+          <p style="font-size: 14px; line-height: 1.6; color: #374151;">Download and listing are fine. Storage paths stay with the owning group &mdash; ask the data steward if you need them for a specific run.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Access from this request</h2>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-n" style="color: #15803d;">1</div><div class="stat-l">Live</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Revoked</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Expired</div></div>
+        </div>
+        <div class="note note-info" style="margin-top: 10px;">Two access types were approved and one grant was written. Local copy confers Browse file tree, so it needs no row of its own.</div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 6 2026, 09:14 AM<br><span class="muted">3 days ago</span></div></div><div class="dl-row"><div class="dt">Reviewed</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-054</span><span style="font-size: 12px;" class="muted">user-054@iu.edu</span></div></div></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="rejected" data-active="false">
+  <p class="screen-caption">Rejected. There is no outcome card, because no grant was ever issued and an empty stat row would be noise. The reviewer's note carries the whole answer, so it sits in the main column rather than the rail.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #b91c1c; background: rgba(239, 68, 68, 0.12); font-size: 12px; padding: 4px 9px;">Rejected</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; rejected 2 days ago by name-054</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Local copy</span>
+                <span class="item-id mono">DATASET:DOWNLOAD</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Download individual files or entire bundle for local use</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #b91c1c; background: rgba(239, 68, 68, 0.12);">Rejected</span>
+              <span style="font-size: 12px;" class="muted">Asked with no end date</span>
+            </div>
+          </div>
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f3f4f6;">
+          <h3 style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #5A6070; margin-bottom: 5px;">Reviewer's note</h3>
+          <p style="font-size: 14px; line-height: 1.6; color: #374151;">This dataset is under an embargo until the primary paper is out. Re-file after June and it will be approved.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div class="stack" style="gap: 3px;"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div><span style="font-size: 12px; font-style: italic;" class="muted">requesting for themselves</span></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 6 2026, 09:14 AM<br><span class="muted">3 days ago</span></div></div><div class="dl-row"><div class="dt">Reviewed</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-054</span><span style="font-size: 12px;" class="muted">user-054@iu.edu</span></div></div></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="preset" data-active="false">
+  <p class="screen-caption">A request made from a preset. The preset is the unit of intent, so it is the row; the access types it covers are chips underneath. A dashed chip is one the access-type order already supplies, which is why approving this writes one grant rather than three.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div style="font-size: 13px; display: flex; gap: 8px; align-items: center;" class="muted">
+        <a href="#">Access Requests</a><span>/</span><span>Request</span>
+      </div>
+      
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px;">
+    <div style="display: flex; gap: 12px; min-width: 0;">
+      <div style="width: 38px; height: 38px; border-radius: 9px; background: rgba(21, 78, 193, 0.09); color: #154EC1; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v3M19 14v.01"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 1px; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">PCM230419_new</h1>
+          <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12); font-size: 12px; padding: 4px 9px;">Approved</span>
+        </div>
+        <p style="font-size: 13px;" class="muted">Access request &middot; approved 1 hour ago by name-054</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;"></div>
+  </div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;">
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Requested access</h2>
+        
+          <div class="item">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="item-name">Standard Research Use (Dataset)</span>
+                <span class="item-id mono">PRESET</span>
+              </div>
+              <p style="font-size: 13px; margin-top: 2px;" class="muted">Dataset grants only: view, list files, download</p><div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px;"><span class="chip">Local copy</span><span class="chip chip-implied">Browse file tree</span><span class="chip chip-implied">See dataset exists</span></div><p style="font-size: 12px; margin-top: 6px; color: #6b7280;">Dashed types are conferred by Local copy through the access-type order.</p>
+            </div>
+            <div class="stack" style="align-items: flex-end; gap: 4px; flex-shrink: 0;">
+              <span class="badge" style="color: #15803d; background: rgba(34, 197, 94, 0.12);">Approved</span>
+              <span style="font-size: 12px;" class="muted">No end date</span>
+            </div>
+          </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 8px;">Purpose</h2>
+        <p style="font-size: 14px; line-height: 1.65; color: #374151;">Reproducing the alignment step of the 2025 landrace assembly for a methods comparison. I need to read the FASTQs in place; no local copy required.</p>
+      </div></div>
+        <div class="stack" style="gap: 16px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Access from this request</h2>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-n" style="color: #15803d;">1</div><div class="stat-l">Live</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Revoked</div></div>
+          <div class="stat"><div class="stat-n" style="color: #9ca3af;">0</div><div class="stat-l">Expired</div></div>
+        </div>
+        <div class="note note-info" style="margin-top: 10px;">One grant of Local copy. It satisfies every check for the other two types in the preset.</div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 10px;">Request details</h2>
+        <div class="dl-row"><div class="dt">Resource</div><div class="dd"><div class="stack" style="gap: 1px; min-width: 0;"><div style="display: flex; align-items: center; gap: 6px; min-width: 0;"><span style="color: #6b7280; flex-shrink: 0;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span><a href="#" style="font-weight: 500;">PCM230419_new</a></div><span style="font-size: 12px; padding-left: 21px;" class="muted">Raw Data</span></div></div></div><div class="dl-row"><div class="dt">Owned by</div><div class="dd"><a href="#">NeuroSeq Atlas</a></div></div><div class="dl-row"><div class="dt">Requester</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-041</span><span style="font-size: 12px;" class="muted">user-041@iu.edu</span></div></div></div></div><div class="dl-row"><div class="dt">For</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar avatar-group">W</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">Wong Lab</span><span style="font-size: 12px;" class="muted">14 members</span></div></div></div></div><div class="dl-row"><div class="dt">Submitted</div><div class="dd">Sep 9 2026, 12:05 AM<br><span class="muted">1 hour ago</span></div></div><div class="dl-row"><div class="dt">Reviewed</div><div class="dd"><div style="display: flex; align-items: center; gap: 8px;"><span class="avatar">N</span><div class="stack" style="gap: 1px; min-width: 0;"><span style="font-size: 14px; font-weight: 500;">name-054</span><span style="font-size: 12px;" class="muted">user-054@iu.edu</span></div></div></div></div>
+      </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="screen" id="fields" data-active="false">
+  <p class="screen-caption">What changed from the page these screens replace, and why.</p>
+  <div class="screen-frame">
+    <div class="page">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">Departures from the current page</h2>
+        <div class="stack">
+          <div class="dl-row"><div class="dt" style="width: 190px;">Page width</div><div class="dd">The page was <span class="mono">max-w-4xl</span>, which left most of a wide viewport empty. It is <span class="mono">max-w-7xl</span> like every other v2 page, in two columns.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Page title</div><div class="dd">An <span class="mono">h1</span> reading "Access request" repeated the breadcrumb. The heading names the resource instead, which is the thing the reader came for.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Key/value rows</div><div class="dd">Labels were left and values hard right, with the width of the card between them. Rows are left-aligned against a fixed label column.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Accent surfaces</div><div class="dd">Resource, subject, and purpose each had a different tinted box. Tint now means status, and nothing else.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Access type naming</div><div class="dd">Rows led with <span class="mono">DATASET:LIST_FILES</span>. They lead with "Browse file tree" and keep the identifier as monospace secondary text, matching the grant rows and the selector.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Status</div><div class="dd">The status badge appeared twice. It appears once, beside the heading.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Card titles</div><div class="dd">Sentence-case <span class="mono">text-lg</span> headings became the uppercase letterspaced card title the other v2 surfaces use.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Outcome</div><div class="dd">Live, revoked, and expired counts were inline badges. They are a stat row at the top of the rail, because on a decided request they are the first question.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Coverage</div><div class="dd">"Also reaching this subject" was a paragraph list at the bottom of the summary card. It is its own card, and it says what the reader should do with it.</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">Rules these screens follow</h2>
+        <div class="stack">
+          <div class="dl-row"><div class="dt" style="width: 190px;">Data</div><div class="dd">Every field shown is already on the request response. Nothing here needs a new endpoint or a schema change.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Colour</div><div class="dd">Green means in force, amber means changed since the decision, red means gone or refused, blue means informational. Neutral for everything else.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Never colour alone</div><div class="dd">Every tone carries a word. A revoked outcome says so in a sentence, not only in red.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Cards that earn a place</div><div class="dd">The outcome card is absent on a rejected request, and the coverage card is absent when nothing else reaches the subject. An empty card is worse than no card.</div></div>
+          <div class="dl-row"><div class="dt" style="width: 190px;">Layers</div><div class="dd">Vuestic supplies the buttons, badges, cards, and modal. Tailwind supplies the grid and the one-off surface. No new primitive is needed.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  const buttons = [...document.querySelectorAll('.showcase-nav button')];
+  const screens = [...document.querySelectorAll('.screen')];
+  function show(target) {
+    buttons.forEach((b) => b.setAttribute('aria-current', String(b.dataset.target === target)));
+    screens.forEach((s) => s.setAttribute('data-active', String(s.id === target)));
+    window.scrollTo({ top: 0 });
+  }
+  buttons.forEach((b) => b.addEventListener('click', () => show(b.dataset.target)));
+</script>
+</body>
+</html>

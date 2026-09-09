@@ -229,6 +229,37 @@ describe('the access type order', () => {
     expect(viaGroup.length).toBeGreaterThan(0);
     expect(viaGroup.some((row) => row.access_type_id === downloadTypeId)).toBe(true);
   }, 30_000);
+
+  // Before a decision no item is approved, so reading only the approved items answers the
+  // coverage question for no pending request at all. "Does the subject already hold this?"
+  // is the reviewer's first question, and the detail page asks it on their behalf.
+  test('an undecided request answers coverage for what was asked', async () => {
+    await createTestGrant({
+      subject_id: ownerGroup.id,
+      resource_id: dataset.resource_id,
+      access_type_id: downloadTypeId,
+      granted_by: reviewer.subject_id,
+    });
+
+    const created = await arService.createAndSubmitAccessRequest({
+      type: 'NEW',
+      resource_id: dataset.resource_id,
+      subject_id: memberOfOwnerGroup.subject_id,
+      purpose: 'coverage before a decision',
+      items: [{ access_type_id: listFilesTypeId }],
+    }, memberOfOwnerGroup.subject_id);
+
+    const request = await arService.getRequestById(created.id);
+
+    expect(request.status).toBe('UNDER_REVIEW');
+    expect(request.access_summary.issued).toBe(0);
+
+    // The group's DOWNLOAD grant is wider than the LIST_FILES that was asked for, so only a
+    // widened lookup finds it.
+    const viaGroup = request.access_summary.covered_elsewhere
+      .filter((row) => row.via === 'GROUP');
+    expect(viaGroup.some((row) => row.access_type_id === downloadTypeId)).toBe(true);
+  }, 30_000);
 });
 
 describe('access summary', () => {

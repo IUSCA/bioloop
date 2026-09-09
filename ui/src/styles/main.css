@@ -54,6 +54,23 @@ a:hover {
 }
 
 @layer components {
+  /* Heading of a card on a v2 detail page. Uppercase and widely tracked so it reads as a
+   * section marker rather than as a second title competing with the page's own <h1>.
+   * @see docs/contributing/v2-design-system.md
+   */
+  .v2-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(17 24 39);
+  }
+
+  .dark .v2-card-title {
+    color: rgb(243 244 246);
+  }
+
   /* Count pill shown beside a tab label on the v2 detail pages.
    * Defined once here because four pages render the same pill.
    * @see docs/contributing/v2-page-patterns.md

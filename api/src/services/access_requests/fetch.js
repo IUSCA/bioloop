@@ -25,8 +25,10 @@ const INCLUDES_CONFIG = {
   reviewer: true,
   resource: {
     include: {
-      dataset: true,
-      collection: true,
+      // The owning group is the governance context a reviewer reads the request in, so the
+      // detail page names it beside the resource.
+      dataset: { include: { owner_group: true } },
+      collection: { include: { owner_group: true } },
     },
   },
   subject: {

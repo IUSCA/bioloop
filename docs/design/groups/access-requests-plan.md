@@ -381,6 +381,12 @@ one already covers it, so a request can read as APPROVED with nothing issued whi
 still holds the access. That costs a query per request, which is why the listings do not ask
 it.
 
+Which access types the coverage query asks about depends on the status. A decided request
+asks about its approved items, because those are what it claims to have produced. An
+undecided one asks about every item, because no item is approved yet and "does the subject
+already hold this?" is the reviewer's first question. `coverageAccessTypeIds` makes that
+choice, and `UNDECIDED_STATUSES` is `DRAFT` and `UNDER_REVIEW`.
+
 The card says "No live access from this request" when a decided request has issued grants and
 none survives. It stays silent while a request is under review and when the request issued
 nothing, because the detail page is where the coverage query can explain the second case.
@@ -391,6 +397,13 @@ nothing, because the detail page is where the coverage query can explain the sec
 Checked against the running app. An approved `DATASET:DOWNLOAD` read "1 live"; revoking that
 grant left the request `APPROVED` and the page then read "0 live · 1 revoked — Nothing from
 this request is in force any more. The last grant was revoked 4s ago (manual).".
+
+Checked again after the detail page was rebuilt. A request asking for `DATASET:DOWNLOAD` and
+`DATASET:COMPUTE` was approved on the first and rejected on the second; the page then read
+`PARTIALLY APPROVED`, "1 live · 0 revoked · 0 expired", and one `APPROVED` and one `REJECTED`
+item badge. A seeded request whose two approved items were both already covered read "0 live"
+with "This request issued no grants. Anything approved was already covered by access the
+subject holds." beside two coverage rows.
 
 ### C5 — Every grant row names where it came from
 

@@ -117,11 +117,13 @@ const statusColorMap = {
   WITHDRAWN: "secondary",
 };
 
+// `requester_id` and `subject_id` are both subject ids, and the schema says a self-request is
+// exactly the case where they are equal. Comparing the nested `requester.id` to `subject.id`
+// compares a user id against a subject id, which never matches.
 const isRequestingForSelf = computed(
   () =>
-    props.request?.requester?.id &&
-    props.request?.subject?.id &&
-    props.request.requester.id === props.request.subject.id,
+    !!props.request?.requester_id &&
+    props.request.requester_id === props.request.subject_id,
 );
 
 const relativeTime = computed(() => {

@@ -111,6 +111,36 @@ async function withGrantCounts(requests) {
   }));
 }
 
+/** The statuses in which nothing has been decided yet. */
+const UNDECIDED_STATUSES = new Set(['DRAFT', 'UNDER_REVIEW']);
+
+/**
+ * The access type ids the coverage question should be asked about, for one request.
+ *
+ * A decided request answers for what was approved, because that is what it claims to have
+ * produced. An undecided one answers for everything that was asked, because "does the
+ * subject already hold this?" is the reviewer's first question and no item is approved yet.
+ *
+ * An item names either one access type or a preset. A preset item leaves `access_type_id`
+ * null and carries its types under `preset.access_type_items`, so reading only the direct
+ * column answers the coverage question for no preset request at all.
+ *
+ * @param {object} request
+ * @returns {number[]}
+ */
+function coverageAccessTypeIds(request) {
+  const items = request.access_request_items ?? [];
+  const relevant = UNDECIDED_STATUSES.has(request.status)
+    ? items
+    : items.filter((item) => item.decision === 'APPROVED');
+
+  return [...new Set(
+    relevant.flatMap((item) => (item.access_type_id != null
+      ? [item.access_type_id]
+      : (item.preset?.access_type_items ?? []).map((i) => i.access_type_id))),
+  )];
+}
+
 /**
  * The listing summary for one request, plus what reaches the subject by some other path.
  *
@@ -126,18 +156,8 @@ async function getAccessSummaryForRequest(request) {
   const summaries = await getGrantCountsForRequests([request.id]);
   const summary = summaries.get(request.id);
 
-  // An approved item names either one access type or a preset. A preset item leaves
-  // `access_type_id` null and carries its types under `preset.access_type_items`, so reading
-  // only the direct column answers the coverage question for no preset request at all.
-  const approvedAccessTypeIds = [...new Set(
-    (request.access_request_items ?? [])
-      .filter((item) => item.decision === 'APPROVED')
-      .flatMap((item) => (item.access_type_id != null
-        ? [item.access_type_id]
-        : (item.preset?.access_type_items ?? []).map((i) => i.access_type_id))),
-  )];
-
-  if (approvedAccessTypeIds.length === 0) {
+  const access_type_ids = coverageAccessTypeIds(request);
+  if (access_type_ids.length === 0) {
     return { ...summary, covered_elsewhere: [] };
   }
 
@@ -145,7 +165,7 @@ async function getAccessSummaryForRequest(request) {
     subject_id: request.subject_id,
     resource_id: request.resource_id,
     resource_type: request.resource.type,
-    access_type_ids: approvedAccessTypeIds,
+    access_type_ids,
   });
 
   // Only the paths this request did not create. A grant this request issued is already
@@ -156,6 +176,7 @@ async function getAccessSummaryForRequest(request) {
 }
 
 module.exports = {
+  coverageAccessTypeIds,
   getGrantCountsForRequests,
   withGrantCounts,
   getAccessSummaryForRequest,
