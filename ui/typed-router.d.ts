@@ -42,6 +42,7 @@ declare module 'vue-router/auto-routes' {
     '/datasets/uploads/[id]': RouteRecordInfo<'/datasets/uploads/[id]', '/datasets/uploads/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
     '/datasets/uploads/new': RouteRecordInfo<'/datasets/uploads/new', '/datasets/uploads/new', Record<never, never>, Record<never, never>>,
     '/dev-login': RouteRecordInfo<'/dev-login', '/dev-login', Record<never, never>, Record<never, never>>,
+    '/invite': RouteRecordInfo<'/invite', '/invite', Record<never, never>, Record<never, never>>,
     '/launch-notebook': RouteRecordInfo<'/launch-notebook', '/launch-notebook', Record<never, never>, Record<never, never>>,
     '/notifications': RouteRecordInfo<'/notifications', '/notifications', Record<never, never>, Record<never, never>>,
     '/profile': RouteRecordInfo<'/profile', '/profile', Record<never, never>, Record<never, never>>,

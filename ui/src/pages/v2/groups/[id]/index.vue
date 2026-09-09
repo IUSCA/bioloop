@@ -90,6 +90,15 @@
             </span>
           </VaTab>
 
+          <VaTab v-if="can('view_invitations')" name="invitations">
+            <span class="flex items-center gap-1.5">
+              Invitations
+              <span v-if="counts.invitations !== null" class="tab-count-badge">
+                {{ counts.invitations }}
+              </span>
+            </span>
+          </VaTab>
+
           <VaTab v-if="can('view_audit_logs')" name="audit-log">
             Audit Log
           </VaTab>
@@ -120,7 +129,9 @@
           :can-add="can('add_member') && !group.is_archived"
           :can-remove="can('remove_member') && !group.is_archived"
           :can-edit-role="can('edit_member_role') && !group.is_archived"
+          :can-invite="can('invite')"
           @count-changed="handleMembersUpdate"
+          @invited="invitationsTabRef?.refresh?.()"
         />
 
         <GroupSubgroupsTab
@@ -144,6 +155,15 @@
           :group="group"
           :can-create="can('add_collection') && !group.is_archived"
           @count-changed="handleCollectionsUpdate"
+        />
+
+        <GroupInvitationsTab
+          ref="invitationsTabRef"
+          v-else-if="activeTab === 'invitations'"
+          :group-id="props.id"
+          :can-invite="can('invite')"
+          @count-changed="handleInvitationsUpdate"
+          @invite="membersTabRef?.openAddMemberModal?.()"
         />
 
         <GroupAuditTab
@@ -194,9 +214,11 @@ const counts = ref({
   subgroups: null,
   datasets: null,
   collections: null,
+  invitations: null,
 });
 
 const membersTabRef = ref(null);
+const invitationsTabRef = ref(null);
 const collectionsTabRef = ref(null);
 
 // ── Derived ───────────────────────────────────────────────────────────────
@@ -266,6 +288,16 @@ async function fetchCounts() {
     );
   }
 
+  if (can("view_invitations")) {
+    fetchers.push(
+      GroupService.listInvitations(props.id, { status: "PENDING", limit: 1 })
+        .then((r) => {
+          counts.value.invitations = r.data.metadata.total;
+        })
+        .catch(() => {}),
+    );
+  }
+
   fetchers.push(
     DatasetService.search({ limit: 0, owner_group_id: props.id })
       .then((r) => {
@@ -290,6 +322,24 @@ function handleMembersUpdate() {
     GroupService.getDirectMembers(props.id, { limit: 0 })
       .then((r) => {
         counts.value.members = r.data.metadata.total;
+      })
+      .catch(() => {});
+  }
+}
+
+/**
+ * The badge counts what is outstanding, so it asks for PENDING regardless of which filter the
+ * tab is showing. The tab emits its own total too, and either may arrive first.
+ */
+function handleInvitationsUpdate(total) {
+  if (typeof total === "number") {
+    counts.value.invitations = total;
+    return;
+  }
+  if (can("view_invitations")) {
+    GroupService.listInvitations(props.id, { status: "PENDING", limit: 1 })
+      .then((r) => {
+        counts.value.invitations = r.data.metadata.total;
       })
       .catch(() => {});
   }

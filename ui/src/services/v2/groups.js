@@ -175,6 +175,30 @@ export default {
   },
 
   /**
+   * Invite an email address to the group.
+   * Resolves to {status: 'invited'|'already_invited', id}. The response deliberately says
+   * nothing about whether the address already has an account.
+   */
+  createInvitation(id, { email, role = "MEMBER" }) {
+    return api.post(`/groups/${id}/invitations`, { email, role });
+  },
+
+  /**
+   * List the group's invitations. `status` takes an INVITATION_STATUS or "all".
+   * Each row carries a computed `is_expired`; none carries the token.
+   */
+  listInvitations(id, { status = "PENDING", limit = 50, offset = 0 } = {}) {
+    return api.get(`/groups/${id}/invitations`, {
+      params: { status, limit, offset },
+    });
+  },
+
+  /** Withdraw an open invitation. */
+  cancelInvitation(id, invitationId) {
+    return api.delete(`/groups/${id}/invitations/${invitationId}`);
+  },
+
+  /**
    * List collections owned by the group.
    * Returns {metadata:{total, limit, offset}, data: Array<Collection>}
    */

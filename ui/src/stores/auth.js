@@ -1,6 +1,7 @@
 import config from "@/config";
 import constants from "@/constants";
 import authService from "@/services/auth";
+import toast from "@/services/toast";
 import * as utils from "@/services/utils";
 import { jwtDecode } from "jwt-decode";
 import { acceptHMRUpdate, defineStore } from "pinia";
@@ -13,6 +14,10 @@ export const useAuthStore = defineStore("auth", () => {
   const loggedIn = ref(false);
   const signupToken = ref(useLocalStorage("signup_token", ""));
   const signupEmail = ref("");
+  // sessionStorage, not localStorage: an invitation belongs to the tab the recipient opened
+  // the link in. It has to survive the OAuth redirect out and back, and it must not leak into
+  // another tab where somebody else may be signed in.
+  const inviteToken = ref(useSessionStorage("invite_token", ""));
   let refreshTokenTimer = null;
   const canOperate = computed(() => {
     return hasRole("operator") || hasRole("admin");
@@ -74,6 +79,9 @@ export const useAuthStore = defineStore("auth", () => {
             ) {
               // handle successful login
               onLogin(res.data);
+              // An invitation held from before the redirect is spent now, and cannot fail
+              // the login: someone who cannot join the group is still signed in.
+              applyHeldInvite();
               return res.data.status;
             }
             if (
@@ -110,6 +118,46 @@ export const useAuthStore = defineStore("auth", () => {
   function clearSignupData() {
     signupToken.value = "";
     signupEmail.value = "";
+  }
+
+  function clearInviteData() {
+    inviteToken.value = "";
+  }
+
+  /**
+   * Spend a held invitation, if there is one.
+   *
+   * Called after a successful login, because that is the first moment the server can tell
+   * whether the account that just signed in is the one the invitation was for.
+   *
+   * The token is cleared only on a definitive answer. 403, 404 and 409 all mean this link
+   * will never work for this account — wrong address, already spent or expired, group
+   * archived — so holding it would only produce the same message on every future login. Any
+   * other failure is the network or the server, and the token stays so the person can retry
+   * within this tab session.
+   */
+  async function applyHeldInvite() {
+    if (!inviteToken.value) return;
+    try {
+      const { data } = await authService.applyInvite(inviteToken.value);
+      toast.success(`You've been added to ${data.group_name}`);
+      clearInviteData();
+    } catch (err) {
+      const status = err?.response?.status;
+      if ([403, 404, 409].includes(status)) {
+        toast.error(
+          status === 403
+            ? "That invitation was sent to a different email address."
+            : "That invitation is no longer valid.",
+        );
+        clearInviteData();
+      } else {
+        console.error("Could not apply the invitation", err);
+        toast.error(
+          "Could not join the group. Open the invitation link again to retry.",
+        );
+      }
+    }
   }
 
   function logout() {
@@ -206,6 +254,9 @@ export const useAuthStore = defineStore("auth", () => {
     signupToken,
     clearSignupData,
     onLogin,
+    inviteToken,
+    clearInviteData,
+    applyHeldInvite,
   };
 });
 

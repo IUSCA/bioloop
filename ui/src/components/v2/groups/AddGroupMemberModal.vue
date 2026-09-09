@@ -44,6 +44,47 @@
           @select="onSelectUser"
         />
 
+        <!-- The way in for someone with no account yet. Deliberately always shown rather
+             than appearing when a search comes back empty: the search only finds people who
+             have signed in, so an empty result is the normal case for a new colleague and a
+             section that appears and disappears reads as an error. -->
+        <div
+          v-if="props.canInvite"
+          class="rounded-lg border border-solid border-slate-200 bg-slate-50/60 p-3 space-y-2 dark:border-slate-700 dark:bg-slate-900/30"
+        >
+          <div
+            class="text-xs font-semibold uppercase tracking-wide va-text-secondary"
+          >
+            Not found? Invite by email
+          </div>
+          <div class="flex gap-2">
+            <VaInput
+              v-model="inviteEmail"
+              class="flex-1"
+              placeholder="name@university.edu"
+              :disabled="inviting"
+              @keyup.enter="sendInvite"
+            />
+            <VaSelect
+              v-model="inviteRole"
+              class="w-32"
+              :options="['MEMBER', 'ADMIN']"
+              :disabled="inviting"
+            />
+            <VaButton
+              preset="secondary"
+              :loading="inviting"
+              :disabled="!inviteEmail.trim()"
+              @click="sendInvite"
+            >
+              Invite
+            </VaButton>
+          </div>
+          <div class="text-xs va-text-secondary">
+            They get an email with a link. Nothing changes until they accept it.
+          </div>
+        </div>
+
         <div v-if="selectedUsers.length > 0" class="space-y-2">
           <div
             class="text-xs font-semibold uppercase tracking-wide va-text-secondary"
@@ -101,9 +142,15 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // Whether the viewer holds `invite` on this group. Adding an existing member and inviting
+  // a stranger are separate capabilities, so the section is hidden rather than failing.
+  canInvite: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update"]);
+const emit = defineEmits(["update", "invited"]);
 
 defineExpose({ show, hide });
 
@@ -126,6 +173,42 @@ function show() {
 
 function hide() {
   visible.value = false;
+}
+
+const inviteEmail = ref("");
+const inviteRole = ref("MEMBER");
+const inviting = ref(false);
+
+async function sendInvite() {
+  const email = inviteEmail.value.trim();
+  if (!email || inviting.value) return;
+
+  inviting.value = true;
+  try {
+    const { data } = await GroupService.createInvitation(props.groupId, {
+      email,
+      role: inviteRole.value,
+    });
+    // The API answers the same way whether or not the address has an account, and so does
+    // this. `already_invited` is the one thing worth distinguishing, because sending again
+    // does nothing and the admin should know why.
+    toast.success(
+      data.status === "already_invited"
+        ? `${email} already has an open invitation`
+        : `Invitation sent to ${email}`,
+    );
+    inviteEmail.value = "";
+    emit("invited");
+  } catch (err) {
+    const status = err?.response?.status;
+    toast.error(
+      status === 400
+        ? err?.response?.data?.message || "That address cannot be invited"
+        : "Could not send the invitation",
+    );
+  } finally {
+    inviting.value = false;
+  }
 }
 
 function onSelectUser(user) {

@@ -24,6 +24,15 @@ class AuthService {
 
   spoof = (username) => api.post(`/auth/spoof/${username}`);
 
+  /**
+   * Whether an invitation link still works. Public: the recipient has not signed in yet.
+   * Resolves to {status: 'valid', email, group_name} or {status: 'invalid'} — never a reason.
+   */
+  checkInvite = (token) => api.post("/auth/invite/check", { token });
+
+  /** Apply an invitation to the signed-in account. */
+  applyInvite = (token) => api.post("/auth/invite/apply", { token });
+
   getGoogleUrl() {
     return api.get("/auth/google/url", {
       params: {

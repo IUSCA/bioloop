@@ -193,7 +193,9 @@
   <AddGroupMemberModal
     ref="addMemberModal"
     :group-id="props.groupId"
+    :can-invite="props.canInvite"
     @update="handleMemberAdded"
+    @invited="emit('invited')"
   />
 
   <EditGroupMemberRoleModal
@@ -217,9 +219,12 @@ const props = defineProps({
   canAdd: { type: Boolean, default: false },
   canRemove: { type: Boolean, default: false },
   canEditRole: { type: Boolean, default: false },
+  // Inviting an address with no account is a separate capability from adding an existing
+  // member, and unlike adding it is blocked on an archived group.
+  canInvite: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed", "invited"]);
 
 const members = ref([]);
 const error = ref(null);
