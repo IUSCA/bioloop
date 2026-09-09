@@ -1,3 +1,6 @@
 {
-  "mode": "localhost"
+  "mode": "localhost",
+  "portal": {
+    "base_url": "https://localhost"
+  }
 }

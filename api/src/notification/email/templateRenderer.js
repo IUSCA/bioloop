@@ -92,7 +92,7 @@ async function renderTemplate(templateName, data) {
  * Prevents first-job latency from cold template compilation.
  */
 function preloadTemplates() {
-  const names = ['base', 'alert', 'workflow', 'request', 'digest', 'system'];
+  const names = ['base', 'alert', 'workflow', 'request', 'digest', 'system', 'invite'];
   let loaded = 0;
   for (const name of names) {
     try {

@@ -262,6 +262,23 @@ Two habits that make this recoverable: give every helper-created group a distinc
 leaked row is identifiable by name, and when the invariant suite fails, read the ids it
 reports rather than the assertion — the set difference names the exact rows to delete.
 
+## Do not pull `mjml` into a jest suite
+
+`renderTemplate` in `src/notification/email/templateRenderer.js` requires `mjml`, which uses
+a dynamic import. Under jest that needs `NODE_OPTIONS=--experimental-vm-modules`, and without
+it the suite reports **every test passing and then "Test suite failed to run"** — a confusing
+shape, because the failure is in teardown rather than in an assertion. It also only appears
+in a full run; the file passes on its own.
+
+Turning the flag on for the whole project to accommodate one file is the wrong trade: it
+changes how every suite runs for everyone, and a CI job that invokes `jest` directly rather
+than through `npm test` would not pick it up and would fail there instead.
+
+Compile the Handlebars source directly instead — read the `.hbs` file and `handlebars.compile`
+it. That isolates the part worth unit-testing, which is Handlebars' auto-escaping of
+attacker-supplied values such as a group name, from the mjml conversion. Check that the result
+survives mjml end to end against MailHog, where the worker does it for real.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

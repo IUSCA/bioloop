@@ -74,5 +74,8 @@
   },
   "import": {
     "sources_dir": "IMPORT_SOURCES_DIR"
+  },
+  "portal": {
+    "base_url": "PORTAL_BASE_URL"
   }
 }

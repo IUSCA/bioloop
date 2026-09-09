@@ -17,6 +17,7 @@ const TYPES = Object.freeze({
   REQUEST: 'request',
   DIGEST: 'digest',
   SYSTEM: 'system',
+  INVITE: 'invite',
 });
 
 /**
@@ -27,6 +28,9 @@ const TYPES = Object.freeze({
 const QUEUE_ROUTING = Object.freeze({
   [TYPES.ALERT]: { queueName: 'email:high', priority: 1 },
   [TYPES.SYSTEM]: { queueName: 'email:high', priority: 1 },
+  // High priority because an invitation is time-limited and the recipient is usually
+  // waiting: someone was told to expect it before the message was sent.
+  [TYPES.INVITE]: { queueName: 'email:high', priority: 1 },
   [TYPES.WORKFLOW]: { queueName: 'email:normal', priority: 3 },
   [TYPES.REQUEST]: { queueName: 'email:normal', priority: 3 },
   [TYPES.DIGEST]: { queueName: 'email:low', priority: 10 },

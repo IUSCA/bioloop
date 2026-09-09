@@ -194,6 +194,9 @@
   "invitations": {
     "ttl_days": 7
   },
+  "portal": {
+    "base_url": ""
+  },
   "notify": {
     "worker": {
       "concurrency": 5

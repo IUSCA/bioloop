@@ -203,6 +203,48 @@ class NotificationService {
   }
 
   /**
+   * Send a group invitation.
+   *
+   * Email only, and deliberately so: `userId` is not a parameter because the recipient
+   * usually has no account to hold an in-app notification. That is the whole point of an
+   * invitation.
+   *
+   * @param {object}          opts
+   * @param {string|string[]} opts.to           - the invited address
+   * @param {string}          opts.subject
+   * @param {string}          opts.groupName
+   * @param {string}          opts.inviterName
+   * @param {string}          opts.role         - 'Member' or 'Admin', as shown to a reader
+   * @param {string}          opts.acceptUrl    - the /invite link carrying the token
+   * @param {number}          opts.expiresInDays
+   * @returns {Promise<import('bull').Job>}
+   *
+   * @example
+   * await notify.sendInvite({
+   *   to: ['dana@university.edu'],
+   *   subject: "You've been invited to join Genomics Core",
+   *   groupName: 'Genomics Core',
+   *   inviterName: 'Jane Doe',
+   *   role: 'Member',
+   *   acceptUrl: 'https://portal.uni.edu/invite?token=...',
+   *   expiresInDays: 7,
+   * });
+   */
+  sendInvite({
+    to, subject, groupName, inviterName, role, acceptUrl, expiresInDays,
+  }) {
+    return this._enqueue({
+      type: TYPES.INVITE,
+      to,
+      subject,
+      template: 'invite',
+      data: {
+        groupName, inviterName, role, acceptUrl, expiresInDays,
+      },
+    });
+  }
+
+  /**
    * Send a digest (daily / weekly summary).
    * Uses the low-priority queue — processed after alerts and workflow updates.
    * Typically called by cron.js, not directly from request handlers.

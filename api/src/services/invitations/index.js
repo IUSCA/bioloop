@@ -9,6 +9,7 @@ const { normalizeEmail } = require('@/utils/email');
 const audit = require('@/authorization/builtin/audit');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { sendInvitationEmail } = require('./notify');
 
 /**
  * Group invitations: issuing one, cancelling one, and applying the ones an address is
@@ -73,7 +74,7 @@ async function createInvitation({
   const invited_email = normalizeEmail(email);
   if (!invited_email) throw createError.BadRequest('A valid email address is required');
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const groupRows = await tx.$queryRaw`
       SELECT is_archived FROM "group" g WHERE g.id = ${group_id} FOR UPDATE;
     `;
@@ -95,6 +96,11 @@ async function createInvitation({
     });
     if (open) return { status: 'already_invited', invitation: open };
 
+    const [group, inviter] = await Promise.all([
+      tx.group.findUnique({ where: { id: group_id }, select: { name: true } }),
+      tx.user.findUnique({ where: { subject_id: invited_by }, select: { name: true, username: true } }),
+    ]);
+
     try {
       const invitation = await tx.group_invitation.create({
         data: {
@@ -106,7 +112,12 @@ async function createInvitation({
           expires_at: expiryFromNow(),
         },
       });
-      return { status: 'invited', invitation };
+      return {
+        status: 'invited',
+        invitation,
+        groupName: group?.name,
+        inviterName: inviter?.name || inviter?.username,
+      };
     } catch (err) {
       // The other admin got there first, between the read above and this write.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
@@ -118,6 +129,18 @@ async function createInvitation({
       throw err;
     }
   });
+
+  // After the transaction, and unable to fail it. Asking twice sends one message, so only a
+  // fresh invitation is announced.
+  if (result.status === 'invited') {
+    await sendInvitationEmail({
+      invitation: result.invitation,
+      groupName: result.groupName,
+      inviterName: result.inviterName,
+    });
+  }
+
+  return { status: result.status, invitation: result.invitation };
 }
 
 /**

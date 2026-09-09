@@ -1,0 +1,24 @@
+<!-- Group Invitation -->
+<mj-section background-color="#ffffff" padding="28px 24px 36px">
+  <mj-column>
+    <mj-text font-size="22px" font-weight="700" color="#1a202c" line-height="1.3"
+             padding="0 0 8px 0">
+      Join {{groupName}}
+    </mj-text>
+    <mj-text font-size="13px" color="#718096" padding="0 0 20px 0">
+      Invited by {{inviterName}} &nbsp;&middot;&nbsp; as {{role}}
+    </mj-text>
+    <mj-text font-size="14px" color="#4a5568" line-height="1.7" padding="0 0 28px 0">
+      {{inviterName}} has invited you to join &ldquo;{{groupName}}&rdquo;. Accepting adds you
+      to the group and gives you whatever access the group holds.
+    </mj-text>
+    <mj-button href="{{acceptUrl}}" padding="0 0 24px 0">
+      Accept invitation
+    </mj-button>
+    <mj-text font-size="13px" color="#718096" line-height="1.6" padding="0">
+      This link expires in {{expiresInDays}} days and can be used once. If you were not
+      expecting this invitation, you can ignore this message &mdash; nothing happens until
+      you accept.
+    </mj-text>
+  </mj-column>
+</mj-section>
