@@ -332,15 +332,9 @@ const activeRuns = ref([]);
 
 const DONE = ["SUCCESS", "FAILURE", "REVOKED"];
 
-// A grant holder sees this instead of the runs.
-//
-// The "requested" branch works from local state. The "ready" branch needs `is_staged`, which
-// the dataset attribute filters withhold from grant holders — it sits in the elevated list
-// beside num_files and du_size, not in PUBLIC_ATTRIBUTES. So a grant holder is told their
-// request was accepted and is not yet told when it finishes. Adding `is_staged` to the
-// dataset PUBLIC_ATTRIBUTES is the one-line fix, and it widens what every grant holder sees,
-// so it is a decision rather than a tidy-up.
-// @see .todo/issues/06-dataset-actions-workflows.md — Open after phase 4
+// A grant holder sees this instead of the runs. "requested" comes from local state right
+// after the click; "ready" comes from `is_staged`, which the dataset attribute filters send
+// to every caller who may view the dataset at all.
 const stageNotice = computed(() => {
   if (props.canViewWorkflows) return null;
   if (requested.value && !props.dataset.is_staged) {

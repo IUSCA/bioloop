@@ -116,18 +116,6 @@ const datasetPolicies = new PolicyContainer({
   description: 'Policies for Dataset resource',
 });
 
-// const PUBLIC_ATTRIBUTES = Object.freeze([
-//   'id', 'name', 'type', 'description', 'size', 'bundle_size',
-//   'is_deleted',
-//   'created_at', 'updated_at', 'owner_group_id', 'resource_id',
-//   // metadata is excluded unless a more specific rule is known, ex: metadata.type
-//   // num_directories, num_files, is_staged are excluded as internal accounting details that are not relevant to all users
-//   // src_instrument_id needs a valid reason to be exposed, so excluded by default
-//   // Paths are excluded by default as they are sensitive infrastructure details
-//   // origin_path, archive_path, staged_path excluded
-//   // du_size excluded (internal accounting detail)
-// ]);
-
 // No policy below names the platform-admin role. The engine allows a platform admin every
 // action before any of these run, so repeating the term here would be dead weight.
 // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
@@ -335,8 +323,7 @@ datasetPolicies
         policy: hasDatasetOwningGroupOversight,
         attribute_filters: PUBLIC_ATTRIBUTES.concat(
           [
-            'num_directories', 'num_files', 'du_size',
-            'is_staged', 'src_instrument_id',
+            'num_directories', 'num_files', 'du_size', 'src_instrument_id',
             'metadata',
           // Paths withheld: oversight is governance-only, not infrastructure access
           // origin_path, archive_path, staged_path are excluded
@@ -355,8 +342,7 @@ datasetPolicies
       {
         policy: userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
         attribute_filters: PUBLIC_ATTRIBUTES.concat([
-          'num_directories', 'num_files', 'du_size',
-          'is_staged', 'src_instrument_id',
+          'num_directories', 'num_files', 'du_size', 'src_instrument_id',
           'metadata',
           'origin_path', 'archive_path', 'staged_path', // unlocked
         ]),

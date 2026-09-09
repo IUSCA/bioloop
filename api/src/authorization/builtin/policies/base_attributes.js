@@ -5,8 +5,19 @@ const collection_attributes = [
   'is_archived', 'owner_group_id', '_count.datasets',
 ].concat(group_attributes.map((attr) => `owner_group.${attr}`));
 
+// What every caller authorized for a dataset action may see.
+//
+// `is_staged` is here rather than in the elevated lists because a grant holder who may
+// request staging has to be able to see that it finished. It says whether the bytes sit on
+// fast storage, and carries no path and no identity.
+//
+// Withheld: `metadata` as a whole, until a specific key such as `metadata.type` earns a rule
+// of its own; `num_directories`, `num_files`, and `du_size` as internal accounting;
+// `src_instrument_id` until a caller has a reason to see it; and `origin_path`,
+// `archive_path`, and `staged_path` as infrastructure detail. Each needs
+// view_sensitive_metadata or a structural role.
 const dataset_attributes = [
-  'id', 'name', 'type', 'description', 'size', 'bundle_size', 'is_deleted',
+  'id', 'name', 'type', 'description', 'size', 'bundle_size', 'is_deleted', 'is_staged',
   'created_at', 'updated_at', 'owner_group_id', 'resource_id',
 ].concat(group_attributes.map((attr) => `owner_group.${attr}`));
 
