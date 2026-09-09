@@ -24,7 +24,19 @@
           :title="hero.title"
           :description="hero.description"
           :role-name="hero.roleName"
-        />
+        >
+          <!--
+            An overseer can see a descendant group and act on none of it, and nothing
+            else on the page says so.
+            @see docs/design/groups/trust-and-communication.md - 4. Oversight visibility
+          -->
+          <template v-if="heroMeta.length > 0" #meta>
+            <template v-for="(item, i) in heroMeta" :key="item">
+              <span v-if="i > 0" aria-hidden="true" class="opacity-50">·</span>
+              <span>{{ item }}</span>
+            </template>
+          </template>
+        </DashboardHero>
 
         <!--
           A panel that failed is named rather than left as a dash, so a reader can tell a
@@ -67,12 +79,152 @@
           </template>
         </ModernAlert>
 
-        <p
-          v-if="isAdmin"
-          class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
-        >
-          Yours
-        </p>
+        <!--
+          Governance sits above the personal sections for an admin, because the review
+          queue is the thing that needs them today.
+        -->
+        <template v-if="isAdmin">
+          <p
+            class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
+          >
+            Governance
+          </p>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <DashboardSection
+              title="Needs your review"
+              subtitle="Oldest first"
+              :count="pendingReviewTotal"
+              count-color="warning"
+              to="/v2/access-requests"
+            >
+              <EmptyState
+                v-if="pendingReviews.length === 0"
+                icon="mdi-check-circle-outline"
+                title="Nothing waiting on you"
+                message="Access requests on the data your groups own appear here."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col gap-3">
+                <AccessRequestCard
+                  v-for="req in pendingReviews"
+                  :key="req.id"
+                  :request="req"
+                  can-act
+                  @view="viewRequest"
+                  @review="viewRequest"
+                />
+              </div>
+            </DashboardSection>
+
+            <DashboardSection
+              title="Grants expiring soon"
+              :subtitle="`Within ${EXPIRY_WINDOW_DAYS} days, grouped by who holds them`"
+              :count="expiringGrants.length"
+              :count-color="expiringGrants.length > 0 ? 'warning' : 'neutral'"
+            >
+              <EmptyState
+                v-if="expiringGrants.length === 0"
+                icon="mdi-clock-check-outline"
+                title="No grant lapses soon"
+                message="A grant with an end date inside the window appears here, so access does not lapse unnoticed."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col gap-2">
+                <DashboardGrantRow
+                  v-for="row in expiringRows"
+                  :key="`${row.subject?.id}-${row.resource?.id}`"
+                  :group="row"
+                />
+                <p
+                  v-if="expiringGrants.length > expiringRows.length"
+                  class="text-xs va-text-secondary mt-1"
+                >
+                  {{ expiringGrants.length - expiringRows.length }} more on the
+                  resources you govern.
+                </p>
+              </div>
+            </DashboardSection>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <DashboardSection
+              title="Groups I administer"
+              subtitle="Oversight is read-only, and labelled as such"
+              to="/v2/groups"
+              link-label="All groups →"
+            >
+              <EmptyState
+                v-if="governedGroups.length === 0"
+                icon="mdi-account-group-outline"
+                title="You administer no groups"
+                message="A platform admin makes someone an admin of a group."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col gap-2">
+                <DashboardListRow
+                  v-for="group in governedGroups"
+                  :key="group.id"
+                  :title="group.name"
+                  :subtitle="governedGroupSubtitle(group)"
+                  :to="`/v2/groups/${group.id}`"
+                >
+                  <template #leading>
+                    <GroupIcon :group="group" size="sm" />
+                  </template>
+                  <template #right>
+                    <RoleBadge
+                      v-if="group.user_role"
+                      :role-name="group.user_role"
+                    />
+                  </template>
+                </DashboardListRow>
+              </div>
+            </DashboardSection>
+
+            <DashboardSection
+              title="Datasets I govern"
+              subtitle="Most recently updated"
+              :count="ownedDatasets"
+              to="/v2/datasets"
+              link-label="View all →"
+            >
+              <EmptyState
+                v-if="ownedRows.length === 0"
+                icon="mdi-database-off-outline"
+                title="Your groups own no datasets"
+                message="A dataset gets its owning group when it is registered."
+                :show-clear-filters="false"
+                class="py-8"
+              />
+              <div v-else class="flex flex-col gap-2">
+                <DashboardListRow
+                  v-for="dataset in ownedRows"
+                  :key="dataset.id"
+                  :title="dataset.name"
+                  :subtitle="datasetSubtitle(dataset)"
+                  icon="mdi-database-outline"
+                  :to="`/v2/datasets/${dataset.resource_id}`"
+                >
+                  <template #right>
+                    <span class="text-xs va-text-secondary whitespace-nowrap">
+                      {{ datetime.fromNowShort(dataset.updated_at) }}
+                    </span>
+                  </template>
+                </DashboardListRow>
+              </div>
+            </DashboardSection>
+          </div>
+
+          <p
+            class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
+          >
+            Yours
+          </p>
+        </template>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           <DashboardSection
@@ -249,8 +401,12 @@ const myOpenRequests = ref(null);
 const myRequests = ref([]);
 
 const pendingReviewTotal = ref(null);
+const pendingReviews = ref([]);
 const ownedDatasets = ref(null);
+const ownedRows = ref([]);
 const administeredGroups = ref(null);
+const oversightGroups = ref(null);
+const governedGroups = ref([]);
 const expiringGrants = ref([]);
 
 const platformGroups = ref(null);
@@ -325,20 +481,46 @@ async function load() {
 
   if (isAdmin.value) {
     calls.push(
+      // Oldest first, because a request that has waited longest is the one blocking
+      // somebody's work.
       attempt("Requests needing your review", async () => {
-        pendingReviewTotal.value = totalOf(
-          await AccessRequestService.pendingReview({ limit: 0 }),
-        );
+        const response = await AccessRequestService.pendingReview({
+          limit: PANEL_ROWS,
+          sort_by: "created_at",
+          sort_order: "asc",
+        });
+        pendingReviewTotal.value = totalOf(response);
+        pendingReviews.value = response.data?.data ?? [];
       }),
       attempt("Datasets you govern", async () => {
-        ownedDatasets.value = totalOf(
-          await DatasetService.search({ scope: "ownership", limit: 0 }),
-        );
+        const response = await DatasetService.search({
+          scope: "ownership",
+          limit: PANEL_ROWS,
+          sort_by: "updated_at",
+          sort_order: "desc",
+          include_owner_group: true,
+        });
+        ownedDatasets.value = totalOf(response);
+        ownedRows.value = response.data?.data ?? [];
       }),
+      // Two scopes, because an admin and an overseer are told apart in the hero and in
+      // the panel, and one search cannot return both counts.
       attempt("Groups you administer", async () => {
-        administeredGroups.value = totalOf(
-          await GroupService.search({ scope: "admin", limit: 1 }),
-        );
+        const [admin, oversight] = await Promise.all([
+          GroupService.search({
+            scope: "admin",
+            limit: PANEL_ROWS,
+            sort_by: "depth",
+            sort_order: "asc",
+          }),
+          GroupService.search({ scope: "oversight", limit: PANEL_ROWS }),
+        ]);
+        administeredGroups.value = totalOf(admin);
+        oversightGroups.value = totalOf(oversight);
+        governedGroups.value = [
+          ...(admin.data?.data ?? []),
+          ...(oversight.data?.data ?? []),
+        ].slice(0, PANEL_ROWS);
       }),
       // Unpaginated and grouped by subject and resource, so the count is the array
       // length and the panel in phase 3 reads the same rows.
@@ -401,6 +583,33 @@ function datasetSubtitle(dataset) {
   if (dataset.size) parts.push(formatBytes(dataset.size));
   return parts.join(" · ");
 }
+
+/**
+ * An admin row says what the caller governs there; an oversight row says plainly that
+ * they cannot act, because the badge alone reads as authority.
+ */
+function governedGroupSubtitle(group) {
+  if (group.user_role === "OVERSIGHT") {
+    return "read-only — you can see this group, and cannot act on it";
+  }
+  return groupSubtitle(group);
+}
+
+const expiringRows = computed(() => expiringGrants.value.slice(0, PANEL_ROWS));
+
+const heroMeta = computed(() => {
+  if (!isAdmin.value) return [];
+  const parts = [];
+  if (administeredGroups.value) {
+    parts.push(`Admin of ${maybePluralize(administeredGroups.value, "group")}`);
+  }
+  if (oversightGroups.value) {
+    parts.push(
+      `Oversight of ${maybePluralize(oversightGroups.value, "group")}, read-only`,
+    );
+  }
+  return parts;
+});
 
 const hasTransitiveMembership = computed(() =>
   myGroups.value.some((g) => g.user_role === "TRANSITIVE_MEMBER"),
