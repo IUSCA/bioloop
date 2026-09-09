@@ -448,9 +448,31 @@ owns. So those two events keep having no emitter, and this epic writes the in-ap
 
 Reviewers are found by joining the resource to its owning group and that group to
 `active_group_user` on `role = 'ADMIN'`, which is the same set
-`getRequestsPendingReviewForUser` selects from the other direction.
+`getRequestsPendingReviewForUser` selects from the other direction. The requester is notified
+rather than the subject: a group's admin who asked on the group's behalf is the person who
+needs the answer, and a group has no inbox.
 
-*Files:* `services/access_requests/request.js`, `services/access_requests/review.js`.
+Both notifications run after their transaction has committed and neither can fail it. An
+un-notified approval reads as a rejection, but a notification that cannot be delivered must
+not undo the decision, so failures are logged and swallowed.
+
+The SSE manager opens two Redis connections when it is constructed and never closed them,
+which is right for a server process and wrong for anything short-lived: any test that creates
+a notification pulled the module in and then never exited. It has a `shutdown()` now, and the
+suites that reach the notification path call it.
+
+The collection tab also gained the header Request Access button the dataset tab already had.
+Without it the only way into the dialog was the empty state, so a second request could not be
+filed from that tab at all.
+
+*Files:* `services/access_requests/notify.js` (new), `services/access_requests/request.js`,
+`services/access_requests/review.js`, `notification/inApp/sseManager.js`,
+`CollectionRequestsTab.vue`.
+
+Checked against the running app. Filing a collection request put "Access request for
+Collection 01 · Alice Johnson · Review request" in the owning group admin's notifications, and
+rejecting it put "Your access request for Collection 01 was rejected · Compute is not enabled
+on this cohort yet. · View decision" in the requester's.
 
 ### D2 — Stale requests expire on a schedule
 
@@ -501,8 +523,8 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B6, and C1 to C5 are built, and the loop was driven end to end in the browser on
-both resource types. D1 and D2 are planned and not started.
+A1, B1 to B6, C1 to C5, and D1 are built, and the loop was driven end to end in the browser
+on both resource types. D2 is planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

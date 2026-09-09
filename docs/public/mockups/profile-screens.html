@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group and Collection Profiles</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111827; -webkit-font-smoothing: antialiased; }
+    a { color: #154EC1; text-decoration: none; }
+    a:hover { color: #0f3a94; text-decoration: underline; }
+    p { margin: 0; }
+    h1, h2, h3 { margin: 0; }
+    ul { margin: 0; }
+    .page { background: #F4F6F8; min-height: 100%; padding: 12px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+    .card-title { font-size: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+    .muted { color: #5A6070; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .tabs { display: flex; gap: 28px; border-bottom: 1px solid rgba(59, 130, 246, 0.5); }
+    .tab { display: flex; align-items: center; gap: 6px; padding: 10px 2px; font-size: 14px; font-weight: 500; color: #5A6070; }
+    .tab-active { color: #154EC1; font-weight: 600; box-shadow: inset 0 -2px 0 0 #154EC1; }
+    .count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 6px; border-radius: 9999px; font-size: 13px; font-weight: 600; background: #dbeafe; color: #1d4ed8; }
+    .dl-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid #f3f4f6; }
+    .dt { width: 116px; flex-shrink: 0; font-size: 12px; font-weight: 500; color: #5A6070; }
+    .dd { font-size: 14px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 8px 12px; border: 1px solid transparent; cursor: pointer; }
+    .btn-primary { background: #154EC1; color: #ffffff; }
+    .btn-ghost { background: #ffffff; color: #374151; border-color: #d1d5db; }
+    .prose h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+    .prose p { font-size: 14px; line-height: 1.65; color: #374151; }
+    .prose li { font-size: 14px; line-height: 1.65; color: #374151; }
+    .stack { display: flex; flex-direction: column; }
+
+  html { background: #eef1f5; }
+  body { background: #eef1f5; }
+  .showcase-nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #ffffff; border-bottom: 1px solid #d8dee6;
+    padding: 0 20px; display: flex; align-items: center; gap: 0;
+    overflow-x: auto;
+  }
+  .showcase-nav .brand {
+    font-size: 13px; font-weight: 600; color: #111827;
+    padding-right: 20px; margin-right: 6px; border-right: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .showcase-nav button {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 500; color: #5A6070;
+    padding: 13px 14px; white-space: nowrap;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .showcase-nav button:hover { color: #111827; }
+  .showcase-nav button[aria-current="true"] { color: #154EC1; font-weight: 600; border-bottom-color: #154EC1; }
+  .showcase-nav button:focus-visible { outline: 2px solid #154EC1; outline-offset: -4px; }
+  .screen { display: none; padding: 20px; }
+  .screen[data-active="true"] { display: block; }
+  .screen-caption {
+    max-width: 1440px; margin: 0 auto 14px; font-size: 13px; line-height: 1.6; color: #4b5563;
+  }
+  .screen-frame {
+    max-width: 1440px; margin: 0 auto; overflow-x: auto;
+    border: 1px solid #d8dee6; border-radius: 10px; background: #F4F6F8;
+  }
+
+</style>
+</head>
+<body>
+
+<nav class="showcase-nav">
+  <span class="brand">Group and collection profiles</span>
+  <button type="button" data-target="group-admin" aria-current="true">Group profile</button>
+  <button type="button" data-target="group-visitor" aria-current="false">Not a member</button>
+  <button type="button" data-target="group-public" aria-current="false">Signed out</button>
+  <button type="button" data-target="group-edit" aria-current="false">Edit profile</button>
+  <button type="button" data-target="collection" aria-current="false">Collection</button>
+  <button type="button" data-target="collection-locked" aria-current="false">Collection, no access</button>
+  <button type="button" data-target="fields" aria-current="false">Fields and decisions</button>
+</nav>
+
+<div class="screen" id="group-admin" data-active="true">
+  <p class="screen-caption">The Overview tab of a group, redrawn as a profile. Viewer is an admin of the group.</p>
+  <div class="screen-frame">
+<div class="page" style="width: 1440px;">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.6" stroke-linecap="round">
+          <path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"></path>
+          <path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"></path>
+          <path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"></path>
+        </svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="font-size: 20px; font-weight: 600;">Genomics Core Facility</h1>
+          <span class="badge" style="color: #c2410c; background: rgba(249, 115, 22, 0.1);">Core</span>
+        </div>
+        <p style="font-size: 14px; max-width: 720px;" class="muted">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <button class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+        Edit profile
+      </button>
+      <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.1); font-size: 12px; padding: 4px 8px;">Admin</span>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="tabs">
+    <div class="tab tab-active">Overview</div>
+    <div class="tab">Members <span class="count">24</span></div>
+    <div class="tab">Subgroups <span class="count">3</span></div>
+    <div class="tab">Datasets <span class="count">412</span></div>
+    <div class="tab">Collections <span class="count">9</span></div>
+    <div class="tab">Audit Log</div>
+  </div>
+
+  <!-- ── Overview grid ───────────────────────────────────────────── -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start;">
+
+    <!-- Left column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- About -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 class="card-title">About</h2>
+          <span style="font-size: 11px; color: #6b7280;">Markdown</span>
+        </div>
+        <div class="prose stack" style="gap: 14px;">
+          <p>The Genomics Core Facility runs shared sequencing instruments and the analysis pipelines built around them. We register every run in Bioloop so that the raw reads, the assemblies, and the variant calls stay linked to the sample manifest they came from.</p>
+          <div class="stack" style="gap: 6px;">
+            <h3>Working with us</h3>
+            <p>Submit a project through the <a href="#">core intake form</a> before sending material. We hold raw reads for 18 months and assemblies indefinitely. Datasets are owned by this group and shared with your lab group through a grant, so your lab keeps access after the project closes.</p>
+          </div>
+          <div class="stack" style="gap: 6px;">
+            <h3>Instruments</h3>
+            <ul style="padding-left: 20px;" class="stack">
+              <li>Illumina NovaSeq X Plus &mdash; whole genome and exome, 25B flow cells</li>
+              <li>Oxford Nanopore PromethION 24 &mdash; long read and direct RNA</li>
+              <li>10x Genomics Chromium X &mdash; single cell and spatial</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to cite -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <h2 class="card-title">How to cite this group</h2>
+          <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="mono" style="font-size: 13px; line-height: 1.6; color: #1f2937; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;">Genomics Core Facility (2026). <em>Genomics Core Facility</em>. Bioloop, Indiana University. https://bioloop.iu.edu/v2/groups/genomics-core</div>
+        <p style="font-size: 12px; margin-top: 8px;" class="muted">Acknowledge the facility in publications that use data produced here. Individual datasets carry their own citation.</p>
+      </div>
+
+      <!-- Related publications -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <h2 class="card-title">Related publications</h2>
+          <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Add DOI
+          </button>
+        </div>
+        <div class="stack">
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">Long-read assembly of twelve regional maize landraces</a>
+              <p style="font-size: 12px;" class="muted">Okonkwo, A., Lindqvist, M., Rao, S. &mdash; <em>Nature Plants</em>, 2026</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1038/s41477-026-01847-2</p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">A reproducible variant calling pipeline for shared core facilities</a>
+              <p style="font-size: 12px;" class="muted">Barros, J., Whitfield, T. &mdash; <em>GigaScience</em>, 2025</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1093/gigascience/giaf113</p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">Benchmarking short- and long-read structural variant detection</a>
+              <p style="font-size: 12px;" class="muted">Ferreira, D., Aoki, H., Bell, R. &mdash; <em>Genome Biology</em>, 2025</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1186/s13059-025-03488-9</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- Links -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Links</h2>
+        <div class="stack">
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Facility website</span>
+              <span style="font-size: 12px; color: #5A6070;">cgb.indiana.edu</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"></path><path d="M15 9h4a1 1 0 0 1 1 1v11"></path><path d="M2 21h20"></path><path d="M8 8h2M8 12h2M8 16h2"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Organization (ROR)</span>
+              <span class="mono" style="font-size: 12px; color: #5A6070;">05qwgg493</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"></path><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"></path><path d="M7 15h10"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Protocols</span>
+              <span style="font-size: 12px; color: #5A6070;">protocols.io/workspaces/iu-cgb</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Contact</span>
+              <span style="font-size: 12px; color: #5A6070;">genomics-core@iu.edu</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #eff6ff;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Members</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">24</p>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #eff6ff;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#158DE3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="5" rx="1"></rect><rect x="2" y="16" width="6" height="5" rx="1"></rect><rect x="16" y="16" width="6" height="5" rx="1"></rect><path d="M12 8v4M5 16v-2h14v2"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Subgroups</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">3</p>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #ecfdf5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#228200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"></path><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Datasets</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">412</p>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #ecfdf5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#228200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Collections</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">9</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Details</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Status</span><span class="dd"><span class="badge" style="color: #047857; background: rgba(16, 185, 129, 0.1);">Active</span></span></div>
+          <div class="dl-row"><span class="dt">Parent group</span><span class="dd"><a href="#">Bloomington Research Cores</a></span></div>
+          <div class="dl-row"><span class="dt">Member contrib.</span><span class="dd">Enabled</span></div>
+          <div class="dl-row"><span class="dt">Visibility</span><span class="dd"><span class="badge" style="color: #154EC1; background: rgba(21, 78, 193, 0.1);">Public profile</span></span></div>
+          <div class="dl-row"><span class="dt">Created</span><span class="dd">Mar 4, 2024</span></div>
+        </div>
+      </div>
+
+      <!-- Admins -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">Admins</h2>
+        <div class="stack" style="gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #0f766e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">RS</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Rosalind Sandoval</p>
+              <p class="mono muted" style="font-size: 12px;">rsandov@iu.edu</p>
+            </div>
+            <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.1);">Admin</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #6d28d9; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">TN</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Toby Nakamura</p>
+              <p class="mono muted" style="font-size: 12px;">tnakamu@iu.edu</p>
+            </div>
+            <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.1);">Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="group-visitor" data-active="false">
+  <p class="screen-caption">The same page for a signed-in user who is not a member. Members, subgroups, and the audit log are gone; the counts say what they count.</p>
+  <div class="screen-frame">
+<div class="page" style="width: 1440px;">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.6" stroke-linecap="round">
+          <path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"></path>
+          <path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"></path>
+          <path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"></path>
+        </svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="font-size: 20px; font-weight: 600;">Genomics Core Facility</h1>
+          <span class="badge" style="color: #c2410c; background: rgba(249, 115, 22, 0.1);">Core</span>
+        </div>
+        <p style="font-size: 14px; max-width: 720px;" class="muted">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <span class="badge" style="color: #374151; background: rgba(107, 114, 128, 0.12); font-size: 12px; padding: 4px 8px;">Not a member</span>
+    </div>
+  </div>
+
+  <!-- ── Tabs (capability-gated: no Members, Subgroups, or Audit) ── -->
+  <div class="tabs">
+    <div class="tab tab-active">Overview</div>
+    <div class="tab">Datasets <span class="count">6</span></div>
+    <div class="tab">Collections <span class="count">2</span></div>
+  </div>
+
+  <!-- ── Overview grid ───────────────────────────────────────────── -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start;">
+
+    <!-- Left column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- Visibility notice -->
+      <div style="display: flex; gap: 10px; align-items: flex-start; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.9" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
+        <div class="stack" style="gap: 3px;">
+          <p style="font-size: 13px; font-weight: 600; color: #1e3a8a;">You are not a member of this group</p>
+          <p style="font-size: 13px; line-height: 1.55; color: #1e40af;">The profile below is the same for everyone. The Datasets and Collections tabs list only what you already have access to &mdash; request access from a dataset or collection page.</p>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 class="card-title">About</h2>
+        </div>
+        <div class="prose stack" style="gap: 14px;">
+          <p>The Genomics Core Facility runs shared sequencing instruments and the analysis pipelines built around them. We register every run in Bioloop so that the raw reads, the assemblies, and the variant calls stay linked to the sample manifest they came from.</p>
+          <div class="stack" style="gap: 6px;">
+            <h3>Working with us</h3>
+            <p>Submit a project through the <a href="#">core intake form</a> before sending material. We hold raw reads for 18 months and assemblies indefinitely. Datasets are owned by this group and shared with your lab group through a grant, so your lab keeps access after the project closes.</p>
+          </div>
+          <div class="stack" style="gap: 6px;">
+            <h3>Instruments</h3>
+            <ul style="padding-left: 20px;" class="stack">
+              <li>Illumina NovaSeq X Plus &mdash; whole genome and exome, 25B flow cells</li>
+              <li>Oxford Nanopore PromethION 24 &mdash; long read and direct RNA</li>
+              <li>10x Genomics Chromium X &mdash; single cell and spatial</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to cite -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <h2 class="card-title">How to cite this group</h2>
+          <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="mono" style="font-size: 13px; line-height: 1.6; color: #1f2937; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;">Genomics Core Facility (2026). <em>Genomics Core Facility</em>. Bioloop, Indiana University. https://bioloop.iu.edu/v2/groups/genomics-core</div>
+      </div>
+
+      <!-- Related publications -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Related publications</h2>
+        <div class="stack">
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">Long-read assembly of twelve regional maize landraces</a>
+              <p style="font-size: 12px;" class="muted">Okonkwo, A., Lindqvist, M., Rao, S. &mdash; <em>Nature Plants</em>, 2026</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1038/s41477-026-01847-2</p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">A reproducible variant calling pipeline for shared core facilities</a>
+              <p style="font-size: 12px;" class="muted">Barros, J., Whitfield, T. &mdash; <em>GigaScience</em>, 2025</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1093/gigascience/giaf113</p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <div class="stack" style="gap: 3px;">
+              <a href="#" style="font-size: 14px; font-weight: 500;">Benchmarking short- and long-read structural variant detection</a>
+              <p style="font-size: 12px;" class="muted">Ferreira, D., Aoki, H., Bell, R. &mdash; <em>Genome Biology</em>, 2025</p>
+              <p class="mono" style="font-size: 12px; color: #154EC1;">10.1186/s13059-025-03488-9</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- Links -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Links</h2>
+        <div class="stack">
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Facility website</span>
+              <span style="font-size: 12px; color: #5A6070;">cgb.indiana.edu</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"></path><path d="M15 9h4a1 1 0 0 1 1 1v11"></path><path d="M2 21h20"></path><path d="M8 8h2M8 12h2M8 16h2"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Organization (ROR)</span>
+              <span class="mono" style="font-size: 12px; color: #5A6070;">05qwgg493</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"></path><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"></path><path d="M7 15h10"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Protocols</span>
+              <span style="font-size: 12px; color: #5A6070;">protocols.io/workspaces/iu-cgb</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Contact</span>
+              <span style="font-size: 12px; color: #5A6070;">genomics-core@iu.edu</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Metrics: only what this viewer may count -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #ecfdf5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#228200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"></path><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Datasets</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">6</p>
+            <p style="font-size: 11px; text-align: center; margin-top: 4px;" class="muted">visible to you</p>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #ecfdf5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#228200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Collections</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">2</p>
+            <p style="font-size: 11px; text-align: center; margin-top: 4px;" class="muted">visible to you</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Details: the governance rows are gone, not blanked -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Details</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Status</span><span class="dd"><span class="badge" style="color: #047857; background: rgba(16, 185, 129, 0.1);">Active</span></span></div>
+          <div class="dl-row"><span class="dt">Parent group</span><span class="dd"><a href="#">Bloomington Research Cores</a></span></div>
+          <div class="dl-row"><span class="dt">Created</span><span class="dd">Mar 4, 2024</span></div>
+        </div>
+      </div>
+
+      <!-- Admins -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">Admins</h2>
+        <div class="stack" style="gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #0f766e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">RS</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Rosalind Sandoval</p>
+              <p class="mono muted" style="font-size: 12px;">rsandov@iu.edu</p>
+            </div>
+            <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.1);">Admin</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #6d28d9; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">TN</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Toby Nakamura</p>
+              <p class="mono muted" style="font-size: 12px;">tnakamu@iu.edu</p>
+            </div>
+            <span class="badge" style="color: #b45309; background: rgba(245, 158, 11, 0.1);">Admin</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="group-public" data-active="false">
+  <p class="screen-caption">The same group for someone who is not signed in at all. No app shell, no counts, no member list.</p>
+  <div class="screen-frame">
+<div style="width: 1440px; min-height: 100%; background: #F4F6F8;">
+
+  <!-- ── Public chrome: no sidebar, no app nav ───────────────────── -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: #ffffff; border-bottom: 1px solid #e5e7eb;">
+    <div style="display: flex; align-items: center; gap: 9px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>
+      <span style="font-size: 15px; font-weight: 600; letter-spacing: -0.01em;">Bioloop</span>
+    </div>
+    <button class="btn btn-primary">Sign in</button>
+  </div>
+
+  <div style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+
+    <!-- ── Header ──────────────────────────────────────────────── -->
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.6" stroke-linecap="round">
+          <path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"></path>
+          <path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"></path>
+          <path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"></path>
+        </svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="font-size: 20px; font-weight: 600;">Genomics Core Facility</h1>
+          <span class="badge" style="color: #c2410c; background: rgba(249, 115, 22, 0.1);">Core</span>
+        </div>
+        <p style="font-size: 14px; max-width: 720px;" class="muted">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+      </div>
+    </div>
+
+    <!-- ── Body ────────────────────────────────────────────────── -->
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start;">
+
+      <div class="stack" style="gap: 12px;">
+
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 12px;">About</h2>
+          <div class="prose stack" style="gap: 14px;">
+            <p>The Genomics Core Facility runs shared sequencing instruments and the analysis pipelines built around them. We register every run in Bioloop so that the raw reads, the assemblies, and the variant calls stay linked to the sample manifest they came from.</p>
+            <div class="stack" style="gap: 6px;">
+              <h3>Working with us</h3>
+              <p>Submit a project through the <a href="#">core intake form</a> before sending material. We hold raw reads for 18 months and assemblies indefinitely. Datasets are owned by this group and shared with your lab group through a grant, so your lab keeps access after the project closes.</p>
+            </div>
+            <div class="stack" style="gap: 6px;">
+              <h3>Instruments</h3>
+              <ul style="padding-left: 20px;" class="stack">
+                <li>Illumina NovaSeq X Plus &mdash; whole genome and exome, 25B flow cells</li>
+                <li>Oxford Nanopore PromethION 24 &mdash; long read and direct RNA</li>
+                <li>10x Genomics Chromium X &mdash; single cell and spatial</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <h2 class="card-title">How to cite this group</h2>
+            <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+              Copy
+            </button>
+          </div>
+          <div class="mono" style="font-size: 13px; line-height: 1.6; color: #1f2937; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;">Genomics Core Facility (2026). <em>Genomics Core Facility</em>. Bioloop, Indiana University. https://bioloop.iu.edu/v2/groups/genomics-core</div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 4px;">Related publications</h2>
+          <div class="stack">
+            <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+              <div class="stack" style="gap: 3px;">
+                <a href="#" style="font-size: 14px; font-weight: 500;">Long-read assembly of twelve regional maize landraces</a>
+                <p style="font-size: 12px;" class="muted">Okonkwo, A., Lindqvist, M., Rao, S. &mdash; <em>Nature Plants</em>, 2026</p>
+                <p class="mono" style="font-size: 12px; color: #154EC1;">10.1038/s41477-026-01847-2</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+              <div class="stack" style="gap: 3px;">
+                <a href="#" style="font-size: 14px; font-weight: 500;">A reproducible variant calling pipeline for shared core facilities</a>
+                <p style="font-size: 12px;" class="muted">Barros, J., Whitfield, T. &mdash; <em>GigaScience</em>, 2025</p>
+                <p class="mono" style="font-size: 12px; color: #154EC1;">10.1093/gigascience/giaf113</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+              <div class="stack" style="gap: 3px;">
+                <a href="#" style="font-size: 14px; font-weight: 500;">Benchmarking short- and long-read structural variant detection</a>
+                <p style="font-size: 12px;" class="muted">Ferreira, D., Aoki, H., Bell, R. &mdash; <em>Genome Biology</em>, 2025</p>
+                <p class="mono" style="font-size: 12px; color: #154EC1;">10.1186/s13059-025-03488-9</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="stack" style="gap: 12px;">
+
+        <!-- Sign-in prompt, in place of the counts a member would see -->
+        <div class="card" style="background: #eff6ff; border-color: #bfdbfe;">
+          <div class="stack" style="gap: 8px;">
+            <p style="font-size: 14px; font-weight: 600; color: #1e3a8a;">You are not signed in</p>
+            <p style="font-size: 13px; line-height: 1.55; color: #1e40af;">Members, datasets, and collections are not listed on a public profile. Sign in to see what you have access to.</p>
+            <div><button class="btn btn-primary" style="margin-top: 2px;">Sign in</button></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 4px;">Links</h2>
+          <div class="stack">
+            <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path></svg>
+              <span class="stack" style="gap: 1px; min-width: 0;">
+                <span style="font-size: 13px; font-weight: 500;">Facility website</span>
+                <span style="font-size: 12px; color: #5A6070;">cgb.indiana.edu</span>
+              </span>
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"></path><path d="M15 9h4a1 1 0 0 1 1 1v11"></path><path d="M2 21h20"></path><path d="M8 8h2M8 12h2M8 16h2"></path></svg>
+              <span class="stack" style="gap: 1px; min-width: 0;">
+                <span style="font-size: 13px; font-weight: 500;">Organization (ROR)</span>
+                <span class="mono" style="font-size: 12px; color: #5A6070;">05qwgg493</span>
+              </span>
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3h4"></path><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"></path><path d="M7 15h10"></path></svg>
+              <span class="stack" style="gap: 1px; min-width: 0;">
+                <span style="font-size: 13px; font-weight: 500;">Protocols</span>
+                <span style="font-size: 12px; color: #5A6070;">protocols.io/workspaces/iu-cgb</span>
+              </span>
+            </a>
+            <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="m3 7 9 6 9-6"></path></svg>
+              <span class="stack" style="gap: 1px; min-width: 0;">
+                <span style="font-size: 13px; font-weight: 500;">Contact</span>
+                <span style="font-size: 12px; color: #5A6070;">genomics-core@iu.edu</span>
+              </span>
+            </a>
+          </div>
+          <p style="font-size: 11.5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6;" class="muted">The shared inbox is a profile field the group publishes. Personal addresses of members and admins never appear here.</p>
+        </div>
+
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom: 4px;">Details</h2>
+          <div class="stack">
+            <div class="dl-row"><span class="dt">Status</span><span class="dd"><span class="badge" style="color: #047857; background: rgba(16, 185, 129, 0.1);">Active</span></span></div>
+            <div class="dl-row"><span class="dt">Type</span><span class="dd">Core facility</span></div>
+            <div class="dl-row"><span class="dt">Created</span><span class="dd">2024</span></div>
+          </div>
+          <p style="font-size: 11.5px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6;" class="muted">The parent group and the exact creation date are withheld: both describe the hierarchy, which is not public.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <p style="font-size: 12px; text-align: center; padding-top: 8px;" class="muted">A public profile carries no member list, no counts, and no dataset names.</p>
+
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="group-edit" data-active="false">
+  <p class="screen-caption">What a group admin edits. Visibility is the first field because it is the consequential one.</p>
+  <div class="screen-frame">
+<div style="width: 1000px; min-height: 100%; background: rgba(17, 24, 39, 0.45); padding: 28px; display: flex; justify-content: center; align-items: flex-start; font-size: 14px;">
+  <div style="width: 720px; background: #ffffff; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); overflow: hidden;">
+
+    <!-- Modal header -->
+    <div style="padding: 20px 24px 0;">
+      <h2 style="font-size: 20px; font-weight: 600;">Edit group profile</h2>
+      <p style="font-size: 13px; margin-top: 4px;" class="muted">Everything here is public to anyone who can see this group. It never changes who can read data.</p>
+    </div>
+
+    <!-- Modal body -->
+    <div class="stack" style="gap: 22px; padding: 20px 24px 24px;">
+
+      <!-- Profile visibility -->
+      <div class="stack" style="gap: 6px;">
+        <label style="font-size: 12px; font-weight: 600; color: #374151;">Who can see this profile</label>
+        <div style="display: flex; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 2px; width: fit-content;">
+          <span style="font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 4px; color: #5A6070;">Members only</span>
+          <span style="font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 4px; color: #5A6070;">Signed-in users</span>
+          <span style="font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 4px; background: #ffffff; color: #154EC1; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);">Anyone on the web</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: flex-start; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 11px 13px; margin-top: 4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 9v5"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2.5 17.5A1.7 1.7 0 0 0 4 20h16a1.7 1.7 0 0 0 1.5-2.5L13.7 3.9a1.7 1.7 0 0 0-3 0Z"></path></svg>
+          <p style="font-size: 12.5px; line-height: 1.55; color: #92400e;">Anyone on the web sees the name, tagline, about text, links, and citation. Member lists, dataset counts, and email addresses are never public. This changes nothing about who can read data.</p>
+        </div>
+      </div>
+
+      <!-- Profile picture -->
+      <div class="stack" style="gap: 8px;">
+        <label style="font-size: 12px; font-weight: 600; color: #374151;">Profile picture</label>
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 72px; height: 72px; border-radius: 8px; background: #e0e7ff; border: 1px solid #c7d2fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.6" stroke-linecap="round">
+              <path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"></path>
+              <path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"></path>
+              <path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"></path>
+            </svg>
+          </div>
+          <div class="stack" style="gap: 8px;">
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-ghost">Replace</button>
+              <button class="btn btn-ghost" style="color: #b91c1c; border-color: #fecaca;">Remove</button>
+            </div>
+            <p style="font-size: 12px;" class="muted">PNG, JPG, or SVG. At least 200 &times; 200. Falls back to a monogram.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tagline -->
+      <div class="stack" style="gap: 6px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between;">
+          <label style="font-size: 12px; font-weight: 600; color: #374151;">Tagline</label>
+          <span style="font-size: 12px;" class="muted">88 / 120</span>
+        </div>
+        <div style="border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 14px;">Sequencing, assembly, and variant calling for the Bloomington research community.</div>
+        <p style="font-size: 12px;" class="muted">One plain line under the group name. Shown on group cards and in search results.</p>
+      </div>
+
+      <!-- About -->
+      <div class="stack" style="gap: 6px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <label style="font-size: 12px; font-weight: 600; color: #374151;">About</label>
+          <div style="display: flex; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 2px;">
+            <span style="font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 4px; background: #ffffff; color: #154EC1; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);">Write</span>
+            <span style="font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 4px; color: #5A6070;">Preview</span>
+          </div>
+        </div>
+        <div class="mono" style="border: 1px solid #94a3b8; border-radius: 6px; padding: 11px 12px; font-size: 12.5px; line-height: 1.65; color: #374151; height: 176px; white-space: pre-wrap; overflow: hidden;">The Genomics Core Facility runs shared sequencing instruments and the
+analysis pipelines built around them.
+
+### Working with us
+
+Submit a project through the [core intake form](https://cgb.indiana.edu/intake)
+before sending material. We hold raw reads for 18 months.
+
+### Instruments
+
+- Illumina NovaSeq X Plus &mdash; whole genome and exome
+- Oxford Nanopore PromethION 24 &mdash; long read and direct RNA</div>
+        <p style="font-size: 12px;" class="muted">Markdown. Headings, lists, links, and emphasis only &mdash; raw HTML and images are stripped.</p>
+      </div>
+
+      <!-- External links -->
+      <div class="stack" style="gap: 8px;">
+        <label style="font-size: 12px; font-weight: 600; color: #374151;">External links</label>
+        <div class="stack" style="gap: 8px;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="width: 190px; flex-shrink: 0; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px; display: flex; align-items: center; justify-content: space-between;"><span>Website</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+            <div style="flex: 1; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px;">https://cgb.indiana.edu</div>
+            <button style="border: none; background: none; padding: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="width: 190px; flex-shrink: 0; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px; display: flex; align-items: center; justify-content: space-between;"><span>Organization (ROR)</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+            <div style="flex: 1; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px;">https://ror.org/05qwgg493</div>
+            <button style="border: none; background: none; padding: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="width: 190px; flex-shrink: 0; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px; display: flex; align-items: center; justify-content: space-between;"><span>Contact email</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+            <div style="flex: 1; border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px;">genomics-core@iu.edu</div>
+            <button style="border: none; background: none; padding: 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-ghost" style="color: #154EC1; border-color: #bfdbfe;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Add link
+          </button>
+        </div>
+      </div>
+
+      <!-- Preferred citation -->
+      <div class="stack" style="gap: 6px;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <label style="font-size: 12px; font-weight: 600; color: #374151;">Preferred citation</label>
+          <span style="font-size: 12px; color: #154EC1; font-weight: 600;">Reset to default</span>
+        </div>
+        <div class="mono" style="border: 1px solid #94a3b8; border-radius: 6px; padding: 10px 12px; font-size: 12.5px; line-height: 1.6; color: #374151;">Genomics Core Facility (2026). Genomics Core Facility. Bioloop, Indiana University. https://bioloop.iu.edu/v2/groups/genomics-core</div>
+        <p style="font-size: 12px;" class="muted">Leave blank and Bioloop generates this line from the name, the year, and the group URL.</p>
+      </div>
+
+      <!-- Related publications -->
+      <div class="stack" style="gap: 8px;">
+        <label style="font-size: 12px; font-weight: 600; color: #374151;">Related publications</label>
+        <div class="stack" style="gap: 8px;">
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <div class="stack" style="flex: 1; gap: 5px;">
+              <div class="mono" style="border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px;">10.1038/s41477-026-01847-2</div>
+              <p style="font-size: 12px; padding-left: 2px;" class="muted">Long-read assembly of twelve regional maize landraces &mdash; <em>Nature Plants</em>, 2026</p>
+            </div>
+            <button style="border: none; background: none; padding: 8px 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <div class="stack" style="flex: 1; gap: 5px;">
+              <div class="mono" style="border: 1px solid #94a3b8; border-radius: 6px; padding: 9px 12px; font-size: 13px;">10.1093/gigascience/giaf113</div>
+              <p style="font-size: 12px; padding-left: 2px;" class="muted">A reproducible variant calling pipeline for shared core facilities &mdash; <em>GigaScience</em>, 2025</p>
+            </div>
+            <button style="border: none; background: none; padding: 8px 6px; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></button>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-ghost" style="color: #154EC1; border-color: #bfdbfe;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+            Add DOI
+          </button>
+        </div>
+        <p style="font-size: 12px;" class="muted">Enter a DOI. The title and journal are resolved once and stored, so the list still reads if the resolver is down.</p>
+      </div>
+
+    </div>
+
+    <!-- Modal footer -->
+    <div style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+      <button class="btn btn-ghost">Cancel</button>
+      <button class="btn btn-primary">Save changes</button>
+    </div>
+
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="collection" data-active="false">
+  <p class="screen-caption">A collection profile for a viewer who can read eight of its twenty datasets.</p>
+  <div class="screen-frame">
+<div class="page" style="width: 1440px;">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #d1fae5; border: 1px solid #a7f3d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">Maize Landrace Panel 2024&ndash;2026</h1>
+          <span style="font-size: 13px;" class="muted">Owned by <a href="#">Genomics Core Facility</a></span>
+        </div>
+        <p style="font-size: 14px; max-width: 760px;" class="muted">Reads, assemblies, and variant calls for 60 regional landraces collected across four Midwest states.</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <span class="badge" style="color: #6d28d9; background: rgba(139, 92, 246, 0.12); font-size: 12px; padding: 4px 8px;">Grant holder</span>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="tabs">
+    <div class="tab tab-active">Overview</div>
+    <div class="tab">Datasets <span class="count">8</span></div>
+    <div class="tab">Requests <span class="count">1</span></div>
+    <div class="tab">Audit Log</div>
+  </div>
+
+  <!-- ── Overview grid ───────────────────────────────────────────── -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start;">
+
+    <!-- Left column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- About -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">About</h2>
+        <div class="prose stack" style="gap: 12px;">
+          <p>Sixty open-pollinated landraces sampled from seed banks and grower collections in Indiana, Illinois, Iowa, and Missouri between 2024 and 2026. Each accession carries paired short and long reads, a draft assembly, and joint-called variants against B73 v5.</p>
+          <p>Sample provenance and consent terms are recorded per accession. Reuse is limited to non-commercial research; see the <a href="#">data use agreement</a> before requesting access.</p>
+        </div>
+      </div>
+
+      <!-- Datasets, filtered by the viewer's access -->
+      <div class="card" style="padding-bottom: 0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <h2 class="card-title">Datasets</h2>
+          <span style="font-size: 12px;" class="muted">8 of 20 visible to you</span>
+        </div>
+
+        <div class="stack">
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="mono" style="font-size: 13px; font-weight: 500; flex: 1; min-width: 0;">ML_2026_LandraceA_reads</a>
+            <span class="badge" style="color: #0f766e; background: rgba(20, 184, 166, 0.12);">Raw data</span>
+            <span style="font-size: 13px; width: 74px; text-align: right;" class="muted">1.24 TB</span>
+            <span style="font-size: 13px; width: 96px; text-align: right;" class="muted">Aug 21, 2026</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="mono" style="font-size: 13px; font-weight: 500; flex: 1; min-width: 0;">ML_2026_LandraceA_assembly</a>
+            <span class="badge" style="color: #6d28d9; background: rgba(139, 92, 246, 0.12);">Data product</span>
+            <span style="font-size: 13px; width: 74px; text-align: right;" class="muted">84 GB</span>
+            <span style="font-size: 13px; width: 96px; text-align: right;" class="muted">Aug 24, 2026</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="mono" style="font-size: 13px; font-weight: 500; flex: 1; min-width: 0;">ML_2026_LandraceB_reads</a>
+            <span class="badge" style="color: #0f766e; background: rgba(20, 184, 166, 0.12);">Raw data</span>
+            <span style="font-size: 13px; width: 74px; text-align: right;" class="muted">1.09 TB</span>
+            <span style="font-size: 13px; width: 96px; text-align: right;" class="muted">Aug 28, 2026</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="mono" style="font-size: 13px; font-weight: 500; flex: 1; min-width: 0;">ML_2026_LandraceB_assembly</a>
+            <span class="badge" style="color: #6d28d9; background: rgba(139, 92, 246, 0.12);">Data product</span>
+            <span style="font-size: 13px; width: 74px; text-align: right;" class="muted">79 GB</span>
+            <span style="font-size: 13px; width: 96px; text-align: right;" class="muted">Sep 1, 2026</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="mono" style="font-size: 13px; font-weight: 500; flex: 1; min-width: 0;">ML_2026_joint_variants_v3</a>
+            <span class="badge" style="color: #6d28d9; background: rgba(139, 92, 246, 0.12);">Data product</span>
+            <span style="font-size: 13px; width: 74px; text-align: right;" class="muted">12 GB</span>
+            <span style="font-size: 13px; width: 96px; text-align: right;" class="muted">Sep 4, 2026</span>
+          </div>
+        </div>
+
+        <div style="padding: 10px 0 14px; border-top: 1px solid #f3f4f6;">
+          <a href="#" style="font-size: 13px; font-weight: 600;">See all 8 datasets you can access</a>
+        </div>
+
+        <!-- The honest gap -->
+        <div style="display: flex; align-items: center; gap: 12px; margin: 0 -16px; padding: 14px 16px; background: #eff6ff; border-top: 1px solid #bfdbfe;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+          <div class="stack" style="gap: 2px; flex: 1;">
+            <p style="font-size: 13px; font-weight: 600; color: #1e3a8a;">12 more datasets are in this collection</p>
+            <p style="font-size: 13px; color: #1e40af;">Their names, sizes, and contents are not shown to you.</p>
+          </div>
+          <button class="btn btn-primary" style="flex-shrink: 0;">Request access</button>
+        </div>
+      </div>
+
+      <!-- How to cite -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <h2 class="card-title">How to cite this collection</h2>
+          <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="mono" style="font-size: 13px; line-height: 1.6; color: #1f2937; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;">Genomics Core Facility (2026). <em>Maize Landrace Panel 2024&ndash;2026</em> [Data collection]. Bioloop, Indiana University. https://bioloop.iu.edu/v2/collections/maize-landrace-panel</div>
+        <p style="font-size: 12px; margin-top: 8px;" class="muted">The citation covers the whole collection, including datasets you cannot see.</p>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- Metrics -->
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #ecfdf5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#228200" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"></path><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">Datasets</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">8</p>
+            <p style="font-size: 11px; text-align: center; margin-top: 4px;" class="muted">of 20</p>
+          </div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 12px;">
+          <div style="padding: 8px; border-radius: 8px; background: #eff6ff;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#158DE3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"></path><path d="M12 7v5l3 2"></path></svg>
+          </div>
+          <div style="flex: 1;">
+            <p style="font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; text-align: center;" class="muted">My requests</p>
+            <p style="font-size: 24px; font-weight: 600; line-height: 1; margin-top: 4px; text-align: center;">1</p>
+            <p style="font-size: 11px; text-align: center; margin-top: 4px;" class="muted">pending</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Details</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Owner group</span><span class="dd"><a href="#">Genomics Core Facility</a></span></div>
+          <div class="dl-row"><span class="dt">Status</span><span class="dd"><span class="badge" style="color: #047857; background: rgba(16, 185, 129, 0.1);">Active</span></span></div>
+          <div class="dl-row"><span class="dt">Slug</span><span class="dd mono" style="font-size: 13px;">maize-landrace-panel</span></div>
+          <div class="dl-row"><span class="dt">Visibility</span><span class="dd"><span class="badge" style="color: #154EC1; background: rgba(21, 78, 193, 0.1);">Public profile</span></span></div>
+          <div class="dl-row"><span class="dt">Created</span><span class="dd">Jan 16, 2024</span></div>
+          <div class="dl-row"><span class="dt">Last updated</span><span class="dd">4 days ago</span></div>
+        </div>
+      </div>
+
+      <!-- Structured metadata -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Metadata</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Organism</span><span class="dd"><em>Zea mays</em> subsp. <em>mays</em></span></div>
+          <div class="dl-row"><span class="dt">Assay</span><span class="dd">WGS, long read</span></div>
+          <div class="dl-row"><span class="dt">Reference</span><span class="dd">B73 RefGen v5</span></div>
+          <div class="dl-row"><span class="dt">Accessions</span><span class="dd">60</span></div>
+          <div class="dl-row"><span class="dt">Collected</span><span class="dd">2024 &ndash; 2026</span></div>
+          <div class="dl-row"><span class="dt">Licence</span><span class="dd">Non-commercial research</span></div>
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Links</h2>
+        <div class="stack">
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Project site</span>
+              <span style="font-size: 12px; color: #5A6070;">landrace-panel.iu.edu</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Data use agreement</span>
+              <span style="font-size: 12px; color: #5A6070;">PDF, 4 pages</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Describing publication</span>
+              <span class="mono" style="font-size: 12px; color: #5A6070;">10.1038/s41477-026-01847-2</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="collection-locked" data-active="false">
+  <p class="screen-caption">The same collection for a viewer with no grant on it. The description stays; the dataset list does not.</p>
+  <div class="screen-frame">
+<div class="page" style="width: 1440px;">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 56px; height: 56px; border-radius: 8px; background: #d1fae5; border: 1px solid #a7f3d0; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"></path><path d="m3 12 9 5 9-5"></path><path d="m3 17 9 5 9-5"></path></svg>
+      </div>
+      <div class="stack" style="gap: 5px; padding-top: 2px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <h1 style="font-size: 20px; font-weight: 600;">Maize Landrace Panel 2024&ndash;2026</h1>
+          <span style="font-size: 13px;" class="muted">Owned by <a href="#">Genomics Core Facility</a></span>
+        </div>
+        <p style="font-size: 14px; max-width: 760px;" class="muted">Reads, assemblies, and variant calls for 60 regional landraces collected across four Midwest states.</p>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+      <button class="btn btn-primary">Request access</button>
+      <span class="badge" style="color: #374151; background: rgba(107, 114, 128, 0.12); font-size: 12px; padding: 4px 8px;">No access</span>
+    </div>
+  </div>
+
+  <!-- ── Tabs: Datasets, Access, and Audit are gone ──────────────── -->
+  <div class="tabs">
+    <div class="tab tab-active">Overview</div>
+    <div class="tab">Requests <span class="count">0</span></div>
+  </div>
+
+  <!-- ── Overview grid ───────────────────────────────────────────── -->
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 16px; align-items: start;">
+
+    <!-- Left column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- About: unchanged for every viewer -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">About</h2>
+        <div class="prose stack" style="gap: 12px;">
+          <p>Sixty open-pollinated landraces sampled from seed banks and grower collections in Indiana, Illinois, Iowa, and Missouri between 2024 and 2026. Each accession carries paired short and long reads, a draft assembly, and joint-called variants against B73 v5.</p>
+          <p>Sample provenance and consent terms are recorded per accession. Reuse is limited to non-commercial research; see the <a href="#">data use agreement</a> before requesting access.</p>
+        </div>
+      </div>
+
+      <!-- Datasets: locked -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+          <h2 class="card-title">Datasets</h2>
+          <span style="font-size: 12px;" class="muted">20 in this collection</span>
+        </div>
+        <div class="stack" style="align-items: center; gap: 8px; padding: 48px 24px; text-align: center;">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+          <p style="font-size: 16px; font-weight: 600; margin-top: 4px;">You do not have access to these datasets</p>
+          <p style="font-size: 14px; max-width: 460px; line-height: 1.6;" class="muted">This collection holds 20 datasets. Their names, sizes, and contents stay hidden until an admin of Genomics Core Facility grants you access.</p>
+          <button class="btn btn-primary" style="margin-top: 10px; padding: 10px 16px;">Request access</button>
+        </div>
+      </div>
+
+      <!-- How to cite -->
+      <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+          <h2 class="card-title">How to cite this collection</h2>
+          <button class="btn btn-ghost" style="padding: 5px 9px; font-size: 12px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+            Copy
+          </button>
+        </div>
+        <div class="mono" style="font-size: 13px; line-height: 1.6; color: #1f2937; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;">Genomics Core Facility (2026). <em>Maize Landrace Panel 2024&ndash;2026</em> [Data collection]. Bioloop, Indiana University. https://bioloop.iu.edu/v2/collections/maize-landrace-panel</div>
+      </div>
+
+    </div>
+
+    <!-- Right column -->
+    <div class="stack" style="gap: 12px;">
+
+      <!-- Who to ask -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 12px;">Access is granted by</h2>
+        <div class="stack" style="gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #0f766e; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">RS</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Rosalind Sandoval</p>
+              <p class="mono muted" style="font-size: 12px;">rsandov@iu.edu</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 32px; height: 32px; border-radius: 9999px; background: #6d28d9; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0;">TN</div>
+            <div class="stack" style="gap: 1px; flex: 1; min-width: 0;">
+              <p style="font-size: 14px; font-weight: 500;">Toby Nakamura</p>
+              <p class="mono muted" style="font-size: 12px;">tnakamu@iu.edu</p>
+            </div>
+          </div>
+          <p style="font-size: 12px; padding-top: 4px; border-top: 1px solid #f3f4f6;" class="muted">Admins of <a href="#">Genomics Core Facility</a>, the owning group.</p>
+        </div>
+      </div>
+
+      <!-- Details -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Details</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Owner group</span><span class="dd"><a href="#">Genomics Core Facility</a></span></div>
+          <div class="dl-row"><span class="dt">Status</span><span class="dd"><span class="badge" style="color: #047857; background: rgba(16, 185, 129, 0.1);">Active</span></span></div>
+          <div class="dl-row"><span class="dt">Slug</span><span class="dd mono" style="font-size: 13px;">maize-landrace-panel</span></div>
+          <div class="dl-row"><span class="dt">Visibility</span><span class="dd"><span class="badge" style="color: #154EC1; background: rgba(21, 78, 193, 0.1);">Public profile</span></span></div>
+          <div class="dl-row"><span class="dt">Created</span><span class="dd">Jan 16, 2024</span></div>
+        </div>
+      </div>
+
+      <!-- Structured metadata -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Metadata</h2>
+        <div class="stack">
+          <div class="dl-row"><span class="dt">Organism</span><span class="dd"><em>Zea mays</em> subsp. <em>mays</em></span></div>
+          <div class="dl-row"><span class="dt">Assay</span><span class="dd">WGS, long read</span></div>
+          <div class="dl-row"><span class="dt">Reference</span><span class="dd">B73 RefGen v5</span></div>
+          <div class="dl-row"><span class="dt">Accessions</span><span class="dd">60</span></div>
+          <div class="dl-row"><span class="dt">Collected</span><span class="dd">2024 &ndash; 2026</span></div>
+          <div class="dl-row"><span class="dt">Licence</span><span class="dd">Non-commercial research</span></div>
+        </div>
+      </div>
+
+      <!-- Links -->
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom: 4px;">Links</h2>
+        <div class="stack">
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Project site</span>
+              <span style="font-size: 12px; color: #5A6070;">landrace-panel.iu.edu</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Data use agreement</span>
+              <span style="font-size: 12px; color: #5A6070;">PDF, 4 pages</span>
+            </span>
+          </a>
+          <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #f3f4f6;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span class="stack" style="gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 500;">Describing publication</span>
+              <span class="mono" style="font-size: 12px; color: #5A6070;">10.1038/s41477-026-01847-2</span>
+            </span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<div class="screen" id="fields" data-active="false">
+  <p class="screen-caption">Every profile field, whether it is a typed column or JSON, the platform it came from, and the two decisions these screens take a position on.</p>
+  <div class="screen-frame">
+<div class="page" style="width: 1180px; padding: 28px;">
+
+  <div class="stack" style="gap: 4px;">
+    <h1 style="font-size: 20px; font-weight: 600;">Profile fields, and where each one lives</h1>
+    <p style="font-size: 14px;" class="muted">What the four page mockups assume, and the decisions they do not settle. Issue #2, tasks T1 and T2.</p>
+  </div>
+
+  <!-- Field table -->
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); gap: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #5A6070;">
+      <div>Field</div><div>Group</div><div>Collection</div><div>Stored as</div><div>Precedent</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Profile picture</div><div style="color: #047857;">Yes</div><div class="muted">No</div><div class="mono" style="font-size: 12px;">avatar_key</div><div class="muted">Zenodo community logo, Dataverse collection logo</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Tagline</div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">tagline &mdash; 120 chars</div><div class="muted">Zenodo short description, Dataverse tagline</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">About</div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">about_md &mdash; text</div><div class="muted">GitHub org profile README, OSF wiki, Zenodo about page</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">External links</div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">metadata.links[]<br><span class="muted">{type, url, label}</span></div><div class="muted">Zenodo website plus ROR organisation</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Preferred citation</div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">metadata.citation<br><span class="muted">generated when blank</span></div><div class="muted">DataCite human form: Creator (Year). Title. Publisher. Identifier</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Related publications</div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">metadata.publications[]<br><span class="muted">{doi, title, container, year}</span></div><div class="muted">DataCite relatedIdentifier and RelatedItem</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Structured metadata</div><div class="muted">No</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">metadata.fields{}</div><div class="muted">dbGaP and EGA study attributes</div>
+    </div>
+    <div style="display: grid; grid-template-columns: 168px 60px 74px minmax(0, 1.15fr) minmax(0, 1fr); padding: 12px 16px; font-size: 13px; line-height: 1.5; align-items: baseline;">
+      <div style="font-weight: 500;">Description <span class="muted" style="font-weight: 400;">(exists)</span></div><div style="color: #047857;">Yes</div><div style="color: #047857;">Yes</div><div class="mono" style="font-size: 12px;">description</div><div class="muted">Unchanged. Stays the plain-text snippet for cards and search</div>
+    </div>
+  </div>
+
+  <!-- The storage rule -->
+  <div class="card" style="background: #f9fafb;">
+    <p style="font-size: 14px; line-height: 1.65; color: #374151;"><strong style="font-weight: 600;">The split rule.</strong> A field gets a typed column when a page header, a card, or a search query reads it on its own. A repeating list nobody filters on stays inside the existing <span class="mono" style="font-size: 13px;">metadata</span> JSON. That puts four typed columns on <span class="mono" style="font-size: 13px;">group</span> and three on <span class="mono" style="font-size: 13px;">collection</span>, and leaves links, citations, and publications as JSON that the API validates on write.</p>
+  </div>
+
+  <!-- Open decisions -->
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start;">
+
+    <div class="card" style="border-color: #fcd34d;">
+      <h2 class="card-title" style="color: #b45309; margin-bottom: 10px;">Decision 1 &mdash; does the profile take the Overview tab?</h2>
+      <p style="font-size: 14px; line-height: 1.65; color: #374151;">The mockups say yes. About, citation, and publications fill the main column; the current definition list demotes to a <em>Details</em> card in the right rail, minus the rows a non-member has no business reading.</p>
+      <p style="font-size: 14px; line-height: 1.65; color: #374151; margin-top: 10px;">The alternative is a seventh tab named Profile, which keeps Overview as the admin panel it is today. Cheaper to build, and it puts the outward-facing page one click behind the internal one.</p>
+    </div>
+
+    <div class="card" style="border-color: #fcd34d;">
+      <h2 class="card-title" style="color: #b45309; margin-bottom: 10px;">Decision 2 &mdash; may a viewer see what they cannot see?</h2>
+      <p style="font-size: 14px; line-height: 1.65; color: #374151;">The collection mockup shows <em>8 of 20 visible to you</em> and a strip reading <em>12 more datasets are in this collection</em>. Names, sizes, and contents stay hidden. Zenodo and dbGaP both publish that a restricted thing exists and gate the data itself.</p>
+      <p style="font-size: 14px; line-height: 1.65; color: #374151; margin-top: 10px;">The count is still a disclosure: it tells an outsider how large the collection is. Suppressing it costs the viewer any way to know a request is worth making.</p>
+    </div>
+
+  </div>
+
+  <!-- What the platforms do -->
+  <div class="card">
+    <h2 class="card-title" style="margin-bottom: 4px;">What the platforms do</h2>
+    <div class="stack">
+      <div style="display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; padding: 12px 0; border-top: 1px solid #f3f4f6; font-size: 13px; line-height: 1.6;">
+        <div style="font-weight: 600;">Zenodo communities</div>
+        <div style="color: #374151;">Name, short description, type, website, and one or more ROR organisations in the header; a logo; separate long-form <em>about</em> and <em>curation policy</em> pages. Record metadata is always public and only files are restricted.</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; padding: 12px 0; border-top: 1px solid #f3f4f6; font-size: 13px; line-height: 1.6;">
+        <div style="font-weight: 600;">Dataverse collections</div>
+        <div style="color: #374151;">Logo, tagline, and a URL behind the tagline, set under Theme and Widgets. A child collection inherits the parent's theme, which maps onto the group hierarchy already in the schema.</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; padding: 12px 0; border-top: 1px solid #f3f4f6; font-size: 13px; line-height: 1.6;">
+        <div style="font-weight: 600;">GitHub organisations, OSF</div>
+        <div style="color: #374151;">One markdown document is the organisation's front page, kept apart from the settings screens. This is the pattern the About card copies.</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; padding: 12px 0; border-top: 1px solid #f3f4f6; font-size: 13px; line-height: 1.6;">
+        <div style="font-weight: 600;">dbGaP, EGA</div>
+        <div style="color: #374151;">Study-level metadata is public and individual-level data needs an application. Citation is by accession plus a link to the study page, which is why the citation block sits on the profile rather than beside the data.</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; padding: 12px 0; border-top: 1px solid #f3f4f6; font-size: 13px; line-height: 1.6;">
+        <div style="font-weight: 600;">DataCite</div>
+        <div style="color: #374151;">Related publications are a first-class property, not prose. Store the DOI and the relation, and render <em>Creator (Year). Title. Publisher. Identifier</em> for people to read.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+  </div>
+</div>
+
+<script>
+  var nav = document.querySelector('.showcase-nav');
+  nav.addEventListener('click', function (event) {
+    var button = event.target.closest('button[data-target]');
+    if (!button) return;
+    var target = button.dataset.target;
+    nav.querySelectorAll('button[data-target]').forEach(function (b) {
+      b.setAttribute('aria-current', String(b.dataset.target === target));
+    });
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.dataset.active = String(s.id === target);
+    });
+    window.scrollTo(0, 0);
+  });
+</script>
+
+</body>
+</html>

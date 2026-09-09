@@ -3,13 +3,29 @@
     <VaCardContent>
       <div class="min-h-[350px]">
         <!-- Header -->
-        <div class="flex flex-wrap items-baseline gap-3">
-          <h2 class="text-lg font-semibold">
-            {{ headerTitle }}
-          </h2>
-          <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {{ headerSubtitle }}
-          </p>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex flex-wrap items-baseline gap-3">
+            <h2 class="text-lg font-semibold">
+              {{ headerTitle }}
+            </h2>
+            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {{ headerSubtitle }}
+            </p>
+          </div>
+
+          <!--
+            The dataset tab offers this in its header, and the epic's goal is one interface
+            across both resources. Without it the only way in was the empty state, so the
+            second request could not be filed from here at all.
+          -->
+          <VaButton
+            v-if="!props.canReview"
+            color="success"
+            icon="add"
+            @click="openRequestModal"
+          >
+            Request Access
+          </VaButton>
         </div>
 
         <!-- content -->

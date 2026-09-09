@@ -145,6 +145,18 @@ class SseManager {
       this._connections.delete(userId);
     }
   }
+
+  /**
+   * Release the two Redis connections this singleton holds.
+   *
+   * They are opened at construction and never closed, which is right for a server process
+   * and wrong for anything short-lived: a test or a script that creates one notification
+   * pulls this module in and then never exits. Delivery is best-effort either way, so
+   * shutting down is safe at any point.
+   */
+  async shutdown() {
+    await Promise.allSettled([this._publisher.quit(), this._subscriber.quit()]);
+  }
 }
 
 // One singleton per PM2 worker process

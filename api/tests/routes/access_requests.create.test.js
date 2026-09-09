@@ -23,6 +23,10 @@ const request = require('supertest');
 const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
+// Submitting and reviewing write an in-app notification, which pulls in the SSE
+// manager's two long-lived Redis connections. Without closing them the process never
+// exits. @see docs/design/groups/access-requests-plan.md — D1
+const { sseManager } = require('@/notification/inApp/sseManager');
 const { errorHandler } = require('@/middleware/error');
 const accessRequestRoutes = require('@/routes/access_requests');
 const {
@@ -98,6 +102,7 @@ afterAll(async () => {
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
   for (const id of userIds) await deleteUser(id).catch(() => {});
+  await sseManager.shutdown();
   await prisma.$disconnect();
 }, 30_000);
 

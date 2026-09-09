@@ -17,6 +17,10 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
+// Submitting and reviewing write an in-app notification, which pulls in the SSE
+// manager's two long-lived Redis connections. Without closing them the process never
+// exits. @see docs/design/groups/access-requests-plan.md — D1
+const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const {
@@ -61,6 +65,7 @@ afterAll(async () => {
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
   for (const id of userIds) await deleteUser(id).catch(() => {});
+  await sseManager.shutdown();
   await prisma.$disconnect();
 }, 30_000);
 

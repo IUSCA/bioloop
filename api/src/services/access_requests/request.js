@@ -7,6 +7,7 @@ const prisma = require('@/db');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
+const { notifyReviewersOfSubmission } = require('./notify');
 
 /**
  * Validates that the requester can create an access request for the specified subject.
@@ -337,7 +338,11 @@ async function _submitRequest(tx, request_id, actor_id) {
  * @see _submitRequest for the parameters.
  */
 async function submitRequest(request_id, actor_id) {
-  return prisma.$transaction((tx) => _submitRequest(tx, request_id, actor_id));
+  const request = await prisma.$transaction((tx) => _submitRequest(tx, request_id, actor_id));
+  // After the commit, and never able to fail it: a notification that cannot be delivered
+  // must not undo a submission. @see docs/design/groups/access-requests-plan.md — D1
+  await notifyReviewersOfSubmission(request);
+  return request;
 }
 
 /**
@@ -354,10 +359,12 @@ async function submitRequest(request_id, actor_id) {
  * @returns {Promise<Object>} the request, UNDER_REVIEW
  */
 async function createAndSubmitAccessRequest(data, requester_id) {
-  return prisma.$transaction(async (tx) => {
+  const request = await prisma.$transaction(async (tx) => {
     const created = await _createAccessRequest(tx, data, requester_id);
     return _submitRequest(tx, created.id, requester_id);
   });
+  await notifyReviewersOfSubmission(request);
+  return request;
 }
 
 module.exports = {

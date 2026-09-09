@@ -10,6 +10,7 @@ const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 
 const { _getRequestById } = require('./fetch');
+const { notifyRequesterOfDecision } = require('./notify');
 const grants = require('../grants');
 
 function determineFinalStatus(approvedCount, rejectedCount) {
@@ -235,9 +236,14 @@ class Review {
  * @param {string} [reviewData.options.decision_reason] - Optional reason for the decisions (e.g. if rejected)
  * @returns {Promise<Object>} Updated access request after review is processed
  */
-function submitReview(reviewData) {
+async function submitReview(reviewData) {
   const review = new Review(reviewData);
-  return review.submit();
+  const result = await review.submit();
+  // After the commit, and never able to fail it. An un-notified approval reads as a
+  // rejection, but a notification that cannot be delivered must not undo the decision.
+  // @see docs/design/groups/access-requests-plan.md — D1
+  await notifyRequesterOfDecision(result);
+  return result;
 }
 
 module.exports = {
