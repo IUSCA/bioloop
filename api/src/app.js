@@ -21,6 +21,11 @@ const createTusMiddleware = require('./middleware/tus');
 const uploadService = require('./services/upload');
 const logger = require('./services/logger');
 
+// Wires the lifecycle hooks. Required for its side effect, before any request can be served:
+// a handler nobody registered fails silently.
+// @see src/services/hooks/subscribers.js
+require('./services/hooks/subscribers');
+
 // Register application
 const app = express();
 

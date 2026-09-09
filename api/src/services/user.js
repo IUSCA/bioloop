@@ -5,6 +5,7 @@ const usernameBlacklist = require('the-big-username-blacklist');
 const config = require('config');
 
 const prisma = require('@/db');
+const hooks = require('@/services/hooks');
 
 let systemUser = null;
 
@@ -171,24 +172,35 @@ async function createUser(data) {
   ])(data);
   const roleObjs = await findRoles(data.roles || []);
 
-  const user = await prisma.user.create({
-    data: {
-      ...userData,
-      // Every user is an authorization subject. user.subject_id is a required FK, and the
-      // subject row must be created with the user rather than backfilled, so that a user can
-      // never exist that grants cannot name.
-      subject: {
-        create: {
-          type: SUBJECT_TYPE.USER,
+  // A transaction so that anything registered against USER_CREATED commits with the account
+  // or not at all. No caller of this function opens one of its own.
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        ...userData,
+        // Every user is an authorization subject. user.subject_id is a required FK, and the
+        // subject row must be created with the user rather than backfilled, so that a user can
+        // never exist that grants cannot name.
+        subject: {
+          create: {
+            type: SUBJECT_TYPE.USER,
+          },
         },
+        ...(roleObjs && {
+          user_role: {
+            create: roleObjs.map((r) => ({ role_id: r.id })),
+          },
+        }),
       },
-      ...(roleObjs && {
-        user_role: {
-          create: roleObjs.map((r) => ({ role_id: r.id })),
-        },
-      }),
-    },
-    include: INCLUDE_ROLES_LOGIN,
+      include: INCLUDE_ROLES_LOGIN,
+    });
+
+    // What else has to happen when an account appears. Handlers are registered in
+    // services/hooks/subscribers.js; this function does not know what any of them do, and a
+    // handler that throws takes the account creation down with it.
+    await hooks.run(hooks.USER_CREATED, { user: created, tx });
+
+    return created;
   });
 
   return user ? transformUser(user) : user;
