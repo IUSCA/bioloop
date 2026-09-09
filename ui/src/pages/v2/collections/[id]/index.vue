@@ -99,7 +99,7 @@
           :collection="collection"
           :counts="counts"
           :can-edit="can('edit_metadata')"
-          :can-review="can('review_requests')"
+          :can-review="can('review_access_requests')"
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
           :can-issue-grants="can('manage_grants')"
@@ -130,7 +130,7 @@
           v-else-if="activeTab === 'requests'"
           ref="requestsTabRef"
           :collection="collection"
-          :can-review="can('review_requests')"
+          :can-review="can('review_access_requests')"
           @count-changed="fetchRequestCount"
         />
 
@@ -258,7 +258,7 @@ async function fetchRequestCount() {
   // if user can review requests, show count of pending review requests,
   // otherwise show count of requests they have made
 
-  if (can("review_requests")) {
+  if (can("review_access_requests")) {
     try {
       const { data } = await AccessRequestService.pendingReview({
         resource_id: props.id,

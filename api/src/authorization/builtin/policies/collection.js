@@ -97,7 +97,7 @@ collectionPolicies
 
     list_grants: Policy.or([isCollectionAdmin, hasCollectionOversight]),
     manage_grants: isCollectionAdmin,
-    review_requests: isCollectionAdmin,
+    review_access_requests: isCollectionAdmin,
     view_audit_logs: Policy.or([isCollectionAdmin, hasCollectionOversight]),
   })
   .roles([

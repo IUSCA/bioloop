@@ -28,7 +28,7 @@
             v-if="!props.canReview"
             color="success"
             icon="add"
-            @click="openIssueGrantModal"
+            @click="openRequestAccessModal"
           >
             Request Access
           </VaButton>
@@ -80,10 +80,17 @@
       :request-id="reviewingId"
       @reviewed="onReviewed"
     />
+
+    <RequestAccessModal
+      ref="requestAccessModalRef"
+      :resource="datasetResource"
+      @submitted="fetchRequests"
+    />
   </div>
 </template>
 
 <script setup>
+import RequestAccessModal from "@/components/v2/access-requests/RequestAccessModal.vue";
 import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
 import AccessRequestService from "@/services/v2/access-requests";
 
@@ -99,6 +106,19 @@ const router = useRouter();
 const requests = ref([]);
 const loading = ref(false);
 const error = ref(null);
+
+// The request form addresses the resource, so a dataset is named by its resource_id here
+// and not by its own id. The collection tab builds the same shape.
+const datasetResource = computed(() => ({
+  type: "DATASET",
+  id: props.dataset.resource_id,
+  dataset: props.dataset,
+}));
+
+const requestAccessModalRef = ref(null);
+function openRequestAccessModal() {
+  requestAccessModalRef.value?.show();
+}
 
 async function fetchRequests() {
   loading.value = true;
@@ -148,5 +168,8 @@ onMounted(() => {
   fetchRequests();
 });
 
-watch(() => props.datasetId, fetchRequests);
+watch(() => props.dataset?.resource_id, fetchRequests);
+
+// The dataset page calls this when a card elsewhere asks for the request dialog.
+defineExpose({ openRequestAccessModal });
 </script>

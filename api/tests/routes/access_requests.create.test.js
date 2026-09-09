@@ -162,6 +162,22 @@ describe('POST /access-requests is gated on the resource', () => {
     expect(res.status).toBe(404);
   }, 20_000);
 
+  // `GET /access-requests/:id` hydrates `resource2` for the owning-group and oversight
+  // arms of the read policy, and that hydrator filtered a relation with `has`, which
+  // Prisma accepts only on a scalar list. Every read by a non-platform-admin was a 500.
+  test('reading one request back works for the requester', async () => {
+    currentUser = admin;
+
+    const created = await request(app).post('/access-requests').send(body());
+    requestIds.push(created.body.id);
+
+    const res = await request(app).get(`/access-requests/${created.body.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(created.body.id);
+    expect(res.body._meta.capabilities).toEqual(expect.arrayContaining(['read']));
+  }, 20_000);
+
   test('a COLLECTION access type cannot be asked for on a dataset', async () => {
     currentUser = admin;
 

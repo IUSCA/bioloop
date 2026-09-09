@@ -23,7 +23,7 @@
         @click="formState.rejectAll()"
         class="text-xs font-medium px-3 py-1.5 rounded transition-colors duration-200 bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
       >
-        <i-mdi-close-all class="inline mr-1" />
+        <i-mdi-close-circle-multiple-outline class="inline mr-1" />
         Reject All
       </button>
     </div>

@@ -56,6 +56,51 @@ The API listens on `http://localhost:3030`. The UI listens on `https://localhost
 443, behind the self-signed certificate you generated during setup. Your browser will warn
 about that certificate the first time.
 
+## Notifications need two more processes
+
+`bin/devserver.sh` starts the API and the UI and nothing else. Neither the notification
+worker nor a mail server is one of them, so email sent from a dev session goes nowhere
+until you start both yourself.
+
+In-app notifications need Redis and the API, and nothing more. The API writes the row and
+publishes it to a per-user Redis channel, and the API process holding your browser's SSE
+connection reads it back and pushes it to the page. Redis is required even when the worker
+is stopped.
+
+Email needs the notification worker and an SMTP server on top of that. The API only
+enqueues a job. `api/src/notification/worker.js` is the single process that dequeues it,
+renders the template, and sends the mail. MailHog is the dev SMTP server, and the API's
+default config already points at `localhost:1025`.
+
+```bash
+docker compose up -d redis mailhog   # SMTP on 1025, MailHog web UI on http://localhost:8025
+bin/devserver.sh up
+cd api && npm run dev:worker         # leave this terminal open
+```
+
+`[Worker] Ready — waiting for jobs` is the last line of a good worker boot, and
+`SMTP connection verified` above it means MailHog is reachable. `npm run dev:all` in `api/`
+runs the API and the worker together in one terminal instead, if you would rather not use
+`devserver.sh` for the API.
+
+Ignore the repeated `This Redis server's default user does not require a password, but a
+password was supplied` warnings. `api/.env` sets `REDIS_PASSWORD` and the dev Redis
+container runs without auth.
+
+To check the whole path at once:
+
+```bash
+cd api && npm run notify:dummy -- alert test_user@iu.edu 2
+```
+
+`test_user` is user id 2 in the seed. The email appears at http://localhost:8025 and the
+in-app row appears in the `notification` table. The script does not exit when you give it a
+user id, because it leaves its Redis pub/sub connections open. Both the email and the row
+have already been sent by that point, so Ctrl-C is safe.
+
+For what the notification system is and how its pieces fit together, see
+[Delivery and in-app notifications](../reference/features/notifications/delivery-and-in-app-notifications.md).
+
 ## Logging in without CAS
 
 The app normally signs you in through Indiana University's CAS. In development that is

@@ -61,10 +61,13 @@ const hasOversightOfResourceGroup = new GrantPolicy({
 const isSubject = new GrantPolicy({
   name: 'isSubject',
   requires: {
-    user: ['id'],
+    // A subject id is a UUID; `user.id` is the integer primary key, so comparing the two
+    // made this policy unsatisfiable and every caller fell through to the next arm.
+    user: ['subject_id'],
     resource: ['subject_id', 'subject_type'], // subject can be a user or a group
   },
-  evaluate: (user, grant) => grant.subject_type === 'USER' && user.id === grant.subject_id,
+  evaluate: (user, grant) => grant.subject_type === 'USER'
+    && user.subject_id === grant.subject_id,
 });
 
 const isAdminOfSubjectGroup = new GrantPolicy({
@@ -116,6 +119,21 @@ grantPolicies
     revoke: isAdminOfResourceGroup,
     list_for_resource: Policy.or([isAdminOfResourceGroup, hasOversightOfResourceGroup]),
     list_for_subject: Policy.or([isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup]),
+
+    // Everything that reaches one subject on one resource, and how each grant arrives.
+    // The question names both a subject and a resource, so either side's authority answers
+    // it: a requester asking what they already hold before filing a request, and a reviewer
+    // deciding whether an approval would change anything. Neither `list_for_resource` nor
+    // `list_for_subject` covers both, and widening either would let one side's authority
+    // reach rows the other side owns.
+    // @see docs/design/groups/access-requests-plan.md — C1
+    view_coverage: Policy.or([
+      isSubject,
+      isAdminOfSubjectGroup,
+      hasOversightOfSubjectGroup,
+      isAdminOfResourceGroup,
+      hasOversightOfResourceGroup,
+    ]),
     list: Policy.always, // listing grants is allowed, but the results will be filtered based on the user's permissions
   })
   .attributes({

@@ -34,11 +34,8 @@
         <VaButton preset="secondary" @click="hide">Cancel</VaButton>
 
         <VaButton
-          :loading="formState.isSubmitting.value"
-          :disabled="
-            !formState.isFormValidForSubmit.value ||
-            formState.isSubmitting.value
-          "
+          :loading="formState.isSubmitting"
+          :disabled="!formState.isFormValidForSubmit || formState.isSubmitting"
           @click="submitRequest"
         >
           <span>Submit for Review</span>
@@ -59,7 +56,11 @@
       />
 
       <!-- Request form -->
-      <RequestAccessForm v-else :resource="props.resource" />
+      <RequestAccessForm
+        v-else
+        :resource="props.resource"
+        :form-state="formState"
+      />
     </VaInnerLoading>
   </VaModal>
 </template>
@@ -94,7 +95,8 @@ const {
   fetch: fetchPresets,
 } = useGrantPresets(computed(() => props.resource?.type));
 
-// Form state
+// One state for the modal and the form it holds. Each used to build its own, so the Submit
+// button read a state the form never filled in.
 const formState = useRequestAccessForm({
   resource: props.resource,
 });
@@ -119,15 +121,15 @@ function hide() {
  */
 async function submitRequest() {
   try {
-    await formState.submit();
+    // A 409 resolves to null and leaves the conflict alert on the form, so the modal stays
+    // open. Reporting success there would tell the requester a request exists that does not.
+    const created = await formState.submit();
+    if (!created) return;
+
     emit("submitted");
     toast.success("Access request submitted for review");
     hide();
   } catch (err) {
-    if (formState.conflictError.value) {
-      // Conflict is handled by the form component's alert
-      return;
-    }
     toast.error(err.message || "Failed to submit request");
   }
 }

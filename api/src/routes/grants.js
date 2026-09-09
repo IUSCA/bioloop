@@ -494,9 +494,11 @@ router.get(
     param('resource_type').isIn(Object.values(RESOURCE_TYPE)),
     param('resource_id').isUUID(),
   ]),
-  authorize('grant', 'list_for_resource', {
+  authorize('grant', 'view_coverage', {
     resourceIdFn: (req) => req.params.resource_id,
     preFetchedResourceFn: (req) => ({
+      subject_id: req.params.subject_id,
+      subject_type: req.params.subject_type,
       resource_id: req.params.resource_id,
       resource_type: req.params.resource_type,
     }),

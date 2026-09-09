@@ -123,6 +123,9 @@ npm run dev:all      # API and worker together
 npm run worker       # worker without nodemon
 ```
 
+To start Redis, MailHog, and the worker for local development, see
+[Running the dev servers](../../../guides/dev-servers.md#notifications-need-two-more-processes).
+
 ## In-App Data Model
 
 Current Prisma model:

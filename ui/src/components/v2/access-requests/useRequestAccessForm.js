@@ -1,10 +1,16 @@
 import accessRequestService from "@/services/v2/access-requests";
+import { reactive } from "vue";
 
 /**
- * Composable: useRequestAccessForm
+ * Form state for one access request, and the call that files it.
  *
- * Manages form state for creating/updating access requests.
- * Handles submitting for review.
+ * Returns `reactive()` rather than a plain object of refs. A plain object is not tracked, so
+ * `v-model="formState.subject"` replaced a ref on an object nothing was watching: the
+ * composable never saw the subject, `isFormValidForSubmit` stayed false, and the form could
+ * not be submitted at all. `reactive` unwraps the refs on read and writes through on
+ * assignment, which is what every binding already assumed.
+ *
+ * @see docs/design/groups/access-requests-plan.md — B6
  */
 export function useRequestAccessForm({ resource }) {
   // Form state
@@ -90,10 +96,11 @@ export function useRequestAccessForm({ resource }) {
           preset_ids: conflictingIds.preset_ids || [],
           request_ids: conflictingIds.request_ids || [],
         };
-      } else {
-        const message = data?.message || "Failed to submit access request";
-        throw new Error(message);
+        // The caller reads the null return and leaves the conflict alert to the form.
+        return null;
       }
+      const message = data?.message || "Failed to submit access request";
+      throw new Error(message);
     } finally {
       isSubmitting.value = false;
     }
@@ -118,7 +125,7 @@ export function useRequestAccessForm({ resource }) {
     conflictError.value = null;
   }
 
-  return {
+  return reactive({
     // Form state
     subject,
     selectedPreset,
@@ -138,5 +145,5 @@ export function useRequestAccessForm({ resource }) {
     resetConflictError,
     reset,
     buildItems,
-  };
+  });
 }

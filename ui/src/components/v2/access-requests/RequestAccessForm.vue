@@ -82,8 +82,8 @@
 
         <!-- Grant scope message -->
         <GrantScopeMessage
-          v-if="subject?.id"
-          :subject-type="subject?.type"
+          v-if="formState.subject?.id"
+          :subject-type="formState.subject?.type"
           :resource-type="props.resource?.type"
         />
 
@@ -111,7 +111,10 @@
 
       <!-- Right side: Current access preview -->
       <div class="col-span-1">
-        <CurrentAccessPreview :subject="subject" :resource="props.resource" />
+        <CurrentAccessPreview
+          :subject="formState.subject"
+          :resource="props.resource"
+        />
       </div>
     </div>
   </div>
@@ -120,24 +123,22 @@
 <script setup>
 import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
 import { useGrantPresets } from "@/components/v2/grants/issue/useGrantPresets";
-import { useRequestAccessForm } from "./useRequestAccessForm";
 
 const props = defineProps({
   resource: {
     type: Object,
     required: true,
   },
+  /**
+   * The state the enclosing modal submits. The form owned its own instance and the modal
+   * owned another, so the Submit button read a state nobody was filling in and stayed
+   * disabled no matter what was typed here.
+   */
+  formState: {
+    type: Object,
+    required: true,
+  },
 });
-
-const formState = useRequestAccessForm({
-  resource: props.resource,
-});
-
-// `formState` is a plain object holding refs, so `formState.subject` reaches a child component
-// as the ref itself rather than its value, and `subject?.id` in this template is undefined
-// until v-model replaces the ref on the first change. Unwrapping once here keeps every reader
-// in this file looking at the value.
-const subject = computed(() => unref(formState.subject));
 
 const {
   accessTypes,
@@ -153,9 +154,9 @@ const {
 
 // Computed: Items covered by selected preset
 const presetCoveredIds = computed(() => {
-  if (!formState.selectedPreset.value) return new Set();
+  if (!props.formState.selectedPreset) return new Set();
   const preset = presets.value.find(
-    (p) => p.id === formState.selectedPreset.value,
+    (p) => p.id === props.formState.selectedPreset,
   );
   return new Set(
     preset?.access_type_items?.map((item) => item.access_type_id) ?? [],
@@ -164,12 +165,12 @@ const presetCoveredIds = computed(() => {
 
 // Computed: Conflicting item names
 const conflictingItemNames = computed(() => {
-  if (!formState.conflictError.value) return [];
+  if (!props.formState.conflictError) return [];
 
   const names = [];
 
   // Map preset IDs
-  (formState.conflictError.value.preset_ids || []).forEach((presetId) => {
+  (props.formState.conflictError.preset_ids || []).forEach((presetId) => {
     const preset = presets.value.find((p) => p.id === presetId);
     if (preset) {
       names.push(`${preset.name} (preset)`);
@@ -177,7 +178,7 @@ const conflictingItemNames = computed(() => {
   });
 
   // Map access type IDs
-  (formState.conflictError.value.access_type_ids || []).forEach((typeId) => {
+  (props.formState.conflictError.access_type_ids || []).forEach((typeId) => {
     const type = accessTypes.value.find((t) => t.id === typeId);
     if (type) {
       names.push(type.name);

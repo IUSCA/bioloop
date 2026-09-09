@@ -147,7 +147,15 @@ import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
 import { useAuthStore } from "@/stores/auth";
 
-const route = useRoute();
+// The file-based router passes the path parameter as a prop; declaring it also stops it
+// falling through as an attribute onto this page's fragment root.
+const props = defineProps({
+  id: {
+    type: String,
+    required: true,
+  },
+});
+
 const nav = useNavStore();
 const auth = useAuthStore();
 
@@ -177,7 +185,7 @@ const DECISION_TONE = {
   REJECTED: "danger",
 };
 
-const requestId = computed(() => route.params.id);
+const requestId = computed(() => props.id);
 
 const statusLabel = computed(() =>
   (request.value?.status || "").replaceAll("_", " "),

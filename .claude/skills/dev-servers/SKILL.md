@@ -41,6 +41,69 @@ session. Nothing in the harness's cleanup path reaches it.
 `setsid` is not available on macOS, which is why the script uses `python3` rather than the
 one-line shell form.
 
+## Notifications need two more processes
+
+`bin/devserver.sh` starts the API and the UI and nothing else. Neither the notification
+worker nor a mail server is one of them, so email sent from a dev session goes nowhere
+until you start both by hand.
+
+**In-app notifications need Redis and the API, and that is all.** The row is written by
+`InAppNotificationService.create`, which then publishes it to a per-user Redis channel.
+The API process holding the browser's SSE connection reads it back off that channel and
+pushes it to the browser. Redis is therefore required even with the worker stopped.
+
+**Email additionally needs the notification worker and an SMTP server.** The API only
+enqueues a Bull job. `api/src/notification/worker.js` is the one process that calls
+`queue.process()`, renders the template, and sends the mail. MailHog is the dev SMTP
+server, and the API's default config already points at `localhost:1025`.
+
+```bash
+docker compose up -d redis mailhog          # 6379 and 1025, MailHog UI on 8025
+bin/devserver.sh up
+```
+
+Start the worker detached the same way `devserver.sh` does, because a `nohup ... &` inside
+a tool call is killed when the call ends:
+
+```bash
+python3 - logs/notification-worker.log logs/notification-worker.pid api npm run dev:worker <<'PYEOF'
+import subprocess, sys
+log, pidfile, cwd, *cmd = sys.argv[1:]
+out = open(log, "ab", buffering=0)
+p = subprocess.Popen(cmd, cwd=cwd, stdout=out, stderr=subprocess.STDOUT,
+                     stdin=subprocess.DEVNULL, start_new_session=True)
+open(pidfile, "w").write(str(p.pid))
+PYEOF
+```
+
+`[Worker] Ready — waiting for jobs` in `logs/notification-worker.log` is the last line of a
+good boot. `SMTP connection verified` above it means MailHog is reachable. Stop the worker
+with `kill -TERM -"$(cat logs/notification-worker.pid)"`.
+
+The repeated `This Redis server's default user does not require a password, but a password
+was supplied` warnings are normal. `api/.env` sets `REDIS_PASSWORD` and the dev container
+runs without auth. They are not a fault.
+
+`npm run dev:all` runs the API and the worker together in one foreground terminal. It is
+the alternative to the two-process setup above, not an addition to it.
+
+## Checking the whole notification path in one command
+
+```bash
+cd api && npm run notify:dummy -- alert test_user@iu.edu 2
+```
+
+`test_user` is user id 2 in the seed. The email lands in MailHog and the in-app row lands
+in the `notification` table:
+
+```bash
+curl -s http://localhost:8025/api/v2/messages | python3 -c "import sys,json; print(json.load(sys.stdin)['total'])"
+```
+
+**The script does not exit when you pass a `userId`.** It leaves the two `ioredis` pub/sub
+connections open, so it hangs after the send. Both the email and the row have already been
+delivered by then, and Ctrl-C is safe. Filed in `.todo/issues/05-notifications.md`.
+
 ## Logging in without CAS
 
 Chrome DevTools MCP cannot complete a CAS login, and a minted token pushed into

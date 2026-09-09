@@ -43,7 +43,7 @@ const MUTATING_ACTIONS = new Set([
   'collection.delete',
   'collection.archive',
   'collection.manage_grants',
-  'collection.review_requests',
+  'collection.review_access_requests',
   'collection.unarchive',
 
   // dataset
@@ -110,6 +110,7 @@ const READING_ACTIONS = new Set([
   'grant.read',
   'grant.list_for_resource',
   'grant.list_for_subject',
+  'grant.view_coverage',
   'grant.list',
 
   // access_request

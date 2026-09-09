@@ -200,7 +200,9 @@ router.get(
   validate([
     query('resource_id').optional().isUUID(),
     query('resource_type').optional().isIn(Object.values(RESOURCE_TYPE)),
-    query('sort_by').default('created_at').isIn(['created_at', 'updated_at']),
+    // `reviewed_at` is the ordering this list wants and is populated on every row in it,
+    // so it is accepted here and nowhere else.
+    query('sort_by').default('reviewed_at').isIn(['created_at', 'updated_at', 'reviewed_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
     query('limit').default(100).isInt({ min: 0, max: 100 }).toInt(),

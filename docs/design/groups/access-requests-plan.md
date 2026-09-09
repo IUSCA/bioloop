@@ -265,9 +265,45 @@ replaces the ref on an object nothing is tracking. The composable never sees the
 Returning `reactive({...})` fixes the bindings and breaks every `.value` reader, so the two
 halves move together. After B5 that is nine readers across two files.
 
+The form and the modal each built their own instance of the composable, so even a fixed
+composable would not have helped: the Submit button read a state the form never filled in.
+The modal owns the one instance and passes it to the form.
+
+A 409 also read as success. `submit()` swallowed the conflict and resolved `undefined`, and
+the modal toasted "submitted for review" over a request that does not exist. It returns null
+on a conflict now, and the modal leaves the dialog open with the form's own alert showing.
+
 *Files:* both resource tabs, `useRequestAccessForm.js`, `RequestAccessForm.vue`,
-`RequestAccessModalWithoutDrafts.vue`, both policy files, `restrictions.js`, both resource
-pages.
+`RequestAccessModal.vue`, both policy files, `restrictions.js`, both resource pages.
+
+### What the browser pass found
+
+The whole loop was driven end to end on both resource types, as an ordinary user filing a
+request and as the owning group's admin deciding it. Five further defects surfaced, each one
+on the path and none of them visible from the code alone.
+
+`getDatasetById` destructured a required options bag, and `grant.js`'s
+`getResourceOwningGroupId` calls it with the id alone. Every authorization path reaching it
+threw a TypeError and returned a 500. The bag is optional now.
+
+The coverage route bound `grant.list_for_resource`, which admits only the resource group's
+admins and oversight, so the requester's own Current Access panel was a 403 for exactly the
+person it is for. The question names both a subject and a resource, so either side's
+authority answers it, and neither existing action covers both. `grant.view_coverage` is that
+action.
+
+`isSubject` compared `user.id`, an integer primary key, against a subject UUID, so the policy
+was unsatisfiable and every caller fell through to the next arm.
+
+The `access_request` hydrator filtered the `access_requests` relation with `has`, which
+Prisma accepts only on a scalar list. `GET /access-requests/:id` was a 500 for every
+non-platform-admin, and so were review, submit, and withdraw.
+
+The queue page sorts the Reviewed tab by `reviewed_at`, and the route accepted only
+`created_at` and `updated_at`, so that tab always returned a 400.
+
+`ReviewRequestForm` used `i-mdi-close-all`, which the icon set does not carry, so importing
+the component failed the Vite transform outright.
 
 ## Phase C — Tell the truth about access
 
@@ -428,7 +464,8 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B5, C1, C2, and C3 are built. B6, C4, C5, D1, and D2 are planned and not started.
+A1, B1 to B6, C1, C2, and C3 are built, and the loop was driven end to end in the browser
+on both resource types. C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

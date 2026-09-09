@@ -293,12 +293,17 @@ function createSqlOrderBy({ sort_by, sort_order }) {
 
 /**
  * Fetch a dataset by ID, with optional includes.
+ *
+ * The options bag is optional. A policy that only needs the owning group calls this with
+ * the id alone, and destructuring a missing argument threw a TypeError that surfaced as a
+ * 500 on every authorization path reaching it.
+ *
  * @param {string} resource_id
- * @param {object} options
- * @param {object} options.includes - Related entities to include in the response
+ * @param {object} [options]
+ * @param {object} [options.includes] - Related entities to include in the response
  * @returns {Promise<object>} The dataset with requested includes
  */
-async function getDatasetById(resource_id, { includes }) {
+async function getDatasetById(resource_id, { includes = {} } = {}) {
   return prisma.dataset.findUnique({
     where: { resource_id },
     include: createPrismaInclude(includes),

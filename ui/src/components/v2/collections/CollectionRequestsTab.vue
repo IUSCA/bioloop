@@ -129,21 +129,19 @@ const noDataMessage = computed(() =>
 );
 
 function fetchRequests() {
-  if (!props.collectionId) return;
-
   loading.value = true;
   error.value = null;
 
   let promise = null;
   if (props.canReview) {
     promise = AccessRequestService.pendingReview({
-      resource_id: props.collectionId,
+      resource_id: props.collection.id,
       limit: pageSize.value,
       offset: (page.value - 1) * pageSize.value,
     });
   } else {
     promise = AccessRequestService.requestedByMe({
-      resource_id: props.collectionId,
+      resource_id: props.collection.id,
       limit: pageSize.value,
       offset: (page.value - 1) * pageSize.value,
     });
@@ -188,6 +186,7 @@ function onReviewed() {
 
 function onRequestSubmitted() {
   emit("count-changed");
+  fetchRequests();
 }
 
 onMounted(() => {
