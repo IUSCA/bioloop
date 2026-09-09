@@ -1,0 +1,311 @@
+# Access and requests plan
+
+The ordered work for [epic #8](https://github.com/IUSCA/cdmd/issues/8): requesting, reviewing,
+and managing access across datasets and collections.
+
+The design record is [Access presets](./access-presets.md) for the grant layer and
+[Decisions](./decisions.md) for the governance model. This page carries only the sequence, the
+scope boundary, and the reasons for each. [Use Cases](./use-cases.md) says which items the
+first release needs.
+
+## The loop this closes
+
+One complete pass: a researcher who can see a dataset asks for it, an admin reviews the
+request and sees what the approval will confer, the decision reaches the requester, and both
+sides can tell what access exists afterwards.
+
+Everything below serves that loop. Collections come along nearly free, because the review
+queue and the review modal are keyed on a request id and never on a resource type.
+
+## What already exists
+
+Every endpoint is built and authorized. Create, submit, review, and withdraw are routed, and
+so are the three list queries `/requested-by-me`, `/my-pending-reviews`, and `/reviewed-by-me`.
+
+Grant presets are complete. They are modeled in `grant_preset` and `grant_preset_item`, scoped
+by resource type, persisted as request items, and expanded at approval with supersession.
+`POST /grants/compute-effective-grants` gives a reviewer a dry run of an approval.
+
+The Access tab works on both resources, with `IssueGrantModal` behind it.
+
+## Where the loop is severed
+
+Four breaks, all in the UI, and each was confirmed by reading the code rather than the
+backlog.
+
+**Creation never submits.** `useRequestAccessForm.submit()` calls `accessRequestService.create`
+and never calls `submit(id)`. A request made through the UI lands in `DRAFT` and stays there.
+Nothing reaches `UNDER_REVIEW`, so the pending queue is empty by construction.
+
+**The review flow is unreachable.** `pages/v2/access-requests/index.vue` imports
+`AccessRequestReviewModal.vue`, which is eighteen lines rendering the literal string
+`Review Modal Stub`. The real `ReviewRequestModal.vue` is 298 lines, complete with the decision
+form, the item rows, and the effective-grants preview, and it is imported by nothing.
+
+**The request card renders no controls.** `AccessRequestCard.vue` is 25 lines showing a title
+and a status. Three call sites pass it `@approve`, `@reject`, `@view`, `:can-act`, and
+`:can-review`. All are ignored.
+
+**The collection tab never fetches.** `CollectionRequestsTab.fetchRequests` opens with
+`if (!props.collectionId) return`, and the prop is named `collection`. It returns before it
+queries, `loading` never clears, and the tab renders an empty div.
+
+The dataset tab is broken differently. It binds `@click="openIssueGrantModal"`, which the
+component does not define, and the dataset page calls `openRequestAccessModal`, which it does
+not expose.
+
+## One enforcement hole blocks everything else
+
+`authorize('access_request', 'create')` is `Policy.always`. `createAccessRequest` validates the
+subject and never checks the resource, so a user holding any resource UUID can file a request
+against a dataset they cannot see. `assertGrantItemsApplicableToResourceType` runs on grant
+creation and not here, so a request may also name access types that do not apply to the
+resource type.
+
+Use case 5 states the test directly: a request against a dataset the requester cannot see is
+refused. This lands before the request tabs reach anyone who is not an admin.
+
+## Scope
+
+### In
+
+Phases A through D below. The loop closes for both resource types, the enforcement hole is
+shut, and the two surfaces that mislead about access are corrected.
+
+### Out, and why
+
+**The oversight review queue.** The upstream issue asks whether oversight should see pending
+reviews and leaves it open. Nothing in [Use Cases](./use-cases.md) marks it as needed for the
+first release. The `hasOversightOfResourceGroup` policy already admits oversight to read one
+request, so the gap is a queue query and a read-only variant of every control, not a model
+change.
+
+**A pre-submit validation endpoint.** Running the subject checks ahead of submission so the
+dialog can block a doomed request is worth having. A 403 that names what failed covers it once
+phase A1 lands, and the endpoint can follow if the message proves insufficient.
+
+**Intra-preset partial approval.** A reviewer who wants four of a preset's six access types
+must reject the preset and add the four individually. This is risk 6 in
+[Trust and communication](./trust-and-communication.md). Fixing it means approval with
+exclusions, which changes the request item model.
+
+**Empty states that distinguish "no access" from "no results".** Risk 8 needs the query layer
+to report that rows were filtered out, which touches every listing rather than this epic.
+
+**Renewals and requests on behalf of a group.** Both are marked `Next` in
+[Use Cases](./use-cases.md). The route rejects any type but `NEW`, and the renewal-context
+endpoint is commented out.
+
+## Phase A — Correctness before reach
+
+### A1 — Request creation is gated on the resource
+
+`access_request.create` stops being `Policy.always`. The route resolves the resource, then
+authorizes `view_metadata` on it, because posture B.5 in [Use Cases](./use-cases.md) says a
+dataset can be asked for when the requester can already see its metadata.
+`assertGrantItemsApplicableToResourceType` runs on the request items as it does on grant
+creation.
+
+The seeded `DATASET:REQUEST_ACCESS` and `COLLECTION:REQUEST_ACCESS` access types stay unused.
+They exist for a later posture where the right to ask diverges from the right to see, and
+nothing needs that separation yet.
+
+*New:* one policy, one route change. *Reuse:* the engine, and the applicability check.
+
+## Phase B — Close the loop
+
+### B1 — Creating a request submits it
+
+`POST /access-requests` takes `submit: true` and performs both the create and the
+`DRAFT → UNDER_REVIEW` transition inside one transaction. The state machine keeps both states
+and both audit events; only the round trip disappears.
+
+Chaining two calls in the client was the alternative. It is rejected because a failure between
+them strands a `DRAFT` row that no surface can see or resume, now that the drafts UI is going.
+
+*New:* one route flag. *Reuse:* `submitRequest`.
+
+### B2 — One request card
+
+`AccessRequestCard.vue` is rebuilt against one contract: it takes `request` and `canAct`, and
+emits `review` and `view`. All three call sites move to it.
+
+This is where an approved item says what access it produced, which is the requester-facing half
+of the case-2 explanation described under [Two things settled here](#two-things-settled-here).
+
+*Rebuilt:* one component. *Reuse:* the status vocabulary in `UploadStatusBadge.vue` is the
+model for the badge, not the source.
+
+### B3 — The review flow is reachable
+
+`ReviewRequestModal.vue` is wired into `pages/v2/access-requests/index.vue` and both resource
+tabs. `AccessRequestReviewModal.vue` is deleted.
+
+*Reuse:* the entire existing modal, its form, its item rows, and its preview. *New:* the
+wiring.
+
+### B4 — The two resource tabs work
+
+`DatasetRequestsTab` gets the request-access modal and exposes the opener the dataset page
+already calls. `CollectionRequestsTab` loses the `props.collectionId` guard that stops it
+fetching.
+
+The capability name is unified in the same change. `dataset.review_access_requests` and
+`collection.review_requests` name one concept, and the epic's goal is a consistent interface
+across the two resources. The restrictions test catches any call site missed.
+
+B4 also has to fix the request form's state wiring, which is worse than the four breaks above.
+`useRequestAccessForm` returns its refs inside a plain object, so `formState.subject` in a
+template is the ref rather than its value. Half the readers know this and write
+`formState.conflictError.value`; the bindings do not, and `v-model="formState.subject"`
+replaces the ref on an object nothing is tracking. The composable never sees the subject, so
+`isFormValidForSubmit` stays false and the form cannot be submitted.
+
+Returning `reactive({...})` fixes the bindings and breaks the fifteen `.value` readers across
+four files, so the two halves move together. One of those files is deleted by B5.
+
+*Reuse:* `RequestAccessModalWithoutDrafts` on both sides.
+
+### B5 — The drafts UI is deleted
+
+`RequestAccessModal.vue`, `DraftRequestPicker.vue`, and `useAccessRequestDrafts.js` total 473
+lines and are imported by nothing. The decision that the UI shows no drafts is already taken,
+and B1 removes the last reason a draft could appear.
+
+## Phase C — Tell the truth about access
+
+### C1 — Effective coverage is one server-side question
+
+`getEffectiveCoverage` answers which live grants reach a subject on a resource, through every
+path, with each grant labelled by how it arrives. It is the query the three surfaces below all
+need, and it is written once.
+
+The union is the same one the authorization layer already uses in `userDatasetsQuery`: the
+subject itself, the groups it inherits from, the system principals, and, for a dataset, any
+collection holding it. A user subject inherits from `effective_user_groups`; a group subject
+inherits from its ancestors in `group_closure`. One query serves both, because the arm that
+does not apply returns no rows.
+
+*New:* one service function. *Reuse:* the union already written in
+`services/grants/helpers.js`.
+
+### C2 — Both previews ask the union question
+
+Neither preview does today, and both mislead the same way. `fetchExistingGrants` and
+`getGrantsForSubjectAndResource` match on the exact `subject_id`, so a grant the subject holds
+through a group is invisible on both sides.
+
+A reviewer approving a personal `DOWNLOAD` for a user whose lab already holds `DOWNLOAD` until
+2027 sees "1 new grant". The coverage is never mentioned, so the reviewer cannot decline as
+redundant.
+
+The write path keeps matching on the exact subject. A grant is issued to one subject, and a
+group's grant cannot be superseded when approving a member. The coverage is therefore
+advisory: it names what already reaches the subject and changes no decision by itself.
+
+### C3 — Case 2 names the grant that covers it
+
+When an approved access type is already covered by a broader grant, no grant is written. The
+reviewer's preview says so and now names the covering grant, including when the coverage
+arrives indirectly.
+
+The requester-facing half lands with B2, because there is no request-detail surface until the
+card is rebuilt.
+
+Both previews were checked against the running app. A reviewer issuing `DATASET:LIST_FILES` to
+a member of `Dr. Alice Wong Lab` on `PCM230203` now reads "Dr. Alice Wong Lab already holds
+this with no end date" beside the new grant, and an approval already covered by a longer grant
+reads "Already covered by a grant expiring Dec 31 2034 — nothing will be written". The
+requester's panel names a grant held through a system principal the same way.
+
+The requester's panel also had two defects of its own. It never loaded, because it watched the
+subject without an initial read and the dialog opens with the subject already set. And it
+formatted `approved_until`, a field a grant row does not carry, so every grant read "Never
+expires".
+
+### C4 — Effective access sits beside the decision
+
+An `APPROVED` request whose grants were all revoked reads as access the requester does not
+have. This is risk 1 in [Trust and communication](./trust-and-communication.md) and the
+highest-risk case in the design.
+
+The request detail and the three list endpoints carry a summary derived from the live grants,
+so no client infers it. C1's query answers this too.
+
+Grants written before this work carry no `source_access_request_id`, so the summary is empty
+for seeded rows and correct for everything issued from now on.
+
+### C5 — Every grant row names where it came from
+
+`grant` already carries `source_access_request_id` and `source_preset_id`. Neither reaches the
+Access tab, so a request for "Standard Research Use" decays into a flat list of access types.
+
+`listGrantsForResourceGrouped` and `listGrantsForSubjectGrouped` carry both, plus the preset
+name, and the tab renders a "via" label. This is risk 5, which
+[Trust and communication](./trust-and-communication.md) calls a launch requirement rather than
+an enhancement.
+
+## Phase D — Close the notification loop
+
+### D1 — Submission and decision are notified, in app
+
+`EVENTS.REQUEST_RECEIVED` and `EVENTS.REQUEST_COMPLETED` already have handlers registered on
+the notification bus, and nothing emits either. `submitRequest` emits the first and
+`submitReview` emits the second.
+
+In-app delivery only. Email templates, digests, and preference handling belong to the
+notifications epic.
+
+Use case 9 puts this in the first release, because people do not poll a portal and an
+un-notified approval reads as a rejection.
+
+### D2 — Stale requests expire on a schedule
+
+`expireStaleRequests` is implemented, tested, and called by nothing, so a request sits
+`UNDER_REVIEW` forever. `src/notification/cron.js` is the API's only scheduler that fires once
+regardless of cluster size, and it documents how to add a job.
+
+## Two things settled here
+
+### Supersession and the no-overlap constraint stay
+
+The `grant_no_overlap` exclusion constraint and the supersession machinery were questioned in
+the 2026-09-03 design review as finding 5, deferred at the time, and re-examined on 2026-09-09.
+They stay. [Decisions](./decisions.md) carries the reasoning.
+
+The argument that carried most weight against them turned out to be a defect in two preview
+components rather than a property of the model, and C2 fixes it.
+
+### The concurrency race is a documented edge case
+
+Two reviewers approving two requests for the same subject, resource, and access type in the
+same moment collide on the exclusion constraint. One approval is rejected, and which expiry
+survives depends on which transaction commits first. `issueGrants.concurrency.test.js` asserts
+exactly this shape: one of the two may be rejected, and the surviving grant may carry either
+expiry.
+
+Nothing retries. The losing reviewer sees a 409 and must review again, which succeeds, because
+the winning grant is then visible to `fetchExistingGrants` and the second approval becomes a
+case-2 skip or a case-3 supersession.
+
+This is accepted rather than fixed. Two admins reviewing requests for the same subject and the
+same dataset within the same transaction window is rare, the failure is loud rather than
+silent, and the recovery is to review again. If it is ever observed, the fix is to retry the
+losing transaction, not to remove the constraint.
+
+## Testing
+
+Each new service function gets lifecycle and invariant tests beside the existing
+`tests/services/access-requests/` and `tests/services/grants/`.
+
+A test that creates a dataset or a collection through a v2 service must delete its grants
+before deleting the resource, because `grant.resource` is `ON DELETE RESTRICT`.
+
+The seed carries seven access requests and none is `UNDER_REVIEW`, so the pending queue is
+empty until one is created through the flow. All 63 seeded grants have a null
+`source_access_request_id`, so provenance labels and effective-access summaries are blank on
+seeded data by design.
+
+## Status
+
+Phase C1 through C3 are built. Everything else is planned and not started.

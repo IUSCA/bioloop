@@ -336,6 +336,63 @@ nowhere to live except the `metadata` column, where nothing can query it.
 **Not an authorization input.** No policy, filter, or grant check reads these rows. Adding an
 affiliation must not widen who can reach a dataset.
 
+## 14. The no-overlap constraint and supersession stay
+
+**Decision.** The `grant_no_overlap` exclusion constraint stays, and so does the supersession
+machinery that exists to satisfy it. Effective access continues to be the union of grants at
+read time, with at most one live grant per subject, resource, and access type on any single
+subject path.
+
+The 2026-09-03 design review argued for dropping both, in its finding 5. The invariant is
+already false for effective access: a grant to a user and a grant to their group overlap
+freely, because `subject_id` differs, and `userDatasetsQuery` has always taken the union of the
+subject paths. The constraint therefore forbids overlap on one path and permits it on every other.
+The review was correct about that, and it deferred the change at the time.
+
+**Re-examined on 2026-09-09, and the constraint stays.** The strongest argument for dropping
+it was that supersession pays a large complexity cost to deduplicate a single path, while the
+system says nothing about the other paths. That turned out to describe two preview components
+rather than the model. `fetchExistingGrants` and `getGrantsForSubjectAndResource` both match on
+the exact subject, so a reviewer approving a request never saw that the requester's group
+already held the access. Reading the union is now `getEffectiveCoverage`, and both previews
+ask it. The model did not have to change.
+
+**What the constraint buys.** Within one subject path, exactly one live grant per access type
+is true, and the database enforces it. Revocation of an access type is one row rather than a
+set. The end date of an access type is one column read rather than a maximum over rows. The
+Access tab is a flat list rather than a collapse. A bug that writes a grant twice fails at
+insert instead of silently doubling rows.
+
+**What it costs, and what was rejected as a fix.** Two arguments against it survive. An
+approval can create nothing, when a broader grant already covers the access type, which is
+risk 2 in [Trust and communication](./trust-and-communication.md); the reviewer's preview now
+names the covering grant instead of showing an unexplained skip. And two reviewers approving
+the same subject, resource, and access type at the same moment collide on the constraint,
+which is recorded as an edge case in
+[the access and requests plan](./access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
+Neither is worth a model change. If the race is ever observed, the fix is to retry the losing
+transaction.
+
+**Consequence to accept.** Supersession keeps writing `revoked_at` on grants nobody revoked.
+`revocation_type` separates `SUPERSEDED` from `MANUAL`, so any query that cares can tell them
+apart, and the closed grant keeps its `valid_from`, `source_access_request_id`, and the window
+it was live for. Access history stays reconstructable.
+
+---
+
+## Raised and deferred
+
+Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
+recorded in that review's outcome table, and both were lost when it was folded into these
+records. They are restored here so a later reader does not mistake a deferral for an omission.
+
+**The no-overlap rule** was deferred, then settled as decision 14 above.
+
+**Oversight is a privilege nobody granted.** The review argued that oversight authority is
+conferred by structure rather than by any grant, so nobody can point at the row that created
+it. This follows the review's finding 1, making groups resources and roles grants, which was
+rejected as decision 4. Oversight stays structural, and it stays outside the grant model.
+
 ---
 
 ## What was not decided

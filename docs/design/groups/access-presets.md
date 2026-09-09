@@ -175,6 +175,42 @@ The exclusion constraint is never violated. Authorization state is unambiguous a
 
 > **Decision:** When expansion produces a conflict, the system compares validity windows. If the new grant is longer or indefinite, the existing grant is superseded atomically and a new grant is created. If the new grant is shorter, grant creation is skipped, the item is still marked APPROVED, and the skip is recorded in the audit log referencing the covering grant.
 
+#### What supersession does not cover
+
+Supersession compares the incoming grant against grants held by the **exact same subject**.
+`fetchExistingGrants` filters on `subject_id`, because that is the only thing a write may
+close: a grant belongs to one subject, and approving a request for Alice cannot close a grant
+her lab holds.
+
+So the one-live-grant invariant holds along a single subject path and nowhere else. Alice may
+hold `DOWNLOAD` personally and inherit `DOWNLOAD` from her lab, from an ancestor of that lab,
+from a system principal, and from a collection holding the dataset. All five overlap, the
+exclusion constraint never fires, and the authorization layer has always read the union.
+
+This is intentional, and it is why the constraint stays rather than being dropped as the
+2026-09-03 review proposed. [Decisions](./decisions.md) records the reasoning as decision 14.
+
+What it costs is explanation, not correctness. A reviewer looking only at the exact-subject
+comparison sees "a new grant will be created" for access the subject already has by another
+path. `getEffectiveCoverage` answers the union question, and both the requester's and the
+reviewer's preview now show it beside the grant that would be written. The coverage is
+advisory: it names what already reaches the subject and closes nothing.
+
+#### Concurrent approvals can collide
+
+Two reviewers approving two requests for the same subject, resource, and access type inside
+the same transaction window collide on the exclusion constraint. One approval is rejected, and
+which validity window survives depends on which transaction commits first.
+`issueGrants.concurrency.test.js` asserts exactly this shape.
+
+Nothing retries. The losing reviewer sees a 409 and reviews again, which then succeeds,
+because the winning grant is visible to `fetchExistingGrants` on the second attempt and the
+approval becomes a Case 1 supersession or a Case 2 skip.
+
+This is accepted rather than fixed. The window is the length of one approval transaction, the
+failure is loud rather than silent, and the recovery is to review again. If it is ever
+observed in practice, the fix is to retry the losing transaction.
+
 ### 2.9 Access explanation reconstructs the preset narrative from request lineage
 
 With write-time expansion, the grant table contains only access types — no preset references. The concern is that this breaks the "illusion" of presets for users and admins viewing current access: the requester selected presets, the reviewer approved presets, but the access explanation shows a flat list of access types.
