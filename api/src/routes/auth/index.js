@@ -18,6 +18,7 @@ const cilogonRouter = require('./cilogon');
 const casRouter = require('./iucas');
 const microsoftRouter = require('./microsoft');
 const signupRouter = require('./signup');
+const inviteRouter = require('./invite');
 
 router.post('/logout', authenticate, asyncHandler(async (req, res, next) => {
   // #swagger.tags = ['Auth']
@@ -134,6 +135,10 @@ router.post(
     return res.json(resObj);
   }),
 );
+
+// Not behind a feature flag. An invitation link has to work whichever provider the
+// recipient signs in with, and /check has to answer before they have signed in at all.
+router.use('/invite', inviteRouter);
 
 router.use('/cas', casRouter);
 

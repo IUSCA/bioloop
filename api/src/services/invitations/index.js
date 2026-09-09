@@ -304,8 +304,126 @@ async function applyPendingInvitations({ email, user_subject_id, tx }) {
   return { applied, skipped };
 }
 
+/**
+ * Whether a token can still be spent, without spending it.
+ *
+ * The answer is `valid` or `invalid` and never says which of expired, cancelled, accepted, or
+ * never-existed applies. The caller is unauthenticated, and a reason turns this into an oracle
+ * for the state of somebody else's invitation. The reason is logged instead.
+ *
+ * It also does not say whether the invited address has an account, which would let anyone
+ * holding a token enumerate the portal.
+ *
+ * @param {string} token
+ * @returns {Promise<{status: 'valid', email: string}|{status: 'invalid'}>}
+ */
+async function checkInvitationToken(token) {
+  if (typeof token !== 'string' || token.length === 0) {
+    return { status: 'invalid' };
+  }
+
+  const invitation = await prisma.group_invitation.findUnique({
+    where: { token },
+    include: { group: { select: { name: true, is_archived: true } } },
+  });
+
+  if (!invitation) {
+    logger.info('Invitation check failed: no such token');
+    return { status: 'invalid' };
+  }
+  if (invitation.status !== INVITATION_STATUS.PENDING) {
+    logger.info(`Invitation ${invitation.id} check failed: status is ${invitation.status}`);
+    return { status: 'invalid' };
+  }
+  if (invitation.expires_at <= new Date()) {
+    logger.info(`Invitation ${invitation.id} check failed: expired ${invitation.expires_at.toISOString()}`);
+    return { status: 'invalid' };
+  }
+  if (invitation.group.is_archived) {
+    logger.info(`Invitation ${invitation.id} check failed: group is archived`);
+    return { status: 'invalid' };
+  }
+
+  return { status: 'valid', email: invitation.invited_email, group_name: invitation.group.name };
+}
+
+/**
+ * Spend a token on behalf of an authenticated user.
+ *
+ * The invited address lives in the row, so the server decides who a link belongs to and no
+ * trust is placed in anything the client says. A forwarded link fails here rather than
+ * anywhere earlier.
+ *
+ * `SELECT ... FOR UPDATE` serialises two tabs racing on the same token: the first spends it,
+ * the second finds it no longer `PENDING` and is told so.
+ *
+ * @param {object} params
+ * @param {string} params.token
+ * @param {object} params.user - the authenticated user, with `email` and `subject_id`
+ * @returns {Promise<{group_id: string, group_name: string, role: string}>}
+ */
+async function acceptInvitationByToken({ token, user }) {
+  const callerEmail = normalizeEmail(user?.email);
+  if (!callerEmail) throw createError.Forbidden('This invitation is for a different email address');
+
+  const outcome = await prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw`
+      SELECT id FROM group_invitation
+      WHERE token = ${token} AND status = 'PENDING' AND expires_at > now()
+      FOR UPDATE;
+    `;
+    if (rows.length === 0) throw createError.NotFound('This invitation is no longer valid');
+
+    const invitation = await tx.group_invitation.findUnique({
+      where: { id: rows[0].id },
+      include: { group: { select: { id: true, name: true, is_archived: true } } },
+    });
+
+    // Checked before the group, so that someone holding a forwarded link learns nothing about
+    // the group it points at.
+    if (invitation.invited_email !== callerEmail) {
+      logger.info(`Invitation ${invitation.id} refused: authenticated as a different address`);
+      throw createError.Forbidden('This invitation is for a different email address');
+    }
+
+    // Reported rather than thrown, because a throw here would roll the transaction back and
+    // take the cancellation with it. The invitation is closed afterwards, outside.
+    if (invitation.group.is_archived) {
+      return { archived: true, invitation_id: invitation.id };
+    }
+
+    // Idempotent for someone who is already a member: the membership insert does nothing and
+    // the invitation still closes.
+    await grantMembership(tx, invitation, user.subject_id);
+
+    return {
+      group_id: invitation.group.id,
+      group_name: invitation.group.name,
+      role: invitation.role,
+    };
+  });
+
+  if (outcome.archived) {
+    // Closed with a reason rather than left pending, so it stops showing as outstanding to
+    // the admin of a group nobody can join any more.
+    await prisma.group_invitation.update({
+      where: { id: outcome.invitation_id },
+      data: {
+        status: INVITATION_STATUS.CANCELLED,
+        cancelled_at: new Date(),
+        cancellation_reason: 'group_archived',
+      },
+    });
+    throw createError.Conflict('The group has been archived since this invitation was sent');
+  }
+
+  return outcome;
+}
+
 module.exports = {
   generateInviteToken,
+  checkInvitationToken,
+  acceptInvitationByToken,
   createInvitation,
   listInvitations,
   cancelInvitation,
