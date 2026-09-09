@@ -476,9 +476,22 @@ on this cohort yet. · View decision" in the requester's.
 
 ### D2 — Stale requests expire on a schedule
 
-`expireStaleRequests` is implemented, tested, and called by nothing, so a request sits
-`UNDER_REVIEW` forever. `src/notification/cron.js` is the API's only scheduler that fires once
-regardless of cluster size, and it documents how to add a job.
+`expireStaleRequests` was implemented, tested, and called by nothing, so a request sat
+`UNDER_REVIEW` forever and the pending queue only ever grew. `src/notification/cron.js` is
+the API's only scheduler that fires once regardless of cluster size, and it documents how to
+add a job.
+
+The schedule and the cutoff are configuration rather than constants, under
+`notify.cron.access_request_expiry`: 02:00 daily, and thirty days. Neither is derivable, so
+both are stated as choices someone may change. Thirty days is the point at which a request
+nobody has looked at is better closed than left implying it is still live; the hour is
+overnight, when nobody is mid-review.
+
+The template's `Europe/London` also went. It is now `notify.cron.timezone`, set to the
+institution's own, and every job registered here reads it — a test asserts that, so a job
+added later cannot quietly keep the template's.
+
+*Files:* `notification/cron.js`, `config/default.json`.
 
 ## Two things settled here
 
@@ -523,8 +536,14 @@ seeded data by design.
 
 ## Status
 
-A1, B1 to B6, C1 to C5, and D1 are built, and the loop was driven end to end in the browser
-on both resource types. D2 is planned and not started.
+Every phase is built: A1, B1 to B6, C1 to C5, D1, and D2. The loop was driven end to end in
+the browser on both resource types — a researcher files a request, an admin reviews it and
+sees what the approval confers, the decision reaches the requester in app, and both sides can
+tell afterwards what access exists.
+
+What the epic deliberately left out is unchanged and listed under [Out, and why](#out-and-why):
+the oversight review queue, a pre-submit validation endpoint, intra-preset partial approval,
+empty states that distinguish "no access" from "no results", and renewals.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

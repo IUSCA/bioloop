@@ -194,6 +194,13 @@
   "notify": {
     "worker": {
       "concurrency": 5
+    },
+    "cron": {
+      "timezone": "America/Indiana/Indianapolis",
+      "access_request_expiry": {
+        "schedule": "0 2 * * *",
+        "max_age_days": 30
+      }
     }
   },
   "jupyterhub": {
