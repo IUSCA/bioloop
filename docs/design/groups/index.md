@@ -26,9 +26,11 @@ to file. When two pages disagree, Decisions is the record of intent.
 - [Dataset storage](./dataset-storage.md) — archival, staging, and download paths
 - [v2 cut-over](../v2-cutover.md) — how v2 is built alongside v1, and how the legacy half retires
 - [Access presets](./access-presets.md) — the preset layer over atomic grants
+- [Profiles](./profiles.md) — the public face of a group or collection, and unauthenticated access
 - [Access and requests plan](./access-requests-plan.md) — the ordered work for requesting and reviewing access
 - [Access type order plan](./access-type-order-plan.md) — the ordered work to make the rest of the system agree with the access-type partial order
-- [Group invitations](./invitations.md) — designed, not built
+- [Dashboard plan](./dashboard-plan.md) — the ordered work for the landing page at `/v2/home`
+- [Group invitations](./invitations.md) — built, except the signup mismatch dialog
 - [UI information architecture](./ui-information-architecture.md) — how the pages are organised
 - [Trust and communication](./trust-and-communication.md) — where the model is right and the surface misleads
 - [Domain glossary](./glossary.md) — the vocabulary

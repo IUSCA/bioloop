@@ -22,15 +22,17 @@ model rather than from per-page judgement.
 Visual mockups of these screens are vendored at
 [`docs/public/mockups/`](https://github.com/IUSCA/bioloop/tree/main/docs/public/mockups) —
 `ui-design.html` is the design spec, and the others show the portal, dashboards, grant
-views, and creation flows. `dataset-creation-screens.html` covers the import and upload
-dialogs, their in-flight states, and the refusals each one can show. They are snapshots of
+views, and creation flows. `dashboard-screens.html` covers the landing page and
+names what it deliberately does not draw. `dataset-creation-screens.html` covers the import and upload
+dialogs, their in-flight states, and the refusals each one can show. `profile-screens.html` covers the
+group and collection profile pages, including what a signed-out reader sees. They are snapshots of
 intent, not of shipped UI.
 
 ## Top-level pages
 
 Seven areas make up the portal.
 
-- **Dashboard** — recent activity, stats, quick links.
+- **Dashboard** — what needs the caller, and what they can reach. See [Dashboard plan](./dashboard-plan.md).
 - **Groups** — hierarchy, membership, archival.
 - **Datasets** — ownership, grants, collection membership, lifecycle.
 - **Collections** — dataset containers and grant targets.
@@ -41,7 +43,7 @@ Seven areas make up the portal.
 ## Page map
 
 ```
-├── / (dashboard: recent activity, stats, quick links)
+├── / (dashboard: sections gated by persona — see the dashboard plan)
 ├── /groups
 │   ├── /groups  (browse & search, create group action)
 │   └── /groups/:id

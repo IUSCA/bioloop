@@ -45,7 +45,9 @@ Supporting records:
 
 - [Access presets](./groups/access-presets.md) — `active`, partially shipped
 - [Access type order plan](./groups/access-type-order-plan.md) — `active`, built
-- [Group invitations](./groups/invitations.md) — `active`, not started
+- [Dashboard plan](./groups/dashboard-plan.md) — `active`, not started
+- [Profiles](./groups/profiles.md) — `active`, not started
+- [Group invitations](./groups/invitations.md) — `active`, built (signup mismatch dialog outstanding)
 - [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
 - [Domain glossary](./groups/glossary.md)
