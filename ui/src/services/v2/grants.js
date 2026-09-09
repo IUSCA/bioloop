@@ -132,4 +132,19 @@ export default {
       { params },
     );
   },
+
+  /**
+   * Every live grant reaching a subject on a resource, and how each one arrives.
+   *
+   * Wider than getGrantsForSubject, which answers only what the subject holds directly.
+   * Each row carries `via` of DIRECT, GROUP, or PRINCIPAL, plus `via_group_name` and
+   * `via_collection_name` where they apply.
+   *
+   * @see docs/design/groups/access-requests-plan.md — C1
+   */
+  getCoverageForSubject(subject_type, subject_id, resource_type, resource_id) {
+    return api.get(
+      `/grants/${subject_type}/${subject_id}/${resource_type}/${resource_id}/coverage`,
+    );
+  },
 };

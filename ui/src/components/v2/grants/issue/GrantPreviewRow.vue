@@ -7,6 +7,19 @@
         </span>
       </div>
       <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ note }}</p>
+      <!--
+        Access the subject already has by another path, which the row above cannot show:
+        the effective-grants computation matches on the exact subject, because that is what
+        a write may supersede. A reviewer seeing this can decline as redundant.
+        @see docs/design/groups/access-requests-plan.md — C2
+      -->
+      <p
+        v-for="cover in props.row.indirect_coverage || []"
+        :key="cover.id"
+        class="mt-0.5 text-xs text-amber-700 dark:text-amber-400"
+      >
+        {{ coverageNote(cover) }}
+      </p>
     </div>
     <span
       class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium"
@@ -54,7 +67,9 @@ const note = computed(() => {
   if (type === "new") return `Will be granted · expires ${fmt(expiry)}`;
   if (type === "existing") {
     // existing grant with equal or later valid_until than the approved_until - existing grant remains effective
-    return `Existing grant (expires ${fmt(existingGrant?.expiry)}) is broader — new grant skipped`;
+    // Approving this item writes nothing, so the covering grant is the whole explanation.
+    // @see docs/design/groups/access-requests-plan.md — C3
+    return `Already covered by a grant expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
   }
   if (type === "supersede") {
     // existing grant with earlier valid_until than the approved_until - new grant would supersede the existing grant
@@ -62,4 +77,23 @@ const note = computed(() => {
   }
   return "";
 });
+
+/**
+ * One line naming a grant that already reaches the subject by some other path.
+ */
+function coverageNote(cover) {
+  const until = cover.valid_until
+    ? `until ${datetime.date(cover.valid_until)}`
+    : "with no end date";
+  if (cover.via === "GROUP" && cover.via_group_name) {
+    return `${cover.via_group_name} already holds this ${until}`;
+  }
+  if (cover.via === "PRINCIPAL") {
+    return `A system principal already confers this ${until}`;
+  }
+  if (cover.via_collection_name) {
+    return `Already held through the collection ${cover.via_collection_name} ${until}`;
+  }
+  return `Already held by another path ${until}`;
+}
 </script>

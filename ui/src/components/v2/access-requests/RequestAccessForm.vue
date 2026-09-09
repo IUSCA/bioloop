@@ -82,8 +82,8 @@
 
         <!-- Grant scope message -->
         <GrantScopeMessage
-          v-if="formState.subject?.id"
-          :subject-type="formState.subject?.type"
+          v-if="subject?.id"
+          :subject-type="subject?.type"
           :resource-type="props.resource?.type"
         />
 
@@ -111,10 +111,7 @@
 
       <!-- Right side: Current access preview -->
       <div class="col-span-1">
-        <CurrentAccessPreview
-          :subject="formState.subject"
-          :resource="props.resource"
-        />
+        <CurrentAccessPreview :subject="subject" :resource="props.resource" />
       </div>
     </div>
   </div>
@@ -135,6 +132,12 @@ const props = defineProps({
 const formState = useRequestAccessForm({
   resource: props.resource,
 });
+
+// `formState` is a plain object holding refs, so `formState.subject` reaches a child component
+// as the ref itself rather than its value, and `subject?.id` in this template is undefined
+// until v-model replaces the ref on the first change. Unwrapping once here keeps every reader
+// in this file looking at the value.
+const subject = computed(() => unref(formState.subject));
 
 const {
   accessTypes,

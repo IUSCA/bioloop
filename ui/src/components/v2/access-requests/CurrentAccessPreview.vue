@@ -40,7 +40,7 @@
         v-else-if="grants.length === 0"
         icon="mdi-lock-outline"
         title="No active grants"
-        description="This subject has no active access on this resource."
+        message="Nothing reaches this subject on this resource, by any path."
         :show-clear-filters="false"
       />
 
@@ -63,7 +63,18 @@
               {{ getAccessTypeName(grant) }}
             </p>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ formatExpiry(grant.approved_until) }}
+              {{ formatExpiry(grant.valid_until) }}
+            </p>
+            <!--
+              A grant reaching the subject through a group or a collection is the case this
+              panel used to hide, and it is the one worth naming: asking for access the
+              subject already inherits is wasted effort on both sides.
+            -->
+            <p
+              v-if="viaLabel(grant)"
+              class="mt-0.5 text-xs text-amber-700 dark:text-amber-400"
+            >
+              {{ viaLabel(grant) }}
             </p>
           </div>
         </div>
@@ -107,12 +118,14 @@ async function loadGrants() {
   error.value = null;
 
   try {
-    const response = await grantService.getGrantsForSubject(
+    // Coverage, not direct grants. The exact-subject question hid access the subject
+    // inherits from a group, which is the thing a requester most needs to know before asking.
+    // @see docs/design/groups/access-requests-plan.md — C2
+    const response = await grantService.getCoverageForSubject(
       props.subject.type,
       props.subject.id,
       props.resource.type,
       props.resource.id,
-      { is_active: true },
     );
     grants.value = response.data || [];
   } catch (err) {
@@ -143,15 +156,32 @@ function formatExpiry(until) {
  * Get access type name from grant
  */
 function getAccessTypeName(grant) {
-  return grant.access_type?.name || grant.access_type_id || "Unknown";
+  return grant.access_type_name || grant.access_type_id || "Unknown";
 }
 
-// Watch for subject changes and reload grants
+/**
+ * How this grant reaches the subject, or null when the subject holds it itself.
+ */
+function viaLabel(grant) {
+  const parts = [];
+  if (grant.via === "GROUP" && grant.via_group_name) {
+    parts.push(`via ${grant.via_group_name}`);
+  } else if (grant.via === "PRINCIPAL") {
+    parts.push("via a system principal");
+  }
+  if (grant.via_collection_name) {
+    parts.push(`through the collection ${grant.via_collection_name}`);
+  }
+  return parts.length ? `Already held ${parts.join(", ")}` : null;
+}
+
+// Load on mount as well as on change. The dialog opens with a subject already chosen, so a
+// watch alone never fired and the panel reported "no active grants" without having asked.
 watch(
   () => props.subject?.id,
   () => {
     loadGrants();
   },
-  { debounce: 300 },
+  { immediate: true },
 );
 </script>
