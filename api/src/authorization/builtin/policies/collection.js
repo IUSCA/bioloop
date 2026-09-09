@@ -49,6 +49,30 @@ const hasCollectionOversight = new CollectionPolicy({
   evaluate: (user, collection) => user.oversight_group_ids.includes(collection.owner_group_id),
 });
 
+/**
+ * The profile is published to the world. Requires no user attribute, which is what lets an
+ * unauthenticated caller satisfy it.
+ * @see docs/design/groups/profiles.md — 1. Visibility is a column, not a grant
+ */
+const isProfilePublic = new CollectionPolicy({
+  name: 'isProfilePublic',
+  requires: {
+    resource: ['profile_visibility'],
+  },
+  evaluate: (user, collection) => collection.profile_visibility === 'PUBLIC',
+});
+
+/** The profile is published to signed-in users, and the caller is one. */
+const isProfileVisibleToSignedInUser = new CollectionPolicy({
+  name: 'isProfileVisibleToSignedInUser',
+  requires: {
+    user: ['is_anonymous'],
+    resource: ['profile_visibility'],
+  },
+  evaluate: (user, collection) => user.is_anonymous !== true
+    && ['PUBLIC', 'AUTHENTICATED'].includes(collection.profile_visibility),
+});
+
 const CallerRole = Object.freeze({
   PLATFORM_ADMIN: 'PLATFORM_ADMIN',
   ADMIN: 'ADMIN',
@@ -65,7 +89,30 @@ const collectionPolicies = new PolicyContainer({
 
 const PUBLIC_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'metadata', 'created_at', 'updated_at', 'is_archived', '_count.datasets',
+  'tagline',
 ].concat(GROUP_PUBLIC_ATTRIBUTES.map((attr) => `owner_group.${attr}`)); // include owner group attributes with 'owner_group.' prefix
+
+/**
+ * What a caller sees who may read the profile and has no grant on the collection. An
+ * unauthenticated caller sees exactly this.
+ *
+ * `_count.datasets` is absent on purpose. Telling a signed-in viewer how many datasets
+ * they cannot open is what makes a request worth making, and they are identified when they
+ * ask. Telling an anonymous viewer the same thing discloses the size of a holding to
+ * somebody the system cannot name.
+ *
+ * The owning group is named because a citation is not usable without it.
+ * @see docs/design/groups/profiles.md — What each audience sees
+ */
+const PUBLIC_PROFILE_ATTRIBUTES = [
+  'id', 'name', 'slug', 'description', 'tagline', 'about_md',
+  'metadata.links', 'metadata.citation', 'metadata.publications', 'metadata.fields',
+  'created_at', 'is_archived', 'profile_visibility',
+  'owner_group.id', 'owner_group.name', 'owner_group.slug',
+];
+
+/** The profile columns a grant holder sees on top of everything they already saw. */
+const PROFILE_ATTRIBUTES = ['tagline', 'about_md', 'profile_visibility'];
 
 // No policy below names the platform-admin role. The engine allows a platform admin every
 // action before any of these run, so repeating the term here would be dead weight.
@@ -79,6 +126,15 @@ collectionPolicies
       isCollectionAdmin,
       hasCollectionOversight,
       userHasGrant('COLLECTION:VIEW_METADATA'),
+    ]),
+
+    // The one action an unauthenticated caller can satisfy. view_metadata stays as it was.
+    view_profile: Policy.or([
+      isCollectionAdmin,
+      hasCollectionOversight,
+      userHasGrant('COLLECTION:VIEW_METADATA'),
+      isProfilePublic,
+      isProfileVisibleToSignedInUser,
     ]),
 
     list: Policy.always, // anyone can list collections, but the results will be filtered based on their permissions
@@ -125,7 +181,24 @@ collectionPolicies
       },
       {
         policy: userHasGrant('COLLECTION:VIEW_METADATA'),
-        attribute_filters: PUBLIC_ATTRIBUTES,
+        attribute_filters: PUBLIC_ATTRIBUTES.concat(PROFILE_ATTRIBUTES),
+      },
+    ],
+    // Rules short-circuit on the first matching policy rather than combining, so these run
+    // most-privileged first and the catch-all sits last. Anyone reaching this point has
+    // already been granted view_profile.
+    view_profile: [
+      {
+        policy: Policy.or([isCollectionAdmin, hasCollectionOversight]),
+        attribute_filters: ['*'],
+      },
+      {
+        policy: userHasGrant('COLLECTION:VIEW_METADATA'),
+        attribute_filters: PUBLIC_ATTRIBUTES.concat(PROFILE_ATTRIBUTES),
+      },
+      {
+        policy: Policy.always,
+        attribute_filters: PUBLIC_PROFILE_ATTRIBUTES,
       },
     ],
     list: [
@@ -139,4 +212,10 @@ collectionPolicies
   })
   .freeze();
 
-module.exports = { collectionPolicies, CallerRole };
+module.exports = {
+  collectionPolicies,
+  CallerRole,
+  PUBLIC_ATTRIBUTES,
+  PUBLIC_PROFILE_ATTRIBUTES,
+  PROFILE_ATTRIBUTES,
+};

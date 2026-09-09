@@ -80,6 +80,9 @@ const MUTATING_ACTIONS = new Set([
 const READING_ACTIONS = new Set([
   // group
   'group.view_metadata',
+  // Reading, and deliberately still available on an archived group. An archived group that
+  // published a profile keeps serving it, with the archived badge showing.
+  'group.view_profile',
   'group.list',
   // Seeing which invitations are outstanding. Reading, and deliberately still available on
   // an archived group: the admin who has to explain why nobody can join needs the list.
@@ -93,6 +96,7 @@ const READING_ACTIONS = new Set([
 
   // collection
   'collection.view_metadata',
+  'collection.view_profile',
   'collection.list',
   'collection.list_datasets',
   'collection.list_grants',

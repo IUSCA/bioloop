@@ -80,4 +80,10 @@ userHydrator.registerVirtualAttribute('accessible_owner_group_ids', async ({ id,
   return rows.map((row) => row.id);
 });
 
+userHydrator.registerVirtualAttribute('is_anonymous', async () => false);
+// A real user is never anonymous, so this loader answers for every signed-in caller. The
+// anonymous principal carries `is_anonymous: true` in the pre-fetched user, which the
+// hydrator prefers over running this, so the loader never sees an unauthenticated request.
+// @see docs/design/groups/profiles.md — The anonymous principal
+
 module.exports = { userHydrator };

@@ -2,14 +2,15 @@
 title: Profiles
 order: 8
 status: active
-implemented: none
+implemented: partial
 last_verified: 2026-09-08
 ---
 
 ::: warning Design record — active
-**No code exists for this yet.** `group` and `collection` carry `description` and a free-form
-`metadata` column and nothing else from this page. There is no `view_profile` action, no
-public router, and no unauthenticated path through the middleware. This record continues
+**Partly built.** The profile columns, the `view_profile` action, the anonymous principal,
+and the grant subject-set fix have shipped. The routes, the services, and the UI have not:
+there is still no public router and no unauthenticated path through the middleware, so
+nothing here is reachable without a token yet. This record continues
 [Decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
 the `Public` principal and deferred the serving half to a separate piece of work.
 :::
@@ -28,8 +29,8 @@ constraint the rest of the page is built to satisfy.
 
 **A group is a subject. A collection is a resource.** `group.id` is a foreign key into
 `subject`, and `collection.id` is a foreign key into `resource`. Grants run from a subject to
-a resource. So a grant can name a collection, and no grant can ever name a group. Any design
-that expresses group visibility as a grant is unbuildable.
+a resource. So a grant can name a collection, and no grant can ever name a group. No design
+that expresses group visibility as a grant can be built.
 
 **Profile visibility is therefore not a grant, for either resource type.** A collection could
 express visibility as a grant of `COLLECTION:VIEW_METADATA` to the `Public` principal, and a
@@ -124,12 +125,24 @@ Three tiers, and one attribute list per tier.
 in `api/src/authorization/builtin/policies/group.js` and `collection.js`.
 
 ```js
+// group.js
 const PUBLIC_PROFILE_ATTRIBUTES = [
-  'id', 'name', 'slug', 'tagline', 'about_md', 'avatar_key',
+  'id', 'name', 'slug', 'description', 'tagline', 'about_md', 'avatar_key',
   'metadata.type', 'metadata.links', 'metadata.citation', 'metadata.publications',
   'is_archived', 'profile_visibility',
 ];
 ```
+
+`description` is on that list because it is already in `PUBLIC_ATTRIBUTES`, which every
+signed-in user receives for every group in a listing. `tagline` and `avatar_key` join
+`PUBLIC_ATTRIBUTES` for the same reason: a tagline sits at the sensitivity of the
+description beside it, and the avatar route authorizes the bytes on its own.
+
+The collection list adds `owner_group.id`, `owner_group.name`, and `owner_group.slug`,
+because a citation is not usable without naming who published the collection.
+
+A third constant, `PROFILE_ATTRIBUTES`, holds the profile columns a member or grant holder
+gains on top of what they already saw, so the member arm and the public arm cannot drift.
 
 Three things are deliberately absent, and each absence is a rule rather than an oversight.
 
@@ -206,6 +219,7 @@ const isProfileVisibleToSignedInUser = new GroupPolicy({
 });
 
 view_profile: Policy.or([
+  isGroupAdmin,
   isGroupMember,
   hasGroupOversight,
   canAccessResourcesOwnedByGroup,
@@ -213,6 +227,12 @@ view_profile: Policy.or([
   isProfileVisibleToSignedInUser,
 ]),
 ```
+
+**Attribute rules short-circuit on the first matching policy; they do not combine.** An
+action-specific rule list also replaces the `'*'` wildcard block entirely rather than adding
+to it. So the `view_profile` rules are written out in full, most privileged first, and the
+last arm is `Policy.always` — everything reaching attribute evaluation has already been
+granted the action, so the catch-all needs no condition of its own.
 
 `is_anonymous` is registered as a virtual attribute on `userHydrator` that returns `false`. A
 real user never carries the field, so the loader answers for them; the anonymous principal
