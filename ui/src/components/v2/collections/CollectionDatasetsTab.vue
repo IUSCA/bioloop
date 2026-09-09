@@ -69,10 +69,9 @@
                 class="v2-table"
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
-                v-model:selected-items="selected"
+                v-model="selected"
                 :selectable="props.canStage"
                 select-mode="multiple"
-                item-key="resource_id"
                 disable-client-side-sorting
               >
                 <template #cell(name)="{ row }">

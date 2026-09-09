@@ -82,8 +82,12 @@
 
       <va-divider />
 
-      <!-- Actions -->
-      <div class="flex justify-end">
+      <!-- Actions.
+           Shown by default, so every legacy caller behaves as before. The v2 dataset
+           workflows tab hides them: its actions authorize against the dataset the run
+           belongs to, and it deliberately offers no delete.
+           @see docs/design/v2-cutover.md — Shared UI components need a v1 story -->
+      <div v-if="props.showActions" class="flex justify-end">
         <div class="flex-none pr-2">
           <div
             v-if="['REVOKED', 'FAILURE'].includes(workflow.status)"
@@ -147,7 +151,10 @@ import toast from "@/services/toast";
 import workflowService from "@/services/workflow";
 import { useAuthStore } from "@/stores/auth";
 
-const props = defineProps({ workflow: Object });
+const props = defineProps({
+  workflow: Object,
+  showActions: { type: Boolean, default: true },
+});
 const emit = defineEmits(["update"]);
 
 const loading = ref(false);

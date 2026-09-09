@@ -30,7 +30,9 @@
         </template>
 
         <div class="mt-2">
-          <Workflow :workflow="run" />
+          <!-- Its own action bar is hidden: it posts to the legacy workflow routes, which
+               authorize on the workflow alone and offer a delete this tab does not. -->
+          <Workflow :workflow="run" :show-actions="false" />
 
           <!-- Acting on a run needs the same authority as starting one, so the buttons
                appear only for callers who could launch this workflow. Oversight sees the
