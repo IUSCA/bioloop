@@ -116,13 +116,22 @@ read. The route therefore reads the resource, then calls `authorizeAction` insid
 with `dataset` or `collection` and the action `view_metadata`, passing `req.policyContext` so
 the caller is hydrated once. `POST /v2/datasets/bulk` already authorizes this way.
 
-`access_request.create` becomes `Policy.always` no longer, but there is nothing useful for it
-to be: the meaningful check is on the resource, not on the request. It is removed from the
-container and the route owns the decision, with a comment saying why.
+`access_request.create` stays in the container as `Policy.always`, which the plan first said
+to remove. Removing it would have deleted a live path: `restrictionTargetFor` follows an
+access_request through to `preFetchedResource.resource_id`, so the binding is how an ARCHIVED
+restriction reaches request creation, and it was simply unwired. The route now supplies
+`preFetchedResourceFn: (req) => ({ resource_id: req.body.resource_id })`, so a request against
+a dataset in an archived group is refused with the restriction named. The policy half is
+`Policy.always` with a comment saying the meaningful check is on the resource and lives in the
+handler.
 
-*Files:* `authorization/builtin/policies/access_request.js`, `routes/access_requests.js`,
-`services/access_requests/request.js`. *Reuse:* `authorizeAction`, and
-`assertGrantItemsApplicableToResourceType`.
+*Files:* `authorization/builtin/policies/access_request.js`, `routes/access_requests.js`.
+*Reuse:* `authorizeAction`, and `assertGrantItemsApplicableToResourceType`.
+
+Tested by `tests/routes/access_requests.create.test.js`, which mounts the router on a bare
+express app with `req.user` set by the test rather than by the authentication middleware. Four
+cases: a non-member is refused, an owning-group admin is not, an unknown resource id is a 404,
+and a `COLLECTION` access type on a dataset is a 400.
 
 ## Phase B — Close the loop
 
@@ -373,8 +382,7 @@ seeded data by design.
 
 ## Status
 
-C1, C2, and C3 are built and checked against the running app. A1, B1 to B6, C4, C5, D1, and
-D2 are planned and not started.
+A1, C1, C2, and C3 are built. B1 to B6, C4, C5, D1, and D2 are planned and not started.
 
 The order to build in is A1, then B1 to B6, then C4 and C5, then D1 and D2. A1 comes first
 because the request tabs must not reach a non-admin before it lands. C4 needs B3's page to

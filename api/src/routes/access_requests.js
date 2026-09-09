@@ -2,13 +2,22 @@ const express = require('express');
 const { param, query, body } = require('express-validator');
 const _ = require('lodash/fp');
 const { RESOURCE_TYPE, ACCESS_REQUEST_ITEM_DECISION } = require('@prisma/client');
+const createError = require('http-errors');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const grantService = require('@/services/grants');
+const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
+const prisma = require('@/db');
+
+// Which policy container governs a resource of each type.
+const POLICY_RESOURCE_TYPE = {
+  [RESOURCE_TYPE.DATASET]: 'dataset',
+  [RESOURCE_TYPE.COLLECTION]: 'collection',
+};
 
 const router = express.Router();
 
@@ -70,8 +79,14 @@ router.post(
     }),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
-  authorize('access_request', 'create'),
-  asyncHandler(async (req, res) => {
+  // The restriction half of authorization. `restrictionTargetFor` follows an access_request
+  // through to the resource it concerns, so this is what stops a request being filed against
+  // a dataset in an archived group. The policy half is `Policy.always`; the real check is on
+  // the resource and runs in the handler, because the body carries no resource type.
+  authorize('access_request', 'create', {
+    preFetchedResourceFn: (req) => ({ resource_id: req.body.resource_id }),
+  }),
+  asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Create a new access request'
 
@@ -100,12 +115,39 @@ router.post(
       }
     }
 
+    // A request may only be filed against a resource the requester can already see. Posture
+    // B.5 in the use cases sets that bar: seeing the metadata is what makes asking possible.
+    // The body names a resource id and no resource type, so the container to authorize
+    // against is not known until the row is read, and an authorize() middleware cannot pick
+    // it. The policy context is threaded through so the caller is hydrated once.
+    // @see docs/design/groups/access-requests-plan.md — A1
+    const resource = await prisma.resource.findUnique({
+      where: { id: data.resource_id },
+      select: { id: true, type: true },
+    });
+    if (!resource) {
+      return next(createError.NotFound('Resource not found'));
+    }
+
+    const decision = await authorizeAction(POLICY_RESOURCE_TYPE[resource.type], 'view_metadata', {
+      identifiers: { user: req.user?.subject_id, resource: resource.id },
+      policyExecutionContext: req.policyContext,
+      preFetched: { user: req.user, context: { req } },
+    });
+    if (!decision.granted) {
+      return next(createError.Forbidden('Not permitted to request access to this resource'));
+    }
+
+    // The same rule grant creation applies: a COLLECTION access type cannot be asked for on
+    // a dataset. Throws a 400 naming the offending access type or preset.
+    await grantService.assertGrantItemsApplicableToResourceType(prisma, resource.type, data.items);
+
     // validated:
-    // - user has permission to create request
+    // - the requester can see the resource, and no restriction blocks filing against it
     // - at least 1 request item and all items are well-formed
-    // - request items are unique
+    // - request items are unique, and applicable to the resource type
     const record = await accessRequestsService.createAccessRequest(data, req.user.subject_id);
-    res.status(201).json(req.permission.filter(record));
+    return res.status(201).json(req.permission.filter(record));
   }),
 );
 

@@ -102,7 +102,17 @@ accessRequestPolicies
     read: Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
     review: isAdminOfResourceGroup,
     update: isRequester,
-    create: Policy.always, // enforced at service level with canCreateAccessRequest policy logic
+    // The meaningful check on creation is on the resource being asked for, not on the
+    // request. A create body names a `resource_id` and no resource type, so which policy
+    // container applies is not known until the `resource` row is read; the route reads it
+    // and authorizes `view_metadata` on the dataset or collection itself.
+    //
+    // This binding is not decorative. `restrictionTargetFor` follows an access_request
+    // through to `preFetchedResource.resource_id`, so it is the path by which an ARCHIVED
+    // restriction reaches request creation. The subject rules — self, or a group the
+    // requester administers — stay in `_validateAccessRequestSubject`.
+    // @see docs/design/groups/access-requests-plan.md — A1
+    create: Policy.always,
   })
   .attributes({
     '*': [
