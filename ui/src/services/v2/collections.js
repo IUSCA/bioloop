@@ -78,4 +78,14 @@ export default {
       data: { dataset_ids: datasetIds },
     });
   },
+
+  /**
+   * Stage datasets in a collection. Omit dataset_ids to stage the whole collection.
+   * Authorization is per dataset; the response reports staged, denied, and skipped.
+   * @param {string} id - collection id
+   * @param {{ dataset_ids?: string[] }} body
+   */
+  stageDatasets(id, body = {}) {
+    return api.post(`/collections/${id}/stage`, body);
+  },
 };

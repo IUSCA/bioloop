@@ -164,7 +164,89 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
   return wf;
 }
 
+/**
+ * The most datasets one bulk stage request may name.
+ *
+ * Matches the batch limit on POST /v2/datasets/bulk. It is a protocol bound rather than a
+ * tuning knob: each dataset costs a workflow-service round trip and a staging job, so an
+ * uncapped "stage all" on a large collection would queue unbounded work from one click.
+ */
+const MAX_BULK_STAGE = 100;
+
+/**
+ * Starts one stage run, taking the dataset's existing runs into account.
+ *
+ * @param {object} dataset - a row with `id`
+ * @param {number} [initiator_id]
+ * @returns {Promise<object>} the created workflow
+ */
+async function startStageRun(dataset, initiator_id) {
+  const rows = await prisma.workflow.findMany({
+    where: { dataset_id: dataset.id },
+    select: { id: true },
+  });
+  const runs = await enrichWorkflows(rows);
+
+  return createWorkflow({
+    dataset: { ...dataset, workflows: runs },
+    wf_name: 'stage',
+    initiator_id,
+  });
+}
+
+/**
+ * Starts a stage run on each of several datasets, reporting each outcome separately.
+ *
+ * A dataset the caller may not stage does not fail the batch, because refusing the whole
+ * request would make "stage all" unusable for exactly the people who hold access to part of
+ * a collection.
+ *
+ * Both collaborators are injected so the decision and the side effect stay separable, and so
+ * a test can drive the buckets without a workflow service.
+ *
+ * @param {object[]} datasets - rows with `id`, `resource_id`, `name`, and `is_staged`
+ * @param {object} options
+ * @param {function(string): Promise<boolean>} options.permits - whether the caller may stage
+ *   the dataset with that resource id
+ * @param {function(object, number): Promise<object>} [options.startRun] - starts one run
+ * @param {number} [options.initiator_id]
+ * @returns {Promise<{staged: object[], denied: object[], skipped: object[]}>}
+ */
+async function bulkStage(datasets, { permits, startRun = startStageRun, initiator_id } = {}) {
+  const staged = [];
+  const denied = [];
+  const skipped = [];
+
+  for (const dataset of datasets) {
+    const summary = { resource_id: dataset.resource_id, name: dataset.name };
+
+    // eslint-disable-next-line no-await-in-loop
+    const allowed = await permits(dataset.resource_id);
+
+    if (!allowed) {
+      denied.push(summary);
+    } else if (dataset.is_staged) {
+      skipped.push({ ...summary, reason: 'already staged' });
+    } else {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const wf = await startRun(dataset, initiator_id);
+        staged.push({ ...summary, workflow_id: wf.workflow_id });
+      } catch (error) {
+        // createWorkflow asserts when a run of the same name is already pending. That is a
+        // reason to leave this dataset alone, not a reason to fail the others.
+        skipped.push({ ...summary, reason: error.message });
+      }
+    }
+  }
+
+  return { staged, denied, skipped };
+}
+
 module.exports = {
+  MAX_BULK_STAGE,
+  bulkStage,
+  startStageRun,
   createWorkflow,
   findDatasetRun,
   runnableWorkflows,

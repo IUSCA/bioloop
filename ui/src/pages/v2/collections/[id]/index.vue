@@ -114,6 +114,7 @@
           :collection="collection"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
+          :can-stage="can('view_metadata')"
           @count-changed="fetchDatasetCount"
         />
 

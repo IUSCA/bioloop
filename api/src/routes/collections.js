@@ -8,8 +8,12 @@ const _ = require('lodash/fp');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const collectionService = require('@/services/collections');
+const datasetService = require('@/services/datasets_v2');
+const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
-const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = require('@/authorization');
+const {
+  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+} = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
@@ -261,6 +265,69 @@ router.delete(
     const { dataset_ids } = req.body;
     await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.subject_id });
     res.status(204).send();
+  }),
+);
+
+/**
+ * Stages several of a collection's datasets at once.
+ *
+ * Naming no dataset stages the whole collection. Authorization is per dataset, because a
+ * collection groups datasets that different groups own and different people can reach, so a
+ * caller is told what was staged, what was refused, and what needed nothing — rather than
+ * having the batch refused because one dataset was out of reach.
+ *
+ * @see .todo/issues/06-dataset-actions-workflows.md — Phase 5
+ */
+router.post(
+  '/:id/stage',
+  validate([
+    param('id').isUUID(),
+    body('dataset_ids').optional().isArray({ min: 1, max: workflowService.MAX_BULK_STAGE }),
+    body('dataset_ids.*').isUUID(),
+  ]),
+  authorize('collection', 'view_metadata'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Collections']
+    // #swagger.summary = 'Stage datasets in a collection'
+
+    const { data: members } = await datasetService.getDatasetsByCollection(req.params.id, {
+      filters: { is_deleted: false },
+      pagination: { limit: workflowService.MAX_BULK_STAGE + 1 },
+      sort: { sort_by: 'name', sort_order: 'asc' },
+      includes: {},
+    });
+
+    const requested = req.body.dataset_ids;
+    const datasets = requested
+      ? members.filter((d) => requested.includes(d.resource_id))
+      : members;
+
+    if (datasets.length > workflowService.MAX_BULK_STAGE) {
+      return next(createError(
+        400,
+        `Stage at most ${workflowService.MAX_BULK_STAGE} datasets at a time; select a subset`,
+      ));
+    }
+    if (datasets.length === 0) {
+      return next(createError(404, 'No datasets in this collection matched the request'));
+    }
+
+    // The policy context is shared across the calls, so the caller is hydrated once however
+    // many datasets the collection holds.
+    const permits = async (resource_id) => {
+      const decision = await authorizeAction('dataset', 'request_stage', {
+        identifiers: { user: req.user?.subject_id, resource: resource_id },
+        policyExecutionContext: req.policyContext,
+        preFetched: { user: req.user, context: { req } },
+      });
+      return decision.granted;
+    };
+
+    const result = await workflowService.bulkStage(datasets, {
+      permits,
+      initiator_id: req.user.id,
+    });
+    return res.json(result);
   }),
 );
 

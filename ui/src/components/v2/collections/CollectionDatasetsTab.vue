@@ -21,6 +21,21 @@
               @update:model-value="setStatus"
             />
 
+            <!-- Authorization is per dataset, so this reports what was staged, what was
+                 refused, and what needed nothing, rather than failing the batch. -->
+            <VaButton
+              v-if="props.canStage"
+              size="small"
+              preset="secondary"
+              :loading="staging"
+              @click="stageSelected"
+            >
+              <div class="flex items-center justify-between gap-2 mx-1">
+                <i-mdi-cloud-download class="text-sm" />
+                {{ selected.length ? `Stage ${selected.length}` : "Stage all" }}
+              </div>
+            </VaButton>
+
             <VaButton
               size="small"
               @click="openAddDatasetModal"
@@ -54,6 +69,10 @@
                 class="v2-table"
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
+                v-model:selected-items="selected"
+                :selectable="props.canStage"
+                select-mode="multiple"
+                item-key="resource_id"
                 disable-client-side-sorting
               >
                 <template #cell(name)="{ row }">
@@ -199,17 +218,24 @@
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import DatasetService from "@/services/v2/datasets";
+import CollectionService from "@/services/v2/collections";
+import toast from "@/services/toast";
 import { getIcon } from "@/services/v2/icons";
 
 const props = defineProps({
   collection: { type: Object, required: true },
   canCreate: { type: Boolean, required: true },
   canRemove: { type: Boolean, required: true },
+  // Whether to offer staging at all. The API still checks every dataset separately, because
+  // a collection can hold datasets this viewer cannot stage.
+  canStage: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["count-changed"]);
 
 const datasets = ref([]);
+const selected = ref([]);
+const staging = ref(false);
 const error = ref(null);
 const loading = ref(true);
 const activeStatus = ref("all"); // 'all' | 'active' | 'archived'
@@ -322,6 +348,39 @@ function openAddDatasetModal() {
 defineExpose({
   openAddDatasetModal,
 });
+async function stageSelected() {
+  staging.value = true;
+  try {
+    const { data } = await CollectionService.stageDatasets(
+      props.collection.id,
+      {
+        dataset_ids: selected.value.length
+          ? selected.value.map((d) => d.resource_id)
+          : undefined,
+      },
+    );
+
+    // Say what happened to each group rather than claiming a flat success. Refused and
+    // skipped datasets are the common case, not an error.
+    const parts = [];
+    if (data.staged.length) parts.push(`${data.staged.length} staging`);
+    if (data.skipped.length) {
+      parts.push(`${data.skipped.length} already staged or in progress`);
+    }
+    if (data.denied.length) parts.push(`${data.denied.length} not permitted`);
+
+    const summary = parts.join(", ") || "Nothing to stage";
+    if (data.staged.length) toast.success(summary);
+    else toast.info(summary);
+
+    selected.value = [];
+  } catch (err) {
+    console.error(err);
+    toast.error(err?.response?.data?.message || "Unable to stage datasets");
+  } finally {
+    staging.value = false;
+  }
+}
 </script>
 
 <style scoped>
