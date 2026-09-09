@@ -4,11 +4,12 @@ const createError = require('http-errors');
 const _ = require('lodash/fp');
 const assert = require('assert');
 const { isUUID } = require('validator');
-const { GROUP_MEMBER_ROLE } = require('@prisma/client');
+const { GROUP_MEMBER_ROLE, INVITATION_STATUS } = require('@prisma/client');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
+const invitationService = require('@/services/invitations');
 const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
@@ -324,6 +325,88 @@ router.post(
 
     const unarchivedGroup = await groupService.unarchiveGroup(id, req.user.subject_id);
     res.json(req.permission.filter(unarchivedGroup));
+  }),
+);
+
+// ── Invitations ──────────────────────────────────────────────────────────────
+//
+// An invitation reaches an email address rather than a user, so these routes never take a
+// user id and never say whether the address has an account.
+// @see docs/design/groups/invitations.md — API Reference
+
+// Invite an email address to the group
+router.post(
+  '/:id/invitations',
+  validate([
+    param('id').isUUID(),
+    body('email')
+      .isString()
+      .trim()
+      .notEmpty()
+      .isLength({ max: 254 }),
+    body('role').optional().isIn(Object.values(GROUP_MEMBER_ROLE)),
+  ]),
+  authorize('group', 'invite'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Invite an email address to join the group'
+
+    const { status, invitation } = await invitationService.createInvitation({
+      group_id: req.params.id,
+      email: req.body.email,
+      role: req.body.role,
+      invited_by: req.user.subject_id,
+    });
+
+    // The same body either way, and no hint about whether the address has an account. An
+    // admin who could tell the difference could enumerate the portal's users one at a time.
+    res.status(status === 'invited' ? 201 : 200).json({ status, id: invitation.id });
+  }),
+);
+
+// List the group's invitations
+router.get(
+  '/:id/invitations',
+  validate([
+    param('id').isUUID(),
+    query('status').default(INVITATION_STATUS.PENDING).isIn([...Object.values(INVITATION_STATUS), 'all']),
+    query('limit').default(50).isInt({ min: 1, max: 100 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('group', 'view_invitations'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'List invitations issued by this group'
+
+    const { status, limit, offset } = req.query;
+    res.json(await invitationService.listInvitations({
+      group_id: req.params.id,
+      status: status === 'all' ? null : status,
+      limit,
+      offset,
+    }));
+  }),
+);
+
+// Withdraw an open invitation
+router.delete(
+  '/:id/invitations/:invitationId',
+  validate([
+    param('id').isUUID(),
+    param('invitationId').isUUID(),
+  ]),
+  authorize('group', 'invite'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['Groups']
+    // #swagger.summary = 'Cancel an open invitation'
+
+    // group_id is part of the match inside the service, not only of the authorization here.
+    // Holding another group's invitation id would otherwise be enough to cancel it.
+    const invitation = await invitationService.cancelInvitation({
+      group_id: req.params.id,
+      invitation_id: req.params.invitationId,
+    });
+    res.json({ id: invitation.id, status: invitation.status });
   }),
 );
 

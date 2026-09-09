@@ -109,6 +109,16 @@ groupPolicies
     remove_member: isGroupAdmin,
     edit_member_role: isGroupAdmin,
 
+    // Issuing and withdrawing an invitation. An invitation is an add_member that has not
+    // happened yet and carries the same authority, so this is not a narrower rule than
+    // add_member; it is a separate action because it is separately restrictable.
+    // @see docs/design/groups/invitations.md — Authorization
+    invite: isGroupAdmin,
+    // Reading the list is split from issuing because the two differ under ARCHIVED: a frozen
+    // group takes no new invitations, and the outstanding ones are exactly what an admin
+    // needs to see while it is frozen.
+    view_invitations: isGroupAdmin,
+
     add_dataset: Policy.or([isGroupAdmin, isMemberContributionsAllowed]),
     add_collection: isGroupAdmin,
   })

@@ -33,6 +33,9 @@ const MUTATING_ACTIONS = new Set([
   'group.add_dataset',
   'group.add_collection',
   'group.unarchive',
+  // Issuing or withdrawing an invitation. An archived group takes no new members by either
+  // route, the same reasoning that puts dataset.contribute here.
+  'group.invite',
 
   // collection
   'collection.create',
@@ -78,6 +81,9 @@ const READING_ACTIONS = new Set([
   // group
   'group.view_metadata',
   'group.list',
+  // Seeing which invitations are outstanding. Reading, and deliberately still available on
+  // an archived group: the admin who has to explain why nobody can join needs the list.
+  'group.view_invitations',
   'group.view_hierarchy',
   'group.list_invalid',
   'group.view_audit_logs',
