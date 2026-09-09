@@ -242,3 +242,23 @@ When a session hits a failure this page does not explain — a new stale pattern
 turns out to be order-dependent, a helper that was missing — amend this file in the same
 change. Record dead ends explicitly, and confirm a claim by running the suite before writing
 it down here.
+
+## `jest.spyOn` cannot intercept a call a module makes to itself
+
+`jest.spyOn(service, 'fn')` replaces the property on the exports object. A caller inside the
+same module holds the original binding, so the spy never fires and the real function runs —
+which in this codebase means a live call to the workflow service, failing with a 401 that
+looks nothing like the mistake.
+
+The symptom is a test whose assertions fail with plausible-but-wrong values while the spy
+reports zero calls.
+
+Two ways out. Inject the collaborator as an argument with a default, which is what
+`bulkStage` does for both its permission check and its run starter, so a test drives the
+outcomes without any service at all. Or, when injection would distort the design, spy on the
+boundary the module genuinely crosses — `wfService.getAll`, `prisma.workflow.findMany` —
+rather than on its own sibling function.
+
+Prefer injection when the function's job is to decide something. It keeps the decision
+testable without a database or a network, and it makes the collaborators visible in the
+signature.

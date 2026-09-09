@@ -68,6 +68,17 @@ The cost of that gap is that unreachable code is never validated. Two bugs sat i
   database default and no insert trigger. The fix is a nested
   `resource: { create: { type: RESOURCE_TYPE.DATASET } }`.
 
+Wiring the workflows tab found three more in the same file and its route:
+
+- `datasetService.getDataset` did not exist, so every attempt to launch a workflow threw a
+  `TypeError`. The v2 service has `getDatasetById`, which takes a resource id.
+- The two download-info services queried `dataset.id` and `dataset_file.dataset_id` — integer
+  keys — with the resource UUID the route hands them.
+- **The workflows sub-router had no `mergeParams`.** `express.Router()` does not inherit
+  `:dataset_id` from its parent, so every handler in the file authorized and queried against
+  `undefined`. `files.js` next door had `express.Router({ mergeParams: true })` all along.
+  Check this first when a sub-router 500s on a `where` clause full of `undefined`.
+
 **Adding a nested relation create flips Prisma into relation form.** Once
 `create_query.resource = { create: ... }` is present, a sibling scalar foreign key such as
 `owner_group_id` is rejected with `Unknown argument`. Use
