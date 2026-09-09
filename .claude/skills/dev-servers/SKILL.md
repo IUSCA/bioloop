@@ -114,6 +114,15 @@ the entire protection; do not weaken it.
 Switching users this way is how to check a page as a platform admin, a group admin, and a
 plain member without three browsers.
 
+**`/dev-login` now applies a held invitation, like the real providers do.** The identity
+providers apply one through `withHandledVerifyResponse` in `ui/src/stores/auth.js`;
+`/dev-login` calls `POST /auth/test_login` directly and used to skip that step. The
+signed-out half of the invitation flow was therefore impossible to exercise in development,
+which is how a missing interstitial and a dead button went unnoticed. To drive that flow:
+send an invitation, read the token out of MailHog, clear `localStorage` and
+`sessionStorage` in the browser, open `/invite?token=…`, then visit
+`/dev-login?username=<the invited account>`.
+
 **A stale session after a database reset looks like a bug in your change.** `prisma migrate
 reset` re-seeds with new `subject_id` values. The browser keeps the old one, reads keep
 working because an unknown subject simply resolves to nothing, and then a write fails with

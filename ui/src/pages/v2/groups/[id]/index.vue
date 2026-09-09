@@ -131,7 +131,7 @@
           :can-edit-role="can('edit_member_role') && !group.is_archived"
           :can-invite="can('invite')"
           @count-changed="handleMembersUpdate"
-          @invited="invitationsTabRef?.refresh?.()"
+          @invite="openAddMemberModal"
         />
 
         <GroupSubgroupsTab
@@ -163,7 +163,7 @@
           :group-id="props.id"
           :can-invite="can('invite')"
           @count-changed="handleInvitationsUpdate"
-          @invite="membersTabRef?.openAddMemberModal?.()"
+          @invite="openAddMemberModal"
         />
 
         <GroupAuditTab
@@ -171,6 +171,20 @@
           :group-id="props.id"
         />
       </div>
+
+      <!--
+        Mounted by the page rather than by a tab, because both the members tab and the
+        invitations tab open it and only one of them is rendered at a time. A ref into an
+        unrendered sibling is null, which is what left the invitations tab's invite button
+        doing nothing.
+      -->
+      <AddGroupMemberModal
+        ref="addMemberModal"
+        :group-id="props.id"
+        :can-invite="can('invite')"
+        @update="handleMemberAdded"
+        @invited="handleInvited"
+      />
 
       <!-- Archive confirm modal -->
       <GroupArchiveConfirmModal
@@ -219,6 +233,24 @@ const counts = ref({
 
 const membersTabRef = ref(null);
 const invitationsTabRef = ref(null);
+const addMemberModal = ref(null);
+
+function openAddMemberModal() {
+  addMemberModal.value?.show?.();
+}
+
+// Adding a member and inviting one both refresh the page's own counts, and additionally the
+// tab that is currently rendered. Neither reaches through a ref for the count, so the badge
+// is right whichever tab the action was started from.
+function handleMemberAdded() {
+  handleMembersUpdate();
+  membersTabRef.value?.refresh?.();
+}
+
+function handleInvited() {
+  handleInvitationsUpdate();
+  invitationsTabRef.value?.refresh?.();
+}
 const collectionsTabRef = ref(null);
 
 // ── Derived ───────────────────────────────────────────────────────────────
@@ -386,14 +418,17 @@ function handleActionRequested(payload) {
   // Switch to the requested tab
   activeTab.value = payload.tabName;
 
+  // The add-member modal belongs to the page, so it opens whether or not the tab it is
+  // named after has rendered. The collection action still reaches into its tab, which is
+  // safe only because the tab it switches to is the one that owns it.
+  if (payload.modalName === "add-member") {
+    openAddMemberModal();
+    return;
+  }
+
   // Open the modal after DOM has rendered the new tab
   nextTick(() => {
-    if (payload.modalName === "add-member" && membersTabRef.value) {
-      membersTabRef.value?.openAddMemberModal?.();
-    } else if (
-      payload.modalName === "create-collection" &&
-      collectionsTabRef.value
-    ) {
+    if (payload.modalName === "create-collection" && collectionsTabRef.value) {
       collectionsTabRef.value?.navigateToCreateCollection?.();
     }
   });

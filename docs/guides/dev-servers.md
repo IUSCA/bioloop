@@ -137,6 +137,10 @@ credential. Do not add a password check and relax the environment guard; that tr
 strictly worse than what is there now. The page additionally refuses to act unless Vite is
 running in dev mode.
 
+`/dev-login` also spends an invitation token the browser is holding, so the whole
+invitation flow can be walked in development: send one, take the link from MailHog, clear
+the browser's storage, open the link, and sign in as the invited account.
+
 **After a database reset, log in again.** `prisma migrate reset` re-seeds with fresh
 `subject_id` values, so a browser session from before the reset points at a user that no
 longer exists. Reads mostly keep working, which is what makes this confusing; writes fail

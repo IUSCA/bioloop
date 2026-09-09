@@ -4,6 +4,7 @@
       <ModernButtonToggle
         v-model="activeStatus"
         :options="statusOptions"
+        value-by="value"
         label="SHOW"
       />
       <!-- Icon in the slot, not the `icon` prop. The prop expects the Material icon font,
@@ -25,7 +26,11 @@
     </div>
 
     <div v-else-if="error" class="py-8">
-      <ErrorState title="Failed to load invitations" :message="error" />
+      <ErrorState
+        title="Failed to load invitations"
+        :message="error"
+        @retry="fetchInvitations"
+      />
     </div>
 
     <div v-else-if="rows.length === 0" class="py-8">

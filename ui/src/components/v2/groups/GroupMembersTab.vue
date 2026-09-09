@@ -190,14 +190,6 @@
     </div>
   </VaInnerLoading>
 
-  <AddGroupMemberModal
-    ref="addMemberModal"
-    :group-id="props.groupId"
-    :can-invite="props.canInvite"
-    @update="handleMemberAdded"
-    @invited="emit('invited')"
-  />
-
   <EditGroupMemberRoleModal
     ref="editRoleModal"
     :group-id="props.groupId"
@@ -224,13 +216,12 @@ const props = defineProps({
   canInvite: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["count-changed", "invited"]);
+const emit = defineEmits(["count-changed", "invite"]);
 
 const members = ref([]);
 const error = ref(null);
 const loading = ref(true);
 const activeScope = ref("all"); // 'all' | 'direct' | 'transitive'
-const addMemberModal = ref(null);
 const editRoleModal = ref(null);
 const selectedMember = ref(null);
 
@@ -249,8 +240,10 @@ const transitiveMembershipCount = computed(
 );
 const number_formatter = Intl.NumberFormat("en", { notation: "compact" });
 
+// The "Add group member" modal is mounted by the group page, not here, because the
+// invitations tab opens the same modal and only one tab is rendered at a time.
 function openAddMemberModal() {
-  addMemberModal.value?.show?.();
+  emit("invite");
 }
 
 function handleMemberAdded() {
@@ -405,6 +398,6 @@ onMounted(() => {
 });
 
 defineExpose({
-  openAddMemberModal,
+  refresh: handleMemberAdded,
 });
 </script>

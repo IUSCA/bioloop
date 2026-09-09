@@ -136,6 +136,18 @@ renders checked and `disabled` with a "via <wider type>" chip. Reading `input.ch
 therefore over-counts what the user chose; read `disabled` too, and treat a disabled tick as
 implied rather than selected.
 
+### `ModernButtonToggle` needs `value-by` when its options are objects
+
+Without it, `getValue()` returns the whole option, so the toggle emits
+`{label: 'Accepted', value: 'ACCEPTED'}` instead of `'ACCEPTED'`. Two things then break at
+once: nothing renders as selected on first paint, because the string model value never
+equals an option object; and the emitted object is serialised into the query string as
+`status[label]=Accepted&status[value]=ACCEPTED`, which the API rejects with a 400.
+
+`GroupInvitationsTab` shipped without it and every filter click showed "Failed to load
+invitations". Every other caller in `pages/v2` passes `value-by="value"` — grep for
+`:options=` and check each one has it.
+
 ### Confirm a class actually generated a rule
 
 Tailwind scans source text for complete class names. A class built by interpolation —
@@ -250,6 +262,26 @@ looked like a "via" badge until `aria-disabled` and `opacity` said the row was u
 where the checkbox renders first, so read the label from the element that holds it rather
 than from position.
 
+## A `ref` into a sibling tab is null, because only one tab is rendered
+
+The v2 detail pages render exactly one tab at a time — `v-else-if="activeTab === '…'"` —
+so a template ref bound to a tab component is `null` whenever a different tab is showing.
+Any cross-tab call written as `otherTabRef?.method?.()` therefore does nothing, silently,
+and the optional chaining is what hides it.
+
+Three bugs in the group page came from this one shape: the invitations tab's "Invite by
+email" button (`membersTabRef?.openAddMemberModal?.()`), the members tab's refresh of the
+invitation list after sending one (`invitationsTabRef?.refresh?.()`), and the Overview
+tab's "Add Member" quick action. Each looked correct in review and each was a no-op.
+
+The fix is to move the shared thing up rather than to reach sideways. `AddGroupMemberModal`
+now mounts on the page and both tabs emit `invite`; the page owns the count refetches, so a
+badge is correct whichever tab the action started from. A ref into a tab is then only ever
+used to refresh the tab you are already looking at, which is the case where it is live.
+
+When you see `someTabRef?.x?.()` in a tabbed page, check whether the two tabs can be
+rendered at the same time. If they cannot, it is a bug.
+
 ## `preset="primary"` is not the filled button
 
 Measured, not inferred. `<VaButton preset="primary">` computes a pale tint with coloured
@@ -274,6 +306,14 @@ filled primary, in a modal footer, it reads correctly and is the established con
   reviewed requests.
 - The request card on a dataset's Requests tab is a `<button>` with no handler, so it does
   not open the request. The card on `/v2/access-requests` does.
+
+## `ErrorState`'s "Try again" does nothing unless you bind `@retry`
+
+The component always renders the button and emits `retry`; it does not reload anything by
+itself. A caller that renders `<ErrorState :message="error" />` gives the user a button
+that fires into the void, which reads as a second failure. Bind it:
+`@retry="fetchWhatever"`. Confirm by watching the network panel rather than the screen —
+nothing visible changes either way.
 
 ## Keeping this current
 

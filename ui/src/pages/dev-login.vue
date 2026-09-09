@@ -42,6 +42,10 @@ onMounted(async () => {
   try {
     const { data } = await api.post("/auth/test_login", { username });
     auth.onLogin(data);
+    // The real providers apply a held invitation through `withHandledVerifyResponse`, which
+    // this page does not go through. Without this line the signed-out half of the invitation
+    // flow cannot be exercised in development at all, which is how it went unnoticed.
+    await auth.applyHeldInvite();
     const roles = data.profile.roles?.join(", ") || "no roles";
     status.value = `Signed in as ${data.profile.username} (${roles}). Redirecting…`;
     router.push(route.query.next || "/v2/groups");
