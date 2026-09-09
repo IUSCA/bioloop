@@ -121,14 +121,20 @@ once no route can write a row without it, and drop the throw from
 ### Before step 1 can happen
 
 The legacy routes are still the only way most datasets get created in production, so v2 has
-to cover every creation path first. `POST /v2/datasets` covers the single-dataset case, and
-`POST /v2/datasets/bulk` covers scanned registration. Import and upload do not have v2 routes
-yet.
+to cover every creation path first. All four paths now have one. `POST /v2/datasets` covers
+the single-dataset case, `POST /v2/datasets/bulk` covers scanned registration,
+`POST /v2/datasets/imports` covers a directory already on disk, and
+`POST /v2/datasets/uploads` covers a transfer from a browser. Each has a dialog behind it and
+each has been run end to end through the UI.
+
+What remains before step 1 is not a missing route. It is confidence that the v2 paths carry
+the traffic: the watch script running on v2 in production, the legacy steppers unused for
+long enough to say so, and the orphan datasets of step 2 identified.
 
 **Both halves run in parallel until then, and neither is touched to help the other.** The
 legacy steppers, the `/datasets/imports/new` and `/datasets/uploads/new` pages, and the
-routes behind them keep working unchanged while the v2 equivalents are built beside them. A
-user can create a dataset either way, and the two produce rows that differ only in whether an
+routes behind them keep working unchanged while the v2 equivalents run beside them. A user
+can create a dataset either way, and the two produce rows that differ only in whether an
 owning group and a seeded grant are present.
 
 ### Done ahead of the cut-over: per-group dataset names
