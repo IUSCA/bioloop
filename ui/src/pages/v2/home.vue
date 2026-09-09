@@ -45,6 +45,150 @@
         </ModernAlert>
 
         <DashboardStatRow :cards="statCards" />
+
+        <!--
+          Zero-default access means a caller with no grants meets an empty portal
+          everywhere, which reads as a broken system rather than as an unshared one.
+          @see docs/design/groups/trust-and-communication.md - 8. Zero-default access
+        -->
+        <ModernAlert
+          v-if="hasNoAccessAtAll"
+          color="warning"
+          title="Nothing has been shared with you yet"
+        >
+          Access here is granted, never assumed. A dataset stays invisible to
+          you until an admin of the group that owns it grants you access, or
+          adds you to that group. An empty page means nothing has been shared
+          with you, not that the platform is empty.
+          <template #actions>
+            <VaButton preset="primary" size="small" to="/v2/datasets">
+              Browse what I can see
+            </VaButton>
+          </template>
+        </ModernAlert>
+
+        <p
+          v-if="isAdmin"
+          class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
+        >
+          Yours
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <DashboardSection
+            title="My access requests"
+            subtitle="What you have asked for, and what came of it"
+            to="/v2/access-requests?tab=mine"
+          >
+            <EmptyState
+              v-if="myRequests.length === 0"
+              icon="mdi-file-document-outline"
+              title="You have not asked for anything yet"
+              message="Open a dataset or collection you can see and use Request access. Your requests and their decisions appear here."
+              :show-clear-filters="false"
+              class="py-8"
+            />
+            <div v-else class="flex flex-col gap-3">
+              <AccessRequestCard
+                v-for="req in myRequests"
+                :key="req.id"
+                :request="req"
+                @view="viewRequest"
+              />
+            </div>
+          </DashboardSection>
+
+          <DashboardSection
+            title="My groups"
+            subtitle="How you reach each one"
+            to="/v2/groups"
+            link-label="Browse groups →"
+          >
+            <EmptyState
+              v-if="myGroups.length === 0"
+              icon="mdi-account-group-outline"
+              title="You are not in any group"
+              message="A group admin adds you, or invites you by email. Groups are how a lab's data reaches its people without a grant each time."
+              :show-clear-filters="false"
+              class="py-8"
+            />
+            <div v-else class="flex flex-col gap-2">
+              <DashboardListRow
+                v-for="group in myGroups"
+                :key="group.id"
+                :title="group.name"
+                :subtitle="groupSubtitle(group)"
+                :to="`/v2/groups/${group.id}`"
+              >
+                <template #leading>
+                  <GroupIcon :group="group" size="sm" />
+                </template>
+                <template #right>
+                  <RoleBadge
+                    v-if="group.user_role"
+                    :role-name="group.user_role"
+                  />
+                </template>
+              </DashboardListRow>
+
+              <!--
+                Membership flows upward, so a member of a lab is a member of the
+                center above it. Nobody guesses that from a list of two names.
+                @see docs/design/groups/design.md - Layer 2: Group Membership Transitivity
+              -->
+              <p
+                v-if="hasTransitiveMembership"
+                class="text-xs va-text-secondary mt-1"
+              >
+                Membership of a group also makes you a member of every group
+                above it. Membership alone does not grant access to data; a
+                grant does.
+              </p>
+            </div>
+          </DashboardSection>
+        </div>
+
+        <DashboardSection
+          title="Datasets I can reach"
+          subtitle="Through a grant to you, to a group you belong to, or to a collection"
+          :count="reachableDatasets"
+          to="/v2/datasets"
+          link-label="Browse datasets →"
+        >
+          <EmptyState
+            v-if="reachableRows.length === 0"
+            icon="mdi-database-off-outline"
+            title="No data has been shared with you"
+            message="Datasets you can read appear here. Ask an admin of the owning group for access to one you need."
+            :show-clear-filters="false"
+            class="py-8"
+          />
+          <div v-else class="flex flex-col gap-2">
+            <DashboardListRow
+              v-for="dataset in reachableRows"
+              :key="dataset.id"
+              :title="dataset.name"
+              :subtitle="datasetSubtitle(dataset)"
+              icon="mdi-database-outline"
+              :to="`/v2/datasets/${dataset.resource_id}`"
+            >
+              <template #right>
+                <span class="text-xs va-text-secondary whitespace-nowrap">
+                  {{ datetime.fromNowShort(dataset.updated_at) }}
+                </span>
+              </template>
+            </DashboardListRow>
+          </div>
+
+          <!--
+            Saying which grant carried the access costs one coverage call per row. The
+            dataset's own Access tab answers it properly.
+          -->
+          <p class="text-xs va-text-secondary mt-3">
+            A row names the owning group. The dataset's Access tab says which
+            grant carried the access.
+          </p>
+        </DashboardSection>
       </div>
     </Transition>
   </div>
@@ -63,12 +207,15 @@
  *
  * @see docs/design/groups/dashboard-plan.md
  */
+import AccessRequestCard from "@/components/v2/access-requests/AccessRequestCard.vue";
+import GroupIcon from "@/components/v2/groups/GroupIcon.vue";
+import * as datetime from "@/services/datetime";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantsService from "@/services/v2/grants";
 import GroupService from "@/services/v2/groups";
-import { maybePluralize } from "@/services/utils";
+import { formatBytes, maybePluralize } from "@/services/utils";
 import { useUIPersonaStore } from "@/stores/v2/uiPersona";
 import { useAuthStore } from "@/stores/auth";
 
@@ -77,6 +224,12 @@ const persona = useUIPersonaStore();
 
 /** How many days ahead the expiring-grants query looks. */
 const EXPIRY_WINDOW_DAYS = 30;
+
+/**
+ * Rows in a dashboard panel. The panel is a summary with a link to the page that holds
+ * the rest, so a longer list only makes the page harder to scan.
+ */
+const PANEL_ROWS = 5;
 
 const firstName = computed(() => {
   const name = auth.user?.name || "";
@@ -89,8 +242,11 @@ const settled = ref(false);
 const failures = ref([]);
 
 const reachableDatasets = ref(null);
+const reachableRows = ref([]);
 const myGroupsTotal = ref(null);
+const myGroups = ref([]);
 const myOpenRequests = ref(null);
+const myRequests = ref([]);
 
 const pendingReviewTotal = ref(null);
 const ownedDatasets = ref(null);
@@ -128,24 +284,42 @@ async function load() {
 
   const calls = [
     attempt("Datasets you can reach", async () => {
-      reachableDatasets.value = totalOf(
-        await DatasetService.search({ scope: "grants", limit: 0 }),
-      );
+      const response = await DatasetService.search({
+        scope: "grants",
+        limit: PANEL_ROWS,
+        sort_by: "updated_at",
+        sort_order: "desc",
+        include_owner_group: true,
+      });
+      reachableDatasets.value = totalOf(response);
+      reachableRows.value = response.data?.data ?? [];
     }),
-    // `POST /groups/search` validates limit as min 1, so a count-only call asks for one
-    // row and reads the total beside it.
     attempt("Your groups", async () => {
-      myGroupsTotal.value = totalOf(
-        await GroupService.search({ scope: "all", limit: 1 }),
-      );
+      const response = await GroupService.search({
+        scope: "all",
+        limit: PANEL_ROWS,
+        sort_by: "depth",
+        sort_order: "asc",
+      });
+      myGroupsTotal.value = totalOf(response);
+      myGroups.value = response.data?.data ?? [];
     }),
     attempt("Your access requests", async () => {
-      myOpenRequests.value = totalOf(
-        await AccessRequestService.requestedByMe({
+      // Two calls on purpose. The panel shows the most recent few whatever their state,
+      // and the stat card counts every open one, which a page of five would under-report.
+      const [recent, open] = await Promise.all([
+        AccessRequestService.requestedByMe({
+          limit: PANEL_ROWS,
+          sort_by: "created_at",
+          sort_order: "desc",
+        }),
+        AccessRequestService.requestedByMe({
           status: "UNDER_REVIEW",
           limit: 0,
         }),
-      );
+      ]);
+      myRequests.value = recent.data?.data ?? [];
+      myOpenRequests.value = totalOf(open);
     }),
   ];
 
@@ -203,6 +377,48 @@ async function load() {
 // ── Presentation ─────────────────────────────────────────────────────────────
 
 const isAdmin = computed(() => persona.isGroupAdmin || persona.isPlatformAdmin);
+
+const router = useRouter();
+
+function viewRequest(request) {
+  router.push(`/v2/access-requests/${request.id}`).catch(() => {});
+}
+
+function groupSubtitle(group) {
+  const parts = [];
+  if (group.metadata?.type) parts.push(group.metadata.type);
+  if (group.size != null) {
+    parts.push(maybePluralize(Number(group.size), "member"));
+  }
+  if (group.is_archived) parts.push("archived");
+  return parts.join(" · ");
+}
+
+function datasetSubtitle(dataset) {
+  const parts = [];
+  if (dataset.owner_group?.name) parts.push(dataset.owner_group.name);
+  if (dataset.type) parts.push(dataset.type);
+  if (dataset.size) parts.push(formatBytes(dataset.size));
+  return parts.join(" · ");
+}
+
+const hasTransitiveMembership = computed(() =>
+  myGroups.value.some((g) => g.user_role === "TRANSITIVE_MEMBER"),
+);
+
+/**
+ * A caller who reaches nothing and belongs to nowhere. This is the state the portal
+ * explains worst on its own, because every list page is simply empty.
+ *
+ * An admin is excluded: their governance sections are full, so the portal is plainly
+ * not broken for them.
+ */
+const hasNoAccessAtAll = computed(
+  () =>
+    !isAdmin.value &&
+    reachableDatasets.value === 0 &&
+    myGroupsTotal.value === 0,
+);
 
 const hero = computed(() => {
   if (persona.isPlatformAdmin) {

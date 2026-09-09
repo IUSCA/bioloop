@@ -26,6 +26,20 @@
             </span>
           </span>
         </VaTab>
+
+        <!--
+          The caller's own requests, which no other page listed. Kept distinct from the
+          two reviewer tabs above, because the audiences differ.
+          @see docs/design/groups/ui-information-architecture.md - The Requests tab never disappears
+        -->
+        <VaTab name="mine">
+          <span class="flex items-center gap-1.5">
+            My requests
+            <span v-if="mineTotal !== null" class="tab-count-badge">
+              {{ mineTotal }}
+            </span>
+          </span>
+        </VaTab>
       </template>
     </VaTabs>
 
@@ -77,7 +91,7 @@
     </div>
 
     <!-- Reviewed -->
-    <div v-else>
+    <div v-else-if="activeTab === 'reviewed'">
       <Transition name="fade-slide" mode="out-in">
         <div v-if="reviewedError" key="error" class="py-12 px-6">
           <ErrorState
@@ -122,6 +136,52 @@
       </Transition>
     </div>
 
+    <!-- My requests -->
+    <div v-else>
+      <Transition name="fade-slide" mode="out-in">
+        <div v-if="mineError" key="error" class="py-12 px-6">
+          <ErrorState
+            title="Failed to load your requests"
+            :message="mineError?.message"
+            @retry="fetchMyRequests"
+          />
+        </div>
+
+        <div
+          v-else-if="!mineLoading && myRequests.length === 0"
+          key="empty"
+          class="py-12 px-6"
+        >
+          <EmptyState
+            icon="mdi-file-document-outline"
+            title="You have not asked for anything yet"
+            message="Open a dataset or collection you can see and use Request access. Your requests and their decisions appear here."
+            :show-clear-filters="false"
+          />
+        </div>
+
+        <div v-else key="list">
+          <div class="space-y-4">
+            <AccessRequestCard
+              v-for="req in myRequests"
+              :key="req.id"
+              :request="req"
+              :can-act="false"
+              @view="viewRequest"
+            />
+          </div>
+
+          <Pagination
+            class="mt-5 px-5"
+            v-model:page="minePage"
+            v-model:page_size="itemsPerPage"
+            :total_results="mineTotal"
+            :curr_items="myRequests.length"
+          />
+        </div>
+      </Transition>
+    </div>
+
     <!-- Mounted only while a review is open, so a fresh instance loads each request. -->
     <ReviewRequestModal
       v-if="reviewingId"
@@ -140,8 +200,13 @@ import { useNavStore } from "@/stores/nav";
 
 const nav = useNavStore();
 const router = useRouter();
+const route = useRoute();
 
-const activeTab = ref("pending");
+// The dashboard links straight at one tab, so the tab is addressable.
+const TABS = ["pending", "reviewed", "mine"];
+const activeTab = ref(
+  TABS.includes(route.query.tab) ? route.query.tab : "pending",
+);
 const itemsPerPage = ref(10);
 
 const pendingRequests = ref([]);
@@ -155,6 +220,12 @@ const reviewedTotal = ref(null);
 const reviewedPage = ref(1);
 const reviewedLoading = ref(true);
 const reviewedError = ref(null);
+
+const myRequests = ref([]);
+const mineTotal = ref(null);
+const minePage = ref(1);
+const mineLoading = ref(true);
+const mineError = ref(null);
 
 const reviewModal = ref(null);
 const reviewingId = ref(null);
@@ -209,9 +280,33 @@ async function fetchReviewedRequests() {
   }
 }
 
+async function fetchMyRequests() {
+  mineLoading.value = true;
+  mineError.value = null;
+  try {
+    const offset = (minePage.value - 1) * itemsPerPage.value;
+    const res = await AccessRequestService.requestedByMe({
+      offset,
+      limit: itemsPerPage.value,
+      sort_by: "created_at",
+      sort_order: "desc",
+    });
+    myRequests.value = res.data?.data ?? [];
+    mineTotal.value = res.data?.metadata?.total ?? 0;
+  } catch (err) {
+    console.error("Failed to load your requests:", err);
+    mineError.value = err;
+    myRequests.value = [];
+    mineTotal.value = 0;
+  } finally {
+    mineLoading.value = false;
+  }
+}
+
 function refreshAll() {
   fetchPendingRequests();
   fetchReviewedRequests();
+  fetchMyRequests();
 }
 
 function viewRequest(request) {
@@ -236,10 +331,13 @@ watch([reviewedPage, itemsPerPage], () => {
   fetchReviewedRequests();
 });
 
+watch([minePage, itemsPerPage], () => {
+  fetchMyRequests();
+});
+
 onMounted(() => {
   setNav();
-  fetchPendingRequests();
-  fetchReviewedRequests();
+  refreshAll();
 });
 </script>
 
