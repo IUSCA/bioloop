@@ -40,6 +40,23 @@ live defects turned up that no test covered.
 - `GET /grants/expiring-soon` dropped the subject from every row, because the route
   destructured `source` where the service returns `subject`.
 
+The page was then driven in the browser as each persona in both themes, which found four
+more that a 200 response cannot show.
+
+- An empty panel stretched to the height of a full sibling. `h-full` on the panel card
+  resolves against the grid row, so it defeats the grid's own `items-start`.
+- The no-active-admin alert reported the system principals. `Authenticated Users` and
+  `Public` are grant subjects rather than groups anybody manages, so having no admin is
+  their normal state, and they were two of the three rows it listed. The query now
+  excludes them by id, as the group listing already did.
+- Audit rows wrapped to one word per line and carried two timestamps. `AuditLog` lays its
+  own message out and prints its own time, so the row gives it the width and adds nothing.
+- The platform panels stack at full width. An audit message wraps to three lines in a
+  half-width card, which made that panel five times the height of the alert beside it.
+
+Measured in the running app: borders compute to `1px solid`, body text measures 14.88,
+6.28, and 14.88 against the surfaces it sits on, and neither theme logs a console error.
+
 ## The state this plan started from
 
 **`/v2/home` rendered nothing.** Its template read `dashboard.loading` and
