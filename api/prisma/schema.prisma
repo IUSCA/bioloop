@@ -472,6 +472,15 @@ enum RESOURCE_TYPE {
   COLLECTION
 }
 
+/// Who may read a group's or a collection's profile. Informational: it never affects who
+/// may read data. PUBLIC includes people who are not signed in.
+/// @see docs/design/groups/profiles.md — 1. Visibility is a column, not a grant
+enum PROFILE_VISIBILITY {
+  PRIVATE
+  AUTHENTICATED
+  PUBLIC
+}
+
 enum SUBJECT_TYPE {
   USER
   GROUP
@@ -529,6 +538,15 @@ model group {
   allow_user_contributions Boolean @default(false)
   metadata                 Json?
 
+  // Profile. Informational only: none of these fields is read by any authorization policy
+  // except profile_visibility, which decides who may read the profile itself.
+  // @see docs/design/groups/profiles.md — Schema
+  tagline            String?            @db.VarChar(120)
+  about_md           String?
+  // Object-store key for the profile picture, not a URL. Null renders a monogram.
+  avatar_key         String?
+  profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
+
   // Relations
   restrictions      restriction[]
   members           group_user[]
@@ -547,6 +565,8 @@ model group {
   affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
   import_sources      import_source[]
   groupInvitations    group_invitation[]
+
+  @@index([profile_visibility])
 }
 
 // Closure table for efficient hierarchy traversal
@@ -692,6 +712,13 @@ model collection {
   // Settings
   metadata Json?
 
+  // Profile. A collection carries no picture; it is displayed inside its owning group's
+  // identity and a second logo competes with it.
+  // @see docs/design/groups/profiles.md — Schema
+  tagline            String?            @db.VarChar(120)
+  about_md           String?
+  profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
+
   // Relations
   datasets collection_dataset[]
   // Restrict: prevents deleting a resource row directly while this collection still references it.
@@ -701,6 +728,7 @@ model collection {
 
   @@index([owner_group_id])
   @@index([is_archived])
+  @@index([profile_visibility])
 }
 
 // Collection membership.
