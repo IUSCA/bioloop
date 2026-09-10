@@ -86,8 +86,11 @@ npx prisma migrate dev
 
 2. Seed the database:
 ```bash
-# Edit api/prisma/data.js to add required users first
+# Development, dummy data included:
 npx prisma db seed
+
+# Production, baseline rows only — see docs/guides/production-seeding.md:
+npm run seed:prod
 ```
 
 ## Common Operations

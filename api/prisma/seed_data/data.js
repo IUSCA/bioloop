@@ -1,20 +1,3 @@
-// Create default roles
-const roles = [{
-  id: 1,
-  name: 'admin',
-  description: 'Access to the Admin Panel',
-},
-{
-  id: 2,
-  name: 'operator',
-  description: 'Operator level access',
-},
-{
-  id: 3,
-  name: 'user',
-  description: 'User level access',
-}];
-
 const admins = [
   {
     // Created at pinned ids by ensureSvcTasksAccount() before this list is walked; the
@@ -338,7 +321,6 @@ const about_records = [
 ];
 
 module.exports = {
-  roles,
   admins,
   operators,
   users,

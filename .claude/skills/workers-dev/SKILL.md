@@ -78,6 +78,13 @@ gitignored. Two fields cause most of the trouble:
   minted before that pinning landed still has the old generated `subject_id` and must be
   reissued once.
 
+  The pinned ids are what a reset gives you, not a guarantee. On a database where something
+  else already holds `user.id` 1 or the pinned subject id, `ensureSvcTasksAccount()` creates
+  the account at generated ids instead and `npm run seed:prod` prints a note saying so. That
+  costs nothing at runtime, because every consumer resolves the account by username, but it
+  does mean the token has to be reissued after the account is created. Read the row rather
+  than the constants when a token looks wrong.
+
   **Every `/v2` route needs `subject_id` in that token, and an old one does not carry it.**
   The claim was added to the JWT profile after the groups work started, so a token minted
   before then authenticates fine and then fails inside the policy engine. The API answers

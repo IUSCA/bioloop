@@ -5,12 +5,13 @@
 The `DATABASE_URL` environment variable is used to connect to the database. This is configured in the `.env` file.
 
 - **Database Schema**: Defined in `prisma/schema.prisma`.
-- **Seeding**: Handled by `prisma/seed.js` with additional scripts in the `seed_data` directory.
+- **Seeding**: `prisma/seed_baseline.js` holds the rows every deployment needs. `prisma/seed.js` calls it and then adds dummy data from the `seed_data` directory, for development only.
 - **Migration Commands**:
   - `npx prisma migrate dev`: Creates a new migration during development.
   - `npx prisma migrate deploy`: Applies migrations in production.
-- **Seeding Command**:
-  - `npx prisma db seed`: Seeds the database with initial data.
+- **Seeding Commands**:
+  - `npx prisma db seed`: Seeds a development database, dummy data included. Refuses to run in production mode.
+  - `npm run seed:prod`: Seeds only the baseline rows. See [Seeding a production database](../../../guides/production-seeding.md).
 - **Initialization**: The `db.js` file contains the setup for the Prisma client.
 
 ## Importing Prisma Client in Routers and Services

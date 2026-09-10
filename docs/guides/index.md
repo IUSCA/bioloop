@@ -12,5 +12,6 @@ Step-by-step instructions for getting Bioloop running and working on it.
 - [Local development](./local-dev.md) — how the Docker Compose dev stack fits together
 - [Dev servers](./dev-servers.md) — starting, restarting, and reading logs of the local API and UI
 - [Workers (local)](./workers-local.md) — running celery, the watch script, and the upload cron without Docker
+- [Seeding a production database](./production-seeding.md) — the rows a new deployment needs before anyone can sign in
 - [Derived applications](./derived-apps.md) — forking Bioloop into a new portal
 - [End-to-end testing](./testing/) — writing and running the Playwright suite

@@ -98,7 +98,8 @@ Detailed Steps:
 - `src/scripts/*.js` - Standalone scripts that need to be executed manually.
 - `config/*.json` - Hierarchical configuration files.
 - `prisma/schema.prisma` - Defines the database schema using Prisma ORM.
-- `prisma/seed.js` - Script for seeding initial data into the database.
+- `prisma/seed_baseline.js` - The rows every deployment needs, in every environment.
+- `prisma/seed.js` - Development-only seeding: calls `seed_baseline.js`, then adds dummy data.
 - `utils/index.js` - Reusable functions that are not tied to business logic.
 - `keys/genKeys.sh` - Script for generating JWT keys.
 - `.env` - Environment-specific configuration file used for managing secrets and runtime settings.

@@ -87,19 +87,25 @@ script and can be re-run at any time to add or update sources.
 ]
 ```
 
-### 3.3 Run the initialization script
+### 3.3 Run the seed script
 
 From the `api/` directory:
 
 ```bash
-# You can alternatively also run the `src/scripts/init_prod_data.js` script.
-node src/scripts/init_prod_import_sources.js
+npm run seed:prod
 ```
+
+Add `-- --dry-run` to validate the file without writing anything.
 
 The script **upserts** — running it again with an updated `import_sources.json`
 is safe.  Existing sources with matching `path` values will have their label,
-description, and sort order updated.  Sources not present in the file are left
-untouched.
+description, sort order, and mounted path updated.  Sources not present in the
+file are left untouched, as are the `status` and owning group of an existing
+source.
+
+Import sources are one part of the baseline seed.  See
+[Seeding a production database](../../guides/production-seeding.md) for the rest
+of what it writes.
 
 ### 3.4 Make the paths accessible to the API container
 

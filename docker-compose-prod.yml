@@ -77,7 +77,7 @@ services:
       #   - /data/bioloop/proteomics:/opt/sca/data/imports/proteomics:ro
       # ** Note: **
       #   - The path to the Import-Source will also need to be populated in the
-      #     database. See api/src/scripts/init_prod_import_sources.js for more details.
+      #     database. See docs/guides/production-seeding.md for more details.
       # 
       # ** Bioloop Production: **
       - ${IMPORT_SOURCE_DIR}:/opt/sca/data/imports:ro

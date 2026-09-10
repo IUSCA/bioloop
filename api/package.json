@@ -17,7 +17,8 @@
     "dev:worker": "nodemon --watch src/notification --ignore 'tests/**/*.js' src/notification/worker.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:worker\"",
     "email:dev": "vite --config src/notification/email-preview/vite.config.js",
-    "notify:dummy": "node src/scripts/send_dummy_notification.js"
+    "notify:dummy": "node src/scripts/send_dummy_notification.js",
+    "seed:prod": "node prisma/seed_baseline.js"
   },
   "keywords": [],
   "author": "",

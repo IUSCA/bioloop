@@ -17,20 +17,18 @@ const { generate_staged_logs } = require('./seed_data/staged_logs');
 const { generate_stage_request_logs } = require('./seed_data/stage_request_logs');
 const { generate_date_range } = require('../src/services/datetime');
 const datasetService = require('../src/services/dataset');
-const { readUsersFromJSON } = require('../src/utils');
 const groupData = require('./seed_data/groups');
 const {
-  GRANT_ACCESS_TYPES, GRANT_ACCESS_TYPE_IMPLICATIONS, GRANT_PRESETS, UNASSIGNED_DATASETS_GROUP_ID,
-  SVC_TASKS_SUBJECT_ID, SVC_TASKS_USER_ID,
+  GRANT_ACCESS_TYPES, UNASSIGNED_DATASETS_GROUP_ID,
 } = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
-const { ensureSvcTasksAccount } = require('../src/services/system_accounts');
+const { seedBaseline } = require('./seed_baseline');
 
 const prisma = new PrismaClient();
 
 if (['production'].includes(config.get('mode'))) {
   // exit if in production mode
-  console.error('Seed script should not be run in production mode. Run node src/scripts/init_prod_data.js instead.');
+  console.error('Seed script should not be run in production mode. Run `npm run seed:prod` instead.');
   process.exit(1);
 }
 
@@ -104,14 +102,10 @@ function createRandomUsers(num) {
 }
 
 async function main() {
-  // enforce order of creation to assign deterministic ids
-  for (const role of data.roles) {
-    await prisma.role.upsert({
-      where: { id: role.id },
-      create: role,
-      update: {},
-    });
-  }
+  // Everything a deployment needs in any environment: roles, the svc_tasks service account,
+  // the grant vocabulary, and any users listed in admins.json, operators.json, and
+  // users.json. Production runs this and stops; the rest of this file is dummy data.
+  await seedBaseline(prisma);
 
   // Seed import sources for non-production environments.
   //
@@ -148,13 +142,9 @@ async function main() {
   // eslint-disable-next-line no-console
   console.log(`seeded ${importSources.length} import sources`);
 
-  // Create default admins
-  const additional_admins = readUsersFromJSON('admins.json');
-  const admin_data = insert_random_dates(data.admins.concat(additional_admins));
-  // svc_tasks first, at its pinned ids. The loop below then finds it by email and leaves it
-  // alone, because upsert's update is empty.
-  await ensureSvcTasksAccount(prisma);
-
+  // Mock admins. The real ones, and svc_tasks, are already in place from seedBaseline();
+  // these upserts find them by email and leave them alone, because `update` is empty.
+  const admin_data = insert_random_dates(data.admins);
   for (const admin of admin_data) {
     await prisma.user.upsert({
       where: { email: `${admin.username}@iu.edu` },
@@ -410,56 +400,10 @@ async function main() {
     data: stage_request_logs,
   });
 
-  // upsert grant access types
-  await Promise.all(
-    GRANT_ACCESS_TYPES.map((gat) => prisma.grant_access_type.upsert({
-      where: { id: gat.id },
-      update: {},
-      create: gat,
-    })),
-  );
-
-  // upsert the access type partial order. Has to follow the access types themselves, since
-  // the edges are written by name and resolved to ids here.
-  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  // The access types, their implications, and the presets are seeded by seedBaseline().
+  // Only the name-to-id lookup is needed here, for the owning-group grants further down.
   const accessTypeIdByName = new Map(GRANT_ACCESS_TYPES.map((gat) => [gat.name, gat.id]));
-  await prisma.grant_access_type_implication.createMany({
-    data: GRANT_ACCESS_TYPE_IMPLICATIONS.map(([implying, implied]) => ({
-      implying_id: accessTypeIdByName.get(implying),
-      implied_id: accessTypeIdByName.get(implied),
-    })),
-    skipDuplicates: true,
-  });
 
-  // upsert grant presets
-  await Promise.all(
-    // eslint-disable-next-line no-unused-vars
-    GRANT_PRESETS.map(({ access_type_ids, ...gp }) => prisma.grant_preset.upsert({
-      where: { id: gp.id },
-      update: {},
-      create: gp,
-    })),
-  );
-
-  // upsert grant preset items
-  for (const preset of GRANT_PRESETS) {
-    const { access_type_ids, id: preset_id } = preset;
-    for (const access_type_id of access_type_ids) {
-      await prisma.grant_preset_item.upsert({
-        where: {
-          preset_id_access_type_id: {
-            preset_id,
-            access_type_id,
-          },
-        },
-        update: {},
-        create: {
-          preset_id,
-          access_type_id,
-        },
-      });
-    }
-  }
   // create instruments
   // delete pre-existing records
   await prisma.instrument.deleteMany();
@@ -675,7 +619,7 @@ async function main() {
 
   // update the auto increment id's sequence numbers
   const tables = [
-    'dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type', 'grant_preset', 'grant_access_type',
+    'dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type', 'grant_preset',
   ];
   await Promise.all(tables.map(update_seq));
 }

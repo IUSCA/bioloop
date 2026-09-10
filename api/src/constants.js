@@ -261,6 +261,15 @@ const SVC_TASKS_SUBJECT_ID = 'ffffffff-0000-4000-8000-000000000003';
 // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
 const UNASSIGNED_DATASETS_GROUP_ID = 'ffffffff-0000-4000-8000-000000000001';
 
+// The three v1 roles, at pinned ids. `user_role.role_id` is written by id in several
+// places, and `svc_tasks` takes role 1, so the ids are part of the contract rather than an
+// implementation detail of the seed.
+const ROLES = [
+  { id: 1, name: 'admin', description: 'Access to the Admin Panel' },
+  { id: 2, name: 'operator', description: 'Operator level access' },
+  { id: 3, name: 'user', description: 'User level access' },
+];
+
 // need to specify ids to have deterministic seeding
 const GRANT_ACCESS_TYPES = [
   {
@@ -425,6 +434,7 @@ module.exports = {
   UNASSIGNED_DATASETS_GROUP_ID,
   SVC_TASKS_USER_ID,
   SVC_TASKS_SUBJECT_ID,
+  ROLES,
   GRANT_ACCESS_TYPES,
   GRANT_ACCESS_TYPE_IMPLICATIONS,
   GRANT_PRESETS,

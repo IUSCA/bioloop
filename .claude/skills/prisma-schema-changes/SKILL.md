@@ -1,6 +1,6 @@
 ---
 name: prisma-schema-changes
-description: Operational technique for changing the Prisma schema in this repository - writing a migration by hand, the defaults and constraints Prisma cannot express, how a validity column silently breaks relation reads, why a seeded sentinel id has to parse as a real UUID, and how to reset the dev database. Use when editing api/prisma/schema.prisma, adding a migration under api/prisma/migrations, changing api/prisma/seed.js, or touching anything that reads group_user, collection_dataset, or the effective-access views.
+description: Operational technique for changing the Prisma schema in this repository - writing a migration by hand, the defaults and constraints Prisma cannot express, how a validity column silently breaks relation reads, why a seeded sentinel id has to parse as a real UUID, and how to reset the dev database. Use when editing api/prisma/schema.prisma, adding a migration under api/prisma/migrations, changing api/prisma/seed.js or api/prisma/seed_baseline.js, or touching anything that reads group_user, collection_dataset, or the effective-access views.
 ---
 
 # Changing the Prisma schema
@@ -128,16 +128,21 @@ reset that fails on `Argument \`archive_key\` is missing`.
 
 ## Lookup rows come from the seed, not from a migration
 
-`grant_access_type`, `grant_preset`, and the roles are populated by `prisma/seed.js`, which
-runs **after** every migration. A migration that inserts into a table joined against one of
+`grant_access_type`, `grant_preset`, and the roles are populated by
+`prisma/seed_baseline.js`, which runs **after** every migration. `prisma/seed.js` calls it
+and adds dev-only rows on top, and `npm run seed:prod` runs it alone. A migration that inserts into a table joined against one of
 those writes nothing, silently, because the table it joins to is still empty at that point.
 
 The symptom is a migration that applies without error and leaves the table empty. Check the
 row count after a reset rather than assuming the `INSERT` worked.
 
-Put new lookup data in `constants.js` next to `GRANT_ACCESS_TYPES`, seed it in `seed.js`
-right after the rows it references, and let the migration create only the table. A test
-asserting the seeded rows match the constant catches the two drifting apart.
+Put new lookup data in `constants.js` next to `GRANT_ACCESS_TYPES`, seed it in
+`seed_baseline.js` right after the rows it references, and let the migration create only the
+table. Putting it in `seed.js` instead means production never gets it — that is how
+`grant_access_type_implication`, which the authorization engine reads at evaluation time,
+came to be missing from the old production scripts. A test asserting the seeded rows match
+the constant catches the two drifting apart; `api/tests/seed_baseline.test.js` is where those
+live, and it needs no database.
 
 ## Prisma's rendering of a database default has to match Postgres exactly
 
@@ -233,8 +238,8 @@ is the one that does reach the database.
 **Check what a NOT NULL provenance column actually points at.** `grant.granted_by` is NOT NULL
 and its foreign key is to `user.subject_id`, not to `subject`. A group is a subject and passes
 the eye test, and then violates the constraint. For a row the system issues rather than a
-person, use the `svc_tasks` service account, which both `prisma/seed.js` and
-`src/scripts/init_prod_users.js` create.
+person, use the `svc_tasks` service account, which `prisma/seed_baseline.js` creates in
+every environment.
 
 **Make the insert re-runnable.** Guard it with `NOT EXISTS`, so a re-run adds nothing rather
 than tripping a uniqueness or exclusion constraint. The `grant_no_overlap` exclusion
@@ -266,7 +271,7 @@ becomes a skipped row rather than an error.
 
 ## A backfill migration cannot see seeded lookup rows on a fresh database
 
-`prisma/seed.js` runs after migrations, so on a fresh database a migration that joins a lookup
+The seed runs after migrations, so on a fresh database a migration that joins a lookup
 table such as `grant_access_type` matches nothing. That is usually harmless, because the tables
 it would backfill are empty too — but only if the seed then writes the same rows for what it
 creates.
