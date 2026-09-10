@@ -2,14 +2,14 @@
 title: Trust and Communication
 order: 9
 status: active
-implemented: none
-last_verified: 2026-09-03
+implemented: partial
+last_verified: 2026-09-10
 ---
 
 ::: warning Design record — active
 A review of where the [groups design](./design.md) is correct at the data layer but
-liable to mislead a user at the surface, and what to do about each case. None of the
-mitigations below are built.
+liable to mislead a user at the surface, and what to do about each case. Each risk says
+what is built and what is not.
 :::
 
 # Trust and Communication
@@ -26,7 +26,7 @@ messages appear.
 
 ## Where trust erodes
 
-### 1. An `APPROVED` request whose grants are all revoked
+### 1. An `APPROVED` request whose grants are all revoked — mostly built
 
 A user opens their request history, reads `APPROVED`, and has no access. The design
 defers reuniting the two states to the UI layer. Anywhere that reunion is missing — an
@@ -35,6 +35,11 @@ email, a notification badge, an access-history row — the system contradicts it
 and the gap is invisible at the data layer.
 
 This is the highest-risk case in the design.
+
+**Built.** Every request listing runs `withGrantCounts`, so each row arrives carrying
+`access_summary`, and `AccessRequestCard` turns an approval with no live grant into a
+sentence saying so. The summary is derived on the server, so no client infers it. What
+remains is the revocation email naming the request that granted the access.
 
 **Mitigations.** Never render `APPROVED` alone on a surface a non-technical user sees;
 render the decision with the current access state beside it, as in
@@ -67,12 +72,16 @@ and the replacing grant. In the subject's access history, show the closed grant 
 `SUPERSEDED` revocation type linked to its replacement, so the chain is visible without
 a support request.
 
-### 4. Oversight visibility reads as authority
+### 4. Oversight visibility reads as authority — partly built
 
 An ancestor group admin can see members, datasets, grants, and audit records across
 every descendant group, and can act on none of it. The overseen party is not told the
 visibility exists. The overseer can see a problem with no path to fixing it. Neither
 half builds trust.
+
+**Built.** The dashboard names what a caller administers and what they merely oversee,
+and says read-only in both the hero line and the group row. The escalation path and
+letting a group admin see which ancestor admins oversee them are not built.
 
 **Mitigations.** Make oversight views visually distinct and read-only, with the reason
 stated: the caller has oversight but not governance authority, and the group's own admin
@@ -114,12 +123,18 @@ a named recipient afterwards. Give group admins of archived groups a single in-s
 action that files a tracked membership-change request to a platform admin. Notify all
 group admins on archival, saying what changed, what is now prohibited, and who to reach.
 
-### 8. Zero-default access produces unexplained empty pages
+### 8. Zero-default access produces unexplained empty pages — partly built
 
 The design is explicit that a user with no grants and no structural authority cannot
 know a resource exists. That is correct for security. It also means a new user, or one
 whose grants have expired, meets an empty interface with nothing to explain it, and may
 reasonably conclude the system is broken.
+
+**Built.** A caller who reaches nothing and belongs to nowhere lands on a dashboard that
+says access here is granted rather than assumed, that an empty page means nothing has been
+shared with them, and offers the way to browse what they can see. That covers the landing
+surface. The per-listing distinction below still needs the query layer to report that rows
+were filtered out, which touches every listing.
 
 **Mitigations.** Distinguish three empty states rather than one. *No results* — things
 exist and are visible, none match the filter. *No access* — the user can see nothing and

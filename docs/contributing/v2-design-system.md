@@ -406,15 +406,13 @@ every link, active tab, and focus ring in both themes. Avatar initials measure 3
 against a background generated from a hash, which needs the generator to pick from a fixed,
 checked palette instead.
 
-Two defects outside the visual layer, found while working through it. A third —
-`pages/v2/home.vue` rendering nothing, because its template read `dashboard.loading` and
-its `<script setup>` never defined `dashboard` — was fixed by the
-[dashboard plan](/design/groups/dashboard-plan.md).
-
-- `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub", visible on
-  the access requests page.
-- The access requests page logs a `Pagination total_results` prop warning and a 400 on
-  reviewed requests.
+Three defects outside the visual layer were found while working through it, and all three
+are now closed. `pages/v2/home.vue` rendered nothing, because its template read
+`dashboard.loading` and its `<script setup>` never defined `dashboard`; the
+[dashboard plan](/design/groups/dashboard-plan.md) fixed it. `AccessRequestReviewModal.vue`
+rendered the literal text "Review Modal Stub"; the file is gone and `ReviewRequestModal.vue`
+is wired in its place. The access requests page 400'd on reviewed requests, because the
+route accepted only `created_at` and `updated_at` while the tab sorted by `reviewed_at`.
 
 ## Measuring this again
 

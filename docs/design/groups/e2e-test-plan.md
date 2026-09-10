@@ -911,11 +911,11 @@ The v2-ui-changes skill keeps a list of things not to chase. Each was re-checked
 
 | Skill claim | Status today |
 |---|---|
-| `pages/v2/home.vue` renders nothing — its template reads `dashboard`, its `<script setup>` never defines it | **Still true.** Twelve references, and the role detection is commented out at lines 635–636. Flow O1 waits on the dashboard plan |
+| `pages/v2/home.vue` renders nothing — its template reads `dashboard`, its `<script setup>` never defines it | **Stale.** Phases 1 to 4 of [the dashboard plan](./dashboard-plan.md) rebuilt the page on `stores/v2/uiPersona`, and the skill no longer carries the claim. Flow O1 is unblocked |
 | `AccessRequestReviewModal.vue` renders the literal text "Review Modal Stub" | **Stale.** The file does not exist. Phase B4 of [the access and requests plan](./access-requests-plan.md#b4--the-review-flow-is-reachable) deleted the stub and wired `ReviewRequestModal.vue` in |
 | The access-requests page 400s on reviewed requests | **Stale.** The route accepted only `created_at` and `updated_at` while the tab sorted by `reviewed_at`; the same phase's browser pass fixed it |
 
-The two stale rows are an amendment due to
+All three rows are stale, and the amendment is due to
 [.claude/skills/v2-ui-changes/SKILL.md](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/v2-ui-changes/SKILL.md),
 not a change this plan makes. They are recorded here so phase 3 does not begin by looking for
 a stub that is gone.

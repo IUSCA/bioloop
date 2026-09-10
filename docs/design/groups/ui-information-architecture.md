@@ -76,7 +76,7 @@ Seven areas make up the portal.
 │       └── tab: Audit Log (admin / oversight only)
 │
 ├── /access-requests
-│   ├── Inbox (requests pending my review, plus my own submitted requests)
+│   ├── Inbox — three tabs: pending my review, reviewed by me, and my own requests
 │   └── Detail view per request (submit view, review view, resolved view)
 │
 ├── /grants
