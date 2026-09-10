@@ -125,7 +125,7 @@
             <div v-else-if="!loading && !areFiltersActive" class="py-12 px-6">
               <EmptyState
                 :icon="getIcon('dataset')"
-                title="No {{ props.type === 'source' ? 'source' : 'derived' }} datasets"
+                :title="`No ${props.type === 'source' ? 'source' : 'derived'} datasets`"
                 :show-clear-filters="false"
               >
                 <template #message>

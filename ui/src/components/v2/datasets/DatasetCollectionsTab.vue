@@ -131,7 +131,7 @@
               <EmptyState
                 icon="mdi-folder-multiple"
                 title="This dataset is not part of any collections yet."
-                message="Collections are a way to group related datasets together. Go to the Collections page to find and add this dataset to relevant collections."
+                message="Collections are a way to group related datasets together."
               >
                 <template #actions>
                   <RouterLink to="/v2/collections" class="no-underline">
