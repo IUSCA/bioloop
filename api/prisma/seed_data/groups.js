@@ -250,18 +250,20 @@ function generateGroupUserMemberships(userIds, systemAdminId) {
   return memberships;
 }
 
-function generateDatasetOwnerships(datasetIds) {
-  // return array of objects with dataset_id and owner_group_id
-  const ownerships = [];
-  datasetIds.forEach((datasetId) => {
-    // Deterministically assign an owner group to this dataset
-    const groupIndex = simpleHash(`dataset-${datasetId}`) % groups.length;
-    ownerships.push({
-      dataset_id: datasetId,
-      owner_group_id: groups[groupIndex].id,
-    });
-  });
-  return ownerships;
+/**
+ * The group that owns a seeded dataset, derived from its name.
+ *
+ * The name is the only identifier of a seeded dataset that survives a reset. An earlier
+ * version keyed this on `dataset.resource_id`, which carries a client-side `uuid()` default
+ * and is therefore regenerated every time the database is rebuilt — so no two seeded
+ * databases agreed on which group owned which dataset, and nothing could be asserted about
+ * ownership in a test.
+ *
+ * @param {string} name — `dataset.name`, as written in seed_data/data.js
+ * @returns {string} the owning group's id
+ */
+function ownerGroupIdForDataset(name) {
+  return groups[simpleHash(`dataset-${name}`) % groups.length].id;
 }
 
 function generateCollections(n, datasets) {
@@ -306,7 +308,7 @@ module.exports = {
   groups,
   group_closure,
   generateGroupUserMemberships,
-  generateDatasetOwnerships,
+  ownerGroupIdForDataset,
   generateCollections,
 };
 

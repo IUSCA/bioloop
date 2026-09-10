@@ -9,7 +9,6 @@ const _ = require('lodash/fp');
 const dayjs = require('dayjs');
 const config = require('config');
 
-const { normalize_name } = require('../src/services/project');
 const data = require('./seed_data/data');
 const { random_files } = require('./seed_data/random_paths');
 const { generate_data_access_logs } = require('./seed_data/data_access_logs');
@@ -51,23 +50,6 @@ async function put_dataset_files({ dataset_id, num_files = 1000, max_depth = 5 }
     where: { dataset_id },
   });
   await datasetService.add_files({ dataset_id, data: files });
-}
-
-// Generates different values of space utilization metrics, by the hour, based
-// on the number of hours provided
-function create_metrics_per_hour(num_hours) {
-  const metrics_data = [];
-  let metricsTimestamp = new Date();
-  _.range(0, num_hours).forEach((hour_count) => {
-    const hour_metrics = data.metrics.map((m) => ({
-      ...m,
-      timestamp: metricsTimestamp,
-      usage: m.usage + Math.ceil(Math.random(0, hour_count) * 100),
-    }));
-    metrics_data.push(...hour_metrics);
-    metricsTimestamp = dayjs(metricsTimestamp).subtract(1, 'hour').toDate();
-  });
-  return metrics_data;
 }
 
 // Given an array of entities, inserts a random date per entity, which is helpful for creating
@@ -217,204 +199,12 @@ async function main() {
     });
   }
 
-  // data.datasets.map((dataset) => {
-  //   const { id, workflows, ...dataset_obj } = dataset;
-  //   if (workflows) {
-  //     dataset_obj.workflows = {
-  //       create: workflows.map((workflow_id) => ({ id: workflow_id })),
-  //     };
-  //   }
-
-  //   // create resource row for each dataset to reference, with type set to DATASET
-  //   dataset_obj.resource = {
-  //     create: {
-  //       type: RESOURCE_TYPE.DATASET,
-  //     },
-  //   };
-
-  //   return prisma.dataset.upsert({
-  //     where: {
-  //       id: dataset_obj.id,
-  //     },
-  //     update: {},
-  //     create: dataset_obj,
-  //   });
-  // });
-
-  for (const dataset of data.datasets) {
-    // prisma threw error if id is included in upsert create object
-    // eslint-disable-next-line no-unused-vars
-    const { id, workflows, ...dataset_obj } = dataset;
-    if (workflows) {
-      dataset_obj.workflows = {
-        create: workflows.map((workflow_id) => ({ id: workflow_id })),
-      };
-    }
-
-    // create resource row for each dataset to reference, with type set to DATASET
-    dataset_obj.resource = {
-      create: {
-        type: RESOURCE_TYPE.DATASET,
-      },
-    };
-
-    // owner_group_id is NOT NULL, and the groups are not seeded until further down this
-    // file. Park each dataset in the quarantine group the migration created, the same way
-    // a dataset with no resolvable owner would be. generateDatasetOwnerships() below
-    // reassigns every one of them to a real group.
-    // `resource: { create: ... }` above selects the relation form of the create input,
-    // which rejects a scalar foreign key, so connect the group rather than setting the id.
-    dataset_obj.owner_group = { connect: { id: UNASSIGNED_DATASETS_GROUP_ID } };
-
-    await prisma.dataset.upsert({
-      where: {
-        owner_group_id_name_type_is_deleted: {
-          owner_group_id: UNASSIGNED_DATASETS_GROUP_ID,
-          name: dataset_obj.name,
-          type: dataset_obj.type,
-          is_deleted: dataset_obj.is_deleted || false,
-        },
-      },
-      update: {},
-      create: dataset_obj,
-    });
-  }
-
-  // upsert raw data - data product associations
-  await Promise.all(
-    data.dataset_hierarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
-      where: {
-        source_id_derived_id: sd,
-      },
-      update: {},
-      create: sd,
-    })),
-  );
-
-  // update dataset audit data
-  await Promise.all(
-    data.dataset_audit_data.map((d) => prisma.dataset_audit.upsert({
-      where: {
-        id: d.id,
-      },
-      update: {},
-      create: d,
-    })),
-  );
-
-  // create contact
-  await Promise.all(
-    data.contacts.map((c) => prisma.contact.upsert({
-      where: {
-        id: c.id,
-      },
-      update: {},
-      create: c,
-    })),
-  );
-
-  // create project data
-  await Promise.all(
-    data.projects.map((p) => prisma.project.upsert({
-      where: {
-        id: p.id,
-      },
-      update: {},
-      create: {
-        slug: normalize_name(p.name),
-        ...p,
-      },
-    })),
-  );
-
-  // create project user associations
-  await Promise.all(
-    data.project_user_assoc.map((pu) => prisma.project_user.upsert({
-      where: {
-        project_id_user_id: pu,
-      },
-      update: {},
-      create: pu,
-    })),
-  );
-
-  // create project dataset associations
-  await Promise.all(
-    data.project_dataset_assoc.map((pd) => prisma.project_dataset.upsert({
-      where: {
-        project_id_dataset_id: pd,
-      },
-      update: {},
-      create: pd,
-    })),
-  );
-
-  // create project contact associations
-  await Promise.all(
-    data.project_contact_assoc.map((pc) => prisma.project_contact.upsert({
-      where: {
-        project_id_contact_id: pc,
-      },
-      update: {},
-      create: pc,
-    })),
-  );
-
-  // upsert dataset_files
-  await put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
-  await put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });
-  await put_dataset_files({ dataset_id: 3, num_files: 1000, max_depth: 2 });
-  await put_dataset_files({ dataset_id: 7, num_files: 100, max_depth: 1 });
-  await put_dataset_files({ dataset_id: 8, num_files: 100 });
-
-  // add metrics
-  // delete first to not overwrite data.
-  await prisma.metric.deleteMany();
-  await prisma.metric.createMany({
-    data: create_metrics_per_hour(72), // 72 hours = 3 days
-  });
-
-  const datasets = await prisma.dataset.findMany();
-  const dataset_ids = datasets.map((d) => d.id);
-  // create data access logs for the last 1 year
-  const data_access_logs = await generate_data_access_logs(1, dataset_ids);
-  // delete pre-existing records
-  await prisma.data_access_log.deleteMany();
-  await prisma.data_access_log.createMany({
-    data: data_access_logs,
-  });
-
-  // create staged datasets' logs for the last 1 year
-  const staged_logs = generate_staged_logs(1, dataset_ids);
-  // delete pre-existing records
-  await prisma.dataset_state.deleteMany();
-  await prisma.dataset_state.createMany({
-    data: staged_logs,
-  });
-
-  // create stage request logs for the last 1 year
-  const stage_request_logs = await generate_stage_request_logs(1, dataset_ids);
-  // delete pre-existing records
-  await prisma.stage_request_log.deleteMany();
-  await prisma.stage_request_log.createMany({
-    data: stage_request_logs,
-  });
-
-  // The access types, their implications, and the presets are seeded by seedBaseline().
-  // Only the name-to-id lookup is needed here, for the owning-group grants further down.
-  const accessTypeIdByName = new Map(GRANT_ACCESS_TYPES.map((gat) => [gat.name, gat.id]));
-
-  // create instruments
-  // delete pre-existing records
-  await prisma.instrument.deleteMany();
-  await prisma.instrument.createMany({
-    data: _.range(0, 10).map((i) => ({
-      name: `Instrument ${i + 1}`,
-      host: `instrument ${i + 1}.iu.edu`,
-    })),
-  });
-
-  // create groups and group closure data
+  // Groups come before datasets, because a dataset is created in the group that owns it.
+  // Seeding them the other way round meant parking every dataset in `Unassigned Datasets`
+  // and reassigning it at the end of the run, which cost three things: the upsert key no
+  // longer matched on a second run, the owning group was drawn from the regenerated
+  // `resource_id` and so differed after every reset, and `generateCollections()` bucketed
+  // datasets by an owner that had not been written yet, leaving every collection empty.
   const { groups } = groupData;
 
   // create subject entries for each group to reference, with type set to GROUP
@@ -486,8 +276,8 @@ async function main() {
   // open rows, so re-seeding never opens a second membership.
   await prisma.group_user.createMany({ data: group_user, skipDuplicates: true });
 
-  // Import sources are seeded before groups exist, so their owning groups are attached
-  // here. A source with no group is invisible to the v2 browse routes.
+  // The owning group of each import source. A source with no group is invisible to the v2
+  // browse routes.
   // @see docs/design/groups/dataset-creation-plan.md — B1
   await prisma.import_source.updateMany({
     where: { label: 'Genomics Lab' },
@@ -498,15 +288,114 @@ async function main() {
     data: { owner_group_id: '79606964-2385-4c72-8f5f-6d3412049a1c' }, // Bioinformatics Core
   });
 
-  // // updates datasets with owner_group_id
-  const datasetResourceIds = datasets.map((d) => d.resource_id);
-  const dataset_group_updates = groupData.generateDatasetOwnerships(datasetResourceIds);
+  // Every group a seeded dataset may be sitting in: the ones this file creates, plus the
+  // quarantine group an older version of it parked them in.
+  const seedOwnedGroupIds = [...groups.map((g) => g.id), UNASSIGNED_DATASETS_GROUP_ID];
+
+  for (const dataset of data.datasets) {
+    // prisma threw error if id is included in upsert create object
+    // eslint-disable-next-line no-unused-vars
+    const { id, workflows, ...dataset_obj } = dataset;
+    if (workflows) {
+      dataset_obj.workflows = {
+        create: workflows.map((workflow_id) => ({ id: workflow_id })),
+      };
+    }
+
+    // create resource row for each dataset to reference, with type set to DATASET
+    dataset_obj.resource = {
+      create: {
+        type: RESOURCE_TYPE.DATASET,
+      },
+    };
+
+    const owner_group_id = groupData.ownerGroupIdForDataset(dataset_obj.name);
+
+    // Find the row this seed wrote last time. The unique key is scoped to the owning group,
+    // and an older version of this file put these datasets in a different group, so the
+    // search covers every group the seed touches rather than only the one computed above.
+    // That makes a re-run correct the owner instead of trying to insert a second copy.
+    const existing = await prisma.dataset.findFirst({
+      where: {
+        name: dataset_obj.name,
+        type: dataset_obj.type,
+        is_deleted: dataset_obj.is_deleted || false,
+        owner_group_id: { in: seedOwnedGroupIds },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      await prisma.dataset.update({
+        where: { id: existing.id },
+        data: { owner_group_id },
+      });
+    } else {
+      // `resource: { create: ... }` above selects the relation form of the create input,
+      // which rejects a scalar foreign key, so connect the group rather than setting the id.
+      dataset_obj.owner_group = { connect: { id: owner_group_id } };
+      await prisma.dataset.create({ data: dataset_obj });
+    }
+  }
+
+  // upsert raw data - data product associations
   await Promise.all(
-    dataset_group_updates.map((dgu) => prisma.dataset.update({
-      where: { resource_id: dgu.dataset_id },
-      data: { owner_group_id: dgu.owner_group_id },
+    data.dataset_hierarchical_association.map((sd) => prisma.dataset_hierarchy.upsert({
+      where: {
+        source_id_derived_id: sd,
+      },
+      update: {},
+      create: sd,
     })),
   );
+
+  // update dataset audit data
+  await Promise.all(
+    data.dataset_audit_data.map((d) => prisma.dataset_audit.upsert({
+      where: {
+        id: d.id,
+      },
+      update: {},
+      create: d,
+    })),
+  );
+
+  // upsert dataset_files
+  await put_dataset_files({ dataset_id: 1, num_files: 100, max_depth: 1 });
+  await put_dataset_files({ dataset_id: 2, num_files: 100, max_depth: 3 });
+  await put_dataset_files({ dataset_id: 3, num_files: 1000, max_depth: 2 });
+  await put_dataset_files({ dataset_id: 7, num_files: 100, max_depth: 1 });
+  await put_dataset_files({ dataset_id: 8, num_files: 100 });
+
+  const datasets = await prisma.dataset.findMany();
+  const dataset_ids = datasets.map((d) => d.id);
+  // create data access logs for the last 1 year
+  const data_access_logs = await generate_data_access_logs(1, dataset_ids);
+  // delete pre-existing records
+  await prisma.data_access_log.deleteMany();
+  await prisma.data_access_log.createMany({
+    data: data_access_logs,
+  });
+
+  // create staged datasets' logs for the last 1 year
+  const staged_logs = generate_staged_logs(1, dataset_ids);
+  // delete pre-existing records
+  await prisma.dataset_state.deleteMany();
+  await prisma.dataset_state.createMany({
+    data: staged_logs,
+  });
+
+  // create stage request logs for the last 1 year
+  const stage_request_logs = await generate_stage_request_logs(1, dataset_ids);
+  // delete pre-existing records
+  await prisma.stage_request_log.deleteMany();
+  await prisma.stage_request_log.createMany({
+    data: stage_request_logs,
+  });
+
+  // The access types, their implications, and the presets are seeded by seedBaseline().
+  // Only the name-to-id lookup is needed here, for the owning-group grants further down.
+  const accessTypeIdByName = new Map(GRANT_ACCESS_TYPES.map((gat) => [gat.name, gat.id]));
 
   // // create collections
   const collections = groupData.generateCollections(20, datasets);
@@ -619,7 +508,7 @@ async function main() {
 
   // update the auto increment id's sequence numbers
   const tables = [
-    'dataset', 'user', 'role', 'dataset_audit', 'contact', 'grant_access_type', 'grant_preset',
+    'dataset', 'user', 'role', 'dataset_audit', 'grant_access_type', 'grant_preset',
   ];
   await Promise.all(tables.map(update_seq));
 }

@@ -402,3 +402,33 @@ rather than on its own sibling function.
 Prefer injection when the function's job is to decide something. It keeps the decision
 testable without a database or a network, and it makes the collaborators visible in the
 signature.
+
+## A 30-second test is an external service, not your change
+
+`tests/services/imports/dataset.import.test.js` failed three of six tests on 2026-09-10,
+reproducibly, three isolated runs in a row. Every failure was Jest's 5-second timeout rather
+than a wrong answer, and all six passed under `--testTimeout=60000` with the two slow tests
+taking **30.4 and 30.5 seconds each**.
+
+The shape identifies it. Exactly the two tests that reach `createWorkflow` were slow; the
+four that refuse before it were 4–18ms. The third failure was collateral — a later test read
+the dataset the first one never managed to create and died on `Cannot read properties of
+null`. Around 30 seconds, on the only calls that leave the process, is an external service
+that accepts the connection and does not answer.
+
+It recovered on its own with no code change: the same suite ran 79ms and 36ms half an hour
+later, three times at the default timeout, and the full suite went back to green. The docker
+stack had been started shortly before, so rhythm was most likely still coming up.
+
+**Do not go looking for the bug before checking that the clock is round.** A test whose
+duration is 5s (the Jest limit) or a multiple of 10 is reporting a timeout somewhere, not a
+defect. Re-run with `--testTimeout=60000` first: if it passes and prints a round number, the
+number is the answer. Chasing this one cost most of an hour and produced no code change.
+
+The measurement worth taking, if it happens again, is a timing probe of each `await` in the
+service — written to the scratchpad, never into `api/`, and run with the alias registered by
+hand so the module resolver finds `@/`:
+
+```js
+require('<abs path>/api/node_modules/module-alias').addAlias('@', '<abs path>/api/src');
+```

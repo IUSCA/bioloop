@@ -126,6 +126,36 @@ existing rows, by `createGroup()` for new ones, and by `prisma/seed.js`, which b
 rows as plain objects rather than going through the service. Missing the third gives a
 reset that fails on `Argument \`archive_key\` is missing`.
 
+## Seed a table before the tables that reference it, not after
+
+`prisma/seed.js` used to create every dataset in the `Unassigned Datasets` group and reassign
+it to a real group at the end of the run, because groups were seeded further down the file.
+One ordering mistake, three separate defects, none of which announced itself:
+
+- **The seed could not be re-run.** The dataset upsert keyed on
+  `owner_group_id_name_type_is_deleted` with the quarantine group's id. After the first run
+  had moved every dataset elsewhere, the key matched nothing, all 24 datasets took the create
+  branch, and the six carrying explicit `workflows` ids failed on a duplicate.
+- **The seed was not reproducible.** The owning group was chosen by hashing
+  `dataset.resource_id`, which carries a client-side `uuid()` default and is regenerated on
+  every reset. No two seeded databases agreed on who owned what, so nothing about ownership
+  could be asserted in a test.
+- **Every collection came out empty.** `generateCollections()` buckets datasets by
+  `owner_group_id`, and it was handed rows read before the reassignment ran. Measured: 20 of
+  21 collections had zero datasets.
+
+The fix was to move the groups block above the datasets block and derive the owning group
+from `dataset.name`, which is the only identifier of a seeded row that survives a reset.
+
+Two rules come out of it. **Derive a deterministic seed value from a column you wrote, never
+from one the database generated** — a defaulted uuid is different every reset. And **a
+"create it here, correct it later in the same run" pass is a smell**: the corrected column is
+usually part of a key that something else reads in between.
+
+When a seed must tolerate rows an earlier version of itself wrote, look the row up by the
+fields that did not change and update the rest, rather than upserting on a key whose value
+you have since altered.
+
 ## Lookup rows come from the seed, not from a migration
 
 `grant_access_type`, `grant_preset`, and the roles are populated by

@@ -195,23 +195,6 @@ const dataset_hierarchical_association = [{
   derived_id: 8,
 }];
 
-const metrics = [{
-  measurement: '/N/scratch files',
-  subject: 'host1',
-  usage: 500200,
-  limit: 8000000,
-}, {
-  measurement: '/N/scratch',
-  subject: 'host1',
-  usage: 100400,
-  limit: 6000000,
-}, {
-  measurement: 'sda',
-  subject: 'host1',
-  usage: 300400,
-  limit: 50000000,
-}];
-
 const dataset_audit_data = [{
   id: 1,
   action: 'DELETE',
@@ -219,119 +202,11 @@ const dataset_audit_data = [{
   dataset_id: 3,
 }];
 
-const contacts = [{
-  id: 1,
-  type: 'email',
-  value: 'sarah.williams@example.com',
-}, {
-  id: 2,
-  type: 'email',
-  value: 'johndoe1985@emailprovider.com',
-}, {
-  id: 3,
-  type: 'email',
-  value: 'emily.jones42@example.net',
-}];
-
-const projects = [
-  {
-    id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    name: 'ILMN_2518_Jackson_DNAseq8_June2023',
-  },
-  {
-    id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    name: 'ILMN_8902_Anderson_DNAseq3_July2023',
-  },
-  {
-    id: 'D77C44B9-3905-4DC2-ACB0-BA285361755A',
-    name: 'ILMN_6247_Sanchez_DNAseq9_August2023',
-  },
-];
-
-const project_user_assoc = [
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 1,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 2,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    user_id: 3,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 5,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    user_id: 6,
-  },
-];
-
-const project_dataset_assoc = [
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    dataset_id: 3,
-  },
-  {
-    project_id: '1B3D3059-4038-4CBC-BA8D-AF25AC70F829',
-    dataset_id: 8,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    dataset_id: 7,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    dataset_id: 8,
-  },
-];
-
-const project_contact_assoc = [
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    contact_id: 1,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    contact_id: 2,
-  },
-  {
-    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
-    contact_id: 3,
-  },
-];
-
-const about_records = [
-  {
-    html: '<p>BIOLOOP is a service of the <a href="https://sca.iu.edu">Scalable Compute Archive (IU SCA)</a> group.'
-        + '<br><br>'
-        + 'Bioloop is a web-based portal to simplify the management of large-scale datasets '
-        + 'shared among research teams in scientific domains. This platform optimizes data handling '
-        + 'by effectively utilizing both cold and hot storage solutions, like tape and disk storage, '
-        + 'to reduce overall storage costs.'
-        + '<br><br>'
-        + 'This instance of Bioloop is being run by:'
-        + '<br><br>'
-        + 'For questions or support, please contact the primary operator:</p>',
-  },
-];
-
 module.exports = {
   admins,
   operators,
   users,
   datasets,
   dataset_hierarchical_association,
-  metrics,
   dataset_audit_data,
-  contacts,
-  projects,
-  project_user_assoc,
-  project_dataset_assoc,
-  project_contact_assoc,
-  about_records,
 };
