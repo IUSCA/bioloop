@@ -60,7 +60,7 @@
     "lodash": "^4.17.21",
     "module-alias": "^2.2.3",
     "morgan": "^1.10.0",
-    "multer": "2.0.2",
+    "multer": "2.3.0",
     "picomatch": "^4.0.2",
     "regex-username": "^2.0.0",
     "swagger-autogen": "^2.23.5",
