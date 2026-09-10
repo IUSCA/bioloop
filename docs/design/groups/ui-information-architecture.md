@@ -133,10 +133,16 @@ capability is present. The same reasoning applies to datasets against `datasetPo
 Four consequences follow.
 
 **A grant holder's Overview is a trimmed layout.** `view_metadata` for a grant holder
-is filtered to `PUBLIC_ATTRIBUTES`: `id`, `name`, `slug`, `description`, `metadata`,
-`created_at`, `updated_at`, `is_archived`, `_count.datasets`, and the owner group's own
-public attributes. Grant and audit-event counts are not in that set, so those stat cards
-must not render for a grant holder.
+is filtered to `PUBLIC_ATTRIBUTES` plus `PROFILE_ATTRIBUTES`: `id`, `name`, `slug`,
+`description`, `metadata`, `created_at`, `updated_at`, `is_archived`, `_count.datasets`,
+`tagline`, `about_md`, `profile_visibility`, and the owner group's own public attributes.
+Grant and audit-event counts are not in that set, so those stat cards must not render for a
+grant holder.
+
+The profile work added the last three. A grant holder reads the profile body on the ordinary
+Overview tab, without `view_profile` being involved, because they already hold a grant on the
+collection. `view_profile` exists for the caller who holds no grant at all, including one who
+is not signed in. @see [Profiles](./profiles.md) — What each audience sees.
 
 **The Datasets tab is gated on the grant, and its rows are gated again.** The tab needs
 `COLLECTION:LIST_CONTENTS`. What a row may show about each dataset is governed by that

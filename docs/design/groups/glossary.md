@@ -2,7 +2,7 @@
 title: Glossary
 order: 5
 status: reference
-last_verified: 2026-09-02
+last_verified: 2026-09-10
 ---
 
 # Groups Domain Glossary
@@ -51,6 +51,20 @@ apply to its subgroups and projects.
 
 **Discoverability** — Whether a group or project is visible to users who are not
 members, in the manner of a public profile or directory listing.
+
+**Profile** — The readable front page of a group or a collection: a picture, a
+tagline, a markdown description, external links, a citation, and related
+publications. A profile is informational and never authorization-bearing.
+Publishing one grants nobody access to data, and hiding one takes no access
+away. Only groups and collections have profiles; a user does not, and neither
+does a dataset. @see [Profiles](./profiles.md).
+
+**Profile visibility** — The one field that decides who may read a profile,
+stored as a column rather than as a grant because it is not an authorization
+fact. `PRIVATE` means members and admins, `AUTHENTICATED` means any signed-in
+user, and `PUBLIC` means anyone with the link, including a reader who is not
+signed in. It says nothing about who may read the data the group or collection
+holds.
 
 ## Roles
 

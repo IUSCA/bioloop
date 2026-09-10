@@ -593,6 +593,21 @@ These actions:
 * Follow organizational hierarchy
 * Require **no grant rows**
 
+**A third kind: an action a column can also admit.**
+
+`group.view_profile` and `collection.view_profile` sit in neither list. Both are reachable
+the ordinary ways — admin, member, oversight, or a grant on the resource — and both are
+*additionally* reachable through one column, `profile_visibility`, which admits a caller who
+holds none of those, including a caller who is not signed in.
+
+The column is not a fourth kind of authority. What it admits a caller to is a picture, a
+tagline, some markdown, links, and a citation, and none of that is data. Publishing a profile
+grants nobody access to a dataset, and hiding one takes no access away. That is why visibility
+is a column rather than a grant to `Public`: a grant is an authorization fact, and this is
+not one.
+
+@see [Profiles](./profiles.md) — Decision 1
+
 **Invariant**:
 
 > Ownership defines *who may control access*.

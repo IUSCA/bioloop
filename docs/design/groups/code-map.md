@@ -2,7 +2,7 @@
 title: Code Map
 order: 4
 status: reference
-last_verified: 2026-09-09
+last_verified: 2026-09-10
 ---
 
 ::: warning Where the code is, not what it does
@@ -28,12 +28,13 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Membership transitivity | view `effective_user_groups` over `active_group_user` | — | `hydrators/user.js` → `effective_group_ids` | — |
 | Oversight visibility | view `effective_user_oversight_groups` | — | `hydrators/user.js` → `oversight_group_ids` | — |
 | Collections | `collection`, `collection_dataset` (validity columns), view `active_collection_dataset` | `routes/collections.js` | `services/collections.js` | `pages/v2/collections/` |
+| Profiles | `tagline`, `about_md`, `profile_visibility` on `group` and `collection`, `avatar_key` on `group`, `PROFILE_VISIBILITY` enum, `links`/`citation`/`publications` under `metadata` | `PATCH /groups/:id/profile`, `PUT` and `DELETE /groups/:id/avatar`, `PATCH /collections/:id/profile`, and the GET-only `routes/public.js` | `services/profiles/` | `components/v2/profiles/`, `pages/public/`, `layouts/public.vue` |
 | Grants | `grant`, `grant_access_type`, view `valid_grants` | `routes/grants.js` | `services/grants/` | `components/v2/grants/` |
 | Grant presets | `grant_preset`, `grant_preset_item` | `/grants/presets` | seeded from `src/constants.js` | `useGrantPresets.js` |
 | Access requests | `access_request`, `access_request_item` | `routes/access_requests.js` | `services/access_requests/` | `pages/v2/access-requests/` |
 | Audit | `authorization_audit` (monthly partitions) | `routes/audit.js` | `services/audit.js`, `authorization/builtin/audit/` | `pages/v2/audit-logs.vue` |
 | ABAC engine | — | `authorize()` middleware | `authorization/core/`, `authorization/builtin/policies/` | capability flags on responses |
-| System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` | `SubjectSelector.vue`, `GroupIcon.vue` |
+| System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` — `subjectSetSql()` decides which principals a caller holds | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |
 | Restriction layer | `restriction`, `restriction_type`, `effective_restriction` view | checked before every policy, filters capabilities | `authorization/builtin/restrictions.js`, `services/restrictions.js` | archive and unarchive dialogs |
 | Platform admin | — | one engine check ahead of every action policy | `authorization/index.js`, `authorization/core/middlewares.js` | `PLATFORM ADMIN` caller-role badge |
@@ -50,5 +51,5 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 Key entry points:
 
 - Policy definitions: [api/src/authorization/builtin/policies/](https://github.com/IUSCA/bioloop/tree/main/api/src/authorization/builtin/policies) — one file per resource type.
-- Effective-access SQL: [api/src/services/grants/helpers.js](https://github.com/IUSCA/bioloop/blob/main/api/src/services/grants/helpers.js) — the `subjects ∪ resources` CTE pattern that unions direct user grants, group grants via closure, collection grants, and both system principals.
+- Effective-access SQL: [api/src/services/grants/helpers.js](https://github.com/IUSCA/bioloop/blob/main/api/src/services/grants/helpers.js) — the `subjects ∪ resources` CTE pattern that combines direct user grants, group grants via closure, collection grants, and whichever system principals the caller actually holds. `subjectSetSql()` is the one place that decides: a signed-in caller holds both principals, and the anonymous caller holds only `Public`.
 - Views and constraints: [the 2026-03-02 migration](https://github.com/IUSCA/bioloop/blob/main/api/prisma/migrations/20260302211516_hierarchical_groups_collections_and_data_access/migration.sql) — `effective_user_groups`, `effective_user_oversight_groups`, `valid_grants`, the `grant_no_overlap` GiST exclusion constraint, and the system-principal protection rules.

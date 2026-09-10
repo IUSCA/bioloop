@@ -194,7 +194,9 @@ route answers the same way for a private group and for an id that was never issu
 
 **The canonical public URL carries the id, not the slug.** `group.slug` is regenerated whenever
 the group is renamed, so a slug in a published citation breaks on the next rename. The routes
-accept a slug and redirect to the id form.
+take an id and nothing else. A slug form that redirects to the id was considered and not
+built: it is a second way to address the same page, and the only URL the system ever hands
+out is the one in the generated citation, which carries the id.
 
 ## Authorization
 
@@ -277,22 +279,21 @@ The principal costs no database reads. `PrismaHydrator.hydrate` merges `preFetch
 shared request cache before deciding what to fetch, so every user attribute the group and
 collection policies declare is already present. Capability derivation reads the same cache.
 
-### A defect this work must fix first
+### Which system principals a caller holds
 
-**An anonymous caller currently resolves grants made to `Authenticated Users`.**
+**Containment runs one way.** A signed-in caller holds both `Public` and
+`Authenticated Users`, because `Public` is the wider audience and contains the authenticated
+one. An anonymous caller holds only `Public`. Reading the containment in the other direction
+would hand an anonymous caller every grant made to `Authenticated Users`.
 
-`SYSTEM_PRINCIPALS_SQL` in `api/src/services/grants/helpers.js` unions both system principals
-into the subject set of every grant query, unconditionally. The union is correct for a
-signed-in user, because `Public` is the wider audience and contains the authenticated one. It
-is wrong in the other direction. Run against the anonymous principal, the same SQL would hand
-an anonymous caller every grant made to `Authenticated Users`.
+`subjectSetSql()` in `api/src/services/grants/helpers.js` is the single place that decides.
+It is one builder rather than the three duplicated subject CTEs that preceded it, so the rule
+cannot hold in one grant query and not in another. A test grants `Authenticated Users` a
+collection access type and asserts the anonymous principal does not resolve it.
 
-The subject-set builders take the principal set as an argument. An anonymous caller gets
-`{ Public }`; a signed-in caller keeps `{ Public, Authenticated Users }`. A test grants
-`Authenticated Users` a collection access type and asserts the anonymous principal does not
-resolve it.
-
-This is worth fixing before any route can be reached without a token, not after.
+This had to be settled before any route could be reached without a token. Until then every
+grant query combined both principals unconditionally, which was harmless only because every
+route required one.
 
 ### Rate limiting and caching
 
@@ -316,13 +317,40 @@ The authenticated pages keep their shape. The Overview tab of
 `ui/src/pages/v2/groups/[id]/index.vue` becomes the profile, and the definition list it shows
 today moves into a *Details* card in the right rail.
 
-The public page is new, at `ui/src/pages/public/groups/[id].vue`, carrying
-`meta: { requiresAuth: false }`. The router already honours that flag. It renders the same
-profile components inside a layout with no sidebar and no navigation.
+The presentation components live in `ui/src/components/v2/profiles/` and are shared by the
+authenticated tab and the public page, so the two cannot drift. `ProfileAboutBody.vue` renders
+the markdown and is used by both the page and the edit form's preview, so a preview cannot
+disagree with the result.
+
+The public pages are new, at `ui/src/pages/public/groups/[id].vue` and
+`ui/src/pages/public/collections/[id].vue`, carrying `meta: { requiresAuth: false }`. The
+router already honours that flag. They render the same profile components inside
+`ui/src/layouts/public.vue`, which has a brand bar and a footer and no sidebar.
+
+**`ui/src/pages/public/index.vue` is what makes that layout apply.** `setupLayouts` wraps every
+top-level route with `meta.layout` or the default, and only then recurses. A page two
+directories deep has the intermediate `/public` record as its top-level route, and that record
+carries no meta, so it takes the default layout with the public one nested inside it — the
+profile renders correctly and the application sidebar renders around it. The plugin skips the
+outer wrap when a top-level route has a `path: ''` child the inner pass already wrapped, which
+is what an `index.vue` carrying the same layout produces. `pages/auth/` depends on the same
+mechanism without saying so.
 
 The public page cannot use `ui/src/services/api.js`. That client redirects to `/auth/logout` on
-any 401, which would throw a signed-out reader out of a page built for signed-out readers. The
-public page uses its own axios instance with no interceptors.
+any 401, which would throw a signed-out reader out of a page built for signed-out readers.
+`ui/src/services/v2/publicProfiles.js` is a bare axios instance with no interceptors, and the
+page renders its own error state rather than raising a toast.
+
+**Markdown is rendered in the browser, with `html: false`.** `markdown-it` is configured to
+drop raw HTML rather than pass it through, and DOMPurify runs on the result anyway. The stored
+value stays the markdown an admin typed, and this text reaches the widest audience the system
+has, so the formatting raw HTML would buy is not worth the surface. This differs from
+`ui/src/pages/about/index.vue`, which allows HTML for a page only a platform admin can write.
+
+**An `<img>` cannot carry a bearer token**, so the avatar is served by the public router and
+the same URL works for everyone: an anonymous reader is authorized by the group's visibility,
+and a signed-in admin looking at a still-private profile is authorized from the `jwt` cookie
+the session already carries.
 
 ## Decisions
 
@@ -380,6 +408,14 @@ size of a holding to somebody the system cannot name.
 
 This one is worth revisiting with a real group. It is the decision most likely to be wrong.
 
+**The anonymous half is built and the signed-in half is not.** A public collection profile
+says that its datasets are not listed and gives no count, which is what this decision asks
+for. The `8 of 20 visible to you` strip on the authenticated Overview tab was not built: the
+collection's Datasets tab already lists what the viewer can read, and the API returns no total
+to compare it against, so the strip needs an endpoint that reports a count the caller is not
+otherwise allowed to see. That is the disclosure this decision is about, and it deserves its
+own change rather than being smuggled in with the profile.
+
 ### 5. The Overview tab becomes the profile
 
 **Decision.** The profile replaces the Overview tab rather than adding a seventh tab.
@@ -414,10 +450,6 @@ decision as [Decision 4](#_4-a-signed-in-viewer-is-told-what-they-cannot-see-an-
 
 **Who may set `PUBLIC`?** The design lets a group admin do it alone. Publishing a page under
 the institution's domain may warrant a platform-admin review step.
-
-**Is markdown rendered on the server or the client?** The repository already sanitises HTML
-with DOMPurify in `api/src/routes/about.js`. Rendering markdown on the client keeps the stored
-value honest, and it puts the sanitiser in the browser.
 
 ## Related records
 
