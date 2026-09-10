@@ -682,9 +682,21 @@ names what would settle it.
    delivery: the SSE manager opened two Redis connections and never closed them until
    `shutdown()` was added for the API suites, and `npm run notify:dummy` still hangs after a
    successful send for the same reason.
-5. **What does the dataset page render for a caller with no access?** Flow N1 asserts that
-   every surface refuses. Establish whether the page shows a refusal, an empty shell, or a
-   redirect, because that decides what the boundary specs assert against.
+5. ~~**What does the dataset page render for a caller with no access?**~~ **Settled: an
+   error state inside the application shell.** Never a redirect, never an empty page. The
+   dataset page renders "Failed to load dataset" with a "Try again" button; the group page
+   renders "Failed to load group" and, less well, the raw axios string *"Request failed with
+   status code 403"* beside it. A list page still renders its table and simply omits the
+   rows. An anonymous caller on an unpublished public profile gets "This profile is not
+   available … If you have a Bioloop account, sign in".
+
+   **The trap this uncovered is worth more than the answer.** A malformed URL renders the
+   *identical* refusal. The canonical dataset URL carries the resource UUID —
+   `ui/src/pages/v2/datasets/index.vue` links to `/v2/datasets/${row.rowData.resource_id}`
+   and the route validates `param('id').isUUID()` — so a spec driving the integer
+   `dataset.id` sees "Failed to load dataset" for every caster and concludes the page refuses
+   everybody. Every refusal assertion therefore needs its paired positive half, which is what
+   `expectAbsentButPresent` exists to force.
 
 Done when each question has a written answer in this page's own record.
 
@@ -746,6 +758,48 @@ pages — enough to prove each page loaded, plus the refusal region from spike 5
 
 Done when a persona with no standing is proved unable to reach anything by page, by
 identifier, or by the route behind the page.
+
+**Built.** Fourteen specs across `e2e/src/specs/refusal/`, covering N1, H1, H3, H4, G3, G7,
+J1, J2, L2, E2 and F10. Component work came to six `data-testid` hooks, not the forty-odd the
+codemod section anticipated: one on `components/utils/ErrorState.vue`, which all 35 v2
+surfaces render their refusal through, and one on the success branch of each of the five
+pages the flows name.
+
+**N1 is asserted by recording, not by an inventory.** `assertions/replay.js` drives the
+dataset page as a permitted member with the network recorded, then reissues every call it
+made as a stranger. N1 names "any programmatic route the browser itself calls", which is a
+list nobody can keep accurate by hand; recorded from the running page it stays correct by
+construction, and a call a component starts making tomorrow is tested with no edit here.
+
+Three ways a refusal spec passes while asserting nothing were each found by a spec doing it,
+and each is now guarded rather than remembered:
+
+**A 404 that is not a refusal.** `GET /v2/datasets/:id/files` answers 404 to a *platform
+admin*, because `listFiles` uses `findFirstOrThrow` and a fixture dataset holds no file rows.
+Every caller was refused, so the spec passed while enforcing nothing. `expectForbidden`
+therefore asserts 403 exactly, and every use of it is paired with `expectNotForbidden` on a
+caller the engine allows.
+
+**A 400 that is not a refusal.** Four governance specs sent a malformed body —
+`POST /grants` requires an `approved_expiry` on each item, `PATCH /groups/:id` requires
+`version`, `POST /groups/:id/members` takes `{user_id}` objects — and express-validator
+rejected them *before the policy ran*. `expectForbidden` now fails with a message naming that
+specifically, because a 400 and a 403 are equally red and only one of them is enforcement.
+
+**A refusal with nothing to compare it to.** Every file in this phase carries a caller who is
+*allowed*, on the same route, in the same test. Without one, a route that was renamed, broken
+or never mounted reads as a policy working perfectly.
+
+Two defects fell out, both filed rather than fixed here:
+[L2 T14](../../../.todo/local/L2-authorization-wiring.md) — `/v2/datasets/:id/files/tree`
+passes a resource UUID into an integer column and returns 500 to every caller — and L2 T15,
+the 404-on-empty above. One gap turned out to be already closed:
+[L1 T2](../../../.todo/local/L1-authorization-enforcement.md) was written as a `test.fail()`
+for flow G3, passed on its first run, and is now an ordinary assertion.
+
+**Still open in this phase.** N2, the file browser's own download enforcement, needs a dataset
+with ingested files; the fixture world creates none. Until it does, the read plane is asserted
+at the route and the download button is not exercised.
 
 ### Phase 3 — the request loop
 

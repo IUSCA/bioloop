@@ -17,7 +17,7 @@
     </div>
 
     <!-- Loaded -->
-    <div v-else-if="group">
+    <div v-else-if="group" data-testid="group-detail">
       <!-- Page header -->
       <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">

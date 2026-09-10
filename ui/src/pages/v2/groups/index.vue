@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+  <div data-testid="group-list" class="flex flex-col gap-3 max-w-7xl mx-auto">
     <p class="text-sm va-text-secondary">
       Browse and manage organizational groups.
     </p>

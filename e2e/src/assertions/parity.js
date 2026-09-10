@@ -54,6 +54,57 @@ async function expectAbsentButPresent({ absent, present }) {
   await expect(absent).toHaveCount(0);
 }
 
+/**
+ * Asserts the refusal came from *authorization* specifically, not from a broken or missing
+ * route.
+ *
+ * `expectRefused` accepts 401, 403, and 404, which is right for a surface whose whole job is
+ * to be indistinguishable from "no such thing". It is too loose where the point is that the
+ * policy engine is what said no: a route that 404s for everybody, or one that was never
+ * mounted, satisfies it while enforcing nothing. Measured here: `/v2/datasets/:id/files`
+ * returns 404 to a platform admin because the fixture dataset holds no file rows, so a
+ * refusal test written with the looser helper passed for that reason alone.
+ */
+async function expectForbidden(api, method, url, body) {
+  const status = await api.status(method, url, body);
+  // A 400 means express-validator rejected the payload and the policy never ran, so the call
+  // proves nothing about authorization. Four specs in this suite were written with a
+  // malformed body and refused for that reason; naming it here is what stopped them being
+  // read as enforcement.
+  expect(
+    status,
+    `${method} ${url} was rejected by validation (400) before authorization ran. `
+    + 'Fix the request body or params — this call is not testing the policy.',
+  ).not.toBe(400);
+  expect(
+    status,
+    `expected ${method} ${url} to be refused by authorization (403), got ${status}`,
+  ).toBe(403);
+  return status;
+}
+
+/**
+ * Asserts authorization did *not* refuse this caller, without requiring the call to succeed.
+ *
+ * The pair to `expectForbidden`, and the only honest positive control where the handler
+ * behind the policy cannot answer for reasons of its own. A caller who passes the policy and
+ * then meets an empty dataset gets a 404 from the handler; insisting on a 2xx would make the
+ * spec fail for something it is not testing.
+ */
+async function expectNotForbidden(api, method, url, body) {
+  const status = await api.status(method, url, body);
+  expect(
+    status,
+    `expected ${method} ${url} to pass authorization, but it answered 403`,
+  ).not.toBe(403);
+  return status;
+}
+
 module.exports = {
-  REFUSALS, expectRefused, expectAllowed, expectAbsentButPresent,
+  REFUSALS,
+  expectRefused,
+  expectAllowed,
+  expectForbidden,
+  expectNotForbidden,
+  expectAbsentButPresent,
 };

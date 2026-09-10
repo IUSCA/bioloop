@@ -17,7 +17,7 @@
     </div>
 
     <!-- Loaded -->
-    <div v-else-if="dataset">
+    <div v-else-if="dataset" data-testid="dataset-detail">
       <!-- Page header -->
       <div class="space-y-3 mt-3">
         <VaAlert v-if="dataset.is_deleted" color="warning" class="!mb-0">

@@ -1,5 +1,14 @@
 <template>
-  <div class="flex flex-col items-center justify-center gap-4 text-center">
+  <!--
+    `data-testid` is the end-to-end suite's hook for "this surface refused". It is on the
+    shared component rather than on each page because every v2 surface renders its refusal
+    through this one, and a per-page hook would drift.
+    @see docs/design/groups/e2e-test-plan.md — Selectors
+  -->
+  <div
+    data-testid="error-state"
+    class="flex flex-col items-center justify-center gap-4 text-center"
+  >
     <div
       class="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30"
     >

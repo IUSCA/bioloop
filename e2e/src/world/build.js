@@ -174,8 +174,14 @@ async function buildWorld(runId) {
     });
   }
 
+  // Access types indexed by name. Their ids are database integers that move between
+  // environments, so a spec naming `DATASET:DOWNLOAD` stays readable and stays correct;
+  // one carrying the literal `3` is neither.
+  const accessTypeRows = await admin.get('/grants/access-types');
+  const accessTypes = Object.fromEntries(accessTypeRows.map((t) => [t.name, t.id]));
+
   return {
-    runId, prefix, people, groups, datasets, collections,
+    runId, prefix, people, groups, datasets, collections, accessTypes,
   };
 }
 
