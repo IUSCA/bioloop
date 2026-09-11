@@ -124,6 +124,7 @@ Verified against the running API. Each of these cost a debugging cycle.
 | `POST /groups/:id/members` | Takes `[{user_id}]` objects, not bare ids. |
 | `POST /groups/search` | `limit` is capped at 100. |
 | `PUT /groups/:id/admins/:userId` | Promotion is a **PUT**. `POST` is not a route there and answers 404 — which "refused" would accept. |
+| `POST /groups/:id/children` | Authorizes against the **parent**, so the creator must already administer it. It also appends a non-platform-admin creator to the child's `admins` (L1 T11). |
 | `GET /groups/:id/invitations` | Defaults to `status=PENDING`, so an invitation that was accepted simply disappears. Pass `status=all` to follow one past its acceptance. |
 | `POST /groups/:id/invitations` | Refuses a **400** for somebody who is already a member — the escalation path C4 describes never opens. |
 | `POST /auth/invite/check` | Public, and answers `{status: 'valid'\|'invalid'}` and nothing else. A reason would make it an oracle for someone else's invitation. |
@@ -159,6 +160,30 @@ group" still has somebody to assert about without putting its dataset in `lab`.
 download on the dataset under test — which reaches the same place with nothing in `cast.js`
 changed. Any spec that grants an outsider anything must create its dataset in `requestLab`.
 Ask not what the grant confers, but which group it opens up.
+
+## `test.fail()` is how a disagreement is recorded
+
+When a flow and the code disagree, write the assertion the *flow* states and mark it
+`test.fail()`. It passes while the disagreement stands and turns red the moment it is
+resolved — in either direction, which is the point: amending the flow should retire the spec
+just as fixing the code should. A spec quietly rewritten to match current behaviour records
+nothing, and a flow simply left out records less.
+
+This has paid twice. G3 was written as an expected failure against an access-request
+enforcement hole and passed on its first run, which is how the suite learned the hole was
+already closed. A1's authority half is an expected failure today: `POST /groups/:id/children`
+appends a non-platform-admin creator to the child's `admins`, so a centre admin governs every
+group she creates, while flow A1 says creating a child confers oversight and not authority.
+
+## A restriction binds a platform admin
+
+Archiving is the restriction the system ships, and it is the one place a platform admin is not
+the most powerful caller. Verified: on an archived group, Priya is refused the same mutations
+Alice is, every read still works for both, existing grants keep working, and unarchive is
+Priya's alone. It propagates downward too — a child of an archived group reports
+`is_archived: false` in its own right and still refuses every mutation, which is worth
+asserting exactly that way round, because "the child is archived" and "the child is frozen"
+are different claims and only the second is true.
 
 ## Membership specs build their own group
 

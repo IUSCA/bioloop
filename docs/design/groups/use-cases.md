@@ -521,10 +521,11 @@ either wiring to finish or code to delete.
 Two remain, and both are live.
 
 - **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always` and the service validates only the *subject*, so a user holding any resource UUID can file against a resource they cannot see. `assertGrantItemsApplicableToResourceType` runs on grant creation but not here, so a request can also name access types that do not apply to the resource type.
-- **`unarchive` binds the wrong policy.** `groupPolicies` defines `unarchive` as platform-admin-only and `archive` as group-admin, but [routes/groups.js:316](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L316) authorizes the unarchive endpoint with `'group', 'archive'`. **Any group admin can unarchive their own group** and reactivate its governance authority. One line.
-
-### Narrower than the design, on purpose
-
+- ~~**`unarchive` binds the wrong policy.**~~ **Fixed.** `routes/groups.js` now authorizes the
+  unarchive endpoint with `'group', 'unarchive'`, which `groupPolicies` defines as
+  platform-admin-only. Verified end to end 2026-09-11: an archived group's own admin is
+  refused, the group stays archived, and a platform admin can reactivate it
+  (`e2e/src/specs/restrictions/archive.spec.js`, flow A5).
 - **The platform-wide audit query has no scoped form.** `GET /audit/records` spans every resource and stays platform admin only. Owning-group admins and oversight read their own resources through the per-resource endpoints in item 57; a feed across everything a caller governs would need the query filtered by their authority and does not exist.
 - **Legacy `/datasets` routes bypass the group model.** They still use the old RBAC `accessControl()` middleware, so "consistency across interfaces" (11, 56) does not hold on them. These retire as the surfaces above them are rebuilt on `/v2`, rather than as a migration of their own.
 
