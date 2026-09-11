@@ -19,6 +19,8 @@ require('module-alias/register');
 const groupRoutes = require('@/routes/groups');
 const collectionRoutes = require('@/routes/collections');
 const datasetRoutes = require('@/routes/datasets_v2');
+const auditRoutes = require('@/routes/audit');
+const { auditPolicies } = require('@/authorization/builtin/policies/audit');
 
 /**
  * The policies bound to one route of a router, as `resourceType.action` strings.
@@ -78,5 +80,31 @@ describe('every authorize() on these routers names a real action', () => {
     for (const { resourceType, action } of bound) {
       expect(policyRegistry.get(resourceType).hasAction(action)).toBe(true);
     }
+  });
+});
+
+describe('a resource audit tab reads its own resource, not the platform log', () => {
+  // The three audit tabs used to call `GET /audit/records`, which is platform-admin only,
+  // so an owning-group admin was shown a tab that answered 403. Each resource now has its
+  // own endpoint bound to its own `view_audit_logs` policy.
+  //
+  // @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
+  test.each([
+    ['group', groupRoutes],
+    ['collection', collectionRoutes],
+    ['dataset', datasetRoutes],
+  ])('%s audit records are bound to view_audit_logs', (resourceType, router) => {
+    expect(policiesFor(router, 'get', '/:id/audit')).toEqual([`${resourceType}.view_audit_logs`]);
+  });
+
+  test('the platform-wide log stays platform admin only', () => {
+    expect(policiesFor(auditRoutes, 'get', '/records')).toEqual(['audit.read_records']);
+
+    // Registration renames a policy to `<resourceType>.<action>`, so identity against
+    // `platformAdminOnly` cannot be asserted. Assert what it does instead: nobody passes it
+    // on their own, and only the engine's platform-admin short-circuit gets through.
+    return expect(
+      auditPolicies.getPolicy('read_records').evaluate({}, {}, {}),
+    ).resolves.toBe(false);
   });
 });

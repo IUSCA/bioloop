@@ -872,7 +872,7 @@ its own.
 | I1–I3 | Access tabs, dataset page | `/grants/…/coverage` |
 | J1, J2 | descendant group and dataset pages | the capability map on each response |
 | K1, K2 | archived group and its resources | every mutating route on them |
-| L1, L2 | `/v2/audit-logs`, per-resource Audit tabs | `GET /audit/records` |
+| L1, L2 | `/v2/audit-logs`, per-resource Audit tabs | `GET /audit/records`; `GET /v2/datasets/:id/audit`, `GET /collections/:id/audit`, `GET /groups/:id/audit` |
 | M1, M2 | Access tabs, subject picker | `/grants` with a principal subject |
 | M3 | — | unbuilt; no public router exists |
 | N1–N3 | every v2 page | every route behind them |

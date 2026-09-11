@@ -19,7 +19,7 @@ const prisma = require('@/db');
  * @param {string} options.sort_order - Sort direction: "asc" or "desc" (default: "desc")
  * @param {number} options.limit - Max records to return, 1-500 (default: 50)
  * @param {number} options.offset - Pagination offset (default: 0)
- * @returns {Object} { data: Array, pagination: { total, limit, offset, returned } }
+ * @returns {Promise<Array>} The matching audit records, newest first by default
  */
 async function getAuditRecords({
   filter = {},
@@ -100,6 +100,81 @@ async function getAuditRecords({
   return records;
 }
 
+/**
+ * Audit records about one resource, for that resource's own audit tab.
+ *
+ * A record belongs to a resource when the resource is either the thing being changed
+ * (`target_id`) or the thing the change is about (`resource_id`). Both are needed. A
+ * collection lifecycle event names the collection as the target, while a grant on that same
+ * collection names the grant as the target and the collection as the resource. A dataset is
+ * never a target at all — no `TARGET_TYPE` value for it exists — so a dataset's records are
+ * found only through `resource_id`.
+ *
+ * The id to pass is the resource's UUID as the audit table stores it: `dataset.resource_id`
+ * for a dataset, `collection.id` for a collection (which is its resource id), and `group.id`
+ * for a group. A group is not a resource, so only its `target_id` rows match; grants issued
+ * *to* a group are recorded against the group as subject and are deliberately not included.
+ *
+ * Callers must authorize first. This function applies no access filtering of its own.
+ *
+ * @param {Object} options
+ * @param {string} options.resource_id - UUID of the dataset, collection, or group
+ * @param {string} [options.event_type] - Comma-separated event types to include
+ * @param {string} [options.start_date] - Include events on or after this date (ISO 8601)
+ * @param {string} [options.end_date] - Include events before or on this date (ISO 8601)
+ * @param {string} [options.sort_order] - "asc" or "desc" (default: "desc")
+ * @param {number} [options.limit] - Max records to return (default: 50)
+ * @param {number} [options.offset] - Pagination offset (default: 0)
+ * @returns {Promise<{metadata: {count: number}, data: Array}>}
+ * @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
+ */
+async function getResourceAuditRecords({
+  resource_id,
+  event_type,
+  start_date,
+  end_date,
+  sort_order = 'desc',
+  limit = 50,
+  offset = 0,
+}) {
+  // Bound the scan the same way getAuditRecords does. The table is partitioned by timestamp,
+  // and an open upper bound makes postgres search partitions for future dates.
+  const timestamp = { lte: new Date(end_date || Date.now()) };
+  if (start_date) {
+    timestamp.gte = new Date(start_date);
+  }
+
+  const where = {
+    timestamp,
+    OR: [
+      { target_id: resource_id },
+      { resource_id },
+    ],
+  };
+
+  if (event_type) {
+    const eventTypes = event_type.split(',').map((t) => t.trim()).filter(Boolean);
+    if (eventTypes.length === 1) {
+      [where.event_type] = eventTypes;
+    } else if (eventTypes.length > 1) {
+      where.event_type = { in: eventTypes };
+    }
+  }
+
+  const [count, data] = await Promise.all([
+    prisma.authorization_audit.count({ where }),
+    prisma.authorization_audit.findMany({
+      where,
+      orderBy: { timestamp: sort_order === 'asc' ? 'asc' : 'desc' },
+      take: limit,
+      skip: offset,
+    }),
+  ]);
+
+  return { metadata: { count }, data };
+}
+
 module.exports = {
   getAuditRecords,
+  getResourceAuditRecords,
 };

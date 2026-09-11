@@ -422,9 +422,10 @@ These are not features. Each one describes something the shipped system gets wro
 cannot answer, found by reading the design against the code rather than by asking a user.
 Users will not report these, because users cannot see them.
 
-57. **The audit log is readable only by people with a reason** — `MVP`
+57. **The audit log is readable only by people with a reason** — `MVP` · **built**
     * Outcome: owning-group admins, oversight admins, and platform admins can read audit records, and nobody else can.
-    * Today: `GET /audit/records` carries no authorization at all, so any authenticated user can read actors, subjects, resource names, and decisions for the whole platform.
+    * Each resource answers for itself, at `GET /v2/datasets/:id/audit`, `GET /collections/:id/audit`, and `GET /groups/:id/audit`, each bound to that resource's `view_audit_logs` policy. A record belongs to a resource when the resource is the thing being changed or the thing the change is about, so the query matches `target_id` or `resource_id`.
+    * The platform-wide `GET /audit/records` stays platform admin only. It spans every resource, so no per-resource policy scopes it.
 
 58. **A derived dataset is never more open than its sources** — **withdrawn**
     * Withdrawn by [decision 10](./decisions.md#_10-derived-and-source-dataset-access-are-independent). A derivative may legitimately be shared more widely than the data it came from, so the source's audience is not a ceiling. A grant-time check enforcing this was built and then removed.
@@ -511,7 +512,7 @@ either wiring to finish or code to delete.
 
 - **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
 - **`DATASET:REMOTE_ACCESS`**, **`DATASET:REQUEST_ACCESS`**, and **`COLLECTION:REQUEST_ACCESS`** are seeded access types that no policy or route checks.
-- **`group.add_dataset`, `group.add_collection`, `group.view_audit_logs`** are defined and never passed to `authorize()`.
+- **`group.add_dataset`** and **`group.add_collection`** are defined and never passed to `authorize()`.
 - **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
 - **Dataset unarchive.** The archive route exists; the unarchive route is commented out, the service has no counterpart, and the UI has no call. A dataset archived through the UI cannot be brought back through it.
 
@@ -524,7 +525,7 @@ Two remain, and both are live.
 
 ### Narrower than the design, on purpose
 
-- **`GET /audit/records` is platform admin only.** It previously carried no authorization at all. The design scopes audit visibility to owning-group admins and oversight as well, which needs the query filtered by the caller's authority rather than merely gated. Gating it did not wait for that.
+- **The platform-wide audit query has no scoped form.** `GET /audit/records` spans every resource and stays platform admin only. Owning-group admins and oversight read their own resources through the per-resource endpoints in item 57; a feed across everything a caller governs would need the query filtered by their authority and does not exist.
 - **Legacy `/datasets` routes bypass the group model.** They still use the old RBAC `accessControl()` middleware, so "consistency across interfaces" (11, 56) does not hold on them. These retire as the surfaces above them are rebuilt on `/v2`, rather than as a migration of their own.
 
 ---

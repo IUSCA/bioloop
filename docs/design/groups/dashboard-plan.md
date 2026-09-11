@@ -197,8 +197,10 @@ review, not all of them.
 **Stale request alerts.** Nothing computes "unreviewed for more than seven days".
 
 **A group admin's activity feed.** `GET /audit/records` is platform admin only, by design,
-because the records span the whole platform. Scoping the audit query to a caller's
-authority is its own piece of work.
+because the records span the whole platform. A group admin reads one resource at a time
+through the per-resource endpoints, which are scoped by `view_audit_logs`. A feed spanning
+everything a caller governs needs the query filtered by their authority, and that query does
+not exist.
 
 **The quick actions grid.** Create subgroup, new collection, grant access, and add member
 all need a target group, and every modal behind them is opened from a group page. A grid of

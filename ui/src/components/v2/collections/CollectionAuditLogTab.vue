@@ -54,14 +54,11 @@ function fetchAuditLogs() {
   loading.value = true;
   error.value = null;
 
-  return AuditLogsService.getAuditRecords({
-    filter: {
-      target_id: props.collectionId,
-    },
+  return AuditLogsService.getCollectionAuditRecords(props.collectionId, {
     limit: 50,
   })
     .then((res) => {
-      auditRecords.value = res.data || [];
+      auditRecords.value = res.data?.data || [];
     })
     .catch((err) => {
       error.value = "Failed to load audit logs.";

@@ -2,16 +2,16 @@ const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
 
 /**
- * Audit record visibility.
+ * Visibility of the platform-wide audit query.
  *
- * `GET /audit/records` returns actors, subjects, resource names, and decisions across the
- * whole platform, and it carried no authorization at all. Any authenticated user could read
- * every record.
+ * `GET /audit/records` returns actors, subjects, resource names, and decisions across every
+ * resource in the system. No per-resource policy scopes an answer that spans all of them, so
+ * platform admin is the rule rather than a placeholder for one.
  *
- * Platform admin is the floor, not the intended end state. Use case 57 wants owning-group
- * admins and oversight admins to read the records for resources they govern, which needs
- * the query to be scoped by the caller's authority rather than merely gated. Closing the
- * hole does not wait for that.
+ * Owning-group admins and oversight authorities read the records for the resources they
+ * govern through each resource's own endpoint, bound to `dataset.view_audit_logs`,
+ * `collection.view_audit_logs`, or `group.view_audit_logs`. This container does not cover
+ * those.
  *
  * @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
  * @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
@@ -19,7 +19,7 @@ const { platformAdminOnly } = require('./utils/index');
 const auditPolicies = new PolicyContainer({
   resourceType: 'audit',
   version: '1.0.0',
-  description: 'Policies for platform audit records',
+  description: 'Policy for the platform-wide audit query',
 });
 
 // No policy below names the platform-admin role. The engine allows a platform admin every

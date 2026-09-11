@@ -17,6 +17,7 @@ const {
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
+const auditService = require('@/services/audit');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { UPLOAD_STATUS_FILTERS } = require('@/constants');
@@ -233,6 +234,50 @@ router.get(
     if (!upload_log) return next(createError.NotFound('Dataset was not uploaded'));
 
     return res.json(upload_log);
+  }),
+);
+
+/**
+ * Audit records for one dataset.
+ *
+ * Scoped to this dataset and authorized by `dataset.view_audit_logs`, so the owning group's
+ * admins and oversight authorities can read it. The platform-wide `GET /audit/records` stays
+ * platform-admin only; it answers a different question and cannot be scoped by the caller's
+ * authority.
+ *
+ * @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
+ */
+router.get(
+  '/:id/audit',
+  validate([
+    param('id').isUUID(),
+    query('event_type').optional().isString().trim(),
+    query('start_date').optional().isISO8601(),
+    query('end_date').optional().isISO8601(),
+    query('sort_order').default('desc').isIn(['asc', 'desc']),
+    query('limit').default(50).isInt({ min: 1, max: 500 }).toInt(),
+    query('offset').default(0).isInt({ min: 0 }).toInt(),
+  ]),
+  authorize('dataset', 'view_audit_logs'),
+  asyncHandler(async (req, res) => {
+    // #swagger.tags = ['datasets']
+    // #swagger.summary = 'Audit records for a dataset'
+
+    const {
+      event_type, start_date, end_date, sort_order, limit, offset,
+    } = req.query;
+
+    const result = await auditService.getResourceAuditRecords({
+      resource_id: req.params.id,
+      event_type,
+      start_date,
+      end_date,
+      sort_order,
+      limit,
+      offset,
+    });
+
+    res.json(result);
   }),
 );
 

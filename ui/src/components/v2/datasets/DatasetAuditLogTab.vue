@@ -52,13 +52,11 @@ async function fetchAuditLogs() {
   error.value = null;
 
   try {
-    const { data } = await AuditLogsService.getAuditRecords({
-      filter: {
-        target_id: props.datasetId,
-      },
-      limit: 50,
-    });
-    auditRecords.value = data || [];
+    const { data } = await AuditLogsService.getDatasetAuditRecords(
+      props.datasetId,
+      { limit: 50 },
+    );
+    auditRecords.value = data?.data || [];
   } catch (err) {
     error.value = "Failed to load audit logs.";
     console.error(err);

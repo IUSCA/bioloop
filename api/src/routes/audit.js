@@ -10,7 +10,9 @@ const router = express.Router();
 // Get audit records with comprehensive filtering, sorting, and pagination
 router.get(
   '/records',
-  // These records span the whole platform, so reading them is platform admin only.
+  // These records span the whole platform, so reading them is platform admin only. A
+  // resource's own admins read that resource's records at `GET /v2/datasets/:id/audit` and
+  // its collection and group counterparts.
   // @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
   authorize('audit', 'read_records', { resourceIdFn: () => null }),
   validate([
