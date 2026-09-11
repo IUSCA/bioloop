@@ -15,7 +15,7 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - **Celery task** (`workers/workers/tasks/verify_upload.py`) performs async verification.
 - **PostgreSQL** stores upload logs and relational-associations related to a Dataset-upload.
 
-![Upload architecture components](../diagrams/upload/architecture_components.png)
+![Upload architecture components](../../diagrams/upload/architecture_components.png)
 
 ### Objectives
 
@@ -64,9 +64,9 @@ Uploads use TUS resumable transfer handled directly by the core API.
 - `PROCESSING_FAILED` -> retry integrated workflow up to retry limit.
 - stale `UPLOADING` sessions -> `UPLOAD_FAILED`.
 
-![Upload request flow sequence](../diagrams/upload/request_flow_sequence.png)
+![Upload request flow sequence](../../diagrams/upload/request_flow_sequence.png)
 
-![Upload status state machine](../diagrams/upload/upload_status_state_machine.png)
+![Upload status state machine](../../diagrams/upload/upload_status_state_machine.png)
 
 ## API staging paths and file moves
 
@@ -232,9 +232,9 @@ endpoints used by the UI, plus what they typically mean in this app.
 - `status`, `process_id`, `retry_count`, `metadata`, `updated_at`.
 - `metadata` JSONB is merged atomically in SQL to avoid concurrent key loss.
 
-![Upload data model ER diagram](../diagrams/upload/data_model_er.png)
+![Upload data model ER diagram](../../diagrams/upload/data_model_er.png)
 
-![Upload metadata structure flow](../diagrams/upload/metadata_structure_flow.png)
+![Upload metadata structure flow](../../diagrams/upload/metadata_structure_flow.png)
 
 ## Upload Statuses
 
@@ -348,7 +348,7 @@ There is **no hard wall-clock timeout** — the client will retry through the
 entire delay schedule. `onError` fires only after the final delay has elapsed
 without a successful reconnect.
 
-![Failure simulation sequence](../diagrams/upload/failure_simulation_sequence.png)
+![Failure simulation sequence](../../diagrams/upload/failure_simulation_sequence.png)
 
 ### How to recreate failures manually
 

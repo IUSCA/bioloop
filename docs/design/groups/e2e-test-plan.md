@@ -790,12 +790,14 @@ specifically, because a 400 and a 403 are equally red and only one of them is en
 *allowed*, on the same route, in the same test. Without one, a route that was renamed, broken
 or never mounted reads as a policy working perfectly.
 
-Two defects fell out, both filed rather than fixed here:
-[L2 T14](../../../.todo/local/L2-authorization-wiring.md) — `/v2/datasets/:id/files/tree`
+Two defects fell out, both filed rather than fixed here: L2 T14 — `/v2/datasets/:id/files/tree`
 passes a resource UUID into an integer column and returns 500 to every caller — and L2 T15,
-the 404-on-empty above. One gap turned out to be already closed:
-[L1 T2](../../../.todo/local/L1-authorization-enforcement.md) was written as a `test.fail()`
-for flow G3, passed on its first run, and is now an ordinary assertion.
+the 404-on-empty above. One gap turned out to be already closed: gating access-request
+creation on the resource was written as a `test.fail()` for flow G3, passed on its first run,
+and is now an ordinary assertion.
+
+The backlog those item numbers name is `.todo/`, which is gitignored, so they are written
+here as plain references rather than links.
 
 **Still open in this phase.** N2, the file browser's own download enforcement, needs a dataset
 with ingested files; the fixture world creates none. Until it does, the read plane is asserted
