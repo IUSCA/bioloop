@@ -935,6 +935,36 @@ a reduced environment. C3 is worth writing carefully: it asserts that Vic's addr
 shown to Frank, which is an absence assertion about a specific string rather than about an
 element.
 
+**Built.** Nine specs across `e2e/src/specs/membership/`, covering B1, B2, B4, B5 and C1, C2,
+C3, C4, C6. Forty-five specs pass across the suite.
+
+**MailHog is not optional after all, and it is the interesting part.** No API returns an
+invitation token: the create route answers `{status, id}` and the list route returns the
+address and the status. That is right — the token belongs in the email — and it means a test
+that *spends* an invitation has to read the mail the invitee would. `src/world/mail.js` does
+that against MailHog's HTTP API, so the suite still never reaches around the product for a
+secret.
+
+The trap there cost a debugging cycle and is now impossible: MailHog keeps every message
+until somebody empties it, so any address invited before — every seeded account, across every
+previous run — already has an invitation waiting. A helper that returns the first matching
+email returns the *old* one, because the new one has not been delivered yet, and sorting
+newest-first does not help since the newest message present is still the stale one. Spending
+it answers "This invitation is no longer valid", which reads as the invitation system being
+broken. Every spec now takes a `mailMark()` before inviting and ignores anything older.
+
+**Two flows turned out to describe the system less well than the system behaves.** C4 imagines
+an invitation being issued to an existing member and then failing to promote them on
+acceptance; `POST /groups/:id/invitations` refuses it outright with a 400, so the escalation
+path never opens. And B2 expects the membership history to be visible — `GET
+/groups/:id/members` returns current members only, which is correct, and the record lives in
+`GET /groups/:id/audit` as `GROUP_MEMBER_ADDED` and `GROUP_MEMBER_REMOVED`. Both specs assert
+what the system does, with the flow's claim satisfied by a different surface than it assumed.
+
+**Membership specs build their own group.** A worker's world is shared by every spec file that
+worker runs, so adding Frank to `lab` here would delete the premise of a refusal spec in
+another file. Teardown collects in-test groups because it deletes by name prefix.
+
 ### Phase 6 — restrictions, oversight, and the landing page
 
 Flows: A1, A2, A3, A4, A5, K1, K2, O1, and the deliberate-absence table.

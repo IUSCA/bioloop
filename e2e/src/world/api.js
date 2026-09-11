@@ -59,6 +59,24 @@ function clientFor(token) {
     patch: (url, body) => request('PATCH', url, body),
     put: (url, body) => request('PUT', url, body),
     del: (url) => request('DELETE', url),
+    /**
+     * Status and body together, without throwing.
+     *
+     * For the assertions that are about what a refusal *says* rather than that it refused —
+     * C3 checks that rejecting the wrong person's invitation does not name the address it was
+     * sent to, and that claim can only be made against the body.
+     */
+    raw: async (method, url, body) => {
+      const res = await fetch(`${API_BASE}${url}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      return { status: res.status, body: await res.text() };
+    },
     /** The raw status, for asserting a refusal rather than following a happy path. */
     status: async (method, url, body) => {
       const res = await fetch(`${API_BASE}${url}`, {

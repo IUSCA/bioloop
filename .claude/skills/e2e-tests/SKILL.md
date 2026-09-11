@@ -61,6 +61,38 @@ grant of `DOWNLOAD` writes one row rather than three. Written as "filter the gra
 filter would still return exactly one. The honest form counts everything the subject holds.
 Before trusting a green assertion, ask what data would have made it red.
 
+## Invitation tokens come from MailHog, and stale mail is the trap
+
+No API returns an invitation token — `POST /groups/:id/invitations` answers `{status, id}` and
+the list route returns `invited_email` and `status`. That is correct: the token belongs in the
+email. So a test that spends an invitation reads MailHog's HTTP API (`src/world/mail.js`),
+which needs Redis, MailHog, and the notification worker running.
+
+**Take a `mailMark()` before issuing the invitation and pass it as `since`.** MailHog keeps
+every message until somebody empties it, so any address invited before — every real seeded
+account, across every previous run — already has an invitation sitting in the mailbox. Without
+the mark, the helper returns the moment it sees *an* email for the address, which is the old
+one, because the new one has not been delivered yet. Sorting newest-first does not save you:
+the newest message *present* is still the stale one until delivery catches up. The stale token
+then fails with "This invitation is no longer valid", which reads as the invitation system
+being broken.
+
+Bodies arrive quoted-printable (`=3D` for `=`, soft line breaks) and the HTML half escapes `=`
+as `&#x3D;`. A regex run against the raw body finds a token with characters missing, which
+then fails to apply. `decodeBody` undoes both.
+
+## A probe script that throws leaves its world behind
+
+Ad-hoc `node -e` scripts that call `buildWorld` are the fastest way to learn an API shape, and
+they skip their own teardown when they throw — which is exactly when you are using them. The
+suite's row census will not notice, because the rows were there before the run as well as
+after. Check for orphans and clear them by run id:
+
+```bash
+node -e "const {query}=require('./src/world/db'); query(\"SELECT name FROM \\\"group\\\" WHERE name LIKE 'e2e-%'\").then(r=>r.forEach(x=>console.log(x.name)))"
+node src/world/teardown.js <runId>
+```
+
 ## The row census picks up other sessions
 
 Counting rows before and after a run is the check that teardown still works, but the database
@@ -91,6 +123,11 @@ Verified against the running API. Each of these cost a debugging cycle.
 | `PATCH /groups/:id` | Requires `version` for optimistic concurrency. |
 | `POST /groups/:id/members` | Takes `[{user_id}]` objects, not bare ids. |
 | `POST /groups/search` | `limit` is capped at 100. |
+| `PUT /groups/:id/admins/:userId` | Promotion is a **PUT**. `POST` is not a route there and answers 404 — which "refused" would accept. |
+| `GET /groups/:id/invitations` | Defaults to `status=PENDING`, so an invitation that was accepted simply disappears. Pass `status=all` to follow one past its acceptance. |
+| `POST /groups/:id/invitations` | Refuses a **400** for somebody who is already a member — the escalation path C4 describes never opens. |
+| `POST /auth/invite/check` | Public, and answers `{status: 'valid'\|'invalid'}` and nothing else. A reason would make it an oracle for someone else's invitation. |
+| `GET /groups/:id/members` | Current members only. A removed member is gone from it; the record of their membership lives in `GET /groups/:id/audit` as `GROUP_MEMBER_ADDED` / `GROUP_MEMBER_REMOVED`. |
 | `GET /v2/users/me` | Returns `{user, uiPersona}`; the profile is nested. |
 | `GET /grants/:subject_type/:subject_id/:resource_type/:resource_id/coverage` | An **array**, each row carrying `access_type_name`, `via` (`DIRECT` or `GROUP`) and `via_group_id`. It lists what is actually held, not the narrower types the order implies — so a subject holding `DOWNLOAD` shows one row, not three. |
 | `GET /grants/resource/...` grouping | Grouped by subject: `{subject: {id, type, user, group}, grants: [...]}`. Use the subject grouping to count what one subject holds; filtering a flat list by access type cannot answer "one row or three". |
@@ -122,6 +159,14 @@ group" still has somebody to assert about without putting its dataset in `lab`.
 download on the dataset under test — which reaches the same place with nothing in `cast.js`
 changed. Any spec that grants an outsider anything must create its dataset in `requestLab`.
 Ask not what the grant confers, but which group it opens up.
+
+## Membership specs build their own group
+
+A worker's world is shared by every spec *file* that worker runs, so a membership test that
+adds Frank to `lab` deletes the premise of a refusal spec in another file, and whichever ran
+second fails. Membership is the thing under test in phase 5, so those specs create a group per
+test under the run's centre. Teardown collects them because it deletes by name prefix, and an
+in-test group named `${world.prefix}-…` matches.
 
 ## Create the resource in the test, not in the world, when the test mutates it
 
