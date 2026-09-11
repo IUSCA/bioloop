@@ -167,10 +167,25 @@ function createFileTree(files) {
   return root;
 }
 
+/**
+ * The whole file hierarchy of a dataset, as a nested tree.
+ *
+ * `dataset_id` is the dataset's resource UUID, matching every other v2 entry point, and is
+ * resolved to the integer `dataset_file.dataset_id` here rather than by the caller.
+ *
+ * @async
+ * @function getFileTree
+ * @param {Object} params
+ * @param {string} params.dataset_id - The dataset's resource UUID.
+ * @returns {Promise<Object>} the root node; `children` is empty when the dataset holds no files.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
+ */
 async function getFileTree({ dataset_id }) {
+  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+
   const files = await prisma.dataset_file.findMany({
     where: {
-      dataset_id,
+      dataset_id: dataset_row_id,
     },
   });
   const root = createFileTree(files);

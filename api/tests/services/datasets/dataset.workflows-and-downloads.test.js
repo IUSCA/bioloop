@@ -213,6 +213,59 @@ describe('download info resolves the dataset by resource id', () => {
   });
 });
 
+describe('the file tree resolves the dataset by resource id', () => {
+  // `/files/tree` returned 500 to every caller who passed the policy: getFileTree put the
+  // route's resource UUID straight into dataset_file.dataset_id, which is the integer
+  // dataset.id. Prisma rejected it with "Expected IntFilter or Int, provided String".
+  let filesDataset;
+
+  beforeAll(async () => {
+    filesDataset = await createTestDataset(group.id, '_wfd_tree');
+    datasetsToDelete.push(filesDataset.id);
+    await prisma.dataset_file.createMany({
+      data: [
+        { dataset_id: filesDataset.id, name: 'reads', path: 'reads', filetype: 'directory' },
+        {
+          dataset_id: filesDataset.id,
+          name: 'a.fastq',
+          path: 'reads/a.fastq',
+          filetype: 'file',
+          size: BigInt(12),
+        },
+      ],
+    });
+  }, 30_000);
+
+  afterAll(async () => {
+    await prisma.dataset_file.deleteMany({ where: { dataset_id: filesDataset.id } });
+  }, 30_000);
+
+  test('builds the tree for a dataset addressed by its resource id', async () => {
+    const tree = await datasetFileService.getFileTree({
+      dataset_id: filesDataset.resource_id,
+    });
+    expect(Object.keys(tree.children)).toContain('reads');
+    expect(Object.keys(tree.children.reads.children)).toContain('a.fastq');
+  });
+
+  test('the integer key is not accepted where a resource id belongs', async () => {
+    await expect(
+      datasetFileService.getFileTree({ dataset_id: String(filesDataset.id) }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  test('an unknown dataset is a 404, not a database error', async () => {
+    await expect(
+      datasetFileService.getFileTree({ dataset_id: randomUUID() }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  test('a dataset with no files has an empty tree rather than an error', async () => {
+    const tree = await datasetFileService.getFileTree({ dataset_id: dataset.resource_id });
+    expect(tree.children).toEqual({});
+  });
+});
+
 describe('the resource row a dataset carries', () => {
   test('is what every v2 entry point addresses it by', async () => {
     const resource = await prisma.resource.findUnique({
