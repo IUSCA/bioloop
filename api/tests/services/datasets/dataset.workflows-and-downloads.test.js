@@ -266,6 +266,51 @@ describe('the file tree resolves the dataset by resource id', () => {
   });
 });
 
+describe('listing files tells an empty dataset from an unknown one', () => {
+  // listFiles used findFirstOrThrow, so a dataset holding no file rows answered 404 — the
+  // same status as a dataset that does not exist, and to a platform admin as readily as to
+  // anyone. An empty dataset is a normal state.
+  let listDataset;
+
+  beforeAll(async () => {
+    listDataset = await createTestDataset(group.id, '_wfd_ls');
+    datasetsToDelete.push(listDataset.id);
+    await prisma.dataset_file.create({
+      data: {
+        dataset_id: listDataset.id, name: 'top', path: 'top', filetype: 'directory',
+      },
+    });
+  }, 30_000);
+
+  afterAll(async () => {
+    await prisma.dataset_file.deleteMany({ where: { dataset_id: listDataset.id } });
+  }, 30_000);
+
+  test('a dataset with no files is an empty listing, not a 404', async () => {
+    await expect(
+      datasetFileService.listFiles({ dataset_id: dataset.resource_id }),
+    ).resolves.toEqual([]);
+  });
+
+  test('an unknown dataset is still a 404', async () => {
+    await expect(
+      datasetFileService.listFiles({ dataset_id: randomUUID() }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  test('a base path with nothing under it is an empty listing', async () => {
+    await expect(
+      datasetFileService.listFiles({ dataset_id: listDataset.resource_id, base: 'nowhere' }),
+    ).resolves.toEqual([]);
+  });
+
+  test('the integer key is not accepted where a resource id belongs', async () => {
+    await expect(
+      datasetFileService.listFiles({ dataset_id: String(listDataset.id) }),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe('the resource row a dataset carries', () => {
   test('is what every v2 entry point addresses it by', async () => {
     const resource = await prisma.resource.findUnique({

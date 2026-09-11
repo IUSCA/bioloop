@@ -95,8 +95,10 @@ test('N1 — the file plane is refused by authorization, not by accident', async
 
   for (const stranger of [frank, quinn]) {
     for (const path of everyRoute) {
-      // 403 exactly. These routes answer 404 to a platform admin because the fixture holds no
-      // file rows, so "any refusal" would pass on a build where the policy was removed.
+      // 403 exactly, not "any refusal". These routes used to answer 404 to a platform admin
+      // because the fixture holds no file rows, which would have passed on a build with the
+      // policy removed. The listing routes no longer do that, but the strict assertion is
+      // what keeps the next such route honest.
       // eslint-disable-next-line no-await-in-loop
       await expectForbidden(stranger.api, 'GET', path(id));
     }
@@ -120,8 +122,9 @@ test('H3 — reading and downloading are gated separately', async ({ world, as }
   const id = world.datasets.labPrimary.resource_id;
 
   for (const path of READ_PLANE) {
-    // Not 2xx: the fixture dataset has no files, so the handler answers 404 once the policy
-    // has let Bob through. What is being asserted is that the policy let him through.
+    // What is being asserted is that the policy let Bob through, not what the handler then
+    // found. The fixture dataset holds no files, which is now an empty listing rather than
+    // a 404.
     // eslint-disable-next-line no-await-in-loop
     await expectNotForbidden(bob.api, 'GET', path(id));
   }

@@ -106,19 +106,28 @@ function normalizeBasePath(base) {
  * it returns files and directories directly under the specified base path, without recursively listing all files in
  * subdirectories.
  *
+ * `dataset_id` is the dataset's resource UUID, matching every other v2 entry point, and is
+ * resolved to the integer `dataset_file.dataset_id` here rather than by the caller.
+ *
+ * A dataset that holds no files, and a base path with nothing under it, are both an empty
+ * listing. Only an unknown dataset is a 404, so "no files yet" stays distinguishable from
+ * "no such dataset".
+ *
  * @async
  * @function files_ls
  * @param {Object} params - The parameters object.
- * @param {number} params.dataset_id - The ID of the dataset.
+ * @param {string} params.dataset_id - The dataset's resource UUID.
  * @param {string} [params.base=''] - The base path to list files from.
- * @returns {Promise<Array>} An array of file objects.
+ * @returns {Promise<Array>} An array of file objects, empty when nothing is under the base path.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
  */
 async function listFiles({ dataset_id, base = '' }) {
+  const dataset_row_id = await resolveDatasetRowId(dataset_id);
   const base_path = normalizeBasePath(base);
 
-  const results = await prisma.dataset_file.findFirstOrThrow({
+  const results = await prisma.dataset_file.findFirst({
     where: {
-      dataset_id,
+      dataset_id: dataset_row_id,
       path: base_path,
     },
     include: {
@@ -129,6 +138,7 @@ async function listFiles({ dataset_id, base = '' }) {
       },
     },
   });
+  if (!results) return [];
   return results.children.map((row) => row.child);
 }
 

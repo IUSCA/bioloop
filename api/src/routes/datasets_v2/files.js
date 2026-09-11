@@ -60,13 +60,8 @@ router.get(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Get a list of files and directories under basepath
 
-    const dataset = await prisma.dataset.findUnique({
-      where: { resource_id: req.params.dataset_id },
-      select: { id: true, resource_id: true },
-    });
-
     const files = await datasetFileService.listFiles({
-      dataset_id: dataset.id,
+      dataset_id: req.params.dataset_id,
       base: req.query.basepath,
     });
 

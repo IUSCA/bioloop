@@ -774,11 +774,15 @@ construction, and a call a component starts making tomorrow is tested with no ed
 Three ways a refusal spec passes while asserting nothing were each found by a spec doing it,
 and each is now guarded rather than remembered:
 
-**A 404 that is not a refusal.** `GET /v2/datasets/:id/files` answers 404 to a *platform
-admin*, because `listFiles` uses `findFirstOrThrow` and a fixture dataset holds no file rows.
+**A 404 that is not a refusal.** `GET /v2/datasets/:id/files` answered 404 to a *platform
+admin*, because `listFiles` used `findFirstOrThrow` and a fixture dataset holds no file rows.
 Every caller was refused, so the spec passed while enforcing nothing. `expectForbidden`
 therefore asserts 403 exactly, and every use of it is paired with `expectNotForbidden` on a
 caller the engine allows.
+
+That 404 is fixed. A dataset holding no files lists as empty, and only an unknown dataset is
+a 404, so the two answers are distinguishable again. The strict assertion stays regardless:
+it guards against the next route that refuses everybody for a reason of its own.
 
 **A 400 that is not a refusal.** Four governance specs sent a malformed body —
 `POST /grants` requires an `approved_expiry` on each item, `PATCH /groups/:id` requires
@@ -791,10 +795,11 @@ specifically, because a 400 and a 403 are equally red and only one of them is en
 or never mounted reads as a policy working perfectly.
 
 Two defects fell out, both filed rather than fixed here: L2 T14 — `/v2/datasets/:id/files/tree`
-passes a resource UUID into an integer column and returns 500 to every caller — and L2 T15,
-the 404-on-empty above. One gap turned out to be already closed: gating access-request
-creation on the resource was written as a `test.fail()` for flow G3, passed on its first run,
-and is now an ordinary assertion.
+passed a resource UUID into an integer column and returned 500 to every caller — and L2 T15,
+the 404-on-empty above. Both are fixed now, each with unit tests confirmed failing without
+the change. One gap turned out to be already closed: gating access-request creation on the
+resource was written as a `test.fail()` for flow G3, passed on its first run, and is now an
+ordinary assertion.
 
 The backlog those item numbers name is `.todo/`, which is gitignored, so they are written
 here as plain references rather than links.

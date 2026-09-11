@@ -62,8 +62,12 @@ async function expectAbsentButPresent({ absent, present }) {
  * to be indistinguishable from "no such thing". It is too loose where the point is that the
  * policy engine is what said no: a route that 404s for everybody, or one that was never
  * mounted, satisfies it while enforcing nothing. Measured here: `/v2/datasets/:id/files`
- * returns 404 to a platform admin because the fixture dataset holds no file rows, so a
+ * returned 404 to a platform admin because the fixture dataset holds no file rows, so a
  * refusal test written with the looser helper passed for that reason alone.
+ *
+ * That particular 404 is gone — an empty dataset now lists as empty — but the rule it
+ * taught stands, so keep asserting 403 exactly. The next route to answer a blanket 404
+ * would otherwise slip through the same way.
  */
 async function expectForbidden(api, method, url, body) {
   const status = await api.status(method, url, body);
@@ -87,9 +91,10 @@ async function expectForbidden(api, method, url, body) {
  * Asserts authorization did *not* refuse this caller, without requiring the call to succeed.
  *
  * The pair to `expectForbidden`, and the only honest positive control where the handler
- * behind the policy cannot answer for reasons of its own. A caller who passes the policy and
- * then meets an empty dataset gets a 404 from the handler; insisting on a 2xx would make the
- * spec fail for something it is not testing.
+ * behind the policy cannot answer for reasons of its own. The file listing and tree routes
+ * now answer 200 with nothing in them for an empty dataset, but the download planes still
+ * refuse a dataset that is not staged; insisting on a 2xx would make the spec fail for
+ * something it is not testing.
  */
 async function expectNotForbidden(api, method, url, body) {
   const status = await api.status(method, url, body);
