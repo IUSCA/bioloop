@@ -94,12 +94,11 @@ Seven areas make up the portal.
 The Overview tab of a group and of a collection has one shape, in three parts, top to
 bottom.
 
-**The summary band** is one card directly under the tabs. The description sits on the left
-and the facts sit in a single row beside it. Putting the facts beside the description rather
-than under it keeps the band from running as a thin strip across a wide window. The
-description is clamped to three lines, with a toggle that appears only when the clamp is
-hiding something, so that a long description cannot make the band taller than the page under
-it.
+**The summary band** is one card directly under the tabs, holding the facts in a single
+row. The band carries no prose. A group's or collection's one-line summary is its `tagline`,
+which the page header already prints under the name, and its long form is `about_md`, which
+`ProfileAbout` renders in the wide panel below. Repeating either one in the band would say
+the same thing twice on one screen.
 
 A fact whose value the caller may change is the control that changes it. Member uploads is
 the first of these: for a caller who may edit the group it is a button that opens the
@@ -192,6 +191,8 @@ Four consequences follow.
 is filtered to `PUBLIC_ATTRIBUTES` plus `PROFILE_ATTRIBUTES`: `id`, `name`, `slug`,
 `description`, `metadata`, `created_at`, `updated_at`, `is_archived`, `_count.datasets`,
 `tagline`, `about_md`, `profile_visibility`, and the owner group's own public attributes.
+The UI draws no `description`; the attribute stays in the set because the API still returns
+the column.
 Grant and audit-event counts are not in that set, so those stat cards must not render for a
 grant holder.
 

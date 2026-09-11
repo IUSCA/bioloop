@@ -22,17 +22,11 @@
       <!-- Page header -->
       <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
-          <!-- The picture stands in for the icon only once a group has one. -->
           <ProfileAvatar
-            v-if="group.avatar_key"
+            kind="group"
             :name="group.name"
-            :avatar-url="avatarUrl"
+            :avatar-url="group.avatar_key ? avatarUrl : null"
             :size="40"
-          />
-          <i-mdi-account-group
-            v-else
-            class="text-2xl shrink-0"
-            style="color: var(--va-primary)"
           />
           <div>
             <h1 class="text-xl font-semibold">

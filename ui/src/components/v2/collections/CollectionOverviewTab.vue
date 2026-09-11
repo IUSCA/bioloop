@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-4">
     <!-- Summary band. The owning group is named in the page header, not repeated here. -->
-    <OverviewBand :description="props.collection.description">
+    <OverviewBand>
       <OverviewFact label="Status">
         <Badge :color="props.collection.is_archived ? 'neutral' : 'success'">
           {{ props.collection.is_archived ? "Archived" : "Active" }}
@@ -59,7 +59,6 @@
     ref="editModalRef"
     :collection-id="props.collection.id"
     :name="props.collection.name"
-    :description="props.collection.description"
     :version="props.collection.version"
     @update="emit('update')"
   />
@@ -176,7 +175,7 @@ const quickActions = computed(() => {
     });
     actions.push({
       icon: "mdi-pencil",
-      label: "Edit name and description",
+      label: "Edit name",
       onClick: openEditModal,
     });
   }

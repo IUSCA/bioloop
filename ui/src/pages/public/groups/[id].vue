@@ -32,6 +32,7 @@
 
   <div v-else-if="group" class="flex flex-col gap-5">
     <ProfileHeader
+      kind="group"
       :name="group.name"
       :tagline="group.tagline"
       :avatar-url="avatarUrl"
@@ -57,13 +58,6 @@
 
       <div class="flex flex-col gap-4">
         <ProfileLinks :links="group.metadata?.links" />
-
-        <VaCard v-if="group.description">
-          <VaCardContent>
-            <h2 class="text-sm font-semibold mb-2">DESCRIPTION</h2>
-            <p class="text-sm">{{ group.description }}</p>
-          </VaCardContent>
-        </VaCard>
 
         <!--
           Names only. `admins[*].email` stops at the member tier, so a group that wants to

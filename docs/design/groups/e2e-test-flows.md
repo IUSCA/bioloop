@@ -244,7 +244,7 @@ Covers the group visibility model in [Design](./design.md#groups-visibility-mode
 **Actor** Bob.
 **Given** Bob is an ordinary member of Wong Lab.
 **When** Bob opens Wong Lab.
-**Then** Bob sees the name, description, archive status, the full member list with roles, the
+**Then** Bob sees the name, tagline, archive status, the full member list with roles, the
 parent group, and the immediate children.
 **And never** does Bob see who assigned each member, the grants issued to the group, the
 grants on the group's resources, or the audit log.
@@ -784,7 +784,7 @@ the access arrives through that principal.
 Covers [Profiles](./profiles.md).
 
 **Given** a group's profile is public and a collection's is not.
-**Then** a signed-out reader sees the group's name, tagline, description, links, and
+**Then** a signed-out reader sees the group's name, tagline, about body, links, and
 citation, and no member count, no admin email address, and no ancestor group. The private
 collection answers as though it does not exist, rather than as forbidden.
 **And never** does a signed-out reader resolve a grant made to the authenticated-users

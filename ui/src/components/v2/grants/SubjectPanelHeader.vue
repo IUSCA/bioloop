@@ -90,7 +90,7 @@ const subjectMeta = computed(() => {
   if (props.subject.type === "USER") {
     return props.subject.user?.email ?? "";
   }
-  return props.subject.group?.description ?? "";
+  return props.subject.group?.tagline ?? "";
 });
 
 const MAX_PREVIEW = 3;

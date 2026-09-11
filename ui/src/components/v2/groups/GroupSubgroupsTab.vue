@@ -105,7 +105,7 @@
                 </RouterLink>
               </template>
 
-              <template #cell(description)="{ value }">
+              <template #cell(tagline)="{ value }">
                 <span class="text-sm va-text-secondary line-clamp-2">
                   {{ value || "—" }}
                 </span>
@@ -158,8 +158,8 @@ const scopeFilters = [
 const columns = [
   { key: "name", label: "Name" },
   {
-    key: "description",
-    label: "Description",
+    key: "tagline",
+    label: "Tagline",
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;", // wrap cell contents
   },

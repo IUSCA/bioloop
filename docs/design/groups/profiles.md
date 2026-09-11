@@ -17,7 +17,7 @@ the `Public` principal and deferred the serving half to a separate piece of work
 # Group and Collection Profiles
 
 A profile is the readable front page of a group or a collection. It carries a picture, a
-tagline, a markdown description, external links, a citation, and related publications.
+tagline, a markdown body, external links, a citation, and related publications.
 Screens are drawn at [`/mockups/profile-screens.html`](/mockups/profile-screens.html).
 
 **A profile is informational and never authorization-bearing.** Publishing a profile grants
@@ -92,7 +92,9 @@ Four notes on the columns.
 
 **`avatar_key` is an object-store key, not a URL.** The bytes live where dataset files live.
 A collection has no picture, because a collection is displayed inside its owning group's
-identity and a second logo competes with it.
+identity and a second logo competes with it. A group or collection with no picture falls
+back to the icon for its kind, never to initials. `UserAvatar` draws a monogram for a person,
+so a lettered square beside a group name reads as a user.
 
 **`citation` is generated when the column is null.** The generated form follows DataCite's
 human-readable order: creator, year, title, publisher, identifier. An admin who sets the
@@ -133,7 +135,9 @@ const PUBLIC_PROFILE_ATTRIBUTES = [
 ```
 
 `description` is on that list because it is already in `PUBLIC_ATTRIBUTES`, which every
-signed-in user receives for every group in a listing. `tagline` and `avatar_key` join
+signed-in user receives for every group in a listing. No screen renders it. `tagline` is the
+one-line summary a card or a header shows, and `about_md` is the body; the column stays
+returned so an API consumer that reads it keeps working. `tagline` and `avatar_key` join
 `PUBLIC_ATTRIBUTES` for the same reason: a tagline sits at the sensitivity of the
 description beside it, and the avatar route authorizes the bytes on its own.
 
@@ -321,6 +325,13 @@ The presentation components live in `ui/src/components/v2/profiles/` and are sha
 authenticated tab and the public page, so the two cannot drift. `ProfileAboutBody.vue` renders
 the markdown and is used by both the page and the edit form's preview, so a preview cannot
 disagree with the result.
+
+`EditProfileModal.vue` splits its fields across three panels: *Profile* carries the picture,
+the tagline, and the About body, *Links* carries the external links, and *Citation* carries
+the preferred citation and the related publications. The whole form is taller than a laptop
+screen in one column. Visibility stays above the panels rather than inside one, because it
+decides who everything below it is written for. Every panel writes into one form object and
+one button saves all three, so a panel the admin never opened is still part of the payload.
 
 The public pages are new, at `ui/src/pages/public/groups/[id].vue` and
 `ui/src/pages/public/collections/[id].vue`, carrying `meta: { requiresAuth: false }`. The

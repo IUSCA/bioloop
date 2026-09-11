@@ -73,7 +73,7 @@
                   </RouterLink>
                 </template>
 
-                <template #cell(description)="{ value }">
+                <template #cell(tagline)="{ value }">
                   <span class="text-sm va-text-secondary line-clamp-1">
                     {{ value || "—" }}
                   </span>
@@ -208,7 +208,7 @@ const statusFilters = [
 
 const columns = [
   { key: "name", label: "Name", sortable: true },
-  { key: "description", label: "Description" },
+  { key: "tagline", label: "Tagline" },
   { key: "size", label: "Size", width: "80px", sortable: true },
   { key: "created_at", label: "Created On", width: "120px", sortable: true },
   { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },

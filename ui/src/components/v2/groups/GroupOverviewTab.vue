@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-4">
     <!-- Summary band -->
-    <OverviewBand :description="props.group.description">
+    <OverviewBand>
       <OverviewFact label="Status">
         <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
           {{ props.group.is_archived ? "Archived" : "Active" }}
@@ -161,7 +161,6 @@
     ref="editModalRef"
     :group-id="props.group.id"
     :name="props.group.name"
-    :description="props.group.description"
     :allow-user-contributions="props.group.allow_user_contributions"
     :version="props.group.version"
     @update="emit('update')"
@@ -310,7 +309,7 @@ const quickActions = computed(() => {
     });
     actions.push({
       icon: "mdi-pencil",
-      label: "Edit name and description",
+      label: "Edit name",
       onClick: openEditModal,
     });
   }

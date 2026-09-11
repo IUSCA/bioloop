@@ -41,7 +41,7 @@
             class="rounded-lg px-3 py-1 text-xs ring-1 flex items-center gap-1"
             :class="QUICK_GROUP_CLASSES[group.tag]"
             @click="onSelectGroup(group)"
-            :title="group.help ?? group.description"
+            :title="group.help ?? group.tagline"
           >
             <Icon :icon="group.icon" class="" />
             <span>

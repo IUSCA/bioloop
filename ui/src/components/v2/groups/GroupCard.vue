@@ -33,12 +33,12 @@
           />
         </div>
 
-        <!-- Description -->
+        <!-- Tagline -->
         <div class="flex-1 min-h-0">
           <p
             class="text-sm leading-relaxed line-clamp-2 text-slate-500 dark:text-slate-400"
           >
-            {{ group.description }}
+            {{ group.tagline }}
           </p>
         </div>
 

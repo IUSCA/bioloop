@@ -72,21 +72,6 @@
                 @blur="validate"
               />
             </div>
-
-            <!-- Description -->
-            <div>
-              <VaTextarea
-                class="w-full"
-                v-model="formData.description"
-                placeholder="Optional description of the group's purpose and scope"
-                outline
-                label="Description"
-                :rows="3"
-                required-mark
-                :rules="descriptionRules"
-                @blur="validate"
-              />
-            </div>
           </div>
         </ModernCard>
 
@@ -262,7 +247,6 @@ const isChildMode = ref(false);
 
 const formData = ref({
   name: "",
-  description: "",
   allow_user_contributions: false,
   selectedParentGroup: null,
   selectedAdmins: [],
@@ -278,12 +262,6 @@ const nameRules = [
   (v) => !!v || "Group name is required",
   (v) => v.length >= 2 || "Group name must be at least 2 characters",
   (v) => v.length <= 255 || "Group name must be at most 255 characters",
-];
-
-const descriptionRules = [
-  (v) => !!v || "Group description is required",
-  (v) =>
-    !v || v.length <= 2000 || "Description must be at most 2000 characters",
 ];
 
 const confirmationValid = computed(() => {
@@ -303,7 +281,6 @@ function show() {
   // Reset form when opening
   formData.value = {
     name: "",
-    description: "",
     allow_user_contributions: false,
     selectedParentGroup: null,
     selectedAdmins: [],
@@ -337,14 +314,12 @@ async function confirm() {
     if (parentGroupId) {
       newGroupRes = await GroupService.createChild(parentGroupId, {
         name: formData.value.name,
-        description: formData.value.description,
         allow_user_contributions: formData.value.allow_user_contributions,
         admins: adminIds,
       });
     } else {
       newGroupRes = await GroupService.create({
         name: formData.value.name,
-        description: formData.value.description,
         allow_user_contributions: formData.value.allow_user_contributions,
         admins: adminIds,
       });

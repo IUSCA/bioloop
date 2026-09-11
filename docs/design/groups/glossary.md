@@ -53,7 +53,7 @@ apply to its subgroups and projects.
 members, in the manner of a public profile or directory listing.
 
 **Profile** — The readable front page of a group or a collection: a picture, a
-tagline, a markdown description, external links, a citation, and related
+tagline, a markdown body, external links, a citation, and related
 publications. A profile is informational and never authorization-bearing.
 Publishing one grants nobody access to data, and hiding one takes no access
 away. Only groups and collections have profiles; a user does not, and neither

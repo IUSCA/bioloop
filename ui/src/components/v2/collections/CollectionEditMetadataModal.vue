@@ -31,18 +31,6 @@
             :rules="nameRules"
           />
         </div>
-
-        <!-- Description field -->
-        <div class="flex flex-col gap-1.5">
-          <VaTextarea
-            v-model="formData.description"
-            placeholder="Collection description (optional)"
-            outline
-            :rows="3"
-            label="Collection Description"
-            :rules="descriptionRules"
-          />
-        </div>
       </va-form>
     </VaInnerLoading>
   </VaModal>
@@ -61,8 +49,6 @@ const props = defineProps({
   collectionId: { type: String, required: true },
   /** Current name of the collection */
   name: { type: String, required: true },
-  /** Current description of the collection */
-  description: { type: String, default: "" },
   /** Current version (for optimistic locking) */
   version: { type: Number, required: true },
 });
@@ -74,7 +60,6 @@ const visible = ref(false);
 const loading = ref(false);
 const formData = ref({
   name: "",
-  description: "",
 });
 const { hasChanges, init, getUpdates } = useChangeTracker(formData);
 
@@ -88,17 +73,10 @@ const nameRules = [
     "Collection name must be less than 255 characters",
 ];
 
-const descriptionRules = [
-  (value) =>
-    (value ? value.length <= 2000 : true) ||
-    "Description must be less than 2000 characters",
-];
-
 async function show() {
   // Reset form to initial state
   formData.value = {
     name: props.name,
-    description: props.description || "",
   };
   init();
   visible.value = true;

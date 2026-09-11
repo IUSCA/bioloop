@@ -2,6 +2,7 @@
   <div class="flex items-start justify-between flex-wrap gap-4">
     <div class="flex items-start gap-3.5 min-w-0">
       <ProfileAvatar
+        :kind="props.kind"
         :name="props.name"
         :avatar-url="props.avatarUrl"
         :size="56"
@@ -41,6 +42,8 @@ import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
  */
 const props = defineProps({
   name: { type: String, required: true },
+  /** "group" or "collection" — picks the icon shown when there is no picture. */
+  kind: { type: String, default: "group" },
   tagline: { type: String, default: null },
   avatarUrl: { type: String, default: null },
   /** `metadata.type` — a short word such as "core" or "lab". */

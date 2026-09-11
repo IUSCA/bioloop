@@ -3,6 +3,7 @@
     v-model="visible"
     :title="`Edit ${props.kind} profile`"
     size="large"
+    class="edit-profile-modal"
     hide-default-actions
     @cancel="hide"
   >
@@ -16,263 +17,319 @@
     </template>
 
     <VaInnerLoading :loading="saving">
-      <div class="flex flex-col gap-6 text-sm">
-        <!-- Visibility comes first: it decides who the rest of this form is written for. -->
-        <div class="flex flex-col gap-2">
+      <div class="flex flex-col gap-4 text-sm">
+        <!--
+          Visibility sits above the tabs rather than inside one, because it decides who
+          everything below it is written for. A tab would hide that decision behind a click.
+        -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <label class="text-xs font-semibold uppercase tracking-wide">
             Who can see this profile
           </label>
-          <VaOptionList
+          <VaButtonToggle
             v-model="form.profile_visibility"
-            type="radio"
+            size="small"
+            preset="secondary"
             :options="VISIBILITY_OPTIONS"
             value-by="value"
-            text-by="label"
           />
-          <p class="text-xs" style="color: var(--va-secondary)">
+          <p class="text-xs basis-full" style="color: var(--va-secondary)">
             {{ visibilityHint }}
           </p>
         </div>
 
-        <!-- Profile picture — groups only; a collection is identified by its owner. -->
-        <div v-if="props.kind === 'group'" class="flex flex-col gap-2">
-          <label class="text-xs font-semibold uppercase tracking-wide">
-            Profile picture
-          </label>
-          <div class="flex items-center gap-4">
-            <ProfileAvatar
-              :name="props.name"
-              :avatar-url="previewAvatarUrl"
-              :size="56"
-            />
-            <div class="flex items-center gap-2">
-              <VaButton preset="secondary" size="small" @click="pickFile">
-                {{
-                  props.avatarKey || pendingAvatarFile ? "Replace" : "Upload"
-                }}
-              </VaButton>
-              <VaButton
-                v-if="props.avatarKey || pendingAvatarFile"
-                preset="secondary"
-                color="danger"
-                size="small"
-                @click="removeAvatar"
+        <VaTabs
+          v-model="activeTab"
+          class="border-b border-solid border-blue-500/50"
+        >
+          <template #tabs>
+            <VaTab name="profile">Profile</VaTab>
+            <VaTab name="links">
+              <span class="flex items-center gap-1.5">
+                Links
+                <span v-if="form.links.length" class="tab-count-badge">
+                  {{ form.links.length }}
+                </span>
+              </span>
+            </VaTab>
+            <VaTab name="citation">
+              <span class="flex items-center gap-1.5">
+                Citation
+                <span v-if="form.publications.length" class="tab-count-badge">
+                  {{ form.publications.length }}
+                </span>
+              </span>
+            </VaTab>
+          </template>
+        </VaTabs>
+
+        <!--
+          One floor for every panel, so switching tabs does not resize the modal under the
+          pointer. The tallest panel is Profile with the About editor at its minimum rows.
+        -->
+        <div class="min-h-[380px]">
+          <!-- Profile: the picture, the one line under the name, and the body. -->
+          <div v-if="activeTab === 'profile'" class="flex flex-col gap-5">
+            <!-- Profile picture — groups only; a collection is identified by its owner. -->
+            <div v-if="props.kind === 'group'" class="flex flex-col gap-2">
+              <label class="text-xs font-semibold uppercase tracking-wide">
+                Profile picture
+              </label>
+              <div class="flex items-center gap-4">
+                <ProfileAvatar
+                  :kind="props.kind"
+                  :name="props.name"
+                  :avatar-url="previewAvatarUrl"
+                  :size="56"
+                />
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex items-center gap-2">
+                    <VaButton preset="secondary" size="small" @click="pickFile">
+                      {{
+                        props.avatarKey || pendingAvatarFile
+                          ? "Replace"
+                          : "Upload"
+                      }}
+                    </VaButton>
+                    <VaButton
+                      v-if="props.avatarKey || pendingAvatarFile"
+                      preset="secondary"
+                      color="danger"
+                      size="small"
+                      @click="removeAvatar"
+                    >
+                      Remove
+                    </VaButton>
+                  </div>
+                  <p class="text-xs" style="color: var(--va-secondary)">
+                    PNG, JPG, WebP, or SVG, up to 2 MB. Falls back to the group
+                    icon.
+                  </p>
+                </div>
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  class="hidden"
+                  aria-label="Profile picture file"
+                  accept=".png,.jpg,.jpeg,.webp,.svg"
+                  @change="onFileChosen"
+                />
+              </div>
+            </div>
+
+            <!-- Tagline -->
+            <div class="flex flex-col gap-1.5">
+              <VaInput
+                v-model="form.tagline"
+                label="Tagline"
+                outline
+                :max-length="TAGLINE_MAX"
+                counter
+                :rules="taglineRules"
+              />
+              <p class="text-xs" style="color: var(--va-secondary)">
+                One plain line under the name. Shown on cards and in search
+                results.
+              </p>
+            </div>
+
+            <!-- About, with a preview, because Markdown that renders wrong is worse than none -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold uppercase tracking-wide">
+                  About
+                </label>
+                <VaButtonToggle
+                  v-model="aboutTab"
+                  size="small"
+                  preset="secondary"
+                  :options="[
+                    { label: 'Write', value: 'write' },
+                    { label: 'Preview', value: 'preview' },
+                  ]"
+                  value-by="value"
+                />
+              </div>
+              <VaTextarea
+                v-if="aboutTab === 'write'"
+                v-model="form.about_md"
+                outline
+                :min-rows="6"
+                :max-rows="12"
+                placeholder="Markdown. Headings, lists, and links."
+              />
+              <div
+                v-else
+                class="rounded-md border border-solid border-gray-200 dark:border-gray-700 px-3 py-3 min-h-[180px]"
               >
-                Remove
+                <ProfileAboutBody :about-md="form.about_md" />
+                <p
+                  v-if="!form.about_md?.trim()"
+                  class="text-xs"
+                  style="color: var(--va-secondary)"
+                >
+                  Nothing to preview yet.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Links: where else this group or collection can be found. -->
+          <div v-else-if="activeTab === 'links'" class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-semibold uppercase tracking-wide">
+                External links
+              </label>
+              <VaButton
+                preset="secondary"
+                size="small"
+                :disabled="form.links.length >= LINKS_MAX"
+                @click="addLink"
+              >
+                Add link
               </VaButton>
             </div>
-            <input
-              ref="fileInputRef"
-              type="file"
-              class="hidden"
-              aria-label="Profile picture file"
-              accept=".png,.jpg,.jpeg,.webp,.svg"
-              @change="onFileChosen"
-            />
-          </div>
-          <p class="text-xs" style="color: var(--va-secondary)">
-            PNG, JPG, WebP, or SVG, up to 2 MB. Falls back to a monogram.
-          </p>
-        </div>
-
-        <!-- Tagline -->
-        <div class="flex flex-col gap-1.5">
-          <VaInput
-            v-model="form.tagline"
-            label="Tagline"
-            outline
-            :max-length="TAGLINE_MAX"
-            counter
-            :rules="taglineRules"
-          />
-          <p class="text-xs" style="color: var(--va-secondary)">
-            One plain line under the name. Shown on cards and in search results.
-          </p>
-        </div>
-
-        <!-- About, with a preview, because Markdown that renders wrong is worse than none -->
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold uppercase tracking-wide">
-              About
-            </label>
-            <VaButtonToggle
-              v-model="aboutTab"
-              size="small"
-              preset="secondary"
-              :options="[
-                { label: 'Write', value: 'write' },
-                { label: 'Preview', value: 'preview' },
-              ]"
-              value-by="value"
-            />
-          </div>
-          <VaTextarea
-            v-if="aboutTab === 'write'"
-            v-model="form.about_md"
-            outline
-            :min-rows="8"
-            :max-rows="16"
-            placeholder="Markdown. Headings, lists, and links."
-          />
-          <div
-            v-else
-            class="rounded-md border border-solid border-gray-200 dark:border-gray-700 px-3 py-3 min-h-[180px]"
-          >
-            <ProfileAboutBody :about-md="form.about_md" />
+            <div
+              v-for="(link, i) in form.links"
+              :key="`link-${i}`"
+              class="flex items-start gap-2"
+            >
+              <VaSelect
+                v-model="link.type"
+                class="w-44 shrink-0"
+                outline
+                :options="LINK_TYPE_OPTIONS"
+                value-by="value"
+                text-by="label"
+              />
+              <VaInput
+                v-model="link.url"
+                class="flex-1"
+                outline
+                :placeholder="
+                  link.type === 'contact_email'
+                    ? 'name@example.edu'
+                    : 'https://example.edu'
+                "
+              />
+              <VaInput
+                v-model="link.label"
+                class="w-40 shrink-0"
+                outline
+                placeholder="Label"
+              />
+              <!--
+                The row stays `items-start` so a validation message under an input cannot
+                push the button down. `h-9` is the input's own height, which is what the
+                button has to centre against.
+              -->
+              <div class="flex items-center h-9 shrink-0">
+                <VaButton
+                  preset="secondary"
+                  color="danger"
+                  size="small"
+                  icon="close"
+                  aria-label="Remove this link"
+                  @click="form.links.splice(i, 1)"
+                />
+              </div>
+            </div>
             <p
-              v-if="!form.about_md?.trim()"
+              v-if="!form.links.length"
               class="text-xs"
               style="color: var(--va-secondary)"
             >
-              Nothing to preview yet.
+              No links yet.
             </p>
           </div>
-        </div>
 
-        <!-- Links -->
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold uppercase tracking-wide">
-              External links
-            </label>
-            <VaButton
-              preset="secondary"
-              size="small"
-              :disabled="form.links.length >= LINKS_MAX"
-              @click="addLink"
-            >
-              Add link
-            </VaButton>
-          </div>
-          <div
-            v-for="(link, i) in form.links"
-            :key="`link-${i}`"
-            class="flex items-start gap-2"
-          >
-            <VaSelect
-              v-model="link.type"
-              class="w-44 shrink-0"
-              outline
-              :options="LINK_TYPE_OPTIONS"
-              value-by="value"
-              text-by="label"
-            />
-            <VaInput
-              v-model="link.url"
-              class="flex-1"
-              outline
-              :placeholder="
-                link.type === 'contact_email'
-                  ? 'name@example.edu'
-                  : 'https://example.edu'
-              "
-            />
-            <VaInput
-              v-model="link.label"
-              class="w-40 shrink-0"
-              outline
-              placeholder="Label"
-            />
-            <VaButton
-              preset="secondary"
-              color="danger"
-              size="small"
-              icon="close"
-              @click="form.links.splice(i, 1)"
-            />
-          </div>
-          <p
-            v-if="!form.links.length"
-            class="text-xs"
-            style="color: var(--va-secondary)"
-          >
-            No links yet.
-          </p>
-        </div>
+          <!-- Citation: how to cite this, and what has already been published from it. -->
+          <div v-else-if="activeTab === 'citation'" class="flex flex-col gap-5">
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold uppercase tracking-wide">
+                  Preferred citation
+                </label>
+                <VaButton
+                  preset="secondary"
+                  size="small"
+                  :disabled="!form.citation"
+                  @click="form.citation = ''"
+                >
+                  Reset to default
+                </VaButton>
+              </div>
+              <VaTextarea v-model="form.citation" outline :min-rows="2" />
+              <p class="text-xs" style="color: var(--va-secondary)">
+                Leave blank and Bioloop generates this line from the name, the
+                year, and the public URL.
+              </p>
+            </div>
 
-        <!-- Citation -->
-        <div class="flex flex-col gap-1.5">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold uppercase tracking-wide">
-              Preferred citation
-            </label>
-            <VaButton
-              preset="secondary"
-              size="small"
-              :disabled="!form.citation"
-              @click="form.citation = ''"
-            >
-              Reset to default
-            </VaButton>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-semibold uppercase tracking-wide">
+                  Related publications
+                </label>
+                <VaButton
+                  preset="secondary"
+                  size="small"
+                  :disabled="form.publications.length >= PUBLICATIONS_MAX"
+                  @click="addPublication"
+                >
+                  Add DOI
+                </VaButton>
+              </div>
+              <div
+                v-for="(pub, i) in form.publications"
+                :key="`pub-${i}`"
+                class="flex items-start gap-2"
+              >
+                <VaInput
+                  v-model="pub.doi"
+                  class="w-56 shrink-0"
+                  outline
+                  placeholder="10.1038/s41477-026-01847-2"
+                  :rules="doiRules"
+                />
+                <VaInput
+                  v-model="pub.title"
+                  class="flex-1"
+                  outline
+                  placeholder="Title"
+                />
+                <VaInput
+                  v-model="pub.container"
+                  class="w-40 shrink-0"
+                  outline
+                  placeholder="Journal"
+                />
+                <VaInput
+                  v-model="pub.year"
+                  class="w-24 shrink-0"
+                  outline
+                  placeholder="Year"
+                />
+                <div class="flex items-center h-9 shrink-0">
+                  <VaButton
+                    preset="secondary"
+                    color="danger"
+                    size="small"
+                    icon="close"
+                    aria-label="Remove this publication"
+                    @click="form.publications.splice(i, 1)"
+                  />
+                </div>
+              </div>
+              <p
+                v-if="!form.publications.length"
+                class="text-xs"
+                style="color: var(--va-secondary)"
+              >
+                No publications yet.
+              </p>
+            </div>
           </div>
-          <VaTextarea v-model="form.citation" outline :min-rows="2" />
-          <p class="text-xs" style="color: var(--va-secondary)">
-            Leave blank and Bioloop generates this line from the name, the year,
-            and the public URL.
-          </p>
-        </div>
-
-        <!-- Publications -->
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold uppercase tracking-wide">
-              Related publications
-            </label>
-            <VaButton
-              preset="secondary"
-              size="small"
-              :disabled="form.publications.length >= PUBLICATIONS_MAX"
-              @click="addPublication"
-            >
-              Add DOI
-            </VaButton>
-          </div>
-          <div
-            v-for="(pub, i) in form.publications"
-            :key="`pub-${i}`"
-            class="flex items-start gap-2"
-          >
-            <VaInput
-              v-model="pub.doi"
-              class="w-56 shrink-0"
-              outline
-              placeholder="10.1038/s41477-026-01847-2"
-              :rules="doiRules"
-            />
-            <VaInput
-              v-model="pub.title"
-              class="flex-1"
-              outline
-              placeholder="Title"
-            />
-            <VaInput
-              v-model="pub.container"
-              class="w-40 shrink-0"
-              outline
-              placeholder="Journal"
-            />
-            <VaInput
-              v-model="pub.year"
-              class="w-24 shrink-0"
-              outline
-              placeholder="Year"
-            />
-            <VaButton
-              preset="secondary"
-              color="danger"
-              size="small"
-              icon="close"
-              @click="form.publications.splice(i, 1)"
-            />
-          </div>
-          <p
-            v-if="!form.publications.length"
-            class="text-xs"
-            style="color: var(--va-secondary)"
-          >
-            No publications yet.
-          </p>
         </div>
       </div>
     </VaInnerLoading>
@@ -288,9 +345,14 @@ import ProfileService from "@/services/v2/profiles";
 /**
  * The one form that writes a profile, for a group or for a collection.
  *
- * Visibility is the first field because it decides who everything below it is written
- * for. The picture is a separate endpoint from the rest, so a save here is up to three
- * requests: the profile PATCH, and an avatar upload or delete.
+ * The fields are split across three panels — Profile, Links, and Citation — because the
+ * full form is taller than a screen. Visibility stays above the panels, because it decides
+ * who everything below it is written for.
+ *
+ * Every panel writes into one `form` object and one save button submits all of them, so a
+ * hidden panel is still part of the payload. The picture is a separate endpoint from the
+ * rest, so a save here is up to three requests: the profile PATCH, and an avatar upload or
+ * delete.
  *
  * The API is the authority on every rule this form applies. The limits repeated here exist
  * to say "no" before a round trip, not instead of the server's check.
@@ -342,6 +404,8 @@ const VISIBILITY_HINTS = {
 
 const visible = ref(false);
 const saving = ref(false);
+/** Which panel of the form is showing. Reset on every open, so a reopen starts at Profile. */
+const activeTab = ref("profile");
 const aboutTab = ref("write");
 const fileInputRef = ref(null);
 const pendingAvatarFile = ref(null);
@@ -407,6 +471,7 @@ function show() {
     })),
   };
   baseline.value = JSON.stringify(form.value);
+  activeTab.value = "profile";
   aboutTab.value = "write";
   discardPendingAvatar();
   visible.value = true;
@@ -544,3 +609,22 @@ async function save() {
 
 onUnmounted(discardPendingAvatar);
 </script>
+
+<style>
+/*
+ * Vuestic's 1.5rem side gutters leave the outlined inputs almost touching the modal edge at
+ * `size="large"`. Not scoped, because the modal teleports to `body`.
+ *
+ * The shorthand has to be restated. `--va-modal-padding` is declared on `:root` as four
+ * `var()` references, and a custom property's own `var()`s are substituted where it is
+ * declared, so by the time it inherits down here it is already the literal `1.5rem` on every
+ * side. Overriding only the per-side variables changes the fixed-layout rules and nothing
+ * else. Top and bottom stay as `var()` so the theme still owns them.
+ */
+.edit-profile-modal {
+  --va-modal-padding-left: 2.5rem;
+  --va-modal-padding-right: 2.5rem;
+  --va-modal-padding: var(--va-modal-padding-top) 2.5rem
+    var(--va-modal-padding-bottom) 2.5rem;
+}
+</style>

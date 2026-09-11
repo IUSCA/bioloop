@@ -57,19 +57,6 @@
                 @blur="validate"
               />
             </div>
-
-            <div>
-              <VaTextarea
-                class="w-full"
-                v-model="formData.description"
-                placeholder="Optional description of this collection"
-                outline
-                label="Description"
-                :rows="3"
-                :rules="descriptionRules"
-                @blur="validate"
-              />
-            </div>
           </div>
         </ModernCard>
 
@@ -170,7 +157,6 @@ const loading = ref(false);
 
 const formData = ref({
   name: "",
-  description: "",
   selectedOwnerGroup: null,
   selectedDatasets: [],
 });
@@ -183,12 +169,6 @@ const nameRules = [
   (value) =>
     (value && value.length <= 255) ||
     "Collection name must be less than 255 characters",
-];
-
-const descriptionRules = [
-  (value) =>
-    (value ? value.length <= 2000 : true) ||
-    "Description must be less than 2000 characters",
 ];
 
 const confirmationValid = computed(() => {
@@ -205,7 +185,6 @@ watch(visible, (newVisible) => {
 function show() {
   formData.value = {
     name: "",
-    description: "",
     selectedOwnerGroup: props.group || null,
     selectedDatasets: [],
   };
@@ -231,7 +210,6 @@ async function confirm() {
   try {
     const payload = {
       name: formData.value.name,
-      description: formData.value.description,
       owner_group_id: formData.value.selectedOwnerGroup.id,
     };
     if (formData.value.selectedDatasets.length) {

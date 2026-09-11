@@ -94,7 +94,7 @@
                 </RouterLink>
               </template>
 
-              <template #cell(description)="{ value }">
+              <template #cell(tagline)="{ value }">
                 <span class="text-sm va-text-secondary line-clamp-1">
                   {{ value || "—" }}
                 </span>
@@ -269,8 +269,8 @@ const columns = [
   },
   { key: "size", label: "Datasets", width: "80px", sortable: true },
   {
-    key: "description",
-    label: "Description",
+    key: "tagline",
+    label: "Tagline",
     tdStyle: "line-clamp-2", // wrap cell contents
   },
   { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },

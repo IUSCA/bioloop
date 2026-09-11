@@ -32,18 +32,6 @@
           />
         </div>
 
-        <!-- Description field -->
-        <div class="flex flex-col gap-1.5">
-          <VaTextarea
-            v-model="formData.description"
-            placeholder="Group description (optional)"
-            outline
-            :rows="3"
-            label="Group Description"
-            :rules="descriptionRules"
-          />
-        </div>
-
         <!-- User Contributions Toggle -->
         <GroupAllowMemberContribSwitch
           v-model="formData.allow_user_contributions"
@@ -66,8 +54,6 @@ const props = defineProps({
   groupId: { type: String, required: true },
   /** Current name of the group */
   name: { type: String, required: true },
-  /** Current description of the group */
-  description: { type: String, default: "" },
   /** Current allow_user_contributions setting */
   allowUserContributions: { type: Boolean, default: false },
   /** Current version (for optimistic locking) */
@@ -81,7 +67,6 @@ const visible = ref(false);
 const loading = ref(false);
 const formData = ref({
   name: "",
-  description: "",
   allow_user_contributions: false,
 });
 const { hasChanges, init, getUpdates } = useChangeTracker(formData);
@@ -95,17 +80,10 @@ const nameRules = [
     "Group name must be less than 255 characters",
 ];
 
-const descriptionRules = [
-  (value) =>
-    (value ? value.length <= 2000 : true) ||
-    "Description must be less than 2000 characters",
-];
-
 async function show() {
   // Reset form to initial state
   formData.value = {
     name: props.name,
-    description: props.description || "",
     allow_user_contributions: props.allowUserContributions,
   };
   init(); // set baseline snapshot for change tracking

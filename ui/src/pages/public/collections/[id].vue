@@ -32,6 +32,7 @@
 
   <div v-else-if="collection" class="flex flex-col gap-5">
     <ProfileHeader
+      kind="collection"
       :name="collection.name"
       :tagline="collection.tagline"
       :is-archived="collection.is_archived"
@@ -72,13 +73,6 @@
 
       <div class="flex flex-col gap-4">
         <ProfileLinks :links="collection.metadata?.links" />
-
-        <VaCard v-if="collection.description">
-          <VaCardContent>
-            <h2 class="text-sm font-semibold mb-2">DESCRIPTION</h2>
-            <p class="text-sm">{{ collection.description }}</p>
-          </VaCardContent>
-        </VaCard>
 
         <VaCard v-if="metadataRows.length">
           <VaCardContent>
