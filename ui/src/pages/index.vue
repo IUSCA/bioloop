@@ -3,14 +3,15 @@
 </template>
 
 <script setup>
-import { useAuthStore } from "@/stores/auth";
+// import { useAuthStore } from "@/stores/auth";
 
-const auth = useAuthStore();
+// const auth = useAuthStore();
 const router = useRouter();
 
-if (auth.canOperate) {
-  router.push("/v2/groups");
-} else {
-  router.push("/projects");
-}
+router.push("/v2/home");
+// if (auth.canOperate) {
+//   router.push("/v2/groups");
+// } else {
+//   router.push("/projects");
+// }
 </script>

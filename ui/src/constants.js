@@ -12,31 +12,31 @@ const icons = {
 const exports = {
   sidebar: {
     user_items: [
-      {
-        icon: "mdi-flask",
-        title: "Projects",
-        path: "/projects",
-        test_id: "sidebar-projects",
-      },
-      {
-        icon: "mdi-folder-plus-outline",
-        title: "Create Dataset",
-        test_id: "sidebar-create-dataset",
-        children: [
-          {
-            feature_key: "import",
-            icon: "mdi-file-import-outline",
-            title: "Import",
-            path: "/datasets/imports",
-          },
-          {
-            feature_key: "uploads",
-            icon: "mdi-cloud-upload-outline",
-            title: "Upload",
-            path: "/datasets/uploads",
-          },
-        ],
-      },
+      // {
+      //   icon: "mdi-flask",
+      //   title: "Projects",
+      //   path: "/projects",
+      //   test_id: "sidebar-projects",
+      // },
+      // {
+      //   icon: "mdi-folder-plus-outline",
+      //   title: "Create Dataset",
+      //   test_id: "sidebar-create-dataset",
+      //   children: [
+      //     {
+      //       feature_key: "import",
+      //       icon: "mdi-file-import-outline",
+      //       title: "Import",
+      //       path: "/datasets/imports",
+      //     },
+      //     {
+      //       feature_key: "uploads",
+      //       icon: "mdi-cloud-upload-outline",
+      //       title: "Upload",
+      //       path: "/datasets/uploads",
+      //     },
+      //   ],
+      // },
       // ── Governance (v2) ──────────────────────────────────────────────────
       {
         icon: "mdi-home-outline",
@@ -63,23 +63,18 @@ const exports = {
         test_id: "sidebar-v2-datasets",
       },
       {
-        icon: `${icons.access_request}-outline`,
+        icon: `${icons.request}-outline`,
         title: "Access Requests",
         path: "/v2/access-requests",
         test_id: "sidebar-v2-access-requests",
       },
     ],
     operator_items: [
-      {
-        icon: "mdi-monitor-dashboard",
-        title: "Dashboard",
-        path: "/dashboard",
-        test_id: "sidebar-dashboard",
-      },
       // {
-      //   icon: "mdi-file-lock",
-      //   title: "Data Products",
-      //   path: "/dataproducts",
+      //   icon: "mdi-monitor-dashboard",
+      //   title: "Dashboard",
+      //   path: "/dashboard",
+      //   test_id: "sidebar-dashboard",
       // },
       // {
       //   icon: "mdi-transition",
@@ -87,39 +82,22 @@ const exports = {
       //   path: "/conversions",
       // },
       // {
-      //   icon: "mdi-folder-upload",
-      //   title: "Data Uploader",
-      //   path: "/datauploader",  // cspell: disable-line
+      //   icon: "mdi-dna",
+      //   title: "Raw Data",
+      //   path: "/rawdata",
+      //   test_id: "sidebar-raw-data",
       // },
-      {
-        icon: "mdi-dna",
-        title: "Raw Data",
-        path: "/rawdata",
-        test_id: "sidebar-raw-data",
-      },
-      {
-        icon: "mdi-package-variant-closed",
-        title: "Data Products",
-        path: "/dataproducts",
-        test_id: "sidebar-data-products",
-      },
+      // {
+      //   icon: "mdi-package-variant-closed",
+      //   title: "Data Products",
+      //   path: "/dataproducts",
+      //   test_id: "sidebar-data-products",
+      // },
       {
         icon: "mdi-table-account",
         title: "User Management",
         path: "/users",
         test_id: "sidebar-user-management",
-      },
-      {
-        icon: "mdi-format-list-bulleted",
-        title: "Stats/Tracking",
-        path: "/stats",
-        test_id: "sidebar-stats-tracking",
-      },
-      {
-        icon: "mdi:map-marker-path",
-        title: "Workflows",
-        path: "/workflows",
-        test_id: "sidebar-workflows",
       },
       {
         feature_key: "alerts",
@@ -128,16 +106,6 @@ const exports = {
         path: "/alerts",
         test_id: "sidebar-alerts",
       },
-      // {
-      //   icon: "mdi-account-multiple",
-      //   title: "Group Management",
-      //   path: "/groups",
-      // },
-      // {
-      //   icon: 'mdi-delete-empty-outline',
-      //   title: 'Data Cleanup',
-      //   path: '/clean',
-      // },
     ],
     bottom_items: [
       {
@@ -166,7 +134,20 @@ const exports = {
         test_id: "sidebar-logout",
       },
     ],
-    admin_items: [],
+    admin_items: [
+      {
+        icon: "mdi-format-list-bulleted",
+        title: "Stats/Tracking",
+        path: "/stats",
+        test_id: "sidebar-stats-tracking",
+      },
+      {
+        icon: "mdi:map-marker-path",
+        title: "Workflows",
+        path: "/workflows",
+        test_id: "sidebar-workflows",
+      },
+    ],
   },
   UPLOAD_STATUSES: {
     // Statuses that only appear in the UI
