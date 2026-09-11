@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-7xl mx-auto px-6 py-8">
+  <div class="px-6 py-8">
     <Transition name="fade-slide" mode="out-in">
       <!-- Until the persona is known, nothing about the page's shape is decided. -->
       <div v-if="persona.loading || !settled" key="loading" class="space-y-6">

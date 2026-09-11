@@ -1,6 +1,6 @@
 <template>
   <VaInnerLoading :loading="loading" icon="flare">
-    <div class="flex flex-col gap-3 max-w-5xl mx-auto">
+    <div class="flex flex-col gap-3">
       <!-- Header row -->
       <VaCard class="header card">
         <VaCardContent>

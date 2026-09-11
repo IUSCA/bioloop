@@ -1,5 +1,5 @@
 <template>
-  <div data-testid="dataset-list" class="flex flex-col gap-3 max-w-7xl mx-auto">
+  <div data-testid="dataset-list" class="flex flex-col gap-3">
     <!-- Header -->
     <VaCard class="header card">
       <VaCardContent>

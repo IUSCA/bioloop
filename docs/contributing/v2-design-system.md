@@ -308,8 +308,13 @@ wrong for a button standing on its own.
 
 Every top-level list page uses the same shell.
 
-- Width is `max-w-7xl mx-auto`, set once in the page. The layout at
-  `ui/src/layouts/default.vue` sets no maximum width, so this is a per-page choice.
+- Width is not a page's choice. `ui/src/layouts/default.vue` wraps the router view in
+  `.page-shell`, which caps the content column at 1440px and centres it. Every page, tab,
+  and panel inside the application shell inherits that one cap. Do not add `max-w-*` plus
+  `mx-auto` to a page root, a tab panel, or a card; a tab that sets its own width jumps
+  the layout when the user cycles tabs, which is the defect the single cap removes. The
+  class is defined in `ui/src/styles/main.css`. A `max-w-*` on a chip, a heading, or a
+  truncating cell is a different thing and stays.
 - The page title comes from the breadcrumb trail, and the page adds a one-line description
   below it in `text-sm va-text-secondary`. A list page does not repeat its own name as an
   `<h1>`.
@@ -323,8 +328,9 @@ Every top-level list page uses the same shell.
 - Empty and error states are `EmptyState` and `ErrorState`. A hand-rolled
   `py-12 text-center` block is not.
 
-`home.vue` is the exception. It is a landing surface rather than a list, and it keeps its
-own full-width shell and its `DashboardHero`.
+`home.vue` is the exception in shape rather than in width. It is a landing surface rather
+than a list, so it keeps its `DashboardHero` and its own padding, and it fills the shell's
+full 1440px instead of a list page's card stack.
 
 Detail pages agree with each other and should stay as
 [V2 page patterns](./v2-page-patterns.md) describes them: a `fade-slide` transition

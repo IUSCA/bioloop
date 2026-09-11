@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-3 max-w-7xl mx-auto">
+  <div class="flex flex-col gap-3">
     <p class="text-sm va-text-secondary">
       Review and manage access requests you are responsible for.
     </p>

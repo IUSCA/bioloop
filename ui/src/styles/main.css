@@ -71,6 +71,18 @@ a:hover {
     color: rgb(243 244 246);
   }
 
+  /* The single width cap for every page inside the application shell. Applied once
+   * on the content wrapper in layouts/default.vue, so no page, tab, or panel sets its
+   * own maximum width. 1440px is the widest common laptop viewport; past it a table
+   * stretches without gaining a column, and the eye loses the row it was reading.
+   * @see docs/contributing/v2-design-system.md - The page shell
+   */
+  .page-shell {
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   /* Count pill shown beside a tab label on the v2 detail pages.
    * Defined once here because four pages render the same pill.
    * @see docs/contributing/v2-page-patterns.md

@@ -1,8 +1,5 @@
 <template>
-  <div
-    data-testid="collection-list"
-    class="flex flex-col gap-3 max-w-7xl mx-auto"
-  >
+  <div data-testid="collection-list" class="flex flex-col gap-3">
     <!-- Header row -->
     <VaCard class="header card">
       <VaCardContent>

@@ -1,11 +1,7 @@
 <template>
   <Transition name="fade-slide" mode="out-in">
     <!-- Loading -->
-    <div
-      v-if="loading"
-      key="loading"
-      class="max-w-7xl mx-auto flex flex-col gap-4"
-    >
+    <div v-if="loading" key="loading" class="flex flex-col gap-4">
       <VaSkeleton variant="text" height="32px" width="260px" />
       <VaSkeleton variant="squared" height="220px" />
       <VaSkeleton variant="squared" height="220px" />
@@ -22,7 +18,7 @@
     </div>
 
     <!-- Loaded -->
-    <div v-else-if="request" key="loaded" class="max-w-7xl mx-auto">
+    <div v-else-if="request" key="loaded">
       <!-- Page header. The <h1> names the resource, as it does on every other v2 detail
            page; "Access request" is the breadcrumb's job and the summary line's. -->
       <div class="mt-3 flex items-start justify-between flex-wrap gap-3">

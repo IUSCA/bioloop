@@ -92,9 +92,10 @@ The template wraps the three states in one transition:
 
 `pages/v2/groups/index.vue` is the reference implementation.
 
-- The shell is `max-w-7xl mx-auto`, a one-line description under the breadcrumb, a
+- The shell is a one-line description under the breadcrumb, a
   `<VaCard class="header card">` holding search and filters and the one page-level action,
-  then a results card. See
+  then a results card. The page sets no width of its own; `layouts/default.vue` caps and
+  centres the content column. See
   [V2 design system](./v2-design-system.md#the-page-shell).
 - Filters are `<ModernButtonToggle>`, which carries `role="group"`, `aria-pressed`, and a
   focus ring. Do not use `VaChip` as a filter control.
