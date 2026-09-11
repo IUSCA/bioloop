@@ -1201,6 +1201,10 @@ Datasets are created via two pathways:
 
 ### Ownership Transfer (Dual Consent)
 
+> **Deferred, and not in the MVP.** The `authority_transfer` table is in the schema, no route
+> or UI reaches it, and a test holds that true. What follows is the shape the flow would take
+> when it is built. See [decision 15](./decisions.md).
+
 Transferring dataset ownership from Group A to Group B requires:
 
 1. User must be admin of **both** source group (A) and target group (B)

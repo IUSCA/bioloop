@@ -380,6 +380,33 @@ it was live for. Access history stays reconstructable.
 
 ---
 
+## 15. The authority-transfer table stays, and nothing reaches it
+
+**Decision.** Ownership transfer is not in the MVP. The `authority_transfer` model stays in
+the schema exactly as it is. The API exposes no route for it, and the UI offers no way to
+start one.
+
+The table has been in `schema.prisma` since the groups work began and is referenced by zero
+lines of code. That left a standing question with three answers: build the dual-consent flow,
+drop the table so the schema stops implying the flow exists, or leave it alone and say so.
+This takes the third.
+
+**Why not drop it.** A migration that drops a table is a real change to a shared schema, and
+it buys nothing a sentence cannot. The design still expects ownership transfer eventually —
+decision 8 makes `owner_group_id` the governance boundary, so moving it is a genuine
+operation and not an accident of modelling — and dropping the table would mean designing it
+again from nothing later.
+
+**Why not build it.** Dual consent needs a source approval, a target approval, an expiry, and
+a rule for what happens to existing grants when the owner changes. Use case 13 and decision 8
+both touch it. Nobody has asked for it, and none of that is settled.
+
+**Consequence to accept.** A reader of the schema sees a table that does nothing, which is
+the cost of the deferral rather than an oversight. The model carries a comment pointing here,
+so the question is answered where it is asked. Anyone adding a route, a policy action, or a
+UI affordance for ownership transfer is reopening this decision, not finishing an
+implementation.
+
 ## Raised and deferred
 
 Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
@@ -397,9 +424,10 @@ rejected as decision 4. Oversight stays structural, and it stays outside the gra
 
 ## What was not decided
 
-**Ownership transfer, reparenting, and identity federation** remain deferred. Decision 4 keeps
-membership as an enum-bearing row rather than a grant, so each of these stays its own piece of
-work rather than collapsing into the access-request machinery.
+**Reparenting and identity federation** remain deferred. Decision 4 keeps membership as an
+enum-bearing row rather than a grant, so each of these stays its own piece of work rather than
+collapsing into the access-request machinery. **Ownership transfer** was in that list and is
+now settled as decision 15: deferred, with its table kept and nothing wired to it.
 
 **Invitations were in that list and are now built.** They confirm the decision rather than
 strain it: an invitation is a standing offer of a `group_user` row with a role, so it needed

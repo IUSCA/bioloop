@@ -43,7 +43,7 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Consent codes | `dataset_use_condition` | accepted by `POST /v2/datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
 | Dataset creation | `dataset.owner_group_id`, `dataset.create_method` | `POST /v2/datasets`, `POST /v2/datasets/bulk` | `services/datasets_v2/create.js` | none yet |
 | Scanned ingestion | `registration.ingestion` config, `create_method: 'SCAN'` | `POST /v2/datasets/bulk`, one authorization check per distinct group | `workers/workers/services/registration_v2.py`, `workers/workers/scripts/watch_v2.py` | — |
-| Ownership transfer | `authority_transfer` **(table only)** | none | none | none |
+| Ownership transfer | `authority_transfer` **(table only, [decision 15](./decisions.md))** | none, and `route_policy_bindings.test.js` holds it that way | none | none |
 | Invitations | `group_invitation`, `INVITATION_STATUS`, partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` | `/groups/:id/invitations`, `POST /auth/invite/check` and `/apply` | `services/invitations/` | `pages/invite.vue`, `GroupInvitationsTab.vue`, `AddGroupMemberModal.vue` |
 | Invitation email | — | — | `notification/types.js` `TYPES.INVITE`, `notification/templates/invite.mjml.hbs`, `services/invitations/notify.js` | — |
 | Dashboard | — | none of its own; it composes eleven existing calls | `routes/users_v2/index.js` → `uiPersona` | `pages/v2/home.vue`, `components/v2/dashboard/`, `stores/v2/uiPersona.js` |

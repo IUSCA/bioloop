@@ -210,7 +210,7 @@ These users are the operational backbone, and they push the system hardest.
 24. **Transfer dataset ownership** — `Later` · **foundation**
     * Outcome: a dataset moves to another group when a grant ends or a PI leaves, with both sides consenting.
     * Trigger: the first grant that ends, or the first PI who leaves.
-    * Why foundation: governance authority is not a row today. It is ownership plus a role, so it cannot be offered, accepted, or made to expire. An `authority_transfer` table exists in the schema with no code behind it, which is a placeholder rather than a design.
+    * Why foundation: governance authority is not a row today. It is ownership plus a role, so it cannot be offered, accepted, or made to expire. An `authority_transfer` table exists in the schema with no code behind it. [Decision 15](./decisions.md) keeps it that way for now and says so explicitly, so it is a recorded deferral rather than an oversight.
 
 25. **Organize datasets into collections** — `Next` · **foundation**
     * Outcome: adding a dataset to a collection extends the collection's grants to it.
@@ -493,7 +493,7 @@ Sequencing lives in the local backlog rather than here.
 - **Invitations — built 2026-09-09, one part outstanding.** The flow works end to end; only the
   signup-time email mismatch dialog is missing, and the server refuses that case anyway. See
   [the design record](./invitations.md).
-- **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Either build it or drop the table, so the schema stops implying it exists.
+- **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Settled by [decision 15](./decisions.md): not in the MVP, the table stays, and nothing is wired to it. `route_policy_bindings.test.js` asserts no route binds `transfer_ownership` or exposes a transfer path.
 - **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
 - **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
 - **Renewals.** `ACCESS_REQUEST_TYPE.RENEWAL` and `previous_grant_ids` are in the schema, the route rejects anything but `NEW`, and the renewal-context endpoint is commented out.

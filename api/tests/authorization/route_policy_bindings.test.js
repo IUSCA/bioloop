@@ -108,3 +108,41 @@ describe('a resource audit tab reads its own resource, not the platform log', ()
     ).resolves.toBe(false);
   });
 });
+
+describe('ownership transfer is modelled and not exposed', () => {
+  // Decision 15: ownership transfer is not in the MVP. The `authority_transfer` table stays
+  // in the schema and the policy containers keep a `transfer_ownership` action, but no route
+  // reaches either. This asserts the second half, so adding a route is a deliberate reopening
+  // of the decision rather than something that slips in.
+  //
+  // @see docs/design/groups/decisions.md — 15. The authority-transfer table stays, and nothing reaches it
+  const routers = [
+    ['groups', groupRoutes],
+    ['collections', collectionRoutes],
+    ['datasets_v2', datasetRoutes],
+  ];
+
+  test.each(routers)('%s binds no transfer_ownership policy', (_name, router) => {
+    const bound = router.stack
+      .filter((l) => l.route)
+      .flatMap((l) => l.route.stack.map((s) => s.handle?.authorizes).filter(Boolean))
+      .map(({ resourceType, action }) => `${resourceType}.${action}`);
+
+    // The router does bind policies, or the assertion below would hold vacuously.
+    expect(bound.length).toBeGreaterThan(0);
+    expect(bound.filter((b) => b.endsWith('.transfer_ownership'))).toEqual([]);
+  });
+
+  test.each(routers)('%s exposes no transfer route', (_name, router) => {
+    const paths = router.stack.filter((l) => l.route).map((l) => l.route.path);
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((p) => /transfer/i.test(p))).toEqual([]);
+  });
+
+  test('the action still exists, so the deferral is visible rather than lost', () => {
+    const { collectionPolicies } = require('@/authorization/builtin/policies/collection');
+    const { datasetPolicies } = require('@/authorization/builtin/policies/dataset');
+    expect(collectionPolicies.hasAction('transfer_ownership')).toBe(true);
+    expect(datasetPolicies.hasAction('transfer_ownership')).toBe(true);
+  });
+});

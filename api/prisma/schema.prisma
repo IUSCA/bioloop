@@ -1214,6 +1214,10 @@ model authorization_audit {
 // AUTHORITY TRANSFERS - Ownership mutation workflow
 // ============================================================================
 
+// Deliberately unused. Ownership transfer is not in the MVP: no route exposes this table and
+// the UI offers no way to start a transfer. The table is kept rather than dropped, and a
+// route or policy action for it reopens the decision rather than completing it.
+// @see docs/design/groups/decisions.md — 15. The authority-transfer table stays, and nothing reaches it
 model authority_transfer {
   id String @id @default(uuid())
 
