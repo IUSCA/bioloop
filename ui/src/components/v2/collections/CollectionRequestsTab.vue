@@ -37,7 +37,8 @@
           <div v-else-if="error" class="py-12 px-6">
             <ErrorState
               title="Failed to load access requests"
-              :message="error?.message"
+              :error="error"
+              subject="these access requests"
               @retry="fetchRequests"
             />
           </div>
@@ -169,8 +170,7 @@ function fetchRequests() {
       totalRequests.value = response.data.metadata.total;
     })
     .catch((err) => {
-      error.value =
-        err?.response?.data?.message ?? "Failed to load access requests.";
+      error.value = err;
       console.error(err);
     })
     .finally(() => {

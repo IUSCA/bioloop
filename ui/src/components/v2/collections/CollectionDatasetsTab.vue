@@ -57,7 +57,8 @@
             <div v-if="error" class="py-12 px-6">
               <ErrorState
                 title="Failed to load datasets"
-                :message="error?.message"
+                :error="error"
+                subject="these datasets"
                 @retry="fetchDatasets"
               />
             </div>
@@ -308,9 +309,7 @@ async function fetchDatasets() {
     datasets.value = data.data;
     total.value = data.metadata?.total ?? data.data.length;
   } catch (err) {
-    error.value =
-      err?.response?.data?.message ??
-      "An error occurred while fetching datasets.";
+    error.value = err;
     datasets.value = [];
     total.value = 0;
   } finally {

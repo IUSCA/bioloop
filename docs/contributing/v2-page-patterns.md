@@ -80,7 +80,10 @@ The template wraps the three states in one transition:
 ```html
 <Transition name="fade-slide" mode="out-in">
   <div v-if="loading">…skeleton…</div>
-  <div v-else-if="error"><ErrorState :message="error?.message" @retry="fetchData" /></div>
+  <div v-else-if="error">
+    <ErrorState :error="error" subject="this dataset" title="Failed to load dataset"
+                @retry="fetchData" />
+  </div>
   <div v-else-if="resource">…content…</div>
 </Transition>
 ```
@@ -95,6 +98,8 @@ The template wraps the three states in one transition:
   [V2 design system](./v2-design-system.md#the-page-shell).
 - Filters are `<ModernButtonToggle>`, which carries `role="group"`, `aria-pressed`, and a
   focus ring. Do not use `VaChip` as a filter control.
+- Store the error itself in `error`, not a string pulled out of it. `ErrorState` reads the
+  status to decide whether this was a refusal, and a flattened string hides that.
 - Empty and error regions are `<EmptyState>` and `<ErrorState>`. Pass
   `:show-clear-filters="false"` when the region is empty because nothing exists rather
   than because a filter excluded everything, and use the `actions` slot for a

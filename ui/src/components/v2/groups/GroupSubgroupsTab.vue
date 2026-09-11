@@ -44,7 +44,8 @@
             <div v-if="error" class="py-12 px-6">
               <ErrorState
                 title="Failed to load subgroups"
-                :message="error?.message"
+                :error="error"
+                subject="these subgroups"
                 @retry="fetchSubgroups"
               />
             </div>

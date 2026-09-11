@@ -42,6 +42,23 @@ test('L2 — the audit stream is not public', async ({ as }) => {
   await expectNotForbidden(priya.api, 'GET', '/audit/records?limit=10');
 });
 
+test('the group page refuses without naming what it is refusing', async ({ world, as }) => {
+  // The group page used to render "Failed to load group. Request failed with status code
+  // 403": an outage to look at, and a confirmation that the group is there. Both halves are
+  // asserted here, because removing only the status code would still read as a breakage.
+  const frank = await as('frank');
+  await frank.page.goto(`/v2/groups/${world.groups.lab.id}`);
+
+  const state = frank.page.getByTestId('error-state');
+  await expect(state).toBeVisible();
+  await expect(state).toContainText(/do not have access/i);
+  await expect(state).not.toContainText(/Request failed with status code/i);
+
+  // The group's name is the thing a refusal must not hand over.
+  await expect(frank.page.getByText(world.groups.lab.name, { exact: false }))
+    .toHaveCount(0);
+});
+
 test('E2 — a collection holds only its own group\'s datasets', async ({ world, as }) => {
   const alice = await as('alice');
   const collectionId = world.collections.labRelease.id;

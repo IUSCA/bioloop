@@ -13,7 +13,8 @@
       <div v-else-if="!persona.uiPersona" key="error" class="py-12">
         <ErrorState
           title="Could not work out what this page should show"
-          :message="persona.error?.message"
+          :error="persona.error"
+          subject="this dashboard"
           @retry="persona.fetchPersona"
         />
       </div>

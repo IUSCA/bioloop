@@ -12,16 +12,16 @@
             class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
           >
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Name
               </dt>
-              <dd class="text-sm text-gray-800 dark:text-gray-200">
+              <dd class="text-base text-gray-800 dark:text-gray-200">
                 {{ props.dataset.name }}
               </dd>
             </div>
 
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Type
               </dt>
               <dd>
@@ -33,7 +33,7 @@
 
             <!-- status: is_deleted -->
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Status
               </dt>
               <dd>
@@ -45,19 +45,19 @@
             </div>
 
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Description
               </dt>
-              <dd class="text-sm line-clamp-2">
+              <dd class="text-base line-clamp-2">
                 {{ props.dataset.description || "—" }}
               </dd>
             </div>
 
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Owner Group
               </dt>
-              <dd class="text-sm font-semibold">
+              <dd class="text-base font-semibold">
                 <RouterLink
                   v-if="props.dataset.owner_group"
                   :to="`/v2/groups/${props.dataset.owner_group.id}`"
@@ -68,20 +68,20 @@
             </div>
 
             <div class="py-2.5 flex items-center gap-4">
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Size
               </dt>
-              <dd class="text-sm">{{ formatBytes(props.dataset.size) }}</dd>
+              <dd class="text-base">{{ formatBytes(props.dataset.size) }}</dd>
             </div>
 
             <div
               v-if="props.dataset.created_at"
               class="py-2.5 flex items-center gap-4"
             >
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Created
               </dt>
-              <dd class="text-sm">
+              <dd class="text-base">
                 {{ datetime.displayDateTime(props.dataset.created_at) }}
               </dd>
             </div>
@@ -90,10 +90,10 @@
               v-if="props.dataset.updated_at"
               class="py-2.5 flex items-center gap-4"
             >
-              <dt class="w-28 shrink-0 text-xs font-medium va-text-secondary">
+              <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Updated
               </dt>
-              <dd class="text-sm">
+              <dd class="text-base">
                 {{ datetime.fromNow(props.dataset.updated_at) }}
               </dd>
             </div>

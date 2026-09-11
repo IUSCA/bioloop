@@ -361,6 +361,25 @@ session holding an older copy of this page does not go looking.
   `view` from a click on its root, and `DatasetRequestsTab` binds both `@view` and
   `@review`.
 
+## `ErrorState` decides the refusal wording, so give it the error, not a string
+
+`ErrorState` takes `:error="error"` and a `subject` noun phrase. It reads
+`error.response.status` and, on 401/403/404, writes its own heading and message; everything
+else falls back to the caller's `title`/`message` and then to the API's `message` from the
+response body. It never renders `error.message`.
+
+**A page that stores `err?.response?.data?.message ?? "Failed to load X."` breaks this
+silently.** The string has no `.response`, so the refusal branch never fires and the page
+shows the ordinary failure title. Five v2 surfaces did exactly that, and — because a string
+also has no `.message` — the old `:message="error?.message"` binding rendered *nothing* on
+them while the other fourteen rendered "Request failed with status code 403". Reading the
+templates made all nineteen look identical; only the running app showed the split. Store
+`err` itself in the catch block.
+
+Verify it in the e2e suite rather than by eye: `getByTestId('error-state')` plus
+`toContainText(/do not have access/i)` and `not.toContainText(/Request failed with status
+code/i)`. `discovery.spec.js` has the group-page case and `dataset.spec.js` the dataset one.
+
 ## `ErrorState`'s "Try again" does nothing unless you bind `@retry`
 
 The component always renders the button and emits `retry`; it does not reload anything by

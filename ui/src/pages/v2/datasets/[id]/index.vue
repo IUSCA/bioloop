@@ -11,7 +11,8 @@
     <div v-else-if="error" class="py-12 px-6">
       <ErrorState
         title="Failed to load dataset"
-        :message="error?.message"
+        :error="error"
+        subject="this dataset"
         @retry="fetchDatasetData"
       />
     </div>
@@ -307,7 +308,7 @@ async function fetchDatasetData() {
     counts.value.files = data.num_files;
     await fetchCounts();
   } catch (err) {
-    error.value = err?.response?.data?.message ?? "Failed to load dataset.";
+    error.value = err;
   } finally {
     loading.value = false;
   }

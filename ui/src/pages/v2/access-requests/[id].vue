@@ -15,7 +15,8 @@
     <div v-else-if="error" key="error" class="py-12 px-6">
       <ErrorState
         title="Failed to load access request"
-        :message="error?.message"
+        :error="error"
+        subject="this access request"
         @retry="fetchRequest"
       />
     </div>

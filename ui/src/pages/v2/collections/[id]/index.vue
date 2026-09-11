@@ -11,7 +11,8 @@
     <div v-else-if="error" class="py-12 px-6">
       <ErrorState
         :title="'Failed to load collection'"
-        :message="error?.message"
+        :error="error"
+        subject="this collection"
         @retry="fetchCollectionData"
       />
     </div>
@@ -218,7 +219,7 @@ async function fetchCollectionData() {
 
     await fetchCounts();
   } catch (err) {
-    error.value = err?.response?.data?.message ?? "Failed to load collection.";
+    error.value = err;
   } finally {
     loading.value = false;
   }

@@ -47,10 +47,21 @@ test('N1 — the page itself refuses, and says so', async ({ world, as }) => {
   await frank.page.goto(`/v2/datasets/${world.datasets.labPrimary.resource_id}`);
 
   // The refusal region, not merely the absence of the detail region. Spike 5 found that a
-  // malformed URL renders the identical "Failed to load dataset", so absence alone would
+  // malformed URL rendered the identical "Failed to load dataset", so absence alone would
   // pass for a spec that simply had the id shape wrong.
-  await expect(frank.page.getByTestId('error-state')).toBeVisible();
+  const state = frank.page.getByTestId('error-state');
+  await expect(state).toBeVisible();
   await expect(frank.page.getByTestId('dataset-detail')).toHaveCount(0);
+
+  // It has to read as a refusal rather than as a broken page, which is also what now
+  // separates this from the malformed-URL case: that one is not a 403 and still falls back
+  // to "Failed to load dataset".
+  await expect(state).toContainText(/do not have access/i);
+
+  // And it must not leak the axios error, which named the status and, by answering at all,
+  // confirmed the dataset exists to someone who may not see it.
+  await expect(state).not.toContainText(/Request failed with status code/i);
+  await expect(state).not.toContainText(/403/);
 });
 
 test('H1 — a stranger\'s dataset list omits what they cannot reach', async ({ world, as }) => {

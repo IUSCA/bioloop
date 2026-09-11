@@ -42,7 +42,8 @@
             <div v-if="error" class="py-12 px-6">
               <ErrorState
                 title="Failed to load datasets"
-                :message="error?.message"
+                :error="error"
+                subject="these datasets"
                 @retry="fetchDatasets"
               />
             </div>

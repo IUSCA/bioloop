@@ -55,10 +55,11 @@
       </div>
 
       <!-- Error -->
-      <div v-else-if="error?.message" class="py-12 px-6">
+      <div v-else-if="error" class="py-12 px-6">
         <ErrorState
           :title="'Failed to load groups'"
-          :message="error?.message"
+          :error="error"
+          subject="these groups"
           @retry="fetchGroups"
         />
       </div>

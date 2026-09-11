@@ -215,8 +215,17 @@ which is the same radius `VaCard` paints.
 a token map, `role="group"`, `aria-pressed`, and a `focus-visible` ring.
 
 **`EmptyState`** and **`ErrorState`** own the centered block a region shows when it has
-nothing to display or when a fetch failed. `EmptyState` takes an `icon`, a `title`, a
-`message` prop or slot, and either the clear-filters affordance for a filtered region or
+nothing to display or when a fetch failed.
+
+`ErrorState` takes the raw `error` and a `subject` noun phrase — "this group", "these
+collections". On a 401, 403, or 404 it writes its own heading and message, because a refusal
+must not read as an outage and must not confirm that the resource exists. On anything else it
+falls back to the caller's `title` and `message`, then to the API's own `message` from the
+response body. It never shows `error.message`, which is axios's "Request failed with status
+code 403". So pass the error object; a page that flattens it into a string loses the status
+and gets the fallback wording.
+
+`EmptyState` takes an `icon`, a `title`, a `message` prop or slot, and either the clear-filters affordance for a filtered region or
 an `actions` slot for a create-the-first-one region. Pass `:show-clear-filters="false"`
 when nothing is filtered, so the button is not offered with nothing to clear.
 

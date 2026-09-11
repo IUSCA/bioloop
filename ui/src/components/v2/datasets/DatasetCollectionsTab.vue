@@ -45,7 +45,8 @@
             <div v-if="error" class="py-12 px-6">
               <ErrorState
                 title="Failed to load collections"
-                :message="error?.message"
+                :error="error"
+                subject="these collections"
                 @retry="fetchCollections"
               />
             </div>

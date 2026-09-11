@@ -76,7 +76,8 @@
           <div v-if="error" key="error" class="py-12 px-6">
             <ErrorState
               title="Failed to load access permissions"
-              :message="error?.message"
+              :error="error"
+              subject="these access permissions"
               @retry="fetchGrants"
             />
           </div>

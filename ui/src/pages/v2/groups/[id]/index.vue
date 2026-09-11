@@ -11,7 +11,8 @@
     <div v-else-if="error" class="py-12 px-6">
       <ErrorState
         :title="'Failed to load group'"
-        :message="error?.message"
+        :error="error"
+        subject="this group"
         @retry="fetchGroupData"
       />
     </div>
