@@ -12,8 +12,14 @@
         </VaButton>
       </div>
 
+      <!--
+        A citation ends in a URL with no spaces in it, so it needs `break-all` rather than
+        `break-words`: the latter keeps an unbroken token whole and lets it run out of the
+        card. The type is a step down from body text because the block is reference matter
+        that is copied rather than read.
+      -->
       <p
-        class="font-mono text-[13px] leading-relaxed rounded-md px-3.5 py-3 bg-gray-50 dark:bg-gray-800 border border-solid border-gray-200 dark:border-gray-700"
+        class="font-mono text-[11.5px] leading-relaxed break-all rounded-md px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-solid border-gray-200 dark:border-gray-700"
       >
         {{ props.citation }}
       </p>

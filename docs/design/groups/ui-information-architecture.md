@@ -25,8 +25,11 @@ Visual mockups of these screens are vendored at
 views, and creation flows. `dashboard-screens-mvp.html` covers the landing page and
 names what it deliberately does not draw; `dashboard-screens.html` is the earlier, wider draw of it. `dataset-creation-screens.html` covers the import and upload
 dialogs, their in-flight states, and the refusals each one can show. `profile-screens.html` covers the
-group and collection profile pages, including what a signed-out reader sees. They are snapshots of
-intent, not of shipped UI.
+group and collection profile pages, including what a signed-out reader sees.
+`overview-redesign.html` redraws the Overview tab of a group and of a collection as a summary
+band over a wide panel and a thin one, drops the count tiles the tab bar already carries, and
+draws the same page to an admin, a member, and a signed-out reader so that what sits above the
+fold follows from what each one came to do. They are snapshots of intent, not of shipped UI.
 
 ## Top-level pages
 
@@ -85,6 +88,59 @@ Seven areas make up the portal.
 │
 └── /audit-log  (global event stream, platform admin only)
 ```
+
+## The Overview tab
+
+The Overview tab of a group and of a collection has one shape, in three parts, top to
+bottom.
+
+**The summary band** is one card directly under the tabs. The description sits on the left
+and the facts sit in a single row beside it. Putting the facts beside the description rather
+than under it keeps the band from running as a thin strip across a wide window. The
+description is clamped to three lines, with a toggle that appears only when the clamp is
+hiding something, so that a long description cannot make the band taller than the page under
+it.
+
+A fact whose value the caller may change is the control that changes it. Member uploads is
+the first of these: for a caller who may edit the group it is a button that opens the
+metadata modal, and for everyone else it is text. A setting whose only edit path is a modal
+two clicks away gets read as a fact about the world rather than as a choice somebody made.
+
+Which facts appear follows from what the API returned, not from a permission check written
+in the UI. A caller who is not a member of a group never receives `allow_user_contributions`,
+so the member-uploads cell disappears on its own. The band therefore carries four cells for
+an admin and fewer for a reader with a narrower attribute filter, without the component
+knowing anything about roles. A fact the page header already states is not repeated: a
+collection names its owning group in the header, so the band does not.
+
+**The wide panel** says what the resource is. It holds, in order: the needs-attention row,
+the profile, the publications, and then the admins card beside the ancestry tree. Cards in
+this panel may be full width or paired side by side. The admins-and-ancestry row keeps two
+columns even on a root group, which has no ancestry card, so that the admins card is the
+same width everywhere rather than stretching across the panel on one page and not another.
+
+**The thin panel** says what the caller can do and how to refer to the resource: quick
+actions, links, citation. Quick actions is first because a grouped panel that falls below
+the fold is a panel nobody uses. The citation is last for a caller who has actions, and
+first for one who has none, because it is what that reader is least likely to need next.
+
+Three rules keep the layout honest.
+
+- **Nothing on Overview repeats a tab.** The tab bar already prints every count, so the tab
+  bar is where counts live. A preview list of subgroups is not offered, because Subgroups is
+  a tab.
+- **The needs-attention row renders only when a count is non-zero**, and only when the count
+  means work waiting on this caller. A collection's request count is pending-review for a
+  reviewer and the caller's own requests otherwise, so the row is gated on the review
+  permission rather than on the number.
+- **Both panels are always present**, including on a resource with no profile written. The
+  wide panel then holds the profile prompt and the admins card rather than the page
+  collapsing into a different layout for an empty state.
+
+Archiving is the last item in the quick actions panel, in red below a rule, rather than a
+bordered card of its own. It is a once-in-a-resource's-life action, and the panel is where a
+caller already looks for things they can do; the rule and the tone say it is not one of the
+everyday ones, and the confirmation modal is the real guard.
 
 ## Role-sensitive rendering
 

@@ -214,4 +214,8 @@ function handleSubgroupCreated() {
 }
 
 onMounted(() => fetchSubgroups());
+
+defineExpose({
+  openCreateModal: handleCreateSubgroup,
+});
 </script>

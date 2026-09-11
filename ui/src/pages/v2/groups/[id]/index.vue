@@ -132,6 +132,7 @@
           :can-archive="can('archive') && !group.is_archived"
           :can-unarchive="can('unarchive') && group.is_archived"
           :can-add-member="can('add_member') && !group.is_archived"
+          :can-create-subgroup="can('create_child') && !group.is_archived"
           :can-create-collection="can('add_collection') && !group.is_archived"
           @toggle-archive="openArchiveModal"
           @update="fetchGroupData"
@@ -151,6 +152,7 @@
         />
 
         <GroupSubgroupsTab
+          ref="subgroupsTabRef"
           v-else-if="activeTab === 'subgroups'"
           :group="group"
           :can-create="can('create_child') && !group.is_archived"
@@ -251,6 +253,7 @@ const counts = ref({
 
 const membersTabRef = ref(null);
 const invitationsTabRef = ref(null);
+const subgroupsTabRef = ref(null);
 const addMemberModal = ref(null);
 
 function openAddMemberModal() {
@@ -452,6 +455,8 @@ function handleActionRequested(payload) {
   nextTick(() => {
     if (payload.modalName === "create-collection" && collectionsTabRef.value) {
       collectionsTabRef.value?.navigateToCreateCollection?.();
+    } else if (payload.modalName === "create-subgroup") {
+      subgroupsTabRef.value?.openCreateModal?.();
     }
   });
 }

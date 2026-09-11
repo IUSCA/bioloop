@@ -1,265 +1,55 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-4 items-start">
-    <!-- Left column: the profile, which is what this tab is for -->
-    <div class="flex flex-col gap-4">
-      <ProfileAbout :about-md="props.collection.about_md" />
-      <ProfileCitation
-        :citation="props.collection.citation"
-        kind="collection"
-      />
-      <ProfilePublications
-        :publications="props.collection.metadata?.publications"
-      />
+  <div class="flex flex-col gap-4">
+    <!-- Summary band. The owning group is named in the page header, not repeated here. -->
+    <OverviewBand :description="props.collection.description">
+      <OverviewFact label="Status">
+        <Badge :color="props.collection.is_archived ? 'neutral' : 'success'">
+          {{ props.collection.is_archived ? "Archived" : "Active" }}
+        </Badge>
+      </OverviewFact>
 
-      <VaCard v-if="profileIsEmpty">
-        <VaCardContent
-          class="py-8 text-center flex flex-col items-center gap-2"
-        >
-          <Icon
-            icon="mdi-card-account-details-outline"
-            class="text-3xl"
-            style="color: var(--va-secondary)"
-          />
-          <p class="text-sm font-medium">This collection has no profile yet</p>
-          <p class="text-sm max-w-md" style="color: var(--va-secondary)">
-            A profile says what the collection holds and how to cite it. It
-            stays private until you publish it.
-          </p>
-          <VaButton
-            v-if="props.canEdit"
-            size="small"
-            class="mt-2"
-            @click="openProfileModal"
-          >
-            Write a profile
-          </VaButton>
-        </VaCardContent>
-      </VaCard>
-
-      <VaCard
-        v-if="props.canArchive || props.canUnarchive"
-        class="border border-solid border-red-200 dark:border-red-800"
-      >
-        <VaCardContent>
-          <h2 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
-            Danger Zone
-          </h2>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium">
-                {{
-                  props.collection.is_archived
-                    ? "Unarchive this collection"
-                    : "Archive this collection"
-                }}
-              </p>
-              <p class="text-xs mt-0.5" style="color: var(--va-secondary)">
-                {{
-                  props.collection.is_archived
-                    ? "Unfreezes datasets and restores edit access."
-                    : "Freezes datasets and blocks new changes."
-                }}
-              </p>
-            </div>
-            <VaButton color="danger" size="small" @click="openArchiveModal">
-              {{ props.collection.is_archived ? "Unarchive" : "Archive" }}
-            </VaButton>
-          </div>
-        </VaCardContent>
-      </VaCard>
-    </div>
-
-    <!-- Right column -->
-    <div class="flex flex-col gap-4">
-      <!-- Stat cards (2×2 grid) -->
-      <div class="grid grid-cols-2 gap-3">
-        <MetricCard
-          label="Datasets"
-          :icon="getIcon('dataset', { outlined: true })"
-          color="success"
-          :value="props.counts.datasets"
-          :loading="props.counts.datasets === null"
+      <OverviewFact v-if="props.collection.profile_visibility" label="Profile">
+        <ProfileVisibilityBadge
+          :visibility="props.collection.profile_visibility"
         />
+      </OverviewFact>
 
-        <MetricCard
-          :label="props.canReview ? 'Pending Requests' : 'My Requests'"
-          :icon="getIcon('request', { outlined: true })"
-          color="info"
-          :value="props.counts.requests"
-          :loading="props.counts.requests === null"
+      <OverviewFact v-if="props.collection.created_at" label="Created">
+        {{ datetime.date(props.collection.created_at) }}
+      </OverviewFact>
+
+      <OverviewFact v-if="props.collection.updated_at" label="Updated">
+        {{ datetime.fromNow(props.collection.updated_at) }}
+      </OverviewFact>
+    </OverviewBand>
+
+    <div
+      class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start"
+    >
+      <!-- Wide panel: what this collection is -->
+      <div class="flex flex-col gap-4">
+        <OverviewAttention :items="attentionItems" />
+
+        <ProfileAbout :about-md="props.collection.about_md" />
+        <ProfilePrompt
+          v-if="profileIsEmpty"
+          kind="collection"
+          :can-write="props.canEdit"
+          @write="openProfileModal"
         />
-
-        <MetricCard
-          :label="props.canIssueGrants ? 'Access' : 'My Access'"
-          :icon="getIcon('grant', { outlined: true })"
-          color="warning"
-          :value="props.counts.grants"
-          :loading="props.counts.grants === null"
+        <ProfilePublications
+          :publications="props.collection.metadata?.publications"
         />
       </div>
 
-      <ProfileLinks :links="props.collection.metadata?.links" />
-
-      <!--
-        The definition list that used to be the whole tab. It keeps its content and gives
-        up the main column to the profile.
-      -->
-      <VaCard>
-        <VaCardContent>
-          <h2 class="text-sm font-semibold mb-1">DETAILS</h2>
-
-          <dl
-            class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
-          >
-            <div class="py-2.5 flex items-start gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Description
-              </dt>
-              <dd class="text-sm">
-                {{ props.collection.description || "—" }}
-              </dd>
-            </div>
-
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Owner group
-              </dt>
-              <dd class="text-sm font-semibold">
-                <RouterLink
-                  v-if="props.collection.owner_group"
-                  :to="`/v2/groups/${props.collection.owner_group.id}`"
-                >
-                  <div class="flex items-center gap-2">
-                    {{ props.collection.owner_group?.name || "—" }}
-                  </div>
-                </RouterLink>
-              </dd>
-            </div>
-
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Status
-              </dt>
-              <dd>
-                <Badge
-                  :color="props.collection.is_archived ? 'neutral' : 'success'"
-                >
-                  {{ props.collection.is_archived ? "Archived" : "Active" }}
-                </Badge>
-              </dd>
-            </div>
-
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Profile
-              </dt>
-              <dd>
-                <ProfileVisibilityBadge
-                  :visibility="props.collection.profile_visibility"
-                />
-              </dd>
-            </div>
-
-            <div
-              v-if="props.collection.created_at"
-              class="py-2.5 flex items-center gap-4"
-            >
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Created
-              </dt>
-              <dd class="text-sm">
-                {{ datetime.displayDateTime(props.collection.created_at) }}
-              </dd>
-            </div>
-
-            <div
-              v-if="props.collection.created_at"
-              class="py-2.5 flex items-center gap-4"
-            >
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Updated
-              </dt>
-              <dd class="text-sm">
-                {{ datetime.fromNow(props.collection.updated_at) }}
-              </dd>
-            </div>
-          </dl>
-        </VaCardContent>
-      </VaCard>
-
-      <!-- Quick Actions -->
-      <div>
-        <h2 class="text-sm font-semibold mb-3 va-text-secondary">
-          QUICK ACTIONS
-        </h2>
-        <div class="grid grid-cols-2 gap-3">
-          <ActionButton
-            v-if="props.canEdit"
-            icon="mdi-card-account-details-outline"
-            icon-color="text-blue-500"
-            title="Edit Profile"
-            description="About, links, citation, visibility"
-            hover-theme="blue"
-            @click="openProfileModal"
-          />
-
-          <ActionButton
-            v-if="props.canIssueGrants"
-            icon="mdi-key"
-            icon-color="text-amber-500"
-            title="Grant Access"
-            description="Grant access to users or groups"
-            hover-theme="blue"
-            @click="emitAction('grant-access', 'grants', 'issue-grants')"
-          />
-
-          <ActionButton
-            v-if="props.canEdit"
-            icon="mdi-pencil"
-            icon-color="text-blue-500"
-            title="Edit Details"
-            description="Update metadata"
-            hover-theme="blue"
-            @click="openEditModal"
-          />
-
-          <ActionButton
-            v-if="props.canAddDataset"
-            :icon="getIcon('dataset', { outlined: true })"
-            icon-color="text-emerald-500"
-            title="Add Dataset"
-            description="Add a dataset to this collection"
-            hover-theme="blue"
-            @click="emitAction('add-dataset', 'datasets', 'add-dataset')"
-          />
-
-          <ActionButton
-            icon="mdi-account-question"
-            icon-color="text-indigo-500"
-            title="Request Access"
-            description="Submit a request to access this collection"
-            hover-theme="blue"
-            @click="emitAction('request-access', 'requests', 'request-access')"
-          />
-        </div>
+      <!-- Thin panel: what the caller can do, and how to refer to this collection -->
+      <div class="flex flex-col gap-4">
+        <OverviewActions :actions="quickActions" />
+        <ProfileLinks :links="props.collection.metadata?.links" />
+        <ProfileCitation
+          :citation="props.collection.citation"
+          kind="collection"
+        />
       </div>
     </div>
   </div>
@@ -299,11 +89,17 @@ import ProfileVisibilityBadge from "@/components/v2/profiles/ProfileVisibilityBa
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
+/**
+ * The Overview tab of a collection: a summary band over a wide panel and a thin one, the
+ * same shape the group Overview uses.
+ *
+ * @see docs/design/groups/ui-information-architecture.md — The Overview tab
+ */
 const props = defineProps({
   collection: { type: Object, required: true },
   counts: {
     type: Object,
-    default: () => ({ datasets: null }),
+    default: () => ({ datasets: null, grants: null, requests: null }),
   },
   canEdit: { type: Boolean, default: false },
   canReview: { type: Boolean, default: false },
@@ -327,13 +123,77 @@ const profileIsEmpty = computed(
     !props.collection.metadata?.publications?.length,
 );
 
-function emitAction(actionName, tabName, modalName) {
-  emit("action-requested", {
-    actionName,
-    tabName,
-    modalName,
-  });
-}
+/**
+ * What is waiting on this caller.
+ *
+ * `counts.requests` carries two different meanings: pending-review for a caller who may
+ * review, and the caller's own requests otherwise. Only the first is work waiting on them,
+ * so the row is gated on `canReview` rather than on the count alone.
+ */
+const attentionItems = computed(() => {
+  const items = [];
+  if (props.canReview && props.counts.requests > 0) {
+    items.push({
+      icon: getIcon("request", { outlined: true }),
+      count: props.counts.requests,
+      label:
+        props.counts.requests === 1
+          ? "access request to review"
+          : "access requests to review",
+      onClick: () => emitAction("review-requests", "requests", null),
+    });
+  }
+  return items;
+});
+
+const quickActions = computed(() => {
+  const actions = [];
+  if (props.canAddDataset) {
+    actions.push({
+      icon: getIcon("dataset", { outlined: true }),
+      label: "Add a dataset",
+      onClick: () => emitAction("add-dataset", "datasets", "add-dataset"),
+    });
+  }
+  if (props.canIssueGrants) {
+    actions.push({
+      icon: "mdi-key",
+      label: "Grant access",
+      onClick: () => emitAction("grant-access", "grants", "issue-grants"),
+    });
+  } else {
+    actions.push({
+      icon: "mdi-account-question",
+      label: "Request access",
+      onClick: () => emitAction("request-access", "requests", "request-access"),
+    });
+  }
+  if (props.canEdit) {
+    actions.push({
+      icon: "mdi-card-account-details-outline",
+      label: "Edit profile",
+      onClick: openProfileModal,
+    });
+    actions.push({
+      icon: "mdi-pencil",
+      label: "Edit name and description",
+      onClick: openEditModal,
+    });
+  }
+  if (props.canArchive || props.canUnarchive) {
+    actions.push({
+      icon: props.collection.is_archived
+        ? "mdi-archive-arrow-up-outline"
+        : "mdi-archive-outline",
+      label: props.collection.is_archived
+        ? "Unarchive this collection"
+        : "Archive this collection",
+      danger: true,
+      onClick: () => emit("toggle-archive"),
+    });
+  }
+  return actions;
+});
 
 const editModalRef = ref(null);
 function openEditModal() {
@@ -345,7 +205,7 @@ function openProfileModal() {
   profileModalRef.value?.show();
 }
 
-function openArchiveModal() {
-  emit("toggle-archive");
+function emitAction(actionName, tabName, modalName) {
+  emit("action-requested", { actionName, tabName, modalName });
 }
 </script>

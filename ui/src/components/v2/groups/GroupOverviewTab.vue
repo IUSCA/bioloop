@@ -1,377 +1,158 @@
 <template>
-  <div class="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-3 items-start">
-    <!-- Left column: the profile, which is what this tab is for -->
-    <div class="flex flex-col gap-3">
-      <ProfileAbout :about-md="props.group.about_md" />
-      <ProfileCitation :citation="props.group.citation" kind="group" />
-      <ProfilePublications :publications="props.group.metadata?.publications" />
+  <div class="flex flex-col gap-4">
+    <!-- Summary band -->
+    <OverviewBand :description="props.group.description">
+      <OverviewFact label="Status">
+        <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
+          {{ props.group.is_archived ? "Archived" : "Active" }}
+        </Badge>
+      </OverviewFact>
 
-      <!--
-        A group with no profile written yet gets one prompt rather than three empty cards.
-      -->
-      <VaCard v-if="profileIsEmpty">
-        <VaCardContent
-          class="py-8 text-center flex flex-col items-center gap-2"
+      <OverviewFact v-if="props.group.profile_visibility" label="Profile">
+        <ProfileVisibilityBadge :visibility="props.group.profile_visibility" />
+      </OverviewFact>
+
+      <OverviewFact v-if="showsMemberUploads" label="Member uploads">
+        <!--
+          The value is the control for a caller who may change it, because a setting whose
+          only edit path is a modal two clicks away gets read as a fact about the world.
+        -->
+        <button
+          v-if="props.canEdit"
+          type="button"
+          class="flex items-center gap-1.5 p-0 text-[13px] font-medium text-left bg-transparent border-0 cursor-pointer text-inherit hover:underline"
+          title="Change whether members may add datasets to this group"
+          @click="openEditModal"
         >
-          <Icon
-            icon="mdi-card-account-details-outline"
-            class="text-3xl"
+          <MemberUploadsValue :allowed="props.group.allow_user_contributions" />
+          <i-mdi-pencil-outline
+            class="text-xs opacity-50"
             style="color: var(--va-secondary)"
           />
-          <p class="text-sm font-medium">This group has no profile yet</p>
-          <p class="text-sm max-w-md" style="color: var(--va-secondary)">
-            A profile says what the group does, how to cite it, and where to
-            find it. It stays private until you publish it.
-          </p>
-          <VaButton
-            v-if="props.canEdit"
-            size="small"
-            class="mt-2"
-            @click="openProfileModal"
-          >
-            Write a profile
-          </VaButton>
-        </VaCardContent>
-      </VaCard>
+        </button>
+        <MemberUploadsValue
+          v-else
+          :allowed="props.group.allow_user_contributions"
+        />
+      </OverviewFact>
 
-      <!-- Ancestry panel -->
-      <VaCard>
-        <VaCardContent>
-          <h2 class="text-sm font-semibold mb-3">ANCESTRY</h2>
-          <div v-if="sortedAncestors.length > 0">
-            <div class="flex flex-col text-sm font-mono">
+      <OverviewFact v-if="props.group.created_at" label="Created">
+        {{ datetime.date(props.group.created_at) }}
+      </OverviewFact>
+    </OverviewBand>
+
+    <div
+      class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 items-start"
+    >
+      <!-- Wide panel: what this group is -->
+      <div class="flex flex-col gap-4">
+        <OverviewAttention :items="attentionItems" />
+
+        <ProfileAbout :about-md="props.group.about_md" />
+        <ProfilePrompt
+          v-if="profileIsEmpty"
+          kind="group"
+          :can-write="props.canEdit"
+          @write="openProfileModal"
+        />
+        <ProfilePublications
+          :publications="props.group.metadata?.publications"
+        />
+
+        <!--
+          Two columns whether or not there is an ancestry card, so a root group's admins
+          card keeps the width it has everywhere else instead of stretching to the panel.
+        -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <VaCard>
+            <VaCardContent>
+              <h2 class="v2-card-title mb-3">Admins</h2>
               <div
-                v-for="item in treeItems"
-                :key="item.isCurrent ? 'current' : item.id"
-                class="flex items-center leading-6"
-                :style="{
-                  paddingLeft:
-                    item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
-                }"
+                v-if="props.group.admins?.length"
+                class="flex flex-col gap-3"
               >
+                <div
+                  v-for="admin in props.group.admins"
+                  :key="admin.id"
+                  class="flex items-center gap-2.5 min-w-0"
+                >
+                  <UserAvatar :username="admin.username" :name="admin.name" />
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-medium truncate">
+                      {{ admin.name ?? admin.username }}
+                    </p>
+                    <p
+                      v-if="admin.email"
+                      class="text-xs font-mono truncate"
+                      style="color: var(--va-secondary)"
+                    >
+                      {{ admin.email }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="text-sm" style="color: var(--va-secondary)">
+                No admins found.
+              </p>
+            </VaCardContent>
+          </VaCard>
+
+          <!--
+            A tree rather than a breadcrumb, because group names are long enough that a
+            horizontal path of three of them does not fit on one row. A root group gets no
+            card at all; there is no lineage to report.
+          -->
+          <VaCard v-if="sortedAncestors.length">
+            <VaCardContent>
+              <div class="flex items-center gap-1.5 mb-3">
+                <h2 class="v2-card-title">Ancestry</h2>
                 <span
-                  v-if="item.level > 0"
-                  class="mr-1 select-none"
-                  style="color: var(--va-secondary)"
-                  >└──</span
+                  class="inline-flex cursor-help"
+                  title="Admins of ancestor groups have oversight visibility over this group and its resources. They cannot modify governance settings."
                 >
-                <RouterLink
-                  v-if="!item.isCurrent"
-                  :to="`/v2/groups/${item.id}`"
-                  class="hover:underline"
-                  style="color: var(--va-primary)"
-                >
-                  {{ item.name }}
-                </RouterLink>
-                <span
-                  v-else
-                  class="font-semibold text-gray-800 dark:text-gray-200"
-                >
-                  {{ item.name }}
+                  <i-mdi-information-outline
+                    class="text-sm"
+                    style="color: var(--va-secondary)"
+                  />
                 </span>
               </div>
-            </div>
-
-            <div
-              class="mt-5 flex items-center gap-2 rounded-md px-3 py-2.5 text-xs bg-blue-50 dark:bg-blue-900/20 border border-solid border-blue-200 dark:border-blue-800"
-            >
-              <i-mdi-information-outline
-                class="text-sm shrink-0 mt-0.5 text-blue-600 dark:text-blue-400"
-              />
-              <span class="text-blue-800 dark:text-blue-300">
-                Admins of ancestor groups have oversight visibility over this
-                group and its resources. They cannot modify governance settings.
-              </span>
-            </div>
-          </div>
-          <div v-else>
-            <div class="flex flex-col items-center py-4 gap-1 text-center">
-              <i-mdi-sitemap-outline
-                class="text-3xl text-gray-300 dark:text-gray-600"
-              />
-              <p class="text-sm" style="color: var(--va-secondary)">
-                This is a top-level (root) group.
-              </p>
-            </div>
-          </div>
-        </VaCardContent>
-      </VaCard>
-
-      <!-- Danger Zone -->
-      <VaCard
-        v-if="props.canArchive || props.canUnarchive"
-        class="border border-solid border-red-200 dark:border-red-800"
-      >
-        <VaCardContent>
-          <h2 class="text-sm font-semibold text-red-600 dark:text-red-400 mb-3">
-            Danger Zone
-          </h2>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium">
-                {{
-                  props.group.is_archived
-                    ? "Unarchive this group"
-                    : "Archive this group"
-                }}
-              </p>
-              <p class="text-xs mt-0.5" style="color: var(--va-secondary)">
-                {{
-                  props.group.is_archived
-                    ? "Unfreezes membership and allows new governance actions."
-                    : "Freezes membership and blocks new governance actions."
-                }}
-              </p>
-            </div>
-            <VaButton
-              color="danger"
-              size="small"
-              @click="emit('toggle-archive')"
-            >
-              {{ props.group.is_archived ? "Unarchive" : "Archive" }}
-            </VaButton>
-          </div>
-        </VaCardContent>
-      </VaCard>
-    </div>
-
-    <!-- Right column -->
-    <div class="flex flex-col gap-3">
-      <!-- Stat cards (2×2 grid) -->
-      <div class="grid grid-cols-2 gap-3">
-        <MetricCard
-          label="Members"
-          icon="mdi-account-multiple-outline"
-          color="primary"
-          :value="props.counts.members"
-          :loading="props.counts.members === null"
-        />
-        <MetricCard
-          label="Subgroups"
-          icon="mdi-sitemap-outline"
-          color="info"
-          :value="props.counts.subgroups"
-          :loading="props.counts.subgroups === null"
-        />
-        <MetricCard
-          label="Datasets"
-          :icon="getIcon('dataset', { outlined: true })"
-          color="success"
-          :value="props.counts.datasets"
-          :loading="props.counts.datasets === null"
-        />
-        <MetricCard
-          label="Collections"
-          :icon="getIcon('collection', { outlined: true })"
-          color="success"
-          :value="props.counts.collections"
-          :loading="props.counts.collections === null"
-        />
+              <div class="flex flex-col text-sm">
+                <div
+                  v-for="item in treeItems"
+                  :key="item.isCurrent ? 'current' : item.id"
+                  class="flex items-start leading-6"
+                  :style="{
+                    paddingLeft:
+                      item.level === 0 ? '0' : `${(item.level - 1) * 1.25}rem`,
+                  }"
+                >
+                  <span
+                    v-if="item.level > 0"
+                    class="mr-1 select-none font-mono shrink-0"
+                    style="color: var(--va-secondary)"
+                    >└──</span
+                  >
+                  <RouterLink
+                    v-if="!item.isCurrent"
+                    :to="`/v2/groups/${item.id}`"
+                    class="hover:underline"
+                    style="color: var(--va-primary)"
+                  >
+                    {{ item.name }}
+                  </RouterLink>
+                  <span v-else class="font-semibold">{{ item.name }}</span>
+                </div>
+              </div>
+            </VaCardContent>
+          </VaCard>
+        </div>
       </div>
 
-      <ProfileLinks :links="props.group.metadata?.links" />
-
-      <!--
-        The definition list that used to be the whole tab. It is still the fastest way to
-        read the group's settings, so it keeps its content and gives up the main column.
-      -->
-      <VaCard>
-        <VaCardContent>
-          <h2 class="text-sm font-semibold mb-1">DETAILS</h2>
-
-          <dl
-            class="flex flex-col divide-y divide-gray-100 dark:divide-gray-800"
-          >
-            <div class="py-2.5 flex items-start gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Description
-              </dt>
-              <dd class="text-sm">
-                {{ props.group.description || "—" }}
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Status
-              </dt>
-              <dd>
-                <Badge :color="props.group.is_archived ? 'neutral' : 'success'">
-                  {{ props.group.is_archived ? "Archived" : "Active" }}
-                </Badge>
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Profile
-              </dt>
-              <dd>
-                <ProfileVisibilityBadge
-                  :visibility="props.group.profile_visibility"
-                />
-              </dd>
-            </div>
-            <div class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Member Contrib.
-              </dt>
-              <dd class="text-sm">
-                <div class="flex items-center gap-1">
-                  <i-mdi-check-circle-outline
-                    v-if="props.group.allow_user_contributions"
-                    class="text-green-600"
-                  />
-                  <i-mdi-close-circle-outline
-                    v-else
-                    class="text-red-600 dark:text-red-400"
-                  />
-
-                  <span>
-                    {{
-                      props.group.allow_user_contributions
-                        ? "Enabled"
-                        : "Disabled"
-                    }}
-                  </span>
-                </div>
-              </dd>
-            </div>
-            <div v-if="nearestAncestor" class="py-2.5 flex items-center gap-4">
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Parent Group
-              </dt>
-              <dd class="text-sm">
-                <RouterLink
-                  :to="`/v2/groups/${nearestAncestor.id}`"
-                  class="hover:underline"
-                  style="color: var(--va-primary)"
-                >
-                  {{ nearestAncestor.name }}
-                </RouterLink>
-              </dd>
-            </div>
-            <div
-              v-if="props.group.created_at"
-              class="py-2.5 flex items-center gap-4"
-            >
-              <dt
-                class="w-28 shrink-0 text-xs font-medium"
-                style="color: var(--va-secondary)"
-              >
-                Created
-              </dt>
-              <dd class="text-sm">
-                {{ datetime.displayDateTime(props.group.created_at) }}
-              </dd>
-            </div>
-          </dl>
-        </VaCardContent>
-      </VaCard>
-
-      <!-- Admins panel -->
-      <VaCard>
-        <VaCardContent>
-          <h2 class="text-sm font-semibold mb-3">ADMINS</h2>
-          <div v-if="props.group.admins?.length" class="flex flex-col gap-3">
-            <div
-              v-for="admin in props.group.admins"
-              :key="admin.id"
-              class="flex items-center gap-2.5 min-w-0"
-            >
-              <UserAvatar :username="admin.username" :name="admin.name" />
-              <div class="min-w-0 flex-1">
-                <p
-                  class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate"
-                >
-                  {{ admin.name ?? admin.username }}
-                </p>
-                <p
-                  class="text-xs font-mono truncate"
-                  style="color: var(--va-secondary)"
-                >
-                  {{ admin.email }}
-                </p>
-              </div>
-              <RoleBadge role-name="ADMIN" class="shrink-0" />
-            </div>
-          </div>
-          <div v-else class="flex flex-col items-center py-4 gap-1 text-center">
-            <i-mdi-shield-account-outline
-              class="text-3xl text-gray-300 dark:text-gray-600"
-            />
-            <p class="text-sm" style="color: var(--va-secondary)">
-              No admins found.
-            </p>
-          </div>
-        </VaCardContent>
-      </VaCard>
-
-      <!-- Quick Actions -->
-      <div>
-        <h2 class="text-sm font-semibold mb-3 va-text-secondary">
-          QUICK ACTIONS
-        </h2>
-        <div class="grid grid-cols-2 gap-3">
-          <ActionButton
-            v-if="props.canEdit"
-            icon="mdi-card-account-details-outline"
-            icon-color="text-blue-500"
-            title="Edit Profile"
-            description="About, links, citation, visibility"
-            hover-theme="blue"
-            @click="openProfileModal"
-          />
-
-          <ActionButton
-            v-if="props.canAddMember"
-            icon="mdi-account-plus"
-            icon-color="text-blue-500"
-            title="Add Member"
-            description="Add a group member"
-            hover-theme="blue"
-            @click="emitAction('add-member', 'members', 'add-member')"
-          />
-
-          <ActionButton
-            v-if="props.canEdit"
-            icon="mdi-pencil"
-            icon-color="text-blue-500"
-            title="Edit Details"
-            description="Update metadata"
-            hover-theme="blue"
-            @click="openEditModal"
-          />
-
-          <ActionButton
-            v-if="props.canCreateCollection"
-            icon="mdi-folder-plus"
-            icon-color="text-emerald-500"
-            title="Create Collection"
-            description="Add a collection to this group"
-            hover-theme="blue"
-            @click="
-              emitAction(
-                'create-collection',
-                'collections',
-                'create-collection',
-              )
-            "
-          />
-        </div>
+      <!-- Thin panel: what the caller can do, and how to refer to this group -->
+      <div class="flex flex-col gap-4">
+        <OverviewActions :actions="quickActions" />
+        <ProfileLinks :links="props.group.metadata?.links" />
+        <ProfileCitation :citation="props.group.citation" kind="group" />
       </div>
     </div>
   </div>
@@ -412,19 +193,36 @@ import ProfileVisibilityBadge from "@/components/v2/profiles/ProfileVisibilityBa
 import * as datetime from "@/services/datetime";
 import { getIcon } from "@/services/v2/icons";
 
+/**
+ * The Overview tab of a group: a summary band over a wide panel and a thin one.
+ *
+ * @see docs/design/groups/ui-information-architecture.md — The Overview tab
+ */
 const props = defineProps({
   group: { type: Object, required: true },
   ancestors: { type: Array, default: () => [] },
-  /** counts.members / counts.subgroups / counts.resources — null while loading */
+  /** counts.members / counts.subgroups / counts.invitations — null while loading */
   counts: { type: Object, default: () => ({}) },
   canEdit: { type: Boolean, default: false },
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
   canAddMember: { type: Boolean, default: false },
+  canCreateSubgroup: { type: Boolean, default: false },
   canCreateCollection: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["toggle-archive", "update", "action-requested"]);
+
+/**
+ * Whether the band shows the member-uploads cell.
+ *
+ * The API's attribute filter decides: a caller who is not a member of the group never
+ * receives `allow_user_contributions`, so the cell disappears without the UI running a
+ * permission check of its own.
+ */
+const showsMemberUploads = computed(
+  () => props.group.allow_user_contributions != null,
+);
 
 // sorted from root (highest depth) → nearest parent
 const sortedAncestors = computed(() =>
@@ -446,10 +244,6 @@ const treeItems = computed(() => [
   },
 ]);
 
-const nearestAncestor = computed(
-  () => sortedAncestors.value[sortedAncestors.value.length - 1] ?? null,
-);
-
 /**
  * Whether anything an admin wrote is present. The citation is excluded, because the API
  * always resolves one — a generated citation is not evidence that somebody wrote a profile.
@@ -462,6 +256,79 @@ const profileIsEmpty = computed(
     !props.group.metadata?.publications?.length,
 );
 
+/**
+ * What is waiting on this caller. `counts.invitations` is already the pending-only total,
+ * and the page fetches it only for a caller who may view invitations, so a non-zero value
+ * here always means work this caller can do.
+ */
+const attentionItems = computed(() => {
+  const items = [];
+  if (props.counts.invitations > 0) {
+    items.push({
+      icon: "mdi-email-outline",
+      count: props.counts.invitations,
+      label:
+        props.counts.invitations === 1
+          ? "invitation awaiting reply"
+          : "invitations awaiting reply",
+      onClick: () => emitAction("view-invitations", "invitations", null),
+    });
+  }
+  return items;
+});
+
+const quickActions = computed(() => {
+  const actions = [];
+  if (props.canAddMember) {
+    actions.push({
+      icon: "mdi-account-plus",
+      label: "Add a member",
+      onClick: () => emitAction("add-member", "members", "add-member"),
+    });
+  }
+  if (props.canCreateSubgroup) {
+    actions.push({
+      icon: "mdi-sitemap-outline",
+      label: "Create a subgroup",
+      onClick: () =>
+        emitAction("create-subgroup", "subgroups", "create-subgroup"),
+    });
+  }
+  if (props.canCreateCollection) {
+    actions.push({
+      icon: getIcon("collection", { outlined: true }),
+      label: "Create a collection",
+      onClick: () =>
+        emitAction("create-collection", "collections", "create-collection"),
+    });
+  }
+  if (props.canEdit) {
+    actions.push({
+      icon: "mdi-card-account-details-outline",
+      label: "Edit profile",
+      onClick: openProfileModal,
+    });
+    actions.push({
+      icon: "mdi-pencil",
+      label: "Edit name and description",
+      onClick: openEditModal,
+    });
+  }
+  if (props.canArchive || props.canUnarchive) {
+    actions.push({
+      icon: props.group.is_archived
+        ? "mdi-archive-arrow-up-outline"
+        : "mdi-archive-outline",
+      label: props.group.is_archived
+        ? "Unarchive this group"
+        : "Archive this group",
+      danger: true,
+      onClick: () => emit("toggle-archive"),
+    });
+  }
+  return actions;
+});
+
 const editModalRef = ref(null);
 function openEditModal() {
   editModalRef.value?.show();
@@ -473,10 +340,6 @@ function openProfileModal() {
 }
 
 function emitAction(actionName, tabName, modalName) {
-  emit("action-requested", {
-    actionName,
-    tabName,
-    modalName,
-  });
+  emit("action-requested", { actionName, tabName, modalName });
 }
 </script>

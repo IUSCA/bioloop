@@ -111,6 +111,7 @@
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
           :can-issue-grants="can('manage_grants')"
+          :can-add-dataset="can('add_dataset')"
           @update="fetchCollectionData"
           @toggle-archive="openArchiveModal"
           @action-requested="handleActionRequested"

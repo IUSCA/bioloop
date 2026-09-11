@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Group and Collection Overview, redesigned</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111827; -webkit-font-smoothing: antialiased; }
+  a { color: #154EC1; text-decoration: none; }
+  a:hover { color: #0f3a94; text-decoration: underline; }
+  p { margin: 0; }
+  h1, h2, h3 { margin: 0; }
+  ul { margin: 0; }
+
+  .page { background: #F4F6F8; min-height: 100%; padding: 12px 24px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5A6070; }
+  .muted { color: #5A6070; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .stack { display: flex; flex-direction: column; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 6px; padding: 2px 7px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .b-green { color: #15803d; background: rgba(34, 197, 94, 0.12); }
+  .b-gray  { color: #4b5563; background: rgba(107, 114, 128, 0.14); }
+  .b-amber { color: #b45309; background: rgba(245, 158, 11, 0.13); }
+  .b-slate { color: #475569; background: rgba(100, 116, 139, 0.13); }
+  .b-blue  { color: #1d4ed8; background: rgba(59, 130, 246, 0.13); }
+
+  .pagehead { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 4px; }
+  .idicon { width: 40px; height: 40px; border-radius: 8px; border: 1px solid transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .tabs { display: flex; gap: 26px; border-bottom: 1px solid rgba(59, 130, 246, 0.5); }
+  .tab { display: flex; align-items: center; gap: 6px; padding: 10px 2px; font-size: 14px; font-weight: 500; color: #5A6070; }
+  .tab-active { color: #154EC1; font-weight: 600; box-shadow: inset 0 -2px 0 0 #154EC1; }
+  .count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 6px; border-radius: 9999px; font-size: 12px; font-weight: 600; background: #dbeafe; color: #1d4ed8; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; font-size: 13px; font-weight: 600; padding: 7px 12px; border: 1px solid transparent; cursor: pointer; font-family: inherit; }
+  .btn-primary { background: #154EC1; color: #ffffff; }
+  .btn-ghost { background: #ffffff; color: #374151; border-color: #d1d5db; }
+
+  /* ── Summary band: description beside the facts, one card ──────── */
+  .band { display: grid; align-items: stretch; padding: 0; overflow: hidden; }
+  .band-lead { padding: 15px 18px; font-size: 14px; line-height: 1.6; color: #374151; display: flex; flex-direction: column; justify-content: center; }
+  .band-rule { background: #eef0f3; }
+  .facts { display: grid; }
+  .fact { padding: 13px 16px; border-left: 1px solid #f2f4f7; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .fact:first-child { border-left: none; }
+  .fact-k { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #8b91a0; margin-bottom: 4px; }
+  .fact-v { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #1f2937; min-width: 0; }
+  .fact-v-trunc { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── The two panels ─────────────────────────────────────────────── */
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+  .halves { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+
+  /* ── Needs attention: only rendered when a count is non-zero ────── */
+  .att-row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 14px; }
+  .att { display: flex; align-items: center; gap: 10px; background: #fffbf3; border: 1px solid #f3e2c3; border-radius: 8px; padding: 12px 14px; text-decoration: none; }
+  .att:hover { border-color: #e6c88c; background: #fff8ea; text-decoration: none; }
+  .att-ico { width: 30px; height: 30px; border-radius: 7px; background: #fbeed6; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .att-n { font-size: 16px; font-weight: 700; color: #8a5a12; }
+  .att-l { font-size: 13px; color: #7a5a22; }
+
+  /* ── Quick actions, grouped, first card in the thin panel ───────── */
+  .qa { display: flex; flex-direction: column; }
+  .qa-item { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #1f2937; cursor: pointer; }
+  .qa-item:hover { background: #f3f6fc; color: #154EC1; }
+  .qa-ico { width: 26px; height: 26px; border-radius: 6px; background: #eef2fb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .qa-rule { height: 1px; background: #eceff3; margin: 6px 2px; }
+  .qa-danger { color: #b91c1c; }
+  .qa-danger:hover { background: #fef2f2; color: #b91c1c; }
+  .qa-ico-danger { background: #fdecec; }
+  .band-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .band-more { align-self: flex-start; margin-top: 4px; font-size: 12px; font-weight: 600; color: #154EC1; cursor: pointer; }
+
+  /* ── Ancestry tree ──────────────────────────────────────────────── */
+  .tree { display: flex; flex-direction: column; font-size: 13px; line-height: 1.5; }
+  .tree-row { display: flex; align-items: flex-start; gap: 4px; padding: 2px 0; }
+  .tree-elbow { color: #b6bcc8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55; flex-shrink: 0; }
+  .tree-cur { font-weight: 600; color: #111827; }
+
+  .prose h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
+  .prose p, .prose li { font-size: 14px; line-height: 1.65; color: #374151; }
+  .admin-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .avatar { width: 30px; height: 30px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #ffffff; flex-shrink: 0; }
+  .cite { background: #f8fafc; border: 1px solid #e8ecf1; border-radius: 6px; padding: 9px 10px; font-size: 11.5px; line-height: 1.55; color: #4b5563; word-break: break-word; }
+  .empty-inline { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px dashed #d4d9e0; border-radius: 8px; background: #fbfcfe; }
+
+  .metric { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .metric-ico { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .metric-n { font-size: 20px; font-weight: 650; line-height: 1.1; }
+  .metric-l { font-size: 12px; color: #5A6070; margin-top: 1px; }
+  .metric-zero .metric-n { color: #9ca3af; }
+
+  /* ── Who sees what: three stacks side by side ───────────────────── */
+  .sf-wrap { max-width: 1440px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .sf-col { background: #ffffff; border: 1px solid #d8dee6; border-radius: 10px; padding: 14px; }
+  .sf-head { margin-bottom: 12px; }
+  .sf-stack { display: flex; flex-direction: column; gap: 7px; }
+  .sf-row { display: grid; grid-template-columns: minmax(0, 1fr) 106px; gap: 7px; }
+  .sf-wide, .sf-thin { border-radius: 6px; padding: 9px 10px; font-size: 12px; line-height: 1.4; display: flex; align-items: center; }
+  .sf-wide { background: #f1f4f9; color: #374151; }
+  .sf-thin { background: #eef2fb; color: #2b4a8a; font-weight: 500; }
+  .sf-none { background: transparent; }
+  .sf-id { background: #e6eaf2; font-weight: 600; color: #111827; }
+  .sf-band { background: #e9edf4; font-weight: 500; grid-column: 1 / -1; }
+  .sf-att { background: #fdf3e2; color: #8a5a12; font-weight: 600; }
+  .sf-sub { background: #f5f7fa; color: #6b7280; }
+  .sf-danger { background: #fbf5f5; color: #9b6a6a; }
+  .sf-fold { position: relative; border-top: 2px dashed #f0a5a5; margin: 7px 0 9px; }
+  .sf-fold span { position: absolute; right: 0; top: -8px; background: #ffffff; padding: 0 6px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #d06666; }
+
+  /* ── Showcase chrome ───────────────────────────────────────────── */
+  html, body { background: #eef1f5; }
+  .showcase-nav { position: sticky; top: 0; z-index: 100; background: #ffffff; border-bottom: 1px solid #d8dee6; padding: 0 20px; display: flex; align-items: center; overflow-x: auto; }
+  .showcase-nav .brand { font-size: 13px; font-weight: 600; color: #111827; padding-right: 20px; margin-right: 6px; border-right: 1px solid #e5e7eb; white-space: nowrap; }
+  .showcase-nav button { appearance: none; border: none; background: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; color: #5A6070; padding: 13px 14px; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .showcase-nav button:hover { color: #111827; }
+  .showcase-nav button[aria-current="true"] { color: #154EC1; font-weight: 600; border-bottom-color: #154EC1; }
+  .screen { display: none; padding: 20px; }
+  .screen[data-active="true"] { display: block; }
+  .screen-caption { max-width: 1440px; margin: 0 auto 14px; font-size: 13px; line-height: 1.6; color: #4b5563; }
+  .screen-frame { max-width: 1440px; margin: 0 auto; overflow-x: auto; border: 1px solid #d8dee6; border-radius: 10px; background: #F4F6F8; }
+  .fold { position: relative; border-top: 2px dashed #f0a5a5; margin: 0 24px; }
+  .fold span { position: absolute; right: 0; top: -9px; background: #eef1f5; padding: 0 8px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #d06666; }
+  .notes { max-width: 900px; margin: 0 auto; background: #ffffff; border: 1px solid #d8dee6; border-radius: 10px; padding: 28px 32px; }
+  .notes h2 { font-size: 17px; margin: 26px 0 10px; }
+  .notes h2:first-child { margin-top: 0; }
+  .notes p, .notes li { font-size: 14px; line-height: 1.7; color: #374151; }
+  .notes li { margin-bottom: 6px; }
+  .notes table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 13.5px; }
+  .notes th, .notes td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid #eceff3; }
+  .notes th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; }
+  .notes code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="showcase-nav">
+  <span class="brand">Overview redesign</span>
+  <button type="button" data-target="s-before" aria-current="true">Today</button>
+  <button type="button" data-target="s-admin" aria-current="false">Admin</button>
+  <button type="button" data-target="s-root" aria-current="false">Admin, no profile</button>
+  <button type="button" data-target="s-member" aria-current="false">Member</button>
+  <button type="button" data-target="s-public" aria-current="false">Signed out</button>
+  <button type="button" data-target="s-collection" aria-current="false">Collection</button>
+  <button type="button" data-target="s-who" aria-current="false">Who sees what</button>
+  <button type="button" data-target="s-notes" aria-current="false">What changed and why</button>
+</nav>
+
+<div class="screen" id="s-before" data-active="true">
+  <p class="screen-caption"><strong>Today.</strong> Everything a reader wants first &mdash; the description, the status, who runs the group &mdash; sits in a 350&nbsp;px rail, and the lower half of it falls below the fold. Two cards carry one line of content each, and the four count tiles repeat numbers the tab bar is already showing.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 4px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="#154EC1"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg>
+        <h1 style="font-size: 20px; font-weight: 600;">Center for Genomics and Bioinformatics</h1>
+      </div>
+      <span class="badge b-amber" style="font-size: 12px; padding: 4px 9px;">Admin</span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Members <span class="count">11</span></div>
+      <div class="tab">Subgroups <span class="count">9</span></div>
+      <div class="tab">Datasets <span class="count">0</span></div>
+      <div class="tab">Collections <span class="count">2</span></div>
+      <div class="tab">Invitations <span class="count">1</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0,1fr) 350px; gap: 14px; align-items: start;">
+      <div class="stack" style="gap: 14px;">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><h2 class="card-title">How to cite this group</h2><span style="font-size:12px;color:#154EC1;">Copy</span></div>
+          <div class="cite mono">Center for Genomics and Bioinformatics (2026). Center for Genomics and Bioinformatics. Bioloop. https://localhost/public/groups/ad8d83b2-c82e-4b72-b03e-1393d272a904</div>
+          <p class="muted" style="font-size:12px; margin-top:8px;">Acknowledge this group in publications that use data produced here.</p>
+        </div>
+        <div class="card" style="text-align:center; padding: 34px 16px;">
+          <p style="font-size:14px; font-weight:500;">This group has no profile yet</p>
+          <p class="muted" style="font-size:13px; margin-top:6px;">A profile says what the group does, how to cite it, and where to find it.</p>
+          <button class="btn btn-primary" style="margin-top:12px;">Write a profile</button>
+        </div>
+        <div class="card" style="padding: 22px 16px 26px;">
+          <h2 class="card-title" style="margin-bottom: 14px;">Ancestry</h2>
+          <p class="muted" style="font-size:13px; text-align:center;">This is a top-level (root) group.</p>
+        </div>
+        <div class="card" style="border-color:#fecaca;">
+          <h2 class="card-title" style="color:#dc2626; margin-bottom:10px;">Danger Zone</h2>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><p style="font-size:14px;font-weight:500;">Archive this group</p><p class="muted" style="font-size:12px;">Freezes membership and blocks new governance actions.</p></div>
+            <button class="btn" style="background:#dc2626;color:#fff;">Archive</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack" style="gap: 14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="metric"><div class="metric-ico" style="background:#e8eefc;"><svg width="17" height="17" viewBox="0 0 24 24" fill="#154EC1"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg></div><div><div class="metric-n">11</div><div class="metric-l">Members</div></div></div>
+          <div class="metric"><div class="metric-ico" style="background:#e6f1fb;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0369a1" stroke-width="2"><path d="M12 3v5M5 21v-4h14v4M12 8v9"/></svg></div><div><div class="metric-n">9</div><div class="metric-l">Subgroups</div></div></div>
+          <div class="metric metric-zero"><div class="metric-ico" style="background:#e9f6ee;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/></svg></div><div><div class="metric-n">0</div><div class="metric-l">Datasets</div></div></div>
+          <div class="metric"><div class="metric-ico" style="background:#e9f6ee;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2"><path d="M3 7h6l2 2h10v10H3Z"/></svg></div><div><div class="metric-n">2</div><div class="metric-l">Collections</div></div></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom:4px;">Details</h2>
+          <div style="border-top:1px solid #f3f4f6; padding:10px 0; display:flex; gap:16px;"><span style="width:110px;font-size:12px;" class="muted">Description</span><span style="font-size:13.5px;">A center dedicated to advancing genomics research through cutting-edge technologies and collaborative efforts.</span></div>
+          <div style="border-top:1px solid #f3f4f6; padding:10px 0; display:flex; gap:16px;"><span style="width:110px;font-size:12px;" class="muted">Status</span><span class="badge b-green">Active</span></div>
+          <div style="border-top:1px solid #f3f4f6; padding:10px 0; display:flex; gap:16px;"><span style="width:110px;font-size:12px;" class="muted">Profile</span><span class="badge b-slate">Private</span></div>
+          <div style="border-top:1px solid #f3f4f6; padding:10px 0; display:flex; gap:16px;"><span style="width:110px;font-size:12px;" class="muted">Member Contrib.</span><span style="font-size:13.5px;">Disabled</span></div>
+          <div style="border-top:1px solid #f3f4f6; padding:10px 0; display:flex; gap:16px;"><span style="width:110px;font-size:12px;" class="muted">Created</span><span style="font-size:13.5px;">Sep 8 2026, 06:41 PM</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="fold"><span>Fold &mdash; 1080&nbsp;px tall window</span></div>
+  <div class="page" style="width: 1440px; padding-top: 14px;">
+    <div style="display: grid; grid-template-columns: minmax(0,1fr) 350px; gap: 14px;">
+      <div></div>
+      <div class="stack" style="gap:14px;">
+        <div class="card">
+          <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+          <div class="admin-row"><div class="avatar" style="background:#b91c1c;">N</div><div style="flex:1;"><p style="font-size:13.5px;font-weight:500;">name-009</p><p class="muted mono" style="font-size:11.5px;">user-009@iu.edu</p></div><span class="badge b-amber">Admin</span></div>
+        </div>
+        <div>
+          <h2 class="card-title" style="margin-bottom:10px;">Quick actions</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="card" style="padding:13px;"><p style="font-size:13.5px;font-weight:600;">Edit Profile</p><p class="muted" style="font-size:11.5px;margin-top:3px;">About, links, citation, visibility</p></div>
+            <div class="card" style="padding:13px;"><p style="font-size:13.5px;font-weight:600;">Add Member</p><p class="muted" style="font-size:11.5px;margin-top:3px;">Add a group member</p></div>
+            <div class="card" style="padding:13px;"><p style="font-size:13.5px;font-weight:600;">Edit Details</p><p class="muted" style="font-size:11.5px;margin-top:3px;">Update metadata</p></div>
+            <div class="card" style="padding:13px;"><p style="font-size:13.5px;font-weight:600;">Create Collection</p><p class="muted" style="font-size:11.5px;margin-top:3px;">Add a collection to this group</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div class="screen" id="s-admin">
+  <p class="screen-caption"><strong>Admin.</strong> Quick actions are a panel again, at the top of the thin column, which is the one place that is both grouped and above the fold. Above it, the two things an admin is on this page to decide: an invitation waiting for a reply and three access requests to review. Archiving is the last item in the panel, in red below a rule.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+    <div class="pagehead">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div class="idicon" style="background:#e0e7ff;border-color:#c7d2fe;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ><path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"/><path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"/><path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"/></svg></div>
+        <div class="stack" style="gap:2px;min-width:0;">
+          <h1 style="font-size:20px;font-weight:600;">Center for Genomics and Bioinformatics</h1>
+          <p class="muted" style="font-size:13.5px;">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+        </div>
+      </div>
+      <span class="badge b-amber" style="font-size:12px;padding:4px 9px;flex-shrink:0;">Admin</span>
+    </div>
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Members <span class="count">11</span></div>
+      <div class="tab">Subgroups <span class="count">9</span></div>
+      <div class="tab">Datasets <span class="count">412</span></div>
+      <div class="tab">Collections <span class="count">2</span></div>
+      <div class="tab">Invitations <span class="count">1</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+    <div class="card band" style="grid-template-columns: minmax(0,1fr) 1px 700px;">
+      <div class="band-lead"><div style="width:100%;"><p class="band-clamp">A center dedicated to advancing genomics research through cutting-edge technologies and collaborative efforts.</p></div></div>
+      <div class="band-rule"></div>
+      <div class="facts" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="fact"><span class="fact-k">Status</span><span class="fact-v"><span class="badge b-green">Active</span></span></div>
+        <div class="fact"><span class="fact-k">Profile</span><span class="fact-v"><span class="badge b-blue">Public</span></span></div>
+        <div class="fact"><span class="fact-k">Member uploads</span><span class="fact-v"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ><path d="m4 12.5 5 5L20 6.5"/></svg>Allowed</span></div>
+        <div class="fact"><span class="fact-k">Created</span><span class="fact-v">8 Sep 2026</span></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="stack" style="gap:14px;">
+      <div class="att-row">
+        <a class="att" href="#">
+          <span class="att-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg></span>
+          <span><span class="att-n">1</span> <span class="att-l">invitation awaiting reply</span></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9a06a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;flex-shrink:0;"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+        <a class="att" href="#">
+          <span class="att-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 2.9 3v1.2M12.5 17v.4"/></svg></span>
+          <span><span class="att-n">3</span> <span class="att-l">access requests to review</span></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9a06a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;flex-shrink:0;"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">About</h2>
+        <div class="prose stack" style="gap:13px;">
+            <p>The Center runs shared sequencing instruments and the analysis pipelines built around them. Every run is registered in Bioloop so that raw reads, assemblies, and variant calls stay linked to the sample manifest they came from.</p>
+            <div class="stack" style="gap:5px;">
+              <h3>Working with us</h3>
+              <p>Submit a project request through the intake form. Turnaround for a standard WGS run is ten working days from sample receipt. Runs are scheduled on the Monday after the manifest is approved.</p>
+            </div>
+            <div class="stack" style="gap:5px;">
+              <h3>Data retention</h3>
+              <p>Raw reads stay on spinning disk for 90 days, then move to tape. Derived products are retained indefinitely.</p>
+            </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Publications</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">Long-read assembly of the maize B73 pan-genome</a>
+            <p class="muted" style="font-size:12.5px;">Nature Genetics, 2025 &middot; doi:10.1038/s41588-025-01234-5</p>
+          </div>
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">A reproducible variant-calling pipeline for core facilities</a>
+            <p class="muted" style="font-size:12.5px;">Bioinformatics, 2024 &middot; doi:10.1093/bioinformatics/btae112</p>
+          </div>
+        </div>
+      </div>
+      <div class="halves">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="admin-row">
+            <div class="avatar" style="background:#b91c1c;">N</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">name-009</p><p class="muted mono" style="font-size:11.5px;">user-009@iu.edu</p></div>
+          </div>
+          <div class="admin-row">
+            <div class="avatar" style="background:#0f766e;">RP</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">Rina Patel</p><p class="muted mono" style="font-size:11.5px;">rpatel@iu.edu</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+          <h2 class="card-title">Ancestry</h2>
+          <span title="Admins of ancestor groups have oversight visibility over this group and its resources. They cannot modify governance settings." style="display:inline-flex;cursor:help;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a2a9b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg></span>
+        </div>
+        <div class="tree">
+          <div class="tree-row"><a href="#">Indiana University</a></div>
+          <div class="tree-row" style="padding-left:2px;"><span class="tree-elbow">&#9492;&#9472;</span><a href="#">College of Arts and Sciences</a></div>
+          <div class="tree-row" style="padding-left:18px;"><span class="tree-elbow">&#9492;&#9472;</span><span class="tree-cur">Center for Genomics and Bioinformatics</span></div>
+        </div>
+      </div>
+      </div>
+      </div>
+      <div class="stack" style="gap:14px;">
+      <div class="card" style="padding:10px 10px 12px;">
+        <h2 class="card-title" style="margin:5px 6px 7px;">Quick actions</h2>
+        <div class="qa">
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>Add a member</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 3v4M6 21v-3h12v3M12 7v11"/></svg></span>Create a subgroup</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 7h6l2 2h10v10H3Z"/></svg></span>Create a collection</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M14 10h4M14 14h4"/></svg></span>Edit profile</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Edit name and description</div>
+        <div class="qa-rule"></div>
+        <div class="qa-item qa-danger"><span class="qa-ico qa-ico-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>Archive this group</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:10px;">Links</h2>
+        <div class="stack" style="gap:8px;">
+          <a href="#" style="font-size:13.5px;">cgb.indiana.edu</a>
+          <a href="#" style="font-size:13.5px;">ROR: 01k2z3m45</a>
+          <a href="#" style="font-size:13.5px;">Project intake form</a>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <h2 class="card-title">Cite this group</h2>
+          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;">Copy</button>
+        </div>
+        <div class="cite mono">Center for Genomics and Bioinformatics (2026). Bioloop. https://bioloop.iu.edu/public/groups/ad8d83b2</div>
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-root">
+  <p class="screen-caption"><strong>The screenshot's own group:</strong> top level, no profile, no datasets. The two panels stay. A root group has no ancestry card, so the admins card takes the wide column on its own. The page still ends above the fold.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+    <div class="pagehead">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div class="idicon" style="background:#e8eefc;border-color:#cddcf7;"><svg width="24" height="24" viewBox="0 0 24 24" fill="#154EC1" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg></div>
+        <div class="stack" style="gap:2px;min-width:0;">
+          <h1 style="font-size:20px;font-weight:600;">Center for Genomics and Bioinformatics</h1>
+          
+        </div>
+      </div>
+      <span class="badge b-amber" style="font-size:12px;padding:4px 9px;flex-shrink:0;">Admin</span>
+    </div>
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Members <span class="count">11</span></div>
+      <div class="tab">Subgroups <span class="count">9</span></div>
+      <div class="tab">Datasets <span class="count">0</span></div>
+      <div class="tab">Collections <span class="count">2</span></div>
+      <div class="tab">Invitations <span class="count">1</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+    <div class="card band" style="grid-template-columns: minmax(0,1fr) 1px 700px;">
+      <div class="band-lead"><div style="width:100%;"><p class="band-clamp">A center dedicated to advancing genomics research through cutting-edge technologies and collaborative efforts.</p></div></div>
+      <div class="band-rule"></div>
+      <div class="facts" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="fact"><span class="fact-k">Status</span><span class="fact-v"><span class="badge b-green">Active</span></span></div>
+        <div class="fact"><span class="fact-k">Profile</span><span class="fact-v"><span class="badge b-slate">Private</span></span></div>
+        <div class="fact"><span class="fact-k">Member uploads</span><span class="fact-v"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ><path d="M6 6l12 12M18 6 6 18"/></svg><span class="muted" style="font-weight:400;">Not allowed</span></span></div>
+        <div class="fact"><span class="fact-k">Created</span><span class="fact-v">8 Sep 2026</span></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="stack" style="gap:14px;">
+      <div class="att-row">
+        <a class="att" href="#">
+          <span class="att-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/></svg></span>
+          <span><span class="att-n">1</span> <span class="att-l">invitation awaiting reply</span></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9a06a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;flex-shrink:0;"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+      </div>
+      <div class="empty-inline">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9aa1b1" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M14 10h4M14 14h4"/></svg>
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:13.5px;font-weight:600;">This group has no profile yet</p>
+          <p class="muted" style="font-size:12.5px;margin-top:2px;">A profile says what the group does and where to find it. It stays private until you publish it.</p>
+        </div>
+        <button class="btn btn-primary" style="flex-shrink:0;">Write a profile</button>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="admin-row">
+            <div class="avatar" style="background:#b91c1c;">N</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">name-009</p><p class="muted mono" style="font-size:11.5px;">user-009@iu.edu</p></div>
+          </div>
+        </div>
+      </div>
+      </div>
+      <div class="stack" style="gap:14px;">
+      <div class="card" style="padding:10px 10px 12px;">
+        <h2 class="card-title" style="margin:5px 6px 7px;">Quick actions</h2>
+        <div class="qa">
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>Add a member</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 3v4M6 21v-3h12v3M12 7v11"/></svg></span>Create a subgroup</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 7h6l2 2h10v10H3Z"/></svg></span>Create a collection</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M14 10h4M14 14h4"/></svg></span>Write a profile</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Edit name and description</div>
+        <div class="qa-rule"></div>
+        <div class="qa-item qa-danger"><span class="qa-ico qa-ico-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>Archive this group</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:10px;">Links</h2>
+        <p class="muted" style="font-size:13px;">No links yet. A website, ROR identifier, or intake form goes here.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <h2 class="card-title">Cite this group</h2>
+          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;">Copy</button>
+        </div>
+        <div class="cite mono">Center for Genomics and Bioinformatics (2026). Bioloop. https://localhost/public/groups/ad8d83b2-c82e-4b72-b03e-1393d272a904</div>
+      </div>
+      </div>
+    </div>
+  </div>
+  <div class="fold"><span>Fold &mdash; 1080&nbsp;px tall window</span></div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-member">
+  <p class="screen-caption"><strong>Member.</strong> Two actions, because two is what a member has: upload a dataset, which appears only because this group allows member uploads, and ask for access to something they cannot open. <em>Member uploads</em> stays in the facts row for the same reason &mdash; it is the fact that decides what they can do here. Governance settings they cannot change are not shown.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+    <div class="pagehead">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div class="idicon" style="background:#e0e7ff;border-color:#c7d2fe;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ><path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"/><path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"/><path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"/></svg></div>
+        <div class="stack" style="gap:2px;min-width:0;">
+          <h1 style="font-size:20px;font-weight:600;">Center for Genomics and Bioinformatics</h1>
+          <p class="muted" style="font-size:13.5px;">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+        </div>
+      </div>
+      <span class="badge b-slate" style="font-size:12px;padding:4px 9px;flex-shrink:0;">Member</span>
+    </div>
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Members <span class="count">11</span></div>
+      <div class="tab">Subgroups <span class="count">9</span></div>
+      <div class="tab">Datasets <span class="count">412</span></div>
+      <div class="tab">Collections <span class="count">2</span></div>
+    </div>
+    <div class="card band" style="grid-template-columns: minmax(0,1fr) 1px 540px;">
+      <div class="band-lead"><div style="width:100%;"><p class="band-clamp">A center dedicated to advancing genomics research through cutting-edge technologies and collaborative efforts.</p></div></div>
+      <div class="band-rule"></div>
+      <div class="facts" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="fact"><span class="fact-k">Status</span><span class="fact-v"><span class="badge b-green">Active</span></span></div>
+        <div class="fact"><span class="fact-k">Member uploads</span><span class="fact-v"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ><path d="m4 12.5 5 5L20 6.5"/></svg>Allowed</span></div>
+        <div class="fact"><span class="fact-k">Created</span><span class="fact-v">8 Sep 2026</span></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="stack" style="gap:14px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">About</h2>
+        <div class="prose stack" style="gap:13px;">
+            <p>The Center runs shared sequencing instruments and the analysis pipelines built around them. Every run is registered in Bioloop so that raw reads, assemblies, and variant calls stay linked to the sample manifest they came from.</p>
+            <div class="stack" style="gap:5px;">
+              <h3>Working with us</h3>
+              <p>Submit a project request through the intake form. Turnaround for a standard WGS run is ten working days from sample receipt. Runs are scheduled on the Monday after the manifest is approved.</p>
+            </div>
+            <div class="stack" style="gap:5px;">
+              <h3>Data retention</h3>
+              <p>Raw reads stay on spinning disk for 90 days, then move to tape. Derived products are retained indefinitely.</p>
+            </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Publications</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">Long-read assembly of the maize B73 pan-genome</a>
+            <p class="muted" style="font-size:12.5px;">Nature Genetics, 2025 &middot; doi:10.1038/s41588-025-01234-5</p>
+          </div>
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">A reproducible variant-calling pipeline for core facilities</a>
+            <p class="muted" style="font-size:12.5px;">Bioinformatics, 2024 &middot; doi:10.1093/bioinformatics/btae112</p>
+          </div>
+        </div>
+      </div>
+      <div class="halves">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="admin-row">
+            <div class="avatar" style="background:#b91c1c;">N</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">name-009</p><p class="muted mono" style="font-size:11.5px;">user-009@iu.edu</p></div>
+          </div>
+          <div class="admin-row">
+            <div class="avatar" style="background:#0f766e;">RP</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">Rina Patel</p><p class="muted mono" style="font-size:11.5px;">rpatel@iu.edu</p></div>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px;margin-top:11px;">Ask an admin for access to a collection you cannot open.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+          <h2 class="card-title">Ancestry</h2>
+          <span title="Admins of ancestor groups have oversight visibility over this group and its resources. They cannot modify governance settings." style="display:inline-flex;cursor:help;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a2a9b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg></span>
+        </div>
+        <div class="tree">
+          <div class="tree-row"><a href="#">Indiana University</a></div>
+          <div class="tree-row" style="padding-left:2px;"><span class="tree-elbow">&#9492;&#9472;</span><a href="#">College of Arts and Sciences</a></div>
+          <div class="tree-row" style="padding-left:18px;"><span class="tree-elbow">&#9492;&#9472;</span><span class="tree-cur">Center for Genomics and Bioinformatics</span></div>
+        </div>
+      </div>
+      </div>
+      </div>
+      <div class="stack" style="gap:14px;">
+      <div class="card" style="padding:10px 10px 12px;">
+        <h2 class="card-title" style="margin:5px 6px 7px;">Quick actions</h2>
+        <div class="qa">
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg></span>New dataset</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><circle cx="8" cy="12" r="4"/><path d="M12 12h9l-2 2 2 2"/></svg></span>Request access</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:10px;">Links</h2>
+        <div class="stack" style="gap:8px;">
+          <a href="#" style="font-size:13.5px;">cgb.indiana.edu</a>
+          <a href="#" style="font-size:13.5px;">ROR: 01k2z3m45</a>
+          <a href="#" style="font-size:13.5px;">Project intake form</a>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <h2 class="card-title">Cite this group</h2>
+          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;">Copy</button>
+        </div>
+        <div class="cite mono">Center for Genomics and Bioinformatics (2026). Bioloop. https://bioloop.iu.edu/public/groups/ad8d83b2</div>
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-public">
+  <p class="screen-caption"><strong>Signed out.</strong> The citation takes the top of the thin column, because a reader who arrived from a paper is here to cite or to contact, and there are no actions to displace it. The band has no facts at all: <code>group.view_profile</code> answers an anonymous caller with the public profile attributes only, which carry neither <code>created_at</code> nor the ancestors, so there is nothing a cell could hold. Admin emails are withheld by the same policy.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+    <div class="pagehead">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div class="idicon" style="background:#e0e7ff;border-color:#c7d2fe;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3730a3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" ><path d="M8 3c0 4.5 8 4.5 8 9s-8 4.5-8 9"/><path d="M16 3c0 4.5-8 4.5-8 9s8 4.5 8 9"/><path d="M9.2 7.5h5.6M9.2 16.5h5.6M8 12h8"/></svg></div>
+        <div class="stack" style="gap:2px;min-width:0;">
+          <h1 style="font-size:20px;font-weight:600;">Center for Genomics and Bioinformatics</h1>
+          <p class="muted" style="font-size:13.5px;">Sequencing, assembly, and variant calling for the Bloomington research community.</p>
+        </div>
+      </div>
+      <span class="badge b-gray" style="font-size:12px;padding:4px 9px;flex-shrink:0;">Signed out</span>
+    </div>
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Datasets <span class="count">46</span></div>
+      <div class="tab">Collections <span class="count">2</span></div>
+    </div>
+    <div class="card" style="padding: 15px 18px;"><p style="font-size:14px;line-height:1.6;color:#374151;">A center dedicated to advancing genomics research through cutting-edge technologies and collaborative efforts.</p></div>
+    <div class="cols">
+      <div class="stack" style="gap:14px;">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">About</h2>
+        <div class="prose stack" style="gap:13px;">
+            <p>The Center runs shared sequencing instruments and the analysis pipelines built around them. Every run is registered in Bioloop so that raw reads, assemblies, and variant calls stay linked to the sample manifest they came from.</p>
+            <div class="stack" style="gap:5px;">
+              <h3>Working with us</h3>
+              <p>Submit a project request through the intake form. Turnaround for a standard WGS run is ten working days from sample receipt. Runs are scheduled on the Monday after the manifest is approved.</p>
+            </div>
+            <div class="stack" style="gap:5px;">
+              <h3>Data retention</h3>
+              <p>Raw reads stay on spinning disk for 90 days, then move to tape. Derived products are retained indefinitely.</p>
+            </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Publications</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">Long-read assembly of the maize B73 pan-genome</a>
+            <p class="muted" style="font-size:12.5px;">Nature Genetics, 2025 &middot; doi:10.1038/s41588-025-01234-5</p>
+          </div>
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">A reproducible variant-calling pipeline for core facilities</a>
+            <p class="muted" style="font-size:12.5px;">Bioinformatics, 2024 &middot; doi:10.1093/bioinformatics/btae112</p>
+          </div>
+        </div>
+      </div>
+      <div class="halves">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="admin-row">
+            <div class="avatar" style="background:#b91c1c;">N</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">name-009</p></div>
+          </div>
+          <div class="admin-row">
+            <div class="avatar" style="background:#0f766e;">RP</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">Rina Patel</p></div>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px;margin-top:11px;">Contact the Center through the intake form.</p>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+          <h2 class="card-title">Ancestry</h2>
+          <span title="Admins of ancestor groups have oversight visibility over this group and its resources. They cannot modify governance settings." style="display:inline-flex;cursor:help;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a2a9b7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.4"/></svg></span>
+        </div>
+        <div class="tree">
+          <div class="tree-row"><a href="#">Indiana University</a></div>
+          <div class="tree-row" style="padding-left:2px;"><span class="tree-elbow">&#9492;&#9472;</span><a href="#">College of Arts and Sciences</a></div>
+          <div class="tree-row" style="padding-left:18px;"><span class="tree-elbow">&#9492;&#9472;</span><span class="tree-cur">Center for Genomics and Bioinformatics</span></div>
+        </div>
+      </div>
+      </div>
+      </div>
+      <div class="stack" style="gap:14px;">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <h2 class="card-title">Cite this group</h2>
+          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;">Copy</button>
+        </div>
+        <div class="cite mono">Center for Genomics and Bioinformatics (2026). Bioloop. https://bioloop.iu.edu/public/groups/ad8d83b2</div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:10px;">Links</h2>
+        <div class="stack" style="gap:8px;">
+          <a href="#" style="font-size:13.5px;">cgb.indiana.edu</a>
+          <a href="#" style="font-size:13.5px;">ROR: 01k2z3m45</a>
+          <a href="#" style="font-size:13.5px;">Project intake form</a>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:9px;">Access</h2>
+        <p class="muted" style="font-size:13px;line-height:1.6;">46 datasets are public. The rest are released
+        on request. <a href="#">Sign in</a> to request access.</p>
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-collection">
+  <p class="screen-caption"><strong>Collection, admin.</strong> The same two panels doing the same two jobs. The wide column pairs the admins with a preview of who holds a grant, which is the question an admin of a restricted collection actually asks; the full list stays on the Access tab.</p>
+  <div class="screen-frame">
+  <div class="page" style="width: 1440px;">
+    <div class="pagehead">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div class="idicon" style="background:#dcfce7;border-color:#bbf7d0;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ><path d="M3 7h6l2 2h10v10H3Z"/></svg></div>
+        <div class="stack" style="gap:2px;min-width:0;">
+          <h1 style="font-size:20px;font-weight:600;">Maize Pan-Genome Release 3</h1>
+          <p class="muted" style="font-size:13.5px;">Assemblies and variant calls for 26 NAM founder lines.</p>
+        </div>
+      </div>
+      <span class="badge b-amber" style="font-size:12px;padding:4px 9px;flex-shrink:0;">Admin</span>
+    </div>
+    <div class="tabs">
+      <div class="tab tab-active">Overview</div>
+      <div class="tab">Datasets <span class="count">26</span></div>
+      <div class="tab">Access <span class="count">7</span></div>
+      <div class="tab">Requests <span class="count">3</span></div>
+      <div class="tab">Audit Log</div>
+    </div>
+    <div class="card band" style="grid-template-columns: minmax(0,1fr) 1px 940px;">
+      <div class="band-lead"><div style="width:100%;"><p class="band-clamp">Reference assemblies, structural variant calls, and the sample manifest for the twenty-six NAM founder lines sequenced in 2025.</p></div></div>
+      <div class="band-rule"></div>
+      <div class="facts" style="grid-template-columns: 2.1fr 1fr 1fr 1fr 1fr;">
+        <div class="fact"><span class="fact-k">Owner group</span><span class="fact-v"><span style="display:flex;align-items:center;gap:6px;min-width:0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg><a href="#" class="fact-v-trunc" title="Center for Genomics and Bioinformatics">Center for Genomics and Bioinformatics</a></span></span></div>
+        <div class="fact"><span class="fact-k">Status</span><span class="fact-v"><span class="badge b-green">Active</span></span></div>
+        <div class="fact"><span class="fact-k">Profile</span><span class="fact-v"><span class="badge b-blue">Public</span></span></div>
+        <div class="fact"><span class="fact-k">Created</span><span class="fact-v">2 Mar 2026</span></div>
+        <div class="fact"><span class="fact-k">Updated</span><span class="fact-v">4 days ago</span></div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="stack" style="gap:14px;">
+      <div class="att-row">
+        <a class="att" href="#">
+          <span class="att-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 2.9 3v1.2M12.5 17v.4"/></svg></span>
+          <span><span class="att-n">3</span> <span class="att-l">access requests to review</span></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9a06a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;flex-shrink:0;"><path d="m9 6 6 6-6 6"/></svg>
+        </a>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">About</h2>
+        <div class="prose stack" style="gap:13px;">
+            <p>Release 3 supersedes the 2023 short-read assemblies. Each founder line carries a primary assembly, a structural variant call set against B73v5, and the read sets both were derived from.</p>
+            <div class="stack" style="gap:5px;">
+              <h3>Terms of use</h3>
+              <p>Access is granted per laboratory. Redistribution outside the granted group is not permitted before the embargo lifts on 1 January 2027.</p>
+            </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Publications</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="stack" style="gap:3px;">
+            <a href="#" style="font-size:14px;font-weight:500;">Long-read assembly of the maize B73 pan-genome</a>
+            <p class="muted" style="font-size:12.5px;">Nature Genetics, 2025 &middot; doi:10.1038/s41588-025-01234-5</p>
+          </div>
+        </div>
+      </div>
+      <div class="halves">
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Admins</h2>
+        <div class="stack" style="gap:12px;">
+          <div class="admin-row">
+            <div class="avatar" style="background:#b91c1c;">N</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">name-009</p><p class="muted mono" style="font-size:11.5px;">user-009@iu.edu</p></div>
+          </div>
+          <div class="admin-row">
+            <div class="avatar" style="background:#0f766e;">RP</div>
+            <div style="flex:1;min-width:0;"><p style="font-size:13.5px;font-weight:500;">Rina Patel</p><p class="muted mono" style="font-size:11.5px;">rpatel@iu.edu</p></div>
+          </div>
+        </div>
+        <p class="muted" style="font-size:12px;margin-top:11px;">Inherited from the owner group.</p>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:12px;">Who has access</h2>
+        <div class="stack" style="gap:9px;font-size:13.5px;">
+          <div style="display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg><a href="#">Kaeppler Lab</a><span class="muted" style="font-size:12.5px;">read &middot; to 1 Jan 2027</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="#94a3b8" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-4 0-8 2-8 4.5V21h16v-2.5C20 16 16 14 12 14Z"/></svg><a href="#">Buckler Lab</a><span class="muted" style="font-size:12.5px;">read &middot; no expiry</span></div>
+          <a href="#" style="font-size:13px;margin-top:2px;">All 7 grants &rarr;</a>
+        </div>
+      </div>
+      </div>
+      </div>
+      <div class="stack" style="gap:14px;">
+      <div class="card" style="padding:10px 10px 12px;">
+        <h2 class="card-title" style="margin:5px 6px 7px;">Quick actions</h2>
+        <div class="qa">
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg></span>Add a dataset</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><circle cx="8" cy="12" r="4"/><path d="M12 12h9l-2 2 2 2"/></svg></span>Grant access</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M14 10h4M14 14h4"/></svg></span>Edit profile</div>
+        <div class="qa-item"><span class="qa-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#154EC1" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span>Edit name and description</div>
+        <div class="qa-rule"></div>
+        <div class="qa-item qa-danger"><span class="qa-ico qa-ico-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>Archive this collection</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 class="card-title" style="margin-bottom:10px;">Links</h2>
+        <div class="stack" style="gap:8px;">
+          <a href="#" style="font-size:13.5px;">Sample manifest (Zenodo)</a>
+          <a href="#" style="font-size:13.5px;">Pipeline source</a>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;">
+          <h2 class="card-title">Cite this collection</h2>
+          <button class="btn btn-ghost" style="padding:3px 8px;font-size:12px;">Copy</button>
+        </div>
+        <div class="cite mono">Center for Genomics and Bioinformatics (2026). Maize Pan-Genome Release 3. Bioloop. https://bioloop.iu.edu/public/collections/7c41ba9e</div>
+      </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+
+<div class="screen" id="s-who">
+  <p class="screen-caption">The same page to three readers, in the order each one meets it. The wide column is on
+  the left of each pair, the thin column on the right. The dashed line is a 1080&nbsp;px window. What sits above it
+  changes with the role, because what the reader came to do changes with the role.</p>
+  <div class="sf-wrap">
+  <div class="sf-col">
+    <div class="sf-head"><span class="badge b-gray">Signed out</span></div>
+    <div class="sf-stack">
+      <div class="sf-row"><span class="sf-wide sf-id">Name, tagline</span><span class="sf-thin">Signed out</span></div>
+      <div class="sf-row"><span class="sf-wide sf-band">Description only &mdash; the policy allows no facts</span><span class="sf-thin sf-none"></span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">About</span><span class="sf-thin">Cite this group</span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">Publications</span><span class="sf-thin">Links</span></div>
+      <div class="sf-fold"><span>fold</span></div>
+      <div class="sf-row"><span class="sf-wide sf-sub">Admins (no emails) + Ancestry</span><span class="sf-thin">How to get access</span></div>
+    </div>
+  </div>
+  <div class="sf-col">
+    <div class="sf-head"><span class="badge b-slate">Member</span></div>
+    <div class="sf-stack">
+      <div class="sf-row"><span class="sf-wide sf-id">Name, tagline</span><span class="sf-thin">Member</span></div>
+      <div class="sf-row"><span class="sf-wide sf-band">Description &middot; Status &middot; Member uploads &middot; Created</span><span class="sf-thin sf-none"></span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">About</span><span class="sf-thin">Quick actions &mdash; 2</span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">Publications</span><span class="sf-thin">Links</span></div>
+      <div class="sf-fold"><span>fold</span></div>
+      <div class="sf-row"><span class="sf-wide sf-sub">Admins + Ancestry</span><span class="sf-thin">Cite this group</span></div>
+    </div>
+  </div>
+  <div class="sf-col">
+    <div class="sf-head"><span class="badge b-amber">Admin</span></div>
+    <div class="sf-stack">
+      <div class="sf-row"><span class="sf-wide sf-id">Name, tagline</span><span class="sf-thin">Admin</span></div>
+      <div class="sf-row"><span class="sf-wide sf-band">Description &middot; Status &middot; Profile &middot; Member uploads &middot; Created</span><span class="sf-thin sf-none"></span></div>
+      <div class="sf-row"><span class="sf-wide sf-att">Needs attention</span><span class="sf-thin">Quick actions &mdash; 5</span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">About</span><span class="sf-thin">Links</span></div>
+      <div class="sf-fold"><span>fold</span></div>
+      <div class="sf-row"><span class="sf-wide sf-main">Publications</span><span class="sf-thin">Cite this group</span></div>
+      <div class="sf-row"><span class="sf-wide sf-sub">Admins + Ancestry</span><span class="sf-thin sf-none"></span></div>
+    </div>
+  </div>
+  </div>
+
+  <div class="notes" style="margin-top: 22px;">
+    <h2>Why the order differs</h2>
+    <p>Each reader is on the page for a different reason, so a different thing earns the space above the fold.
+    The page structure does not change &mdash; a summary band, then a wide panel and a thin one. What changes is
+    which cards are in them and in what order.</p>
+
+    <table>
+      <tr><th style="width:16%;">Reader</th><th style="width:34%;">Here to</th><th>Gets the space above the fold</th></tr>
+      <tr>
+        <td><strong>Signed out</strong></td>
+        <td>Read what this group is, cite it, or find a way to contact it. Arrived from a paper or a search.</td>
+        <td>The profile prose, and the citation at the top of the thin column. There are no actions to displace it.
+        The band carries no facts: <code>group.view_profile</code> answers an anonymous caller with the public
+        profile attributes alone, and those include neither <code>created_at</code> nor the ancestors, so there is
+        nothing a cell could hold. Admin names appear without emails, by the same policy.</td>
+      </tr>
+      <tr>
+        <td><strong>Member</strong></td>
+        <td>Find and use the group's data, and work out what they are allowed to do.</td>
+        <td>The profile, and a two-item action panel. <em>Member uploads</em> stays in the band because it is the
+        fact that decides whether <em>New dataset</em> is even offered. Settings they cannot change are dropped.
+        Admins sit below the fold with a line saying what to ask them for.</td>
+      </tr>
+      <tr>
+        <td><strong>Admin</strong></td>
+        <td>Decide the things only they can decide, then change settings.</td>
+        <td>A <strong>needs attention</strong> row &mdash; invitations awaiting a reply, access requests to review
+        &mdash; above everything else in the wide column, and the five-item action panel beside it. Both sit
+        between the band and the profile, so an admin never scrolls to find work. The profile follows, because an
+        admin already knows what the group does.</td>
+      </tr>
+    </table>
+
+    <h2>The rule behind it</h2>
+    <ul>
+      <li><strong>A fact earns its cell only if the reader can act on it or is bound by it.</strong> That is why
+      the band has four cells for an admin, three for a member, and two for a visitor, rather than one row hidden
+      behind permission checks.</li>
+      <li><strong>Attention before description.</strong> Anything waiting on the viewer outranks anything merely
+      describing the resource. Only an admin has such a thing, so only an admin's page starts with one.</li>
+      <li><strong>The attention row renders only when the count is non-zero.</strong> A row reading
+      <em>0 requests to review</em> is worse than no row: it takes the best position on the page to say nothing.</li>
+      <li><strong>Reference material sinks.</strong> The citation is first for a visitor and last for an admin,
+      for the same reason in both cases &mdash; it is what that reader is least likely to need next.</li>
+    </ul>
+  </div>
+</div>
+
+
+<div class="screen" id="s-notes">
+  <div class="notes">
+    <h2>The shape of the page</h2>
+    <p>Three parts, in this order, for every role and for both groups and collections.</p>
+    <ul>
+      <li><strong>Summary band.</strong> One card under the tabs: the description on the left, the facts that
+      matter to this reader in a single row beside it.</li>
+      <li><strong>Wide panel.</strong> What this resource is. Cards may be full width or paired side by side.</li>
+      <li><strong>Thin panel, 320&nbsp;px.</strong> What the reader can do and how to refer to the resource:
+      quick actions, links, citation.</li>
+    </ul>
+    <p>The two panels are always both present, including on a resource with no profile written. The wide panel
+    then holds the profile prompt and the admins card, so the width stays used and the page does not reflow into
+    a different layout for an empty state.</p>
+
+    <h2>Review one</h2>
+    <table>
+      <tr><th style="width:33%;">Problem</th><th style="width:33%;">Change</th><th>Why</th></tr>
+      <tr>
+        <td>The description, status, profile visibility, member uploads, and created date sat in a 350&nbsp;px
+        rail, half of them below the fold.</td>
+        <td>They move into the summary band, description on the left and facts beside it.</td>
+        <td>These are the facts a reader wants first, so they take the position a reader looks at first. Beside
+        the description rather than under it, so the band is not a thin strip across 1440&nbsp;px.</td>
+      </tr>
+      <tr>
+        <td>Archiving had its own bordered red card, permanently on screen for an action taken once, if ever.</td>
+        <td>The last item in the quick actions panel, in red below a rule. The confirmation modal is
+        unchanged.</td>
+        <td>A destructive action has to be findable and hard to hit by accident. The panel is where a caller
+        already looks for things they can do; the rule and the tone say this is not one of the everyday ones.</td>
+      </tr>
+      <tr>
+        <td><code>This is a top-level (root) group.</code> filled a card with a heading, an icon, and a sentence.</td>
+        <td>The ancestry card renders only when there are ancestors. A root group shows nothing.</td>
+        <td>A root group has no lineage to report. The absence of the card is the statement.</td>
+      </tr>
+    </table>
+
+    <h2>Review two</h2>
+    <table>
+      <tr><th style="width:33%;">Point</th><th>Change</th></tr>
+      <tr><td>Subgroups are already a tab.</td>
+          <td>The subgroup preview is deleted. Nothing on Overview repeats a tab's job.</td></tr>
+      <tr><td>Lineage is width-constrained &mdash; that is why the tree view exists.</td>
+          <td>The breadcrumb is withdrawn and the tree comes back. It now sits in the wide panel, paired with the
+          admins card, where a long group name has more room than the thin panel gave it.</td></tr>
+      <tr><td>Quick actions are still below the fold. Major concern.</td>
+          <td>The panel is the first card in the thin column, so it clears the fold at every role.</td></tr>
+      <tr><td>The count cards are mostly empty and make the page look sparse.</td>
+          <td>Deleted. The tab bar already prints <code>Members 11</code>, <code>Subgroups 9</code>,
+          <code>Datasets 412</code>, <code>Collections 2</code>, and each tab is the link the tile offered.</td></tr>
+      <tr><td>Citation in the thin panel is right, and may fall below the fold.</td>
+          <td>Kept. It is last for an admin and a member. For a signed-out reader it moves to the top of the thin
+          panel, because that reader has no actions and the citation is what they came for.</td></tr>
+    </table>
+
+    <h2>Review three</h2>
+    <table>
+      <tr><th style="width:33%;">Point</th><th>Change</th></tr>
+      <tr><td>Actions at the top of the page are wrong; keep them grouped as they are.</td>
+          <td>The header action bar and its overflow menu are withdrawn. Quick actions is a panel again, in the
+          thin column, and it is placed first so that being grouped does not cost it the fold. The page header
+          carries only the name, the tagline, and the role badge, as it does today.</td></tr>
+      <tr><td>Always two panels below the summary band, even with no profile.</td>
+          <td>The single-column empty state is withdrawn. A resource with no profile keeps both panels: the wide
+          one holds the prompt strip and the admins card, the thin one is unchanged.</td></tr>
+      <tr><td>The wide panel may hold smaller cards side by side.</td>
+          <td>Used in three places: admins beside ancestry, admins beside who-has-access on a collection, and the
+          needs-attention row, which is two small cards rather than one wide one.</td></tr>
+      <tr><td>Think about what each role sees first.</td>
+          <td>A separate page, <em>Who sees what</em>, sets the three orders side by side and gives the rule each
+          one follows.</td></tr>
+    </table>
+
+    <h2>Review four</h2>
+    <table>
+      <tr><th style="width:33%;">Point</th><th>Change</th></tr>
+      <tr><td>The admins card takes the whole row on a root group.</td>
+          <td>The admins-and-ancestry row keeps two columns whether or not there is an ancestry card, so the
+          admins card is the same width on every group page.</td></tr>
+      <tr><td>The citation text is too large and breaks out of its card.</td>
+          <td>Down to 11.5&nbsp;px, and <code>break-all</code> rather than <code>break-words</code>: a citation ends
+          in a URL with no spaces in it, and <code>break-words</code> keeps an unbroken token whole and lets it run
+          past the edge.</td></tr>
+      <tr><td>Move archiving into the quick actions.</td>
+          <td>Done; the footer line is gone. It is the last item, in red, below a rule.</td></tr>
+      <tr><td>Clicking the member-uploads value should open the modal that changes it.</td>
+          <td>The value is a button for a caller who may edit the group, with a pencil beside it, and plain text for
+          everyone else. The general rule: a fact the caller may change is the control that changes it.</td></tr>
+      <tr><td>A long description is displayed badly in the band.</td>
+          <td>Clamped to three lines with a <em>Show more</em> toggle. The toggle appears only when the clamp is
+          actually hiding something, which is measured rather than guessed from the text length.</td></tr>
+    </table>
+
+    <h2>As built</h2>
+    <p>The layout above is implemented in <code>GroupOverviewTab.vue</code> and
+    <code>CollectionOverviewTab.vue</code>, over four new shared components in
+    <code>components/v2/overview/</code>. Six things differ from what is drawn here.</p>
+    <ul>
+      <li><strong>The signed-out page is not built.</strong> The public profiles are separate
+      components, and the band drawn for them cannot exist: <code>group.view_profile</code> answers an
+      anonymous caller with the public profile attributes alone, which carry neither
+      <code>created_at</code> nor the ancestors.</li>
+      <li><strong>A collection's band has no owner-group cell.</strong> The collection page header
+      already reads <em>Owned by &hellip;</em>, and the rule against repeating is not suspended for
+      the band.</li>
+      <li><strong>The who-has-access preview is not built.</strong> The Overview tab holds a grant
+      count and no grants; drawing two rows needs a fetch the tab does not make.</li>
+      <li><strong>A group has no "request access" action</strong>, because access requests target
+      datasets and collections. A member of a group that forbids uploads therefore has an empty
+      action panel, and the panel is dropped rather than rendered empty.</li>
+      <li><strong>A collection's "request access" action now hides from a caller who can issue
+      grants.</strong> It used to render for everyone. Somebody who can grant access to a collection
+      does not need to ask for it.</li>
+      <li><strong>"Create a subgroup" is new.</strong> It needed the subgroups tab to expose its
+      modal and the page to route the action, which the other quick actions already had.</li>
+      <li><strong>The member-uploads control is the metadata modal</strong>, not a switch in place. The modal
+      already owns that setting and its explanation, and a second edit path would be a second thing to keep
+      in step.</li>
+    </ul>
+    <p>One defect surfaced on the way: the collection page declared <code>canAddDataset</code> on the
+    Overview tab and never bound it, so <em>Add a dataset</em> could not appear for anyone. It is
+    bound now.</p>
+
+    <h2>What stays the same</h2>
+    <ul>
+      <li>The page header, the tabs, and every modal.</li>
+      <li>Every field that was on the page is still reachable. The counts moved to the tab bar, which was already
+      showing them.</li>
+      <li>Group and collection Overview keep the same shape, so the two pages stay recognisably siblings.</li>
+    </ul>
+
+    <h2>Open questions for review</h2>
+    <ul>
+      <li><strong>The needs-attention row is new.</strong> It reads counts the page already fetches &mdash; pending
+      invitations on a group, pending access requests on a collection &mdash; and renders nothing when both are
+      zero. Worth confirming that those are the only two things that should ever appear there.</li>
+      <li><strong>Who-has-access on a collection</strong> previews two grants beside a link to the Access tab. It
+      is the one place a preview of a tab's content survives, on the argument that <em>who can read this</em> is
+      the question an admin of a restricted collection asks constantly. Delete it if that argument does not hold.</li>
+      <li><strong>Admin emails are withheld from signed-out readers</strong> and shown to members. Confirm that
+      matches what the public profile is meant to expose.</li>
+      <li><strong>A member with no permissions</strong> has an empty action panel. The drawn member can upload,
+      so the panel has two items; when a group forbids member uploads the panel should be dropped rather than
+      shown empty, which moves the citation up.</li>
+      <li><strong><code>Member Contrib.</code> is relabelled <em>Member uploads</em>.</strong> The abbreviation
+      existed to fit a 110&nbsp;px column that is gone. Confirm the wording matches the switch elsewhere.</li>
+      <li><strong>The facts row at narrow widths.</strong> Below roughly 1100&nbsp;px the band should stack,
+      description first and facts beneath, and the two panels become one column. The breakpoints have to be
+      checked against the real ones in the app.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const buttons = document.querySelectorAll('.showcase-nav button');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      buttons.forEach((b) => b.setAttribute('aria-current', String(b === btn)));
+      document.querySelectorAll('.screen').forEach((s) => {
+        s.dataset.active = String(s.id === target);
+      });
+      window.scrollTo({ top: 0 });
+    });
+  });
+</script>
+
+</body>
+</html>
