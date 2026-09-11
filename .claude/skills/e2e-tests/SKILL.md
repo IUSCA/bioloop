@@ -55,6 +55,20 @@ A worked example of why this is not theoretical: `GET /v2/datasets/:id/files` us
 404 to a platform admin, because the fixture dataset held no file rows. The stranger's refusal
 was real but unprovable, and the spec asserted nothing until the positive half was added.
 
+**A fourth way, which is subtler: an assertion that could not have failed.** F3 checks that a
+grant of `DOWNLOAD` writes one row rather than three. Written as "filter the grants by
+`DOWNLOAD` and expect one", it passes whatever the API does — had three rows been written, the
+filter would still return exactly one. The honest form counts everything the subject holds.
+Before trusting a green assertion, ask what data would have made it red.
+
+## The row census picks up other sessions
+
+Counting rows before and after a run is the check that teardown still works, but the database
+is shared. A run once showed `restriction` drifting 1 → 2; the row belonged to a
+`test-group-abc` somebody else had just archived, and the suite had left zero `e2e-%` groups
+behind. Before treating drift as a teardown bug, check whether the rows carry the run's own
+prefix.
+
 ## Assert the shape, not a substring of the JSON
 
 A G5 assertion written as `expect(JSON.stringify(summary)).toMatch(/revoked/)` went green
@@ -78,6 +92,8 @@ Verified against the running API. Each of these cost a debugging cycle.
 | `POST /groups/:id/members` | Takes `[{user_id}]` objects, not bare ids. |
 | `POST /groups/search` | `limit` is capped at 100. |
 | `GET /v2/users/me` | Returns `{user, uiPersona}`; the profile is nested. |
+| `GET /grants/:subject_type/:subject_id/:resource_type/:resource_id/coverage` | An **array**, each row carrying `access_type_name`, `via` (`DIRECT` or `GROUP`) and `via_group_id`. It lists what is actually held, not the narrower types the order implies — so a subject holding `DOWNLOAD` shows one row, not three. |
+| `GET /grants/resource/...` grouping | Grouped by subject: `{subject: {id, type, user, group}, grants: [...]}`. Use the subject grouping to count what one subject holds; filtering a flat list by access type cannot answer "one row or three". |
 | `GET /v2/datasets/:id` | Wants the **resource UUID**. The integer `dataset.id` is a 400, and the page renders the same "Failed to load dataset" it shows for a refusal. |
 | `POST /collections/:id/datasets` | `dataset_ids` are resource UUIDs despite the name. A cross-group dataset is refused **400**, not 403 — the caller is legitimate, the request is not. |
 
@@ -97,8 +113,27 @@ a different file.
 
 So a dataset that some outsider must be able to see cannot live in a group that a boundary
 spec asserts is invisible. The world keeps them apart: `requestLab` owns everything the
-request flows need to be discoverable, and `lab` stays a group the sibling branch cannot see.
-When adding a fixture grant, ask which group it opens up.
+request and grant flows need to be reachable, and `lab` stays a group the sibling branch
+cannot see. Bob is a member of both, so a flow that needs "an ordinary member of the owning
+group" still has somebody to assert about without putting its dataset in `lab`.
+
+**This bites twice, from opposite directions.** The first time was a fixture grant in
+`cast.js`. The second was a spec issuing a grant of its own — F8 hands the sibling lab
+download on the dataset under test — which reaches the same place with nothing in `cast.js`
+changed. Any spec that grants an outsider anything must create its dataset in `requestLab`.
+Ask not what the grant confers, but which group it opens up.
+
+## Create the resource in the test, not in the world, when the test mutates it
+
+Grants accumulate on a resource and revocations are permanent. Two grant specs sharing a
+fixture dataset make the order they ran in decide the outcome, and the failure surfaces in
+whichever spec ran second, which did nothing wrong. Phase 4 creates a dataset per test — a
+group admin may call `POST /v2/datasets` — and teardown collects them because it deletes by
+owning group rather than by name.
+
+A dataset is born holding exactly one grant: `DATASET:LIST_FILES` to its owning group, with
+`creation_type: SYSTEM_BOOTSTRAP`. That is decision 12, and it is what makes D2 possible —
+revoking it removes every member's access while leaving the group's governance untouched.
 
 ## Worlds are built one at a time
 

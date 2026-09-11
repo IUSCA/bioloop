@@ -890,6 +890,39 @@ report, not a broken test.
 
 F6 and F7, the supersession pair, are `Next` and follow when the surfaces exist.
 
+**Built.** Nine specs in `e2e/src/specs/grants/order.spec.js` covering F1, F2, F3, F4, F5, F8,
+F9, D1 and D2. Thirty-six specs pass across the suite.
+
+**F4 did not fail.** The plan expected it to, on the grounds that the access-type order plan's
+phase 3 — the UI naming the order — was unfinished. At the API level the model is coherent:
+`GET /grants/:subject_type/:subject_id/:resource_type/:resource_id/coverage` answers with what
+the subject actually holds, each row carrying `access_type_name`, `via` (`DIRECT` or `GROUP`)
+and `via_group_id`. A subject holding `DOWNLOAD` gets one row, not three, which is decision 7
+expressed exactly. The page has everything it needs to say "removing this changes nothing, and
+here is what still confers it". Whether it *says* so is a UI assertion this phase does not
+make, so F4's browser half remains open rather than passing.
+
+**The assertions that could not have failed.** F3 checks that granting `DOWNLOAD` writes one
+row rather than three, and the first version filtered the grant list *by* `DOWNLOAD` before
+counting — which returns one row whether the API wrote one or three. It is a fourth way a
+spec passes while asserting nothing, alongside the three phase 2 found, and the only defence
+is to ask what data would have turned the assertion red. The honest form counts everything the
+subject holds.
+
+**Each test creates its own dataset, in `requestLab`.** Grants accumulate and revocations are
+permanent, so a shared fixture would let the order tests ran in decide the outcome. The group
+matters for the reason phase 3 recorded: a grant on a dataset makes its owning group visible.
+Phase 3 hit that through a fixture grant in `cast.js`; phase 4 hit it again through a spec
+issuing its own grant, with `cast.js` untouched. Bob is now a member of `requestLab` as well
+as `lab`, so the owning-member half of D1 and D2 has somebody to assert about without putting
+its dataset where a refusal spec is looking.
+
+**D1 and D2 are the pair worth having.** A dataset is born holding exactly one grant —
+`DATASET:LIST_FILES` to its owning group, `creation_type: SYSTEM_BOOTSTRAP` — and revoking it
+removes every member's access while leaving Alice's governance intact. That is decision 12
+demonstrated rather than asserted: members read through a listed grant, never through an
+invisible structural rule.
+
 ### Phase 5 — membership and invitations
 
 Flows: B1, B2, B4, B5, C1, C2, C3, C4, C6.

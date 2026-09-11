@@ -48,6 +48,9 @@ const ASSIGNED_CAST = Object.freeze([
  */
 const EXTRA_STANDING = Object.freeze([
   { key: 'alice', group: 'requestLab', role: 'ADMIN' },
+  // Bob is a member here as well as of `lab`, so the grant flows can assert what an ordinary
+  // member of an owning group reads without putting their datasets in `lab`.
+  { key: 'bob', group: 'requestLab', role: 'MEMBER' },
 ]);
 
 /**

@@ -37,4 +37,20 @@ async function grantsFromRequest(api, resourceId, requestId, resourceType = 'DAT
   return all.filter((g) => g.source_access_request?.id === requestId);
 }
 
-module.exports = { grantsOnResourceUrl, grantsOnResource, grantsFromRequest };
+/**
+ * Every grant one subject holds on a resource.
+ *
+ * The route groups its reply by subject, so this is the natural question to ask and the one
+ * that makes "how many rows does this subject hold" answerable. Filtering a flat list by
+ * access type cannot answer it: a check for "one row, not three" written that way still finds
+ * exactly one row when the API wrote three.
+ */
+async function grantsHeldBy(api, resourceId, subjectId, resourceType = 'DATASET') {
+  const bySubject = await api.get(grantsOnResourceUrl(resourceId, resourceType));
+  const group = Object.values(bySubject).find((g) => g.subject?.id === subjectId);
+  return group ? group.grants || [] : [];
+}
+
+module.exports = {
+  grantsOnResourceUrl, grantsOnResource, grantsFromRequest, grantsHeldBy,
+};
