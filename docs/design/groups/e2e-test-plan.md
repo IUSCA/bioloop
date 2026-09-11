@@ -837,6 +837,44 @@ Done when a researcher files, an admin reviews and sees what approval confers, a
 read the truth afterwards — including flow G5, where an approved request whose grants were
 revoked says so.
 
+**Built.** Five specs in `e2e/src/specs/requests/loop.spec.js` covering G1, G2, G5, G6 and G8.
+Twenty-seven specs pass across the suite, and a full run still leaves eleven tables unchanged.
+
+**G5 is the one that mattered, and its first version was wrong.** The assertion read
+`expect(JSON.stringify(summary)).toMatch(/revoked/)` and went green *before* anything was
+revoked, because `access_summary` contains `"revoked": 0`. The summary is
+`{issued, live, revoked, expired, last_revoked_at, last_revocation_type, covered_elsewhere}`,
+so the honest test reads `live` and `last_revoked_at` both before and after the revocation.
+The API carries everything the flow needs; only the test was weak.
+
+**The world gained a group, for a reason worth stating.** A grant on a dataset also makes its
+*owning group* visible: one `DATASET:VIEW_METADATA` grant to the sibling lab on a lab-owned
+dataset took Frank from 403 to 200 on the lab's own group page, and broke a refusal spec in
+another file. The request flows need datasets an outsider can see, so those live in a new
+`requestLab` and `lab` stays a group the sibling branch cannot see at all. A fixture grant is
+never local to the dataset it names.
+
+**Each request flow owns a dataset.** The API answers 409 for a second pending request naming
+an access type already asked for, and for one covering access already held. Both are correct,
+and both mean a shared dataset would let whichever spec ran first decide whether the next could
+begin. `cast.js` carries one `lockedFor*` dataset per flow.
+
+Two corrections to earlier phases fell out. `GET /grants?resource_id=…` is not a route — it is
+a 404, and a 404 satisfies "not forbidden", so F10's positive control had been passing against
+a route that does not exist since phase 2. The real route is
+`GET /grants/resource/:resource_type/:resource_id`, it rejects a `limit`, and it returns
+`{subject, grants}` groups rather than a flat list. With it, F10 now asserts the full shape:
+Alice reads the grant list, Dana reads it as oversight, and Bob — a member of the owning lab —
+is refused it.
+
+One defect filed: [L2 T18](../../../.todo/local/L2-authorization-wiring.md) — reviewing a
+request without `approved_expiry` answers 500 rather than 400, because the route validates the
+decision and not the expiry while the handler dereferences it unconditionally. Rejections are
+unaffected, which is why it hides.
+
+The operational half of all of this now lives in
+[the e2e-tests skill](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/e2e-tests/SKILL.md).
+
 ### Phase 4 — grants and the access-type order
 
 Flows: F1, F2, F3, F4, F5, F8, F9, and D1, D2.

@@ -1,0 +1,147 @@
+---
+name: e2e-tests
+description: Operational technique for the Playwright suite in e2e/ that covers the v2 groups and access-control flows - how a world is built and torn down, the API shapes that are not what they look like, and the several ways a refusal test passes while asserting nothing. Use when writing or running anything under e2e/, or when a boundary test behaves unexpectedly.
+---
+
+# The v2 end-to-end suite
+
+`e2e/` is the browser-driven suite for the groups and access-control flows. It is separate
+from `tests/`, which covers v1 and is organised around RBAC roles. The plan and the flow
+catalogue it implements are
+[e2e-test-plan.md](../../../docs/design/groups/e2e-test-plan.md) and
+[e2e-test-flows.md](../../../docs/design/groups/e2e-test-flows.md); this page is the
+operational half.
+
+```bash
+cd e2e && npx playwright test                      # everything
+npx playwright test src/specs/refusal --workers=1  # one area, serially
+```
+
+## The suite builds its own world and does not read the seeded one
+
+`api/prisma/seed_data/flows_world.js` seeds a named cast — `alice`, `frank`, `quinn` and the
+rest — so the flows can be walked by hand at `/dev-login?username=alice`. **The suite does not
+use it.** A spec that hard-codes a seeded identity fails whenever somebody edits the seed.
+
+Each worker builds its own world through the HTTP API (`src/world/build.js`), names every row
+`e2e-<runId>-*`, and removes them afterwards by SQL (`src/world/teardown.js`). Teardown goes
+around the API because there is deliberately no `DELETE /groups/:id`.
+
+Prove teardown still works by counting rows before and after a full run. Every table should be
+unchanged; drift means a new resource type needs a line in `teardown.js`.
+
+## Three ways a refusal test passes while asserting nothing
+
+This is the core hazard of the whole suite, and each of these shipped green before being
+caught.
+
+**A 404 that is not a refusal.** `expectRefused` accepts 401, 403 and 404, which is right for
+a surface meant to be indistinguishable from "no such thing" and far too loose where the point
+is that a *policy* refused. A route that 404s for everybody — or one that was renamed, or
+never mounted — satisfies it. Use `expectForbidden` (403 exactly) whenever the claim is about
+enforcement.
+
+**A 400 that is not a refusal.** `express-validator` runs *before* the authorization
+middleware, so a malformed body is rejected without the policy ever being consulted. Four
+governance specs were written with a wrong payload and refused for that reason.
+`expectForbidden` now fails with a message naming this case specifically.
+
+**A refusal with nothing to compare it to.** Every refusal assertion needs a caller who is
+*allowed*, on the same route, in the same test — `expectNotForbidden` where the handler may
+legitimately answer non-2xx for its own reasons. Without it, a broken route reads as a policy
+working perfectly. `expectAbsentButPresent` is the same rule for pages.
+
+A worked example of why this is not theoretical: `GET /v2/datasets/:id/files` used to answer
+404 to a platform admin, because the fixture dataset held no file rows. The stranger's refusal
+was real but unprovable, and the spec asserted nothing until the positive half was added.
+
+## Assert the shape, not a substring of the JSON
+
+A G5 assertion written as `expect(JSON.stringify(summary)).toMatch(/revoked/)` went green
+*before* anything was revoked, because the summary contains `"revoked": 0`. Read the actual
+field. `access_summary` on an access request is
+`{issued, live, revoked, expired, last_revoked_at, last_revocation_type, covered_elsewhere}`,
+and the honest test asserts `live` before and after the revocation.
+
+## API shapes that are not what they look like
+
+Verified against the running API. Each of these cost a debugging cycle.
+
+| Call | The trap |
+| --- | --- |
+| `GET /grants?resource_id=…` | **Not a route.** 404. Use `GET /grants/resource/:resource_type/:resource_id`, which takes no `limit` (a 400 if you send one) and returns `{subject, grants}` groups, not a flat list. `src/world/grants.js` wraps it. |
+| A grant's source request | `source_access_request`, a nested object. There is no `source_access_request_id` in the response, and filtering on one silently matches nothing. |
+| `POST /access-requests` | Needs `submit: true`, which creates and submits in one transaction. Without it the row stays `DRAFT`, and no surface lists a DRAFT. `useRequestAccessForm.js` sends the flag; a spec that omits it is testing a state the product never produces. |
+| `POST /access-requests/:id/review` | `approved_expiry` is required on an `APPROVED` decision and is *not* declared in the validator, so omitting it is a 500 rather than a 400 (L2 T18). Rejections are unaffected, which is why it hides. |
+| `POST /grants` | Each item needs `approved_expiry`; an expiry is `{type: 'never'|'date', value}`. |
+| `PATCH /groups/:id` | Requires `version` for optimistic concurrency. |
+| `POST /groups/:id/members` | Takes `[{user_id}]` objects, not bare ids. |
+| `POST /groups/search` | `limit` is capped at 100. |
+| `GET /v2/users/me` | Returns `{user, uiPersona}`; the profile is nested. |
+| `GET /v2/datasets/:id` | Wants the **resource UUID**. The integer `dataset.id` is a 400, and the page renders the same "Failed to load dataset" it shows for a refusal. |
+| `POST /collections/:id/datasets` | `dataset_ids` are resource UUIDs despite the name. A cross-group dataset is refused **400**, not 403 — the caller is legitimate, the request is not. |
+
+## The API refuses duplicate and redundant requests, so give each flow its own dataset
+
+`POST /access-requests` answers 409 for a second pending request naming an access type already
+asked for, and for one covering access already held. Both are correct. The consequence for the
+suite is that request-loop specs cannot share a dataset: whichever ran first decides whether
+the next can begin, and the failure appears in a spec that did nothing wrong. `cast.js` carries
+one `lockedFor*` dataset per flow.
+
+## A grant on a dataset makes its owning group visible
+
+Measured: adding a single `DATASET:VIEW_METADATA` grant to the sibling lab on one lab-owned
+dataset took Frank from 403 to 200 on the **lab's own group page**, breaking a refusal spec in
+a different file.
+
+So a dataset that some outsider must be able to see cannot live in a group that a boundary
+spec asserts is invisible. The world keeps them apart: `requestLab` owns everything the
+request flows need to be discoverable, and `lab` stays a group the sibling branch cannot see.
+When adding a fixture grant, ask which group it opens up.
+
+## Worlds are built one at a time
+
+Workers choose their accounts by asking which seeded users belong to no group. Two builds
+overlapping both read that list before either writes, so both borrow the same six people and
+Alice in one world is Alice in the other. `withWorldBuildLock` in `src/world/db.js` serialises
+builds with a Postgres advisory lock; a build costs about a third of a second, so this is free.
+
+`ASSIGNED_CAST` is also the borrow list — one seeded account per entry — so a person must
+appear in it exactly once. Extra group memberships go in `EXTRA_STANDING`.
+
+## The servers are warmed once, and the API restarts under you
+
+`src/global-setup.js` compiles the first UI route and polls the API heartbeat for up to a
+minute before any test runs. Both halves earn their place: Vite compiles a route on first
+request, which can take tens of seconds, and nodemon restarts the API whenever **anybody**
+saves a file under `api/` — including another agent session in the same checkout. Four
+consecutive runs died on that while the server itself was healthy.
+
+## Selectors
+
+Six `data-testid` hooks exist, and that is deliberate rather than a starting point.
+`components/utils/ErrorState.vue` carries `error-state`, which covers the refusal region on
+every v2 surface that renders one; the five pages the flows name carry a hook on their
+*success* branch, which is the positive half of an absence assertion.
+
+Vuestic tabs render `role="tab"` on a `div`, so `getByRole('tab', {name: /Files/i})` works.
+
+## N1 is asserted by recording, not by an inventory
+
+`src/assertions/replay.js` drives a page as a permitted caller with the network recorded, then
+reissues every call as a stranger. Flow N1 names "any programmatic route the browser itself
+calls", which nobody can keep accurate by hand.
+
+Its `CALLER_SCOPED` list is the dangerous part: every entry is an exemption, and exemptions are
+how a test like this stops testing anything. Before adding one, show that the route answers
+about the *caller* rather than the resource — call it as a stranger with a real id and with an
+id that was never issued, and require the replies to be indistinguishable. Both current entries
+were admitted that way.
+
+## Keeping this current
+
+When a phase teaches something this page does not mention — a response shape that surprised
+you, a spec that passed for the wrong reason, a world-design constraint — amend this file **in
+the same commit as that phase**, rather than saving it for the end of the work. Verify a claim
+against the running API before writing it down.

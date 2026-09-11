@@ -1,5 +1,6 @@
 const { test, expect } = require('../../fixtures');
 const { expectForbidden, expectNotForbidden, expectRefused } = require('../../assertions/parity');
+const { grantsOnResourceUrl } = require('../../world/grants');
 
 /**
  * Phase 2 — the refusal spine, on governance.
@@ -35,7 +36,18 @@ test('F10 — only the owning group\'s admins may grant', async ({ world, as }) 
 
   // Alice administers the owning lab. She is the control: without her, "nobody may grant"
   // and "only the owning admin may grant" look identical from every other assertion here.
-  await expectNotForbidden(alice.api, 'GET', `/grants?resource_id=${datasetId}`);
+  //
+  // The URL comes from a helper because the obvious guess, `/grants?resource_id=…`, is a 404
+  // — and a 404 satisfies "not forbidden", so this control passed for two phases against a
+  // route that does not exist.
+  const grantList = grantsOnResourceUrl(datasetId);
+  await expectNotForbidden(alice.api, 'GET', grantList);
+
+  // Dana oversees from the centre and may read the grant list; Bob is a member of the owning
+  // lab and may not. Governance is visible to oversight and invisible to plain membership,
+  // which is the distinction F10 turns on.
+  await expectNotForbidden(dana.api, 'GET', grantList);
+  await expectForbidden(bob.api, 'GET', grantList);
 
   // Dana oversees the lab from the centre above it. Oversight reads and does not act.
   await expectForbidden(dana.api, 'POST', '/grants', issue);

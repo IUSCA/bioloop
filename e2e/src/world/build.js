@@ -1,7 +1,7 @@
 const { signIn, clientFor } = require('./api');
 const { query } = require('./db');
 const {
-  FIXED_ACCOUNTS, ASSIGNED_CAST, HIERARCHY, DATASETS, COLLECTIONS,
+  FIXED_ACCOUNTS, ASSIGNED_CAST, HIERARCHY, DATASETS, COLLECTIONS, EXTRA_GRANTS, EXTRA_STANDING,
 } = require('./cast');
 
 /**
@@ -127,10 +127,13 @@ async function buildWorld(runId) {
   // through a second request, so a group is never briefly ungoverned.
   const groups = {};
   for (const node of HIERARCHY) {
-    const admins = ASSIGNED_CAST
+    // Both lists, because a person's standing can come from either: their one cast entry, or
+    // an extra membership recorded beside it.
+    const standing = [...ASSIGNED_CAST, ...EXTRA_STANDING];
+    const admins = standing
       .filter((c) => c.group === node.key && c.role === 'ADMIN')
       .map((c) => people[c.key].subject_id);
-    const members = ASSIGNED_CAST
+    const members = standing
       .filter((c) => c.group === node.key && c.role === 'MEMBER')
       .map((c) => people[c.key].subject_id);
 
@@ -174,11 +177,30 @@ async function buildWorld(runId) {
     });
   }
 
+  // The grants the world holds beyond each dataset's own owning-group seed. Issued as the
+  // platform admin, because the point is the state they leave behind rather than who may
+  // issue one — that is F10's subject, and it is asserted separately.
+  const accessTypeRows = await admin.get('/grants/access-types');
+  const accessTypeIds = Object.fromEntries(accessTypeRows.map((t) => [t.name, t.id]));
+
+  for (const spec of EXTRA_GRANTS) {
+    // eslint-disable-next-line no-await-in-loop
+    await admin.post('/grants', {
+      subject_id: groups[spec.subjectGroup].id,
+      resource_type: 'DATASET',
+      resource_id: datasets[spec.dataset].resource_id,
+      justification: `Fixture grant for end-to-end run ${runId}.`,
+      items: [{
+        access_type_id: accessTypeIds[spec.accessType],
+        approved_expiry: { type: 'never', value: null },
+      }],
+    });
+  }
+
   // Access types indexed by name. Their ids are database integers that move between
   // environments, so a spec naming `DATASET:DOWNLOAD` stays readable and stays correct;
   // one carrying the literal `3` is neither.
-  const accessTypeRows = await admin.get('/grants/access-types');
-  const accessTypes = Object.fromEntries(accessTypeRows.map((t) => [t.name, t.id]));
+  const accessTypes = accessTypeIds;
 
   return {
     runId, prefix, people, groups, datasets, collections, accessTypes,
