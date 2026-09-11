@@ -78,21 +78,40 @@ Midwest Genomics Center
 
 ### The people
 
-| Person | Standing | Reaches |
-|---|---|---|
-| Priya | Platform admin | Everything, subject to restrictions |
-| Dana | Admin of Midwest Genomics Center | Governance of the Center; oversight of all four descendants |
-| Alice | Admin of Wong Lab | Governance of Wong Lab; oversight of Wong Sequencing |
-| Bob | Member of Wong Lab | Transitively a member of the Center |
-| Carol | Member of Wong Sequencing | Transitively a member of Wong Lab and the Center |
-| Erin | Admin of Patel Lab | Governance of Patel Lab, and nothing in Wong Lab |
-| Frank | Member of Patel Lab | The outsider for every Wong Lab flow |
-| Quinn | Member of no group, holder of no grant | The zero-access user |
-| Vic | No account yet | The invitee |
+| Person | Account | Standing | Reaches |
+|---|---|---|---|
+| Priya | `priya` | Platform admin | Everything, subject to restrictions |
+| Dana | `dana` | Admin of Midwest Genomics Center | Governance of the Center; oversight of all four descendants |
+| Alice | `alice` | Admin of Wong Lab | Governance of Wong Lab; oversight of Wong Sequencing |
+| Bob | `bob` | Member of Wong Lab | Transitively a member of the Center |
+| Carol | `carol` | Member of Wong Sequencing | Transitively a member of Wong Lab and the Center |
+| Erin | `erin` | Admin of Patel Lab | Governance of Patel Lab, and nothing in Wong Lab |
+| Frank | `frank` | Member of Patel Lab | The outsider for every Wong Lab flow |
+| Quinn | `quinn` | Member of no group, holder of no grant | The zero-access user |
+| Vic | *none* | No account yet | The invitee |
 
 Dana is the oversight case. Frank is the refusal case. Quinn is the empty-state case. Vic is
 the invitation case. Carol proves transitivity. Erin proves that admin authority does not
 travel sideways.
+
+**The world in the tables above is seeded, so it can be walked by hand.** `npm run seed`
+writes it, and `/dev-login?username=<account>` signs in as any of these people without a
+credential. Vic has no row, which is the invitation flows working rather than the seed being
+incomplete. The fixture lives in `api/prisma/seed_data/flows_world.js`, beside the sample
+world the seed also writes; the two never interleave. Dana additionally administers the
+imaging core, because flow F2 needs its admin to issue a grant and the table above names
+nobody for it.
+
+No flows-world resource is granted to `Public` or `Authenticated Users`, so a refusal here is
+a real refusal. The sample world does hold five such grants, and a global principal grant
+reaches an account with no memberships — so `quinn` sees 0 groups and 0 collections but 3
+sample datasets. Flow H1 is therefore walked against this world's resources rather than
+against an absolutely empty portal.
+
+The end-to-end suite does **not** use these rows. It builds its own world per run, named for
+the run, and borrows unaffiliated `user-0NN` accounts — see
+[End-to-end test plan](./e2e-test-plan.md). Seeded and generated worlds coexist without
+colliding.
 
 ### The resources
 
@@ -100,9 +119,13 @@ travel sideways.
 |---|---|---|
 | `PCM230203` | Wong Lab | The dataset every access flow is about |
 | `PCM230204` | Wong Lab | The second dataset, for collection and bulk flows |
-| `IMG-0007` | Imaging Core | A dataset in a sibling branch |
+| `IMG-0007` | Midwest Imaging Core | A dataset in a sibling branch |
 | `PAT-1101` | Patel Lab | Frank's own data, used to prove refusals run both ways |
 | Aim 2 Release | Wong Lab | The collection holding `PCM230203` and `PCM230204` |
+
+The imaging group is **Midwest Imaging Core**. `group.name` is unique and the seed's sample
+world already holds a group called Imaging Core. No flow depends on that group's name — it
+exists to own a dataset in a branch neither Wong Lab nor Patel Lab reaches.
 
 ### What the world must not contain
 

@@ -1,3 +1,4 @@
+// cSpell: ignore Raman Okafor Nwosu Adeyemi Ferreira Vasquez Baptiste
 const admins = [
   {
     // Created at pinned ids by ensureSvcTasksAccount() before this list is walked; the
@@ -6,12 +7,19 @@ const admins = [
     username: 'svc_tasks',
   },
   {
-    // Development login account. The /auth/test_login route accepts this username and no
-    // other, and that route does not exist when env is production or test. Seeded as an
-    // admin so a developer or an agent can reach every surface without CAS.
+    // General-purpose development login. The /auth/test_login route signs in as any active
+    // user by username, and exists only when `mode` is localhost, docker, or ci. Seeded as
+    // an admin so a developer or an agent can reach every surface without CAS.
     // @see docs/guides/dev-servers.md — Logging in without CAS
     name: 'Test User',
     username: 'test_user',
+  },
+  // Priya, the flows fixture's platform admin. She is in this list rather than in
+  // `flows_cast` below because that is what gives her the `admin` role.
+  // @see prisma/seed_data/flows_world.js — CAST
+  {
+    name: 'Priya Raman',
+    username: 'priya',
   },
 ];
 
@@ -43,6 +51,29 @@ const users = [
     username: 'ethompson', // cspell: disable-line
     name: 'Emily Thompson',
   },
+];
+
+/**
+ * The flows fixture's cast, minus Priya, who holds `admin` and is in the list above.
+ *
+ * Named accounts, so a manual pass can sign in as the person a flow names instead of
+ * working out which `user-0NN` was assigned their standing. Their group memberships live in
+ * `flows_world.js`; this list only creates the accounts.
+ *
+ * **Vic is absent on purpose.** Vic is the invitee, and the invitation flows exist to prove
+ * that inviting somebody with no account works.
+ *
+ * @see prisma/seed_data/flows_world.js — CAST
+ * @see docs/design/groups/e2e-test-flows.md — The cast and the world
+ */
+const flows_cast = [
+  { username: 'dana', name: 'Dana Okafor' },
+  { username: 'alice', name: 'Alice Wong' },
+  { username: 'bob', name: 'Bob Ferreira' },
+  { username: 'carol', name: 'Carol Nwosu' },
+  { username: 'erin', name: 'Erin Vasquez' },
+  { username: 'frank', name: 'Frank Adeyemi' },
+  { username: 'quinn', name: 'Quinn Baptiste' },
 ];
 
 const _datasets = [
@@ -206,6 +237,7 @@ module.exports = {
   admins,
   operators,
   users,
+  flows_cast,
   datasets,
   dataset_hierarchical_association,
   dataset_audit_data,

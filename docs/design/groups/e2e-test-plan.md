@@ -29,7 +29,8 @@ has to be built before any of it can run.
 The short version is that four things are missing, and only one of them is test code.
 
 1. The v2 UI carries no test hooks at all.
-2. The seed cannot supply a named cast, so the suite has to build its own world.
+2. The seed's *sample* world cannot supply a named cast, so the suite builds its own world.
+   (The seed now also writes a named cast for manual use — see F2.)
 3. The existing Playwright suite is organised around v1 roles, which v2 does not have.
 4. Nothing runs Playwright in CI.
 
@@ -109,12 +110,23 @@ component listed in this plan lives under `ui/src/components/v2` or `ui/src/page
 legacy file is edited, and the shared `components/filebrowser/` tree is reached through the
 props pattern the [v2 cut-over](../v2-cutover.md) already describes.
 
-### F2 — The seed's cast is a hash, not a cast
+### F2 — The sample world's cast is a hash; a named cast is seeded beside it
 
 `generateGroupUserMemberships` in `api/prisma/seed_data/groups.js` picks members with
 `simpleHash(group.id + userId) % 100 < 10`, then names one or two of them admin. The result
 is deterministic given the same user list, and it is opaque: nothing in the seed says who
 administers what.
+
+**Since 2026-09-11 the seed also writes the flows page's named world**, in
+`api/prisma/seed_data/flows_world.js`: the accounts `priya`, `dana`, `alice`, `bob`, `carol`,
+`erin`, `frank`, and `quinn`, the Midwest Genomics Center hierarchy, its four datasets, and
+`Aim 2 Release`. It exists so the flows can be walked by hand in a browser. **The suite still
+builds its own world and does not read these rows**, for the reason below: a spec that
+hard-codes a seeded identity fails whenever somebody edits the seed. The two worlds do not
+collide — the suite's rows are named `e2e-<runId>-*`, and the flows cast does not match the
+`user-%` pattern the borrow query uses, so none of it is borrowable.
+
+The paragraph that follows measures the sample world, and is unchanged by that addition.
 
 Measured against the running database today:
 
@@ -131,7 +143,12 @@ Measured against the running database today:
 | Cancer Pathways AI | `user-080` | 2 |
 | Unified Immune Signature | `user-057` | 3 |
 
-`user-004`, `user-005`, `user-010`, `user-013`, and `user-014` belong to no group.
+Thirty-seven `user-0NN` accounts belong to no group, hold only the `user` role, and are
+therefore borrowable; `user-004`, `user-005`, `user-010`, `user-013`, and `user-014` are the
+first five. Re-measured 2026-09-11 with the borrow query itself, against a database carrying
+both the sample world and the flows world. `BORROWED_ACCOUNT_COUNT` is 6, so the margin is
+31. An earlier version of this line read as though only five existed, which would have put
+the suite one account below its own minimum.
 
 Those names are stable only while the generated user list and the hard-coded group ids are
 both unchanged. Adding one user to `createRandomUsers` reshuffles every membership. **A spec

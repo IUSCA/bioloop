@@ -21,6 +21,7 @@ const {
   GRANT_ACCESS_TYPES, UNASSIGNED_DATASETS_GROUP_ID,
 } = require('../src/constants');
 const { generateGroupAccessSeedData } = require('./seed_data/groups_access_data');
+const { seedFlowsWorld, GROUP_ID_SET: FLOWS_GROUP_IDS } = require('./seed_data/flows_world');
 const { seedBaseline } = require('./seed_baseline');
 
 const prisma = new PrismaClient();
@@ -175,7 +176,9 @@ async function main() {
 
   // create test user
   const user_data = insert_random_dates(
-    data.users.concat(createRandomUsers(100)), // mock some extra users
+    // `flows_cast` is the named fixture cast. It joins the ordinary users so the accounts
+    // get the `user` role and nothing more; their standing is written by seedFlowsWorld().
+    data.users.concat(data.flows_cast).concat(createRandomUsers(100)), // mock some extra users
   );
   for (const user of user_data) {
     await prisma.user.upsert({
@@ -428,6 +431,19 @@ async function main() {
     })),
   );
 
+  // The named fixture world from the flows page, beside the sample world above rather than
+  // instead of it. Seeded here, before the grants are derived, so its datasets and its
+  // collection pick up the owning-group grants the loop at the end of this function writes
+  // for every group.
+  // @see docs/design/groups/e2e-test-flows.md — The cast and the world
+  const flowsCounts = await seedFlowsWorld(prisma, {
+    SUBJECT_TYPE,
+    RESOURCE_TYPE,
+    systemAdminSubjectId: systemAdmin.subject_id,
+  });
+  // eslint-disable-next-line no-console
+  console.log('seeded the flows fixture world:', flowsCounts);
+
   // Seed some sample access requests + grants for UI / test coverage (derived from groups/users/datasets)
   const groupsWithMembers = await prisma.group.findMany({
     include: {
@@ -437,8 +453,13 @@ async function main() {
     },
   });
 
+  // The flows groups are excluded. This generator writes sample access requests and a global
+  // grant to each of the two system principals, and both would break the flows world: a
+  // principal grant reaches Quinn, whose whole purpose is to reach nothing, and a seeded
+  // request on a fixture resource makes a refusal flow pass for the wrong reason.
+  // @see docs/design/groups/e2e-test-flows.md — What the world must not contain
   const accessSeedData = generateGroupAccessSeedData({
-    groups: groupsWithMembers,
+    groups: groupsWithMembers.filter((g) => !FLOWS_GROUP_IDS.has(g.id)),
     systemAdminSubjectId: systemAdmin.subject_id,
   });
 

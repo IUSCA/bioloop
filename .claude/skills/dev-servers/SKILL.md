@@ -135,12 +135,53 @@ working because an unknown subject simply resolves to nothing, and then a write 
 a foreign-key violation on a column like `group_user.removed_by`. The fix is to visit
 `/dev-login`, not to debug the write path. This cost a session once.
 
+## The named cast is seeded — use it before hunting for an account
+
+`npm run seed` writes the fixture world the end-to-end flows are written against, so the
+account for a given standing has a name and does not have to be discovered:
+
+| Account | Standing | Use it for |
+|---|---|---|
+| `priya` | Platform admin | Reaching everything. Proves no policy. |
+| `dana` | Admin of Midwest Genomics Center | Oversight down a branch |
+| `alice` | Admin of Wong Lab | Governance actions: issue a grant, review a request |
+| `bob` | Member of Wong Lab | What a plain member sees |
+| `carol` | Member of Wong Sequencing | Transitivity — membership rising two levels |
+| `erin` | Admin of Patel Lab | That admin authority does not travel sideways |
+| `frank` | Member of Patel Lab | The outsider. Every refusal check |
+| `quinn` | No group, no grant | The empty portal |
+
+```
+https://localhost/dev-login?username=alice&next=/v2/groups
+```
+
+Their world is `Midwest Genomics Center → Wong Lab → Wong Sequencing`, plus `Patel Lab` and
+`Midwest Imaging Core`; the datasets are `PCM230203`, `PCM230204`, `IMG-0007`, and
+`PAT-1101`, and the collection is `Aim 2 Release`. It is defined in
+`api/prisma/seed_data/flows_world.js` and sits beside the sample world the seed also writes.
+
+**These names are stable by construction**, unlike the sample world's, because the module
+writes them explicitly rather than hashing. Prefer them to the queries below.
+
+**There is deliberately no `vic` account.** Vic is the invitee in the invitation flows, and
+seeding the account would defeat the flows that exist to test inviting somebody who has none.
+
+**`quinn`'s portal is empty of groups and collections but not of datasets.** Measured
+2026-09-11: 0 groups, 0 collections, and **3 datasets**. No flows-world resource is granted to
+`Public` or `Authenticated Users`, but the sample world holds five such grants, and a global
+principal grant reaches everybody including an account with no memberships.
+
+So emptiness has to be asserted against the flows world specifically — "`quinn` reaches none
+of `PCM230203`, `PCM230204`, `IMG-0007`, `PAT-1101`, and no group" — rather than against the
+whole portal. Removing the sample world's principal grants would make the portal absolutely
+empty and would cost the only demonstration that grants to the two system principals work.
+
 ## Seeing a page as somebody with no privileges
 
 A platform admin sees every dataset, group, and collection regardless of grants, so
 checking an access-control change while signed in as `test_user` proves nothing. Sign in as
-somebody who belongs to no group instead: anything they can see, they can see because of a
-grant.
+somebody who belongs to no group instead — `quinn` from the table above, or an account the
+queries below turn up: anything they can see, they can see because of a grant.
 
 **Find that account, do not memorise it.** The seed assigns memberships by hashing, so which
 accounts belong to nothing moves whenever the seed changes. This page named `ajohnson`,

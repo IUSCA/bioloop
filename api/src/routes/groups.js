@@ -373,7 +373,7 @@ router.put(
   }),
 );
 
-// Remove the group's profile picture. The profile falls back to a monogram.
+// Remove the group's profile picture. The profile falls back to the group icon.
 router.delete(
   '/:id/avatar',
   validate([param('id').isUUID()]),
