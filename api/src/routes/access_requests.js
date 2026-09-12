@@ -341,6 +341,17 @@ router.post(
       ACCESS_REQUEST_ITEM_DECISION.APPROVED,
       ACCESS_REQUEST_ITEM_DECISION.REJECTED,
     ]),
+    // An APPROVED decision carries the expiry its grant is issued with; a REJECTED one carries
+    // nothing, so the field is checked per decision rather than by a wildcard rule on the
+    // field itself. `Expiry.validate` throws the reason and express-validator answers 400.
+    // Without this the handler's `Expiry.fromJSON` raised a TypeError, and a review that
+    // approved anything without an expiry came back as a 500.
+    body('item_decisions.*').custom((decision) => {
+      if (decision?.decision === ACCESS_REQUEST_ITEM_DECISION.APPROVED) {
+        Expiry.validate(decision.approved_expiry);
+      }
+      return true;
+    }),
     body('decision_reason').isString().notEmpty(),
   ]),
   authorize('access_request', 'review'),

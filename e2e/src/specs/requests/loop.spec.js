@@ -52,9 +52,9 @@ async function fileRequest(world, frank, datasetKey, purpose) {
 /**
  * Alice decides every item of a request the same way.
  *
- * `approved_expiry` is required on an APPROVED decision even though the route's validator
- * does not say so: the handler calls `Expiry.fromJSON` on it unconditionally. Omitting it
- * answers 500 rather than 400 — filed as L2 T18.
+ * `approved_expiry` is required on an APPROVED decision and on no other, which the route's
+ * validator now says. It used to say nothing, and the handler's unguarded `Expiry.fromJSON`
+ * turned an omitted field into a 500; `G1` asserts the 400 that replaced it.
  */
 async function decide(alice, request, decision, reason) {
   const full = await alice.api.get(`/access-requests/${request.id}`);
@@ -86,6 +86,19 @@ test('G1 — the whole loop, and the grant names the request that made it', asyn
   // It reaches the owning admin's queue. Alice administers the lab that owns the dataset.
   const queue = await alice.api.get('/access-requests/my-pending-reviews?limit=100');
   expect(queue.data.map((r) => r.id)).toContain(filed.id);
+
+  // Approving without an expiry is a bad request, not a crash, and it decides nothing. The
+  // 500 this used to answer was indistinguishable from the route being broken.
+  const noExpiry = await alice.api.raw('POST', `/access-requests/${filed.id}/review`, {
+    item_decisions: (await alice.api.get(`/access-requests/${filed.id}`))
+      .access_request_items.map((i) => ({ id: i.id, decision: 'APPROVED' })),
+    decision_reason: 'G1: an approval with no expiry on it.',
+  });
+  expect(noExpiry.status, 'approving without an expiry did not answer 400').toBe(400);
+  expect(noExpiry.body, 'the refusal is a 400 about something other than the expiry')
+    .toMatch(/Expiry/);
+  const stillOpen = await alice.api.get(`/access-requests/${filed.id}`);
+  expect(stillOpen.status, 'the refused review decided the request anyway').toBe('UNDER_REVIEW');
 
   const decided = await decide(alice, filed, 'APPROVED', 'G1: approved for the run.');
   expect(decided.status).toBe('APPROVED');

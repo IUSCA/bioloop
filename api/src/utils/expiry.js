@@ -77,6 +77,11 @@ class Expiry {
   }
 
   static fromJSON(json) {
+    // Guarded so a missing or non-object value raises the message below rather than a
+    // TypeError on `json.type`, which a route surfaces as a 500 instead of a 400.
+    if (json == null || typeof json !== 'object') {
+      throw new Error('Invalid JSON for Expiry');
+    }
     if (json.type === 'never') {
       return Expiry.never();
     } if (json.type === 'date') {

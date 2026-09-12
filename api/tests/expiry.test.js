@@ -66,6 +66,16 @@ describe('Expiry', () => {
     expect(parsed.value.getTime()).toBe(d.getTime());
   });
 
+  // A route that calls fromJSON on a field the client omitted used to get a TypeError, which
+  // the error handler cannot tell from a bug and answers 500. It has to be the same refusal a
+  // malformed value gets.
+  it('should refuse a missing or non-object value with the Expiry message', () => {
+    expect(() => Expiry.fromJSON(undefined)).toThrow(/Invalid JSON for Expiry/);
+    expect(() => Expiry.fromJSON(null)).toThrow(/Invalid JSON for Expiry/);
+    expect(() => Expiry.fromJSON('never')).toThrow(/Invalid JSON for Expiry/);
+    expect(() => Expiry.fromJSON({ type: 'whenever', value: null })).toThrow(/Invalid JSON for Expiry/);
+  });
+
   it('should compare and select later correctly', () => {
     const early = Expiry.at(new Date('2025-01-01T00:00:00Z'));
     const later = Expiry.at(new Date('2025-12-31T23:59:59Z'));

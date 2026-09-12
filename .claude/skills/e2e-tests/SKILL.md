@@ -118,7 +118,7 @@ Verified against the running API. Each of these cost a debugging cycle.
 | `GET /grants?resource_id=…` | **Not a route.** 404. Use `GET /grants/resource/:resource_type/:resource_id`, which takes no `limit` (a 400 if you send one) and returns `{subject, grants}` groups, not a flat list. `src/world/grants.js` wraps it. |
 | A grant's source request | `source_access_request`, a nested object. There is no `source_access_request_id` in the response, and filtering on one silently matches nothing. |
 | `POST /access-requests` | Needs `submit: true`, which creates and submits in one transaction. Without it the row stays `DRAFT`, and no surface lists a DRAFT. `useRequestAccessForm.js` sends the flag; a spec that omits it is testing a state the product never produces. |
-| `POST /access-requests/:id/review` | `approved_expiry` is required on an `APPROVED` decision and is *not* declared in the validator, so omitting it is a 500 rather than a 400 (L2 T18). Rejections are unaffected, which is why it hides. |
+| `POST /access-requests/:id/review` | `approved_expiry` is required on an `APPROVED` decision and ignored on a `REJECTED` one. Omitting it is a 400 naming `Expiry`; it used to be a 500, which is what L2 T18 was. |
 | `POST /grants` | Each item needs `approved_expiry`; an expiry is `{type: 'never'|'date', value}`. |
 | `PATCH /groups/:id` | Requires `version` for optimistic concurrency. |
 | `POST /groups/:id/members` | Takes `[{user_id}]` objects, not bare ids. |
@@ -243,6 +243,17 @@ how a test like this stops testing anything. Before adding one, show that the ro
 about the *caller* rather than the resource — call it as a stranger with a real id and with an
 id that was never issued, and require the replies to be indistinguishable. Both current entries
 were admitted that way.
+
+## A 400 assertion has to name the field, or any validator satisfies it
+
+Asserting a bad request is refused is as weak as asserting a stranger is refused: a route with
+a dozen validators answers 400 for a dozen reasons, and the spec passes on whichever fires
+first. `api.raw()` returns `{status, body}`, so assert both — G1 requires the 400 *and* a body
+matching `/Expiry/` before it accepts that the expiry validator is what refused it.
+
+The same call also asserts that the refused review changed nothing: the request is still
+`UNDER_REVIEW` afterwards. A route that crashed halfway is the failure mode a status assertion
+alone cannot see.
 
 ## Driving a form, when the assertion is about the form's own state
 

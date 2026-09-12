@@ -867,10 +867,12 @@ a route that does not exist since phase 2. The real route is
 Alice reads the grant list, Dana reads it as oversight, and Bob — a member of the owning lab —
 is refused it.
 
-One defect filed: [L2 T18](../../../.todo/local/L2-authorization-wiring.md) — reviewing a
-request without `approved_expiry` answers 500 rather than 400, because the route validates the
-decision and not the expiry while the handler dereferences it unconditionally. Rejections are
-unaffected, which is why it hides.
+One defect filed and since fixed: [L2 T18](../../../.todo/local/L2-authorization-wiring.md) —
+reviewing a request without `approved_expiry` answered 500 rather than 400, because the route
+validated the decision and not the expiry while the handler dereferenced it unconditionally.
+Rejections were unaffected, which is why it hid. The review route now validates the field per
+decision, the same `Expiry.validate` the grants route uses, and `Expiry.fromJSON` refuses a
+missing value with its own message instead of a `TypeError`. G1 asserts the 400.
 
 The operational half of all of this now lives in
 [the e2e-tests skill](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/e2e-tests/SKILL.md).
