@@ -979,8 +979,9 @@ O1 waits on the dashboard, which [Dashboard plan](./dashboard-plan.md) records a
 nothing today.
 
 **Built.** Six specs in `e2e/src/specs/restrictions/archive.spec.js` covering A1, A3, A4, A5,
-K1 and K2. Fifty specs pass across the suite, a full run leaves eleven tables unchanged, and
-no fixture rows survive it.
+K1 and K2, plus two in `e2e/src/specs/membership/create-child.spec.js` for A1's create form.
+Fifty-two specs pass across the suite, a full run leaves eleven tables unchanged, and no
+fixture rows survive it.
 
 **A5 was expected to fail and does not.** The hole recorded in
 [Use Cases](./use-cases.md#enforcement-holes) — the unarchive endpoint authorized with
@@ -989,14 +990,22 @@ no fixture rows survive it.
 group stays archived, and a platform admin can reactivate it. That entry in `use-cases.md` is
 now marked fixed.
 
-**A1's second half fails, and that is the finding of the phase.** `POST /groups/:id/children`
-appends a non-platform-admin creator to the child's `admins`, commented "to ensure they have
-access to manage the child group they created". So Dana, who administers the centre, governs
-every lab she creates under it: she issues grants on its datasets, adds and removes its
-members, and edits it. Flow A1 says the opposite in as many words. The rest of the model keeps
-that separation carefully — J1 and J2 hold, and an ancestor admin who did *not* create the
-descendant is correctly refused — so this is a disagreement to decide rather than a bug to
-patch. It is carried as a `test.fail()` and filed as
+**A1's second half failed, and that was the finding of the phase. It is now fixed.**
+`POST /groups/:id/children` appended a non-platform-admin creator to the child's `admins`,
+commented "to ensure they have access to manage the child group they created". So Dana, who
+administers the centre, governed every lab she created under it: she issued grants on its
+datasets, added and removed its members, and edited it. Flow A1 says the opposite in as many
+words, and the rest of the model keeps that separation carefully — J1 and J2 hold, and an
+ancestor admin who did *not* create the descendant is correctly refused.
+
+The route was the half that changed. It no longer appends anybody, and a group admin who names
+no admin at all gets a 400 rather than a group only they can govern; a platform admin may still
+create one deliberately, because `GET /groups/without-active-admin` exists to find and repair
+exactly that state. The create form now asks, as a checkbox that starts checked and disabled
+and becomes a choice once another admin is named. `test.fail()` became an ordinary `test`, and
+two specs in `e2e/src/specs/membership/create-child.spec.js` drive the form itself — the only
+UI-state specs in the suite, because the checkbox's two states are what a reader would otherwise
+have to take on trust. Filed and closed as
 [L1 T11](../../../.todo/local/L1-authorization-enforcement.md).
 
 **K1 is the assertion worth having.** On an archived group, Priya is refused exactly the

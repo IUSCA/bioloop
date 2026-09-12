@@ -21,17 +21,29 @@
 import AutoCompleteSearch from "@/components/utils/AutoCompleteSearch.vue";
 import UserService from "@/services/v2/users";
 
-// const props = defineProps({});
+const props = defineProps({
+  // Subject ids the search must never offer, so a caller can keep somebody out of a list they
+  // are filling. Filtering happens after the fetch, so ask for enough rows to still return
+  // `RESULT_COUNT` once the excluded ones are dropped.
+  excludeIds: {
+    type: Array,
+    default: () => [],
+  },
+});
 const emit = defineEmits(["select"]);
+
+const RESULT_COUNT = 5;
 
 async function searchUsers(searchQuery) {
   try {
     const res = await UserService.getAll({
       search: searchQuery,
-      take: 5,
+      take: RESULT_COUNT + props.excludeIds.length,
     });
     const value = res.data?.users || [];
-    return value;
+    return value
+      .filter((user) => !props.excludeIds.includes(user.subject_id))
+      .slice(0, RESULT_COUNT);
   } catch (error) {
     console.error("Failed to search users:", error);
     return [];

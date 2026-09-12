@@ -70,26 +70,37 @@ test('A1 — a centre admin creates a child and it appears with its named admin'
     === world.people.alice.subject_id);
   expect(aliceRow, 'the named first admin is not in the group').toBeTruthy();
   expect(aliceRow.role).toBe('ADMIN');
+
+  // And Dana is not in it at all. She named Alice and not herself, so she governs nothing here.
+  const danaRow = rows.find((m) => (m.user_id || m.subject_id || m.user?.subject_id)
+    === world.people.dana.subject_id);
+  expect(danaRow, 'the creator was added to the child she created').toBeFalsy();
+
+  // Which is why naming nobody is refused rather than quietly making the creator the admin.
+  // 400, not 403: Dana is allowed to create the group, the request is the thing at fault.
+  const refused = await dana.api.raw('POST', `/groups/${world.groups.center.id}/children`, {
+    name: `${world.prefix}-a1-ungoverned-${Math.random().toString(36).slice(2, 8)}`,
+    description: 'Phase 6 fixture: the child nobody would govern.',
+    admins: [],
+    members: [],
+  });
+  expect(refused.status, 'a child group with no admin was accepted').toBe(400);
+  expect(refused.body, 'the refusal does not say an admin is needed').toMatch(/admin/i);
 });
 
 /**
- * A1's second half, which the system does not satisfy.
+ * A1's second half: the separation between oversight and authority, at the one place it used to
+ * leak.
  *
  * The flow says "never does Dana gain the ability to issue or revoke a grant on anything Wong
  * Lab owns. Creating a child confers oversight, not authority." `POST /groups/:id/children`
- * disagrees on purpose: it appends a non-platform-admin creator to the child's `admins`,
- * commented "to ensure they have access to manage the child group they created". Dana
- * therefore governs every group she creates, and the ancestor/descendant separation the rest
- * of the model maintains is bypassed by whoever made the child.
- *
- * Written as the assertion the flow states rather than one matching the code, per the plan's
- * instruction for exactly this situation. It passes while the disagreement stands and turns
- * red when it is resolved — in either direction, which is the point: resolving it by amending
- * the flow should also retire this spec.
+ * used to disagree, appending a non-platform-admin creator to the child's `admins`, so whoever
+ * made a group governed it for good. It no longer does, and the request has to name an admin
+ * instead. This spec carried the disagreement as a `test.fail()` until then.
  *
  * @see .todo/local/L1-authorization-enforcement.md — T11
  */
-test.fail('A1 — creating a child confers oversight, not authority', async ({ world, as }) => {
+test('A1 — creating a child confers oversight, not authority', async ({ world, as }) => {
   const [dana, alice] = await Promise.all([as('dana'), as('alice')]);
   const child = await createGroup(dana, world, 'a1-authority', 'center');
   const dataset = await createDatasetIn(alice, world, child, 'a1-dataset');

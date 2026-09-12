@@ -180,7 +180,7 @@ router.post(
     body('admins.*').isUUID(),
   ]),
   authorize('group', 'create_child'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Create a new child group under a parent group'
 
@@ -188,9 +188,17 @@ router.post(
     const data = pickNonNil(['name', 'description', 'allow_user_contributions', 'metadata'])(req.body);
     const { members = [], admins = [] } = req.body;
 
-    // if not platform admin, add user as admin of the child group by default to ensure they have access to manage the child group they created
-    if (!isPlatformAdmin(req) && !admins.includes(req.user.subject_id)) {
-      admins.push(req.user.subject_id);
+    // The creator is not appended here. Creating a child confers oversight over it, never
+    // authority within it, so an ancestor admin governs the child only when the request names
+    // them — which the create form offers as a checkbox the creator may clear.
+    // @see docs/design/groups/e2e-test-flows.md — A1
+    //
+    // Naming nobody would therefore leave the group with no governor, so a group admin has to
+    // name at least one. A platform admin may still create one deliberately: the platform-admin
+    // short-circuit administers every group, and `GET /groups/without-active-admin` lists the
+    // groups in that state for repair.
+    if (!isPlatformAdmin(req) && admins.length === 0) {
+      return next(createError.BadRequest('A child group needs at least one admin.'));
     }
 
     const childGroup = await groupService.createGroup({

@@ -151,6 +151,10 @@ Covers use cases 14 and 15.
 as its first admin.
 **Then** Wong Lab appears under the Center in the hierarchy view. Alice appears in its member
 list with the admin role. Dana's own oversight list gains Wong Lab.
+**And** the form asks whether Dana herself should be one of its admins. The checkbox starts
+checked and disabled, because a group needs an admin and on an empty form Dana is the only
+candidate. Naming Alice makes it a real choice, and Dana clears it. Dana never appears in the
+admin search: the checkbox is how she would put herself in.
 **And never** does Dana gain the ability to issue or revoke a grant on anything Wong Lab
 owns. Creating a child confers oversight, not authority.
 

@@ -3,11 +3,9 @@
     <div class="mb-3">
       <UserSearchSelect
         placeholder="Search users to add as admins..."
+        :exclude-ids="props.excludeIds"
         @select="onSelectUser"
       />
-      <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
-        You will be added as admin automatically. Add others here.
-      </p>
     </div>
 
     <!-- Selected users as chips -->
@@ -24,6 +22,15 @@
 </template>
 
 <script setup>
+const props = defineProps({
+  // Subject ids the search must not offer. The create form passes the signed-in user's own id:
+  // making yourself an admin of a group you create is a checkbox there, not a search result.
+  excludeIds: {
+    type: Array,
+    default: () => [],
+  },
+});
+
 const model = defineModel({
   type: Array,
   default: () => [],
@@ -32,6 +39,9 @@ const model = defineModel({
 function onSelectUser(user) {
   // Prevent adding duplicates
   if (model.value.some((u) => u.id === user.id)) {
+    return;
+  }
+  if (props.excludeIds.includes(user.subject_id)) {
     return;
   }
   model.value = [...model.value, user];

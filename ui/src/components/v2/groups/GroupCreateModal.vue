@@ -210,7 +210,22 @@
 
         <!-- INITIAL ADMINS Section -->
         <ModernCard icon="mdi-account-multiple" title="Initial Admins">
-          <UserAdminSelect v-model="formData.selectedAdmins" />
+          <UserAdminSelect
+            v-model="formData.selectedAdmins"
+            :exclude-ids="adminSearchExcludeIds"
+          />
+
+          <div v-if="isChildTarget" class="mt-4">
+            <VaCheckbox
+              v-model="formData.creatorIsAdmin"
+              :disabled="!canDeclineAdmin"
+              :label="`I will be an admin of this ${childNoun}`"
+              data-testid="creator-is-admin"
+            />
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-2">
+              {{ creatorAdminHint }}
+            </p>
+          </div>
         </ModernCard>
       </VaForm>
     </VaInnerLoading>
@@ -222,6 +237,7 @@ import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
 import { computed, ref, watch } from "vue";
 import { useForm, VaButton } from "vuestic-ui";
+import { useAuthStore } from "@/stores/auth";
 import GroupAllowMemberContribSwitch from "./GroupAllowMemberContribSwitch.vue";
 import UserAdminSelect from "./UserAdminSelect.vue";
 
@@ -241,6 +257,8 @@ defineExpose({ show, hide });
 
 const { validate, resetValidation, isValid } = useForm("formRef");
 
+const auth = useAuthStore();
+
 const visible = ref(false);
 const loading = ref(false);
 const isChildMode = ref(false);
@@ -250,6 +268,11 @@ const formData = ref({
   allow_user_contributions: false,
   selectedParentGroup: null,
   selectedAdmins: [],
+  // Whether the creator governs the child they are creating. Creating a child group confers
+  // oversight over it, never authority within it, so this is the creator's own choice rather
+  // than something the API adds for them.
+  // @see docs/design/groups/e2e-test-flows.md — A1
+  creatorIsAdmin: true,
 });
 
 watch(isChildMode, (value) => {
@@ -258,19 +281,65 @@ watch(isChildMode, (value) => {
   }
 });
 
+// A child group must arrive with at least one admin, so the creator may only step back once
+// somebody else is named. Losing the last other admin puts them back in.
+watch(
+  () => formData.value.selectedAdmins.length,
+  (count) => {
+    if (count === 0) {
+      formData.value.creatorIsAdmin = true;
+    }
+  },
+);
+
 const nameRules = [
   (v) => !!v || "Group name is required",
   (v) => v.length >= 2 || "Group name must be at least 2 characters",
   (v) => v.length <= 255 || "Group name must be at most 255 characters",
 ];
 
+// Both the subgroup mode and the create-group child mode post to `POST /groups/:id/children`,
+// and it is that route that requires an admin.
+const isChildTarget = computed(() => props.isSubgroup || isChildMode.value);
+const childNoun = computed(() => (props.isSubgroup ? "subgroup" : "group"));
+
+const canDeclineAdmin = computed(
+  () => formData.value.selectedAdmins.length > 0,
+);
+
+const creatorAdminHint = computed(() => {
+  if (!canDeclineAdmin.value) {
+    return `At least one admin is needed. Add another admin above to leave this ${childNoun.value} to somebody else.`;
+  }
+  return `Clear this if you should not govern the ${childNoun.value}. Creating it already gives you oversight.`;
+});
+
+// Whoever is signed in never appears in the admin search: they are the checkbox, not a result.
+const adminSearchExcludeIds = computed(() =>
+  isChildTarget.value && auth.user?.subject_id ? [auth.user.subject_id] : [],
+);
+
+/** Every admin the request names, the creator included when they chose to be one. */
+const adminIds = computed(() => {
+  const ids = formData.value.selectedAdmins.map((admin) => admin.subject_id);
+  if (
+    isChildTarget.value &&
+    formData.value.creatorIsAdmin &&
+    auth.user?.subject_id
+  ) {
+    ids.push(auth.user.subject_id);
+  }
+  return ids;
+});
+
 const confirmationValid = computed(() => {
   if (!isValid.value) return false;
-  if (isChildMode.value || props.isSubgroup) {
+  if (isChildTarget.value) {
     const selectedParent = props.isSubgroup
       ? props.parentGroup
       : formData.value.selectedParentGroup;
     if (!selectedParent) return false;
+    if (adminIds.value.length === 0) return false;
   }
   return true;
 });
@@ -284,6 +353,7 @@ function show() {
     allow_user_contributions: false,
     selectedParentGroup: null,
     selectedAdmins: [],
+    creatorIsAdmin: true,
   };
   isChildMode.value = false;
 }
@@ -304,24 +374,19 @@ async function confirm() {
         ? formData.value.selectedParentGroup?.id
         : null;
 
-    // Extract admin IDs for API call
-    const adminIds = formData.value.selectedAdmins.map(
-      (admin) => admin.subject_id,
-    );
-
     // Create the group
     let newGroupRes;
     if (parentGroupId) {
       newGroupRes = await GroupService.createChild(parentGroupId, {
         name: formData.value.name,
         allow_user_contributions: formData.value.allow_user_contributions,
-        admins: adminIds,
+        admins: adminIds.value,
       });
     } else {
       newGroupRes = await GroupService.create({
         name: formData.value.name,
         allow_user_contributions: formData.value.allow_user_contributions,
-        admins: adminIds,
+        admins: adminIds.value,
       });
     }
 

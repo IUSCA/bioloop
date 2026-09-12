@@ -244,6 +244,38 @@ about the *caller* rather than the resource — call it as a stranger with a rea
 id that was never issued, and require the replies to be indistinguishable. Both current entries
 were admitted that way.
 
+## Driving a form, when the assertion is about the form's own state
+
+Most of the suite talks to the API and uses the browser only to prove a page refuses. Two specs
+in `src/specs/membership/create-child.spec.js` are the exception: the create-subgroup form's
+"I will be an admin" checkbox starts checked and **disabled** and becomes a choice once another
+admin is named, and no API call can show that.
+
+What made them work, after the selectors were found by running them rather than by reading:
+
+- **Give the control a `data-testid` and read the input inside it.** Vuestic's `VaCheckbox`
+  passes an unknown attribute to its root wrapper, not to the `<input>`, so
+  `getByTestId('creator-is-admin')` is the wrapper and
+  `.locator('input[type="checkbox"]')` is what `toBeChecked()` and `toBeDisabled()` need.
+  **Click the wrapper to toggle it.** Measured: `uncheck()` on the inner input times out with
+  "`<div class="va-checkbox__square">` intercepts pointer events", because the real input is a
+  1x1 box behind the drawn square. The wrapper also carries `va-checkbox--disabled` while the
+  control is disabled, if a spec ever needs the class rather than the attribute.
+- **Assert both states of a disabled control in one spec.** `toBeDisabled()` alone passes if the
+  selector is wrong in a way that resolves to nothing surprising, and passes forever if the
+  attribute is never set. Asserting `toBeDisabled()` before the admin is named and
+  `toBeEnabled()` after it is what makes each half evidence.
+- **`AutoCompleteSearch` renders "No results found"**, which is how a spec asserts that somebody
+  is *missing* from a search — here that the signed-in user cannot pick themselves. Fill the
+  search with their own username and expect that message; the same search filled with somebody
+  else's username must then find them, or the first half proved only that search is broken.
+- **`UserChip`'s remove control is named `Remove <name>`**, so
+  `getByRole('button', {name: /^Remove /})` removes a selected chip. There is no class to
+  target.
+- **`GET /v2/users?search=` matches name, email, *and* username** (`services/user.js:144`), but
+  the result row renders `name || email`. So search by the username the world handed you and
+  click by the display name, which a spec has to look up.
+
 ## Keeping this current
 
 When a phase teaches something this page does not mention — a response shape that surprised
