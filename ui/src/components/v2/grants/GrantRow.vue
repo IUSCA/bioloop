@@ -8,7 +8,7 @@
     <!-- Access Type Name -->
     <span
       :class="[
-        'text-sm font-medium text-gray-900 dark:text-gray-100',
+        'text-base font-medium text-gray-900 dark:text-gray-100',
         props.grant.revoked_at !== null ? 'line-through' : '',
       ]"
     >
@@ -21,7 +21,7 @@
     <!-- Access Type Description -->
     <span
       v-if="props.grant.access_type?.description"
-      class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"
+      class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"
     >
       {{ props.grant.access_type.description }}
     </span>
@@ -32,7 +32,7 @@
          @see docs/design/groups/decisions.md — 7. Access types imply one another -->
     <span
       v-if="alsoConfers.length && props.grant.revoked_at === null"
-      class="text-xs text-gray-500 dark:text-gray-500 mt-0.5"
+      class="text-sm text-gray-500 dark:text-gray-500 mt-0.5"
     >
       Also confers {{ alsoConfers.join(", ") }}
     </span>
@@ -66,7 +66,7 @@
     </div>
 
     <!-- Date Row -->
-    <div class="flex items-center gap-1.5 text-xs mt-1">
+    <div class="flex items-center gap-1.5 text-sm mt-1">
       <span class="text-gray-600 dark:text-gray-400"
         >Granted {{ datetime.date(props.grant.valid_from) }}</span
       >
@@ -85,7 +85,7 @@
     <button
       v-if="props.canRevoke && props.grant.revoked_at === null"
       type="button"
-      class="mt-1 self-start text-xs px-3 py-1.5 rounded-md border border-solid text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+      class="mt-1 self-start text-sm px-3 py-1.5 rounded-md border border-solid text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
       @click.stop="emit('revoke', props.grant)"
     >
       Revoke

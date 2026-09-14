@@ -5,10 +5,10 @@
     <!-- Grant on (collection grants) -->
     <div
       v-if="props.grant.resource?.type === 'COLLECTION'"
-      class="flex gap-2 text-xs"
+      class="flex gap-2 text-sm"
     >
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
         >Grant on</span
       >
       <span class="text-gray-700 dark:text-gray-300">
@@ -18,9 +18,9 @@
     </div>
 
     <!-- Origin -->
-    <div class="flex gap-2 text-xs">
+    <div class="flex gap-2 text-sm">
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
       >
         Origin
       </span>
@@ -68,9 +68,9 @@
     </div>
 
     <!-- Preset -->
-    <div v-if="props.grant.source_preset" class="flex gap-2 text-xs">
+    <div v-if="props.grant.source_preset" class="flex gap-2 text-sm">
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
       >
         Preset
       </span>
@@ -85,10 +85,10 @@
         props.grant.issuing_authority &&
         props.grant.creation_type !== 'ACCESS_REQUEST'
       "
-      class="flex gap-2 text-xs"
+      class="flex gap-2 text-sm"
     >
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
       >
         Authority
       </span>
@@ -98,9 +98,9 @@
     </div>
 
     <!-- Justification -->
-    <div v-if="props.grant.justification" class="flex gap-2 text-xs">
+    <div v-if="props.grant.justification" class="flex gap-2 text-sm">
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
       >
         Note
       </span>
@@ -110,9 +110,9 @@
     </div>
 
     <!-- Revoked -->
-    <div v-if="props.grant.revoked_at !== null" class="flex gap-2 text-xs">
+    <div v-if="props.grant.revoked_at !== null" class="flex gap-2 text-sm">
       <span
-        class="w-[72px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
+        class="w-[88px] flex-shrink-0 font-medium text-gray-500 dark:text-gray-400"
       >
         Revoked
       </span>

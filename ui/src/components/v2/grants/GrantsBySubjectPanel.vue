@@ -28,7 +28,7 @@
         <!-- Group Access Note -->
         <p
           v-if="props.subject.type === 'GROUP'"
-          class="text-xs text-gray-600 dark:text-gray-400 mb-1"
+          class="text-sm text-gray-600 dark:text-gray-400 mb-1"
         >
           All effective members of this group — including members of subgroups —
           have the access listed below.
