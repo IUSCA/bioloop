@@ -14,12 +14,11 @@
           </div>
 
           <!--
-            The dataset tab offers this in its header, and the epic's goal is one interface
-            across both resources. Without it the only way in was the empty state, so the
-            second request could not be filed from here at all.
+            The way to file a second request once the list has rows. Hidden while loading
+            and when the list is empty, because the empty state offers the same action.
           -->
           <VaButton
-            v-if="!props.canReview"
+            v-if="!props.canReview && (error || requests?.length)"
             color="success"
             icon="add"
             @click="openRequestModal"
