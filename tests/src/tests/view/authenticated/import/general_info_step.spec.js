@@ -25,10 +25,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Dataset Type select is visible with default value
       const datasetTypeSelect = page.getByTestId(
@@ -68,7 +68,7 @@ test.describe('Dataset Import — General Info step', () => {
         testId: 'import-metadata-project-autocomplete',
       });
 
-      // Assign Source Instrument checkbox is checked by default (if instruments available)
+      // Assign Source Instrument is checked by default when instruments exist.
       const sourceInstrumentSelect = page.getByTestId(
         'import-metadata-source-instrument-select',
       );
@@ -81,10 +81,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Change Dataset Type to Raw Data
       await selectDropdownOption({
@@ -131,10 +131,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Select source Raw Data
       await selectAutocompleteResult({
@@ -169,10 +169,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Verify the Assign Source Raw Data checkbox is enabled
       await assertCheckboxState({
@@ -229,10 +229,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Reset Dataset Type to Data Product so Source Raw Data can be assigned
       await selectDropdownOption({
@@ -306,10 +306,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       await assertCheckboxState({
         page,
@@ -367,10 +367,10 @@ test.describe('Dataset Import — General Info step', () => {
     async ({ page }) => {
       const reachedGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !reachedGeneralInfo,
-        'No import directories available in test environment',
-      );
+      expect(
+        reachedGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Select a Source Instrument first
       await selectDropdownOption({

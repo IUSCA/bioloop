@@ -262,7 +262,7 @@
                   :aria-label="isSelected(rowData) ? 'Remove' : 'Add'"
                   @click="addOrRemove(rowData)"
                   :disabled="
-                   selectedResultSelections.length > 0 || props.loading
+                    selectedResultSelections.length > 0 || props.loading
                   "
                 >
                   <Icon

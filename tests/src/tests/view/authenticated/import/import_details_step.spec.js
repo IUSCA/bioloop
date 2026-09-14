@@ -17,7 +17,10 @@ test.describe('Dataset Import — Import Details step', () => {
     async ({ page }) => {
       const onStep2 = await navigateToImportDetails(page);
 
-      test.skip(!onStep2, 'Could not reach Import step');
+      expect(
+        onStep2,
+        'Expected to reach Import Details using seeded import data',
+      ).toBe(true);
 
       // Two cards contain this title. The second one is the ImportInfo card.
       const card = page
@@ -46,7 +49,10 @@ test.describe('Dataset Import — Import Details step', () => {
     async ({ page }) => {
       const onStep2 = await navigateToImportDetails(page);
 
-      test.skip(!onStep2, 'Could not reach Import step');
+      expect(
+        onStep2,
+        'Expected to reach Import Details using seeded import data',
+      ).toBe(true);
 
       const nameInput = page.getByTestId(
         DATASET_NAME_INPUT_TEST_ID,
@@ -117,7 +123,10 @@ test.describe('Dataset Import — Import Details step', () => {
     async ({ page }) => {
       const onStep2 = await navigateToImportDetails(page);
 
-      test.skip(!onStep2, 'Could not reach Import step');
+      expect(
+        onStep2,
+        'Expected to reach Import Details using seeded import data',
+      ).toBe(true);
 
       await page
         .getByTestId(PREVIOUS_BUTTON_TEST_ID)

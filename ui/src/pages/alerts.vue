@@ -40,11 +40,7 @@
     />
 
     <!-- New Alert button -->
-    <va-button
-      class="px-1"
-      color="success"
-      @click="showNewAlertModal"
-    >
+    <va-button class="px-1" color="success" @click="showNewAlertModal">
       <Icon icon="material-symbols:add" class="mr-2 text-xl" />
       New Alert
     </va-button>

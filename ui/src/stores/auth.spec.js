@@ -58,7 +58,6 @@ describe("useAuthStore", () => {
     vi.clearAllMocks();
 
     vi.mocked(jwtDecode).mockReturnValue({ exp: 0 });
-
   });
 
   // -- Auth state --
@@ -232,7 +231,10 @@ describe("useAuthStore", () => {
       (roles, canAdmin, canOperate) => {
         const store = useAuthStore();
         store.onLogin({
-          profile: { username: "elijah", ...(roles !== undefined && { roles }) },
+          profile: {
+            username: "elijah",
+            ...(roles !== undefined && { roles }),
+          },
           token: "token",
         });
 

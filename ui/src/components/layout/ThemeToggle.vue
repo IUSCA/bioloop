@@ -8,7 +8,9 @@
     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
   >
     <Icon
-      :icon="isDark ? 'material-symbols:light-mode' : 'material-symbols:dark-mode'"
+      :icon="
+        isDark ? 'material-symbols:light-mode' : 'material-symbols:dark-mode'
+      "
       class="text-xl"
     />
   </va-button>

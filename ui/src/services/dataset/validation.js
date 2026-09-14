@@ -42,8 +42,8 @@ export function getDatasetExistsError(datasetType, datasetTypes) {
   )?.label;
 
   return datasetTypeLabel
-  ? `A ${datasetTypeLabel} with this name already exists.`
-  : "A dataset with this name already exists.";
+    ? `A ${datasetTypeLabel} with this name already exists.`
+    : "A dataset with this name already exists.";
 }
 
 /**

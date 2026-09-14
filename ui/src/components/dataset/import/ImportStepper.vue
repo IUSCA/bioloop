@@ -490,16 +490,16 @@ const isNextButtonDisabled = computed(() => {
 /**
  * Payload sent along with the network request responsible for creating a database entry of the Dataset being imported.
  */
-const importFormData = computed(() => 
-    buildImportPayload({
-      name: importedDatasetName.value,
+const importFormData = computed(() =>
+  buildImportPayload({
+    name: importedDatasetName.value,
     type: selectedDatasetType.value.value,
     selectedRawData: selectedRawData.value,
     projectSelected: projectSelected.value,
     selectedSourceInstrument: selectedSourceInstrument.value,
     selectedFile: selectedFile.value,
     willCreateNewProject: willCreateNewProject.value,
-    })
+  }),
 );
 
 const resetRawDataSearch = () => {
@@ -608,17 +608,17 @@ const setFormErrors = async () => {
 
   if (step.value === 1) {
     if (
-  hasMetadataAssignmentError({
-    willAssignSourceRawData: willAssignSourceRawData.value,
-    selectedRawData: selectedRawData.value,
-    willAssignProject: willAssignProject.value,
-    projectSelected: projectSelected.value,
-    willAssignSourceInstrument: willAssignSourceInstrument.value,
-    selectedSourceInstrument: selectedSourceInstrument.value,
-  })
-) {
-  formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
-}
+      hasMetadataAssignmentError({
+        willAssignSourceRawData: willAssignSourceRawData.value,
+        selectedRawData: selectedRawData.value,
+        willAssignProject: willAssignProject.value,
+        projectSelected: projectSelected.value,
+        willAssignSourceInstrument: willAssignSourceInstrument.value,
+        selectedSourceInstrument: selectedSourceInstrument.value,
+      })
+    ) {
+      formErrors.value[STEP_KEYS.GENERAL_INFO] = true;
+    }
   }
 
   if (step.value === 2) {

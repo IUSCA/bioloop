@@ -131,7 +131,7 @@ const selectedDatasets = computed(() => projectFormStore.datasets);
 const step = ref(0);
 const loading = ref(false);
 const steps = [
-{ label: "General Info", icon: "material-symbols:lightbulb" },
+  { label: "General Info", icon: "material-symbols:lightbulb" },
   { label: "Datasets", icon: "material-symbols:dataset" },
   { label: "Users", icon: "material-symbols:group" },
   { label: "Create", icon: "material-symbols:add-task" },

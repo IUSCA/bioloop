@@ -148,12 +148,12 @@ describe("arrayEquals", () => {
 
 describe("mapValues / filterByValues", () => {
   it("maps each entry with key and value", () => {
-    expect(mapValues({ a: 1, b: 2 }, (key, value) => `${key}:${value}`)).toEqual(
-      {
-        a: "a:1",
-        b: "b:2",
-      },
-    );
+    expect(
+      mapValues({ a: 1, b: 2 }, (key, value) => `${key}:${value}`),
+    ).toEqual({
+      a: "a:1",
+      b: "b:2",
+    });
   });
 
   it("keeps entries that match the predicate", () => {
@@ -174,9 +174,9 @@ describe("set helpers", () => {
     expect([...union(new Set([1, 2]), new Set([2, 3]))].sort()).toEqual([
       1, 2, 3,
     ]);
-    expect([...setIntersection(new Set([1, 2, 3]), new Set([2, 3, 4]))]).toEqual(
-      [2, 3],
-    );
+    expect([
+      ...setIntersection(new Set([1, 2, 3]), new Set([2, 3, 4])),
+    ]).toEqual([2, 3]);
   });
 });
 

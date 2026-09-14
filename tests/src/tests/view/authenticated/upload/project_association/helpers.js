@@ -8,6 +8,26 @@ import {
 } from '../../../../../actions/datasetUpload';
 import { navigateToNextStep } from '../../../../../actions/stepper';
 import { generateUniqueDatasetName } from '../../../../../api/dataset';
+import { expect } from '../../../../../fixtures';
+
+/**
+ * Submits the upload and waits until the API records it as complete.
+ * Register the response listener before clicking so a fast response is not missed.
+ * @param {import('@playwright/test').Page} page - Playwright page
+ */
+export async function submitAndWaitForUploadCompletion(page) {
+  const completionResponsePromise = page.waitForResponse((response) => {
+    const { pathname } = new URL(response.url());
+
+    return response.request().method() === 'POST'
+      && /\/datasets\/uploads\/[^/]+\/complete\/?$/.test(pathname);
+  });
+
+  await page.getByTestId('upload-next-button').click();
+
+  const completionResponse = await completionResponsePromise;
+  expect(completionResponse.ok()).toBe(true);
+}
 
 /**
  * Completes and submits an upload for a project-association scenario.
@@ -67,7 +87,7 @@ export default async function submitProjectAssociationUpload({
   });
 
   await page.getByTestId('upload-details-dataset-name-input').fill(uploadedDatasetName);
-  await page.getByTestId('upload-next-button').click();
+  await submitAndWaitForUploadCompletion(page);
 
   return { uploadedDatasetName, selectedDatasetType };
 }

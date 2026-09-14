@@ -16,7 +16,7 @@
   },
   "enabledFeatures": {
     "notifications": {
-      "enabledForRoles": ["admin"]
+      "enabledForRoles": []
     },
     "uploads": {
       "enabledForRoles": [

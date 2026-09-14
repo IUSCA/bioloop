@@ -525,7 +525,6 @@ const STEP_KEYS = {
   UPLOAD: "upload",
 };
 
-
 // The various steps that the user will taken through during the process of uploading a dataset.
 const steps = [
   {
@@ -1250,7 +1249,9 @@ const uploadFilesWithTus = async (files, endpoint) => {
   const uploadSingleFileWithTus = (file) => {
     return new Promise((resolve, reject) => {
       // TEST ONLY: Check for failure count configuration.
-      const simulateFailureCount = getTestSetting("SIMULATE_UPLOAD_FAILURE_COUNT");
+      const simulateFailureCount = getTestSetting(
+        "SIMULATE_UPLOAD_FAILURE_COUNT",
+      );
 
       let upload = null;
 
@@ -1262,11 +1263,11 @@ const uploadFilesWithTus = async (files, endpoint) => {
         endpoint,
         // Do not persist per-file resume fingerprints in localStorage.
         // Large upload sessions can exceed browser storage quota and abort
-        // uploads with QuotaExceededError before PATCH begins. 
+        // uploads with QuotaExceededError before PATCH begins.
         // ** NOTE: **
-        // Setting storeFingerprintForResuming: false affects 
-        // *persistent* resume (the feature that survives page reload/browser 
-        // restart), because tus-js no longer stores fingerprint→upload URL 
+        // Setting storeFingerprintForResuming: false affects
+        // *persistent* resume (the feature that survives page reload/browser
+        // restart), because tus-js no longer stores fingerprint→upload URL
         // in localStorage.
         storeFingerprintForResuming: false,
         // Send each file as bounded PATCH chunks so upstream proxies with
@@ -1312,7 +1313,7 @@ const uploadFilesWithTus = async (files, endpoint) => {
         },
         onBeforeRequest: (req) => {
           try {
-            // Read token at request time, so that long-lasting uploads keep 
+            // Read token at request time, so that long-lasting uploads keep
             // using unexpired JWTs.
             const latestToken = getAuthToken();
             if (latestToken && req?.setHeader) {
@@ -1327,7 +1328,8 @@ const uploadFilesWithTus = async (files, endpoint) => {
         },
         onError: (error) => {
           const statusCode = error.originalResponse?.getStatus?.() ?? "unknown";
-          const statusText = error.originalResponse?.getBody?.() || error.message || "unknown";
+          const statusText =
+            error.originalResponse?.getBody?.() || error.message || "unknown";
           bumpCounter(failureStatusHistogram, statusCode);
           bumpCounter(failureMessageHistogram, statusText);
           console.error(`[TUS-CLIENT] Upload FAILED for ${file.name}:`, {

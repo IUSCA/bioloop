@@ -54,10 +54,7 @@
         </template>
 
         <template #cell(actions)="{ row, isExpanded }">
-          <va-button
-            @click="row.toggleRowDetails()"
-            preset="plain"
-          >
+          <va-button @click="row.toggleRowDetails()" preset="plain">
             <Icon
               :icon="
                 isExpanded

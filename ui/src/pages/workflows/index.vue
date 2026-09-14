@@ -164,7 +164,8 @@
         v-if="workflows.length === 0"
         class="text-center mt-24 flex flex-col gap-5 justify-center items-center"
       >
-        <Icon icon="mdi:alert-circle-outline"
+        <Icon
+          icon="mdi:alert-circle-outline"
           style="color: var(--va-info)"
           class="text-4xl"
         />

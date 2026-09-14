@@ -94,10 +94,10 @@ test.describe('Dataset Import — Select Directory step', () => {
 
       const initialCount = await resultItems.count();
 
-      test.skip(
-        initialCount === 0,
-        'Need at least 1 result to verify filtering',
-      );
+      expect(
+        initialCount,
+        'Expected at least 1 seeded import directory to verify filtering',
+      ).toBeGreaterThan(0);
 
       // Use part of the first directory name as the search term.
       const firstButtonText = (
@@ -174,10 +174,10 @@ test.describe('Dataset Import — Select Directory step', () => {
 
       const hasResults = await selectFirstImportDirectory(page);
 
-      test.skip(
-        !hasResults,
-        'No import directories available in test environment',
-      );
+      expect(
+        hasResults,
+        'Expected at least 1 seeded import directory in the test environment',
+      ).toBe(true);
 
       // Error should no longer be visible
       await expect(errorMessage).not.toBeVisible();

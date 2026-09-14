@@ -10,6 +10,7 @@ import {
 import { navigateToNextStep } from '../../../../../../actions/stepper';
 import { generateUniqueDatasetName } from '../../../../../../api/dataset';
 import { expect, test } from '../../../../../../fixtures';
+import { submitAndWaitForUploadCompletion } from '../helpers';
 
 const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
 
@@ -92,7 +93,7 @@ test('user upload is associated with an existing or new Project', async ({
     await expect(projectText).toContainText(NEW_PROJECT_TEXT);
   }
 
-  await page.getByTestId('upload-next-button').click();
+  await submitAndWaitForUploadCompletion(page);
 
   const projectLink = page.getByTestId('upload-details-project-link');
   await expect(projectLink).toBeVisible();

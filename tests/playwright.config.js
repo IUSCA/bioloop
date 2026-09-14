@@ -49,8 +49,9 @@ module.exports = {
       ignoreHTTPSErrors: true,
       video: 'on-first-retry',
     },
-    /* Ignore tests */
-    testIgnore: ['**/view/authenticated/project/*.spec.js'],
+
+    // Notifications are still a work in progress and are not part of required CI.
+    testIgnore: ['**/view/authenticated/notifications/*.spec.js'],
 
     /* Configure Projects (groups of tests) */
 
@@ -85,7 +86,7 @@ module.exports = {
       {
         name: 'unauthenticated',
         use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/unauthenticated/test.spec.js',
+        testMatch: '/view/unauthenticated/project.spec.js',
       },
 
       /** Tests than run in authenticated mode */

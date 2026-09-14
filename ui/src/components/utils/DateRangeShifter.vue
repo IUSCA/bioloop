@@ -7,7 +7,10 @@
       @click="jumpToStartDateExtreme(props.startDateMin)"
       :disabled="isAtStartDateExtreme"
     >
-      <Icon icon="material-symbols:keyboard-double-arrow-left" class="text-xl" />
+      <Icon
+        icon="material-symbols:keyboard-double-arrow-left"
+        class="text-xl"
+      />
     </va-button>
     <va-button
       preset="secondary"
@@ -57,7 +60,10 @@
       @click="jumpToEndDateExtreme(props.endDateMax)"
       :disabled="isAtEndDateExtreme"
     >
-      <Icon icon="material-symbols:keyboard-double-arrow-right" class="text-xl" />
+      <Icon
+        icon="material-symbols:keyboard-double-arrow-right"
+        class="text-xl"
+      />
     </va-button>
   </va-button-group>
 </template>

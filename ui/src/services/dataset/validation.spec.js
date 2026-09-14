@@ -43,7 +43,6 @@ describe("validateDatasetNameFormat", () => {
   });
 });
 
-
 describe("getDatasetExistsError", () => {
   it("includes the dataset type label", () => {
     expect(getDatasetExistsError("RAW_DATA", datasetTypes)).toBe(

@@ -26,11 +26,7 @@ import {
  * and methods used by the checksum service.
  */
 
-function createMockFile({
-  name,
-  content = "",
-  webkitRelativePath = "",
-}) {
+function createMockFile({ name, content = "", webkitRelativePath = "" }) {
   const bytes = new TextEncoder().encode(content);
 
   return {
@@ -84,7 +80,7 @@ function createMockHasher() {
 }
 
 describe("getManifestPath", () => {
-   /**
+  /**
    * Single-file uploads do not have a webkitRelativePath,
    * so the manifest should use the file name directly.
    */
@@ -126,7 +122,7 @@ describe("getManifestPath", () => {
     expect(getManifestPath(file)).toBe("sub/test.txt");
   });
 
-   /**
+  /**
    * Single-file paths beginning with "./" should be normalized
    * to the plain filename used by the manifest.
    */
@@ -164,7 +160,7 @@ describe("computeManifestHash", () => {
     expect(createBLAKE3).not.toHaveBeenCalled();
   });
 
-/**
+  /**
    * When checksum verification is disabled, no checksum work should
    * be performed and the function should return null.
    */
@@ -204,17 +200,13 @@ describe("computeManifestHash", () => {
     // passed into the final manifest-hash operation.
 
     expect(result.manifest_hash).toBe(
-      [
-        "blake3-manifest-v1",
-        "test.txt\t5\thello",
-      ].join("\n"),
+      ["blake3-manifest-v1", "test.txt\t5\thello"].join("\n"),
     );
 
     expect(result.computed_at).toEqual(expect.any(String));
   });
 
-
- /**
+  /**
    * Directory uploads must remove the top-level directory name
    * before creating the manifest entry.
    */
@@ -233,10 +225,7 @@ describe("computeManifestHash", () => {
     ]);
 
     expect(result.manifest_hash).toBe(
-      [
-        "blake3-manifest-v1",
-        "sub/test.txt\t5\thello",
-      ].join("\n"),
+      ["blake3-manifest-v1", "sub/test.txt\t5\thello"].join("\n"),
     );
   });
 
@@ -272,17 +261,11 @@ describe("computeManifestHash", () => {
     });
 
     expect(result.manifest_hash).toBe(
-      [
-        "blake3-manifest-v1",
-        "a.txt\t1\tA",
-        "sub/b.txt\t1\tB",
-      ].join("\n"),
+      ["blake3-manifest-v1", "a.txt\t1\tA", "sub/b.txt\t1\tB"].join("\n"),
     );
   });
 
-
-
-/**
+  /**
    * Zero-byte files are valid files and should hash as an empty stream
    * rather than causing an error or being skipped.
    */
@@ -306,23 +289,18 @@ describe("computeManifestHash", () => {
     });
 
     expect(result.manifest_hash).toBe(
-      [
-        "blake3-manifest-v1",
-        "empty.txt\t0\tEMPTY_HASH",
-      ].join("\n"),
+      ["blake3-manifest-v1", "empty.txt\t0\tEMPTY_HASH"].join("\n"),
     );
   });
 
-    /**
+  /**
    * A checksum failure should not fail the entire upload.
    * Instead, the service should return a skip marker so the backend
    * knows checksum computation was attempted but failed.
    */
 
   it("returns a skip marker when checksum computation fails", async () => {
-    createBLAKE3.mockRejectedValueOnce(
-      new Error("WASM failed"),
-    );
+    createBLAKE3.mockRejectedValueOnce(new Error("WASM failed"));
 
     const consoleErrorSpy = vi
       .spyOn(console, "error")
@@ -344,7 +322,7 @@ describe("computeManifestHash", () => {
     consoleErrorSpy.mockRestore();
   });
 
-   /**
+  /**
    * Verifies that the progress callback reaches 100% after
    * a successful checksum calculation.
    */
@@ -369,12 +347,12 @@ describe("computeManifestHash", () => {
     expect(progressCallback).toHaveBeenCalled();
     expect(progressCallback).toHaveBeenLastCalledWith(100);
   });
-  
-   /**
+
+  /**
    * Verifies that overall progress is calculated correctly when
    * multiple files are processed and still finishes at 100%.
    */
-  
+
   it("reports overall progress across multiple files", async () => {
     const hasher = createMockHasher();
 
@@ -406,7 +384,7 @@ describe("isChecksumVerificationEnabled", () => {
     config.enabledFeatures.upload_verify_checksums = true;
   });
 
-   /**
+  /**
    * The helper should return true when checksum verification
    * is enabled in application configuration.
    */

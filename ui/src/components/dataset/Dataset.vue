@@ -78,14 +78,20 @@
               </va-card-title>
               <va-card-content>
                 <div class="flex flex-nowrap gap-3 justify-start items-center">
-                  <Icon icon="mdi:chart-box-outline" class="flex-initial text-2xl" />
+                  <Icon
+                    icon="mdi:chart-box-outline"
+                    class="flex-initial text-2xl"
+                  />
                   <a
                     class="va-link flex items-center justify-start"
                     target="_blank"
                     :href="`/api/reports/${dataset?.metadata?.report_id}/multiqc_report.html`"
                   >
                     <span class="flex-initial">MultiQC Report</span>
-                    <Icon icon="mdi:open-in-new" class="flex-initial inline-block pl-1" />
+                    <Icon
+                      icon="mdi:open-in-new"
+                      class="flex-initial inline-block pl-1"
+                    />
                   </a>
                 </div>
               </va-card-content>
@@ -296,7 +302,10 @@
           v-else
           class="text-center bg-slate-200 dark:bg-slate-800 py-2 rounded shadow"
         >
-          <Icon icon="mdi:card-remove-outline" class="inline-block text-4xl pr-3" />
+          <Icon
+            icon="mdi:card-remove-outline"
+            class="inline-block text-4xl pr-3"
+          />
           <span class="text-lg">
             There are no workflows associated with this dataset.
           </span>

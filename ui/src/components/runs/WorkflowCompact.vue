@@ -79,7 +79,8 @@
     <!-- created at -->
     <div class="col-span-2 lg:col-span-3">
       <va-popover message="Created On" :hover-over-timeout="500">
-        <Icon icon="mdi:calendar"
+        <Icon
+          icon="mdi:calendar"
           class="text-xl inline-block text-slate-700 dark:text-slate-300"
         />
       </va-popover>
@@ -94,7 +95,8 @@
     <!-- Elapsed time and last updated -->
     <div class="col-span-1 lg:col-span-2">
       <va-popover message="Duration" placement="top" :hover-over-timeout="500">
-        <Icon icon="mdi:timer"
+        <Icon
+          icon="mdi:timer"
           class="hidden sm:inline-block text-xl text-slate-700 dark:text-slate-300"
         />
       </va-popover>

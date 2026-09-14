@@ -52,10 +52,10 @@ test.describe('Dataset Import — submit and verify workflow', () => {
     await test.step('should select the first directory and enable Next', async () => {
       const hasResults = await selectFirstImportDirectory(page);
 
-      test.skip(
-        !hasResults,
-        'No import directories available in test environment',
-      );
+      expect(
+        hasResults,
+        'Expected at least 1 seeded import directory in the test environment',
+      ).toBe(true);
 
       await expect(
         page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID),
@@ -70,7 +70,10 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
           .isEnabled();
 
-        if (!nextEnabled) return;
+        expect(
+          nextEnabled,
+          'Expected Next to be enabled after selecting an import directory',
+        ).toBe(true);
 
         await navigateToNextStep({
           page,
@@ -87,11 +90,13 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           )
           .isVisible();
 
-        test.skip(!onStep1, 'Could not reach General Info step');
+        expect(
+          onStep1,
+          'Expected to reach General Info after selecting an import directory',
+        ).toBe(true);
 
-        // Uncheck optional assignment fields so no selections are required to advance.
-        // Each call is a no-op when the checkbox is already unchecked or disabled
-        // (i.e. when there is no available data to assign in the test environment).
+        // Uncheck optional assignments before advancing.
+        // Each call is a no-op when its checkbox is unchecked or disabled.
         await setCheckboxState({
           page,
           testId: 'import-metadata-assign-source-checkbox',
@@ -112,10 +117,9 @@ test.describe('Dataset Import — submit and verify workflow', () => {
 
         await expect
           .poll(
-            () =>
-              page
-                .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
-                .isEnabled(),
+            () => page
+              .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
+              .isEnabled(),
             { timeout: 5000 },
           )
           .toBe(true);
@@ -132,21 +136,10 @@ test.describe('Dataset Import — submit and verify workflow', () => {
     await test.step(
       'should enter a valid dataset name and enable the Import button',
       async () => {
-        // Wait briefly for the Import Details card to render after navigating.
-        await page
-          .waitForSelector('[data-testid="import-info-card"]', {
-            timeout: 10000,
-          })
-          .catch(() => {});
-
-        const onStep2 = await page
-          .locator('[data-testid="import-info-card"]')
-          .isVisible();
-
-        test.skip(
-          !onStep2,
-          'Could not reach Import Details step',
-        );
+        // Fail clearly if navigation did not reach Import Details.
+        await expect(page.getByTestId('import-info-card')).toBeVisible({
+          timeout: 10000,
+        });
 
         const uniqueName = `e2e_import_${Date.now()}`;
 
@@ -154,13 +147,12 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .getByTestId(DATASET_NAME_INPUT_TEST_ID)
           .fill(uniqueName);
 
-        // The Import button stays disabled until the async name-uniqueness check passes.
+        // Wait for the asynchronous name-uniqueness check to pass.
         await expect
           .poll(
-            () =>
-              page
-                .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
-                .isEnabled(),
+            () => page
+              .getByTestId(IMPORT_NEXT_BUTTON_TEST_ID)
+              .isEnabled(),
             { timeout: 10000 },
           )
           .toBe(true);
@@ -174,10 +166,10 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .locator('[data-testid="import-info-card"]')
           .isVisible();
 
-        test.skip(
-          !onStep2,
-          'Could not reach Import Details step',
-        );
+        expect(
+          onStep2,
+          'Expected to remain on Import Details before submitting the import',
+        ).toBe(true);
 
         await page.getByTestId(IMPORT_NEXT_BUTTON_TEST_ID).click();
 
@@ -196,10 +188,10 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .locator('[data-testid="import-info-card"]')
           .isVisible();
 
-        test.skip(
-          !onStep2,
-          'Could not reach Import Details step',
-        );
+        expect(
+          onStep2,
+          'Expected to remain on Import Details after submitting the import',
+        ).toBe(true);
 
         const link = page.getByTestId(
           'import-success-dataset-link',
@@ -222,15 +214,15 @@ test.describe('Dataset Import — submit and verify workflow', () => {
           .locator('[data-testid="import-info-card"]')
           .isVisible();
 
-        test.skip(
-          !onStep2,
-          'Could not reach Import Details step',
-        );
+        expect(
+          onStep2,
+          'Expected to remain on Import Details before opening the Dataset',
+        ).toBe(true);
 
-        test.skip(
-          !datasetHref,
-          'Dataset link was not captured',
-        );
+        expect(
+          datasetHref,
+          'Expected the created Dataset link to be captured',
+        ).toBeTruthy();
 
         await page
           .getByTestId('import-success-dataset-link')
@@ -242,12 +234,12 @@ test.describe('Dataset Import — submit and verify workflow', () => {
         });
 
         // Wait for the dataset API response so the loading overlay clears
-        // (va-inner-loading hides its slot content while the fetch is in flight).
+        // va-inner-loading hides its content while the fetch is in flight.
         await page.waitForLoadState('networkidle', {
           timeout: 20000,
         });
 
-        // Verify the WORKFLOWS section is present and contains at least one workflow.
+        // Verify WORKFLOWS is present and contains at least one workflow.
         const workflowsSection = page.getByTestId(
           'dataset-workflows-section',
         );

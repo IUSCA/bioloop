@@ -42,10 +42,10 @@ const nav = useNavStore();
 }
 
 .va-breadcrumbs__item:not(:last-child) {
-  color: #475569; 
+  color: #475569;
 }
 
 :root.dark .va-breadcrumbs__item:not(:last-child) {
-  color: #cbd5e1; 
+  color: #cbd5e1;
 }
 </style>

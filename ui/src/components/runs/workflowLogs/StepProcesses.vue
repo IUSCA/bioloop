@@ -16,7 +16,11 @@
               <span>PID: {{ p.pid }}</span>
             </div>
             <div class="flex gap-1 flex-none">
-              <Icon icon="mdi:server-network" aria-label="hostname" class="flex-none" />
+              <Icon
+                icon="mdi:server-network"
+                aria-label="hostname"
+                class="flex-none"
+              />
               <span>{{ p.hostname }} </span>
             </div>
           </div>
@@ -28,7 +32,8 @@
         <va-list-item-label>
           <div>
             <va-popover message="Started On" :hover-over-timeout="500">
-              <Icon icon="mdi:calendar"
+              <Icon
+                icon="mdi:calendar"
                 class="inline-block text-slate-700 dark:text-slate-300"
               />
             </va-popover>

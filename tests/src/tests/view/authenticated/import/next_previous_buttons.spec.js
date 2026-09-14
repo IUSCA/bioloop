@@ -55,10 +55,10 @@ test.describe('Dataset Import — Next/Previous buttons', () => {
     async ({ page }) => {
       const onGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !onGeneralInfo,
-        'Could not reach General Info step',
-      );
+      expect(
+        onGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       await expect(
         page.getByTestId(PREVIOUS_BUTTON_TEST_ID),
@@ -75,10 +75,10 @@ test.describe('Dataset Import — Next/Previous buttons', () => {
     async ({ page }) => {
       const onGeneralInfo = await navigateToImportGeneralInfo(page);
 
-      test.skip(
-        !onGeneralInfo,
-        'Could not reach General Info step',
-      );
+      expect(
+        onGeneralInfo,
+        'Expected to reach General Info using seeded import data',
+      ).toBe(true);
 
       // Select source Raw Data
       await selectAutocompleteResult({

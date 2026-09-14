@@ -71,12 +71,11 @@ describe("buildImportPayload", () => {
       selectedSourceInstrument: null,
       willCreateNewProject: false,
     });
-  
+
     expect(result).not.toHaveProperty("origin_path");
     expect(result).not.toHaveProperty("create_method");
   });
 });
-
 
 describe("buildUploadPayload", () => {
   it("builds the basic upload payload", () => {
@@ -127,8 +126,6 @@ describe("buildUploadPayload", () => {
     expect(result).not.toHaveProperty("project_id");
   });
 });
-
-
 
 describe("buildSizeManifest", () => {
   it("uses the filename for single-file uploads", () => {
