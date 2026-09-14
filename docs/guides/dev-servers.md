@@ -58,9 +58,13 @@ Ctrl-C stops the tail. It does not stop the servers.
 
 The whole `logs/` directory is gitignored.
 
+<!-- cSpell: ignore thisisunsafe -->
+
 The API listens on `http://localhost:3030`. The UI listens on `https://localhost`, port
 443, behind the self-signed certificate you generated during setup. Your browser will warn
-about that certificate the first time.
+about that certificate the first time. A browser driven by Chrome DevTools MCP stops on the
+same warning with `net::ERR_CERT_AUTHORITY_INVALID`. Typing `thisisunsafe` on the warning
+page loads the site.
 
 ## Notifications need Redis, MailHog, and the worker
 

@@ -1,35 +1,10 @@
 <template>
   <div class="flex flex-col gap-3">
-    <!-- Header row -->
-    <VaCard class="header card">
+    <!-- show request button if user cannot review -->
+    <VaCard v-if="!props.canReview" class="header card">
       <VaCardContent>
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex flex-col gap-2 flex-1">
-            <div class="flex items-center justify-between gap-3">
-              <!-- subject type selector -->
-              <ModernButtonToggle
-                v-model="subjectType"
-                :options="subjectTypeOptions"
-                value-by="value"
-              />
-
-              <!-- Search input -->
-              <div class="flex-1">
-                <Searchbar
-                  v-model="subjectSearchTerm"
-                  placeholder="Search requests by user or group name"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- show request button if user cannot review -->
-          <VaButton
-            v-if="!props.canReview"
-            color="success"
-            icon="add"
-            @click="openRequestAccessModal"
-          >
+        <div class="flex items-start justify-end gap-3">
+          <VaButton color="success" icon="add" @click="openRequestAccessModal">
             Request Access
           </VaButton>
         </div>

@@ -107,6 +107,11 @@ https://localhost/dev-login?username=user-013  # an ordinary member of a seeded 
 https://localhost/dev-login?username=<any>&next=/v2/datasets
 ```
 
+**A fresh DevTools browser refuses the self-signed certificate.** The first navigation fails
+with `net::ERR_CERT_AUTHORITY_INVALID` and leaves a Chrome privacy-error page. Call
+`type_text` with `thisisunsafe` on that page; it needs no focused element, and Chrome then
+loads the original URL. Checked 2026-09-14.
+
 It calls `POST /auth/test_login`, which accepts any active username with no credential and is
 registered only in a recognised development mode — `localhost`, `docker`, or `ci`. That
 environment guard is the entire protection; do not weaken it.
