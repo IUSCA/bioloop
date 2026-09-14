@@ -72,6 +72,23 @@ div.va-dropdown__content.va-dropdown__content-wrapper {
   --va-data-table-cell-padding: 8px;
 }
 
+/* A v2 table scrolls inside itself and never widens the page.
+ * `contain: inline-size` keeps the table's width out of its wrappers' size, which matters
+ * because Vuestic gives `.va-inner-loading` a `min-width: fit-content`.
+ * @see docs/contributing/v2-design-system.md - Tables
+ */
+.v2-table {
+  contain: inline-size;
+}
+
+/* The one column that takes the leftover width, with its text truncated by the cell's content.
+ * @see docs/contributing/v2-design-system.md - Tables
+ */
+.v2-table .v2-table-fill-cell {
+  width: 100%;
+  max-width: 0;
+}
+
 .card.header {
   --va-card-padding: 0.8rem;
 }

@@ -119,7 +119,10 @@
                 </template>
 
                 <template #cell(description)="{ value }">
-                  <span class="text-sm va-text-secondary line-clamp-1">
+                  <span
+                    class="block truncate text-sm va-text-secondary"
+                    :title="value"
+                  >
                     {{ value || "—" }}
                   </span>
                 </template>
@@ -290,20 +293,19 @@ const statusFilters = [
 const columns = computed(() => {
   const _columns = [
     { key: "name", label: "Name", sortable: true },
-    { key: "type", label: "Type", width: "120px" },
-    { key: "description", label: "Description" },
-    { key: "size", label: "Size", width: "100px", sortable: true },
-    { key: "created_at", label: "Created On", width: "120px", sortable: true },
+    { key: "type", label: "Type" },
+    { key: "description", label: "Description", tdClass: "v2-table-fill-cell" },
+    { key: "size", label: "Size", sortable: true },
+    { key: "created_at", label: "Created On", sortable: true },
     {
       key: "updated_at",
       label: "Last Updated",
-      width: "120px",
       sortable: true,
     },
-    { key: "status", label: "Status", width: "100px" },
+    { key: "status", label: "Status" },
   ];
   if (props.canRemove) {
-    _columns.push({ key: "actions", label: "", width: "40px" });
+    _columns.push({ key: "actions", label: "" });
   }
   return _columns;
 });

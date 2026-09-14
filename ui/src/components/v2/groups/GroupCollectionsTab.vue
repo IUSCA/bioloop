@@ -74,7 +74,10 @@
                 </template>
 
                 <template #cell(tagline)="{ value }">
-                  <span class="text-sm va-text-secondary line-clamp-1">
+                  <span
+                    class="block truncate text-sm va-text-secondary"
+                    :title="value"
+                  >
                     {{ value || "—" }}
                   </span>
                 </template>
@@ -208,11 +211,11 @@ const statusFilters = [
 
 const columns = [
   { key: "name", label: "Name", sortable: true },
-  { key: "tagline", label: "Tagline" },
-  { key: "size", label: "Size", width: "80px", sortable: true },
-  { key: "created_at", label: "Created On", width: "120px", sortable: true },
-  { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },
-  { key: "status", label: "Status", width: "100px" },
+  { key: "tagline", label: "Tagline", tdClass: "v2-table-fill-cell" },
+  { key: "size", label: "Size", sortable: true },
+  { key: "created_at", label: "Created On", sortable: true },
+  { key: "updated_at", label: "Last Updated", sortable: true },
+  { key: "status", label: "Status" },
 ];
 
 function setStatus(value) {

@@ -357,6 +357,27 @@ handles this. A hand-rolled control carries the shared `.focus-ring` class from
 **Color is never the only signal.** A revoked grant is struck through as well as faded. An
 archived resource carries a labelled badge, not only a muted tone.
 
+## Tables
+
+A v2 table scrolls sideways inside itself and never makes the page scroll. Every
+`VaDataTable` in v2 carries the `v2-table` class, which sets `contain: inline-size`. That
+property keeps the table's width out of the size of the elements around it.
+
+Containment is needed because of two Vuestic defaults. The table sets `white-space: nowrap`,
+so a long cell grows the table rather than wrapping. And `.va-inner-loading` sets
+`min-width: fit-content`, so every loading wrapper grows to fit that table. `App.vue` wraps
+the whole layout in one, so without containment the page grows too. Measured on a group's
+Datasets tab at a 1000px window: the wrapper and `#main` were both 1440px wide.
+
+Columns carry no `width`. The browser sizes each column to its content, and the table
+stays readable at any window width.
+
+At most one column takes the leftover width and truncates. It is the free-text column, such
+as a description or tagline. Its column definition sets `tdClass: "v2-table-fill-cell"`, and
+its slot renders a `block truncate` element with the full text in `title`. The class sets
+`width: 100%` and `max-width: 0` on the cell. The zero maximum stops the text from sizing the
+column, and the full width hands it whatever the other columns leave.
+
 ## Borders need two classes
 
 A border color alone renders nothing, and so does `border` alone. Measured in the running
@@ -379,7 +400,8 @@ once:
   use it and none of them redefines it.
 - **`.focus-ring`** — `ui/src/styles/main.css`, under `@layer utilities`.
 - **`.v2-table { --va-data-table-cell-padding: 8px }`** — `ui/src/styles/overrides.css`.
-  Nine v2 tables carry the class. Six v1 files still set the variable locally, four of them
+  Ten v2 tables carry the class, and it also carries the containment described under
+  [Tables](#tables). Six v1 files still set the variable locally, four of them
   to a different value, so they are not copies of one decision.
 - **`.card.header { --va-card-padding: 0.8rem }`** — `ui/src/styles/overrides.css`.
 - **`--va-card-border-radius: 0.5rem`** — `ui/src/styles/overrides.css`.

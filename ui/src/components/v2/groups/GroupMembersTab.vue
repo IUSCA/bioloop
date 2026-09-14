@@ -286,10 +286,10 @@ const roleActionColor = (role) => (isAdminRole(role) ? "danger" : "success");
 const columns = computed(() => {
   const baseColumns = [
     { key: "name" },
-    { key: "email", label: "Email", width: "200px", tdClass: "truncate" },
-    { key: "effective_role", label: "Role", width: "180px" },
-    { key: "membership_via", label: "Membership", width: "180px" },
-    { key: "assigned_at", label: "Joined", width: "70px" },
+    { key: "email", label: "Email", tdClass: "truncate" },
+    { key: "effective_role", label: "Role" },
+    { key: "membership_via", label: "Membership" },
+    { key: "assigned_at", label: "Joined" },
   ];
 
   if (props.canRemove || props.canEditRole) {

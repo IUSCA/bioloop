@@ -92,7 +92,10 @@
               </template>
 
               <template #cell(tagline)="{ value }">
-                <span class="text-sm va-text-secondary line-clamp-1">
+                <span
+                  class="block truncate text-sm va-text-secondary"
+                  :title="value"
+                >
                   {{ value || "—" }}
                 </span>
               </template>
@@ -261,17 +264,16 @@ const columns = [
   {
     key: "owner_group",
     label: "Owner Group",
-    width: "300px",
     tdClass: "truncate",
   },
-  { key: "size", label: "Datasets", width: "80px", sortable: true },
+  { key: "size", label: "Datasets", sortable: true },
   {
     key: "tagline",
     label: "Tagline",
-    tdStyle: "line-clamp-2", // wrap cell contents
+    tdClass: "v2-table-fill-cell",
   },
-  { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },
-  { key: "status", label: "Status", width: "100px" },
+  { key: "updated_at", label: "Last Updated", sortable: true },
+  { key: "status", label: "Status" },
 ];
 
 watch(

@@ -472,6 +472,36 @@ Authorization header: the group avatar is served by the public router precisely 
 URL works for an anonymous reader and, through the `jwt` cookie, for a signed-in admin
 looking at a profile that is still private.
 
+## A table that widens the page: measure the ancestor chain
+
+A wide `VaDataTable` made a group page scroll sideways on 2026-09-14. Reading the templates
+suggested nothing; walking up from `.va-data-table` and printing each element's
+`clientWidth`, `display`, and computed `min-width` found it in one run. The element that
+refused to shrink was `.va-inner-loading`, which Vuestic gives `min-width: fit-content`.
+`App.vue` wraps the whole layout in one, so it grew `#main` to 1440px in a 1000px window.
+The fix and the column rules are in the design doc under *Tables*.
+
+Two things that looked like fixes are not. `line-clamp-1` on a cell does nothing, because
+Vuestic's table sets `white-space: nowrap` and the text never wraps into a second line.
+`tdClass: "truncate"` on a column with no width bound does nothing either.
+
+## Measuring without the MCP browser: a Playwright script run with node
+
+When `list_pages` reports the profile is locked, a throwaway `.cjs` script in `e2e/` run with
+`node` works with no help from the user. It needs `require('@playwright/test')`,
+`chromium.launch({ channel: 'chrome' })`, and `ignoreHTTPSErrors: true`. Sign in with
+`/dev-login?username=…&next=…`. The detail pages switch tabs through a ref, not the URL, so
+click `getByRole('tab', { name: /^Datasets/ })`. Delete the script afterwards.
+
+Run such scripts one after another, not in parallel. Three at once, all signing in as the
+same user, left two of them on pages with no links.
+
+After `npm run seed:demo` there is no `test_user`, and dev-login reports "No active user
+named 'test_user'". Sign in as `alice` or another of the flows cast instead.
+
+macOS has no `timeout` command, and `npm run build` fails with "Missing script" unless it
+runs from `ui/`.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a new trap, a

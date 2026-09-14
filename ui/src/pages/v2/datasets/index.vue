@@ -277,11 +277,11 @@ function uploadBadgeColor(status) {
 
 const columns = [
   { key: "name", label: "Name", sortable: true },
-  { key: "type", label: "Type", width: "120px", sortable: true },
-  { key: "owner_group", label: "Owner", width: "200px" },
-  { key: "size", label: "Size", width: "100px", sortable: true },
-  { key: "updated_at", label: "Last Updated", width: "120px", sortable: true },
-  { key: "status", label: "Status", width: "100px" },
+  { key: "type", label: "Type", sortable: true },
+  { key: "owner_group", label: "Owner" },
+  { key: "size", label: "Size", sortable: true },
+  { key: "updated_at", label: "Last Updated", sortable: true },
+  { key: "status", label: "Status" },
 ];
 
 const areFiltersActive = computed(() => {

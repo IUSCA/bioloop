@@ -45,7 +45,13 @@
       />
     </div>
 
-    <VaDataTable v-else :items="rows" :columns="columns" hoverable>
+    <VaDataTable
+      v-else
+      :items="rows"
+      :columns="columns"
+      class="v2-table"
+      hoverable
+    >
       <template #cell(invited_email)="{ rowData }">
         <span class="font-medium">{{ rowData.invited_email }}</span>
       </template>
@@ -106,11 +112,11 @@ const statusOptions = [
 
 const columns = [
   { key: "invited_email", label: "Email" },
-  { key: "role", label: "Role", width: "100px" },
-  { key: "status", label: "Status", width: "130px" },
-  { key: "inviter", label: "Invited by", width: "180px" },
-  { key: "expires_at", label: "Expires", width: "180px" },
-  { key: "actions", label: "", width: "110px" },
+  { key: "role", label: "Role" },
+  { key: "status", label: "Status" },
+  { key: "inviter", label: "Invited by" },
+  { key: "expires_at", label: "Expires" },
+  { key: "actions", label: "" },
 ];
 
 const rows = ref([]);

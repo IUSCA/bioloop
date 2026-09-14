@@ -163,7 +163,7 @@ const columns = [
     tdStyle:
       "white-space: pre-wrap; word-wrap: break-word; word-break: break-word;", // wrap cell contents
   },
-  { key: "status", label: "Status", width: "120px" },
+  { key: "status", label: "Status" },
 ];
 
 function setScope(value) {
