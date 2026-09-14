@@ -148,6 +148,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  projectSlug: {
+    type: String,
+    default: null,
+  },
 });
 // const emit = defineEmits(["update"]);
 
@@ -158,6 +162,10 @@ defineExpose({
 });
 
 const downloadURL = computed(() => {
+  // when projectSlug is present, open the filebrowser within the project context
+  if (props.projectSlug) {
+    return `${window.location.origin}/projects/${props.projectSlug}/datasets/${props.dataset.id}/filebrowser`;
+  }
   return `${window.location.origin}/datasets/${props.dataset?.id}/filebrowser`;
 });
 
