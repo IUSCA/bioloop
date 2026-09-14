@@ -71,7 +71,9 @@
               <dt class="w-28 shrink-0 text-sm font-medium va-text-secondary">
                 Size
               </dt>
-              <dd class="text-base">{{ formatBytes(props.dataset.size) }}</dd>
+              <dd class="text-base">
+                {{ formatBytes(props.dataset.size) || "—" }}
+              </dd>
             </div>
 
             <div
@@ -130,12 +132,12 @@
       <!-- Stat Cards. A card the caller may not see is left out rather than shown empty:
            the page never fetches that count, so it would stay a skeleton or a dash. -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <!-- num_files is withheld from grant holders by the dataset attribute filters. -->
+        <!-- counts.files is null when the caller may not list files. -->
         <MetricCard
-          v-if="props.dataset.num_files != null"
+          v-if="props.counts.files != null"
           label="Files"
           icon="mdi-file-multiple"
-          :value="props.dataset.num_files"
+          :value="props.counts.files"
           :loading="false"
         />
         <MetricCard

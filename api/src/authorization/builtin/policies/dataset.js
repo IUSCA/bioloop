@@ -339,12 +339,9 @@ datasetPolicies
         ),
       },
 
-      // Grant holders (view_metadata): public-facing attributes only.
-      // Infrastructure paths and sensitive metadata are excluded.
-      {
-        policy: userHasGrant('DATASET:VIEW_METADATA'),
-        attribute_filters: PUBLIC_ATTRIBUTES,
-      },
+      // The grant rules run widest first. The first matching rule wins, and every dataset
+      // access type implies DATASET:VIEW_METADATA, so a rule placed below that one never runs.
+      // tests/services/grants/grantHolderAttributes.test.js runs each access type through it.
 
       // Grant holders (view_sensitive_metadata): adds infrastructure paths
       {
@@ -354,6 +351,20 @@ datasetPolicies
           'metadata',
           'origin_path', 'archive_path', 'staged_path', // unlocked
         ]),
+      },
+
+      // Grant holders (list_files, and download, compute, and remote_access through the
+      // order): adds the file count, which browsing the file tree already shows them.
+      {
+        policy: userHasGrant('DATASET:LIST_FILES'),
+        attribute_filters: PUBLIC_ATTRIBUTES.concat(['num_files']),
+      },
+
+      // Grant holders (view_metadata): public-facing attributes only.
+      // Infrastructure paths and sensitive metadata are excluded.
+      {
+        policy: userHasGrant('DATASET:VIEW_METADATA'),
+        attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],
     list: [

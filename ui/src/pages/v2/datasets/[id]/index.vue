@@ -179,7 +179,6 @@
           v-else-if="activeTab === 'files'"
           :dataset="dataset"
           :can-download="can('download')"
-          :has-files="hasFiles"
         />
 
         <DatasetAssociatedDatasetsTab
@@ -293,8 +292,6 @@ const capabilities = computed(
 );
 const callerRole = computed(() => dataset.value?._meta?.caller_role);
 
-const hasFiles = computed(() => (counts.value?.files || 0) > 0);
-
 const isUpload = computed(
   () =>
     dataset.value?.create_method === constants.DATASET_CREATE_METHODS.UPLOAD,
@@ -317,7 +314,9 @@ async function fetchDatasetData() {
     const { data } = await DatasetService.get(props.id);
     dataset.value = data;
     setNavBreadcrumbs(data);
-    counts.value.files = data.num_files;
+    // A caller who may list files receives num_files. A dataset never counted has none, and
+    // reads as 0. Everyone else gets no count, so no badge and no card.
+    counts.value.files = can("list_files") ? (data.num_files ?? 0) : null;
     await fetchCounts();
   } catch (err) {
     error.value = err;

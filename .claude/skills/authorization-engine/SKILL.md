@@ -173,6 +173,23 @@ it. A collection access type never counts for a dataset. The collection Datasets
 Check a list change against the live API per persona: call the list, then the page for every
 row it returns, and expect no 403.
 
+## Attribute rules stop at the first match, so grant rules run widest first
+
+`attributeFilters.js` evaluates a rule list in order and returns the first rule whose policy
+passes. Every dataset access type implies `DATASET:VIEW_METADATA`, and the hydrated grant set
+is already closed over the order. A `userHasGrant('DATASET:VIEW_METADATA')` rule therefore
+matches every grant holder, and any grant rule placed below it never runs.
+
+This was live until 2026-09-14. The `VIEW_SENSITIVE_METADATA` rule sat below the
+`VIEW_METADATA` rule, so no grant holder ever received paths or `num_files`. The unit test in
+`tests/authorization/dataset.attribute_filters.test.js` only checked that a rule naming
+`staged_path` existed, which is why it passed.
+
+Assert reachability by running the decision, not by reading the rule list.
+`tests/services/grants/grantHolderAttributes.test.js` grants each access type and checks what
+`authorizeAction(...).filter(dataset)` returns. Against the old order it failed three of four
+cases.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

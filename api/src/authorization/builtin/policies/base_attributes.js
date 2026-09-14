@@ -12,7 +12,8 @@ const collection_attributes = [
 // fast storage, and carries no path and no identity.
 //
 // Withheld: `metadata` as a whole, until a specific key such as `metadata.type` earns a rule
-// of its own; `num_directories`, `num_files`, and `du_size` as internal accounting;
+// of its own; `num_directories` and `du_size` as internal accounting; `num_files` except to a
+// caller who may list files, since browsing the tree shows it;
 // `src_instrument_id` until a caller has a reason to see it; and `origin_path`,
 // `archive_path`, and `staged_path` as infrastructure detail. Each needs
 // view_sensitive_metadata or a structural role.
