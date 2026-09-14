@@ -164,6 +164,8 @@
           :can-download="can('download')"
           :can-request-stage="can('request_stage')"
           :can-view-workflows="can('view_workflows')"
+          :can-view-source-datasets="can('view_source_datasets')"
+          :can-view-derived-datasets="can('view_derived_datasets')"
           @update="fetchDatasetData"
           @delete="openDeleteModal"
           @action-requested="handleActionRequested"

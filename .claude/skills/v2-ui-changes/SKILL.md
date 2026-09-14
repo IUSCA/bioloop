@@ -136,6 +136,15 @@ confirm the new token before retrying:
 
 It is filed as T9 in `.todo/local/L1-authorization-enforcement.md`.
 
+### Finding a button by its text finds the wrapper first
+
+`[...document.querySelectorAll('div, button')].find((el) => el.innerText.trim() === 'Request Access ...')`
+returns the first match in document order. That is the outermost element whose text is the
+same, such as the grid holding a single `ActionButton`. A `.click()` on the wrapper fires
+nothing, so the check reads as the action being broken. Filter every match, take the last
+one, and click `el.closest('button')`. The dataset Overview's Request Access action looked
+dead this way on 2026-09-14 and worked on the second, correct click.
+
 ### A Vuestic checkbox takes a click on its wrapper, not on the input
 
 Unlike `va-select`, `va-checkbox` needs no component-state surgery. The a11y snapshot lists

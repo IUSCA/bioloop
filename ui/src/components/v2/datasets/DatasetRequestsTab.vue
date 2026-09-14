@@ -1,7 +1,11 @@
 <template>
   <div class="flex flex-col gap-3">
-    <!-- show request button if user cannot review -->
-    <VaCard v-if="!props.canReview" class="header card">
+    <!-- The way to file a second request once the list has rows. Hidden while loading and
+         when the list is empty, because the empty state offers the same action. -->
+    <VaCard
+      v-if="!props.canReview && !loading && (error || requests.length)"
+      class="header card"
+    >
       <VaCardContent>
         <div class="flex items-start justify-end gap-3">
           <VaButton color="success" icon="add" @click="openRequestAccessModal">
@@ -22,6 +26,7 @@
 
         <div v-else-if="requests.length === 0" class="text-center py-8">
           <EmptyState
+            icon="mdi-account-question-outline"
             :title="props.canReview ? 'No pending requests' : 'No requests yet'"
             :message="
               props.canReview
@@ -29,7 +34,20 @@
                 : 'You have not made any access requests for this dataset.'
             "
             :show-clear-filters="false"
-          />
+          >
+            <template #actions>
+              <VaButton
+                v-if="!props.canReview"
+                color="primary"
+                @click="openRequestAccessModal"
+              >
+                <div class="flex items-center gap-3 px-2">
+                  <i-mdi-account-question-outline class="text-lg" />
+                  <span class="font-medium">Request access</span>
+                </div>
+              </VaButton>
+            </template>
+          </EmptyState>
         </div>
 
         <div v-else class="space-y-3">
@@ -79,7 +97,7 @@ const emit = defineEmits(["count-changed"]);
 const router = useRouter();
 
 const requests = ref([]);
-const loading = ref(false);
+const loading = ref(true);
 const error = ref(null);
 
 // The request form addresses the resource, so a dataset is named by its resource_id here

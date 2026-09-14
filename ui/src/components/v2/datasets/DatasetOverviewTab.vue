@@ -127,21 +127,26 @@
 
     <!-- Right: Stats & Actions -->
     <div class="flex flex-col gap-4">
-      <!-- Stat Cards -->
+      <!-- Stat Cards. A card the caller may not see is left out rather than shown empty:
+           the page never fetches that count, so it would stay a skeleton or a dash. -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- num_files is withheld from grant holders by the dataset attribute filters. -->
         <MetricCard
+          v-if="props.dataset.num_files != null"
           label="Files"
           icon="mdi-file-multiple"
           :value="props.dataset.num_files"
           :loading="false"
         />
         <MetricCard
+          v-if="props.canIssueGrants"
           label="Access"
           icon="mdi-key"
           :value="props.counts.grants"
-          :loading="props.canIssueGrants && props.counts.grants === null"
+          :loading="props.counts.grants === null"
         />
         <MetricCard
+          v-if="props.canViewWorkflows"
           label="Workflows"
           icon="mdi-map-marker-path"
           :value="props.counts.workflows"
@@ -154,12 +159,14 @@
           :loading="props.counts.requests === null"
         />
         <MetricCard
+          v-if="props.canViewSourceDatasets"
           label="Sources"
           icon="mdi-source-branch"
           :value="props.counts.sourceDatasets"
           :loading="props.counts.sourceDatasets === null"
         />
         <MetricCard
+          v-if="props.canViewDerivedDatasets"
           label="Derivatives"
           icon="mdi-source-merge"
           :value="props.counts.derivedDatasets"
@@ -207,15 +214,16 @@
             @click="emitAction('grant-access', 'grants', 'issue-grants')"
           />
 
-          <!-- request access -->
-          <!-- <ActionButton
-            icon="mdi-hand-okay"
+          <!-- The counterpart of Grant Access, as on the collection Overview. -->
+          <ActionButton
+            v-if="!props.canIssueGrants"
+            icon="mdi-account-question"
             icon-color="text-emerald-500"
             title="Request Access"
-            description="Submit access request"
-            hover-theme="emerald"
-            @click="handleNewRequest"
-          /> -->
+            description="Ask for more access"
+            hover-theme="blue"
+            @click="emitAction('request-access', 'requests', 'request-access')"
+          />
 
           <!-- emitAction('download', 'files', 'download') -->
           <ActionButton
@@ -294,6 +302,8 @@ const props = defineProps({
   // Whether the viewer may open the Workflows tab. Decides which of the two status views
   // below they get.
   canViewWorkflows: { type: Boolean, default: false },
+  canViewSourceDatasets: { type: Boolean, default: false },
+  canViewDerivedDatasets: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -399,12 +409,4 @@ function handleStageRequest() {
 function handleNavigateToFiles() {
   emit("navigate-to-files");
 }
-
-// function handleNewRequest() {
-//   emit("action-requested", {
-//     actionName: "request-access",
-//     tabName: "requests",
-//     modalName: "request-access",
-//   });
-// }
 </script>
