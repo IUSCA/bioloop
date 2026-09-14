@@ -123,16 +123,18 @@
             <p
               class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium mb-1"
             >
-              Access Type
+              Access
             </p>
-            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              {{ accessTypeName }}
-            </p>
+            <AccessTypeName
+              :access-type="accessType"
+              show-identifier
+              label-class="text-sm font-semibold text-gray-900 dark:text-gray-100"
+            />
             <p
-              v-if="accessTypeDescription"
+              v-if="accessType?.long_description"
               class="text-xs text-gray-600 dark:text-gray-400 mt-0.5"
             >
-              {{ accessTypeDescription }}
+              {{ accessType.long_description }}
             </p>
           </div>
         </div>
@@ -264,20 +266,11 @@ const subjectName = computed(() => {
   return subject.value.group?.name || "Unknown Group";
 });
 
-const accessTypeName = computed(() => {
-  if (!grant.value) return "—";
-  return (
-    props.accessTypeMap[grant.value.access_type_id]?.name ??
-    grant.value.access_type?.name ??
-    "Unknown Access Type"
-  );
-});
-
-const accessTypeDescription = computed(() => {
+const accessType = computed(() => {
   if (!grant.value) return null;
   return (
-    props.accessTypeMap[grant.value.access_type_id]?.description ??
-    grant.value.access_type?.description ??
+    props.accessTypeMap[grant.value.access_type_id] ??
+    grant.value.access_type ??
     null
   );
 });

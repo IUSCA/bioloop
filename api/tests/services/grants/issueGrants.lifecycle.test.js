@@ -19,10 +19,11 @@ let group;
 let dataset;
 let viewMetaId;
 let downloadId;
-// DATASET:REQUEST_ACCESS and DATASET:VIEW_SENSITIVE_METADATA both imply DATASET:VIEW_METADATA
-// and neither implies the other, so they give the tests an incomparable pair.
-let requestAccessId;
+// DATASET:VIEW_SENSITIVE_METADATA and DATASET:DOWNLOAD both imply DATASET:VIEW_METADATA and
+// neither implies the other, so they give the tests an incomparable pair.
 let sensitiveMetaId;
+// Discoverable lists the two VIEW_METADATA types, and neither implies the other.
+let collectionViewMetaId;
 let createdGrantIds = [];
 let createdAccessRequestIds = [];
 
@@ -41,7 +42,7 @@ beforeAll(async () => {
   await deleteGrantsForResource(dataset.resource_id);
   viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
   downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
-  requestAccessId = await getAccessTypeId('DATASET:REQUEST_ACCESS');
+  collectionViewMetaId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
   sensitiveMetaId = await getAccessTypeId('DATASET:VIEW_SENSITIVE_METADATA');
 }, 30000);
 
@@ -292,9 +293,9 @@ describe('issueGrants - lifecycle', () => {
     expect(active[0].id).toBe(existingGrant.id);
   });
 
-  it('supports preset with single access type', async () => {
-    // Discoverable lists DATASET:VIEW_METADATA and DATASET:REQUEST_ACCESS, and request access
-    // implies view metadata, so the dataset half of the preset is one grant.
+  it('writes every access type a preset lists when none implies another', async () => {
+    // Discoverable lists DATASET:VIEW_METADATA and COLLECTION:VIEW_METADATA. The order has no
+    // edge between them, so both are written and both name the preset.
     const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
@@ -302,9 +303,12 @@ describe('issueGrants - lifecycle', () => {
       await grantsService.issueGrants(tx, { ...defaultContext(), source_preset_id: presetId }, [{ preset_id: presetId, approved_expiry: expiry }]);
     });
 
-    const g = await fetchActiveGrant(requestAccessId);
-    expect(g.source_preset_id).toBe(presetId);
-    expect(await fetchActiveGrant(viewMetaId)).toBeNull();
+    const datasetMeta = await fetchActiveGrant(viewMetaId);
+    const collectionMeta = await fetchActiveGrant(collectionViewMetaId);
+    expect(datasetMeta).not.toBeNull();
+    expect(collectionMeta).not.toBeNull();
+    expect(datasetMeta.source_preset_id).toBe(presetId);
+    expect(collectionMeta.source_preset_id).toBe(presetId);
   });
 
   it('supports preset with multiple access types', async () => {
@@ -334,11 +338,13 @@ describe('issueGrants - lifecycle', () => {
       ]);
     });
 
-    const g = await fetchActiveGrant(requestAccessId);
+    const g = await fetchActiveGrant(viewMetaId);
     expect(new Date(g.valid_until).toISOString()).toBe(expiry2.toValue().toISOString());
   });
 
-  it('supports mixed preset + direct access type no overlap', async () => {
+  it('lets a direct wider type absorb the narrower one a preset lists', async () => {
+    // DOWNLOAD implies DATASET:VIEW_METADATA for as long, so that half of Discoverable writes
+    // nothing. COLLECTION:VIEW_METADATA is outside the order DOWNLOAD reaches and is written.
     const presetId = BUILTIN_PRESET_DISCOVERABLE;
 
     const expiry = Expiry.at(new Date(Date.now() + 100000));
@@ -349,10 +355,9 @@ describe('issueGrants - lifecycle', () => {
       ]);
     });
 
-    const g1 = await fetchActiveGrant(viewMetaId);
-    const g2 = await fetchActiveGrant(downloadId);
-    expect(g1).toBeDefined();
-    expect(g2).toBeDefined();
+    expect(await fetchActiveGrant(downloadId)).not.toBeNull();
+    expect(await fetchActiveGrant(viewMetaId)).toBeNull();
+    expect(await fetchActiveGrant(collectionViewMetaId)).not.toBeNull();
   });
 
   it('merges overlapping preset+direct expiry for same access type', async () => {

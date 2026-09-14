@@ -67,7 +67,7 @@
             <ResourceChip :resource="props.resource" />
 
             <!-- subject selector -->
-            <ModernCard title="Subject">
+            <ModernCard title="Who gets access">
               <SubjectSelector
                 :resource-owner-group-id="resourceOwningGroupId"
                 v-model="subject"
@@ -111,9 +111,13 @@
                   </div>
                 </template>
 
+                <!-- Every type, including those only an admin grants, with identifiers for the
+                     admin reading. @see docs/design/groups/ui-information-architecture.md — Access types in forms -->
                 <AccessTypeSelector
                   :access-types="accessTypes"
                   :preset-covered-ids="presetCoveredIds"
+                  :resource-type="props.resource?.type"
+                  show-identifier
                   v-model="selectedTypes"
                 />
               </div>
@@ -124,14 +128,14 @@
           /> -->
 
             <!-- Expiry -->
-            <ModernCard title="Expiry">
+            <ModernCard title="For how long">
               <ExpirySelector v-model="expiry" />
             </ModernCard>
 
             <!-- Justification -->
             <div>
               <p class="mb-2 text-sm font-medium uppercase tracking-wide">
-                Justification
+                Note
                 <span
                   class="normal-case tracking-normal font-normal va-text-secondary"
                 >
@@ -140,7 +144,7 @@
               </p>
               <VaTextarea
                 v-model="justification"
-                placeholder="Reason for granting this access…"
+                placeholder="Why this access is being given…"
                 class="w-full"
                 :min-rows="2"
                 :max-rows="3"
@@ -170,8 +174,8 @@
                   class="text-3xl text-gray-400 dark:text-gray-500"
                 />
                 <p class="text-sm text-gray-500 dark:text-gray-400 text-center">
-                  Select a subject and access types to preview the effective
-                  grants that will be issued.
+                  Choose who gets access and what they can do, to see what will
+                  change.
                 </p>
               </div>
             </div>

@@ -511,7 +511,6 @@ Anything seeded, modeled, or exported and never called reads as shipped. Each of
 either wiring to finish or code to delete.
 
 - **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
-- **`DATASET:REMOTE_ACCESS`**, **`DATASET:REQUEST_ACCESS`**, and **`COLLECTION:REQUEST_ACCESS`** are seeded access types that no policy or route checks.
 - **`group.add_dataset`** and **`group.add_collection`** are defined and never passed to `authorize()`.
 - **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
 - **Dataset unarchive.** The archive route exists; the unarchive route is commented out, the service has no counterpart, and the UI has no call. A dataset archived through the UI cannot be brought back through it.

@@ -26,18 +26,19 @@ const props = defineProps({
   },
 });
 
+// Read by the person asking and by the admin granting, so it avoids words only one of them
+// uses. @see docs/design/groups/ui-information-architecture.md — Access types in forms
 const MESSAGES = {
   USER: {
-    DATASET:
-      "This grant applies to the selected user only and covers this dataset exclusively.",
+    DATASET: "Applies to this person only, and to this dataset only.",
     COLLECTION:
-      "This grant applies to the selected user only and extends to all datasets currently in this collection, as well as any added in the future.",
+      "Applies to this person only, and to every dataset in this collection, including datasets added later.",
   },
   GROUP: {
     DATASET:
-      "This grant applies to all current and future members of this group, including members inherited through subgroups, and covers this dataset exclusively.",
+      "Applies to everyone in this group, including members of its subgroups and people who join later, and to this dataset only.",
     COLLECTION:
-      "This grant applies to all current and future members of this group, including members inherited through subgroups, and extends to all datasets currently in this collection, as well as any added in the future.",
+      "Applies to everyone in this group, including members of its subgroups and people who join later, and to every dataset in this collection, including datasets added later.",
   },
 };
 

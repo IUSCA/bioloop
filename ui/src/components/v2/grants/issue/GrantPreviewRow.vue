@@ -2,9 +2,11 @@
   <div class="flex items-start justify-between gap-4 px-3 py-2.5">
     <div class="min-w-0 flex-1">
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
-          {{ props.row.access_type?.description }}
-        </span>
+        <AccessTypeName
+          :access-type="props.row.access_type"
+          show-identifier
+          label-class="text-sm font-medium text-gray-900 dark:text-gray-100"
+        />
       </div>
       <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ note }}</p>
       <!--
@@ -96,10 +98,10 @@ function coverageNote(cover) {
     ? `until ${datetime.date(cover.valid_until)}`
     : "with no end date";
   if (cover.via === "GROUP" && cover.via_group_name) {
-    return `${cover.via_group_name} already holds this ${until}`;
+    return `Members of ${cover.via_group_name} already have this ${until}`;
   }
   if (cover.via === "PRINCIPAL") {
-    return `A system principal already confers this ${until}`;
+    return `Everyone signed in already has this ${until}`;
   }
   if (cover.via_collection_name) {
     return `Already held through the collection ${cover.via_collection_name} ${until}`;

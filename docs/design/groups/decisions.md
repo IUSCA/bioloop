@@ -176,13 +176,15 @@ COMPUTE ───────────────┼──> LIST_FILES ─�
 REMOTE_ACCESS ─────────┘                 │
                                          v
 VIEW_SENSITIVE_METADATA ───────> VIEW_METADATA
-REQUEST_ACCESS ────────────────────────^
 LIST_DERIVED_DATASETS ─────────────────^
 LIST_SOURCE_DATASETS ──────────────────^
 
 COLLECTION:LIST_CONTENTS ──> COLLECTION:VIEW_METADATA
-COLLECTION:REQUEST_ACCESS ─────────────^
 ```
+
+No access type confers the right to ask for access. Filing a request needs only
+`view_metadata` on the resource, as posture B.5 in [Use Cases](./use-cases.md) sets out, so
+such a type would only duplicate `VIEW_METADATA`.
 
 Nothing previously stopped a grant of `DATASET:DOWNLOAD` without
 `DATASET:VIEW_METADATA`, which describes a user who may download a dataset they cannot see.

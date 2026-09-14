@@ -61,7 +61,7 @@ import { computed } from "vue";
 const props = defineProps({
   /**
    * One `{ subject, resource, grants }` group as `GET /grants/expiring-soon` returns it.
-   * Each grant carries `access_type_name` and `valid_until`.
+   * Each grant carries `access_type_name`, `access_type_description`, and `valid_until`.
    */
   group: { type: Object, required: true },
 });
@@ -78,9 +78,8 @@ const grants = computed(() => props.group.grants ?? []);
 
 const accessTypeLabel = computed(() => {
   const names = grants.value
-    .map((g) => g.access_type_name)
-    .filter(Boolean)
-    .map((name) => name.replaceAll("_", " ").toLowerCase());
+    .map((g) => g.access_type_description || g.access_type_name)
+    .filter(Boolean);
   return names.length > 0 ? names.join(" · ") : "No access types named";
 });
 

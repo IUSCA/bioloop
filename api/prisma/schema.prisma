@@ -854,11 +854,26 @@ enum GRANT_REVOCATION_TYPE {
   SUPERSEDED
 }
 
+// The headings the access type selector groups types under, in the order they are shown.
+// Postgres sorts an enum in declaration order, so ordering by the column orders by heading.
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
+enum GRANT_ACCESS_TYPE_CATEGORY {
+  COLLECTION
+  DATASET_ABOUT
+  DATASET_FILES
+  DATASET_DATA
+}
+
 model grant_access_type {
-  id               Int     @id @default(autoincrement())
+  id               Int                        @id @default(autoincrement())
   name             String
   description      String?
   long_description String?
+  // The heading this type sits under in the selector, and its position under that heading.
+  category         GRANT_ACCESS_TYPE_CATEGORY
+  sort_order       Int
+  // False for a type only an admin grants directly. Access requests refuse it.
+  is_requestable   Boolean
 
   grants               grant[]
   access_request_items access_request_item[]

@@ -17,7 +17,13 @@
           <!-- Title and description -->
           <div class="space-y-1 mb-2">
             <h3 class="text-sm font-semibold">
-              {{ itemName }}
+              <!-- A reviewer is an admin, so an access type carries its identifier in gray. -->
+              <AccessTypeName
+                v-if="!isPreset"
+                :access-type="props.item?.access_type"
+                show-identifier
+              />
+              <template v-else>{{ itemName }}</template>
             </h3>
             <p
               v-if="itemDescription"
@@ -39,7 +45,7 @@
               color="secondary"
               class="text-xs"
             >
-              {{ accessType.name }}
+              {{ accessType.description || accessType.name }}
             </va-chip>
           </div>
 
@@ -134,20 +140,16 @@ const presetAccessTypes = computed(() =>
     .filter(Boolean),
 );
 
-const itemName = computed(() => {
-  if (isPreset.value) {
-    return props.item?.preset?.name || `Preset ${props.item?.preset_id}`;
-  }
-  return (
-    props.item?.access_type?.name || `Access Type ${props.item?.access_type_id}`
-  );
-});
+// Only a preset row reads this; an access type row renders AccessTypeName.
+const itemName = computed(
+  () => props.item?.preset?.name || `Preset ${props.item?.preset_id}`,
+);
 
 const itemDescription = computed(() => {
   if (isPreset.value) {
     return props.item?.preset?.description || "";
   }
-  return props.item?.access_type?.description || "";
+  return props.item?.access_type?.long_description || "";
 });
 
 const requestedUntilNote = computed(() => {

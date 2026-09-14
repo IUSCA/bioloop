@@ -7,7 +7,7 @@
  *
  * The shapes that matter most are the ones where a grant implies nothing across resource
  * types. A bare COLLECTION:LIST_CONTENTS lets a caller open the collection and not the
- * datasets in it; DATASET:REQUEST_ACCESS issued on a collection does the reverse.
+ * datasets in it; DATASET:VIEW_METADATA issued on a collection does the reverse.
  *
  * @see docs/design/groups/decisions.md — 7. Access types imply one another
  */
@@ -37,9 +37,7 @@ const {
   deleteUser,
 } = require('../helpers');
 
-const DISCOVERABLE = [
-  'DATASET:VIEW_METADATA', 'DATASET:REQUEST_ACCESS', 'COLLECTION:VIEW_METADATA', 'COLLECTION:LIST_CONTENTS',
-];
+const DISCOVERABLE = ['DATASET:VIEW_METADATA', 'COLLECTION:VIEW_METADATA'];
 
 // `on` names the resource the grant is issued on. `datasetOpens` and `collectionOpens` are
 // the expected page decisions; the test asserts every list agrees with them.
@@ -62,16 +60,9 @@ const CASES = [
     collectionOpens: true,
   },
   {
-    label: 'COLLECTION:REQUEST_ACCESS on the collection',
+    label: 'DATASET:VIEW_METADATA on the collection',
     on: 'collection',
-    types: ['COLLECTION:REQUEST_ACCESS'],
-    datasetOpens: false,
-    collectionOpens: true,
-  },
-  {
-    label: 'DATASET:REQUEST_ACCESS on the collection',
-    on: 'collection',
-    types: ['DATASET:REQUEST_ACCESS'],
+    types: ['DATASET:VIEW_METADATA'],
     datasetOpens: true,
     collectionOpens: false,
   },

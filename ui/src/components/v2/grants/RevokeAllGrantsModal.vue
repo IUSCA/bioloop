@@ -111,13 +111,13 @@
                 icon="mdi-key-remove"
                 class="shrink-0 text-red-400 dark:text-red-500 text-sm"
               />
-              <span class="text-sm text-gray-800 dark:text-gray-200">
-                {{
-                  props.accessTypeMap[g.access_type_id]?.name ??
-                  g.access_type?.name ??
-                  "Unknown Access Type"
-                }}
-              </span>
+              <AccessTypeName
+                :access-type="
+                  props.accessTypeMap[g.access_type_id] ?? g.access_type
+                "
+                show-identifier
+                label-class="text-sm text-gray-800 dark:text-gray-200"
+              />
             </li>
           </ul>
         </div>

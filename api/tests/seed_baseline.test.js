@@ -9,8 +9,13 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { GRANT_ACCESS_TYPE_CATEGORY } = require('@prisma/client');
 const {
-  ROLES, GRANT_ACCESS_TYPES, GRANT_ACCESS_TYPE_IMPLICATIONS, GRANT_PRESETS,
+  ROLES,
+  GRANT_ACCESS_TYPES,
+  GRANT_ACCESS_TYPE_IMPLICATIONS,
+  GRANT_ACCESS_TYPE_CATEGORY_LABELS,
+  GRANT_PRESETS,
 } = require('@/constants');
 const {
   collectUsersFromJSON,
@@ -155,6 +160,45 @@ describe('the seeded configuration is self-consistent', () => {
     GRANT_PRESETS.forEach((preset) => {
       expect([preset.name, preset.resource_types]).toEqual([preset.name, ['COLLECTION']]);
     });
+  });
+
+  // @see docs/design/groups/ui-information-architecture.md — Access types in forms
+  test('every access type category has a heading, listed in the enum order', () => {
+    expect(Object.keys(GRANT_ACCESS_TYPE_CATEGORY_LABELS))
+      .toEqual(Object.values(GRANT_ACCESS_TYPE_CATEGORY));
+    GRANT_ACCESS_TYPES.forEach((t) => {
+      expect([t.name, t.category in GRANT_ACCESS_TYPE_CATEGORY_LABELS]).toEqual([t.name, true]);
+    });
+  });
+
+  test('no two access types share a position under one heading', () => {
+    const positions = GRANT_ACCESS_TYPES.map((t) => `${t.category}:${t.sort_order}`);
+    expect(new Set(positions).size).toBe(GRANT_ACCESS_TYPES.length);
+  });
+
+  test('every access type states whether it can be requested', () => {
+    GRANT_ACCESS_TYPES.forEach((t) => {
+      expect([t.name, typeof t.is_requestable]).toEqual([t.name, 'boolean']);
+    });
+  });
+
+  // A preset is offered on the request form, so a type in it that cannot be requested would
+  // be refused only at submit.
+  test('every preset is made of requestable access types', () => {
+    const requestable = new Set(GRANT_ACCESS_TYPES.filter((t) => t.is_requestable).map((t) => t.id));
+    GRANT_PRESETS.forEach((preset) => {
+      preset.access_type_ids.forEach((id) => {
+        expect([preset.name, id, requestable.has(id)]).toEqual([preset.name, id, true]);
+      });
+    });
+  });
+
+  // Filing a request needs only view_metadata on the resource, so an access type conferring
+  // the right to ask would duplicate VIEW_METADATA. Pins the retirement of REQUEST_ACCESS.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  test('no access type confers the right to request access', () => {
+    expect(GRANT_ACCESS_TYPES.map((t) => t.name).filter((n) => n.endsWith(':REQUEST_ACCESS')))
+      .toEqual([]);
   });
 
   test('access type ids and names are unique', () => {

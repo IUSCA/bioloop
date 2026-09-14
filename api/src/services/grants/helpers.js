@@ -383,6 +383,49 @@ async function assertGrantItemsApplicableToResourceType(tx, resourceType, items)
   }
 }
 
+/**
+ * Refuses access request items that name a type only an admin grants, whether directly or
+ * through a preset. Throws a 400 naming the type.
+ *
+ * Runs after `assertGrantItemsApplicableToResourceType`, which refuses unknown ids.
+ * @param {object} [tx] - Prisma transaction; defaults to the shared client
+ * @param {Array<{access_type_id?: number, preset_id?: number}>} items
+ * @see docs/design/groups/ui-information-architecture.md — Access types in forms
+ */
+async function assertItemsRequestable(tx, items) {
+  const db = tx || prisma;
+  const accessTypeIds = items.map((item) => item.access_type_id).filter(Boolean);
+  const presetIds = items.map((item) => item.preset_id).filter(Boolean);
+
+  const [grantOnlyTypes, grantOnlyPresetItems] = await Promise.all([
+    accessTypeIds.length > 0
+      ? db.grant_access_type.findMany({
+        where: { id: { in: accessTypeIds }, is_requestable: false },
+        select: { name: true },
+      })
+      : [],
+    presetIds.length > 0
+      ? db.grant_preset_item.findMany({
+        where: { preset_id: { in: presetIds }, access_type: { is_requestable: false } },
+        select: { preset: { select: { name: true } }, access_type: { select: { name: true } } },
+      })
+      : [],
+  ]);
+
+  if (grantOnlyTypes.length > 0) {
+    const names = grantOnlyTypes.map((t) => t.name).join(', ');
+    throw createError.BadRequest(
+      `access_type ${names} cannot be requested; an admin of the owning group grants it directly`,
+    );
+  }
+  if (grantOnlyPresetItems.length > 0) {
+    const [first] = grantOnlyPresetItems;
+    throw createError.BadRequest(
+      `preset ${first.preset.name} includes ${first.access_type.name}, which cannot be requested`,
+    );
+  }
+}
+
 module.exports = {
   userHasGrant,
   subjectSetSql,
@@ -394,6 +437,7 @@ module.exports = {
   // resource compatibility helpers
   isAccessTypeApplicableToResourceType,
   assertGrantItemsApplicableToResourceType,
+  assertItemsRequestable,
 
   // sql queries
   ownerGroupIdsOfResourcesAccessibleByUserQuery,

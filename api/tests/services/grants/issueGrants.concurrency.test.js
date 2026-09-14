@@ -25,11 +25,11 @@ let group;
 let dataset;
 let viewMetaId;
 let downloadId;
-// The reduced presets no longer overlap on DATASET:VIEW_METADATA, because a wider type in
-// each supplies it. What they do share is COLLECTION:LIST_CONTENTS.
+// Discoverable writes the two VIEW_METADATA types, and Standard Research Use writes DOWNLOAD
+// and LIST_CONTENTS, which imply them. The two presets overlap only through the order.
 // @see docs/design/groups/decisions.md — 7. Access types imply one another
 let listContentsId;
-let requestAccessId;
+let collectionViewMetaId;
 
 const createdGrantIds = [];
 const createdAccessRequestIds = [];
@@ -50,7 +50,7 @@ beforeAll(async () => {
   viewMetaId = await getAccessTypeId('DATASET:VIEW_METADATA');
   downloadId = await getAccessTypeId('DATASET:DOWNLOAD');
   listContentsId = await getAccessTypeId('COLLECTION:LIST_CONTENTS');
-  requestAccessId = await getAccessTypeId('DATASET:REQUEST_ACCESS');
+  collectionViewMetaId = await getAccessTypeId('COLLECTION:VIEW_METADATA');
 }, 30000);
 
 afterEach(async () => {
@@ -338,23 +338,25 @@ describe('issueGrants - concurrency', () => {
       async (results) => {
         expect(results.filter((r) => r.status === 'fulfilled').length).toBeGreaterThan(0);
 
-        const activeDownload = await prisma.grant.findMany({
-          where: {
-            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: downloadId, revoked_at: null,
-          },
+        const live = await prisma.grant.findMany({
+          where: { subject_id: member.subject_id, resource_id: dataset.resource_id, revoked_at: null },
+          include: { access_type: true },
         });
-        expect(activeDownload.length).toBeLessThanOrEqual(1);
+        createdGrantIds.push(...live.map((g) => g.id));
 
-        // Both presets supply this type, so exactly one grant survives the race.
-        const activeShared = await prisma.grant.findMany({
-          where: {
-            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: listContentsId, revoked_at: null,
-          },
-        });
-        expect(activeShared.length).toBe(1);
+        // Whichever preset commits second may find its types already covered and write
+        // nothing, so the row count depends on commit order. No type holds two live rows,
+        // and the subject holds everything both presets confer, written or implied.
+        const rowsPerType = new Map();
+        for (const g of live) rowsPerType.set(g.access_type_id, (rowsPerType.get(g.access_type_id) ?? 0) + 1);
+        expect(Math.max(0, ...rowsPerType.values())).toBeLessThanOrEqual(1);
 
-        createdGrantIds.push(...activeDownload.map((g) => g.id));
-        createdGrantIds.push(...activeShared.map((g) => g.id));
+        const held = await grantsService.expand(live.map((g) => g.access_type.name));
+        for (const name of ['DATASET:DOWNLOAD', 'COLLECTION:LIST_CONTENTS', 'DATASET:VIEW_METADATA', 'COLLECTION:VIEW_METADATA']) {
+          expect([name, held.has(name)]).toEqual([name, true]);
+        }
+        expect(rowsPerType.get(listContentsId)).toBe(1);
+        expect(rowsPerType.get(downloadId)).toBe(1);
       },
     );
   });
@@ -391,7 +393,8 @@ describe('issueGrants - concurrency', () => {
         });
         const g2 = await prisma.grant.findFirst({
           where: {
-            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: requestAccessId, revoked_at: null,
+            // COLLECTION:VIEW_METADATA, because DOWNLOAD cannot cover it whichever commits first.
+            subject_id: member.subject_id, resource_id: dataset.resource_id, access_type_id: collectionViewMetaId, revoked_at: null,
           },
         });
         expect(g1).not.toBeNull();

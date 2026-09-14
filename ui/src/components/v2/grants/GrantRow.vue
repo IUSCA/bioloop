@@ -5,25 +5,21 @@
       props.grant.revoked_at !== null ? 'opacity-60' : '',
     ]"
   >
-    <!-- Access Type Name -->
-    <span
-      :class="[
+    <!-- The label leads and the identifier follows in gray, because an admin reads this tab. -->
+    <AccessTypeName
+      :access-type="accessType"
+      show-identifier
+      :label-class="[
         'text-base font-medium text-gray-900 dark:text-gray-100',
         props.grant.revoked_at !== null ? 'line-through' : '',
       ]"
-    >
-      {{
-        props.accessTypeMap[props.grant.access_type_id]?.name ??
-        "Unknown access type"
-      }}
-    </span>
+    />
 
-    <!-- Access Type Description -->
     <span
-      v-if="props.grant.access_type?.description"
+      v-if="accessType?.long_description"
       class="text-sm text-gray-600 dark:text-gray-400 mt-0.5"
     >
-      {{ props.grant.access_type.description }}
+      {{ accessType.long_description }}
     </span>
 
     <!-- What the order confers beyond this grant's own name. A grant of Download satisfies
@@ -103,6 +99,11 @@ const props = defineProps({
   canRevoke: { type: Boolean, default: false },
   canNavigateToRequest: { type: Boolean, default: false },
 });
+
+const accessType = computed(
+  () =>
+    props.accessTypeMap[props.grant.access_type_id] ?? props.grant.access_type,
+);
 
 /**
  * The access this grant confers through the access-type order, beyond its own type.

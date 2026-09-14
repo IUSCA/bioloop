@@ -6,6 +6,7 @@ const {
 
 const prisma = require('@/db');
 
+const { GRANT_ACCESS_TYPE_CATEGORY_LABELS } = require('@/constants');
 const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
 const accessTypeClosure = require('./accessTypeClosure');
@@ -348,11 +349,17 @@ async function listGrantsForResourceGrouped({
   return grantsGrouped;
 }
 
+/**
+ * Every access type, in the order the selector shows them: by heading, then by position
+ * under the heading. Postgres sorts the category enum in declaration order.
+ *
+ * @param {{resource_type?: 'DATASET'|'COLLECTION'}} [params] - DATASET omits collection types
+ * @returns {Promise<Object[]>} access types, each with `category_label` and `implies`
+ * @see docs/design/groups/ui-information-architecture.md — Access types in forms
+ */
 async function listAccessTypes({ resource_type } = {}) {
   const accessTypes = await prisma.grant_access_type.findMany({
-    orderBy: {
-      name: 'asc',
-    },
+    orderBy: [{ category: 'asc' }, { sort_order: 'asc' }],
   });
 
   // Each type carries what holding it also confers, so the browser can show the order
@@ -360,7 +367,13 @@ async function listAccessTypes({ resource_type } = {}) {
   // and a grant row names what it confers beyond its own name.
   // @see docs/design/groups/decisions.md — 7. Access types imply one another
   const impliedIds = await accessTypeClosure.impliedIdsByAccessTypeId();
-  const withOrder = accessTypes.map((t) => ({ ...t, implies: impliedIds.get(t.id) ?? [] }));
+  const withOrder = accessTypes.map((t) => {
+    const category_label = GRANT_ACCESS_TYPE_CATEGORY_LABELS[t.category];
+    if (!category_label) {
+      throw new Error(`No heading is defined for access type category ${t.category}`);
+    }
+    return { ...t, category_label, implies: impliedIds.get(t.id) ?? [] };
+  });
 
   // for collections, return all access types
   // for datasets, filter out access types that are only applicable to datasets
@@ -444,6 +457,7 @@ async function listExpiringGrants({
           'id', g.id,
           'access_type_id', g.access_type_id,
           'access_type_name', at.name,
+          'access_type_description', at.description,
           'valid_from', g.valid_from,
           'valid_until', g.valid_until
         )
@@ -503,6 +517,7 @@ async function listExpiringGrantsForAdmin({
             'id', g.id,
             'access_type_id', g.access_type_id,
             'access_type_name', at.name,
+            'access_type_description', at.description,
             'valid_from', g.valid_from,
             'valid_until', g.valid_until
           )

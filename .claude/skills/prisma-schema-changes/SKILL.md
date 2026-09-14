@@ -380,6 +380,44 @@ A reset re-seeds, which can unmask test bugs that a long-lived database was hidi
 suite that passed only because the table happened to hold one kind of row. Treat new
 failures after a reset as real until shown otherwise.
 
+## Adding a NOT NULL column to a populated lookup table
+
+`grant_access_type` gained `category`, `sort_order`, and `is_requestable`, all NOT NULL and
+all supplied by the seed. The migration runs before the seed, so on a populated database
+the rows already exist and a plain `ADD COLUMN ... NOT NULL` fails. Add each column with a
+temporary default, then drop the default in a second `ALTER`:
+
+```sql
+ALTER TABLE "grant_access_type"
+  ADD COLUMN "category" "GRANT_ACCESS_TYPE_CATEGORY" NOT NULL DEFAULT 'DATASET_ABOUT',
+  ADD COLUMN "sort_order" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "grant_access_type"
+  ALTER COLUMN "category" DROP DEFAULT,
+  ALTER COLUMN "sort_order" DROP DEFAULT;
+```
+
+The schema then declares no default, which matches the database, so there is no drift. The
+placeholder values survive only until the seed's upsert overwrites them, so the seed's
+`update` branch must write the new columns too, not only its `create` branch.
+
+A Postgres enum sorts in declaration order, not alphabetically. `orderBy: { category: 'asc' }`
+therefore follows the order the values are written in `schema.prisma`, which makes the enum
+a legitimate place to encode display order.
+
+## Deleting lookup rows the seed no longer lists
+
+`seed_baseline.js` deletes access types missing from `GRANT_ACCESS_TYPES`. Grants, access
+request items, and preset items reference them with RESTRICT foreign keys.
+
+**Check the references before deleting, rather than catching the error.** Postgres reports
+a RESTRICT violation as `23001`, not the `23503` that Prisma maps to `P2003`. Prisma surfaces
+it as a `PrismaClientUnknownRequestError` with no `code`, so a `catch` testing for `P2003`
+rethrows it and the seed dies with a stack trace instead of its own message. Count the
+referencing rows first and `refuse` with the stale names.
+
+A retired preset still counts. Presets are retired with `is_active: false`, never deleted, so
+their items keep naming the old type, and only a database reset clears them.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a constraint Prisma

@@ -81,6 +81,8 @@ Fourteen rows where six suffice. Every seeded preset is redundant under the orde
 
 The two dataset presets were later removed, because each reduced to a single access type.
 The seed retires them. [Access presets](./access-presets.md) section 2.11 records why.
+Both `REQUEST_ACCESS` types were later deleted, so *Discoverable* now lists only the two
+`VIEW_METADATA` types.
 
 The codebase already disagrees with itself here. The owning-group seed writes one
 `LIST_FILES` row and says why in a comment at `services/grants/issue.js:110`. The preset

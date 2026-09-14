@@ -170,6 +170,39 @@ Four principles apply across every page.
 Explainability is a system invariant, not a UI nicety. It is surfaced on the dataset
 Access tab, the group Grants tab, and as a standalone query tool.
 
+## Access types in forms
+
+Two forms offer access types: the request form and the grant dialog. Both list the same
+types, in the same order, under the same headings.
+
+**Order.** Each access type carries a `category` and a `sort_order`, both seeded from
+`GRANT_ACCESS_TYPES` in `api/src/constants.js`. The category is a Postgres enum, and
+Postgres sorts an enum in declaration order. `GET /grants/access-types` sorts by category
+and then by `sort_order`. The headings are *This collection*, *About the dataset*,
+*Files*, and *Use the data*, in that order. Narrower access comes first under each heading.
+On a collection, the dataset headings sit under *Datasets in this collection*. A dataset
+type issued on a collection applies to the datasets the collection holds.
+
+**Labels.** An access type's `description` is its short label, such as "Browse file tree".
+Its `name` is its identifier, such as `DATASET:LIST_FILES`. Every surface leads with the
+label. Surfaces an admin reads also show the identifier as small gray text. Those are the
+grant dialog, the Access tab, the review queue, the revoke dialogs, and the grant preview.
+The request form and a requester's own panels show the label alone.
+
+**Requestable types.** `is_requestable` is false for a type that only an admin grants
+directly. `DATASET:VIEW_SENSITIVE_METADATA` is the one such type. The request form omits
+it. `POST /access-requests` refuses it with a 400, whether the request names it directly or
+through a preset. The grant dialog offers every type.
+
+**Access already held.** The request form loads what the chosen person or group already
+holds, by any path. The selector shows each held type, and every type it implies, ticked
+and disabled. A short reason sits beside it, such as "You have this through Wong Lab".
+
+**Wording.** People who ask and admins who grant read the same forms, so both forms use one
+vocabulary. They say "Who needs access", "For how long", and "Everyone signed in". They do
+not say "subject", "expiry", or "system principal". Only the framing differs between the
+two forms.
+
 ## Tab visibility on a collection detail page
 
 Tab visibility follows from `collectionPolicies` in

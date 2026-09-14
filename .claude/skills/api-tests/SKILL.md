@@ -342,7 +342,7 @@ afterEach(async () => {
 ```
 
 The same shape bites fixtures. `prisma.grant_access_type.findMany({ take: 3 })` returns
-`VIEW_METADATA`, `VIEW_SENSITIVE_METADATA`, and `REQUEST_ACCESS`, and the last two both imply
+`VIEW_METADATA`, `VIEW_SENSITIVE_METADATA`, and `LIST_FILES`, and the last two both imply
 the first — so a preset built from them collapses to one grant and every expansion,
 deduplication, and supersession case has nothing to act on. When a test needs several access
 types to behave independently, name pairwise incomparable ones explicitly:

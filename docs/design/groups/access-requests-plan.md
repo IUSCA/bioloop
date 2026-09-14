@@ -108,9 +108,8 @@ dataset can be asked for when the requester can already see its metadata.
 `assertGrantItemsApplicableToResourceType` runs on the request items as it does on grant
 creation.
 
-The seeded `DATASET:REQUEST_ACCESS` and `COLLECTION:REQUEST_ACCESS` access types stay unused.
-They exist for a later posture where the right to ask diverges from the right to see, and
-nothing needs that separation yet.
+No access type confers the right to ask, because seeing the resource already permits a
+request. See [decision 7](./decisions.md#_7-access-types-imply-one-another).
 
 The check cannot go in the `authorize()` middleware. The create body carries `resource_id` and
 no `resource_type`, so which policy container applies is not known until the `resource` row is

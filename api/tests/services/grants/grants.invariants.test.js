@@ -21,6 +21,7 @@ const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
 const {
   AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_ID, SYSTEM_PRINCIPAL_GROUP_IDS,
+  GRANT_ACCESS_TYPE_CATEGORY_LABELS,
 } = require('@/constants');
 const {
   createTestUser,
@@ -362,6 +363,57 @@ describe('grants - invariants', () => {
           [{ preset_id: BUILTIN_PRESET_DISCOVERABLE }],
         ),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // @see docs/design/groups/ui-information-architecture.md — Access types in forms
+  describe('access types in forms', () => {
+    it('lists access types by heading, then by position under it', async () => {
+      const types = await grantsService.listAccessTypes({ resource_type: 'COLLECTION' });
+      const headingOrder = Object.keys(GRANT_ACCESS_TYPE_CATEGORY_LABELS);
+
+      // Seeded ids and identifiers both sort differently from the headings, so an order by
+      // either would fail here.
+      const positions = types.map((t) => [headingOrder.indexOf(t.category), t.sort_order]);
+      const sorted = [...positions].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      expect(positions).toEqual(sorted);
+      expect(types.map((t) => t.category_label))
+        .toEqual(types.map((t) => GRANT_ACCESS_TYPE_CATEGORY_LABELS[t.category]));
+    });
+
+    it('lists no collection type for a dataset', async () => {
+      const types = await grantsService.listAccessTypes({ resource_type: 'DATASET' });
+      expect(types.filter((t) => t.category === 'COLLECTION')).toEqual([]);
+      expect(types.length).toBeGreaterThan(0);
+    });
+
+    it('refuses a request item naming a type only an admin grants', async () => {
+      const sensitiveId = await getAccessTypeId('DATASET:VIEW_SENSITIVE_METADATA');
+      await expect(grantsService.assertItemsRequestable(prisma, [{ access_type_id: sensitiveId }]))
+        .rejects.toMatchObject({ status: 400, message: expect.stringMatching(/cannot be requested/) });
+
+      // The paired positive half, so the refusal is not a helper that refuses everything.
+      await expect(grantsService.assertItemsRequestable(prisma, [{ access_type_id: viewMetaId }]))
+        .resolves.toBeUndefined();
+      await expect(grantsService.assertItemsRequestable(prisma, [{ preset_id: BUILTIN_PRESET_DISCOVERABLE }]))
+        .resolves.toBeUndefined();
+    });
+
+    it('refuses a preset that includes a type only an admin grants', async () => {
+      const sensitiveId = await getAccessTypeId('DATASET:VIEW_SENSITIVE_METADATA');
+      const preset = await prisma.grant_preset.create({
+        data: {
+          name: `_inv_grant_only_${Date.now()}`,
+          resource_types: ['DATASET'],
+          access_type_items: { create: [{ access_type_id: viewMetaId }, { access_type_id: sensitiveId }] },
+        },
+      });
+      try {
+        await expect(grantsService.assertItemsRequestable(prisma, [{ preset_id: preset.id }]))
+          .rejects.toMatchObject({ status: 400, message: expect.stringMatching(/cannot be requested/) });
+      } finally {
+        await prisma.grant_preset.delete({ where: { id: preset.id } });
+      }
     });
   });
 });

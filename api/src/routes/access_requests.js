@@ -145,6 +145,8 @@ router.post(
     // The same rule grant creation applies: a COLLECTION access type cannot be asked for on
     // a dataset. Throws a 400 naming the offending access type or preset.
     await grantService.assertGrantItemsApplicableToResourceType(prisma, resource.type, data.items);
+    // A type only an admin grants, such as sensitive metadata, cannot be asked for.
+    await grantService.assertItemsRequestable(prisma, data.items);
 
     // validated:
     // - the requester can see the resource, and no restriction blocks filing against it
@@ -304,6 +306,7 @@ router.put(
           return res.status(400).json({ message: 'requested_expiry must be in the future' });
         }
       }
+      await grantService.assertItemsRequestable(prisma, data.items);
     }
 
     // validated:

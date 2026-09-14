@@ -9,7 +9,7 @@
         <ResourceChip :resource="props.resource" />
 
         <!-- Subject selector -->
-        <ModernCard title="Subject">
+        <ModernCard title="Who needs access">
           <RequestSubjectSelector v-model="formState.subject" />
         </ModernCard>
 
@@ -53,17 +53,21 @@
 
             <!-- Access type selector -->
             <div>
+              <!-- Only requestable types, and what the subject already holds is ticked and
+                   disabled. @see docs/design/groups/ui-information-architecture.md — Access types in forms -->
               <AccessTypeSelector
                 v-model="formState.selectedTypes"
-                :access-types="accessTypes"
+                :access-types="requestableAccessTypes"
                 :preset-covered-ids="presetCoveredIds"
+                :held-reasons="heldReasons"
+                :resource-type="props.resource?.type"
               />
             </div>
           </div>
         </ModernCard>
 
         <!-- Expiry -->
-        <ModernCard title="Requested Expiry">
+        <ModernCard title="For how long">
           <ExpirySelector v-model="formState.expiry" />
         </ModernCard>
 
@@ -75,7 +79,7 @@
             <span
               class="text-xs normal-case tracking-normal font-normal text-gray-400 dark:text-gray-500"
             >
-              (required for submission)
+              (required)
             </span>
           </div>
           <VaTextarea
@@ -101,26 +105,30 @@
           :closeable="true"
           @close="formState.resetConflictError()"
         >
-          <template #title>Request conflict detected</template>
+          <template #title>Some of this is already requested</template>
           <div class="space-y-2 text-sm">
             <p>{{ formState.conflictError.message }}</p>
             <p v-if="conflictingItemNames.length > 0" class="text-xs">
-              Conflicting items:
+              Already in a pending request:
               <strong>{{ conflictingItemNames.join(", ") }}</strong>
             </p>
             <p class="text-xs">
-              Please wait for the conflicting request to be resolved or withdraw
-              it first.
+              Wait for that request to be decided, or withdraw it, then try
+              again.
             </p>
           </div>
         </ModernAlert>
       </div>
 
-      <!-- Right side: Current access preview -->
+      <!-- Right side: what the subject already has -->
       <div class="col-span-1">
         <CurrentAccessPreview
           :subject="formState.subject"
           :resource="props.resource"
+          :rows="coverageRows"
+          :loading="coverageLoading"
+          :error="coverageError"
+          @retry="loadCoverage"
         />
       </div>
     </div>
@@ -130,6 +138,7 @@
 <script setup>
 import { useAccessTypes } from "@/components/v2/grants/issue/useAccessTypes";
 import { useGrantPresets } from "@/components/v2/grants/issue/useGrantPresets";
+import { coverageReason, useSubjectCoverage } from "./useSubjectCoverage";
 
 const props = defineProps({
   resource: {
@@ -158,6 +167,37 @@ const {
   // loading: presetsLoading,
   // error: presetsError,
 } = useGrantPresets(computed(() => props.resource?.type));
+
+// A type only an admin grants, such as sensitive metadata, is not offered here.
+const requestableAccessTypes = computed(() =>
+  accessTypes.value.filter((t) => t.is_requestable),
+);
+
+const {
+  rows: coverageRows,
+  loading: coverageLoading,
+  error: coverageError,
+  load: loadCoverage,
+} = useSubjectCoverage(
+  computed(() => props.formState.subject),
+  computed(() => props.resource),
+);
+
+// What the subject already holds, together with everything it implies, keyed by access type
+// id. The selector ticks and disables these, so nobody asks for access they already have.
+// @see docs/design/groups/decisions.md — 7. Access types imply one another
+const heldReasons = computed(() => {
+  const byId = new Map(accessTypes.value.map((t) => [t.id, t]));
+  const reasons = new Map();
+  for (const row of coverageRows.value) {
+    const reason = coverageReason(row, props.formState.subject);
+    const conferred = byId.get(row.access_type_id)?.implies ?? [];
+    for (const id of [row.access_type_id, ...conferred]) {
+      if (!reasons.has(id)) reasons.set(id, reason);
+    }
+  }
+  return reasons;
+});
 
 // Computed: Items covered by selected preset
 const presetCoveredIds = computed(() => {
@@ -188,7 +228,7 @@ const conflictingItemNames = computed(() => {
   (props.formState.conflictError.access_type_ids || []).forEach((typeId) => {
     const type = accessTypes.value.find((t) => t.id === typeId);
     if (type) {
-      names.push(type.name);
+      names.push(type.description || type.name);
     }
   });
 

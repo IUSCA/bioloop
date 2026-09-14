@@ -146,6 +146,9 @@ async function seedGrantVocabulary(prisma) {
         name: accessType.name,
         description: accessType.description,
         long_description: accessType.long_description,
+        category: accessType.category,
+        sort_order: accessType.sort_order,
+        is_requestable: accessType.is_requestable,
       },
     });
   }
@@ -202,6 +205,32 @@ async function seedGrantVocabulary(prisma) {
     where: { id: { notIn: GRANT_PRESETS.map((p) => p.id) }, is_active: true },
     data: { is_active: false },
   });
+
+  // An access type no longer in GRANT_ACCESS_TYPES is deleted, and its implication edges go
+  // with it. This has to follow the presets, whose membership was just replaced. A grant, an
+  // access request item, or a retired preset that still names the type blocks the delete,
+  // and the seed refuses rather than leaving a type nothing lists. The references are
+  // checked first because Postgres reports the foreign keys as RESTRICT, which Prisma
+  // surfaces as an unknown error with no code to match.
+  const listedAccessTypeIds = GRANT_ACCESS_TYPES.map((t) => t.id);
+  const unlisted = { access_type_id: { notIn: listedAccessTypeIds } };
+  const staleReferences = await Promise.all([
+    prisma.grant.count({ where: unlisted }),
+    prisma.access_request_item.count({ where: unlisted }),
+    prisma.grant_preset_item.count({ where: unlisted }),
+  ]);
+  if (staleReferences.some((n) => n > 0)) {
+    const stale = await prisma.grant_access_type.findMany({
+      where: { id: { notIn: listedAccessTypeIds } },
+      select: { name: true },
+    });
+    refuse(
+      'Access types removed from GRANT_ACCESS_TYPES are still referenced; reset the database '
+      + 'or remove the grants, access request items, and presets that name them',
+      stale.map((t) => t.name),
+    );
+  }
+  await prisma.grant_access_type.deleteMany({ where: { id: { notIn: listedAccessTypeIds } } });
 
   return {
     accessTypes: GRANT_ACCESS_TYPES.length,

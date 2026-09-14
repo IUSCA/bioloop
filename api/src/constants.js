@@ -270,80 +270,111 @@ const ROLES = [
   { id: 3, name: 'user', description: 'User level access' },
 ];
 
-// need to specify ids to have deterministic seeding
+// The headings the access type selector groups types under, keyed by the
+// GRANT_ACCESS_TYPE_CATEGORY enum. Postgres sorts that enum in declaration order, and these
+// keys must follow the same order; tests/seed_baseline.test.js asserts both.
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
+const GRANT_ACCESS_TYPE_CATEGORY_LABELS = {
+  COLLECTION: 'This collection',
+  DATASET_ABOUT: 'About the dataset',
+  DATASET_FILES: 'Files',
+  DATASET_DATA: 'Use the data',
+};
+
+// Ids are pinned for deterministic seeding and are never reused; 3 and 8 were the retired
+// REQUEST_ACCESS types. `category` and `sort_order` place a type in the selector, and
+// `is_requestable` is false for a type only an admin grants directly.
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
 const GRANT_ACCESS_TYPES = [
   {
     id: 1,
     name: 'DATASET:VIEW_METADATA',
     description: 'See dataset exists',
     long_description: 'See dataset exists and view non-sensitive metadata such as description, size, file count',
+    category: 'DATASET_ABOUT',
+    sort_order: 1,
+    is_requestable: true,
   },
   {
     id: 2,
     name: 'DATASET:VIEW_SENSITIVE_METADATA',
     description: 'Paths, infrastructure and lifecycle data',
     long_description: 'View sensitive metadata such as file paths, infrastructure details, and lifecycle data',
-  },
-  {
-    id: 3,
-    name: 'DATASET:REQUEST_ACCESS',
-    description: 'Can request access',
-    long_description: 'Can request other access types, which may include '
-    + 'viewing sensitive metadata, listing files, downloading, remote access, or compute access',
+    category: 'DATASET_ABOUT',
+    sort_order: 4,
+    is_requestable: false,
   },
   {
     id: 4,
     name: 'DATASET:LIST_FILES',
     description: 'Browse file tree',
     long_description: 'Browse file tree and see file names, size.',
+    category: 'DATASET_FILES',
+    sort_order: 1,
+    is_requestable: true,
   },
   {
     id: 5,
     name: 'DATASET:DOWNLOAD',
     description: 'Local copy',
     long_description: 'Download individual files or entire bundle for local use',
+    category: 'DATASET_DATA',
+    sort_order: 1,
+    is_requestable: true,
   },
   {
     id: 6,
     name: 'DATASET:COMPUTE',
     description: 'Run compute jobs',
     long_description: 'Run compute jobs on dataset in place, without downloading',
+    category: 'DATASET_DATA',
+    sort_order: 2,
+    is_requestable: true,
   },
   {
     id: 7,
     name: 'COLLECTION:VIEW_METADATA',
     description: 'See collection exists',
     long_description: 'See collection exists and view non-sensitive metadata such as description, dataset count',
-  },
-  {
-    id: 8,
-    name: 'COLLECTION:REQUEST_ACCESS',
-    description: 'Can request access',
-    long_description: 'Can request other access types, which may include listing datasets in collection',
+    category: 'COLLECTION',
+    sort_order: 1,
+    is_requestable: true,
   },
   {
     id: 9,
     name: 'COLLECTION:LIST_CONTENTS',
     description: 'Browse datasets in collection',
     long_description: 'Browse datasets in collection and see dataset names, types, and size',
+    category: 'COLLECTION',
+    sort_order: 2,
+    is_requestable: true,
   },
   {
     id: 10,
     name: 'DATASET:REMOTE_ACCESS',
     description: 'Path to storage',
     long_description: 'Access dataset in place via provided path, without downloading',
+    category: 'DATASET_DATA',
+    sort_order: 3,
+    is_requestable: true,
   },
   {
     id: 11,
     name: 'DATASET:LIST_DERIVED_DATASETS',
     description: 'View derived datasets',
     long_description: 'View derived datasets and their metadata that reference this dataset as a source',
+    category: 'DATASET_ABOUT',
+    sort_order: 3,
+    is_requestable: true,
   },
   {
     id: 12,
     name: 'DATASET:LIST_SOURCE_DATASETS',
     description: 'View source datasets',
     long_description: 'View source datasets and their metadata that reference this dataset as a derived dataset',
+    category: 'DATASET_ABOUT',
+    sort_order: 2,
+    is_requestable: true,
   },
 ];
 
@@ -366,13 +397,11 @@ const GRANT_ACCESS_TYPE_IMPLICATIONS = [
   // Anything you can do to a dataset implies knowing the dataset exists.
   ['DATASET:LIST_FILES', 'DATASET:VIEW_METADATA'],
   ['DATASET:VIEW_SENSITIVE_METADATA', 'DATASET:VIEW_METADATA'],
-  ['DATASET:REQUEST_ACCESS', 'DATASET:VIEW_METADATA'],
   ['DATASET:LIST_DERIVED_DATASETS', 'DATASET:VIEW_METADATA'],
   ['DATASET:LIST_SOURCE_DATASETS', 'DATASET:VIEW_METADATA'],
 
   // The same shape one level up, for collections.
   ['COLLECTION:LIST_CONTENTS', 'COLLECTION:VIEW_METADATA'],
-  ['COLLECTION:REQUEST_ACCESS', 'COLLECTION:VIEW_METADATA'],
 ];
 
 // Every preset is scoped to collections. A preset listed here is active; one removed from
@@ -382,9 +411,9 @@ const GRANT_PRESETS = [
   {
     id: 1,
     name: 'Discoverable',
-    description: 'Allows users to view collection and dataset metadata and request further access',
+    description: 'Allows users to see that the collection and its datasets exist',
     resource_types: ['COLLECTION'],
-    access_type_ids: [1, 3, 7, 9],
+    access_type_ids: [1, 7],
   },
   {
     id: 2,
@@ -425,6 +454,7 @@ module.exports = {
   ROLES,
   GRANT_ACCESS_TYPES,
   GRANT_ACCESS_TYPE_IMPLICATIONS,
+  GRANT_ACCESS_TYPE_CATEGORY_LABELS,
   GRANT_PRESETS,
   JWT_COOKIE_NAME,
   GRAFANA_COOKIE_NAME,

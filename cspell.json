@@ -288,7 +288,8 @@
     "WCAG",
     "weakcb",
     "webassets",
-    "zenodo"
+    "zenodo",
+    "requestable"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

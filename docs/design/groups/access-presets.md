@@ -245,7 +245,7 @@ When a group admin grants access preemptively (outside the request workflow), th
 
 Access types carry a partial order, held in `grant_access_type_implication`. Holding a wider type satisfies a check for a narrower one, so `DATASET:DOWNLOAD` satisfies `DATASET:LIST_FILES`, which satisfies `DATASET:VIEW_METADATA`. A preset that lists all three describes one fact, and writing three rows records it three times.
 
-Approval-time expansion therefore reduces the access type set to its maximal elements before anything is written. *Standard Research Use* writes one grant of `DATASET:DOWNLOAD` and one of `COLLECTION:LIST_CONTENTS`. Both seeded presets reduce: nine listed access types become four grants.
+Approval-time expansion therefore reduces the access type set to its maximal elements before anything is written. *Standard Research Use* writes one grant of `DATASET:DOWNLOAD` and one of `COLLECTION:LIST_CONTENTS`, so five listed access types become two grants. *Discoverable* lists two types that do not imply each other, and writes both.
 
 Reduction is a property of the access types, not of presets. Two access types named directly in one request collapse the same way.
 
@@ -263,7 +263,7 @@ Every seeded preset applies to a collection, and none applies to a dataset. A pr
 
 The order has no edge between a `COLLECTION:*` type and a `DATASET:*` type. `COLLECTION:LIST_CONTENTS` lets a subject browse a collection and open none of its datasets. `DATASET:DOWNLOAD` issued on the collection opens its datasets and not the collection itself. A collection preset pairs the two, so a requester does not have to know that both are needed.
 
-A dataset has no such pair. Every dataset bundle reduces through the order to one access type. A dataset copy of *Standard Research Use* wrote one `DATASET:DOWNLOAD` grant, and a dataset copy of *Discoverable* wrote one `DATASET:REQUEST_ACCESS` grant. A preset that names one access type only gives it a second name. The request form and the issue dialog therefore offer a dataset its access types directly, and they omit the preset block when no preset applies.
+A dataset has no such pair. Every dataset bundle reduces through the order to one access type. A dataset copy of *Standard Research Use* wrote one `DATASET:DOWNLOAD` grant, and a dataset copy of *Discoverable* wrote one `DATASET:VIEW_METADATA` grant. A preset that names one access type only gives it a second name. The request form and the issue dialog therefore offer a dataset its access types directly, and they omit the preset block when no preset applies.
 
 `grant_preset.resource_types` stays. It is the check that refuses a collection preset on a dataset.
 

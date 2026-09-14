@@ -257,6 +257,10 @@ noise.
 - zsh expands `--include=*.vue` unless it is quoted: `--include="*.vue"`.
 - The Bash tool's working directory persists between calls. Prefer absolute paths, or
   re-`cd` at the start of each call.
+- zsh does not word-split an unquoted variable. `F="a.vue b.vue"; npx prettier --write $F`
+  passes one argument naming a file that does not exist, and prettier answers
+  "No files matching". Worse, `npx eslint $F` then lints nothing and exits clean. List the
+  files inline or use an array: `F=(a.vue b.vue); npx prettier --write $F`.
 - A newline-joined file list can overflow an argument and produce "File name too long".
   Use `find ... -print0` piped to `xargs -0`.
 
