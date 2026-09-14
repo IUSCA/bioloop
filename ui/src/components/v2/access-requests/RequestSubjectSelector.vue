@@ -33,11 +33,16 @@
         v-if="modelValue?.id"
         class="flex flex-1 items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-solid border-gray-200 dark:border-gray-700"
       >
-        <UserAvatar :user="modelValue" size="sm" />
+        <UserAvatar
+          :username="modelValue.user?.username"
+          :name="modelValue.user?.name"
+        />
         <div class="flex-1 min-w-0">
-          <p class="text-sm font-medium truncate">{{ modelValue?.name }}</p>
+          <p class="text-sm font-medium truncate">
+            {{ modelValue.user?.name }}
+          </p>
           <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {{ modelValue?.email }}
+            {{ modelValue.user?.email }}
           </p>
         </div>
       </div>
