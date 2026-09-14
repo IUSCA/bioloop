@@ -19,6 +19,7 @@ const {
 const { pickNonNil, setsEqual } = require('@/utils');
 const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 
 const router = express.Router();
 
@@ -212,14 +213,48 @@ router.delete(
   }),
 );
 
-// list datasets in collection
+/**
+ * Whether the caller may stage one dataset.
+ *
+ * The collection datasets list and the stage route both ask this, so the staging a row offers
+ * and the answer the stage route gives cannot disagree. The policy context is shared across
+ * calls in one request, so the caller is hydrated once however many datasets are checked.
+ * @param {import('express').Request} req
+ * @param {string} resource_id
+ * @returns {Promise<boolean>}
+ */
+async function canRequestStage(req, resource_id) {
+  const decision = await authorizeAction('dataset', 'request_stage', {
+    identifiers: { user: req.user?.subject_id, resource: resource_id },
+    policyExecutionContext: req.policyContext,
+    preFetched: { user: req.user, context: { req } },
+  });
+  return decision.granted;
+}
+
+/**
+ * Every dataset in the collection, for a caller permitted to browse it.
+ *
+ * Browsing a collection does not mean every dataset in it opens: a bare
+ * COLLECTION:LIST_CONTENTS grant confers the first and not the second. Each row carries
+ * `_meta.can_view_metadata`, so the page shows a row that will not open as plain text and offers a
+ * request on the collection rather than a link onto a refusal. Each row also carries
+ * `_meta.can_request_stage`, from the check the stage route makes, so the page offers staging
+ * only where that route would accept it.
+ *
+ * Rows carry the dataset's public attributes whoever the caller is, the rule `dataset.list`
+ * applies.
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
+ */
 router.get(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
+    query('name').optional().isString().trim()
+      .notEmpty(),
     query('limit').default(100).isInt({ min: 1, max: 100 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
-    query('sort_by').default('name').isIn(['name', 'created_at', 'updated_at']),
+    query('sort_by').default('name').isIn(['name', 'size', 'created_at', 'updated_at']),
     query('sort_order').default('asc').isIn(['asc', 'desc']),
   ]),
   authorize('collection', 'list_datasets'),
@@ -229,13 +264,35 @@ router.get(
 
     const { metadata, data } = await collectionService.listDatasetsInCollection({
       collection_id: req.params.id,
+      name: req.query.name,
       limit: req.query.limit,
       offset: req.query.offset,
       sort_by: req.query.sort_by,
       sort_order: req.query.sort_order,
     });
-    const filteredDatasets = data.map((d) => req.permission.filter(d));
-    res.json({ metadata, data: filteredDatasets });
+
+    const resourceIds = data.map((d) => d.resource_id);
+    const viewable = isPlatformAdmin(req)
+      ? new Set(resourceIds)
+      : await datasetService.viewableDatasetIds(req.user.subject_id, resourceIds);
+
+    // One at a time, as bulkStage does, so the first call fills the shared policy context.
+    const stageable = new Set();
+    for (const d of data) {
+      // eslint-disable-next-line no-await-in-loop
+      if (await canRequestStage(req, d.resource_id)) stageable.add(d.resource_id);
+    }
+
+    res.json({
+      metadata,
+      data: data.map((d) => ({
+        ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d),
+        _meta: {
+          can_view_metadata: viewable.has(d.resource_id),
+          can_request_stage: stageable.has(d.resource_id),
+        },
+      })),
+    });
   }),
 );
 
@@ -389,19 +446,8 @@ router.post(
       return next(createError(404, 'No datasets in this collection matched the request'));
     }
 
-    // The policy context is shared across the calls, so the caller is hydrated once however
-    // many datasets the collection holds.
-    const permits = async (resource_id) => {
-      const decision = await authorizeAction('dataset', 'request_stage', {
-        identifiers: { user: req.user?.subject_id, resource: resource_id },
-        policyExecutionContext: req.policyContext,
-        preFetched: { user: req.user, context: { req } },
-      });
-      return decision.granted;
-    };
-
     const result = await workflowService.bulkStage(datasets, {
-      permits,
+      permits: (resource_id) => canRequestStage(req, resource_id),
       initiator_id: req.user.id,
     });
     return res.json(result);

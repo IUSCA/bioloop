@@ -18,6 +18,10 @@ they failed to *run*. Read the `Tests:` line before the `Suites:` line — `0 fa
 wall of red suites means the invocation was wrong, not the code. Put the `cd api` in the
 same command.
 
+A foreground call has the same trap. The Bash tool keeps the directory a previous call `cd`-ed
+into, so after a UI command jest reports `No tests found` and names `.../bioloop/ui` as the
+directory it searched. The pattern is fine; the directory is wrong.
+
 `--runInBand` is not optional. The service suites talk to the **real development database**
 on `localhost:5432` and the concurrency suites deliberately race transactions against real
 constraints. Running them in parallel produces failures that mean nothing.

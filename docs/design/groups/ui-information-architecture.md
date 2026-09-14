@@ -201,10 +201,24 @@ Overview tab, without `view_profile` being involved, because they already hold a
 collection. `view_profile` exists for the caller who holds no grant at all, including one who
 is not signed in. @see [Profiles](./profiles.md) — What each audience sees.
 
-**The Datasets tab is gated on the grant, and its rows are gated again.** The tab needs
-`COLLECTION:LIST_CONTENTS`. What a row may show about each dataset is governed by that
-caller's per-dataset capabilities, which are usually narrower — file counts and sizes
-require deeper access than `view_metadata`.
+**The Datasets tab is gated on the grant, and opening a row is gated again.** The tab needs
+`COLLECTION:LIST_CONTENTS`. It lists every dataset in the collection, with each dataset's
+public attributes. Opening a dataset needs `DATASET:VIEW_METADATA`, and no collection access
+type implies it. `GET /collections/:id/datasets` therefore marks each row with
+`_meta.can_view_metadata`. The tab shows a row that will not open as plain text, not as a link.
+Each row also carries `_meta.can_request_stage`, from the `request_stage` check the stage
+route makes. The tab shows the Stage button and the row checkboxes only when some row on the
+page can be staged.
+
+**A browsable collection offers the next step.** When any row will not open, the tab offers a
+request for access on the collection. That request may name dataset access types, because
+they are valid on a collection. The `Discoverable` preset never reaches this state. It issues
+`DATASET:VIEW_METADATA` on the collection together with `COLLECTION:LIST_CONTENTS`.
+
+**A list row always opens.** The dataset list and the collection list count a grant only
+when its type satisfies the page's `view_metadata` check, after the access-type order is
+applied. `api/tests/services/grants/listVisibility.test.js` asserts the lists and the pages
+agree for each grant shape. @see [Decisions](./decisions.md) — 7. Access types imply one another.
 
 **The Requests tab never disappears.** `create` on `access_request` is `Policy.always`,
 so any authenticated user can file a request, and `isRequester` always lets them see

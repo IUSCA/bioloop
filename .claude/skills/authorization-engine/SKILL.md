@@ -148,6 +148,31 @@ all, so adding a policy requirement to such a model is where this bites.
 `hydrator.hydrate({ id, attributes })` — an object, not positional arguments — and assert the
 attribute resolves.
 
+## A list query must widen through the access-type order, as the page does
+
+A page decides with `userHasGrant`, which reads a hydrated set already closed over the
+access-type order. A list query filters grant rows in SQL, and `gat.name IN (...)` matches a
+literal type, not the types that imply it. Two lists got this wrong in opposite directions.
+
+- **Too strict.** `POST /collections/search` matched `COLLECTION:VIEW_METADATA` literally, so a
+  collection held through `COLLECTION:LIST_CONTENTS` opened by id and never appeared in the list.
+- **Too loose.** `GET /v2/datasets` passed no type filter, so a bare collection grant listed
+  every dataset in the collection, and each one's page then refused with 403.
+
+Widen the page's type with `grantService.satisfiedBy([...])` and pass the result to the query.
+`accessibleDatasetIdsByGrantsQuery` throws when given no types, so the loose form cannot
+return there. `api/tests/services/grants/listVisibility.test.js` is the parity harness. Add a
+case when a new grant shape appears. It failed four of its ten cases against the code before
+the fix, so it measures something.
+
+A grant on a collection may carry dataset access types, and those count for the datasets in
+it. A collection access type never counts for a dataset. The collection Datasets tab reads
+`GET /collections/:id/datasets`, which lists every dataset and marks each with
+`_meta.can_view_metadata`, so browsing and opening can differ row by row.
+
+Check a list change against the live API per persona: call the list, then the page for every
+row it returns, and expect no 403.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

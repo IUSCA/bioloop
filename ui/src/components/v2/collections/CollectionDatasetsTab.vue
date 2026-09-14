@@ -24,7 +24,7 @@
             <!-- Authorization is per dataset, so this reports what was staged, what was
                  refused, and what needed nothing, rather than failing the batch. -->
             <VaButton
-              v-if="props.canStage"
+              v-if="canStage"
               size="small"
               preset="secondary"
               :loading="staging"
@@ -64,6 +64,28 @@
             </div>
 
             <div v-else-if="datasets.length > 0">
+              <!-- A grant to browse a collection does not open every dataset in it. Offer the
+                   next step rather than links that end in a refusal. -->
+              <ModernAlert
+                v-if="hasRowsThatWillNotOpen"
+                color="info"
+                class="mb-4"
+                title="Some datasets here are not open to you"
+              >
+                <div
+                  class="flex flex-wrap items-center justify-between gap-3 text-sm"
+                >
+                  <span>
+                    You can see that they belong to this collection, but not
+                    their details. Request access to this collection to open
+                    them.
+                  </span>
+                  <VaButton size="small" @click="emit('request-access')">
+                    Request access
+                  </VaButton>
+                </div>
+              </ModernAlert>
+
               <VaDataTable
                 :items="datasets"
                 :columns="columns"
@@ -71,18 +93,22 @@
                 v-model:sort-by="sortBy"
                 v-model:sorting-order="sortOrder"
                 v-model="selected"
-                :selectable="props.canStage"
+                :selectable="canStage"
                 select-mode="multiple"
                 disable-client-side-sorting
               >
                 <template #cell(name)="{ row }">
                   <RouterLink
+                    v-if="row.rowData._meta?.can_view_metadata"
                     :to="`/v2/datasets/${row.rowData.resource_id}`"
                     class="text-sm font-medium hover:underline"
                     style="color: var(--va-primary)"
                   >
                     {{ row.rowData.name }}
                   </RouterLink>
+                  <span v-else class="text-sm font-medium">
+                    {{ row.rowData.name }}
+                  </span>
                 </template>
 
                 <template #cell(type)="{ row }">
@@ -101,9 +127,7 @@
                 <template #cell(size)="{ rowData }">
                   <span class="text-sm">
                     {{
-                      rowData?._count?.datasets != null
-                        ? formatBytes(rowData._count.datasets)
-                        : "—"
+                      rowData?.size != null ? formatBytes(rowData.size) : "—"
                     }}
                   </span>
                 </template>
@@ -217,7 +241,6 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
-import DatasetService from "@/services/v2/datasets";
 import CollectionService from "@/services/v2/collections";
 import toast from "@/services/toast";
 import { getIcon } from "@/services/v2/icons";
@@ -226,12 +249,9 @@ const props = defineProps({
   collection: { type: Object, required: true },
   canCreate: { type: Boolean, required: true },
   canRemove: { type: Boolean, required: true },
-  // Whether to offer staging at all. The API still checks every dataset separately, because
-  // a collection can hold datasets this viewer cannot stage.
-  canStage: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(["count-changed"]);
+const emit = defineEmits(["count-changed", "request-access"]);
 
 const datasets = ref([]);
 const selected = ref([]);
@@ -246,6 +266,16 @@ const itemsPerPage = ref(20);
 const sortBy = ref("created_at");
 const sortOrder = ref("desc");
 const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
+
+// Staging is authorized per dataset, so offer it only when some row on this page accepts it.
+// The stage route still checks every dataset it is asked to stage.
+const canStage = computed(() =>
+  datasets.value.some((d) => d._meta?.can_request_stage),
+);
+
+const hasRowsThatWillNotOpen = computed(() =>
+  datasets.value.some((d) => !d._meta?.can_view_metadata),
+);
 
 const areFiltersActive = computed(() => {
   return searchTerm.value !== "" || activeStatus.value !== "all";
@@ -295,16 +325,14 @@ watch(currentPage, fetchDatasets);
 async function fetchDatasets() {
   loading.value = true;
   try {
-    const { data } = await DatasetService.search({
+    const { data } = await CollectionService.getDatasets(props.collection.id, {
       limit: itemsPerPage.value,
       offset: (currentPage.value - 1) * itemsPerPage.value,
       name: searchTerm.value || undefined,
-      collection_id: props.collection.id,
-      sort_by: sortBy.value === "size" ? "_count.datasets" : sortBy.value,
+      sort_by: sortBy.value,
       sort_order: sortOrder.value,
     });
 
-    console.log("Fetched datasets:", data.data);
     error.value = null;
     datasets.value = data.data;
     total.value = data.metadata?.total ?? data.data.length;

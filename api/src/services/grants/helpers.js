@@ -193,13 +193,22 @@ function accessibleCollectionsByGrantsQuery(user_id, access_types = []) {
 
 /** Helper to build SQL query for fetching datasets that are accessible by a user via grants
  * (directly or via group membership, including via collection-level grants)
+ *
+ * Only grants of `access_types` count. A caller that lists datasets passes the types that
+ * satisfy `DATASET:VIEW_METADATA`, so every row it shows is one the dataset page will open.
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
  * @param {string} user_id - UUID of the user
+ * @param {string[]} access_types - the grant types that count. Required: counting every type
+ *   admits datasets the user cannot open, such as those under a bare COLLECTION:LIST_CONTENTS.
  * @returns {Prisma.sql} SQL query to fetch dataset resource ids accessible by the user via grants
  */
-function accessibleDatasetIdsByGrantsQuery(user_id) {
+function accessibleDatasetIdsByGrantsQuery(user_id, access_types) {
+  if (!access_types?.length) {
+    throw new Error('accessibleDatasetIdsByGrantsQuery needs the access types that count');
+  }
   return Prisma.sql`
     WITH valid_grants AS (
-      ${userValidGrantsQuery(user_id)}
+      ${userValidGrantsQuery(user_id, access_types)}
     )
     SELECT DISTINCT d.resource_id
     FROM valid_grants g

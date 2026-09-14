@@ -331,12 +331,24 @@ async function searchAllDatasets({
   return { data: datasets, metadata: { total: total_count } };
 }
 
-function createAccessibleDatasetIdsCte(user_id, scope = RESOURCE_SCOPES.ALL) {
+/**
+ * The grant type a dataset row needs to be listed. It is the type `dataset.view_metadata`
+ * checks, so a listed dataset always opens. Widened through the access-type order before use.
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ */
+const LISTING_ACCESS_TYPE = 'DATASET:VIEW_METADATA';
+
+/**
+ * @param {string} user_id - subject id
+ * @param {string} scope - one of RESOURCE_SCOPES
+ * @param {string[]} grant_access_types - `satisfiedBy([LISTING_ACCESS_TYPE])`
+ */
+function createAccessibleDatasetIdsCte(user_id, scope, grant_access_types) {
   const includeAll = scope === RESOURCE_SCOPES.ALL;
   const parts = [];
 
   if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id)})`);
+    parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id, grant_access_types)})`);
   }
 
   if (includeAll || scope === RESOURCE_SCOPES.OWNERSHIP) {
@@ -369,18 +381,39 @@ function createAccessibleDatasetIdsCte(user_id, scope = RESOURCE_SCOPES.ALL) {
   `;
 }
 
+/**
+ * Which of `resource_ids` the user can open, by the same rule the dataset list uses.
+ *
+ * A platform admin is not special-cased here; the caller checks for one first.
+ * @param {string} user_id - subject id
+ * @param {string[]} resource_ids - dataset resource ids
+ * @returns {Promise<Set<string>>}
+ */
+async function viewableDatasetIds(user_id, resource_ids) {
+  if (resource_ids.length === 0) return new Set();
+  const grant_access_types = await grantService.satisfiedBy([LISTING_ACCESS_TYPE]);
+  const rows = await prisma.$queryRaw(Prisma.sql`
+    ${createAccessibleDatasetIdsCte(user_id, RESOURCE_SCOPES.ALL, grant_access_types)}
+    SELECT resource_id FROM accessible_ids
+    WHERE resource_id IN (${Prisma.join(resource_ids)})
+  `);
+  return new Set(rows.map((r) => r.resource_id));
+}
+
 async function searchDatasetsForUser({
   user_id, filters, pagination, sort, includes,
 }) {
   // user is an admin of the group that owns the dataset
   // OR user has oversight of the group that owns the dataset
-  // OR user has any grant on dataset
+  // OR user holds a grant satisfying DATASET:VIEW_METADATA, on the dataset or on a
+  //    collection containing it
 
   const effectiveFilters = filters ?? {};
   const { scope = RESOURCE_SCOPES.ALL } = effectiveFilters;
   const whereClause = createSqlWhere(effectiveFilters);
   const orderByClause = createSqlOrderBy(sort);
-  const cte_query = createAccessibleDatasetIdsCte(user_id, scope);
+  const grant_access_types = await grantService.satisfiedBy([LISTING_ACCESS_TYPE]);
+  const cte_query = createAccessibleDatasetIdsCte(user_id, scope, grant_access_types);
 
   const data_query = Prisma.sql`
     ${cte_query}
@@ -442,6 +475,7 @@ module.exports = {
   getDatasetById,
   searchAllDatasets,
   searchDatasetsForUser,
+  viewableDatasetIds,
   getDatasetsByOwnerGroup,
   getDatasetsByCollection,
 };

@@ -51,9 +51,14 @@ export default {
     return api.post(`/collections/${id}/unarchive`);
   },
 
-  /** List datasets within the collection. */
-  getDatasets(id) {
-    return api.get(`/collections/${id}/datasets`);
+  /**
+   * List datasets within the collection. Each row carries `_meta.can_view_metadata`,
+   * because a caller may browse a collection holding datasets they cannot open.
+   * @param {string} id
+   * @param {{limit?: number, offset?: number, name?: string, sort_by?: string, sort_order?: string}} [params]
+   */
+  getDatasets(id, params) {
+    return api.get(`/collections/${id}/datasets`, { params });
   },
 
   /**

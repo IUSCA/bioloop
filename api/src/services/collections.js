@@ -429,12 +429,19 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
   });
 }
 
-function buildAccessibleCollectionIdsCte(user_id, scope) {
+/**
+ * @param {string} user_id - subject id
+ * @param {string} scope - one of RESOURCE_SCOPES
+ * @param {string[]} grant_access_types - `satisfiedBy(['COLLECTION:VIEW_METADATA'])`, the
+ *   types that let a caller open a collection, so every listed collection opens
+ * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ */
+function buildAccessibleCollectionIdsCte(user_id, scope, grant_access_types) {
   const includeAll = scope === RESOURCE_SCOPES.ALL;
   const parts = [];
 
   if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id, ['COLLECTION:VIEW_METADATA'])})`);
+    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id, grant_access_types)})`);
   }
 
   if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
@@ -532,7 +539,8 @@ async function searchCollectionsForUser({
 
   const whereClause = buildWhereClause([searchClause, archivedClause, ownerGroupClause, datasetClause], 'AND');
 
-  const cte_query = buildAccessibleCollectionIdsCte(user_id, scope);
+  const grant_access_types = await grantService.satisfiedBy(['COLLECTION:VIEW_METADATA']);
+  const cte_query = buildAccessibleCollectionIdsCte(user_id, scope, grant_access_types);
 
   const data_query = Prisma.sql`
     ${cte_query}
@@ -675,30 +683,34 @@ async function findCollectionsByOwnerGroup(group_id, options) {
  * @param {number} offset - Pagination offset
  * @returns {Promise<Object>} An object containing metadata about the search results and an array of datasets in the collection
  */
+/**
+ * The datasets currently in a collection, excluding deleted ones.
+ * @param {Object} params
+ * @param {string} params.collection_id
+ * @param {string} [params.name] - case-insensitive substring of the dataset name
+ * @param {number} params.limit
+ * @param {number} params.offset
+ * @param {string} params.sort_by
+ * @param {'asc'|'desc'} params.sort_order
+ * @returns {Promise<{metadata: {total: number, limit: number, offset: number}, data: Object[]}>}
+ */
 async function listDatasetsInCollection({
-  collection_id, limit, offset, sort_by, sort_order,
+  collection_id, name, limit, offset, sort_by, sort_order,
 }) {
-  const datasets = await prisma.dataset.findMany({
-    where: {
-      collections: {
-        some: {
-          collection_id,
-          removed_at: null,
-        },
-      },
-    },
-    take: limit,
-    skip: offset,
-    orderBy: {
-      [sort_by]: sort_order,
-    },
-  });
-  const total = await prisma.collection_dataset.count({
-    where: {
-      collection_id,
-      removed_at: null,
-    },
-  });
+  const where = {
+    is_deleted: false,
+    collections: { some: { collection_id, removed_at: null } },
+    ...(name ? { name: { contains: name, mode: 'insensitive' } } : {}),
+  };
+  const [datasets, total] = await Promise.all([
+    prisma.dataset.findMany({
+      where,
+      take: limit,
+      skip: offset,
+      orderBy: { [sort_by]: sort_order },
+    }),
+    prisma.dataset.count({ where }),
+  ]);
   return { metadata: { total, limit, offset }, data: datasets };
 }
 

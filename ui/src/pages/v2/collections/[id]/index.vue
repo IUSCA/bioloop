@@ -123,8 +123,13 @@
           :collection="collection"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
-          :can-stage="can('view_metadata')"
           @count-changed="fetchDatasetCount"
+          @request-access="
+            handleActionRequested({
+              tabName: 'requests',
+              modalName: 'request-access',
+            })
+          "
         />
 
         <CollectionGrantsTab
@@ -167,7 +172,6 @@
 import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
-import DatasetService from "@/services/v2/datasets";
 import GrantService from "@/services/v2/grants";
 import { useNavStore } from "@/stores/nav";
 
@@ -240,9 +244,8 @@ async function fetchDatasetCount() {
   }
 
   try {
-    const { data } = await DatasetService.search({
-      collection_id: props.id,
-      limit: 0,
+    const { data } = await CollectionService.getDatasets(props.id, {
+      limit: 1,
     });
     counts.value.datasets = data.metadata?.total ?? null;
   } catch {

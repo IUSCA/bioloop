@@ -421,11 +421,13 @@ This one is worth revisiting with a real group. It is the decision most likely t
 
 **The anonymous half is built and the signed-in half is not.** A public collection profile
 says that its datasets are not listed and gives no count, which is what this decision asks
-for. The `8 of 20 visible to you` strip on the authenticated Overview tab was not built: the
-collection's Datasets tab already lists what the viewer can read, and the API returns no total
-to compare it against, so the strip needs an endpoint that reports a count the caller is not
-otherwise allowed to see. That is the disclosure this decision is about, and it deserves its
-own change rather than being smuggled in with the profile.
+for. The `8 of 20 visible to you` strip on the authenticated Overview tab was not built.
+A caller holding `COLLECTION:LIST_CONTENTS` already sees both numbers on the Datasets tab.
+It lists every dataset in the collection and marks the ones that caller cannot open. A caller
+with only `COLLECTION:VIEW_METADATA` has no Datasets tab and no total. For that caller the
+strip needs an endpoint that reports a count they are not otherwise allowed to see. That is the
+disclosure this decision is about, and it deserves its own change rather than being smuggled
+in with the profile.
 
 ### 5. The Overview tab becomes the profile
 
