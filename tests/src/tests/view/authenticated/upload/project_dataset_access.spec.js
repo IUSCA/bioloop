@@ -1,196 +1,156 @@
 import { getAutoCompleteResults } from '../../../../actions';
 import { loginAndNavigate } from '../../../../actions/auth';
-import { selectFiles } from '../../../../actions/datasetUpload';
-import { navigateToNextStep } from '../../../../actions/stepper';
+import { selectFilesAndGoToGeneralInfo } from '../../../../actions/datasetUpload';
 import { createDataset } from '../../../../api/dataset';
-import { createProject, editProjectDatasets, editProjectUsers } from '../../../../api/project';
+import {
+  createProject,
+  editProjectDatasets,
+  editProjectUsers,
+} from '../../../../api/project';
 import { ensureRoleUser } from '../../../../api/user';
 import { expect, test } from '../../../../fixtures';
 import { getTokenByRole } from '../../../../fixtures/auth';
 
-const attachments = Array.from({ length: 3 }, (_, i) => ({ name: `file_${i + 1}` }));
+const attachments = Array.from(
+  { length: 3 },
+  (_, i) => ({ name: `file_${i + 1}` }),
+);
 
 test.use({ attachments });
 
-test.describe.serial('Dataset Upload Process', () => {
-  let userPage; // Playwright page instance for `user` role user
-  let operatorPage; // Playwright page instance for `operator` role user
-  let adminPage; // Playwright page instance for `admin` role user
+async function openGeneralInfoForRole({
+  browser,
+  attachmentManager,
+  role,
+}) {
+  const page = await browser.newPage();
 
-  let user; // `user` role user
-  let operator; // `operator` role user
-  let admin; // `admin` role user
+  await loginAndNavigate({
+    page,
+    ticket: role,
+    path: '/datasets/uploads/new',
+    waitForTestId: 'upload-container',
+  });
 
-  // Projects that will be created, to be used as options of field "Assign
-  // Project".
+  const filePaths = attachments.map(
+    (file) => `${attachmentManager.getPath()}/${file.name}`,
+  );
+  await selectFilesAndGoToGeneralInfo({ page, filePaths });
+
+  return page;
+}
+
+test.describe.serial('Dataset Upload Project and Dataset access', () => {
   const projects = [];
-  // Project that will be associated with the `user` role User
-  let projectAssociatedWithUserRole;
-  // Datasets that will be associated with the Project that will be associated
-  // with the `user` role User.
   const datasetsAssociatedWithUserProject = [];
-  // Datasets that will not be associated with the Project that will be
-  // associated with the `user` role User.
   const datasetsNotAssociatedWithUserProject = [];
-  /**
-   * Setup:
-   * - Create a new User. Test will be run while logged-in as this user.
-   * - Create a new Project. Test will use this Project.
-   * - Create a few Datasets to associate with the Project. Test will use
-   *    these Datasets as options of field "Source Raw Data".
-   * - Associate the created Datasets with the Project
-   * - Associate the test User with the created Project
-   */
-  const setup = async () => {
+  let projectAssociatedWithUserRole;
+
+  test.beforeAll(async () => {
     const adminToken = await getTokenByRole({ role: 'admin' });
+    const user = await ensureRoleUser({ token: adminToken, role: 'user' });
 
-    user = await ensureRoleUser({ token: adminToken, role: 'user' });
-    admin = await ensureRoleUser({ token: adminToken, role: 'admin' });
-    operator = await ensureRoleUser({ token: adminToken, role: 'operator' });
-
-    // Create a few Projects. Test will use these Projects as options of field
-    // "Assign Project".
-    const numProjectsToCreate = 2;
-    for (let i = 0; i < numProjectsToCreate; i += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      projects.push(await createProject({
-        token: adminToken,
-      }));
-    }
-
-    // Choose any Project to be associated with `user` role User.
+    const createdProjects = await Promise.all(
+      Array.from(
+        { length: 2 },
+        () => createProject({ token: adminToken }),
+      ),
+    );
+    projects.push(...createdProjects);
     [projectAssociatedWithUserRole] = projects;
 
-    // Create a few Datasets to associate with the Project which is being
-    // associated with the `user` role User. Test will use these Datasets as
-    // options of field "Source Raw Data".
-    const numDatasetsToAssociate = 3;
-    for (let i = 0; i < numDatasetsToAssociate; i += 1) {
-      // eslint-disable-next-line no-await-in-loop
-      const dataset = await createDataset({
-        token: adminToken,
-        data: {
-          type: 'RAW_DATA',
-        },
-      });
-      datasetsAssociatedWithUserProject.push(dataset);
-    }
-    // Associate the created Datasets with the Project exposed to `user` role
-    // User.
+    const associatedDatasets = await Promise.all(
+      Array.from(
+        { length: 3 },
+        () => createDataset({
+          token: adminToken,
+          data: { type: 'RAW_DATA' },
+        }),
+      ),
+    );
+    datasetsAssociatedWithUserProject.push(...associatedDatasets);
+
     await editProjectDatasets({
       token: adminToken,
       id: projectAssociatedWithUserRole.id,
       data: {
-        add_dataset_ids: datasetsAssociatedWithUserProject.map((dataset) => dataset.id),
+        add_dataset_ids: datasetsAssociatedWithUserProject.map(
+          (dataset) => dataset.id,
+        ),
       },
     });
-    // Associate the `user` role User with the Project
     await editProjectUsers({
       token: adminToken,
       id: projectAssociatedWithUserRole.id,
-      data: {
-        user_ids: [user.id],
-      },
+      data: { user_ids: [user.id] },
     });
 
-    // Create a few more Datasets, which will not be associated with the Project
-    // that will be associated with the `user` role User.
     datasetsNotAssociatedWithUserProject.push(await createDataset({
       token: adminToken,
-      data: {
-        type: 'RAW_DATA',
-      },
+      data: { type: 'RAW_DATA' },
     }));
-  };
+  });
 
-  test.describe.serial('Upload-initiation step', () => {
-    test.beforeAll(async () => {
-      // Setup the test conditions.
-      await setup();
-    });
+  test.describe('user role access', () => {
+    let page;
 
-    test.describe('`user` role access to Projects and Datasets', () => {
-      test.beforeAll(async ({ browser, attachmentManager }) => {
-        // Create a new browser instance for logging-in as `user` role User
-        userPage = await browser.newPage();
-
-        await loginAndNavigate({
-          page: userPage,
-          ticket: 'user',
-          path: '/datasets/uploads/new',
-          waitForTestId: 'upload-container',
-        });
-
-        // - Select files to upload
-        const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: userPage, filePaths, fileSelectTestId: 'upload-file-select' });
-
-        // click Next button
-        await navigateToNextStep({ page: userPage, nextButtonTestId: 'upload-next-button' });
-      });
-
-      test('`user` role should only be able to choose Source Raw Data from Datasets that are associated with Projects that the User is associated with', async () => {
-        const sourceRawDataOptions = await getAutoCompleteResults({
-          page: userPage,
-          testId: 'upload-metadata-dataset-autocomplete',
-        });
-
-        // Verify results contents
-        datasetsAssociatedWithUserProject.forEach((dataset) => {
-          expect(sourceRawDataOptions).toContain(dataset.name);
-        });
-        datasetsNotAssociatedWithUserProject.forEach((dataset) => {
-          expect(sourceRawDataOptions).not.toContain(dataset.name);
-        });
-      });
-
-      test('`user` role should only be able to choose from Projects that they are associated with', async () => {
-        const projectOptions = await getAutoCompleteResults({
-          page: userPage,
-          testId: 'upload-metadata-project-autocomplete',
-        });
-
-        // Verify results contents
-        expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
-      });
-
-      test.afterAll(async () => {
-        await userPage.close();
+    test.beforeAll(async ({ browser, attachmentManager }) => {
+      page = await openGeneralInfoForRole({
+        browser,
+        attachmentManager,
+        role: 'user',
       });
     });
 
-    test.describe('`operator` role access to Projects and Datasets', () => {
-      test.beforeAll(async ({ browser, attachmentManager }) => {
-        // Create a new browser instance for logging-in as `operator` role User
-        operatorPage = await browser.newPage();
-
-        await loginAndNavigate({
-          page: operatorPage,
-          ticket: 'operator',
-          path: '/datasets/uploads/new',
-          waitForTestId: 'upload-container',
-        });
-
-        // - Select files to upload
-        const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: operatorPage, filePaths, fileSelectTestId: 'upload-file-select' });
-
-        // click Next button
-        await navigateToNextStep({ page: operatorPage, nextButtonTestId: 'upload-next-button' });
+    test('only lists source datasets from an associated Project', async () => {
+      const sourceRawDataOptions = await getAutoCompleteResults({
+        page,
+        testId: 'upload-metadata-dataset-autocomplete',
       });
 
-      test('`operator` role should be able to choose Source Raw Data from any Datasets, regardless of what Projects they are associated with', async () => {
+      datasetsAssociatedWithUserProject.forEach((dataset) => {
+        expect(sourceRawDataOptions).toContain(dataset.name);
+      });
+      datasetsNotAssociatedWithUserProject.forEach((dataset) => {
+        expect(sourceRawDataOptions).not.toContain(dataset.name);
+      });
+    });
+
+    test('only lists Projects associated with the user', async () => {
+      const projectOptions = await getAutoCompleteResults({
+        page,
+        testId: 'upload-metadata-project-autocomplete',
+      });
+
+      expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
+    });
+
+    test.afterAll(async () => {
+      await page.close();
+    });
+  });
+
+  ['operator', 'admin'].forEach((role) => {
+    test.describe(`${role} role access`, () => {
+      let page;
+
+      test.beforeAll(async ({ browser, attachmentManager }) => {
+        page = await openGeneralInfoForRole({
+          browser,
+          attachmentManager,
+          role,
+        });
+      });
+
+      test('lists source datasets regardless of Project association', async () => {
         const sourceRawDataOptions = await getAutoCompleteResults({
-          page: operatorPage,
+          page,
           testId: 'upload-metadata-dataset-autocomplete',
         });
 
-        // Verify results count
         expect(sourceRawDataOptions.length).toBeGreaterThanOrEqual(
           datasetsAssociatedWithUserProject.length,
         );
-
-        // Verify results contents
         datasetsAssociatedWithUserProject.forEach((dataset) => {
           expect(sourceRawDataOptions).toContain(dataset.name);
         });
@@ -199,79 +159,18 @@ test.describe.serial('Dataset Upload Process', () => {
         });
       });
 
-      test('`operator` role should be able to choose from any Projects', async () => {
+      test('lists all Projects', async () => {
         const projectOptions = await getAutoCompleteResults({
-          page: operatorPage,
+          page,
           testId: 'upload-metadata-project-autocomplete',
         });
 
-        // `operator` role should be able to choose from any Projects
-        // - Verify results count
         expect(projectOptions.length).toBeGreaterThanOrEqual(projects.length);
-        // - Verify that the Project that is associated with the `user` role
-        // User is also available for the operator to choose from.
         expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
       });
 
       test.afterAll(async () => {
-        await operatorPage.close();
-      });
-    });
-
-    test.describe('`admin` role access to Projects and Datasets', async () => {
-      test.beforeAll(async ({ browser, attachmentManager }) => {
-        // Create a new browser instance for logging-in as `admin` role User
-        adminPage = await browser.newPage();
-
-        await loginAndNavigate({
-          page: adminPage,
-          ticket: 'admin',
-          path: '/datasets/uploads/new',
-          waitForTestId: 'upload-container',
-        });
-
-        // - Select files to upload
-        const filePaths = attachments.map((file) => `${attachmentManager.getPath()}/${file.name}`);
-        await selectFiles({ page: adminPage, filePaths, fileSelectTestId: 'upload-file-select' });
-
-        // click Next button
-        await navigateToNextStep({ page: adminPage, nextButtonTestId: 'upload-next-button' });
-      });
-
-      test('`admin` role should be able to choose Source Raw Data from any Datasets, regardless of what Projects they are associated with', async () => {
-        const sourceRawDataOptions = await getAutoCompleteResults({
-          page: adminPage,
-          testId: 'upload-metadata-dataset-autocomplete',
-        });
-
-        // Verify results count
-        expect(sourceRawDataOptions.length).toBeGreaterThanOrEqual(
-          datasetsAssociatedWithUserProject.length,
-        );
-
-        // Verify results contents
-        datasetsAssociatedWithUserProject.forEach((dataset) => {
-          expect(sourceRawDataOptions).toContain(dataset.name);
-        });
-        datasetsNotAssociatedWithUserProject.forEach((dataset) => {
-          expect(sourceRawDataOptions).toContain(dataset.name);
-        });
-      });
-
-      test('`admin` role should be able to choose from any Projects', async () => {
-        const projectOptions = await getAutoCompleteResults({
-          page: adminPage,
-          testId: 'upload-metadata-project-autocomplete',
-        });
-        // `admin` role should be able to choose from any Projects
-        expect(projectOptions.length).toBeGreaterThanOrEqual(projects.length);
-        // Verify that the Project that is associated with the `user` role User
-        // is also available for the admin to choose from.
-        expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
-      });
-
-      test.afterAll(async () => {
-        await adminPage.close();
+        await page.close();
       });
     });
   });

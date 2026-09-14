@@ -20,6 +20,10 @@ const admins = [
     name: 'svc_tasks',
     username: 'svc_tasks',
   },
+  {
+    name: 'E2E Admin',
+    username: 'e2eAdmin',
+  },
 ];
 
 const operators = [
@@ -238,6 +242,11 @@ const contacts = [{
   id: 3,
   type: 'email',
   value: 'emily.jones42@example.net',
+},
+{
+  id: 4,
+  type: 'email',
+  value: 'e2e-admin@example.com',
 }];
 
 const projects = [
@@ -249,6 +258,8 @@ const projects = [
     id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
     name: 'ILMN_8902_Anderson_DNAseq3_July2023',
   },
+  // Reserved for E2E Project tests. Keep this Project free of shared
+  // user, Dataset, and contact associations.
   {
     id: 'D77C44B9-3905-4DC2-ACB0-BA285361755A',
     name: 'ILMN_6247_Sanchez_DNAseq9_August2023',
@@ -309,6 +320,10 @@ const project_contact_assoc = [
   {
     project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
     contact_id: 3,
+  },
+  {
+    project_id: '69EF006F-53E0-432A-87F4-AECBD181FFE8',
+    contact_id: 4,
   },
 ];
 

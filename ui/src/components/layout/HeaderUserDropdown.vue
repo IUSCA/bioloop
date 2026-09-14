@@ -12,7 +12,7 @@
       <div class="space-y-1">
         <router-link class="flex gap-3 p-1 va-link" to="/profile">
           <div class="flex-none">
-            <Icon icon="mdi-account-details" class="text-2xl" />
+            <Icon icon="mdi:account-details" class="text-2xl" />
           </div>
           <div>
             <span class=""> Profile </span>
@@ -21,7 +21,7 @@
 
         <router-link class="flex gap-3 p-1 va-link" to="/auth/logout">
           <div class="flex-none">
-            <Icon icon="mdi-logout-variant" class="text-2xl" />
+            <Icon icon="mdi:logout-variant" class="text-2xl" />
           </div>
           <div>
             <span class=""> Logout </span>

@@ -36,6 +36,8 @@ cypress
 tests/videos
 tests/screenshots
 tests/*.png
+/test-results/
+/playwright-report/
 
 logs
 log
