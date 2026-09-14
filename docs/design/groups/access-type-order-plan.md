@@ -79,6 +79,9 @@ Measured over all four seeded presets, from `GRANT_PRESETS` and
 
 Fourteen rows where six suffice. Every seeded preset is redundant under the order.
 
+The two dataset presets were later removed, because each reduced to a single access type.
+The seed retires them. [Access presets](./access-presets.md) section 2.11 records why.
+
 The codebase already disagrees with itself here. The owning-group seed writes one
 `LIST_FILES` row and says why in a comment at `services/grants/issue.js:110`. The preset
 path writes the whole chain.

@@ -286,22 +286,40 @@ test('F1 — a preset grant names the preset, and re-issuing changes nothing', a
   const [alice, frank] = await Promise.all([as('alice'), as('frank')]);
   const dataset = await createDataset(alice, world, 'requestLab', 'f1-preset');
 
-  const presets = await alice.api.get('/grants/presets');
-  const preset = (presets.data || presets).find((x) => /Standard Research Use \(Dataset\)/.test(x.name));
-  expect(preset, 'the seeded "Standard Research Use (Dataset)" preset is missing').toBeTruthy();
+  // Presets are scoped to collections, so the preset is issued on a collection holding the
+  // dataset, and the dataset itself is offered none.
+  // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+  const collection = await alice.api.post('/collections', {
+    name: `${world.prefix}-f1-preset-${Math.random().toString(36).slice(2, 8)}`,
+    description: 'Phase 4 fixture for f1-preset.',
+    owner_group_id: world.groups.requestLab.id,
+    dataset_ids: [dataset.resource_id],
+  });
 
-  await alice.api.post('/grants', {
+  const datasetPresets = await alice.api.get('/grants/presets?resource_type=DATASET');
+  expect(datasetPresets.data || datasetPresets, 'a preset is offered for a dataset').toEqual([]);
+
+  const presets = await alice.api.get('/grants/presets?resource_type=COLLECTION');
+  const preset = (presets.data || presets).find((x) => x.name === 'Standard Research Use');
+  expect(preset, 'the seeded "Standard Research Use" preset is missing').toBeTruthy();
+
+  const issueFromPreset = (justification) => alice.api.status('POST', '/grants', {
     subject_id: world.people.frank.subject_id,
-    resource_type: 'DATASET',
-    resource_id: dataset.resource_id,
-    justification: 'F1: issued from a preset.',
+    resource_type: 'COLLECTION',
+    resource_id: collection.id,
+    justification,
     source_preset_id: preset.id,
     items: [{ preset_id: preset.id, approved_expiry: NEVER }],
   });
 
+  expect(await issueFromPreset('F1: issued from a preset.'), 'the preset grant was refused')
+    .toBeLessThan(300);
+
+  // The preset pairs collection access with dataset access, so Frank reaches both.
+  await expectNotForbidden(frank.api, 'GET', `/collections/${collection.id}`);
   await expectNotForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
 
-  const held = await grantsHeldBy(alice.api, dataset.resource_id, world.people.frank.subject_id);
+  const held = await grantsHeldBy(alice.api, collection.id, world.people.frank.subject_id, 'COLLECTION');
   expect(held.length, 'the preset conferred nothing').toBeGreaterThan(0);
   // The row names the preset rather than a bare list of access types — F9's claim, on the
   // path that makes it hardest.
@@ -312,15 +330,8 @@ test('F1 — a preset grant names the preset, and re-issuing changes nothing', a
 
   // Issuing the same preset again changes nothing. Whether the API says so with a 2xx or a
   // 409 is its own business; what must not happen is a second set of rows.
-  await alice.api.status('POST', '/grants', {
-    subject_id: world.people.frank.subject_id,
-    resource_type: 'DATASET',
-    resource_id: dataset.resource_id,
-    justification: 'F1: the same preset, a second time.',
-    source_preset_id: preset.id,
-    items: [{ preset_id: preset.id, approved_expiry: NEVER }],
-  });
+  await issueFromPreset('F1: the same preset, a second time.');
 
-  const after = await grantsHeldBy(alice.api, dataset.resource_id, world.people.frank.subject_id);
+  const after = await grantsHeldBy(alice.api, collection.id, world.people.frank.subject_id, 'COLLECTION');
   expect(after.length, 'issuing the same preset twice duplicated the access').toBe(before);
 });

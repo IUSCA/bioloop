@@ -375,6 +375,9 @@ const GRANT_ACCESS_TYPE_IMPLICATIONS = [
   ['COLLECTION:REQUEST_ACCESS', 'COLLECTION:VIEW_METADATA'],
 ];
 
+// Every preset is scoped to collections. A preset listed here is active; one removed from
+// this list is retired by the seed, never deleted, and its id is never reused.
+// @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
 const GRANT_PRESETS = [
   {
     id: 1,
@@ -389,21 +392,6 @@ const GRANT_PRESETS = [
     description: 'Allows users to view and download datasets',
     resource_types: ['COLLECTION'],
     access_type_ids: [1, 4, 5, 7, 9],
-  },
-  // Dataset-only copies of built-in presets (collection actions removed):
-  {
-    id: 3,
-    name: 'Discoverable (Dataset)',
-    description: 'Dataset grants only: view metadata and request access',
-    resource_types: ['DATASET'],
-    access_type_ids: [1, 3],
-  },
-  {
-    id: 4,
-    name: 'Standard Research Use (Dataset)',
-    description: 'Dataset grants only: view, list files, download',
-    resource_types: ['DATASET'],
-    access_type_ids: [1, 4, 5],
   },
 ];
 

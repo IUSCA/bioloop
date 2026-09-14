@@ -41,16 +41,40 @@ let ownerGroup;
 let dataset;
 let downloadTypeId;
 let listFilesTypeId;
+let viewMetadataTypeId;
+// No seeded preset applies to a dataset, so the preset paths here run against one made for
+// the test. Its two types are comparable, so a wider group grant has something to cover.
+// @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+let datasetPreset;
+// Leaves a request under review, so it asks as its own subject rather than colliding with
+// the in-flight checks of the tests that use `requester`.
+let retiredPresetRequester;
 
 const userIds = [];
 const groupIds = [];
 const datasetIds = [];
+const presetIds = [];
+
+async function createDatasetPreset(tag) {
+  const preset = await prisma.grant_preset.create({
+    data: {
+      name: `${tag}_${Date.now()}`,
+      resource_types: ['DATASET'],
+      access_type_items: {
+        create: [{ access_type_id: viewMetadataTypeId }, { access_type_id: listFilesTypeId }],
+      },
+    },
+  });
+  presetIds.push(preset.id);
+  return preset;
+}
 
 beforeAll(async () => {
   requester = await createTestUser('_aras_req');
   reviewer = await createTestUser('_aras_rev');
   memberOfOwnerGroup = await createTestUser('_aras_mem');
-  userIds.push(requester.id, reviewer.id, memberOfOwnerGroup.id);
+  retiredPresetRequester = await createTestUser('_aras_ret');
+  userIds.push(requester.id, reviewer.id, memberOfOwnerGroup.id, retiredPresetRequester.id);
 
   ownerGroup = await createTestGroup(reviewer.subject_id, '_aras_og');
   groupIds.push(ownerGroup.id);
@@ -62,10 +86,13 @@ beforeAll(async () => {
   dataset = await createTestDataset(ownerGroup.id, '_aras_ds');
   datasetIds.push(dataset.id);
 
-  [downloadTypeId, listFilesTypeId] = await Promise.all([
+  [downloadTypeId, listFilesTypeId, viewMetadataTypeId] = await Promise.all([
     getAccessTypeId('DATASET:DOWNLOAD'),
     getAccessTypeId('DATASET:LIST_FILES'),
+    getAccessTypeId('DATASET:VIEW_METADATA'),
   ]);
+
+  datasetPreset = await createDatasetPreset('_aras_preset');
 }, 30_000);
 
 // Each test approves a request for the same subject and resource. Access types carry a
@@ -82,8 +109,12 @@ afterAll(async () => {
   // must go before the request that issued them.
   await prisma.grant.deleteMany({ where: { resource_id: dataset.resource_id } });
   await deleteAccessRequests({
-    requesterIds: [requester.subject_id, memberOfOwnerGroup.subject_id],
+    requesterIds: [
+      requester.subject_id, memberOfOwnerGroup.subject_id, retiredPresetRequester.subject_id,
+    ],
   });
+  // After the grants and requests, because both reference a preset with ON DELETE RESTRICT.
+  await prisma.grant_preset.deleteMany({ where: { id: { in: presetIds } } });
   for (const id of datasetIds) await deleteDataset(id).catch(() => {});
   for (const id of groupIds) await deleteGroup(id).catch(() => {});
   for (const id of userIds) await deleteUser(id).catch(() => {});
@@ -122,10 +153,7 @@ describe('grant provenance', () => {
   // types with no shape.
   // @see docs/design/groups/access-requests-plan.md — C5
   test('a preset request stamps the preset on every grant it expands to', async () => {
-    const preset = await prisma.grant_preset.findFirstOrThrow({
-      where: { is_active: true, resource_types: { has: 'DATASET' } },
-      include: { access_type_items: true },
-    });
+    const preset = datasetPreset;
 
     const created = await arService.createAndSubmitAccessRequest({
       type: 'NEW',
@@ -189,10 +217,7 @@ describe('the access type order', () => {
   // LIST_FILES, which no exact match would find.
   // @see docs/design/groups/access-type-order-plan.md — Phase 1
   test('covered_elsewhere finds a group grant of a wider type behind a preset request', async () => {
-    const preset = await prisma.grant_preset.findFirstOrThrow({
-      where: { is_active: true, resource_types: { has: 'DATASET' } },
-      include: { access_type_items: true },
-    });
+    const preset = datasetPreset;
 
     await createTestGrant({
       subject_id: ownerGroup.id,
@@ -316,5 +341,42 @@ describe('access summary', () => {
         + request.access_summary.expired,
       );
     }
+  }, 30_000);
+});
+
+describe('a retired preset', () => {
+  // Retiring a preset takes it off the offer. A request made while it was active still names
+  // it, and approving that request is refused, because expanding a retired preset to nothing
+  // would mark the item approved and write no grant.
+  // @see docs/design/groups/design.md — The seeded presets
+  test('approving a request that names a retired preset is refused', async () => {
+    const preset = await createDatasetPreset('_aras_retired');
+
+    const created = await arService.createAndSubmitAccessRequest({
+      type: 'NEW',
+      resource_id: dataset.resource_id,
+      subject_id: retiredPresetRequester.subject_id,
+      purpose: 'retired preset test',
+      items: [{ preset_id: preset.id }],
+    }, retiredPresetRequester.subject_id);
+
+    await prisma.grant_preset.update({ where: { id: preset.id }, data: { is_active: false } });
+
+    await expect(arService.submitReview({
+      request_id: created.id,
+      reviewer_id: reviewer.subject_id,
+      options: {
+        decision_reason: 'approved for the test',
+        item_decisions: created.access_request_items.map((item) => ({
+          id: item.id,
+          decision: 'APPROVED',
+          approved_expiry: Expiry.fromJSON({ type: 'never' }),
+        })),
+      },
+    })).rejects.toMatchObject({ status: 400, message: expect.stringMatching(/not active/) });
+
+    const request = await arService.getRequestById(created.id);
+    expect(request.status).toBe('UNDER_REVIEW');
+    expect(await prisma.grant.count({ where: { source_access_request_id: created.id } })).toBe(0);
   }, 30_000);
 });

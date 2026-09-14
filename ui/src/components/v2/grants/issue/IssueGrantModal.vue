@@ -87,29 +87,29 @@
                   <span
                     class="text-xs normal-case tracking-normal font-normal text-gray-400 dark:text-gray-500"
                   >
-                    (Choose one preset, individual types, or both.)
+                    {{
+                      presets.length
+                        ? "(Choose one preset, individual types, or both.)"
+                        : "(Choose one or more access types.)"
+                    }}
                   </span>
                 </div>
               </template>
               <div>
-                <!-- <p class="mb-0.5 text-sm font-medium uppercase tracking-wide">
-                Access
-              </p> -->
-                <!-- <p class="mb-3 text-xs va-text-secondary">
-                Choose one preset, individual types, or both.
-              </p> -->
+                <!-- Presets are scoped to collections, so a dataset has none and skips this block.
+                     @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections -->
+                <template v-if="presets.length">
+                  <PresetSelector :presets="presets" v-model="selectedPreset" />
 
-                <!-- <p class="mb-2 text-sm font-medium">Preset</p> -->
-                <PresetSelector :presets="presets" v-model="selectedPreset" />
-
-                <!-- Section divider -->
-                <div class="my-4 flex items-center gap-3">
-                  <div class="h-px flex-1 bg-gray-200 dark:bg-gray-600" />
-                  <span class="text-xs tracking-wide font-medium">
-                    Additional access types
-                  </span>
-                  <div class="h-px flex-1 bg-gray-200 dark:bg-gray-600" />
-                </div>
+                  <!-- Section divider -->
+                  <div class="my-4 flex items-center gap-3">
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-gray-600" />
+                    <span class="text-xs tracking-wide font-medium">
+                      Additional access types
+                    </span>
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-gray-600" />
+                  </div>
+                </template>
 
                 <AccessTypeSelector
                   :access-types="accessTypes"

@@ -327,10 +327,10 @@ describe('grants - invariants', () => {
   });
 
   describe('grant presets resource_type behavior', () => {
-    it('lists dataset-only presets when resource_type=DATASET', async () => {
+    // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+    it('offers no preset for a dataset', async () => {
       const presets = await grantsService.listPresets({ resource_type: 'DATASET' });
-      expect(presets.length).toBeGreaterThanOrEqual(1);
-      expect(presets.every((preset) => preset.resource_types.includes('DATASET'))).toBe(true);
+      expect(presets).toEqual([]);
     });
 
     it('rejects collection-specific access types for DATASET resources', async () => {
@@ -354,12 +354,12 @@ describe('grants - invariants', () => {
       ).rejects.toThrow('not applicable to resource type DATASET');
     });
 
-    it('accepts a dataset-specific preset for DATASET resources', async () => {
+    it('accepts a collection preset for COLLECTION resources', async () => {
       await expect(
         grantsService.assertGrantItemsApplicableToResourceType(
           prisma,
-          'DATASET',
-          [{ preset_id: 4 }],
+          'COLLECTION',
+          [{ preset_id: BUILTIN_PRESET_DISCOVERABLE }],
         ),
       ).resolves.toBeUndefined();
     });

@@ -150,6 +150,13 @@ describe('the seeded configuration is self-consistent', () => {
     });
   });
 
+  // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+  test('every preset is scoped to collections', () => {
+    GRANT_PRESETS.forEach((preset) => {
+      expect([preset.name, preset.resource_types]).toEqual([preset.name, ['COLLECTION']]);
+    });
+  });
+
   test('access type ids and names are unique', () => {
     expect(new Set(GRANT_ACCESS_TYPES.map((t) => t.id)).size).toBe(GRANT_ACCESS_TYPES.length);
     expect(new Set(GRANT_ACCESS_TYPES.map((t) => t.name)).size).toBe(GRANT_ACCESS_TYPES.length);

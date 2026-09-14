@@ -98,8 +98,10 @@ The ABAC work renamed things without updating tests, so these shapes recur:
   `user.subject_id`, not the numeric `user.id`. Tests written before that still pass
   `{ id: 77 }`.
 - **Argument shapes.** `listPresets({ resource_type })` takes an object. A test passing
-  `listPresets('DATASET')` destructures to `undefined`, silently drops the filter, and only
-  fails once the seed data contains more than one kind of row.
+  `listPresets('DATASET')` destructures to `undefined` and silently drops the filter. Every
+  seeded preset is now scoped to collections, so the dropped filter is easy to miss:
+  `listPresets('DATASET')` returns both collection presets, where the correct call returns
+  none.
 
 In each case the production code was right and the test was stale. Check the caller in
 `src/routes` before changing either.

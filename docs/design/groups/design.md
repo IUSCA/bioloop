@@ -657,10 +657,17 @@ request named directly, or that two presets both supply, records no preset.
 
 #### The seeded presets
 
-Four presets ship with the platform, two scoped to collections and two to datasets. They are
-platform configuration rather than lifecycle-managed entities: they carry no version, no
-per-group variant, and no owner. `is_active` retires one without deleting it, because
-historical requests reference it.
+Two presets ship with the platform, *Discoverable* and *Standard Research Use*, and both are
+scoped to collections. They are platform configuration rather than lifecycle-managed
+entities: they carry no version, no per-group variant, and no owner. `is_active` retires one
+without deleting it, because historical requests reference it.
+
+No preset is scoped to a dataset. On a dataset every bundle reduces through the order to one
+access type, so a preset would only give that type a second name. The seed retires any
+preset `GRANT_PRESETS` no longer lists. Approving a request that names a retired preset is
+refused.
+
+@see [Access presets](./access-presets.md) — 2.11 Presets are scoped to collections
 
 #### What presets do not do
 

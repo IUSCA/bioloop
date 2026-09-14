@@ -3,7 +3,7 @@ title: Access Presets
 order: 6
 status: active
 implemented: partial
-last_verified: 2026-09-02
+last_verified: 2026-09-14
 ---
 
 ::: warning Design record — active
@@ -18,9 +18,9 @@ Design decisions and implementation notes — March 2026
 
 ## 1. Purpose
 
-Access types are the atomic unit of permission in this system. Presets are named, curated bundles of access types that represent common, coherent patterns of access — the seeded *Standard Research Use* preset bundles `DATASET:VIEW_METADATA`, `DATASET:LIST_FILES`, and `DATASET:DOWNLOAD`. Presets exist to reduce cognitive load and input friction for the three actor types who initiate or grant access: group admins (preemptive granting), requesters (access requests), and platform admins (configuration).
+Access types are the atomic unit of permission in this system. Presets are named, curated bundles of access types that represent common, coherent patterns of access — the seeded *Standard Research Use* preset bundles the collection types for browsing a collection with `DATASET:VIEW_METADATA`, `DATASET:LIST_FILES`, and `DATASET:DOWNLOAD` for the datasets it holds. Presets exist to reduce cognitive load and input friction for the three actor types who initiate or grant access: group admins (preemptive granting), requesters (access requests), and platform admins (configuration).
 
-Access types also carry a partial order, so a preset's bundle is usually smaller than its list. `DATASET:DOWNLOAD` satisfies every check for the other two types in *Standard Research Use*, and issuing that preset writes one grant rather than three. Section 2.10 covers what expansion does with the order. The worked examples in section 2.8 use letters for access types that are pairwise incomparable, because that is the case supersession has to resolve.
+Access types also carry a partial order, so a preset's bundle is usually smaller than its list. `DATASET:DOWNLOAD` satisfies every check for the other two dataset types in *Standard Research Use*, and `COLLECTION:LIST_CONTENTS` does the same for `COLLECTION:VIEW_METADATA`, so issuing that preset writes two grants rather than five. Section 2.10 covers what expansion does with the order. The worked examples in section 2.8 use letters for access types that are pairwise incomparable, because that is the case supersession has to resolve.
 
 Presets are a convenience and a provenance mechanism. They are not an enforcement boundary. Individual grants remain the authorization primitive; presets only determine how grants are described and grouped.
 
@@ -245,7 +245,7 @@ When a group admin grants access preemptively (outside the request workflow), th
 
 Access types carry a partial order, held in `grant_access_type_implication`. Holding a wider type satisfies a check for a narrower one, so `DATASET:DOWNLOAD` satisfies `DATASET:LIST_FILES`, which satisfies `DATASET:VIEW_METADATA`. A preset that lists all three describes one fact, and writing three rows records it three times.
 
-Approval-time expansion therefore reduces the access type set to its maximal elements before anything is written. *Standard Research Use (Dataset)* writes one grant of `DATASET:DOWNLOAD`. All four seeded presets reduce: fourteen listed access types become six grants.
+Approval-time expansion therefore reduces the access type set to its maximal elements before anything is written. *Standard Research Use* writes one grant of `DATASET:DOWNLOAD` and one of `COLLECTION:LIST_CONTENTS`. Both seeded presets reduce: nine listed access types become four grants.
 
 Reduction is a property of the access types, not of presets. Two access types named directly in one request collapse the same way.
 
@@ -256,6 +256,20 @@ Reduction is a property of the access types, not of presets. Two access types na
 > **Decision:** Expansion reduces to the maximal access types under the order, subject to expiry. A wider grant already held skips the write and is never closed by a narrower one.
 
 @see [decision 7](./decisions.md#_7-access-types-imply-one-another) and the [Access type order plan](./access-type-order-plan.md).
+
+### 2.11 Presets are scoped to collections
+
+Every seeded preset applies to a collection, and none applies to a dataset. A preset earns its place by pairing access types the order does not connect.
+
+The order has no edge between a `COLLECTION:*` type and a `DATASET:*` type. `COLLECTION:LIST_CONTENTS` lets a subject browse a collection and open none of its datasets. `DATASET:DOWNLOAD` issued on the collection opens its datasets and not the collection itself. A collection preset pairs the two, so a requester does not have to know that both are needed.
+
+A dataset has no such pair. Every dataset bundle reduces through the order to one access type. A dataset copy of *Standard Research Use* wrote one `DATASET:DOWNLOAD` grant, and a dataset copy of *Discoverable* wrote one `DATASET:REQUEST_ACCESS` grant. A preset that names one access type only gives it a second name. The request form and the issue dialog therefore offer a dataset its access types directly, and they omit the preset block when no preset applies.
+
+`grant_preset.resource_types` stays. It is the check that refuses a collection preset on a dataset.
+
+A preset removed from `GRANT_PRESETS` is retired, never deleted. The seed sets `is_active` to false on every preset the constant no longer lists. Grants and request items reference a preset with `ON DELETE RESTRICT`, so deleting one would fail on any history. Approving a request that names a retired preset is refused with a 400. Expanding a retired preset to nothing would mark the item approved and write no grant.
+
+> **Decision:** Presets are scoped to collections. A preset dropped from the seed is retired, and an approval that names it is refused.
 
 ---
 

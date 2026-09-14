@@ -454,10 +454,14 @@ log.
 Covers use cases 29, 30, and 32.
 
 **Actor** Alice, then Frank.
-**When** Alice issues a preset named for ordinary research use on `PCM230203` to Frank.
-**Then** the dataset's access list gains a row naming Frank, the preset, the access it
-confers, and the date it ends. Frank reaches the dataset on his next page load.
+**When** Alice issues a preset named for ordinary research use to Frank, on a collection
+holding `PCM230203`.
+**Then** the collection's access list gains a row naming Frank, the preset, the access it
+confers, and the date it ends. Frank reaches the collection and the dataset on his next page
+load.
 **And** issuing the same preset again changes nothing and says so.
+**And never** is a preset offered for the dataset itself, because presets are scoped to
+collections.
 
 ### F2 — A grant to a group reaches its descendants · `MVP` · `invariant`
 

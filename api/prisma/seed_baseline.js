@@ -180,6 +180,7 @@ async function seedGrantVocabulary(prisma) {
         name: row.name,
         description: row.description,
         resource_types: row.resource_types,
+        is_active: true,
       },
     });
 
@@ -193,6 +194,14 @@ async function seedGrantVocabulary(prisma) {
       skipDuplicates: true,
     });
   }
+
+  // A preset no longer in GRANT_PRESETS is retired rather than deleted, because grants and
+  // access request items still reference it by id.
+  // @see docs/design/groups/design.md — The seeded presets
+  await prisma.grant_preset.updateMany({
+    where: { id: { notIn: GRANT_PRESETS.map((p) => p.id) }, is_active: true },
+    data: { is_active: false },
+  });
 
   return {
     accessTypes: GRANT_ACCESS_TYPES.length,

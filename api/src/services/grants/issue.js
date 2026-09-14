@@ -256,12 +256,19 @@ function validateItems(items) {
   }
 }
 
-// Build a map of preset_id -> [access_type_id, ...] for quick lookup when processing approved items
+// Build a map of preset_id -> [access_type_id, ...] for quick lookup when processing approved items.
+// A retired or unknown preset is refused, because expanding it to nothing would approve the
+// item and write no grant.
 async function buildPresetIdToAccessTypeIdsMap(tx, presetIds) {
   const presets = await tx.grant_preset.findMany({
     where: { id: { in: presetIds }, is_active: true },
     include: { access_type_items: true },
   });
+  const found = new Set(presets.map((p) => p.id));
+  const missing = [...new Set(presetIds)].filter((id) => !found.has(id));
+  if (missing.length > 0) {
+    throw createError.BadRequest(`preset_id ${missing.join(', ')} does not exist or is not active`);
+  }
   return new Map(presets.map((p) => [p.id, p.access_type_items.map((i) => i.access_type_id)]));
 }
 

@@ -443,6 +443,10 @@ shows each of its three grants badged with the preset name and captioned "Issued
 "3 LIVE". A revoked grant from an earlier single-access-type request sits beside them with no
 preset badge.
 
+That preset has since been removed. Presets are now scoped to collections, for the reasons in
+[Access presets](./access-presets.md) section 2.11, so the same check today runs on a
+collection request.
+
 ## Phase D — Close the notification loop
 
 ### D1 — Submission and decision are notified, in app

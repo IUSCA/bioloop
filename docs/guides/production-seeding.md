@@ -25,6 +25,10 @@ two never drift, because there is one definition of the baseline.
 | Users | `admins.json`, `operators.json`, `users.json` |
 | Import sources | `import_sources.json` |
 
+A preset removed from `GRANT_PRESETS` stays in the table with `is_active` set to false. Grants
+and access request items still reference it, so the seed retires it rather than deleting it.
+A preset the constant lists is set active on every run.
+
 Three further sets of rows are created by migrations rather than by the seed, because the
 constraints that reference them are added in the same migration: the `Authenticated Users`
 and `Public` principals, the `Unassigned Datasets` group, and the restriction types. The
