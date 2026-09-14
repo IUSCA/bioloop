@@ -5,6 +5,7 @@ const prisma = require('@/db');
 const logger = require('@/services/logger');
 const wfService = require('@/services/workflow');
 const { DONE_STATUSES } = require('@/constants');
+const createError = require('http-errors');
 
 /**
  * The workflows a caller may launch on a dataset, and the policy action each one needs.
@@ -149,7 +150,10 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
     .filter((wf) => wf.name === wf_body.name)
     .filter((wf) => !DONE_STATUSES.includes(wf.status));
 
-  assert(active_same_name.length === 0, 'A workflow with the same name is either pending / running');
+  // 409, not an assert: the UI tells a duplicate apart from a server failure by this status.
+  if (active_same_name.length > 0) {
+    throw createError.Conflict('A workflow with the same name is either pending / running');
+  }
 
   const wf = (await wfService.create({ ...wf_body, args: [dataset.id] })).data;
 

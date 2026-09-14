@@ -57,6 +57,8 @@ afterAll(async () => {
   await deleteGrants(createdGrantIds);
   await deleteDataset(dataset.id);
   await deleteGroup(group.id);
+  // Revoking notifies the subject, and a notification row would block deleting the user.
+  await prisma.notification.deleteMany({ where: { user_id: member.id } });
   await deleteUser(member.id);
   await deleteUser(actor.id);
   await prisma.$disconnect();
@@ -219,6 +221,42 @@ describe('grants - lifecycle', () => {
         where: { event_type: AUTH_EVENT_TYPE.GRANT_REVOKED, target_type: TARGET_TYPE.GRANT, target_id: grant.id },
       });
       expect(auditRow).not.toBeNull();
+    });
+  });
+
+  describe('revokeAllGrants', () => {
+    let revoked;
+
+    beforeAll(async () => {
+      await makeUserGrant({ access_type_id: downloadId });
+      revoked = await grantsService.revokeAllGrants(member.subject_id, dataset.resource_id, {
+        actor_id: actor.subject_id,
+        reason: 'project ended',
+      });
+    });
+
+    it('names the resource on every GRANT_REVOKED audit row', async () => {
+      const revokedIds = new Set(revoked.map((g) => g.id));
+      const rows = (await prisma.authorization_audit.findMany({
+        where: { event_type: AUTH_EVENT_TYPE.GRANT_REVOKED, resource_id: dataset.resource_id },
+      })).filter((r) => revokedIds.has(r.metadata?.target_id));
+
+      expect(revoked.length).toBeGreaterThan(0);
+      expect(rows).toHaveLength(revoked.length);
+      for (const row of rows) {
+        expect(row.resource_name).toBe(dataset.name);
+        expect(row.resource_type).toBe('DATASET');
+      }
+    });
+
+    it('tells the user subject their access was revoked', async () => {
+      const notice = await prisma.notification.findFirst({
+        where: { user_id: member.id, title: { contains: 'was revoked' } },
+        orderBy: { created_at: 'desc' },
+      });
+      expect(notice).not.toBeNull();
+      expect(notice.title).toBe(`Your access to ${dataset.name} was revoked`);
+      expect(notice.body).toBe('project ended');
     });
   });
 

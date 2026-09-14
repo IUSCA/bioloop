@@ -14,6 +14,7 @@ const fetchService = require('./fetch');
 const issueService = require('./issue');
 const coverageService = require('./coverage');
 const helpers = require('./helpers');
+const { notifySubjectOfRevocation } = require('./notify');
 
 /**
  * Revoke a grant
@@ -62,6 +63,10 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
 
     await builder.create(tx, AUTH_EVENT_TYPE.GRANT_REVOKED);
 
+    return revokedGrant;
+  }).then(async (revokedGrant) => {
+    // After commit: a notice that cannot be delivered must not undo the revocation.
+    await notifySubjectOfRevocation([revokedGrant]);
     return revokedGrant;
   });
 }
@@ -119,6 +124,8 @@ async function revokeAllGrants(subject_id, resource_id, { actor_id, reason }) {
         });
         return {
           subject_id: g.subject_id,
+          // Without it `createBatch` resolves no resource, and the audit row reads "revoked on Unknown".
+          resource_id: g.resource_id,
           metadata: {
             target_id: g.id,
             target_type: TARGET_TYPE.GRANT,
@@ -130,6 +137,9 @@ async function revokeAllGrants(subject_id, resource_id, { actor_id, reason }) {
 
     await builder.createBatch(tx, AUTH_EVENT_TYPE.GRANT_REVOKED, items);
 
+    return revokedGrants;
+  }).then(async (revokedGrants) => {
+    await notifySubjectOfRevocation(revokedGrants);
     return revokedGrants;
   });
 }

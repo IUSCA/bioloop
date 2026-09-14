@@ -396,7 +396,7 @@ function handleStageRequest() {
     .catch((err) => {
       // The API refuses a second stage run while one is pending; say so rather than
       // reporting a generic failure.
-      const pending = err?.response?.status === 500;
+      const pending = err?.response?.status === 409;
       toast.error(
         pending
           ? "This dataset is already being staged."

@@ -134,7 +134,9 @@ Three rules keep the layout honest.
   permission rather than on the number.
 - **Both panels are always present**, including on a resource with no profile written. The
   wide panel then holds the profile prompt and the admins card rather than the page
-  collapsing into a different layout for an empty state.
+  collapsing into a different layout for an empty state. A collection has no admins card
+  yet, so its prompt shows whenever it has no About body and no publications, even when a
+  tagline is written.
 
 Archiving is the last item in the quick actions panel, in red below a rule, rather than a
 bordered card of its own. It is a once-in-a-resource's-life action, and the panel is where a

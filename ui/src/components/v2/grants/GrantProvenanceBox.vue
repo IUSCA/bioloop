@@ -12,8 +12,8 @@
         >Grant on</span
       >
       <span class="text-gray-700 dark:text-gray-300">
-        Collection: {{ props.grant.resource?.name }} — covers all datasets in
-        this collection
+        Collection: {{ props.grant.resource?.collection?.name }} — covers all
+        datasets in this collection
       </span>
     </div>
 
@@ -40,15 +40,8 @@
           >
             View request
           </button>
-          <template v-if="props.grant.issuing_authority">
-            · approved by {{ props.grant.issuing_authority.name }}
-          </template>
-          <template v-if="props.grant.source_access_request?.requester">
-            on behalf of
-            {{
-              props.grant.source_access_request.requester.name ||
-              props.grant.source_access_request.requester.email
-            }}
+          <template v-if="props.grant.grantor?.name">
+            · approved by {{ props.grant.grantor.name }}
           </template>
           <span
             v-if="props.grant.source_access_request?.purpose"

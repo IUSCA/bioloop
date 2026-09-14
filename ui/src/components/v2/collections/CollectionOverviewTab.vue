@@ -111,14 +111,13 @@ const props = defineProps({
 const emit = defineEmits(["update", "toggle-archive", "action-requested"]);
 
 /**
- * Whether anything an admin wrote is present. The citation is excluded, because the API
- * always resolves one — a generated citation is not evidence that somebody wrote a profile.
+ * Whether the wide panel would otherwise be blank. The tagline and the links render in the
+ * header and the thin panel, so only the About body and the publications fill the wide one.
+ * @see docs/design/groups/ui-information-architecture.md — The Overview tab
  */
 const profileIsEmpty = computed(
   () =>
     !props.collection.about_md?.trim() &&
-    !props.collection.tagline &&
-    !props.collection.metadata?.links?.length &&
     !props.collection.metadata?.publications?.length,
 );
 

@@ -499,8 +499,9 @@ Sequencing lives in the local backlog rather than here.
 - **Renewals.** `ACCESS_REQUEST_TYPE.RENEWAL` and `previous_grant_ids` are in the schema, the route rejects anything but `NEW`, and the renewal-context endpoint is commented out.
 - **Notifications on access decisions — built 2026-09-08.** Submitting an access request
   notifies the reviewers and deciding notifies the requester, both in app, through
-  `services/access_requests/notify.js`. Use cases 9 and 54 are met for access requests. Grant
-  issue and revoke still notify nobody.
+  `services/access_requests/notify.js`. Use cases 9 and 54 are met for access requests.
+  Revoking a grant tells a user subject in app, through `services/grants/notify.js`. A group
+  subject is not told, and issuing a grant still notifies nobody.
 - **Access history queries** (34). The data is preserved; nothing reconstructs effective access as of a past date from it.
 - **Compliance reporting and least-privilege review** (35, 36). No report generation, no broad-access detection.
 - **Training / DUA preconditions** (45, 46). Named as extensible; no attributes and no policy hooks exist.

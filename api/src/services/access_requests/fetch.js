@@ -28,7 +28,9 @@ const INCLUDES_CONFIG = {
       // The owning group is the governance context a reviewer reads the request in, so the
       // detail page names it beside the resource.
       dataset: { include: { owner_group: true } },
-      collection: { include: { owner_group: true } },
+      // `_count.datasets` feeds the "Collection · N datasets" line on the request card and the
+      // review dialog. It is a public attribute, so every caller who may see the request may see it.
+      collection: { include: { owner_group: true, _count: { select: { datasets: true } } } },
     },
   },
   subject: {
