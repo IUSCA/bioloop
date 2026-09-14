@@ -157,6 +157,44 @@ longer exists. Reads mostly keep working, which is what makes this confusing; wr
 with a foreign-key error on a column such as `group_user.removed_by`. Visiting `/dev-login`
 fixes it. Do not go hunting for a bug in the write path until you have re-logged in.
 
+## The demo world
+
+`npm run seed:demo` in `api/` writes the baseline and one realistic research center, and
+nothing else. Use it for a live demo: no sample-world collection or fixture prose shows up on
+any page.
+
+Run it on an empty database, then restart the API:
+
+```bash
+cd api
+npx prisma migrate reset --force --skip-seed
+npm run seed:demo
+cd .. && bin/devserver.sh restart api
+```
+
+The center is `Center for Precision Health Research`. Every account holds the plain `user`
+role, so each page shows what the access model decides:
+
+| Account | Standing |
+|---|---|
+| `dana` | Admin of the center; oversight of every lab |
+| `alice` | Admin of Wong Cancer Genomics Lab and its Tumor Sequencing Unit |
+| `bob` | Member of Wong Cancer Genomics Lab |
+| `carol` | Member of Tumor Sequencing Unit |
+| `erin` | Admin of Vasquez Neuroimaging Lab |
+| `frank` | Member of Vasquez Neuroimaging Lab, the outsider who requests access |
+| `quinn` | No group and no grant |
+
+The usernames are the flows world's cast, in the same roles. The two worlds share those
+usernames, so seed one or the other into a database, never both.
+
+The collection most demos use is `BRCA Cohort Release 1`, at
+`/v2/collections/de300000-0000-4000-8000-000000000101`. Group and collection ids are fixed.
+Dataset pages take `dataset.resource_id`, which changes on every reset, so look it up.
+
+`npm run seed` does not write this world. To go back to the development data, reset and run
+`npm run seed`.
+
 ## Seeing a page as somebody with no privileges
 
 <!-- cspell:ignore ajohnson sdavis ethompson -->

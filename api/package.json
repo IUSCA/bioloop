@@ -18,7 +18,8 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:worker\"",
     "email:dev": "vite --config src/notification/email-preview/vite.config.js",
     "notify:dummy": "node src/scripts/send_dummy_notification.js",
-    "seed:prod": "node prisma/seed_baseline.js"
+    "seed:prod": "node prisma/seed_baseline.js",
+    "seed:demo": "node prisma/seed_demo.js"
   },
   "keywords": [],
   "author": "",

@@ -168,6 +168,15 @@ Their world is `Midwest Genomics Center → Wong Lab → Wong Sequencing`, plus 
 **These names are stable by construction**, unlike the sample world's, because the module
 writes them explicitly rather than hashing. Prefer them to the queries below.
 
+**Group and collection ids are fixed; dataset page ids are not.** The five groups are
+`f1005000-0000-4000-8000-00000000000{1..5}` (Center, Wong Lab, Wong Sequencing, Patel Lab,
+Imaging Core) and `Aim 2 Release` is `f1005000-0000-4000-8000-000000000101`, so
+`/v2/groups/<id>` and `/v2/collections/<id>` URLs survive a reset. `/v2/datasets/:id` takes
+`dataset.resource_id`, not the integer `dataset.id` — `/v2/datasets/25` renders "Failed to load
+dataset". `resource_id` is a client-side `uuid()` default, so it changes on every reset;
+checked 2026-09-14, `PCM230203` went from `01d99a55…` to `932a83cd…`. Look it up:
+`select resource_id from dataset where name='PCM230203' and owner_group_id like 'f1005000%';`
+
 **There is deliberately no `vic` account.** Vic is the invitee in the invitation flows, and
 seeding the account would defeat the flows that exist to test inviting somebody who has none.
 
@@ -180,6 +189,31 @@ So emptiness has to be asserted against the flows world specifically — "`quinn
 of `PCM230203`, `PCM230204`, `IMG-0007`, `PAT-1101`, and no group" — rather than against the
 whole portal. Removing the sample world's principal grants would make the portal absolutely
 empty and would cost the only demonstration that grants to the two system principals work.
+
+## The demo world is seeded on its own
+
+`npm run seed:demo` writes the baseline and `api/prisma/seed_data/demo_world.js`, and
+nothing else. Run it after `npx prisma migrate reset --force --skip-seed`, then restart the
+API. It exists for live demos: names, profiles, and file trees read as a real center would
+write them, and no sample-world grant to `Authenticated Users` surfaces an unrelated
+collection. The accounts reuse the flows cast in the same roles: `dana` (center admin),
+`alice` (lab admin), `bob` (member), `carol` (sub-unit member), `erin` (other lab's admin),
+`frank` (outsider), and `quinn` (nothing). The Sequencing Core Facility has no admin. The
+guide has the table. Because the usernames are shared, never seed this on top of `npm run seed`.
+
+**Point `DATABASE_URL` at a scratch database, not `DATABASE_DB`.** Sourcing `api/.env`
+expands `DATABASE_URL` at that moment, so a later `DATABASE_DB=other` changes nothing and the
+Prisma CLI and client both keep talking to `app`. Checked 2026-09-14: a "throwaway" run
+reported `No pending migrations` because it was looking at the dev database.
+
+**Wait before reading a grant preview.** The Effective Grants Preview in the grant, request,
+and review dialogs refetches about 350 ms after a change. A snapshot taken right after
+clicking `Set date` still reads `expires never`, which looks like a bug and is not. Checked
+2026-09-14: two seconds later it read `expires Oct 14 2026` in both the grant and review
+dialogs.
+
+**The walk leaves rows behind.** Granting, requesting, and revoking write grants, audit rows,
+and notifications. Reset and re-run `npm run seed:demo` before the real demo.
 
 ## Seeing a page as somebody with no privileges
 
