@@ -351,7 +351,7 @@ function createAccessibleDatasetIdsCte(user_id, scope, grant_access_types) {
     parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id, grant_access_types)})`);
   }
 
-  if (includeAll || scope === RESOURCE_SCOPES.OWNERSHIP) {
+  if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
     parts.push(Prisma.sql`
       SELECT d.resource_id
       FROM "dataset" d
