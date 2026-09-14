@@ -115,7 +115,10 @@
               </span>
             </span>
           </VaTab>
-          <VaTab name="grants" v-if="can('manage_grants')">
+          <VaTab
+            name="grants"
+            v-if="can('manage_grants') || callerRole === 'GRANT_HOLDER'"
+          >
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -200,10 +203,17 @@
 
         <DatasetGrantsTab
           ref="grantsTabRef"
-          v-else-if="activeTab === 'grants'"
+          v-else-if="activeTab === 'grants' && can('manage_grants')"
           :dataset="dataset"
           :can-manage-grants="can('manage_grants')"
           @count-changed="fetchGrantsCount"
+        />
+
+        <!-- A grant holder sees why they can see this dataset, never the grant table. -->
+        <MyAccessTab
+          v-else-if="activeTab === 'grants'"
+          resource-type="DATASET"
+          :resource-id="dataset.resource_id"
         />
 
         <DatasetRequestsTab

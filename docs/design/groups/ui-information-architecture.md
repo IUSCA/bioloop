@@ -181,11 +181,11 @@ capability is present. The same reasoning applies to datasets against `datasetPo
 |---|---|---|---|---|
 | Overview | Full | Full, read-only | Public attributes only | Hidden |
 | Datasets | Full | Full | With `COLLECTION:LIST_CONTENTS` | Hidden |
-| Access (grants) | Full, can manage | Read-only | Hidden | Hidden |
+| Access (grants) | Full, can manage | Read-only | Own access only | Hidden |
 | Requests | Incoming queue + own | Incoming queue, read-only, + own | Own requests only | Own requests only |
 | Audit Log | Full | Read-only | Hidden | Hidden |
 
-Four consequences follow.
+The consequences follow.
 
 **A grant holder's Overview is a trimmed layout.** `view_metadata` for a grant holder
 is filtered to `PUBLIC_ATTRIBUTES` plus `PROFILE_ATTRIBUTES`: `id`, `name`, `slug`,
@@ -229,6 +229,16 @@ always available. Do not collapse them into one list.
 **Access and Requests are different tabs on purpose.** "Access" is the grant table —
 standing access, admin-managed. "Requests" is the user-initiated workflow for asking
 for access. The labels should keep that distinction visible.
+
+**A grant holder's Access tab explains their own access.** It lists each grant that reaches
+the caller on this resource, and the path it arrives by. A path is a direct grant, a group
+the caller belongs to, a system principal such as `Public`, or a collection holding the
+dataset. It never lists another subject's grants. The tab reads
+`GET /grants/USER/:subject_id/:resource_type/:resource_id/coverage`, which `view_coverage`
+allows for the subject themselves. The same rule applies on a dataset page.
+
+Coverage explains grants only. An admin or an overseer holds access through group structure,
+which no grant row records. Those callers see the full grant table instead.
 
 ::: tip Related open item
 `create` on `access_request` being `Policy.always` means a caller can file a request

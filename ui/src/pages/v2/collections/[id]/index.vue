@@ -86,7 +86,10 @@
               </span>
             </span>
           </VaTab>
-          <VaTab name="grants" v-if="can('list_grants')">
+          <VaTab
+            name="grants"
+            v-if="can('list_grants') || callerRole === 'GRANT_HOLDER'"
+          >
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -134,10 +137,17 @@
 
         <CollectionGrantsTab
           ref="grantsTabRef"
-          v-else-if="activeTab === 'grants'"
+          v-else-if="activeTab === 'grants' && can('list_grants')"
           :collection="collection"
           :can-manage-grants="can('manage_grants')"
           @count-changed="fetchGrantsCount"
+        />
+
+        <!-- A grant holder sees why they can see this collection, never the grant table. -->
+        <MyAccessTab
+          v-else-if="activeTab === 'grants'"
+          resource-type="COLLECTION"
+          :resource-id="collection.id"
         />
 
         <CollectionRequestsTab
