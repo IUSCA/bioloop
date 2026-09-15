@@ -11,6 +11,47 @@ class CapabilityEvaluationError extends Error {
 }
 
 /**
+ * Withdraws a capability the transition table forbids in the resource's current state.
+ *
+ * The gate does not read state: a service refuses a wrong-state action with a 409. A capability
+ * is an offer, so it must not be made in a state that would refuse it. Only an action that is
+ * allowed and declares a transition row is checked, and only when there is a resource to read.
+ *
+ * @see docs/design/groups/access-model.md — The transition table
+ * @param {Object} options
+ * @param {PolicyContainer} options.policyContainer
+ * @param {Object.<string, boolean>} options.capabilities
+ * @param {Object} options.identifiers
+ * @param {HydratorRegistry} options.hydratorRegistry
+ * @param {{ resource?: Map }} [options.caches]
+ * @param {Object} [options.preFetched]
+ * @returns {Promise<Object.<string, boolean>>} a new map; the input is not modified
+ */
+async function applyTransitions({
+  policyContainer, capabilities, identifiers, hydratorRegistry, caches = {}, preFetched = null,
+}) {
+  if (identifiers?.resource == null) return capabilities;
+  const stateful = Object.keys(capabilities)
+    .filter((name) => capabilities[name] === true && policyContainer.getTransition(name));
+  if (stateful.length === 0) return capabilities;
+
+  const attributes = [...new Set(stateful.flatMap((name) => policyContainer.getTransition(name).requires))];
+  const resource = await hydratorRegistry.get(policyContainer.meta.resourceType).hydrate({
+    id: identifiers.resource,
+    attributes,
+    cache: caches.resource || new Map(),
+    preFetched: preFetched?.resource,
+  });
+
+  const out = { ...capabilities };
+  stateful.forEach((name) => {
+    const transition = policyContainer.getTransition(name);
+    out[name] = transition.from.includes(transition.stateOf(resource));
+  });
+  return out;
+}
+
+/**
  * Evaluates a set of action policies for a given user+resource in a single hydration pass.
  *
  * Algorithm:
@@ -130,7 +171,9 @@ async function evaluateCapabilitySet({
     }),
   );
 
-  return results;
+  return applyTransitions({
+    policyContainer, capabilities: results, identifiers, hydratorRegistry, caches, preFetched,
+  });
 }
 
 async function deriveCallerRole({
@@ -189,5 +232,9 @@ function toCapabilitiesArray(capabilitiesObj) {
 }
 
 module.exports = {
-  evaluateCapabilitySet, CapabilityEvaluationError, deriveCallerRole, toCapabilitiesArray,
+  evaluateCapabilitySet,
+  CapabilityEvaluationError,
+  deriveCallerRole,
+  toCapabilitiesArray,
+  applyTransitions,
 };

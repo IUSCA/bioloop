@@ -159,7 +159,7 @@ const userHydrator = new PrismaHydrator({
 });
 
 // Register virtual attributes (computed/derived data)
-userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
+userHydrator.registerVirtualAttribute('current_roles', async ({ id, hydrator }) => {
   const roles = await hydrator.prisma.user_role.findMany({
     where: { user_id: id },
     include: { roles: true },

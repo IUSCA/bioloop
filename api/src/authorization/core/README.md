@@ -79,7 +79,7 @@ const userHydrator = new PrismaHydrator({
   modelName: 'user' 
 });
 
-userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
+userHydrator.registerVirtualAttribute('current_roles', async ({ id, hydrator }) => {
   // Custom attribute loading logic
 });
 ```

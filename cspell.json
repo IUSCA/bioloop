@@ -296,7 +296,9 @@
     "webassets",
     "zenodo",
     "unhydratable",
-    "Unhydratable"
+    "Unhydratable",
+    "unpoliced",
+    "Unpoliced"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

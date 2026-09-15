@@ -1183,6 +1183,41 @@ specification go to Decisions.
 **Exit:** no disagreement is unclassified. Each fixed bug has a harness cell that failed before
 the fix. The six known disagreements were found.
 
+**Result, 2026-09-15.** The harness writes the covering world, 110 cells, into `app_test`.
+The Engine arm decides 6,600 actions from identifiers alone, and 114 disagreed on the first run.
+
+- Two were bugs, now fixed. `group.add_dataset` admitted any caller to a group accepting
+  contributions, the anonymous principal included, because its term read only the flag. A grant
+  to a system principal made its owning group visible, against decision 16 row 8. Cells 3 and 47
+  failed before the fixes.
+- The remaining 107 are one class. A deleted dataset still admits mutating and data-plane
+  actions, which decision 16 row 4 refuses. `tests/model/engineArm.test.js` classifies them for
+  Phase 6, and fails if the class stops matching.
+- The Term forms arm found `getGrantAccessTypesForUser` and `accessibleDatasetIdsByGrantsQuery`
+  in agreement for every signed-in user and every dataset access type.
+- The Creates arm found `dataset.create` and `collection.create` blocked by an archived owning
+  group and by an archived ancestor, as Phase 0 made them.
+- The Transitions arm found `review`, `update`, `submit`, and `withdraw` offered in states the
+  transition table forbids. Capabilities now consult the table, including a platform admin's.
+- The Session disagreement was real in the engine, not only in the route. Routes seed the JWT
+  profile, with its login-time roles, into the policy context. The platform-admin term now reads
+  `current_roles` from `user_role`, which no profile carries.
+
+The ten known disagreements stand as follows.
+
+| Disagreement | Where it is found | Status |
+|---|---|---|
+| group role precedence | Standing arm | Phase 5 replaces the first-match role with paths |
+| group search leaving out resource access | Lists arm | Phase 4 |
+| expiring grants for overseers | Lists arm | Phase 4 |
+| an archived ancestor on create | Creates arm | fixed in Phase 0 |
+| an overseer with a sensitive-metadata grant losing `staged_path` | `attributeRuleOrdering.test.js` | pinned; Phase 5 unions projections |
+| lineage rows carrying the parent dataset's field set | Related rows arm | Phase 5 |
+| a grant listing carrying full `subject.user` and `grantor` rows | Projection arm | Phase 5 |
+| `review` reported on a request no longer `UNDER_REVIEW` | Transitions arm | fixed in Phase 3 |
+| a platform admin refused `edit_metadata` on a quarantined dataset | Engine arm | agreement: an archived group binds platform admins, as decision 11 says |
+| the route admitting a platform admin whose role the database no longer holds | Session | fixed in the engine in Phase 3; route-level list branches that read the session remain, filed in L1 |
+
 ### Phase 4: the rule becomes a query
 
 This phase begins in `core/`. `Policy.or`, `Policy.and`, and `Policy.not` keep their operator

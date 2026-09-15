@@ -57,13 +57,22 @@ const canAccessResourcesOwnedByGroup = new GroupPolicy({
   evaluate: (user, group) => user.accessible_owner_group_ids.includes(group.id),
 });
 
-const isMemberContributionsAllowed = new GroupPolicy({
-  name: 'isMemberContributionsAllowed',
-  meta: { pathKind: 'resource_rule', rule: 'contributions_allowed' },
+/**
+ * The caller is an effective member of the group, and the group accepts contributions.
+ *
+ * Membership is part of the term. The flag alone admitted any caller, the anonymous principal
+ * included, to add a dataset to a group that accepts contributions.
+ * @see docs/design/groups/access-model.md — The decision rule
+ */
+const isGroupContributor = new GroupPolicy({
+  name: 'isGroupContributor',
+  meta: { pathKind: 'member', rule: 'contributions_allowed' },
   requires: {
-    resource: ['allow_user_contributions'],
+    user: ['effective_group_ids'],
+    resource: ['id', 'allow_user_contributions'],
   },
-  evaluate: (user, group) => group.allow_user_contributions === true,
+  evaluate: (user, group) => group.allow_user_contributions === true
+    && user.effective_group_ids.includes(group.id),
 });
 
 /**
@@ -201,7 +210,7 @@ groupPolicies
     // needs to see while it is frozen.
     view_invitations: reading(isGroupAdmin),
 
-    add_dataset: mutating(Policy.or([isGroupAdmin, isMemberContributionsAllowed])),
+    add_dataset: mutating(Policy.or([isGroupAdmin, isGroupContributor])),
     add_collection: mutating(isGroupAdmin),
   })
   .attributes({

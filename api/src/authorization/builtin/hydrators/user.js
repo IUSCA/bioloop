@@ -7,7 +7,11 @@ const { PrismaHydrator } = require('../../core/hydrators/PrismaHydrator');
 
 const userHydrator = new PrismaHydrator({ prismaClient: prisma, modelName: 'user', idAttribute: 'subject_id' });
 
-userHydrator.registerVirtualAttribute('roles', async ({ id, hydrator }) => {
+// Named `current_roles`, not `roles`, so no request can supply it. A session's JWT profile
+// carries `roles` from login time, and routes pass that profile as the pre-fetched user. A
+// requirement no profile carries is always read from user_role, per request.
+// @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 14
+userHydrator.registerVirtualAttribute('current_roles', async ({ id, hydrator }) => {
   const dbClient = hydrator.prisma;
   const rows = await dbClient.user_role.findMany({
     // The relation on user_role is `users`, not `user`. Naming it wrongly threw only when

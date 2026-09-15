@@ -157,9 +157,13 @@ function userValidGrantsQuery(user_id, access_types = []) {
  * @returns {Prisma.sql} SQL query to fetch owner group ids of resources accessible by the user via grants
  */
 function ownerGroupIdsOfResourcesAccessibleByUserQuery(user_id) {
+  // A grant to a system principal is not a relationship with the owning group, so it does
+  // not make the group's page visible.
+  // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 8
   return Prisma.sql`
     WITH user_valid_grants AS (
-      ${userValidGrantsQuery(user_id)}
+      SELECT * FROM (${userValidGrantsQuery(user_id)}) ug
+      WHERE ug.subject_id NOT IN (${Prisma.join(SYSTEM_PRINCIPAL_GROUP_IDS)})
     )
     -- directly join all grants to datasets; if a grant resource is not dataset, 
     -- the join will remove the row, so we only get grants that are on datasets

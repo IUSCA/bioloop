@@ -244,6 +244,43 @@ returns `<model>:<id>`. Code that seeds a cache, such as `core/middlewares.js` a
 `middleware/auth.js` for the user, must call it rather than use the bare id. A bare key is
 a silent miss, not an error.
 
+## Platform admin reads `current_roles`, never `roles`
+
+Routes seed the JWT profile into `req.policyContext.cache.user` and pass it as `preFetched.user`.
+That profile carries the roles the user held at login. `isPlatformAdmin` therefore requires
+`current_roles`, a virtual attribute on the user hydrator that no profile carries, so it is always
+read from `user_role`. Do not rename it back to `roles`, and do not put `current_roles` into a
+pre-fetched user. `tests/authorization/platformAdminFromDatabase.test.js` pins both directions.
+
+Code outside the engine still reads the session. `isPlatformAdmin(req)` in `services/auth.js`
+backs list branches in the groups, grants, collections, datasets_v2, and users_v2 routes, and
+`listEligibleOwnerGroups` takes roles from the user object its caller passes. Those are filed in
+`.todo/local/L1-authorization-enforcement.md`.
+
+## Capabilities consult the transition table; the gate does not
+
+`applyTransitions` in `core/capabilities.js` withdraws a capability when the resource's state is
+not one of the action's from-states. `evaluateCapabilitySet` and the platform-admin branch of
+`authorizeAction` both call it. The gate itself never reads state, because a wrong-state action
+is refused by the service with a 409, and a gate refusal would be a 403 instead.
+`tests/model/transitionsArm.test.js` checks every request status for the requester, the group
+admin, and a platform admin.
+
+## The comparison arms
+
+`api/tests/model` holds the reference model, the world generator, and the arms.
+
+- `node tests/model/runEngineArm.js [report.json]` writes the covering world into `app_test`,
+  runs the Engine arm, prints disagreements grouped by action with the dimension values they
+  share, and removes the world. It takes about 10 seconds. The hydrators log every query, so
+  filter the output with `grep -E "^wrote world|^engine arm:|^\[[0-9]+\]|^  shared:"`.
+- `tests/model/engineArm.test.js` runs the Engine, Term forms, and Creates arms. A new
+  disagreement fails as unclassified. Add a `CLASSIFIED` entry only with the decision that
+  settles it and the phase that removes it; a classification that stops matching fails as stale.
+- `tests/model/dbWorld.js` writes rows directly. `group_closure` has no trigger, so it writes the
+  self row and every ancestor row itself. The quarantine group and the system principals are the
+  seeded rows.
+
 ## Probing the engine from a script
 
 A one-off script can call the shipped engine against the development database. It must run from

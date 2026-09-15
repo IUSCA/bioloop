@@ -35,7 +35,7 @@ const {
   createAuthorizationMiddlewareFunction,
 
   // capabilities
-  evaluateCapabilitySet,
+  evaluateCapabilitySet, applyTransitions,
   CapabilityEvaluationError,
   deriveCallerRole,
   toCapabilitiesArray,
@@ -176,9 +176,15 @@ async function authorizeAction(resourceType, action, {
   });
   if (adminResult.granted) {
     if (shouldDeriveCapabilities) {
-      adminResult.capabilities = Object.fromEntries(
-        policyContainer.getActionNames().map((name) => [name, true]),
-      );
+      // Every action, less those the resource's state forbids. @see core/capabilities.js
+      adminResult.capabilities = await applyTransitions({
+        policyContainer,
+        capabilities: Object.fromEntries(policyContainer.getActionNames().map((name) => [name, true])),
+        identifiers,
+        hydratorRegistry,
+        caches: { resource: policyExecutionContext?.cache?.resource },
+        preFetched,
+      });
     }
     if (shouldDeriveCallerRole) {
       adminResult.callerRole = PLATFORM_ADMIN.callerRole;

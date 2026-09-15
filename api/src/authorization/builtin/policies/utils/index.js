@@ -14,9 +14,10 @@ const isPlatformAdmin = new Policy({
   resourceType: null,
   meta: { pathKind: 'platform_admin' }, // this policy is not tied to a specific resource type
   requires: {
-    user: ['roles'],
+    // From user_role on every request, never from the session. @see hydrators/user.js
+    user: ['current_roles'],
   },
-  evaluate: (user) => user?.roles?.includes('admin') === true,
+  evaluate: (user) => user?.current_roles?.includes('admin') === true,
 });
 
 /**
