@@ -182,6 +182,15 @@ function typeBlocks(typeName, qualifiedAction) {
 }
 
 /**
+ * Whether any restriction type defined today could block this qualified action. Reading is
+ * never blocked, so most checks stop here without a query.
+ */
+function actionCouldBeBlocked(qualifiedAction) {
+  return Object.keys(BLOCKED_ACTIONS_BY_TYPE)
+    .some((typeName) => typeBlocks(typeName, qualifiedAction));
+}
+
+/**
  * The restriction types in force on a group or a resource, following the group tree.
  *
  * @param {Object} target
@@ -219,40 +228,70 @@ async function blockingRestriction(resourceType, action, target) {
 
   // Reading is never blocked by any type defined today, so skip the query entirely rather
   // than paying for it on the read path, which is almost every request.
-  const anyTypeCouldBlock = Object.keys(BLOCKED_ACTIONS_BY_TYPE)
-    .some((typeName) => typeBlocks(typeName, qualifiedAction));
-  if (!anyTypeCouldBlock) return null;
+  if (!actionCouldBeBlocked(qualifiedAction)) return null;
 
   const types = await effectiveRestrictionTypes(target);
   return types.find((typeName) => typeBlocks(typeName, qualifiedAction)) || null;
 }
 
 /**
+ * Raised when a restrictable action reaches the restriction check with nothing to check.
+ *
+ * A missing target used to allow the action, so a route that forgot to say which resource a
+ * grant or a request concerned was never checked against ARCHIVED. An unanswerable question is
+ * now an error that names the action, the same way `userHasGrant` refuses an empty type list.
+ * @see docs/design/groups/access-model-verification-plan.md — The restriction check refuses when it cannot find a target
+ */
+class RestrictionTargetError extends Error {
+  constructor(resourceType, action) {
+    super(`Cannot resolve a restriction target for ${resourceType}.${action}: `
+      + 'the call supplied neither a resource id nor the resource it concerns');
+    this.name = 'RestrictionTargetError';
+  }
+}
+
+/**
  * What a restriction check should look at, for a given policy evaluation.
  *
- * Groups are addressed by group id. Datasets and collections are addressed by resource id,
- * which for a collection is the same value as its own id. A grant or an access request is
- * not itself restrictable, so the check follows through to the resource it concerns, which
- * the route supplies as pre-fetched data.
+ * - A group is addressed by its id. A root group being created has no parent, so nothing
+ *   restricts it.
+ * - A dataset or a collection is addressed by resource id. A create action has no resource
+ *   yet, so it is addressed by the owning group it names, and an archived owner or an
+ *   archived ancestor of that owner blocks it.
+ * - A grant or an access request is not itself restrictable. The check follows through to the
+ *   resource it concerns: from the pre-fetched resource when the route supplies one, and
+ *   otherwise by reading the row the id names.
  *
- * Returns null when there is nothing to check, which is the case for a create action with
- * no resource yet and for the resource types restrictions do not attach to.
+ * Returns null when there is nothing that could be restricted. Throws when the action could
+ * be restricted and the call carries nothing to resolve.
  *
  * @param {string} resourceType
+ * @param {string} action
  * @param {string|null} resourceId
  * @param {Object|null} preFetchedResource
- * @returns {{group_id?: string, resource_id?: string}|null}
+ * @returns {Promise<{group_id?: string, resource_id?: string}|null>}
  */
-function restrictionTargetFor(resourceType, resourceId, preFetchedResource) {
+async function restrictionTargetFor(resourceType, action, resourceId, preFetchedResource) {
   if (resourceType === 'group') {
     return resourceId ? { group_id: resourceId } : null;
   }
   if (resourceType === 'dataset' || resourceType === 'collection') {
-    return resourceId ? { resource_id: resourceId } : null;
+    if (resourceId) return { resource_id: resourceId };
+    const ownerGroupId = preFetchedResource?.owner_group_id;
+    if (ownerGroupId) return { group_id: ownerGroupId };
+    throw new RestrictionTargetError(resourceType, action);
   }
   if (resourceType === 'grant' || resourceType === 'access_request') {
     const underlying = preFetchedResource?.resource_id;
-    return underlying ? { resource_id: underlying } : null;
+    if (underlying) return { resource_id: underlying };
+    if (resourceId) {
+      const model = resourceType === 'grant' ? prisma.grant : prisma.access_request;
+      const row = await model.findUnique({ where: { id: resourceId }, select: { resource_id: true } });
+      // An id that names no row concerns nothing that could be restricted. The policy and the
+      // service answer for the missing row.
+      return row ? { resource_id: row.resource_id } : null;
+    }
+    throw new RestrictionTargetError(resourceType, action);
   }
   return null;
 }
@@ -266,7 +305,8 @@ function restrictionTargetFor(resourceType, resourceId, preFetchedResource) {
 async function checkRestriction({
   resourceType, action, resourceId, preFetchedResource,
 }) {
-  const target = restrictionTargetFor(resourceType, resourceId, preFetchedResource);
+  if (!actionCouldBeBlocked(`${resourceType}.${action}`)) return null;
+  const target = await restrictionTargetFor(resourceType, action, resourceId, preFetchedResource);
   if (!target) return null;
   return blockingRestriction(resourceType, action, target);
 }
@@ -281,4 +321,5 @@ module.exports = {
   restrictionTargetFor,
   checkRestriction,
   ARCHIVED_EXEMPT_ACTIONS,
+  RestrictionTargetError,
 };

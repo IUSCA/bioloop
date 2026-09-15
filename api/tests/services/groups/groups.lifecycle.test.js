@@ -378,7 +378,17 @@ describe('groups - lifecycle', () => {
 
     it('demotion changes role back to MEMBER', async () => {
       const g = await newGroup('_demote');
-      await groupsService.addGroupMembers(g.id, { user_ids: [memberUser.subject_id], actor_id: actor.subject_id });
+      // A second admin stays, because demoting the last one is refused. @see lastAdmin.test.js
+      const otherAdmin = await createTestUser('_demote_other_admin');
+      usersToDelete.push(otherAdmin.id);
+      await groupsService.addGroupMembers(g.id, {
+        user_ids: [memberUser.subject_id, otherAdmin.subject_id],
+        actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: otherAdmin.subject_id,
+        actor_id: actor.subject_id,
+      });
       await groupsService.promoteGroupMemberToAdmin(g.id, {
         user_id: memberUser.subject_id,
         actor_id: actor.subject_id,

@@ -212,6 +212,11 @@ same tables. They wait for step 1, and they are listed here so they are not atte
   foreign key, because creating a resource through v2 seeds an owning-group grant and
   `grant.resource` is `ON DELETE RESTRICT`. The fix is to delete grants first. It is a legacy
   developer script, so it waits rather than being repaired inside a v2 change.
+- **Whitelisting the legacy `PATCH /datasets/:id` body.** It passes `req.body` to the update
+  whole, so a caller permitted by the old RBAC middleware can rewrite `owner_group_id`,
+  `is_deleted`, or `archive_path`. The v2 route now accepts only `name` and `description`. The
+  workers patch sizes and bundles through the legacy route, so its field list is settled at
+  cut-over rather than narrowed while they depend on it.
 
 @see docs/design/groups/dataset-creation.md — What groups break that was safe when everything
 was global

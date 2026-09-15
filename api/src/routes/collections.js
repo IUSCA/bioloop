@@ -96,10 +96,8 @@ router.get(
 // create collection
 router.post(
   '/',
-  authorize('collection', 'create', {
-    resourceIdFn: () => null,
-    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
-  }),
+  // Validated first: the restriction check resolves a create to the owning group the body
+  // names, so a body without one must be refused as malformed before authorization asks.
   validate([
     body('name').isString().notEmpty(),
     body('description').optional().isString(),
@@ -108,6 +106,10 @@ router.post(
     body('dataset_ids').optional().isArray({ min: 1 }),
     body('dataset_ids.*').isUUID(),
   ]),
+  authorize('collection', 'create', {
+    resourceIdFn: () => null,
+    preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
+  }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Create a new collection'

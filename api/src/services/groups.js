@@ -632,6 +632,42 @@ async function listGroupMembers(group_id, {
   });
 }
 
+const LAST_ADMIN_MESSAGE = 'Cannot remove the only admin from the group.'
+  + ' Please promote another member to admin before removing this member.';
+
+/**
+ * Refuses a membership change that would leave a group with no admin.
+ *
+ * Runs inside the caller's transaction after the group row is locked, so two removals in one
+ * call, or in two concurrent calls, see each other. It used to run in the route before the
+ * transaction and ask "is this user the only admin" once per user against the state before
+ * any removal, so removing both of two admins in one call passed both checks.
+ *
+ * An admin is an active membership, read from `active_group_user`, of an account that is not
+ * deleted. That is the definition `getGroupsWithoutActiveAdmins` reports on. A change that
+ * touches no current admin is never refused, even in a group that already has none.
+ *
+ * @param {Object} tx - Prisma transaction holding the group row lock
+ * @param {string} group_id
+ * @param {string[]} leaving_user_ids - users whose admin standing the change ends
+ * @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+ */
+async function assertAdminsRemain(tx, group_id, leaving_user_ids) {
+  const [counts] = await tx.$queryRaw`
+    SELECT
+      count(*) FILTER (WHERE gu.user_id = ANY(${leaving_user_ids}::text[])) AS leaving,
+      count(*) FILTER (WHERE NOT (gu.user_id = ANY(${leaving_user_ids}::text[]))) AS remaining
+    FROM active_group_user gu
+    JOIN "user" u ON u.subject_id = gu.user_id
+    WHERE gu.group_id = ${group_id}
+      AND gu.role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
+      AND u.is_deleted = false
+  `;
+  if (Number(counts.leaving) > 0 && Number(counts.remaining) === 0) {
+    throw createError.Conflict(LAST_ADMIN_MESSAGE);
+  }
+}
+
 /**
  * Remove users from a group
  * @param {string} group_id
@@ -658,6 +694,8 @@ async function removeGroupMembers(group_id, {
     if (groupRecords[0].is_archived) {
       throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
     }
+
+    await assertAdminsRemain(tx, group_id, user_ids);
 
     // Close the membership rather than deleting it, so that "who was a member on date X?"
     // stays answerable. Re-adding the user later opens a new row.
@@ -791,6 +829,15 @@ async function demoteAdminToMember(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
+    // Lock the group row first, as removal does, so a demotion and a removal of the other
+    // admin cannot both pass the last-admin check.
+    const groupRows = await tx.$queryRaw`
+      SELECT id FROM "group" WHERE id = ${group_id} FOR UPDATE
+    `;
+    if (groupRows.length === 0) {
+      throw createError.NotFound('Group not found');
+    }
+
     const membership = await tx.group_user.findFirst({
       where: { group_id, user_id, removed_at: null },
     });
@@ -801,6 +848,8 @@ async function demoteAdminToMember(group_id, {
     if (membership.role === GROUP_MEMBER_ROLE.MEMBER) {
       return membership;
     }
+
+    await assertAdminsRemain(tx, group_id, [user_id]);
 
     const updatedMembership = await tx.group_user.update({
       where: { id: membership.id },

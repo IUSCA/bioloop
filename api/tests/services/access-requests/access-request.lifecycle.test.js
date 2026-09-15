@@ -281,7 +281,8 @@ describe('access requests - lifecycle', () => {
       const hasGrant = await grantsService.userHasGrant({
         user_id: requester.subject_id,
         resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
+        resource_type: 'DATASET',
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(hasGrant).toBe(true);
     });
@@ -748,7 +749,8 @@ describe('access requests - lifecycle', () => {
       const hasAccess = await grantsService.userHasGrant({
         user_id: groupMember.subject_id,
         resource_id: dataset.resource_id,
-        access_type_id: viewMetadataTypeId,
+        resource_type: 'DATASET',
+        access_types: ['DATASET:VIEW_METADATA'],
       });
       expect(hasAccess).toBe(true);
     });

@@ -193,8 +193,14 @@ describe('groups - invariants', () => {
     // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
     it('group_memberships drops the row as soon as the member is removed', async () => {
       const g = await newGroup('_closed_authority');
+      // A second admin stays, because removing the last one is refused. @see lastAdmin.test.js
+      const otherAdmin = await createTestUser('_closed_authority_other');
+      usersToDelete.push(otherAdmin.id);
       await groupsService.addGroupMembers(g.id, {
-        user_ids: [memberUser.subject_id], actor_id: actor.subject_id,
+        user_ids: [memberUser.subject_id, otherAdmin.subject_id], actor_id: actor.subject_id,
+      });
+      await groupsService.promoteGroupMemberToAdmin(g.id, {
+        user_id: otherAdmin.subject_id, actor_id: actor.subject_id,
       });
       await groupsService.promoteGroupMemberToAdmin(g.id, {
         user_id: memberUser.subject_id, actor_id: actor.subject_id,

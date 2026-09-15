@@ -551,8 +551,13 @@ router.patch(
       return next(createError(404, 'Dataset not found'));
     }
 
-    // Perform update with integer id
-    const updated = await datasetService.patchDataset(dataset.id, req.body);
+    // Only the fields this route validates. The body used to be passed through whole, so an
+    // admin of the owning group could rewrite owner_group_id, is_deleted, or archive_path.
+    // @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+    const updated = await datasetService.patchDataset(
+      dataset.id,
+      _.pick(['name', 'description'])(req.body),
+    );
     res.json(req.permission.filter(updated));
   }),
 );

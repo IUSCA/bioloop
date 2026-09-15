@@ -4,7 +4,6 @@ const fsPromises = require('fs/promises');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
-const assert = require('assert');
 const { isUUID } = require('validator');
 const { GROUP_MEMBER_ROLE, INVITATION_STATUS } = require('@prisma/client');
 
@@ -23,27 +22,6 @@ const { isPlatformAdmin } = require('@/services/auth');
 // const datasetService = require('@/services/datasets_v2');
 
 const router = express.Router();
-
-/**
- * Helper function to ensure that a user is not removing the last admin from a group
- *
- * @param {string} group_id - UUID of group
- * @param {string} user_id - UUID of user
- */
-async function ensureNotRemovingLastAdmin(group_id, user_id) {
-  // reject if this removal leads to zero admins in the group
-  // This allows platform admins to remove use that leads to zero admins
-  // but prevents group admins from removing the only admin (themselves) and leaving the group without any admins,
-  // which would make it impossible to manage the group going forward
-  const groupAdmins = await prisma.group_user.findMany({
-    where: { group_id, role: GROUP_MEMBER_ROLE.ADMIN, removed_at: null },
-  });
-  const message = 'Cannot remove the only admin from the group.'
-        + ' Please promote another member to admin before removing this member.';
-  if (groupAdmins.length === 1 && groupAdmins[0].user_id === user_id) {
-    assert.fail(message);
-  }
-}
 
 // Search groups by name or description
 router.post(
@@ -630,8 +608,6 @@ router.delete(
 
     const { id, userId } = req.params;
 
-    await ensureNotRemovingLastAdmin(id, userId);
-
     const deletedUserIds = await groupService.removeGroupMembers(
       id,
       { user_ids: [userId], actor_id: req.user.subject_id },
@@ -700,8 +676,6 @@ router.delete(
 
     const { id, userId } = req.params;
 
-    await ensureNotRemovingLastAdmin(id, userId);
-
     await groupService.demoteAdminToMember(id, { user_id: userId, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
@@ -722,9 +696,6 @@ router.delete(
 
     const { id } = req.params;
     const { user_ids } = req.body;
-
-    // check if any of the removals would lead to zero admins in the group
-    await Promise.all(user_ids.map((user_id) => ensureNotRemovingLastAdmin(id, user_id)));
 
     await groupService.removeGroupMembers(id, { user_ids, actor_id: req.user.subject_id });
     res.status(204).send();

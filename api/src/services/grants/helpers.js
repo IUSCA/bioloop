@@ -274,6 +274,13 @@ async function getGrantAccessTypesForUser(user_id, resource_id, resource_type) {
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,
 }) {
+  // An empty requirement is an under-specified question, not "any grant". `satisfiedBy([])`
+  // returns [] and the query builders read an empty list as no filter, so without this a call
+  // that forgot its types would answer true for any holding at all.
+  // @see docs/design/groups/access-model-verification-plan.md — Refusal of an under-specified question
+  if (!Array.isArray(access_types) || access_types.length === 0) {
+    throw new Error('userHasGrant requires at least one access type');
+  }
   // Widen the requirement, not the holding: a check for DATASET:VIEW_METADATA is satisfied
   // by a grant of DATASET:DOWNLOAD, so the SQL filter asks for every type that implies one
   // of the requested ones. One query, no extra round trip.
