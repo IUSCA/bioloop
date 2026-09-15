@@ -31,8 +31,10 @@
 
         <div class="mt-2">
           <!-- Its own action bar is hidden: it posts to the legacy workflow routes, which
-               authorize on the workflow alone and offer a delete this tab does not. -->
-          <Workflow :workflow="run" :show-actions="false" />
+               authorize on the workflow alone and offer a delete this tab does not. Its
+               refetch is off for the same reason: the run above already carries its task
+               runs, and the legacy read refuses callers who hold only dataset access. -->
+          <Workflow :workflow="run" :show-actions="false" :fetch="false" />
 
           <!-- Acting on a run needs the same authority as starting one, so the buttons
                appear only for callers who could launch this workflow. Oversight sees the

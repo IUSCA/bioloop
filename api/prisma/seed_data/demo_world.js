@@ -17,7 +17,9 @@
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
+const config = require('config');
 
 const FileGraph = require('../../src/services/fileGraph');
 const { GRANT_ACCESS_TYPES } = require('../../src/constants');
@@ -364,6 +366,37 @@ const COLLECTIONS = Object.freeze([
   },
 ]);
 
+/**
+ * Instrument drop directories, one per group that produces raw data. Each lives under
+ * `import.sources_dir`, which `IMPORT_SOURCES_DIR` points at `data/import` on a native setup.
+ * A member of the owning group, or of a group overseeing it, sees the source when importing.
+ *
+ * @see docs/design/groups/dataset-creation-plan.md — B1
+ */
+const IMPORT_SOURCES = Object.freeze([
+  {
+    dir: 'tumor_sequencing_novaseq_x',
+    label: 'Tumor Sequencing NovaSeq X',
+    description: 'Demultiplexed run folders from the Tumor Sequencing Unit\'s NovaSeq X.',
+    sort_order: 1,
+    owner_group_id: GROUP_IDS.tumorSequencing,
+  },
+  {
+    dir: 'vasquez_lab_3t_mri',
+    label: 'Vasquez Lab 3T MRI',
+    description: 'BIDS exports from the Vasquez lab\'s 3T scanner.',
+    sort_order: 2,
+    owner_group_id: GROUP_IDS.vasquezLab,
+  },
+  {
+    dir: 'sequencing_core_deliveries',
+    label: 'Sequencing Core Deliveries',
+    description: 'Completed sequencing runs the core hands back to the requesting lab.',
+    sort_order: 3,
+    owner_group_id: GROUP_IDS.sequencingCore,
+  },
+]);
+
 function buildClosure() {
   const parentOf = new Map(GROUPS.map((g) => [g.id, g.parent_id]));
   const rows = [];
@@ -558,6 +591,19 @@ async function seedDemoWorld(prisma, { SUBJECT_TYPE, RESOURCE_TYPE }) {
     });
   }
 
+  // The directory is created as well as the row, because the scheduled path check suspends a
+  // source whose directory it cannot read.
+  const importSourcesDir = config.get('import.sources_dir');
+  for (const { dir, ...source } of IMPORT_SOURCES) {
+    const sourcePath = path.join(importSourcesDir, dir);
+    fs.mkdirSync(sourcePath, { recursive: true });
+    await prisma.import_source.upsert({
+      where: { path: sourcePath },
+      update: {},
+      create: { ...source, path: sourcePath },
+    });
+  }
+
   // The owning group reads what it governs, exactly as `seed.js` writes it for its worlds.
   // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
   const accessTypeIdByName = new Map(GRANT_ACCESS_TYPES.map((t) => [t.name, t.id]));
@@ -587,6 +633,7 @@ async function seedDemoWorld(prisma, { SUBJECT_TYPE, RESOURCE_TYPE }) {
     people: CAST.length,
     datasets: DATASETS.length,
     collections: COLLECTIONS.length,
+    importSources: IMPORT_SOURCES.length,
   };
 }
 
@@ -598,5 +645,6 @@ module.exports = {
   CAST,
   DATASETS,
   COLLECTIONS,
+  IMPORT_SOURCES,
   seedDemoWorld,
 };

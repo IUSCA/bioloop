@@ -90,41 +90,6 @@ async function main() {
   // users.json. Production runs this and stops; the rest of this file is dummy data.
   await seedBaseline(prisma);
 
-  // Seed import sources for non-production environments.
-  //
-  // The directory holding them comes from config so a native dev environment and the
-  // docker stack can differ: `import.sources_dir` defaults to /opt/sca/data/imports,
-  // which is what workers/bin/init_dirs.sh creates on the shared volume, and
-  // IMPORT_SOURCES_DIR overrides it with a path on the developer's machine.
-  //
-  // The path has to be absolute and has to exist where both the API and the workers can
-  // read it. The API serves the browse endpoint from it, and a dataset imported from
-  // here keeps it as its origin_path, which a worker later archives from.
-  const importSourcesDir = config.get('import.sources_dir');
-  const importSources = [
-    {
-      path: path.join(importSourcesDir, 'genomics_lab_instrument_drop'),
-      label: 'Genomics Lab',
-      description: 'Drop location for genomics lab instrument output',
-      sort_order: 1,
-    },
-    {
-      path: path.join(importSourcesDir, 'proteomics_lab_instrument_drop'),
-      label: 'Proteomics Lab',
-      description: 'Drop location for proteomics lab instrument output',
-      sort_order: 2,
-    },
-  ];
-  await Promise.all(
-    importSources.map((source) => prisma.import_source.upsert({
-      where: { path: source.path },
-      create: source,
-      update: { label: source.label, description: source.description, sort_order: source.sort_order },
-    })),
-  );
-  // eslint-disable-next-line no-console
-  console.log(`seeded ${importSources.length} import sources`);
-
   // Mock admins. The real ones, and svc_tasks, are already in place from seedBaseline();
   // these upserts find them by email and leave them alone, because `update` is empty.
   const admin_data = insert_random_dates(data.admins);
@@ -279,17 +244,51 @@ async function main() {
   // open rows, so re-seeding never opens a second membership.
   await prisma.group_user.createMany({ data: group_user, skipDuplicates: true });
 
-  // The owning group of each import source. A source with no group is invisible to the v2
-  // browse routes.
+  // Seed import sources for non-production environments.
+  //
+  // The directory holding them comes from config so a native dev environment and the
+  // docker stack can differ: `import.sources_dir` defaults to /opt/sca/data/imports,
+  // which is what workers/bin/init_dirs.sh creates on the shared volume, and
+  // IMPORT_SOURCES_DIR overrides it with a path on the developer's machine.
+  //
+  // The path has to be absolute and has to exist where both the API and the workers can
+  // read it. The API serves the browse endpoint from it, and a dataset imported from
+  // here keeps it as its origin_path, which a worker later archives from.
+  //
+  // Seeded after the groups, because each source names its owning group. A source with no
+  // group is invisible to the v2 browse routes.
   // @see docs/design/groups/dataset-creation-plan.md — B1
-  await prisma.import_source.updateMany({
-    where: { label: 'Genomics Lab' },
-    data: { owner_group_id: '83101409-fa05-44be-abca-c91fff4f9754' }, // Genomics Core
-  });
-  await prisma.import_source.updateMany({
-    where: { label: 'Proteomics Lab' },
-    data: { owner_group_id: '79606964-2385-4c72-8f5f-6d3412049a1c' }, // Bioinformatics Core
-  });
+  const importSourcesDir = config.get('import.sources_dir');
+  const importSources = [
+    {
+      path: path.join(importSourcesDir, 'genomics_lab_instrument_drop'),
+      label: 'Genomics Lab',
+      description: 'Drop location for genomics lab instrument output',
+      sort_order: 1,
+      owner_group_id: '83101409-fa05-44be-abca-c91fff4f9754', // Genomics Core
+    },
+    {
+      path: path.join(importSourcesDir, 'proteomics_lab_instrument_drop'),
+      label: 'Proteomics Lab',
+      description: 'Drop location for proteomics lab instrument output',
+      sort_order: 2,
+      owner_group_id: '79606964-2385-4c72-8f5f-6d3412049a1c', // Bioinformatics Core
+    },
+  ];
+  await Promise.all(
+    importSources.map((source) => prisma.import_source.upsert({
+      where: { path: source.path },
+      create: source,
+      update: {
+        label: source.label,
+        description: source.description,
+        sort_order: source.sort_order,
+        owner_group_id: source.owner_group_id,
+      },
+    })),
+  );
+  // eslint-disable-next-line no-console
+  console.log(`seeded ${importSources.length} import sources`);
 
   // Every group a seeded dataset may be sitting in: the ones this file creates, plus the
   // quarantine group an older version of it parked them in.

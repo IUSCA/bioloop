@@ -190,6 +190,38 @@ Assert reachability by running the decision, not by reading the rule list.
 `authorizeAction(...).filter(dataset)` returns. Against the old order it failed three of four
 cases.
 
+## A restriction check with no target allows the action
+
+`restrictionTargetFor` in `builtin/restrictions.js` resolves a grant or an access request to its
+resource only through the pre-fetched resource. With none, it returns null, and a null target
+blocks nothing. Create actions have no resource id and get null the same way.
+
+So an `authorize('grant', 'revoke')` with no `preFetchedResourceFn` is never checked against
+`ARCHIVED`. On 2026-09-14 five routes had this shape, filed as L1 T11. When adding a mutating
+route on a grant or an access request, pass `preFetchedResourceFn` returning `resource_id`, and
+test it by archiving the collection and calling the route.
+
+@see docs/design/groups/access-model-verification-plan.md — Totality: combinations with no answer
+
+## Probing the engine from a script
+
+A one-off script can call the shipped engine against the development database. It must run from
+inside `api/`, because `module-alias` reads `api/package.json`:
+
+```js
+require('module-alias/register');
+const prisma = require('@/db');
+const { authorizeAction, policyRegistry } = require('@/authorization');
+```
+
+Write the script in the scratchpad, copy it into `api/`, run it with `node`, and delete it.
+macOS has no `timeout` command, so use the tool timeout instead. `policyRegistry.get(type).getActionNames()`
+lists the registered actions.
+
+`authorizeAction` expects `identifiers: { user, resource }`. Passing `{ group_id }` throws
+`AuthorizationError: [policy:isPlatformAdmin] User identifier is required`. `GET /groups/slug/:slug`
+does exactly that, which is how it was found.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

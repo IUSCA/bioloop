@@ -188,6 +188,17 @@ role, so each page shows what the access model decides:
 The usernames are the flows world's cast, in the same roles. The two worlds share those
 usernames, so seed one or the other into a database, never both.
 
+
+The world also has three import sources. Each one is a directory under `IMPORT_SOURCES_DIR`,
+which is `data/import` on a native setup. The seed creates the directories empty.
+
+<!-- cSpell: ignore novaseq -->
+| Import source | Directory | Owning group |
+|---|---|---|
+| Tumor Sequencing NovaSeq X | `tumor_sequencing_novaseq_x` | Tumor Sequencing Unit |
+| Vasquez Lab 3T MRI | `vasquez_lab_3t_mri` | Vasquez Neuroimaging Lab |
+| Sequencing Core Deliveries | `sequencing_core_deliveries` | Sequencing Core Facility |
+
 The collection most demos use is `BRCA Cohort Release 1`, at
 `/v2/collections/de300000-0000-4000-8000-000000000101`. Group and collection ids are fixed.
 Dataset pages take `dataset.resource_id`, which changes on every reset, so look it up.

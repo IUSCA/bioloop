@@ -154,6 +154,11 @@ import { useAuthStore } from "@/stores/auth";
 const props = defineProps({
   workflow: Object,
   showActions: { type: Boolean, default: true },
+  // Refetch the run from the legacy workflow route when it arrives. The v2 dataset
+  // workflows tab turns this off: it passes a run already loaded with its task runs, and
+  // the legacy route refuses readers who hold only dataset access.
+  // @see docs/design/v2-cutover.md — Shared UI components need a v1 story
+  fetch: { type: Boolean, default: true },
 });
 const emit = defineEmits(["update"]);
 
@@ -167,7 +172,7 @@ watch(
   [() => props.workflow],
   () => {
     workflow.value = props.workflow;
-    fetch_data();
+    if (props.fetch) fetch_data();
     // console.log(workflow.value);
   },
   {
