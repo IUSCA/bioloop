@@ -645,7 +645,7 @@ const LAST_ADMIN_MESSAGE = 'Cannot remove the only admin from the group.'
  * @param {Object} tx - Prisma transaction holding the group row lock
  * @param {string} group_id
  * @param {string[]} leaving_user_ids - users whose admin standing the change ends
- * @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
  */
 async function assertAdminsRemain(tx, group_id, leaving_user_ids) {
   const [counts] = await tx.$queryRaw`
@@ -1313,7 +1313,7 @@ async function getGroupsWithoutActiveAdmins() {
  *
  * @param {string} user_id - subject id
  * @returns {Promise<{admin_group_count: number, oversight_group_count: number}>}
- * @see docs/design/groups/access-model-verification-plan.md — The persona goes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The persona goes
  */
 async function governanceCounts(user_id) {
   const [row] = await prisma.$queryRaw(Prisma.sql`

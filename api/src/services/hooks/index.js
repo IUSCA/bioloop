@@ -10,7 +10,7 @@
  * point rather than an oversight: a handler runs inside the caller's transaction, so a
  * failure has to take the whole thing down instead of leaving half of it committed.
  *
- * @see docs/design/groups/invitations.md — User provisioning
+ * @see docs/design/groups/implementation/invitations.md — User provisioning
  */
 
 /** An account has just been created. Payload: `{ user, tx }`. */

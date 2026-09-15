@@ -8,7 +8,7 @@ const { signIn, clientFor } = require('../world/api');
  * The fixtures every spec builds on: a fixture world per worker, and a signed-in browser
  * context per person.
  *
- * @see docs/design/groups/e2e-test-plan.md — Personas, and how a spec asks for one
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Personas, and how a spec asks for one
  */
 
 /**

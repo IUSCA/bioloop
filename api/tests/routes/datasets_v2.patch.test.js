@@ -5,7 +5,7 @@
  * the body to the update whole, so an admin of the owning group could move the dataset to any
  * group, flip `is_deleted`, or rewrite `archive_path`, with no audit row.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
  */
 
 const path = require('path');

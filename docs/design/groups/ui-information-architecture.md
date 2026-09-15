@@ -35,7 +35,7 @@ fold follows from what each one came to do. They are snapshots of intent, not of
 
 Seven areas make up the portal.
 
-- **Dashboard** — what needs the caller, and what they can reach. See [Dashboard plan](./dashboard-plan.md).
+- **Dashboard** — what needs the caller, and what they can reach. See [Dashboard plan](./implementation/dashboard-plan.md).
 - **Groups** — hierarchy, membership, archival.
 - **Datasets** — ownership, grants, collection membership, lifecycle.
 - **Collections** — dataset containers and grant targets.
@@ -166,7 +166,7 @@ Four principles apply across every page.
    See [Explainability and Effective Access](./design.md#explainability-and-effective-access).
 2. **Archived resources are visually distinct** everywhere they appear.
 3. **Grant atomicity is abstracted by presets.** Raw grants stay available behind an
-   "Advanced" toggle. See [Access Presets](./access-presets.md).
+   "Advanced" toggle. See [Grant Presets](./design.md#grant-presets).
 4. **The audit trail is one click from every material action's success toast.**
 
 Explainability is a system invariant, not a UI nicety. It is surfaced on the dataset
@@ -234,7 +234,7 @@ grant holder.
 The profile work added the last three. A grant holder reads the profile body on the ordinary
 Overview tab, without `view_profile` being involved, because they already hold a grant on the
 collection. `view_profile` exists for the caller who holds no grant at all, including one who
-is not signed in. @see [Profiles](./profiles.md) — What each audience sees.
+is not signed in. @see [Profiles](./implementation/profiles.md) — What each audience sees.
 
 **The Datasets tab is gated on the grant, and opening a row is gated again.** The tab needs
 `COLLECTION:LIST_CONTENTS`. It lists every dataset in the collection, with each dataset's

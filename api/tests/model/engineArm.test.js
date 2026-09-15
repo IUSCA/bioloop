@@ -14,7 +14,7 @@
  * visible. Cell 3 (an anonymous caller) and cell 47 (a grant to Authenticated Users) failed
  * before the fixes.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Comparison arms
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Comparison arms
  */
 
 const path = require('path');

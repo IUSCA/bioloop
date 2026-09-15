@@ -50,7 +50,7 @@
  * admin typed. The link always resolves through doi.org rather than a stored URL, so a
  * publisher moving a paper does not break the profile.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 const props = defineProps({
   /** [{ doi, title?, container?, year? }] */

@@ -110,7 +110,7 @@ two must still reject the preset item and add that type individually. The review
 state the constraint inline rather than let a reviewer discover it by failing.
 
 @see [decision 7](./decisions.md#_7-access-types-imply-one-another) and the
-[Access type order plan](./access-type-order-plan.md).
+[Access type order plan](./implementation/access-type-order-plan.md).
 
 ### 7. Membership on an archived group is frozen with no way through
 

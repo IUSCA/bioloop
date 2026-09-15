@@ -71,7 +71,7 @@ const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
  * @param {Function} [params.expandPath] - `(term, entities) => paths`, passed to `deriveStanding`.
  * @param {string[]} [params.concealRefusalsWithoutStanding] - resource types whose refusals are concealed
  * @returns {function(string, string, Object): Promise<Object>}
- * @see docs/design/groups/access-model-verification-plan.md — One pipeline
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — One pipeline
  * @see docs/design/groups/access-model.md — Refusal shapes
  */
 function createDecisionPipeline({

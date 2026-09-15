@@ -224,7 +224,7 @@ router.post(
     // `buildEffectiveGrants` matches on the exact subject, because that is what the write path
     // may supersede, so on its own it would report a brand new grant for access the subject
     // already has. The reviewer needs to see that before deciding.
-    // @see docs/design/groups/access-requests-plan.md — C2
+    // @see docs/design/groups/implementation/access-requests-plan.md — C2
     const coverage = await grantService.labelCoverage(
       await grantService.getEffectiveCoverage({
         subject_id: data.subject_id,
@@ -351,7 +351,7 @@ router.get(
 
 // What revoking a grant leaves its subject, for the confirmation modal. The coverage it reads
 // counts every path, so the modal never tells an admin a subject loses access they keep.
-// @see docs/design/groups/access-model-verification-plan.md — The UI layer
+// @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
 router.get(
   '/:id/revoke-preview',
   validate([
@@ -532,7 +532,7 @@ router.get(
 
 // Everything that already reaches a subject on a resource, and how each grant arrives.
 // Distinct from the route below, which answers only what the subject holds directly.
-// @see docs/design/groups/access-requests-plan.md — C1
+// @see docs/design/groups/implementation/access-requests-plan.md — C1
 router.get(
   '/:subject_type/:subject_id/:resource_type/:resource_id/coverage',
   validate([

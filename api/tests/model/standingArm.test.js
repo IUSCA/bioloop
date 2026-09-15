@@ -8,7 +8,7 @@
  * kinds, and for `member` paths whether the membership is direct, because the badge reads both.
  * A platform admin's standing leads with `platform_admin` and still lists every other path.
  *
- * @see docs/design/groups/access-model-verification-plan.md — A decision returns its paths
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — A decision returns its paths
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

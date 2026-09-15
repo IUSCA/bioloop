@@ -476,7 +476,7 @@ enum RESOURCE_TYPE {
 
 /// Who may read a group's or a collection's profile. Informational: it never affects who
 /// may read data. PUBLIC includes people who are not signed in.
-/// @see docs/design/groups/profiles.md — 1. Visibility is a column, not a grant
+/// @see docs/design/groups/implementation/profiles.md — 1. Visibility is a column, not a grant
 enum PROFILE_VISIBILITY {
   PRIVATE
   AUTHENTICATED
@@ -542,7 +542,7 @@ model group {
 
   // Profile. Informational only: none of these fields is read by any authorization policy
   // except profile_visibility, which decides who may read the profile itself.
-  // @see docs/design/groups/profiles.md — Schema
+  // @see docs/design/groups/implementation/profiles.md — Schema
   tagline            String?            @db.VarChar(120)
   about_md           String?
   // Object-store key for the profile picture, not a URL. Null renders the group icon.
@@ -631,7 +631,7 @@ model group_user {
 /// account yet. The invited email lives in the row rather than in the token, so the server
 /// decides who a link belongs to and the token itself decodes to nothing.
 ///
-/// @see docs/design/groups/invitations.md
+/// @see docs/design/groups/implementation/invitations.md
 model group_invitation {
   id       String @id @default(uuid())
   // 256 bits of randomness, base64url. Not a JWT: there is nothing to verify offline, so
@@ -668,7 +668,7 @@ enum GROUP_MEMBER_ROLE {
 
 // No EXPIRED member. Expiry is the computed condition `status = 'PENDING' AND expires_at <
 // now()`, so expires_at stays the only thing that decides, and no job has to catch up with it.
-// @see docs/design/groups/invitations.md — Data Model
+// @see docs/design/groups/implementation/invitations.md — Data Model
 enum INVITATION_STATUS {
   PENDING
   ACCEPTED
@@ -718,7 +718,7 @@ model collection {
 
   // Profile. A collection carries no picture; it is displayed inside its owning group's
   // identity and a second logo competes with it.
-  // @see docs/design/groups/profiles.md — Schema
+  // @see docs/design/groups/implementation/profiles.md — Schema
   tagline            String?            @db.VarChar(120)
   about_md           String?
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
@@ -1314,7 +1314,7 @@ model import_source {
   // The group whose members may browse and import from this source. Nullable: a source with
   // no group stays reachable through the legacy browse routes, which are global. The v2
   // routes serve only sources that name a group.
-  // @see docs/design/groups/dataset-creation-plan.md — B1
+  // @see docs/design/groups/implementation/dataset-creation-plan.md — B1
   owner_group_id String?
   owner_group    group?  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
 
@@ -1385,7 +1385,7 @@ enum ALERT_TYPE {
 // The views below are created by migrations. These blocks only let Prisma read them, so a
 // relation named for current state (`group.members`, `collection.datasets`,
 // `dataset.collections`) reads the view, and history is asked for by its own name.
-// @see docs/design/groups/access-model-verification-plan.md — Current state has one definition
+// @see docs/design/groups/implementation/access-model-verification-plan.md — Current state has one definition
 
 // Memberships in force: not removed, and not past valid_until.
 view active_group_user {

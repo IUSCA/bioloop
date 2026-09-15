@@ -78,7 +78,7 @@ function authenticate(req, res, next) {
  * hydrator, so capability derivation cannot reach the database for a user row that does
  * not exist.
  *
- * @see docs/design/groups/profiles.md — The anonymous principal
+ * @see docs/design/groups/implementation/profiles.md — The anonymous principal
  */
 function optionalAuthenticate(req, res, next) {
   try {

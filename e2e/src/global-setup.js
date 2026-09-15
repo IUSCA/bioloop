@@ -14,7 +14,7 @@ const { API_BASE } = require('./world/api');
  * it fails with a message naming the server that is not up rather than a timeout inside an
  * unrelated assertion.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 1
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 1
  */
 
 /** Generous, because a cold Vite compile is genuinely slow. This is a wait, not an assertion. */

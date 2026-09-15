@@ -11,7 +11,7 @@ const createError = require('http-errors');
  * The bytes sit under one directory, flat, because there are as many avatars as there are
  * groups and that is a number a directory listing can hold.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 
 /** The formats a browser renders and a person is likely to have. */

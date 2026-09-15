@@ -36,7 +36,7 @@
         <!--
           A decided request is not the same as access the subject still has. Say which,
           rather than letting APPROVED stand for both.
-          @see docs/design/groups/access-requests-plan.md — C4
+          @see docs/design/groups/implementation/access-requests-plan.md — C4
         -->
         <p v-if="accessNote" class="text-sm" :class="accessNoteClass">
           {{ accessNote }}
@@ -73,7 +73,7 @@
  * nothing else: the decision detail belongs on the request detail page. The Review button reads
  * the row's `_meta.capabilities`, which every access-request list sends.
  *
- * @see docs/design/groups/access-requests-plan.md — B2
+ * @see docs/design/groups/implementation/access-requests-plan.md — B2
  */
 import Badge from "@/components/v2/Badge.vue";
 import ResourceChip from "@/components/v2/ResourceChip.vue";

@@ -6,7 +6,7 @@ from group standing and grants — so the two suites need different fixtures and
 configuration. **Do not add v2 specs to `tests/`, and do not edit it.**
 
 - What the suite must prove: [docs/design/groups/e2e-test-flows.md](../docs/design/groups/e2e-test-flows.md)
-- How it gets built: [docs/design/groups/e2e-test-plan.md](../docs/design/groups/e2e-test-plan.md)
+- How it gets built: [docs/design/groups/implementation/e2e-test-plan.md](../docs/design/groups/implementation/e2e-test-plan.md)
 
 ## State
 

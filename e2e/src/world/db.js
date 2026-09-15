@@ -15,7 +15,7 @@ const { databaseConfig } = require('./api');
  * Nothing else may use this. A spec that reads the database to check an outcome is asserting
  * against rows rather than against what a person can see, which is the API suites' job.
  *
- * @see docs/design/groups/e2e-test-plan.md — How it is torn down
+ * @see docs/design/groups/implementation/e2e-test-plan.md — How it is torn down
  */
 async function withClient(fn) {
   const client = new Client(databaseConfig());

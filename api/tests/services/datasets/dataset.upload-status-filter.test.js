@@ -8,7 +8,7 @@
  * marked deleted after it failed for good — must still be reachable, because otherwise the
  * person who uploaded never learns what happened.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C5
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — C5
  */
 
 const path = require('path');

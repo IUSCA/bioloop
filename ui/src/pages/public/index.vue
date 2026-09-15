@@ -38,7 +38,7 @@
  * So do not delete this page because nothing links to it. Deleting it puts the application
  * sidebar back on every public profile.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 </script>
 

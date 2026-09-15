@@ -1,11 +1,19 @@
+---
+title: Access and requests plan
+order: 3
+status: active
+implemented: shipped
+last_verified: 2026-09-15
+---
+
 # Access and requests plan
 
 The ordered work for [epic #8](https://github.com/IUSCA/cdmd/issues/8): requesting, reviewing,
 and managing access across datasets and collections.
 
-The design record is [Access presets](./access-presets.md) for the grant layer and
-[Decisions](./decisions.md) for the governance model. This page carries only the sequence, the
-scope boundary, and the reasons for each. [Use Cases](./use-cases.md) says which items the
+The design record is [Grant presets](../design.md#grant-presets) for the grant layer and
+[Decisions](../decisions.md) for the governance model. This page carries only the sequence, the
+scope boundary, and the reasons for each. [Use Cases](../use-cases.md) says which items the
 first release needs.
 
 ## The loop this closes
@@ -75,7 +83,7 @@ shut, and the two surfaces that mislead about access are corrected.
 ### Out, and why
 
 **The oversight review queue.** The upstream issue asks whether oversight should see pending
-reviews and leaves it open. Nothing in [Use Cases](./use-cases.md) marks it as needed for the
+reviews and leaves it open. Nothing in [Use Cases](../use-cases.md) marks it as needed for the
 first release. The `hasOversightOfResourceGroup` policy already admits oversight to read one
 request, so the gap is a queue query and a read-only variant of every control, not a model
 change.
@@ -86,7 +94,7 @@ phase A1 lands, and the endpoint can follow if the message proves insufficient.
 
 **Intra-preset partial approval.** A reviewer who wants only part of a preset must reject the
 preset item and add the access types individually. This is risk 6 in
-[Trust and communication](./trust-and-communication.md), and the access-type order shrank it:
+[Trust and communication](../trust-and-communication.md), and the access-type order shrank it:
 issuance reduces a preset to the types the order does not already supply, so no seeded preset
 is worth more than two grants. Fixing what remains means approval with exclusions, which
 changes the request item model.
@@ -95,7 +103,7 @@ changes the request item model.
 to report that rows were filtered out, which touches every listing rather than this epic.
 
 **Renewals and requests on behalf of a group.** Both are marked `Next` in
-[Use Cases](./use-cases.md). The route rejects any type but `NEW`, and the renewal-context
+[Use Cases](../use-cases.md). The route rejects any type but `NEW`, and the renewal-context
 endpoint is commented out.
 
 ## Phase A — Correctness before reach
@@ -103,13 +111,13 @@ endpoint is commented out.
 ### A1 — Request creation is gated on the resource
 
 `access_request.create` stops being `Policy.always`. The route resolves the resource, then
-authorizes `view_metadata` on it, because posture B.5 in [Use Cases](./use-cases.md) says a
+authorizes `view_metadata` on it, because posture B.5 in [Use Cases](../use-cases.md) says a
 dataset can be asked for when the requester can already see its metadata.
 `assertGrantItemsApplicableToResourceType` runs on the request items as it does on grant
 creation.
 
 No access type confers the right to ask, because seeing the resource already permits a
-request. See [decision 7](./decisions.md#_7-access-types-imply-one-another).
+request. See [decision 7](../decisions.md#_7-access-types-imply-one-another).
 
 The check cannot go in the `authorize()` middleware. The create body carries `resource_id` and
 no `resource_type`, so which policy container applies is not known until the `resource` row is
@@ -360,7 +368,7 @@ expires".
 ### C4 — Effective access sits beside the decision
 
 An `APPROVED` request whose grants were all revoked reads as access the requester does not
-have. This is risk 1 in [Trust and communication](./trust-and-communication.md) and the
+have. This is risk 1 in [Trust and communication](../trust-and-communication.md) and the
 highest-risk case in the design.
 
 The request detail and the three list endpoints carry a summary derived from the live grants,
@@ -411,7 +419,7 @@ Access tab, so a request for "Standard Research Use" decays into a flat list of 
 
 `listGrantsForResourceGrouped` and `listGrantsForSubjectGrouped` carry both, plus the preset
 name, and the tab renders a "via" label. This is risk 5, which
-[Trust and communication](./trust-and-communication.md) calls a launch requirement rather than
+[Trust and communication](../trust-and-communication.md) calls a launch requirement rather than
 an enhancement.
 
 The plan said the server change was a left join for the preset name. It was not, because
@@ -443,7 +451,7 @@ shows each of its three grants badged with the preset name and captioned "Issued
 preset badge.
 
 That preset has since been removed. Presets are now scoped to collections, for the reasons in
-[Access presets](./access-presets.md) section 2.11, so the same check today runs on a
+[The seeded presets](../design.md#the-seeded-presets), so the same check today runs on a
 collection request.
 
 ## Phase D — Close the notification loop
@@ -517,7 +525,7 @@ added later cannot quietly keep the template's.
 
 The `grant_no_overlap` exclusion constraint and the supersession machinery were questioned in
 the 2026-09-03 design review as finding 5, deferred at the time, and re-examined on 2026-09-09.
-They stay. [Decisions](./decisions.md) carries the reasoning.
+They stay. [Decisions](../decisions.md) carries the reasoning.
 
 The argument that carried most weight against them turned out to be a defect in two preview
 components rather than a property of the model, and C2 fixes it.

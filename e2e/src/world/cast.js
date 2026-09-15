@@ -7,7 +7,7 @@
  * path the invitation flows exist to test rather than a side effect of every run.
  *
  * @see docs/design/groups/e2e-test-flows.md — The cast and the world
- * @see docs/design/groups/e2e-test-plan.md — Build the world, borrow the people
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Build the world, borrow the people
  */
 
 /**

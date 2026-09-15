@@ -79,7 +79,7 @@ async function runDailyDigest() {
  * and writes one audit record per request. It was implemented and tested and called by
  * nothing, so a request sat `UNDER_REVIEW` forever and the pending queue only ever grew.
  *
- * @see docs/design/groups/access-requests-plan.md — D2
+ * @see docs/design/groups/implementation/access-requests-plan.md — D2
  */
 async function runAccessRequestExpiry() {
   const { max_age_days } = config.get('notify.cron.access_request_expiry');

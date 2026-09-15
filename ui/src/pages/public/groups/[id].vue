@@ -62,7 +62,7 @@
         <!--
           Names only. `admins[*].email` stops at the member tier, so a group that wants to
           be reachable publishes a shared inbox as a contact link instead.
-          @see docs/design/groups/profiles.md — What each audience sees
+          @see docs/design/groups/implementation/profiles.md — What each audience sees
         -->
         <VaCard v-if="group.admins?.length">
           <VaCardContent>
@@ -99,7 +99,7 @@ import PublicProfileService from "@/services/v2/publicProfiles";
  * The API answers the same 404 for a group that does not exist and for one whose profile
  * is not published, so this page cannot tell the two apart and does not try to.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({ id: { type: String, required: true } });
 

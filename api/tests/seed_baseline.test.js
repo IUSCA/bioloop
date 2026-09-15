@@ -155,7 +155,7 @@ describe('the seeded configuration is self-consistent', () => {
     });
   });
 
-  // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+  // @see docs/design/groups/design.md — The seeded presets
   test('every preset is scoped to collections', () => {
     GRANT_PRESETS.forEach((preset) => {
       expect([preset.name, preset.resource_types]).toEqual([preset.name, ['COLLECTION']]);

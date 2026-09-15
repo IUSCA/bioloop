@@ -464,7 +464,7 @@ checked palette instead.
 Three defects outside the visual layer were found while working through it, and all three
 are now closed. `pages/v2/home.vue` rendered nothing, because its template read
 `dashboard.loading` and its `<script setup>` never defined `dashboard`; the
-[dashboard plan](/design/groups/dashboard-plan.md) fixed it. `AccessRequestReviewModal.vue`
+[dashboard plan](/design/groups/implementation/dashboard-plan.md) fixed it. `AccessRequestReviewModal.vue`
 rendered the literal text "Review Modal Stub"; the file is gone and `ReviewRequestModal.vue`
 is wired in its place. The access requests page 400'd on reviewed requests, because the
 route accepted only `created_at` and `updated_at` while the tab sorted by `reviewed_at`.

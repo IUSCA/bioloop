@@ -6,7 +6,7 @@
  * dialog says the source is unavailable instead of showing an empty directory. One that
  * comes back is restored.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B1a
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B1a
  */
 const path = require('path');
 

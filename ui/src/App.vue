@@ -13,7 +13,7 @@
       Outside RouterView on purpose. RouterView remounts on every path change, so a transfer
       indicator inside a page would vanish the moment the user navigated — which is the very
       thing uploads are meant to survive. The store holds the transfers; this only shows them.
-      @see docs/design/groups/dataset-creation-plan.md — C3
+      @see docs/design/groups/implementation/dataset-creation-plan.md — C3
     -->
     <UploadTray v-if="auth.loggedIn" />
   </va-inner-loading>

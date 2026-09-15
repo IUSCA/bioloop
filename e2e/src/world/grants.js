@@ -10,7 +10,7 @@
  *
  * `limit` is not accepted here; passing one is a 400.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 3
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 3
  */
 
 /** The URL, so a refusal assertion and a read agree about which route they mean. */

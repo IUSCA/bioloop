@@ -20,7 +20,7 @@ router.get(
 
     // Read from `user_role` and the membership views, as the engine reads them. The pages use
     // these to choose sections and offers; every action is still decided by its own route.
-    // @see docs/design/groups/access-model-verification-plan.md — The persona goes
+    // @see docs/design/groups/implementation/access-model-verification-plan.md — The persona goes
     const [is_platform_admin, counts] = await Promise.all([
       callerIsPlatformAdmin(req),
       groupService.governanceCounts(req.user.subject_id),

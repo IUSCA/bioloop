@@ -241,7 +241,7 @@ async function submitReview(reviewData) {
   const result = await review.submit();
   // After the commit, and never able to fail it. An un-notified approval reads as a
   // rejection, but a notification that cannot be delivered must not undo the decision.
-  // @see docs/design/groups/access-requests-plan.md — D1
+  // @see docs/design/groups/implementation/access-requests-plan.md — D1
   await notifyRequesterOfDecision(result);
   return result;
 }

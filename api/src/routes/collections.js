@@ -89,7 +89,7 @@ router.get(
       ...req.permission.filter(collection),
       // Derived from the owning group's name, the year, and the public URL, so it carries
       // nothing the caller could not already see.
-      // @see docs/design/groups/profiles.md — Schema
+      // @see docs/design/groups/implementation/profiles.md — Schema
       citation: profileService.resolveCitation(collection, 'collections'),
       _meta: {
         standing: req.permission.standing,
@@ -180,7 +180,7 @@ router.patch(
 );
 
 // Update the collection profile.
-// @see docs/design/groups/profiles.md — API
+// @see docs/design/groups/implementation/profiles.md — API
 router.patch(
   '/:id/profile',
   validate([

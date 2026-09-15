@@ -4,7 +4,7 @@ The rule that decides every access question in v2, stated over the data it reads
 consumer, from the policy engine to a button on a page, gives the answer this page gives.
 
 The verification work that produced this page is in
-[Access model verification plan](./access-model-verification-plan.md). Decisions are recorded in
+[Access model verification plan](./implementation/access-model-verification-plan.md). Decisions are recorded in
 [Decisions](./decisions.md), and the lifecycle effects are in
 [Design — Lifecycle Management](./design.md#lifecycle-management).
 

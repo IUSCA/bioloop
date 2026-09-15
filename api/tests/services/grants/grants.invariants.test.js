@@ -330,7 +330,7 @@ describe('grants - invariants', () => {
   });
 
   describe('grant presets resource_type behavior', () => {
-    // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+    // @see docs/design/groups/design.md — The seeded presets
     it('offers no preset for a dataset', async () => {
       const presets = await grantsService.listPresets({ resource_type: 'DATASET' });
       expect(presets).toEqual([]);

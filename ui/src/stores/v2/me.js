@@ -9,7 +9,7 @@ import { computed, ref } from "vue";
  * Pages read these to choose which sections and offers to show. No control is authorized by
  * them; every action is decided by its own route.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The persona goes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The persona goes
  */
 export const useMeStore = defineStore("v2Me", () => {
   const facts = ref(null);

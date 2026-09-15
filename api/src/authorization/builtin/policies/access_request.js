@@ -137,7 +137,7 @@ accessRequestPolicies
     // through to `preFetchedResource.resource_id`, so it is the path by which an ARCHIVED
     // restriction reaches request creation. The subject rules — self, or a group the
     // requester administers — stay in `_validateAccessRequestSubject`.
-    // @see docs/design/groups/access-requests-plan.md — A1
+    // @see docs/design/groups/implementation/access-requests-plan.md — A1
     create: mutating(Policy.always),
   })
   .attributes({

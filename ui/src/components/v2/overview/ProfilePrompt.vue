@@ -35,7 +35,7 @@
  * It is a strip rather than a centred block because an empty profile should not occupy the
  * height a written one would.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({
   /** "group" or "collection" — read into the two sentences. */

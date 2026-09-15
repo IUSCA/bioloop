@@ -1,6 +1,6 @@
 -- Import sources belong to a group and have a lifecycle.
 --
--- @see docs/design/groups/dataset-creation-plan.md — B1
+-- @see docs/design/groups/implementation/dataset-creation-plan.md — B1
 --
 -- Import sources were global: every source was listed to every user, and the browse route
 -- resolved a requested path against all of them. Under groups that means one group reading

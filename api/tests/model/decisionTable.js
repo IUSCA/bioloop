@@ -7,7 +7,7 @@
  * one row per cell would be tens of thousands of rows nobody reads; collapsing equal standings
  * is what makes it reviewable.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Worlds
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Worlds
  */
 
 const { createReference } = require('./reference');

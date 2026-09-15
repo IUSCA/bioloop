@@ -7,7 +7,7 @@
  * calls below go straight to the services, which is the case a group archived between the
  * middleware's check and the write reaches.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The restriction layer keeps its three lines
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The restriction layer keeps its three lines
  */
 
 const path = require('path');

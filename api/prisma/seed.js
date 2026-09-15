@@ -257,7 +257,7 @@ async function main() {
   //
   // Seeded after the groups, because each source names its owning group. A source with no
   // group is invisible to the v2 browse routes.
-  // @see docs/design/groups/dataset-creation-plan.md — B1
+  // @see docs/design/groups/implementation/dataset-creation-plan.md — B1
   const importSourcesDir = config.get('import.sources_dir');
   const importSources = [
     {

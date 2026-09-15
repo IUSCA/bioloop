@@ -11,7 +11,7 @@ What a browser-driven test suite for the v2 groups system must prove. This page 
 from [Design](./design.md), [Decisions](./decisions.md), and [Use Cases](./use-cases.md)
 alone. It names no file, no route, and no selector, because a flow that quotes the code
 cannot contradict it. The grounded companion is
-[End-to-end test plan](./e2e-test-plan.md).
+[End-to-end test plan](./implementation/e2e-test-plan.md).
 :::
 
 <!-- cspell:ignore Priya -->
@@ -110,7 +110,7 @@ against an absolutely empty portal.
 
 The end-to-end suite does **not** use these rows. It builds its own world per run, named for
 the run, and borrows unaffiliated `user-0NN` accounts — see
-[End-to-end test plan](./e2e-test-plan.md). Seeded and generated worlds coexist without
+[End-to-end test plan](./implementation/e2e-test-plan.md). Seeded and generated worlds coexist without
 colliding.
 
 ### The resources
@@ -289,7 +289,7 @@ is no tiered visibility based on membership path.
 
 ### C1 — Inviting somebody who has no account · `MVP` · `journey`
 
-Covers [Invitations](./invitations.md).
+Covers [Invitations](./implementation/invitations.md).
 
 **Actor** Alice, then Vic.
 **Given** Vic has no account and no pending invitation.
@@ -512,7 +512,7 @@ or download.
 
 ### F6 — A longer grant closes a shorter one, and says so · `Next` · `invariant`
 
-Covers supersession, case 1, in [Access presets](./access-presets.md#supersession--the-adopted-approach).
+Covers supersession, case 1, in [Design](./design.md#supersession).
 
 **Actor** Alice.
 **Given** Frank holds download on `PCM230203` until the end of the month.
@@ -596,7 +596,7 @@ Covers use case 28.
 ### G3 — A request against an invisible resource is refused · `MVP` · `boundary`
 
 Covers use case 5 and the enforcement hole in
-[Access and requests plan](./access-requests-plan.md#one-enforcement-hole-blocks-everything-else).
+[Access and requests plan](./implementation/access-requests-plan.md#one-enforcement-hole-blocks-everything-else).
 
 **Actor** Frank.
 **Given** Frank cannot see `IMG-0007`, which belongs to Imaging Core.
@@ -624,7 +624,7 @@ from it is in force, with the date of the last revocation.
 
 ### G6 — A requester can see their own requests · `MVP` · `journey`
 
-Covers use case 8, and the gap named in [Dashboard plan](./dashboard-plan.md#the-gap-only-the-dashboard-closes).
+Covers use case 8, and the gap named in [Dashboard plan](./implementation/dashboard-plan.md#the-gap-only-the-dashboard-closes).
 
 **Actor** Frank.
 **Then** one page lists every request Frank has filed, across every resource, with its status
@@ -653,7 +653,7 @@ Covers use case 33 as applied to requests.
 ### G10 — Two reviewers colliding fails loudly · `Later` · `boundary`
 
 Covers the documented edge case in
-[Access and requests plan](./access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
+[Access and requests plan](./implementation/access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
 
 **Then** one approval is refused with a conflict the reviewer can see and retry, and the
 second attempt succeeds.
@@ -813,7 +813,7 @@ the access arrives through that principal.
 
 ### M3 — A signed-out reader gets only what is published · `Later` · `boundary`
 
-Covers [Profiles](./profiles.md).
+Covers [Profiles](./implementation/profiles.md).
 
 **Given** a group's profile is public and a collection's is not.
 **Then** a signed-out reader sees the group's name, tagline, about body, links, and
@@ -859,7 +859,7 @@ property, and both are asserted.
 
 ### O1 — Each persona lands somewhere true · `Next` · `journey`
 
-Covers [Dashboard plan](./dashboard-plan.md).
+Covers [Dashboard plan](./implementation/dashboard-plan.md).
 
 **Actor** Quinn, Bob, Alice, and Priya in turn.
 **Then** each sees a page that renders without error, with sections composed from what is

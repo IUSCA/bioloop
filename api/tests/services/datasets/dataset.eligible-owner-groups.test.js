@@ -6,7 +6,7 @@
  * candidate the path statement names, so the list agrees with the creation routes by
  * construction: a group offered here is one they admit, and one they admit is offered here.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A2
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — A2
  */
 
 const path = require('path');

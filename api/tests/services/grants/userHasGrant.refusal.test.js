@@ -6,7 +6,7 @@
  * filter. Two lifecycle assertions passed `access_type_id`, a key the function never read, and
  * so could not fail.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Refusal of an under-specified question
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Refusal of an under-specified question
  */
 
 const path = require('path');

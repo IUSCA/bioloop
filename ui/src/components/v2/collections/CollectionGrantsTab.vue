@@ -169,7 +169,7 @@ const router = useRouter();
 
 // A grant that came from a request links to the request that produced it. The page
 // exists now; before B3 this went to a path that did not.
-// @see docs/design/groups/access-requests-plan.md — C5
+// @see docs/design/groups/implementation/access-requests-plan.md — C5
 function viewRequest(requestId) {
   router.push(`/v2/access-requests/${requestId}`).catch(() => {});
 }

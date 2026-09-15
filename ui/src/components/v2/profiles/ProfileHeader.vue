@@ -38,7 +38,7 @@ import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
 /**
  * The identity block at the top of a profile: picture, name, and the one line under it.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({
   name: { type: String, required: true },

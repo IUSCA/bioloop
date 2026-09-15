@@ -214,7 +214,7 @@ const subject = ref(null);
 /**
  * The API's revoke preview: for this grant's type and each type it implies, the other grants
  * that still confer it, through any path. The modal reports it and decides nothing itself.
- * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
  */
 const preview = ref([]);
 

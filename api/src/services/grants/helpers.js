@@ -26,7 +26,7 @@ const SYSTEM_PRINCIPALS_SQL = Prisma.raw(
  *
  * An unauthenticated caller arrives as the `Public` principal itself, which is a group row
  * rather than a user, so it has no memberships to expand.
- * @see docs/design/groups/profiles.md — The anonymous principal
+ * @see docs/design/groups/implementation/profiles.md — The anonymous principal
  *
  * A group subject holds what its ancestors hold, the way a member of it does. The closure arm
  * returns nothing for a user.

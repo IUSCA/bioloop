@@ -5,7 +5,7 @@
  * name taken in one group is still free in another, and the answer never reveals anything
  * about a group the caller cannot contribute to.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A3
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — A3
  */
 
 const path = require('path');

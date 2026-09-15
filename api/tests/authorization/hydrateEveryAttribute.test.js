@@ -6,7 +6,7 @@
  * declared attribute against a real seeded row, so a loader that throws, or a relation the
  * hydrator cannot select, fails in CI rather than as a 500 on the first request that needs it.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The static checks that already exist
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The static checks that already exist
  */
 
 const path = require('path');

@@ -492,7 +492,7 @@ Sequencing lives in the local backlog rather than here.
 
 - **Invitations — built 2026-09-09, one part outstanding.** The flow works end to end; only the
   signup-time email mismatch dialog is missing, and the server refuses that case anyway. See
-  [the design record](./invitations.md).
+  [the design record](./implementation/invitations.md).
 - **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Settled by [decision 15](./decisions.md): not in the MVP, the table stays, and nothing is wired to it. `route_policy_bindings.test.js` asserts no route binds `transfer_ownership` or exposes a transfer path.
 - **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
 - **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.

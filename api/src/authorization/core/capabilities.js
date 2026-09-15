@@ -192,7 +192,7 @@ async function evaluateCapabilitySet({
  * @param {Object} [options.preFetched] - `{ user, resource, context }` seeds
  * @param {Function} [options.expandPath] - `(term, { user, resource, context }) => Object[]`
  * @returns {Promise<Object[]>} the paths, each with at least `kind`
- * @see docs/design/groups/access-model-verification-plan.md — A decision returns its paths
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — A decision returns its paths
  */
 async function deriveStanding({
   policyContainer,

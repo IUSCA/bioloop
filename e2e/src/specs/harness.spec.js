@@ -8,7 +8,7 @@ const { expectRefused, expectAllowed } = require('../assertions/parity');
  * as themselves rather than as a platform admin, and the API agrees with the page about who
  * may reach what. It is not a flow from the flows page; it is the floor those flows stand on.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 1
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 1
  */
 
 test('the world is built, and its shape is what the flows assume', async ({ world }) => {

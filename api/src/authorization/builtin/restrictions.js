@@ -156,7 +156,7 @@ async function blockingRestriction(resourceType, action, target) {
  * A missing target used to allow the action, so a route that forgot to say which resource a
  * grant or a request concerned was never checked against ARCHIVED. An unanswerable question is
  * now an error that names the action, the same way `userHasGrant` refuses an empty type list.
- * @see docs/design/groups/access-model-verification-plan.md — The restriction check refuses when it cannot find a target
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The restriction check refuses when it cannot find a target
  */
 class RestrictionTargetError extends Error {
   constructor(resourceType, action) {

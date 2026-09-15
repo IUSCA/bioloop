@@ -6,7 +6,7 @@
  * every route is a GET, every route authorizes `view_profile`, and the router is mounted
  * above the line in `routes/index.js` that requires authentication.
  *
- * @see docs/design/groups/profiles.md — API
+ * @see docs/design/groups/implementation/profiles.md — API
  */
 
 const path = require('path');

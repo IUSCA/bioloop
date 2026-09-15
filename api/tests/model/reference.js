@@ -11,7 +11,7 @@
  * code bug or a gap in the page, and both are worth knowing.
  *
  * @see docs/design/groups/access-model.md — The decision rule
- * @see docs/design/groups/access-model-verification-plan.md — Reference model
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Reference model
  */
 
 const ARCHIVED = 'ARCHIVED';

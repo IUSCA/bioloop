@@ -11,7 +11,7 @@ const { recordApiCalls, expectAllRefused } = require('../../assertions/replay');
  * every way in refuse", because the page and the route behind it are separate code.
  *
  * @see docs/design/groups/e2e-test-flows.md — N1, H1
- * @see docs/design/groups/e2e-test-plan.md — Phase 2
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 2
  */
 
 test('N1 — every call the dataset page makes is refused for a stranger', async ({ world, as }) => {

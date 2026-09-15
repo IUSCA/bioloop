@@ -8,7 +8,7 @@
  *
  * Each case here names a route shape that failed open.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The restriction check refuses when it cannot find a target
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The restriction check refuses when it cannot find a target
  */
 
 const path = require('path');

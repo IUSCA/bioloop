@@ -5,7 +5,7 @@
  * table of words in the UI. This reads that table as text and checks it against the restriction
  * layer both ways: every blocked action has words, and no words name an action nothing blocks.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
  */
 
 const fs = require('fs');

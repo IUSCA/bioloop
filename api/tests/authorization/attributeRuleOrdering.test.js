@@ -14,7 +14,7 @@
  * The test reports every list that is not ordered and pins the report. A list that becomes
  * unordered fails here; a list that is fixed fails here too, so the pin is updated by hand.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Projection: a path list, not a field set
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
  */
 
 const path = require('path');

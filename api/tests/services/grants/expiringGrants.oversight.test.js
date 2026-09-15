@@ -7,7 +7,7 @@
  * The list used to read admin memberships alone, so an admin of a parent group, who may open
  * the child group's grants, never saw them expire.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 3, known disagreements
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 3, known disagreements
  */
 
 const path = require('path');

@@ -12,7 +12,7 @@
  * A deleted dataset is left out of the comparison. Lists exclude it unless asked, as decision
  * 16 row 4 says, and the reference decides reading, not listing.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Comparison arms
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Comparison arms
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

@@ -171,7 +171,7 @@ no invitations in the table the handler does nothing, so legacy behaviour is unc
 
 This is the shape a granted carve-out should take: an extension point in the old code, and the
 feature itself somewhere else. It is not a precedent for editing v1 generally.
-[Invitations](./groups/invitations.md) is the record.
+[Invitations](./groups/implementation/invitations.md) is the record.
 
 ### Done ahead of the cut-over: a text-size setting on the profile page
 

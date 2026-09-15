@@ -13,7 +13,7 @@
 >   async.
 > - List handlers call `callerIsPlatformAdmin(req)`, which reads `user_role`.
 > - `group.members`, `collection.datasets`, and `dataset.collections` read the active views.
-> @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+> @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
 
 Purpose: understand the engine and its tests fully before revising the access-model plan.
 Update after each file. Re-read before the next. Organised by theme (my choice), with file refs.
@@ -2232,7 +2232,7 @@ API were fixed naïvely. The plan needs to say what a non-admin subject search r
 
 ## §33 Plan updated (2026-09-15)
 
-`docs/design/groups/access-model-verification-plan.md` now carries the 20 review items and the
+`docs/design/groups/implementation/access-model-verification-plan.md` now carries the 20 review items and the
 §32 UI findings. What changed, by section: base relations gain `quarantine`, `seeded_grant`,
 `profile_visibility`, `contributions_allowed`, `status`; derived relations gain `precondition`
 and `resource_rule`; the decision rule gains both and states the platform-admin session

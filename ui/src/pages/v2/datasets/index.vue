@@ -12,7 +12,7 @@
             <!--
               The group is selectable here, unlike on a group's own page, because this list
               spans every group the user can reach.
-              @see docs/design/groups/dataset-creation-plan.md — A7
+              @see docs/design/groups/implementation/dataset-creation-plan.md — A7
             -->
             <VaButton v-if="canCreate" @click="openAddDataset">
               <div class="flex items-center justify-between gap-2 mx-1">
@@ -57,7 +57,7 @@
             <!--
               An upload that fails for good is tombstoned, so it drops out of the ordinary
               listing. Choosing anything but "All" here reaches those rows.
-              @see docs/design/groups/dataset-creation-plan.md — C5
+              @see docs/design/groups/implementation/dataset-creation-plan.md — C5
             -->
             <ModernButtonToggle
               v-model="activeUpload"

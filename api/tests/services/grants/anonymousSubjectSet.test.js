@@ -12,7 +12,7 @@
  * The tests are written against `getGrantAccessTypesForUser`, which reads the grant rows of
  * `accessPathsQuery`, the statement the context hydrator's `access_paths` reads.
  *
- * @see docs/design/groups/profiles.md — A defect this work must fix first
+ * @see docs/design/groups/implementation/profiles.md — A defect this work must fix first
  */
 
 const path = require('path');

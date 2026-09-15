@@ -7,7 +7,7 @@
  *
  * The UI has no test runner, so this reads the two UI files as text.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
 
 const fs = require('fs');

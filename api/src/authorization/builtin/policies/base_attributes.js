@@ -41,7 +41,7 @@ const access_type_attributes = ['id', 'name', 'description', 'long_description',
 // an include is withheld until someone lists it here. `expiry` and `is_active` are computed.
 // The flat `access_type_name` and `access_type_description` are what the grouped SQL lists
 // select in place of the relation.
-// @see docs/design/groups/access-model-verification-plan.md — Phase 5
+// @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 5
 const grant_attributes = [
   'id', 'subject_id', 'resource_id', 'access_type_id',
   'valid_from', 'valid_until', 'expiry', 'is_active',

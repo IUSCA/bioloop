@@ -8,7 +8,7 @@ const createError = require('http-errors');
  * malformed link or an unbounded list is a defect that reaches the widest audience the
  * system has.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 
 /** The link kinds the UI knows how to label and give an icon. */

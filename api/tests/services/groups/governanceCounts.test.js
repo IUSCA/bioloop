@@ -5,7 +5,7 @@
  * membership views. An admin of a parent group oversees its child, a plain member of the parent
  * oversees nothing, and a user in no group has both counts at zero.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The persona goes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The persona goes
  */
 
 const path = require('path');

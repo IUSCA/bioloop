@@ -319,7 +319,7 @@ class GrantIssueService {
     // Both may be set. An approved preset item inside a request produces a grant that came
     // from a request *and* from a preset, and the Access tab needs to say so: without the
     // preset, "Standard Research Use" decays into a flat list of access types.
-    // @see docs/design/groups/access-requests-plan.md — C5
+    // @see docs/design/groups/implementation/access-requests-plan.md — C5
     this.creation_type = access_request_id ? GRANT_CREATION_TYPE.ACCESS_REQUEST : GRANT_CREATION_TYPE.MANUAL;
 
     this.subject_id = subject_id;
@@ -407,7 +407,7 @@ class GrantIssueService {
    * in one issuance has no single answer, so it maps to null too: a label that names one of
    * two presets is worse than no label.
    *
-   * @see docs/design/groups/access-requests-plan.md — C5
+   * @see docs/design/groups/implementation/access-requests-plan.md — C5
    */
   async _buildAccessTypeIdToPresetIdMap(tx) {
     const presetIds = this.items.filter((i) => i.preset_id).map((i) => i.preset_id);

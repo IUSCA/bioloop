@@ -5,7 +5,7 @@
  * and a path is resolved against those same sources — scoping the list without scoping the
  * resolve would leave the contents readable to anyone who guessed a path.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B1, B2
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B1, B2
  */
 
 const path = require('path');

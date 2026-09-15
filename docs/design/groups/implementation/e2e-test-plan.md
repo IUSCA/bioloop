@@ -1,6 +1,6 @@
 ---
 title: End-to-end test plan
-order: 12
+order: 7
 status: active
 implemented: none
 last_verified: 2026-09-09
@@ -8,7 +8,7 @@ last_verified: 2026-09-09
 
 ::: warning Design record — active
 The ordered work to build a browser-driven test suite for the v2 groups system. The flows it
-must prove are in [End-to-end test flows](./e2e-test-flows.md), which was written from the
+must prove are in [End-to-end test flows](../e2e-test-flows.md), which was written from the
 design records before any of this code was read. This page is the grounded half: what exists,
 what does not, what each flow costs, and the order to build in.
 
@@ -22,7 +22,7 @@ development database. Re-verify before relying on a number.
 
 ## What this page adds to the flows page
 
-[End-to-end test flows](./e2e-test-flows.md) says what must be proved. It names no file on
+[End-to-end test flows](../e2e-test-flows.md) says what must be proved. It names no file on
 purpose. This page maps each flow onto a page, a route, and a selector, and then says what
 has to be built before any of it can run.
 
@@ -56,7 +56,7 @@ to add v2 specs to it, and that instinct is wrong for reasons given below.
 
 It is a competent suite for what it covers. `tests/src/actions/`, `tests/src/api/`, and
 `tests/src/fixtures/` are a real page-object and API-helper layer, and the role-gated feature
-pattern documented in [Role-gated features](../../guides/testing/role_gated_features.md) is a
+pattern documented in [Role-gated features](../../../guides/testing/role_gated_features.md) is a
 sound answer to the question it was asked.
 
 ### Why v2 does not belong in it
@@ -67,7 +67,7 @@ Four reasons, in order of weight.
 `playwright.config.js` selects one of three RBAC roles. The v2 model has no roles below
 platform admin: what a person may do follows from which groups they belong to, which they
 administer, and which grants reach them. The flows in
-[End-to-end test flows](./e2e-test-flows.md) need at least eight distinct actors, and several
+[End-to-end test flows](../e2e-test-flows.md) need at least eight distinct actors, and several
 need two actors inside one test. A project per actor per feature is a combinatorial list
 nobody will maintain.
 
@@ -103,12 +103,12 @@ Two consequences.
 
 **The hook work is its own phase, ahead of the specs.** Writing specs against class names or
 text content produces a suite that breaks on every design-system pass, which the
-[v2 design system](../../contributing/v2-design-system.md) work makes frequent.
+[v2 design system](../../../contributing/v2-design-system.md) work makes frequent.
 
 **Adding hooks is a v2 change to v2 files, so it does not touch the cut-over rule.** Every
 component listed in this plan lives under `ui/src/components/v2` or `ui/src/pages/v2`. No
 legacy file is edited, and the shared `components/filebrowser/` tree is reached through the
-props pattern the [v2 cut-over](../v2-cutover.md) already describes.
+props pattern the [v2 cut-over](../../v2-cutover.md) already describes.
 
 ### F2 — The sample world's cast is a hash; a named cast is seeded beside it
 
@@ -293,7 +293,7 @@ reusing a file, and must never be given a `reuseExistingServer`-style shortcut.
 
 **Signing in as `test_user` proves nothing.** The engine short-circuits for a platform admin
 before any policy runs, per
-[decision 11](./decisions.md#_11-platform-admin-is-one-check-in-the-engine). Exactly one
+[decision 11](../decisions.md#_11-platform-admin-is-one-check-in-the-engine). Exactly one
 persona in the suite is a platform admin, and it is used only for the flows that require one.
 A defect survived an entire phase of the access-requests work because every browser check had
 been driven as a platform admin.
@@ -376,7 +376,7 @@ accounts, then datasets with their owning groups, then collections, then grants.
 Every name carries a run identifier — `e2e-<runId>-wong-lab` — so a crashed run leaves rows
 that are obviously orphaned and a later run cannot collide with them. This matters because
 dataset names are unique within `[owner_group_id, name, type, is_deleted]` per
-[Dataset storage](./dataset-storage.md), and a rerun after a crash would otherwise conflict.
+[Dataset storage](../dataset-storage.md), and a rerun after a crash would otherwise conflict.
 
 ### How it is torn down
 
@@ -386,8 +386,8 @@ dataset names are unique within `[owner_group_id, name, type, is_deleted]` per
 invitations; collections do have `DELETE /collections/:id`.
 
 That absence is the design working, not a gap. Archiving is not deletion, and history is
-preserved rather than removed — [decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved)
-and the archiving section of [Design](./design.md#archiving-groups) both turn on it. **Adding
+preserved rather than removed — [decision 1](../decisions.md#_1-membership-and-collection-history-are-preserved)
+and the archiving section of [Design](../design.md#archiving-groups) both turn on it. **Adding
 a destructive endpoint so a test suite can tidy up would put a hole in the model to serve the
 tests**, and it would be a hole with no policy anyone had reason to write. The suite gets a
 small Postgres client of its own instead, and deletes its own rows by run identifier.
@@ -398,14 +398,14 @@ paths work — and **torn down through SQL**, which keeps the teardown out of th
 **Grants before resources.** `grant.resource` is `ON DELETE RESTRICT`, which
 [the access and requests plan](./access-requests-plan.md#testing) already records as a trap
 for the API suites, and which is the same reason `api/src/scripts/delete_datasets.js` is
-listed as broken in the [v2 cut-over](../v2-cutover.md#what-only-the-cut-over-may-do).
+listed as broken in the [v2 cut-over](../../v2-cutover.md#what-only-the-cut-over-may-do).
 
 Teardown runs in Playwright's global teardown and is idempotent, keyed on the run identifier.
 A run that crashes leaves rows behind, so `e2e/src/world/teardown.js` also takes a run id on
 the command line for cleaning up by hand.
 
 **Membership and collection rows are closed rather than deleted** by the services, per
-[decision 1](./decisions.md#_1-membership-and-collection-history-are-preserved). Teardown
+[decision 1](../decisions.md#_1-membership-and-collection-history-are-preserved). Teardown
 therefore has to delete the group, not merely empty it, and a spec that asserts on history
 must not assume an empty table.
 
@@ -550,7 +550,7 @@ Three rules keep the hooks from rotting.
 
 ### The hazard specific to this suite
 
-Most flows in [End-to-end test flows](./e2e-test-flows.md) assert that something is *absent*.
+Most flows in [End-to-end test flows](../e2e-test-flows.md) assert that something is *absent*.
 A `toBeVisible()` on a selector that matches nothing passes for the wrong reason, and so does
 `not.toBeVisible()` on a selector whose name was misspelled.
 
@@ -867,7 +867,7 @@ a route that does not exist since phase 2. The real route is
 Alice reads the grant list, Dana reads it as oversight, and Bob — a member of the owning lab —
 is refused it.
 
-One defect filed and since fixed: [L2 T18](../../../.todo/local/L2-authorization-wiring.md) —
+One defect filed and since fixed: [L2 T18](../../../../.todo/local/L2-authorization-wiring.md) —
 reviewing a request without `approved_expiry` answered 500 rather than 400, because the route
 validated the decision and not the expiry while the handler dereferenced it unconditionally.
 Rejections were unaffected, which is why it hid. The review route now validates the field per
@@ -885,7 +885,7 @@ Component work: `IssueGrantModal`, `SubjectSelector`, `AccessTypeSelector`, `Pre
 `ExpirySelector`, `GrantRow`, `GrantProvenanceBox`, `RevokeGrantModal`.
 
 F3 and F4 are the flows worth the phase. Both assert the consequences of
-[decision 7](./decisions.md#_7-access-types-imply-one-another) at the surface, and the
+[decision 7](../decisions.md#_7-access-types-imply-one-another) at the surface, and the
 [access type order plan](./access-type-order-plan.md) records that its phase 3 — the UI naming
 the order — is where the model and the interface still disagree. A failing F4 is a true
 report, not a broken test.
@@ -972,7 +972,7 @@ another file. Teardown collects in-test groups because it deletes by name prefix
 Flows: A1, A2, A3, A4, A5, K1, K2, O1, and the deliberate-absence table.
 
 A5 asserts the enforcement hole recorded in
-[Use Cases](./use-cases.md#enforcement-holes): the unarchive endpoint is authorized with
+[Use Cases](../use-cases.md#enforcement-holes): the unarchive endpoint is authorized with
 `'group', 'archive'`, so a group admin can reactivate their own group. **The spec is expected
 to fail until that one line is fixed.** Write it anyway, and mark it as the failing assertion
 it is, rather than writing it to match current behaviour.
@@ -986,7 +986,7 @@ Fifty-two specs pass across the suite, a full run leaves eleven tables unchanged
 fixture rows survive it.
 
 **A5 was expected to fail and does not.** The hole recorded in
-[Use Cases](./use-cases.md#enforcement-holes) — the unarchive endpoint authorized with
+[Use Cases](../use-cases.md#enforcement-holes) — the unarchive endpoint authorized with
 `'group', 'archive'` — has been fixed; the route now binds `'group', 'unarchive'`, which
 `groupPolicies` defines as platform-admin-only. An archived group's own admin is refused, the
 group stays archived, and a platform admin can reactivate it. That entry in `use-cases.md` is
@@ -1008,7 +1008,7 @@ and becomes a choice once another admin is named. `test.fail()` became an ordina
 two specs in `e2e/src/specs/membership/create-child.spec.js` drive the form itself — the only
 UI-state specs in the suite, because the checkbox's two states are what a reader would otherwise
 have to take on trust. Filed and closed as
-[L1 T11](../../../.todo/local/L1-authorization-enforcement.md).
+[L1 T11](../../../../.todo/local/L1-authorization-enforcement.md).
 
 **K1 is the assertion worth having.** On an archived group, Priya is refused exactly the
 mutations Alice is, which is what makes archiving a restriction rather than a permission. A4
@@ -1067,7 +1067,7 @@ what makes the suite safe to run against a developer's own database.
 **It must not be driven as a platform admin.** Stated twice on purpose.
 
 **It must not edit anything under `tests/`.** The v1 suite keeps working unchanged, as the
-[v2 cut-over](../v2-cutover.md) requires of every legacy surface.
+[v2 cut-over](../../v2-cutover.md) requires of every legacy surface.
 
 ## Already broken, and where the skills are stale
 
@@ -1085,7 +1085,7 @@ All three rows are stale, and the amendment is due to
 not a change this plan makes. They are recorded here so phase 3 does not begin by looking for
 a stub that is gone.
 
-The dev-servers skill and [docs/guides/dev-servers.md](../../guides/dev-servers.md) both
+The dev-servers skill and [docs/guides/dev-servers.md](../../../guides/dev-servers.md) both
 carried the F3 claim and were corrected with the fix itself.
 
 ## Open questions
@@ -1102,7 +1102,7 @@ useful to a developer mid-change. The plan above chooses the developer's databas
 purpose-built world. Revisit if world-building proves slower than seeding.
 
 **How much of the deliberate-absence table is worth automating?** Nine rows in
-[Deliberately absent](./e2e-test-flows.md#p-deliberately-absent) assert that a feature is not
+[Deliberately absent](../e2e-test-flows.md#p-deliberately-absent) assert that a feature is not
 there. Each is cheap to write and each will need deleting when the feature arrives. A single
 spec asserting all nine, with one assertion per row, is probably the right size.
 

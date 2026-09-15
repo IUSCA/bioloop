@@ -10,7 +10,7 @@ import { reactive } from "vue";
  * not be submitted at all. `reactive` unwraps the refs on read and writes through on
  * assignment, which is what every binding already assumed.
  *
- * @see docs/design/groups/access-requests-plan.md — B6
+ * @see docs/design/groups/implementation/access-requests-plan.md — B6
  */
 export function useRequestAccessForm({ resource }) {
   // Form state
@@ -60,7 +60,7 @@ export function useRequestAccessForm({ resource }) {
    * lists one — so chaining create and submit from here would strand a row the requester
    * could neither see nor resume if the second call failed.
    *
-   * @see docs/design/groups/access-requests-plan.md — B1
+   * @see docs/design/groups/implementation/access-requests-plan.md — B1
    */
   async function submit() {
     if (!isFormValidForSubmit.value) {

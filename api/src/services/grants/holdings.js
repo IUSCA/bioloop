@@ -3,7 +3,7 @@
  *
  * Both functions ask the statement the engine and the lists ask, keeping only its `grant`
  * rows, so they cannot disagree with either.
- * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
  */
 
 const { RESOURCE_TYPE } = require('@prisma/client');
@@ -47,7 +47,7 @@ async function getGrantAccessTypesForUser(user_id, resource_id, resource_type) {
  * @param {string} args.resource_id
  * @param {string[]} args.access_types - at least one
  * @returns {Promise<boolean>}
- * @see docs/design/groups/access-model-verification-plan.md — Refusal of an under-specified question
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Refusal of an under-specified question
  */
 async function userHasGrant({
   user_id, resource_type, resource_id, access_types,

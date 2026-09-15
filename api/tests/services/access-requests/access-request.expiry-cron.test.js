@@ -5,7 +5,7 @@
  * UNDER_REVIEW forever and the pending queue only ever grew. This asserts the cron module
  * registers the job and that the handler it registers actually expires a stale request.
  *
- * @see docs/design/groups/access-requests-plan.md — D2
+ * @see docs/design/groups/implementation/access-requests-plan.md — D2
  */
 
 const path = require('path');

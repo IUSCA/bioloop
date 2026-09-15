@@ -5,7 +5,7 @@
  * checked in the service rather than trusted from the client: the path is inside a source
  * the caller may browse, the source is ACTIVE, and no live dataset holds that path.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B3
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B3
  */
 
 const path = require('path');

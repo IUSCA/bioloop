@@ -19,7 +19,7 @@ const accessTypeClosure = require('./accessTypeClosure');
  * can say "issued as part of Standard Research Use" rather than listing five access types
  * with no shape. Both are null on grants that predate the provenance work.
  *
- * @see docs/design/groups/access-requests-plan.md — C5
+ * @see docs/design/groups/implementation/access-requests-plan.md — C5
  */
 const PRESET_JSON = Prisma.sql`
   CASE WHEN gp.id IS NULL THEN NULL

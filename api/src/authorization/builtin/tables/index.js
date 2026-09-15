@@ -12,7 +12,7 @@
  * the generated decision table.
  *
  * @see docs/design/groups/access-model.md
- * @see docs/design/groups/access-model-verification-plan.md — Where the tables live, and how they change
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Where the tables live, and how they change
  */
 
 /**

@@ -9,7 +9,7 @@
  * before it landed, a user holding any resource UUID could file a request against a dataset
  * they could not see.
  *
- * @see docs/design/groups/access-requests-plan.md — A1
+ * @see docs/design/groups/implementation/access-requests-plan.md — A1
  */
 
 const path = require('path');
@@ -25,7 +25,7 @@ const { randomUUID } = require('crypto');
 const prisma = require('@/db');
 // Submitting and reviewing write an in-app notification, which pulls in the SSE
 // manager's two long-lived Redis connections. Without closing them the process never
-// exits. @see docs/design/groups/access-requests-plan.md — D1
+// exits. @see docs/design/groups/implementation/access-requests-plan.md — D1
 const { sseManager } = require('@/notification/inApp/sseManager');
 const { errorHandler } = require('@/middleware/error');
 const accessRequestRoutes = require('@/routes/access_requests');

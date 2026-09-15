@@ -7,7 +7,7 @@
  *
  * It now runs inside the removal and demotion transactions, after the group row is locked.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
  */
 
 const path = require('path');

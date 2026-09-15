@@ -458,7 +458,7 @@
  * This page owns every call. A section component is presentational and takes its rows as
  * props, so two panels never ask the same question twice.
  *
- * @see docs/design/groups/dashboard-plan.md
+ * @see docs/design/groups/implementation/dashboard-plan.md
  */
 import AccessRequestCard from "@/components/v2/access-requests/AccessRequestCard.vue";
 import GroupIcon from "@/components/v2/groups/GroupIcon.vue";

@@ -32,7 +32,7 @@
             <!--
               A preset is the unit of intent, so it stays the row; the types it covers are
               chips underneath rather than rows of their own.
-              @see docs/design/groups/access-presets.md
+              @see docs/design/groups/design.md — A request names presets and access types
             -->
             <div
               v-if="presetAccessTypes(item).length"

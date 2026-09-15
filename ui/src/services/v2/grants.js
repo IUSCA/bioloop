@@ -149,7 +149,7 @@ export default {
    * Each row carries `via` of DIRECT, GROUP, or PRINCIPAL, plus `via_group_name` and
    * `via_collection_name` where they apply.
    *
-   * @see docs/design/groups/access-requests-plan.md — C1
+   * @see docs/design/groups/implementation/access-requests-plan.md — C1
    */
   getCoverageForSubject(subject_type, subject_id, resource_type, resource_id) {
     return api.get(

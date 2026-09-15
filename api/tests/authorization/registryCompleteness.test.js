@@ -13,7 +13,7 @@
  *
  * Failures name the offending row with the `[label, value]` idiom.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 2: the four tables, the reference model, and worlds
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 2: the four tables, the reference model, and worlds
  */
 
 const path = require('path');

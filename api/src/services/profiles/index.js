@@ -13,7 +13,7 @@ const validate = require('./validate');
  * A profile is informational. Nothing here decides who may read data; the one field that
  * decides anything is `profile_visibility`, which decides who may read the profile itself.
  *
- * @see docs/design/groups/profiles.md
+ * @see docs/design/groups/implementation/profiles.md
  */
 
 const CONFLICT_ERROR_MESSAGE = 'This profile was changed by somebody else. Reload and try again.';
@@ -29,7 +29,7 @@ const PROFILE_METADATA_KEYS = ['links', 'citation', 'publications'];
  * Follows DataCite's human-readable order — creator, year, title, publisher, identifier.
  * This is a display field, so an approximation that reads correctly is the right answer
  * and precision work here is wasted.
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 function generateCitation({
   creator, year, title, url, isCollection = false,

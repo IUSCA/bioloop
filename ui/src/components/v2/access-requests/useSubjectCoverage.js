@@ -5,7 +5,7 @@ import grantService from "@/services/v2/grants";
  *
  * The request form reads it twice. The Current Access panel lists it, and the access type
  * selector ticks and disables what it already covers.
- * @see docs/design/groups/access-requests-plan.md — C2
+ * @see docs/design/groups/implementation/access-requests-plan.md — C2
  */
 export function useSubjectCoverage(subjectRef, resourceRef) {
   const rows = ref([]);

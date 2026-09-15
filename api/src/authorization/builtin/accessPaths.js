@@ -23,7 +23,7 @@
  * The platform admin, restrictions, projection, and terms that name no resource stay outside
  * the statement.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
  * @see docs/design/groups/access-model.md — Paths and standing
  */
 
@@ -214,7 +214,7 @@ async function summarizePaths(rows) {
  * @param {Object} id - the context identifiers `{ user, resourceType, resource, prospective }`
  * @returns {Promise<{rows: Object[], kinds: Set<string>, access_types: Set<string>}>}
  *   `access_types` holds the grant rows' types widened through the implication closure.
- * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
  */
 async function loadAccessPaths({
   user, resourceType, resource, prospective,
@@ -245,7 +245,7 @@ async function loadAccessPaths({
  * @param {string} args.resourceType
  * @param {string[]} args.resourceIds - not empty
  * @returns {Promise<Map<string, Object>>} an entry for every id, with no rows where nothing reaches it
- * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
  */
 async function accessPathsByResource({ userId, resourceType, resourceIds }) {
   const rows = await prisma.$queryRaw(accessPathsQuery({ userId, resourceType, resourceIds }));

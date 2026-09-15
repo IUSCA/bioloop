@@ -171,7 +171,7 @@
   <!--
     The owning group is fixed here: the user is on that group's page, so there is nothing to
     choose. The modal still shows which group it will be.
-    @see docs/design/groups/dataset-creation-plan.md — A7
+    @see docs/design/groups/implementation/dataset-creation-plan.md — A7
   -->
   <AddDatasetModal
     ref="addDatasetModal"

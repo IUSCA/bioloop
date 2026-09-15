@@ -52,7 +52,7 @@
  * - The leading mark. `icon` draws a plain glyph; the `leading` slot takes a component
  *   such as `GroupIcon`, which carries the group-type identity color.
  *
- * @see docs/design/groups/dashboard-plan.md - Phase 2
+ * @see docs/design/groups/implementation/dashboard-plan.md - Phase 2
  * @see docs/contributing/v2-design-system.md - Accessibility floor
  */
 import { useSlots } from "vue";

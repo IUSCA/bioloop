@@ -11,7 +11,7 @@
  *
  * Require `tests/testDatabase.js` first. This module writes thousands of rows.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Worlds
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Worlds
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

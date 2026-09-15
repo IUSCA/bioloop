@@ -1,6 +1,6 @@
 ---
 title: Dataset Creation Plan
-order: 8
+order: 1
 status: active
 implemented: partial
 last_verified: 2026-09-08
@@ -10,7 +10,7 @@ last_verified: 2026-09-08
 
 This page is the ordered plan for giving groups their own import and upload paths. It says
 what gets built, in what order, and which layer each piece belongs to. The reasoning behind
-the shapes chosen here lives in [Dataset creation](./dataset-creation.md); this page does not
+the shapes chosen here lives in [Dataset creation](../dataset-creation.md); this page does not
 repeat it.
 
 The work splits into four features. Feature S changes the naming constraint and the storage
@@ -28,7 +28,7 @@ The legacy steppers, pages, routes, and services keep working in parallel throug
 modules are added beside them; none is replaced.
 
 Three constraints in this plan can only be finished by the cut-over, and each is recorded in
-[v2 cut-over](../v2-cutover.md) under *What only the cut-over may do*: a unique
+[v2 cut-over](../../v2-cutover.md) under *What only the cut-over may do*: a unique
 `origin_path`, retiring the legacy `exists` route, and deleting the two small pieces of logic
 that this plan copies rather than shares.
 
@@ -54,8 +54,8 @@ task, and the `integrated` workflow are all reused unchanged.
 visual language. Logic carries over and markup does not: the tus-js-client loop, the BLAKE3
 checksum service, the directory-typeahead behaviour, and the upload status vocabulary.
 `CollectionCreateModal.vue` is the structural template.
-[V2 design system](../../contributing/v2-design-system.md) and
-[V2 page patterns](../../contributing/v2-page-patterns.md) govern the rest. The screens are
+[V2 design system](../../../contributing/v2-design-system.md) and
+[V2 page patterns](../../../contributing/v2-page-patterns.md) govern the rest. The screens are
 drawn in [the mockups](/mockups/dataset-creation-screens.html).
 
 **Two pieces get copied rather than shared.** The `origin_path` format
@@ -82,7 +82,7 @@ be built on a layout that is about to move.
 and the naming constraint are single facts about the system, so there is no way to give the
 legacy half one layout and the new half another. The seeded default group is what makes the
 edit safe: a legacy caller passes no group, lands in `Unassigned Datasets`, and behaves
-exactly as before. [Dataset storage](./dataset-storage.md) is the design record.
+exactly as before. [Dataset storage](../dataset-storage.md) is the design record.
 
 Data is disposable throughout. The development database is reseeded rather than migrated in
 place where that is simpler.
@@ -400,7 +400,7 @@ its grants before deleting the resource, because `grant.resource` is `ON DELETE 
 The bulk route takes up to a hundred datasets, each carrying its own `owner_group_id` in the
 shape the single-create route accepts, and authorizes once per distinct group through
 `authorizeAction`. Registration config is keyed by ingestion directory rather than by dataset
-type. [Dataset creation](./dataset-creation.md#route-1-the-watch-script) describes the
+type. [Dataset creation](../dataset-creation.md#route-1-the-watch-script) describes the
 result.
 
 Deployment note: every `/v2` route reads `subject_id` from the caller's JWT, and the workers'

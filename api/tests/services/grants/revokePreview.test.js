@@ -5,7 +5,7 @@
  * still confer it. The case that matters is access another path supplies: a grant to a system
  * principal keeps a type a direct grant's revocation would otherwise take away.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
  */
 
 const path = require('path');

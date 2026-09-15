@@ -8,7 +8,7 @@ description: Operational technique for the Playwright suite in e2e/ that covers 
 `e2e/` is the browser-driven suite for the groups and access-control flows. It is separate
 from `tests/`, which covers v1 and is organised around RBAC roles. The plan and the flow
 catalogue it implements are
-[e2e-test-plan.md](../../../docs/design/groups/e2e-test-plan.md) and
+[e2e-test-plan.md](../../../docs/design/groups/implementation/e2e-test-plan.md) and
 [e2e-test-flows.md](../../../docs/design/groups/e2e-test-flows.md); this page is the
 operational half.
 

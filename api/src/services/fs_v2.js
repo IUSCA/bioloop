@@ -62,7 +62,7 @@ async function exists(p) {
  * the user may browse. Nothing here re-checks that, so do not call it with a source the
  * caller did not resolve.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B2
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B2
  */
 async function browseImportSource({
   source, requestedPath, dirs_only = false, extension = null,

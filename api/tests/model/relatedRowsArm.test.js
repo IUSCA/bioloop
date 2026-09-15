@@ -10,7 +10,7 @@
  * the rows where that projection differs from the row's own, so a world without such rows fails
  * instead of passing by construction.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Projection applied to rows it was not decided for
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection applied to rows it was not decided for
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

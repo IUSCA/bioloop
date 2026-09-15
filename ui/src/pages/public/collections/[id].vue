@@ -50,7 +50,7 @@
         <!--
           A public reader is told the collection has contents and is told nothing about
           them. Names, sizes, and counts all stop at the member tier.
-          @see docs/design/groups/profiles.md — What each audience sees
+          @see docs/design/groups/implementation/profiles.md — What each audience sees
         -->
         <VaCard>
           <VaCardContent
@@ -112,7 +112,7 @@ import PublicProfileService from "@/services/v2/publicProfiles";
 /**
  * A collection profile, readable without an account.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({ id: { type: String, required: true } });
 

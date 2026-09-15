@@ -18,7 +18,7 @@ import markdownit from "markdown-it";
  * Kept separate from `ProfileAbout.vue` so the edit form's preview renders through exactly
  * the same code as the page — a preview that differs from the result is worse than none.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({
   /** Markdown source. Null or empty renders nothing at all. */

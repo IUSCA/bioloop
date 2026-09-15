@@ -15,7 +15,7 @@ const { waitForInvitationToken, mailMark } = require('../../world/mail');
  * `bin/devserver.sh up notifications-worker`.
  *
  * @see docs/design/groups/e2e-test-flows.md — C1, C2, C3, C4, C6
- * @see docs/design/groups/invitations.md
+ * @see docs/design/groups/implementation/invitations.md
  */
 
 /** A fresh group so one test's invitations cannot decide another's. */

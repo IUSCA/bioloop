@@ -5,7 +5,7 @@
  * An admin of the group that owns a source may see every field of it, and a derivative owned by
  * a group they have no path to shows them only what the dataset list shows every caller.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Projection applied to rows it was not decided for
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection applied to rows it was not decided for
  * @see tests/services/grants/derivedIndependence.test.js — lineage confers no access
  */
 

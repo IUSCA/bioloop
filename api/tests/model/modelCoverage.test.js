@@ -16,7 +16,7 @@
  *
  * Failures name the offending row with the `[label, value]` idiom.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Worlds
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Worlds
  */
 
 const fs = require('fs');

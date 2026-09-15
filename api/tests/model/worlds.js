@@ -14,7 +14,7 @@
  *   that the reference model decides differently. A dimension with no such pair is a
  *   dimension the data cannot test, and the generator fails rather than report a pass.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Worlds
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Worlds
  */
 
 const DAY = 24 * 60 * 60 * 1000;

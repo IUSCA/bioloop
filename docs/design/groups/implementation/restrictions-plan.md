@@ -1,3 +1,11 @@
+---
+title: Restrictions and resource state plan
+order: 9
+status: active
+implemented: none
+last_verified: 2026-09-15
+---
+
 # Restrictions and resource state plan
 
 The ordered work to separate resource state from authorization, and to leave a restriction check
@@ -5,9 +13,9 @@ on every action that allows everything until restrictions are specified.
 
 Nothing in this plan adds a feature to MVP scope.
 
-The decisions are recorded in [Decisions](./decisions.md): decision 6 for restrictions, and
-[decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization) for resource
-state. [Access model](./access-model.md) states the rule, and [Design](./design.md) describes
+The decisions are recorded in [Decisions](../decisions.md): decision 6 for restrictions, and
+[decision 17](../decisions.md#_17-resource-state-is-checked-after-authorization) for resource
+state. [Access model](../access-model.md) states the rule, and [Design](../design.md) describes
 archiving and restrictions.
 
 ## What changes
@@ -236,7 +244,7 @@ with no transaction or lock gains both.
 - **`routes/collections.js` `POST /:id/stage`** checks each dataset's state.
 
 The v1 `POST /datasets/uploads/:id/complete` route and the TUS `onUploadCreate` hook check no v2
-state. Both are v1 code, so they are recorded in [v2 cut-over](../v2-cutover.md) and not changed.
+state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.md) and not changed.
 
 **Tests:**
 
@@ -378,7 +386,7 @@ with the reference model, and the full API suite passes.
   - `e2e/src/specs/restrictions/archive.spec.js` expects 409, through a new `expectConflict` in
     `e2e/src/assertions/parity.js`.
   - Flow A4 asserts a sub-group stays active.
-  - Section K follows [E2E test flows](./e2e-test-flows.md).
+  - Section K follows [E2E test flows](../e2e-test-flows.md).
 - **The as-built documents.**
   - `request-lifecycle.md`, `code-map.md`, and the production seeding guide describe the state
     check and the restriction check as built.

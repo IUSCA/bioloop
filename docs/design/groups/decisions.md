@@ -369,9 +369,16 @@ risk 2 in [Trust and communication](./trust-and-communication.md); the reviewer'
 names the covering grant instead of showing an unexplained skip. And two reviewers approving
 the same subject, resource, and access type at the same moment collide on the constraint,
 which is recorded as an edge case in
-[the access and requests plan](./access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
+[the access and requests plan](./implementation/access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
 Neither is worth a model change. If the race is ever observed, the fix is to retry the losing
 transaction.
+
+**Why supersession, and not refusal or chaining.** A subject who holds one preset and
+requests another that shares an access type is not making a mistake. Refusing the second
+request would make them work out which grants they already hold. Chaining would start the
+new grant when the old one expires. An early revocation of the old grant would then leave the
+new one starting at a meaningless time. Supersession closes the shorter grant and writes the
+longer one in one transaction, as [Design](./design.md#supersession) describes.
 
 **Consequence to accept.** Supersession keeps writing `revoked_at` on grants nobody revoked.
 `revocation_type` separates `SUPERSEDED` from `MANUAL`, so any query that cares can tell them
@@ -410,7 +417,7 @@ implementation.
 ## 16. The access model's open questions have answers
 
 **Decision.** The nineteen questions the
-[access model verification plan](./access-model-verification-plan.md#decisions-the-model-forces)
+[access model verification plan](./implementation/access-model-verification-plan.md#decisions-the-model-forces)
 raised are answered below. Each answer is stated in [Access model](./access-model.md) or in the
 operations table of [Design — Lifecycle Management](./design.md#lifecycle-management), and each
 answer that differs from what the code did is implemented by a phase of that plan.
@@ -465,7 +472,46 @@ service. And every container needs a mapping to the thing whose state is checked
 caller could act, and enables it when the state admits the action. A control whose state cannot
 return, such as Review on a decided request, is hidden instead. Sending both keeps an admin's
 authority visible on an archived group, where a merged list would hide it. See the
-[Restrictions and resource state plan](./restrictions-plan.md#the-two-answers-in-the-response).
+[Restrictions and resource state plan](./implementation/restrictions-plan.md#the-two-answers-in-the-response).
+
+## 18. Presets are stored, and expanded when a grant is issued
+
+**Decision.** A grant preset is a database row, and a request item may name one. Expansion
+into access types happens once, when grants are issued. Each grant stays one access type, and
+it records the preset that supplied it.
+
+**Rejected: presets as UI sugar.** The UI could expand a preset and send only access type
+ids. Nothing would then record that a preset was chosen. Grants issued from one choice would
+share no provenance, so a reviewer could not reconstruct the intent. Revoking some of them
+would leave a state that matches no known preset and has no explanation. A reviewer who
+approved "Standard Research Use" approved something named, and the name should survive.
+
+**Rejected: grants that name a preset.** A grant could hold a preset id and be expanded when
+access is checked. Three costs follow. The no-overlap constraint cannot be enforced without
+expanding at write time anyway. Every authorization check becomes a join, an expansion, and a
+deduplication on the hottest read path. Editing a preset would change the access of every
+subject holding it, which turns preset configuration into an authorization event.
+
+**Rejected: expanding at submission.** A request expanded when it is submitted loses the
+shape the requester chose. The reviewer would approve a list rather than the preset, and the
+audit trail would record the list. Expanding at issue keeps the preset as the unit of intent
+through review.
+
+**Presets do not constrain revocation.** An admin revokes any grant on its own. The system
+explains a partial state rather than preventing it.
+
+**Deferred.** Four things wait for a need.
+
+- **Preset versioning.** No approval references a preset version.
+- **Per-group presets.** Every preset is platform configuration. `owner_group_id` on
+  `grant_preset` is a one-column migration when a group needs its own.
+- **Atomic preset revocation.** Grants are revoked one at a time, and the partial state is
+  explained.
+- **A snapshot of the preset name on the request item.** A preset is retired with
+  `is_active` rather than deleted, so a historical request still resolves its name. Build the
+  snapshot if anyone but a platform admin can ever rename a preset.
+
+@see [Design](./design.md#grant-presets) for how presets expand and which ones ship.
 
 ## Raised and deferred
 
@@ -492,7 +538,7 @@ now settled as decision 15: deferred, with its table kept and nothing wired to i
 **Invitations were in that list and are now built.** They confirm the decision rather than
 strain it: an invitation is a standing offer of a `group_user` row with a role, so it needed
 its own table and lifecycle and borrowed nothing from grants or access requests. See
-[Invitations](./invitations.md).
+[Invitations](./implementation/invitations.md).
 
 **Serving unauthenticated requests** is deferred by decision 3. The principal exists; the
 route path does not.

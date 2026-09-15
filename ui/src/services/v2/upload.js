@@ -109,7 +109,7 @@ function uploadOneFile({
  * Progress is reported in bytes across the whole set, so a single big file and ten thousand
  * small ones both give a meaningful bar.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C2
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — C2
  * @returns {Promise<{ok: boolean, processId: string|null, failures: Array}>}
  */
 export async function transferFiles({

@@ -89,7 +89,7 @@ describe('issueGrants - invariants', () => {
   // A grant from an approved preset item inside a request has both provenances, and the
   // Access tab needs both: without the preset, a request for "Standard Research Use" decays
   // into a flat list of access types.
-  // @see docs/design/groups/access-requests-plan.md — C5
+  // @see docs/design/groups/implementation/access-requests-plan.md — C5
   it('constructor accepts access_request_id and source_preset_id together', () => {
     const svc = new grantsService.GrantIssueService({
       subject_id: member.subject_id, resource_id: dataset.resource_id, granted_by: actor.subject_id, access_request_id: 'x', source_preset_id: 1,

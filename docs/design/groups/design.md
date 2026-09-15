@@ -565,6 +565,25 @@ one row is not one capability. It is one authorization fact, and the order says 
 fact reaches. Issuance reduces a request to the access types the order does not already
 supply, so the two never disagree about how many rows an approval is worth.
 
+#### Supersession
+
+Issuing a grant for an access type the subject already holds on that resource compares the
+two expiries. Supersession resolves the overlap rather than refusing the new grant.
+
+- **The new grant lasts longer.** The existing grant is closed with `revocation_type`
+  `SUPERSEDED`, and the new grant is written in the same transaction. A grant with no expiry
+  outlasts any grant with one.
+- **The existing grant lasts as long or longer.** No grant is written. On a request, the item
+  is still approved, and a `GRANT_CREATION_SKIPPED` audit record names the covering grant.
+- **A wider access type already covers it for as long.** No grant is written here either. A
+  wider grant is never closed to write a narrower one, because approving a request must never
+  narrow access.
+
+Supersession compares grants the exact subject holds. A grant that reaches the subject
+through a group or through a collection is never closed.
+[Decision 14](./decisions.md#_14-the-no-overlap-constraint-and-supersession-stay) records why
+the constraint stays, and why supersession is preferred over refusal or chaining.
+
 ### Critical Constraint: Grants Are Only For Consumption Actions
 
 Grants represent **consumption rights**, not **governance authority**.
@@ -618,7 +637,7 @@ grants nobody access to a dataset, and hiding one takes no access away. That is 
 is a column rather than a grant to `Public`: a grant is an authorization fact, and this is
 not one.
 
-@see [Profiles](./profiles.md) — Decision 1
+@see [Profiles](./implementation/profiles.md) — Decision 1
 
 **Invariant**:
 
@@ -650,8 +669,9 @@ downloadable by their lab. **Grant presets** are named bundles of access types t
 that gap.
 
 A preset is a convenience and a provenance label. It is not an enforcement boundary, and it
-does not change what authorization evaluates. The design record is
-[Access presets](./access-presets.md).
+does not change what authorization evaluates.
+[Decision 18](./decisions.md#_18-presets-are-stored-and-expanded-when-a-grant-is-issued) records why presets are stored
+and expanded when a grant is issued.
 
 #### What a preset expands to
 
@@ -667,6 +687,19 @@ Each issued grant records the preset that supplied it, so the Access tab names
 "Standard Research Use" rather than listing access types with no shape. An access type the
 request named directly, or that two presets both supply, records no preset.
 
+#### A request names presets and access types
+
+Each request item names one unit of intent: a preset or a single access type.
+`access_request_item` holds either `preset_id` or `access_type_id`. The
+`chk_item_exactly_one_type` constraint refuses a row with both or neither. A request names
+each preset and each access type at most once.
+
+A reviewer decides each item as a whole, so a preset item is approved or rejected entirely.
+The request keeps the shape the requester chose through the whole review.
+
+When items are approved, an access type that two of them supply takes the later of their
+approved expiries. Reduction through the order then runs on the combined set.
+
 #### The seeded presets
 
 Two presets ship with the platform, *Discoverable* and *Standard Research Use*, and both are
@@ -678,8 +711,6 @@ No preset is scoped to a dataset. On a dataset every bundle reduces through the 
 access type, so a preset would only give that type a second name. The seed retires any
 preset `GRANT_PRESETS` no longer lists. Approving a request that names a retired preset is
 refused.
-
-@see [Access presets](./access-presets.md) — 2.11 Presets are scoped to collections
 
 #### What presets do not do
 
@@ -694,7 +725,7 @@ refused.
 A preset names access types only. It never resolves a subject. Choosing who receives access —
 a user, a group, or a system principal — is a separate, explicit step in every flow.
 
-@see [Access type order plan](./access-type-order-plan.md) for how issuance reduces a preset,
+@see [Access type order plan](./implementation/access-type-order-plan.md) for how issuance reduces a preset,
 and [decision 7](./decisions.md#_7-access-types-imply-one-another) for the order itself.
 
 
@@ -767,6 +798,12 @@ stateDiagram-v2
     WITHDRAWN --> [*]
     EXPIRED --> [*]
 ```
+
+A request records a decision, and a decided request never changes. Every status change is
+guarded on the status it leaves, which is `DRAFT` or `UNDER_REVIEW`. No request status means
+revoked. Revoking access is always an operation on grants, so a request whose grants were
+all revoked still reads `APPROVED`. The approval happened, and the revocations are recorded
+on the grants.
 
 ---
 

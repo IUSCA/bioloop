@@ -125,7 +125,7 @@ router.post(
     // The body names a resource id and no resource type, so the container to authorize
     // against is not known until the row is read, and an authorize() middleware cannot pick
     // it. The policy context is threaded through so the caller is hydrated once.
-    // @see docs/design/groups/access-requests-plan.md — A1
+    // @see docs/design/groups/implementation/access-requests-plan.md — A1
     const resource = await prisma.resource.findUnique({
       where: { id: data.resource_id },
       select: { id: true, type: true },
@@ -159,7 +159,7 @@ router.post(
     // `submit: true` creates the request and puts it under review in one transaction. A
     // DRAFT is invisible — no surface lists one — so two client calls would strand a row
     // the requester could neither see nor resume if the second failed.
-    // @see docs/design/groups/access-requests-plan.md — B1
+    // @see docs/design/groups/implementation/access-requests-plan.md — B1
     const record = req.body.submit
       ? await accessRequestsService.createAndSubmitAccessRequest(data, req.user.subject_id)
       : await accessRequestsService.createAccessRequest(data, req.user.subject_id);

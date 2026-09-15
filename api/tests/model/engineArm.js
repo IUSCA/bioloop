@@ -5,7 +5,7 @@
  * pre-fetches nothing. The user cache is seeded only for the anonymous principal, as
  * `optionalAuthenticate` does, because no user row exists for it.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Comparison arms
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Comparison arms
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

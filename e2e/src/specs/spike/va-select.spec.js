@@ -16,7 +16,7 @@ const { test, expect } = require('@playwright/test');
  * navigations from a signed-in start. There are no test hooks in the v2 tree yet, so this
  * throwaway spec selects by text and role.
  *
- * @see docs/design/groups/e2e-test-plan.md — Phase 0
+ * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 0
  */
 
 // Dr. Alice Wong Lab, seeded in api/prisma/seed_data/groups.js.

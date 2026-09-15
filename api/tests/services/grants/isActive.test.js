@@ -5,7 +5,7 @@
  * extension computes it for ORM rows and `isGrantActive` for raw rows, and both must agree with
  * the view for a grant that is in force, revoked, expired, not yet started, and bounded.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
  */
 
 const path = require('path');

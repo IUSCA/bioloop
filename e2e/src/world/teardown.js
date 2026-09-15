@@ -19,7 +19,7 @@ const { prefixFor } = require('./build');
  * `group.id`, `resource.id`, `subject.id`, and every id referencing them are `text` in
  * Postgres. A `uuid[]` cast fails with `operator does not exist: text = uuid`.
  *
- * @see docs/design/groups/e2e-test-plan.md — How it is torn down
+ * @see docs/design/groups/implementation/e2e-test-plan.md — How it is torn down
  */
 async function teardownWorld(runId) {
   const prefix = prefixFor(runId);

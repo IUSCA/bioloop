@@ -13,7 +13,7 @@
         Access the subject already has by another path, which the row above cannot show:
         the effective-grants computation matches on the exact subject, because that is what
         a write may supersede. A reviewer seeing this can decline as redundant.
-        @see docs/design/groups/access-requests-plan.md — C2
+        @see docs/design/groups/implementation/access-requests-plan.md — C2
       -->
       <p
         v-for="cover in props.row.indirect_coverage || []"
@@ -70,7 +70,7 @@ const note = computed(() => {
   if (type === "existing") {
     // existing grant with equal or later valid_until than the approved_until - existing grant remains effective
     // Approving this item writes nothing, so the covering grant is the whole explanation.
-    // @see docs/design/groups/access-requests-plan.md — C3
+    // @see docs/design/groups/implementation/access-requests-plan.md — C3
     if (props.row.covered_by_wider) {
       // The covering grant is a wider access type, which confers this one through the order,
       // so naming it is the difference between an explanation and an apparent no-op.

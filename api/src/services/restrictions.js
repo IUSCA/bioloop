@@ -98,7 +98,7 @@ const RESTRICTED_MESSAGE = 'This is archived, or belongs to an archived group, a
  * `effective_restriction`, the view the authorization middleware reads, so the two lines ask
  * the same question: a child of a group archived between the middleware's check and the write
  * is refused here too.
- * @see docs/design/groups/access-model-verification-plan.md — The restriction layer keeps its three lines
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The restriction layer keeps its three lines
  *
  * @param {Object} client - the Prisma client or a transaction client
  * @param {{group_id?: string, resource_id?: string}} target - exactly one of the two

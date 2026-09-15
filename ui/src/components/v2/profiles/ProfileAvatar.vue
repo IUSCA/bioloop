@@ -34,7 +34,7 @@ import { getIcon } from "@/services/v2/icons";
  * The fallback is the kind's own icon rather than initials. A monogram is what `UserAvatar`
  * draws for a person, so a lettered square beside a group name reads as a user.
  *
- * @see docs/design/groups/profiles.md — The UI
+ * @see docs/design/groups/implementation/profiles.md — The UI
  */
 const props = defineProps({
   name: { type: String, default: "" },

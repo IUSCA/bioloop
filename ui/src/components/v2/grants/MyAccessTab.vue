@@ -67,7 +67,7 @@
  * subject's grants.
  *
  * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
- * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
 import * as datetime from "@/services/datetime";
 import GrantService from "@/services/v2/grants";

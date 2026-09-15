@@ -4,7 +4,7 @@
 -- reach someone who has no account yet. The invited address lives in the row and not in the
 -- token, so the server decides who a link belongs to and the token decodes to nothing.
 --
--- @see docs/design/groups/invitations.md
+-- @see docs/design/groups/implementation/invitations.md
 
 CREATE TYPE "INVITATION_STATUS" AS ENUM ('PENDING', 'ACCEPTED', 'CANCELLED');
 

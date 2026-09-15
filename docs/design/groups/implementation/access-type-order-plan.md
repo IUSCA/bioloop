@@ -1,11 +1,19 @@
+---
+title: Access type order plan
+order: 2
+status: active
+implemented: shipped
+last_verified: 2026-09-15
+---
+
 # Access type order plan
 
 The ordered work to make the rest of the system agree with
-[decision 7](./decisions.md#_7-access-types-imply-one-another). Access types carry a partial
+[decision 7](../decisions.md#_7-access-types-imply-one-another). Access types carry a partial
 order. Evaluation closes over it. Nothing else does.
 
-The design record is [Decisions](./decisions.md) for the order itself and
-[Access presets](./access-presets.md) for the preset layer above it. This page carries the
+The design record is [Decisions](../decisions.md) for the order itself and
+[Grant presets](../design.md#grant-presets) for the preset layer above it. This page carries the
 gaps, the sequence, and the decisions each phase needs.
 
 **All four phases are built.** The gap list below is what they closed, kept because it says
@@ -80,7 +88,7 @@ Measured over all four seeded presets, from `GRANT_PRESETS` and
 Fourteen rows where six suffice. Every seeded preset is redundant under the order.
 
 The two dataset presets were later removed, because each reduced to a single access type.
-The seed retires them. [Access presets](./access-presets.md) section 2.11 records why.
+The seed retires them. [The seeded presets](../design.md#the-seeded-presets) records why.
 Both `REQUEST_ACCESS` types were later deleted, so *Discoverable* now lists only the two
 `VIEW_METADATA` types.
 
@@ -140,7 +148,7 @@ also describes visibility and composite presets that were never built.
 
 Three downstream premises assume a preset yields six independent access types.
 `trust-and-communication.md` risk 6, `access-requests-plan.md` line 87, and the worked
-example in `access-presets.md` section 2.8 all rest on it. No seeded preset has six
+example in the access presets record all rest on it. No seeded preset has six
 independent types, and the largest reduces to two.
 
 `use-cases.md` line 495 is current and needs no change.
@@ -259,7 +267,7 @@ access types, which makes a preset a name for a point in the order rather than a
 reframing is worth doing and it is a separate design change, not a consequence of this plan.
 
 **Preset versioning, per-group presets, and atomic preset revocation.** All three stay
-deferred for the reasons in `access-presets.md` section 6. Nothing here changes them.
+deferred for the reasons in [decision 18](../decisions.md#_18-presets-are-stored-and-expanded-when-a-grant-is-issued). Nothing here changes them.
 
 **The exclusion constraint.** It stays as it is, for the reasons in decision 14. Reduction
 lowers how often it is reached, and it does not change what it enforces.

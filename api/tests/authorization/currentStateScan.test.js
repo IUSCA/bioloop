@@ -10,7 +10,7 @@
  * read of current state, and an entry that no longer matches fails too, so the list shrinks
  * with the code.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Current state has one definition
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Current state has one definition
  */
 
 const fs = require('fs');

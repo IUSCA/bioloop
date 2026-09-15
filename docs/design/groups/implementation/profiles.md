@@ -1,6 +1,6 @@
 ---
 title: Profiles
-order: 8
+order: 4
 status: active
 implemented: yes
 last_verified: 2026-09-09
@@ -10,7 +10,7 @@ last_verified: 2026-09-09
 **Built.** The profile columns, the `view_profile` action, the anonymous principal, the
 grant subject-set fix, the profile and avatar routes, the public router, and the UI have all
 shipped. This record continues
-[Decision 3](./decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
+[Decision 3](../decisions.md#_3-a-public-principal-exists-and-everyone-is-renamed), which added
 the `Public` principal and deferred the serving half to a separate piece of work.
 :::
 
@@ -463,7 +463,7 @@ the institution's domain may warrant a platform-admin review step.
 
 ## Related records
 
-- [Decisions](./decisions.md) — Decision 3 added the `Public` principal and deferred this work
-- [Design](./design.md) — how groups, collections, and grants fit together
-- [UI information architecture](./ui-information-architecture.md) — where these pages sit
-- [Code map](./code-map.md) — where the authorization engine lives
+- [Decisions](../decisions.md) — Decision 3 added the `Public` principal and deferred this work
+- [Design](../design.md) — how groups, collections, and grants fit together
+- [UI information architecture](../ui-information-architecture.md) — where these pages sit
+- [Code map](../code-map.md) — where the authorization engine lives

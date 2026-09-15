@@ -7,7 +7,7 @@
  * enforced on write and asserted here. A profile is shown to people who are not signed in,
  * which makes a malformed link the defect with the widest audience in the system.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 
 const path = require('path');

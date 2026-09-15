@@ -15,7 +15,7 @@ const { getEffectiveCoverage, labelCoverage } = require('@/services/grants/cover
  * `source_access_request_id`, so it is empty for seeded rows and correct for everything
  * issued from now on.
  *
- * @see docs/design/groups/access-requests-plan.md — C4
+ * @see docs/design/groups/implementation/access-requests-plan.md — C4
  */
 
 /**

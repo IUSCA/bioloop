@@ -11,7 +11,7 @@ const router = express.Router();
  *
  * Any signed-in caller may read it. It describes the rule, not any resource.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
  */
 router.get(
   '/:type/blocked-actions',

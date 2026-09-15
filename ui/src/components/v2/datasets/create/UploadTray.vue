@@ -7,7 +7,7 @@
 
   Renders nothing when there is nothing to report.
 
-  @see docs/design/groups/dataset-creation-plan.md — C3
+  @see docs/design/groups/implementation/dataset-creation-plan.md — C3
 -->
 <template>
   <div

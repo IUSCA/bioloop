@@ -97,7 +97,7 @@
               </template>
               <div>
                 <!-- Presets are scoped to collections, so a dataset has none and skips this block.
-                     @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections -->
+                     @see docs/design/groups/design.md — The seeded presets -->
                 <template v-if="presets.length">
                   <PresetSelector :presets="presets" v-model="selectedPreset" />
 

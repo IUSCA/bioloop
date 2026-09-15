@@ -7,7 +7,7 @@
  * stays invisible until an ordinary user hits an ordinary route. Checking at boot moves it to
  * startup, for every policy, every attribute rule, and every transition row.
  *
- * @see docs/design/groups/access-model-verification-plan.md — The static checks that already exist
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The static checks that already exist
  */
 
 function hydratorFor(hydratorRegistry, type) {
@@ -87,7 +87,7 @@ function findUnhydratableRequirements(policyRegistry, hydratorRegistry) {
  * A term decides from the attributes it declares, which the hydrators fetch before `evaluate`
  * runs. An async `evaluate` almost always means the term reads the database itself, so its
  * `requires` understates what it reads and no compiler can turn it into SQL.
- * @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
  * @param {import('./policies/PolicyRegistry')} policyRegistry
  * @returns {string[]} `<resource type>.<action> (<term>)`, one per async term
  */

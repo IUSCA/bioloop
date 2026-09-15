@@ -100,7 +100,7 @@ class Policy {
     this._evaluate = evaluate;
     // The tree a combinator was built from. A compiler walks it to turn `or` into a UNION;
     // without it a composed policy is an opaque closure.
-    // @see docs/design/groups/access-model-verification-plan.md — What compilation needs from core
+    // @see docs/design/groups/implementation/access-model-verification-plan.md — What compilation needs from core
     this.meta = meta ? Object.freeze({ ...meta }) : null;
     this.operator = operator;
     this.children = children ? Object.freeze([...children]) : null;

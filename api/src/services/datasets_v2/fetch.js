@@ -14,7 +14,7 @@ const { RESOURCE_SCOPES } = require('../resources');
  * `ANY` returns every dataset that has an upload log, whatever became of it. A group name
  * returns that group's statuses, and a single status returns just itself.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C5
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — C5
  * @param {string} upload_status
  * @returns {string[]|null} the statuses to match, or null for "any status"
  */

@@ -391,7 +391,7 @@ function collectImportSourcesFromJSON() {
  * and `status` are deliberately left alone, because a platform admin sets those after the
  * groups exist.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B1
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B1
  */
 async function seedImportSources(prisma, sources, { dryRun }) {
   if (sources.length === 0) return { created: 0, updated: 0 };

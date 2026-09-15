@@ -136,7 +136,7 @@ const UPLOAD_STATUSES = {
 //
 // A test asserts these three cover every value of UPLOAD_STATUSES exactly once, so a status
 // added to the enum has to be classified before it can ship.
-// @see docs/design/groups/dataset-creation-plan.md — C5
+// @see docs/design/groups/implementation/dataset-creation-plan.md — C5
 const UPLOAD_STATUS_GROUPS = {
   IN_PROGRESS: [
     UPLOAD_STATUSES.UPLOADING,
@@ -236,7 +236,7 @@ const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_I
 //
 // Every user attribute the group and collection policies declare is present, so the engine
 // hydrates none of them and reads no user row.
-// @see docs/design/groups/profiles.md — The anonymous principal
+// @see docs/design/groups/implementation/profiles.md — The anonymous principal
 const ANONYMOUS_PRINCIPAL = Object.freeze({
   subject_id: PUBLIC_GROUP_ID,
   is_anonymous: true,
@@ -404,7 +404,7 @@ const GRANT_ACCESS_TYPE_IMPLICATIONS = [
 
 // Every preset is scoped to collections. A preset listed here is active; one removed from
 // this list is retired by the seed, never deleted, and its id is never reused.
-// @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+// @see docs/design/groups/design.md — The seeded presets
 const GRANT_PRESETS = [
   {
     id: 1,

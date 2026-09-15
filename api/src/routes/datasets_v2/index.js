@@ -34,7 +34,7 @@ const router = express.Router();
  * `admitted_by`, so the creation dialog can say why a group is offered rather than showing
  * an unexplained list. The creation routes still authorize — this is a convenience.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A2
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — A2
  */
 router.get(
   '/eligible-owner-groups',
@@ -77,7 +77,7 @@ router.get(
  * `GET /datasets/:type/:name/exists` answers for any name in the system and is open to
  * every `user` role; that is a global existence oracle and this deliberately is not one.
  *
- * @see docs/design/groups/dataset-creation-plan.md — A3
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — A3
  */
 router.get(
   '/name-available',
@@ -124,7 +124,7 @@ router.get(
  * Authorized with `contribute`, so a member of a group that accepts contributions may
  * import into it, not only its admins.
  *
- * @see docs/design/groups/dataset-creation-plan.md — B3
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — B3
  */
 router.post(
   '/imports',
@@ -187,7 +187,7 @@ router.post(
  * Authorized with `contribute`, so a member of a group that accepts contributions may upload
  * into it and not only its admins.
  *
- * @see docs/design/groups/dataset-creation-plan.md — C1
+ * @see docs/design/groups/implementation/dataset-creation-plan.md — C1
  */
 router.post(
   '/uploads',
@@ -355,7 +355,7 @@ router.get(
     // search by upload state: an upload that fails for good is tombstoned, so the dataset
     // is renamed and marked deleted, and the default would hide exactly the rows the
     // person who uploaded needs to see.
-    // @see docs/design/groups/dataset-creation-plan.md — C5
+    // @see docs/design/groups/implementation/dataset-creation-plan.md — C5
     if (filters.is_deleted == null && filters.upload_status == null) {
       filters.is_deleted = false;
     }
@@ -583,7 +583,7 @@ router.patch(
 
     // Only the fields this route validates. The body used to be passed through whole, so an
     // admin of the owning group could rewrite owner_group_id, is_deleted, or archive_path.
-    // @see docs/design/groups/access-model-verification-plan.md — Phase 0: close the live holes
+    // @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
     const updated = await datasetService.patchDataset(
       dataset.id,
       _.pick(['name', 'description'])(req.body),

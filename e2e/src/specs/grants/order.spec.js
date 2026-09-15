@@ -288,7 +288,7 @@ test('F1 — a preset grant names the preset, and re-issuing changes nothing', a
 
   // Presets are scoped to collections, so the preset is issued on a collection holding the
   // dataset, and the dataset itself is offered none.
-  // @see docs/design/groups/access-presets.md — 2.11 Presets are scoped to collections
+  // @see docs/design/groups/design.md — The seeded presets
   const collection = await alice.api.post('/collections', {
     name: `${world.prefix}-f1-preset-${Math.random().toString(36).slice(2, 8)}`,
     description: 'Phase 4 fixture for f1-preset.',

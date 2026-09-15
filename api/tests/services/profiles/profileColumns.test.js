@@ -9,7 +9,7 @@
  * These tests pin the default, because a column that defaulted to anything but PRIVATE
  * would publish every existing row the moment the migration ran.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 
 const path = require('path');

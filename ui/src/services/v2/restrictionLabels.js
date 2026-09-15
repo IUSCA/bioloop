@@ -8,7 +8,7 @@
  * `api/tests/model/restrictionLabels.test.js` fails when a blocked action has no entry here, or
  * an entry names an action nothing blocks.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
  */
 
 const MEMBERSHIP = "Add or remove members, or change their roles";

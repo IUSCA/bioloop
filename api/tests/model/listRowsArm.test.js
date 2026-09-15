@@ -10,7 +10,7 @@
  * Each page holds a fragment's own resources and the next two fragments', so a page mixes rows
  * the caller reaches with rows they do not.
  *
- * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

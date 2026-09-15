@@ -50,7 +50,7 @@
  * Not responsible for:
  * - Linking to a grant. There is no grant detail page, so the row links to the resource.
  *
- * @see docs/design/groups/dashboard-plan.md - Phase 3
+ * @see docs/design/groups/implementation/dashboard-plan.md - Phase 3
  */
 import Badge from "@/components/v2/Badge.vue";
 import ResourceChip from "@/components/v2/ResourceChip.vue";

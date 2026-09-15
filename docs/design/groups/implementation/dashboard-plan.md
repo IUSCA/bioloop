@@ -1,6 +1,6 @@
 ---
 title: Dashboard plan
-order: 10
+order: 6
 status: active
 implemented: partial
 last_verified: 2026-09-09
@@ -8,8 +8,8 @@ last_verified: 2026-09-09
 
 ::: warning Design record — active
 The ordered work for the landing page at `/v2/home`. The page structure it sits inside is
-[UI information architecture](./ui-information-architecture.md), and the visual rules are
-[V2 design system](../../contributing/v2-design-system.md). Screens are drawn at
+[UI information architecture](../ui-information-architecture.md), and the visual rules are
+[V2 design system](../../../contributing/v2-design-system.md). Screens are drawn at
 [`/mockups/dashboard-screens-mvp.html`](/mockups/dashboard-screens-mvp.html). The earlier
 [`dashboard-screens.html`](/mockups/dashboard-screens.html) is kept as it was drawn, and it
 shows more than this plan builds.
@@ -75,7 +75,7 @@ Three of the five calls that dashboard made were wrong against the API.
   and `sort_order`, and all three were ignored.
 
 The page also imported the legacy `@/services/dataset` for `getStats()`. That is a v2 page
-calling a v1 domain service, which the [v2 cut-over](../v2-cutover.md) forbids.
+calling a v1 domain service, which the [v2 cut-over](../../v2-cutover.md) forbids.
 
 ## What changed since the mockup was drawn
 
@@ -122,7 +122,7 @@ the member view first.
 
 **An empty portal explains nothing.** Zero-default access means a user with no grants sees
 empty pages everywhere, which reads as a broken system. That is risk 8 in
-[Trust and communication](./trust-and-communication.md). The dashboard is where the
+[Trust and communication](../trust-and-communication.md). The dashboard is where the
 explanation goes, because it is the page such a user lands on.
 
 ## One page, not three
@@ -241,7 +241,7 @@ first, capped at five, using `AccessRequestCard` so the access summary comes alo
 Its "View all" link needs somewhere to go, so this phase also adds a third tab, "My
 requests", to `/v2/access-requests`. That page has two tabs today, "Pending review" and
 "Reviewed", and both are reviewer surfaces.
-[UI information architecture](./ui-information-architecture.md) already calls for the
+[UI information architecture](../ui-information-architecture.md) already calls for the
 inbox to hold the caller's own submitted requests beside the queue. The tab is the same
 `AccessRequestCard` list with the same query and a different default sort.
 
@@ -302,7 +302,7 @@ Each item names the endpoint it waits on, and none of them is in the first relea
 - **Active grants and membership counts** scoped to a caller's groups need an aggregate
   count endpoint. Two stat cards follow.
 - **A grant detail page** closes the remaining dead link. `/v2/grants` does not exist
-  either, and [UI information architecture](./ui-information-architecture.md) calls for
+  either, and [UI information architecture](../ui-information-architecture.md) calls for
   both. Until it does, a grant row on the dashboard links to the resource rather than to
   the grant.
 - **Discover and request** needs use case 2, a search over datasets the caller cannot yet

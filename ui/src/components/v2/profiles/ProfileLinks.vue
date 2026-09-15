@@ -40,7 +40,7 @@
  * `contact_email`, so this component renders what it is given without re-checking. It does
  * decide how to display one: a website shows its host, an email address shows itself.
  *
- * @see docs/design/groups/profiles.md — Schema
+ * @see docs/design/groups/implementation/profiles.md — Schema
  */
 const props = defineProps({
   /** [{ type, url, label? }] — the validated shape the API stores. */

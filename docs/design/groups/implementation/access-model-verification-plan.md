@@ -1,9 +1,17 @@
+---
+title: Access model verification plan
+order: 8
+status: active
+implemented: shipped
+last_verified: 2026-09-15
+---
+
 # Access model verification plan
 
 The ordered work to state the v2 access model as a small formal model, and to show that the
 code agrees with it in every state the code can reach.
 
-The design record stays in [Design](./design.md) and [Decisions](./decisions.md). This page
+The design record stays in [Design](../design.md) and [Decisions](../decisions.md). This page
 carries the formal statement of the problem, the findings behind it, the target shape, the
 test harness, and the sequence.
 
@@ -313,7 +321,7 @@ Three refusal shapes exist in the code, and each was chosen deliberately.
 
 | Shape | Where | Reason given in the code |
 |---|---|---|
-| 403 | signed-in detail routes | none recorded. [Design](./design.md#authorization-model) states, under the corollary that resource existence is access-controlled, that a user without access cannot know the resource exists. The 403 contradicts the design rather than implementing it |
+| 403 | signed-in detail routes | none recorded. [Design](../design.md#authorization-model) states, under the corollary that resource existence is access-controlled, that a user without access cannot know the resource exists. The 403 contradicts the design rather than implementing it |
 | 404 | the `/public` router, via `hideRefusals` | a 403 confirms existence to an anonymous caller |
 | 200 with `{ status: 'invalid' }` | `POST /auth/invite/check` | "a reason would tell an unauthenticated caller the state of somebody else's invitation" |
 
@@ -889,7 +897,7 @@ fails on any hit outside an allowlist of history readers. This follows the shape
 
 Every cell of the operations table gets one of three decisions: cascade to the related record,
 refuse the operation, or leave the record with a stated reason. The table moves into
-[Design — Lifecycle Management](./design.md#lifecycle-management). Each cell becomes one
+[Design — Lifecycle Management](../design.md#lifecycle-management). Each cell becomes one
 assertion in the operation sequences below.
 
 ## Verification harness
@@ -902,7 +910,7 @@ sequences.
 `api/tests/model/reference.js` implements the model section in plain JavaScript over in-memory
 arrays. It never imports the engine, `src/services`, or Prisma. It does import the four tables,
 for the reason given under [Where the tables live](#where-the-tables-live-and-how-they-change).
-It is written from [Design](./design.md), not from the code. That independence is weaker than it
+It is written from [Design](../design.md), not from the code. That independence is weaker than it
 sounds, because the model section of this page was itself derived by reading the code, so the
 reference and the engine can share a mistake the reading made. The decisions list and the cases
 manual testing found are the check on that. Its size is estimated at 200 to 300 lines. That
@@ -1022,7 +1030,7 @@ admin-only run proves nothing about a policy path.
 
 The output is a report of disagreements grouped by arm and by dimension, not a bare pass or
 fail. Each disagreement is either a code bug or a gap in the specification. Gaps go to
-[Decisions](./decisions.md).
+[Decisions](../decisions.md).
 
 **Known disagreements to confirm.** The first run should find these ten:
 
@@ -1132,7 +1140,7 @@ L1 T11, T12, and T13 are live today and do not need the harness.
 - T12 whitelists the fields `PATCH /v2/datasets/:id` accepts.
 - T13 moves the last-admin check into the removal transaction.
 - `userHasGrant` throws when given no access types, and the two lifecycle tests that pass `access_type_id` are corrected so they can fail.
-- The legacy `PATCH /datasets/:id` passes its body through the same way. It is v1, so it is recorded in [v2 cut-over](../v2-cutover.md) and not changed.
+- The legacy `PATCH /datasets/:id` passes its body through the same way. It is v1, so it is recorded in [v2 cut-over](../../v2-cutover.md) and not changed.
 
 **Exit:** one refusal test per item fails before the fix and passes after it.
 
@@ -1144,7 +1152,7 @@ the non-escalation rule, field provenance, invariant ownership, time, the transi
 badge vocabulary with its precedence, the UI consumption contract, the validity window of
 download and upload tokens, and the operations table with a decision in every cell. The open
 decisions below are answered with the owner, and each answer goes to
-[Decisions](./decisions.md).
+[Decisions](../decisions.md).
 
 **Exit:** no operations-table cell is undecided, every non-edge is listed with its test, every
 invariant names its owning layer, every action on a stateful resource has a transition row,
@@ -1509,7 +1517,7 @@ the code.
 
 ## Out of scope
 
-- **v1 routes.** They retire at cut-over, as [v2 cut-over](../v2-cutover.md) describes.
+- **v1 routes.** They retire at cut-over, as [v2 cut-over](../../v2-cutover.md) describes.
 - **Races.** The concurrency suites own them, and database constraints enforce the two rules above.
 - **The cost of the view queries.** Performance is measured separately if Phase 4 slows a list.
 - **Bounded model checkers such as Alloy or TLA+.** They earn their cost when the hierarchy changes during its lifetime. Reparenting or delegated authority would be that trigger.

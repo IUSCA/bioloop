@@ -7,7 +7,7 @@
 
   No project or instrument fields. Projects do not exist in v2, and instruments are deferred.
 
-  @see docs/design/groups/dataset-creation-plan.md — B4
+  @see docs/design/groups/implementation/dataset-creation-plan.md — B4
 -->
 <template>
   <VaModal

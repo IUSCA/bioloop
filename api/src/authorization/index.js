@@ -168,7 +168,7 @@ async function authorizeWithFilters({
  * @param {string} action
  * @param {Object} options - `identifiers`, `policyExecutionContext`, `preFetched`,
  *   `shouldDeriveCapabilities`, and `shouldDeriveStanding`
- * @see docs/design/groups/access-model-verification-plan.md — One pipeline
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — One pipeline
  */
 async function authorizeAction(resourceType, action, options) {
   return decide(resourceType, action, options);
@@ -248,7 +248,7 @@ async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_met
  * @param {(row: Object) => string} options.idOf - the id a check binds: `resource_id` for a dataset
  * @param {string} [options.action] - the action the detail route authorizes
  * @returns {Promise<Array<{capabilities: string[], standing: Object[]}>>} in row order
- * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
 async function decideRows(resourceType, rows, options) {
   return (await decideEachRow(resourceType, rows, options)).map(({ meta }) => meta);
@@ -274,7 +274,7 @@ async function decideRows(resourceType, rows, options) {
  * @param {string} [options.action] - the read action, `view_metadata` unless named
  * @returns {Promise<Object[]>}
  * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
- * @see docs/design/groups/access-model-verification-plan.md — Projection applied to rows it was not decided for
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection applied to rows it was not decided for
  */
 async function projectRows(resourceType, rows, {
   req, idOf, publicAttributes, relationAttributes = [], action = 'view_metadata',
@@ -298,7 +298,7 @@ async function projectRows(resourceType, rows, {
  * @param {import('express').Request} req
  * @param {string} resourceId - a dataset's resource id or a collection's id
  * @returns {Promise<boolean>}
- * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
  */
 async function mayRequestAccess(req, resourceId) {
   if (!req.user?.subject_id || req.user.is_anonymous) return false;
@@ -314,7 +314,7 @@ async function mayRequestAccess(req, resourceId) {
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a
 // hydrator can supply. An unmet requirement is a 500 on the first ordinary request that
 // evaluates it, so it fails here, at startup, instead.
-// @see docs/design/groups/access-model-verification-plan.md — The static checks that already exist
+// @see docs/design/groups/implementation/access-model-verification-plan.md — The static checks that already exist
 const unhydratable = findUnhydratableRequirements(policyRegistry, hydratorRegistry);
 if (unhydratable.length) {
   throw new Error(`Policies declare attributes no hydrator supplies:\n  ${unhydratable.join('\n  ')}`);
@@ -322,7 +322,7 @@ if (unhydratable.length) {
 
 // An async `evaluate` reads the database itself, so its `requires` understates what it reads
 // and no list statement can restate it. Its read belongs in a hydrator virtual attribute.
-// @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+// @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
 const asyncTerms = findAsyncTerms(policyRegistry);
 if (asyncTerms.length) {
   throw new Error(`Policies read the database inside evaluate:\n  ${asyncTerms.join('\n  ')}`);
