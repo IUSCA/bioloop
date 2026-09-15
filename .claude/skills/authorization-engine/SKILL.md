@@ -433,6 +433,23 @@ code path writes a DELETED restriction row and every soft delete, v1 or v2, is c
 service guards call `isRestricted(tx, target)` from `services/restrictions.js`, which reads the
 same view, so a guard refuses a soft-deleted dataset's collection target only through its owner.
 
+## A new container fails the suite until it is placed
+
+Registering a container is not enough. Three checks read `policyRegistry.listTypes()`:
+
+- `registryCompleteness.test.js` fails on an action declared as a bare policy, because it has no
+  restriction class. The pre-2026-09-15 `custom/README.md` example wrote actions that way.
+- `modelCoverage.test.js` fails on a type that is neither in `MODELLED_RESOURCE_TYPES`, exported by
+  `tests/model/reference.js`, nor in its own `NOT_MODELLED` map with the path of the test that
+  decides it. `reference.decide` throws on any other type.
+- `modelCoverage.test.js` also fails on an enum value no world reaches and no entry declares
+  unread. The check reads `@prisma/client`, so a schema edit counts only after `prisma generate`.
+
+Measured on 2026-09-15 on a scratch branch. A fully declared container, with `reading` and
+`mutating` on every action, passed every suite until the resource-type check was added. With the
+check in place it fails on "resource type throwaway". A `THROWAWAY` value on `GROUP_MEMBER_ROLE`
+fails the enum check.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

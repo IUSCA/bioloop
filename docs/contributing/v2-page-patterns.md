@@ -138,6 +138,19 @@ The template wraps the three states in one transition:
   `.tab-count-badge` rule is defined once in `ui/src/styles/main.css`; do not copy it into
   a page's scoped style block.
 
+## Checklist for a change to the access model
+
+- [ ] A new enum value, action, operation, or restriction type extends the
+  [access model](/design/groups/access-model.md), the reference model in
+  `api/tests/model/reference.js`, and the four tables under
+  `api/src/authorization/builtin/tables/`. Three tests fail until it does:
+  - `api/tests/model/modelCoverage.test.js` fails on an enum value no world reaches and no entry
+    declares unread. It also fails on a registered resource type that the reference model does
+    not decide and that names no test deciding it.
+  - `api/tests/authorization/registryCompleteness.test.js` fails on an action with no restriction
+    class and on a term with no path kind.
+  - `api/tests/model/uiScan.test.js` fails on a page that computes a decision the API should send.
+
 ## Optimistic concurrency on update
 
 Every `PATCH` carries the `version` read with the resource, so a stale write is rejected

@@ -453,6 +453,9 @@ against the open restriction.
   on adding a user to the child of an archived group.
 - Revert a guard for that check by copying the file aside and restoring it with a plain copy.
   `cp -i` prompts, and a background task blocked on the prompt never restores the file.
+- Put a revert experiment in a script file and run it with `bash file.sh`. A heredoc typed into
+  the Bash tool runs under zsh with the profile loaded. There `rm` and `cp` are aliased to `-i`,
+  and an unquoted `$SUITES` is one word, so Jest reports "No tests found" for the joined paths.
 - Two operations-table cells sit outside the suite. The profile cache lifetime is
   `tests/routes/public.cache.test.js`, and the owner-change refusal is
   `tests/authorization/route_policy_bindings.test.js`.

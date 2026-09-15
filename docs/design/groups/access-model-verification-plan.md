@@ -1441,6 +1441,31 @@ taught.
 **Exit:** adding a throwaway enum value in a scratch branch fails the coverage check, and
 registering a throwaway container in `custom/` fails the action-table check.
 
+**Result, 2026-09-15.** The v2 page patterns carry a checklist for a change to the access model.
+Both exit checks fail on a scratch branch, which was deleted afterwards.
+
+- A `THROWAWAY` value on `GROUP_MEMBER_ROLE`, after `prisma generate`, fails
+  `modelCoverage.test.js` on `GROUP_MEMBER_ROLE`.
+- A container registered in `custom/` with bare policies, as `custom/README.md` showed, fails
+  `registryCompleteness.test.js` on `throwaway.view` and `throwaway.edit`.
+- A container that declares `reading` and `mutating` on every action fails
+  `modelCoverage.test.js` on "resource type throwaway".
+- The control, with no throwaway, passes both suites.
+
+One departure from the plan as written:
+
+- **A resource-type check was added, because the declared container passed.** Before it, a
+  container with a restriction class on every action and a path kind on every term passed every
+  suite. It extended neither the model page nor the reference model. `reference.js` now exports
+  `MODELLED_RESOURCE_TYPES`, and `decide` throws on any other type. `modelCoverage.test.js` fails
+  on a registered type in neither that list nor `NOT_MODELLED`. Each `NOT_MODELLED` entry names
+  the test that decides the type instead. The check proves a new type was placed, not that it was
+  placed correctly.
+
+`custom/README.md` now shows actions with a restriction class, terms with a path kind, no
+platform-admin term, the real registration calls, and the placement step. The same stale example
+in two other READMEs is filed as L2 T22.
+
 ## Decisions the model forces
 
 Each question needs an answer before Phase 1 ends. Each one states today's behaviour, read from

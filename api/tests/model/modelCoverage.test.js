@@ -32,6 +32,7 @@ const { buildTransitionTable } = require('@/authorization/builtin/tables');
 const { RESTRICTION_TYPE } = require('@/services/restrictions');
 
 const { modelTablesFrom } = require('./tables');
+const { MODELLED_RESOURCE_TYPES } = require('./reference');
 const { renderDecisionTable, outcomeSignature } = require('./decisionTable');
 const W = require('./worlds');
 
@@ -90,6 +91,36 @@ describe('every enum value is reached or declared unread', () => {
       const label = `${name}.${value} listed unread but reached`;
       expect([label, reached.has(value)]).toEqual([label, false]);
     });
+  });
+});
+
+/**
+ * Registered types the reference model does not decide, each with the test that decides it
+ * instead. A container a derived app registers fails until it is modelled or listed here.
+ */
+const NOT_MODELLED = {
+  // Every capability, in every status, for the requester, an admin, and a platform admin.
+  access_request: 'tests/model/transitionsArm.test.js',
+  // Its terms read the resource's owning group, hydrated from a grant id.
+  grant: 'tests/authorization/grantHydrator.test.js',
+  // `list` is the directory search a group admin may run.
+  user: 'tests/routes/users_v2.directory.test.js',
+  // `read_records` is platform admin only.
+  audit: 'tests/authorization/platformAdminShortCircuit.test.js',
+};
+
+test('every registered resource type is modelled or names the test that decides it', () => {
+  policyRegistry.listTypes().forEach((type) => {
+    const label = `resource type ${type}`;
+    const placed = MODELLED_RESOURCE_TYPES.includes(type)
+      || fs.existsSync(path.join(__dirname, '..', '..', NOT_MODELLED[type] ?? '.missing'));
+    expect([label, placed]).toEqual([label, true]);
+  });
+  // A listed type that is also modelled, or no longer registered, is a stale entry.
+  Object.keys(NOT_MODELLED).forEach((type) => {
+    const label = `${type} listed not modelled`;
+    expect([label, !MODELLED_RESOURCE_TYPES.includes(type) && policyRegistry.listTypes().includes(type)])
+      .toEqual([label, true]);
   });
 });
 

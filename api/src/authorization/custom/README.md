@@ -24,19 +24,24 @@ Create a new file in `custom/policies/` for each resource type:
 
 **Example: `custom/policies/project.js`**
 
+Every action declares its restriction class with `mutating`, `reading`, or `readingData`. Every
+term declares the path kind it confers in `meta`. No policy names the platform-admin role: the
+engine allows a platform admin before any action policy runs.
+
 ```javascript
-const Policy = require('../../../core/policies/Policy');
-const PolicyContainer = require('../../../core/policies/PolicyContainer');
-const { isPlatformAdmin } = require('../../../builtin/policies/utils/index');
+const Policy = require('../../core/policies/Policy');
+const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { mutating, reading } = require('../../core/policies/PolicyContainer');
 
 // Optional: Create a resource-specific policy class for convenience
 class ProjectPolicy extends Policy {
-  constructor({ name, requires, evaluate }) {
+  constructor({ name, requires, evaluate, meta }) {
     super({
-      name, 
-      resourceType: 'project', 
-      requires, 
+      name,
+      resourceType: 'project',
+      requires,
       evaluate,
+      meta,
     });
   }
 }
@@ -44,6 +49,7 @@ class ProjectPolicy extends Policy {
 // Define specific policies for this resource
 const isProjectOwner = new ProjectPolicy({
   name: 'isProjectOwner',
+  meta: { pathKind: 'self' },
   requires: {
     user: ['id'],
     resource: ['owner_id'],
@@ -53,6 +59,7 @@ const isProjectOwner = new ProjectPolicy({
 
 const isProjectMember = new ProjectPolicy({
   name: 'isProjectMember',
+  meta: { pathKind: 'member' },
   requires: {
     user: ['project_memberships'],
     resource: ['id'],
@@ -71,17 +78,17 @@ const projectPolicies = new PolicyContainer({
 
 projectPolicies
   .actions({
-    create: Policy.always, // Anyone can create a project
-    view: Policy.or([isPlatformAdmin, isProjectOwner, isProjectMember]),
-    edit: Policy.or([isPlatformAdmin, isProjectOwner]),
-    delete: Policy.or([isPlatformAdmin, isProjectOwner]),
-    add_member: Policy.or([isPlatformAdmin, isProjectOwner]),
-    remove_member: Policy.or([isPlatformAdmin, isProjectOwner]),
+    create: mutating(Policy.always), // Anyone can create a project
+    view: reading(Policy.or([isProjectOwner, isProjectMember])),
+    edit: mutating(isProjectOwner),
+    delete: mutating(isProjectOwner),
+    add_member: mutating(isProjectOwner),
+    remove_member: mutating(isProjectOwner),
   })
   .attributes({
     '*': [
       {
-        policy: Policy.or([isPlatformAdmin, isProjectOwner]),
+        policy: isProjectOwner,
         attribute_filters: ['*'], // All attributes
       },
       {
@@ -103,7 +110,7 @@ If your resource requires virtual attributes or custom hydration logic:
 
 ```javascript
 const prisma = require('@/db');
-const { PrismaHydrator } = require('../../../core/hydrators/PrismaHydrator');
+const { PrismaHydrator } = require('../../core/hydrators/PrismaHydrator');
 
 const projectHydrator = new PrismaHydrator({ 
   prismaClient: prisma, 
@@ -131,27 +138,36 @@ After creating your policy/hydrator files, register them in the main `index.js`:
 
 ```javascript
 // ============================================================================
-// SECTION 3: IMPORT CUSTOM POLICIES (derived app code)
-// Add your custom policy imports here
+// SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
+// Add your custom policy and hydrator imports here
 // ============================================================================
 const projectPolicies = require('./custom/policies/project');
+const projectHydrator = require('./custom/hydrators/project');
 
 // ... later in the file ...
 
-const POLICY_REGISTRY = {
-  // Builtin policies
-  group: groupPolicies,
-  collection: collectionPolicies,
-  
-  // Custom policies (add yours here)
-  project: projectPolicies,
-};
+// Register derived app policy containers here
+policyRegistry.register(projectPolicies);
 
 // ... and for hydrators ...
 
-// Register custom hydrators (add yours here)
-hydratorRegistry.register('project', require('./custom/hydrators/project'));
+// Register custom hydrators (add yours here in derived apps)
+hydratorRegistry.register('project', projectHydrator);
 ```
+
+### 4. Place the New Type in the Access Model
+
+The test suite fails until a new container is placed. Three tests read the registry:
+
+- `api/tests/authorization/registryCompleteness.test.js` fails on an action with no restriction
+  class and on a term with no path kind.
+- `api/tests/model/modelCoverage.test.js` fails on a registered resource type that the reference
+  model does not decide. Either extend `MODELLED_RESOURCE_TYPES` and the rule in
+  `api/tests/model/reference.js`, or add the type to `NOT_MODELLED` with the test that decides it.
+- `api/tests/services/restrictions/restrictions.test.js` fails when an exemption names an action
+  no container registers.
+
+See [v2 page patterns — Checklist for a change to the access model](../../../../docs/contributing/v2-page-patterns.md).
 
 ## Merge Conflict Strategy
 
@@ -190,29 +206,24 @@ const experimentPolicies = require('./custom/policies/experiment');
 
 ## Testing Your Custom Policies
 
+Routes bind an action with the authorization middleware. It runs the restriction check, the
+platform-admin check, and then the action's policy, and answers a refusal with 404 or 403.
+
 ```javascript
-// In your route handler:
-const { authorize, POLICY_REGISTRY, hydratorRegistry } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 
-router.get('/projects/:id', async (req, res) => {
-  const allowed = await authorize(
-    POLICY_REGISTRY.project.getPolicy('view'),
-    { 
-      user: req.user.id, 
-      resource: req.params.id,
-      context: req.id 
-    },
-    hydratorRegistry,
-    req.policyContext
-  );
-
-  if (!allowed) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  // ... proceed with request
-});
+router.get(
+  '/projects/:id',
+  authorize('project', 'view'),
+  asyncHandler(async (req, res) => {
+    const project = await projectService.get(req.params.id);
+    res.json(req.permission.filter(project));
+  }),
+);
 ```
+
+A handler that decides in its body calls `authorizeAction('project', 'view', { identifiers, policyExecutionContext })`
+and answers with `decision.status` when `decision.granted` is false.
 
 ## Questions?
 

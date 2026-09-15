@@ -24,6 +24,9 @@ const DATA_PLANE_ACTIONS = new Set([
 /** Restriction exemptions: lifting a restriction is never blocked by it. */
 const RESTRICTION_EXEMPT_ACTIONS = new Set(['unarchive']);
 
+/** The resource types this model decides. `modelCoverage.test.js` fails on a registered type in neither this list nor its own. */
+const MODELLED_RESOURCE_TYPES = ['group', 'dataset', 'collection'];
+
 /**
  * @typedef {Object} World
  * @property {Date} now
@@ -266,6 +269,9 @@ function createReference(tables, world) {
   };
 
   const decide = (userId, resourceType, action, resourceId, { ownerGroupId = null } = {}) => {
+    if (!MODELLED_RESOURCE_TYPES.includes(resourceType)) {
+      throw new Error(`reference: ${resourceType} is not a modelled resource type`);
+    }
     const user = users.get(userId);
     if (!user) throw new Error(`reference: unknown user ${userId}`);
     const row = tables.actions[resourceType]?.[action];
@@ -295,4 +301,4 @@ function createReference(tables, world) {
   };
 }
 
-module.exports = { createReference, DATA_PLANE_ACTIONS };
+module.exports = { createReference, DATA_PLANE_ACTIONS, MODELLED_RESOURCE_TYPES };
