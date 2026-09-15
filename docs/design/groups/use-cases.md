@@ -323,6 +323,7 @@ These users care about global correctness rather than individual projects.
     * Outcome: a rule such as "every dataset in Center X is readable by Core Y unless marked restricted" holds without anyone maintaining a list.
     * Trigger: a center large enough that hand-assembled collections stop scaling.
     * Why foundation: needs both rule-based collection membership and a way to mark something restricted, so it depends on Q5 and Q6 together.
+    * The membership half is sketched in [Collection placement rules](../ideas/collection-placement-rules.md), an idea nobody has committed to.
 
 ### 4.2 Evolution over time
 
