@@ -387,6 +387,18 @@ const held = await expand(live.map((g) => g.access_type.name));
 for (const type of types) expect(held.has(type.name)).toBe(true);
 ```
 
+## A finished run can look hung, because jest does not exit
+
+After the last suite, jest prints `Test Suites: ...` and then `Jest did not exit one second after
+the test run has completed`. The Redis and SSE clients the services open stay connected, so the
+process idles at 0% CPU until something kills it. That looks exactly like a stalled test, and one
+session killed three finished runs before reading their output.
+
+Write the output straight to a file, and look for the `Test Suites:` line before deciding a run is
+stuck. Piping jest through `grep` buffers everything until the process exits, which it never does.
+Pass `--forceExit` when the run should end on its own. Before starting a run, check
+`ps -eo pid,etime,args | grep "[j]est --runInBand"` and stop runs that already printed a summary.
+
 ## A single failure in a full run is usually cross-suite interference
 
 Four consecutive full runs on 2026-09-09 produced three different single-test failures and

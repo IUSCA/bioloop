@@ -168,8 +168,8 @@ literal type, not the types that imply it. Two lists got this wrong in opposite 
   every dataset in the collection, and each one's page then refused with 403.
 
 Widen the page's type with `grantService.satisfiedBy([...])` and pass the result to the query.
-`accessibleDatasetIdsByGrantsQuery` throws when given no types, so the loose form cannot
-return there. `api/tests/services/grants/listVisibility.test.js` is the parity harness. Add a
+`accessPathsQuery` throws when given an empty type list, so the loose form cannot return
+there. `api/tests/services/grants/listVisibility.test.js` is the parity harness. Add a
 case when a new grant shape appears. It failed four of its ten cases against the code before
 the fix, so it measures something.
 
@@ -252,9 +252,11 @@ That profile carries the roles the user held at login. `isPlatformAdmin` therefo
 read from `user_role`. Do not rename it back to `roles`, and do not put `current_roles` into a
 pre-fetched user. `tests/authorization/platformAdminFromDatabase.test.js` pins both directions.
 
-Code outside the engine still reads the session. `isPlatformAdmin(req)` in `services/auth.js`
-backs list branches in the groups, grants, collections, datasets_v2, and users_v2 routes, and
-`listEligibleOwnerGroups` takes roles from the user object its caller passes. Those are filed in
+A route that branches on platform admin calls `callerIsPlatformAdmin(req)` from
+`@/authorization`, which reads `current_roles` through the request's policy context. Never use
+`auth.isPlatformAdmin(req)` in a v2 route, because it reads the session. Two readers remain:
+the persona in `GET /v2/users/me`, which Phase 5 retires, and `listEligibleOwnerGroups`, which
+takes roles from the user object its caller passes. Both are filed in
 `.todo/local/L1-authorization-enforcement.md`.
 
 ## Capabilities consult the transition table; the gate does not
@@ -274,12 +276,55 @@ admin, and a platform admin.
   runs the Engine arm, prints disagreements grouped by action with the dimension values they
   share, and removes the world. It takes about 10 seconds. The hydrators log every query, so
   filter the output with `grep -E "^wrote world|^engine arm:|^\[[0-9]+\]|^  shared:"`.
-- `tests/model/engineArm.test.js` runs the Engine, Term forms, and Creates arms. A new
+- `tests/model/engineArm.test.js` runs the Engine and Creates arms. A new
   disagreement fails as unclassified. Add a `CLASSIFIED` entry only with the decision that
   settles it and the phase that removes it; a classification that stops matching fails as stale.
+- `tests/model/pathsArm.test.js` compares `accessPathsQuery` with the reference's `termPaths`:
+  path kinds, widened grant types, and list membership. `tests/model/listsArm.test.js` compares
+  the dataset, collection, and group searches with the reference for `view_metadata`.
+- The Term forms arm is retired. Both grant term forms now read `accessPathsQuery`, so the
+  comparison could not disagree.
 - `tests/model/dbWorld.js` writes rows directly. `group_closure` has no trigger, so it writes the
   self row and every ancestor row itself. The quarantine group and the system principals are the
   seeded rows.
+
+## The builtin terms read `access_paths`
+
+The dataset, collection, and group terms decide from one context attribute, `access_paths`.
+`loadAccessPaths` in `builtin/accessPaths.js` runs `accessPathsQuery` bound to the one resource
+and returns `{ rows, kinds, access_types }`, with the grant types widened. A term is a set test,
+such as `context.access_paths.kinds.has('admin')`. Do not add a user fact such as a group id list
+for a new dataset, collection, or group term; add a path kind to the statement instead, and the
+Paths arm checks it.
+
+A create has no resource id. `contextIdentifiers` in `core/hydrationUtils.js` passes the
+pre-fetched resource as `prospective`, and the loader reads the owning group's rows limited to
+`PROSPECTIVE_KINDS`. The context cache key includes the prospective resource, because the batch
+create route checks several owning groups in one request.
+
+`findAsyncTerms` runs at boot. An `evaluate` declared `async` fails startup, because it reads the
+database behind its `requires`. Put the read in a hydrator virtual attribute, as
+`resource_owner_group_id` on the grant hydrator does.
+
+Measured on 63 detail checks in the covering world, one run each: the median check went from 7
+queries to 3, and the maximum from 9 to 5.
+
+## Relations named for current state read the views
+
+`group.members`, `collection.datasets`, and `dataset.collections` are Prisma relations to the
+`view` models `active_group_user` and `active_collection_dataset`. The base-table relations are
+`group.membership_history`, `collection.dataset_history`, and `dataset.collection_history`. So an
+include, a filter, or a `_count` through the plain name returns only open rows, and history is
+asked for by name. `tx.active_group_user.findFirst(...)` reads one membership in force.
+
+Prisma cannot `orderBy` a relation count through a view relation. It fails with
+`Unknown argument _count`. `searchAllCollections` ranks by the counted relation in memory.
+
+Writes still go to the base models. A view model has no create or update.
+
+`tests/authorization/currentStateScan.test.js` fails on `removed_at: null`, `revoked_at: null`, or
+`is_archived: false` in `api/src` outside its allowlist. Each entry names why it is not a read of
+current state, and an entry that stops matching fails as stale.
 
 ## Probing the engine from a script
 

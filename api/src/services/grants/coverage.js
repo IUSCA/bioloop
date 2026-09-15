@@ -3,7 +3,13 @@ const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const prisma = require('@/db');
 
+const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 const accessTypeClosure = require('./accessTypeClosure');
+
+const PATH_RESOURCE_TYPE = {
+  [RESOURCE_TYPE.DATASET]: 'dataset',
+  [RESOURCE_TYPE.COLLECTION]: 'collection',
+};
 
 // How a grant reaches the subject it covers. The order is the order a reader should be told
 // them in: what the subject holds itself, then what it inherits, then what everyone has.
@@ -16,10 +22,10 @@ const COVERAGE_VIA = Object.freeze({
 /**
  * Every live grant that reaches one subject on one resource, and how each one arrives.
  *
- * The authorization layer has always read access this way. `userDatasetsQuery` unions the
- * user's own subject id with their effective groups, the system principals, and any collection
- * holding the dataset, then asks whether any grant matches. This answers the same question and
- * keeps the paths apart, so a caller can say which grant arrives from where.
+ * The rows are the `grant` paths of `accessPathsQuery`, the statement the engine and the lists
+ * read, so coverage cannot report a grant the engine would not honour. Each path keeps which
+ * grant arrives and through which collection, and the grant's own subject says whether it was
+ * held directly, inherited from a group, or granted to a system principal.
  *
  * Two callers need that. A reviewer deciding an access request should see that the requester's
  * lab already holds the access, so they can decline as redundant rather than issue a grant that
@@ -30,6 +36,7 @@ const COVERAGE_VIA = Object.freeze({
  * `fetchExistingGrants` stays as it is.
  *
  * @see docs/design/groups/access-requests-plan.md — C1
+ * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
  * @param {object} params
  * @param {string} params.subject_id - the user or group the coverage is being computed for
  * @param {string} params.resource_id - the dataset or collection resource id
@@ -42,51 +49,20 @@ const COVERAGE_VIA = Object.freeze({
 async function getEffectiveCoverage({
   subject_id, resource_id, resource_type, access_type_ids,
 }) {
-  // A user subject inherits from the groups it belongs to and their ancestors; a group subject
-  // inherits from its own ancestors. Both arms run, and the one that does not apply to this
-  // subject returns no rows, so no branch on subject type is needed.
-  const principalArms = SYSTEM_PRINCIPAL_GROUP_IDS
-    .map((id) => Prisma.sql`SELECT ${id} AS subject_id, ${COVERAGE_VIA.PRINCIPAL} AS via`);
-
-  const subjects = Prisma.sql`
-    SELECT ${subject_id} AS subject_id, ${COVERAGE_VIA.DIRECT} AS via
-    UNION
-    SELECT group_id, ${COVERAGE_VIA.GROUP}
-    FROM effective_user_groups
-    WHERE user_id = ${subject_id}
-    UNION
-    SELECT ancestor_id, ${COVERAGE_VIA.GROUP}
-    FROM group_closure
-    WHERE descendant_id = ${subject_id} AND depth > 0
-    UNION
-    ${Prisma.join(principalArms, ' UNION ')}
-  `;
-
-  // A grant on a collection confers on the datasets it holds, so a dataset is covered by
-  // grants on itself and on every collection currently containing it. A collection is covered
-  // only by grants on itself.
-  const resources = resource_type === RESOURCE_TYPE.COLLECTION
-    ? Prisma.sql`SELECT ${resource_id} AS resource_id`
-    : Prisma.sql`
-      SELECT ${resource_id} AS resource_id
-      UNION
-      SELECT collection_id
-      FROM active_collection_dataset
-      WHERE dataset_id = ${resource_id}
-    `;
+  const resourceType = PATH_RESOURCE_TYPE[resource_type];
+  if (!resourceType) throw new Error(`Coverage is not defined for resource type ${resource_type}`);
 
   // Widen the requirement before filtering. A caller asking about DATASET:LIST_FILES is
-  // covered by a lab's grant of DATASET:DOWNLOAD, and matching on the exact id would report
+  // covered by a lab's grant of DATASET:DOWNLOAD, and matching on the exact type would report
   // that access as new. The rows still carry the access type actually granted.
   // @see docs/design/groups/decisions.md — 7. Access types imply one another
-  const widenedAccessTypeIds = await accessTypeClosure.satisfiedByIds(access_type_ids ?? []);
-  const accessTypeFilter = widenedAccessTypeIds.length
-    ? Prisma.sql`WHERE g.access_type_id IN (${Prisma.join(widenedAccessTypeIds)})`
-    : Prisma.empty;
+  let accessTypes = null;
+  if (access_type_ids?.length) {
+    const { nameById } = await accessTypeClosure.getAccessTypeClosure();
+    accessTypes = (await accessTypeClosure.satisfiedByIds(access_type_ids)).map((id) => nameById.get(id));
+  }
 
   const rows = await prisma.$queryRaw(Prisma.sql`
-    WITH covering_subjects AS (${subjects}),
-    covered_resources AS (${resources})
     SELECT
       g.id,
       g.subject_id,
@@ -98,25 +74,21 @@ async function getEffectiveCoverage({
       g.source_preset_id,
       gat.name AS access_type_name,
       gat.description AS access_type_description,
-      cs.via,
-      CASE WHEN cs.via = ${COVERAGE_VIA.DIRECT} THEN NULL ELSE cs.subject_id END AS via_group_id,
-      CASE WHEN g.resource_id = ${resource_id} THEN NULL ELSE g.resource_id END AS via_collection_id
-    FROM valid_grants g
-    JOIN covering_subjects cs ON g.subject_id = cs.subject_id
-    JOIN covered_resources cr ON g.resource_id = cr.resource_id
-    JOIN grant_access_type gat ON g.access_type_id = gat.id
-    ${accessTypeFilter}
+      p.collection_id AS via_collection_id
+    FROM (${accessPathsQuery({
+    userId: subject_id, resourceType, resourceIds: [resource_id], accessTypes,
+  })}) p
+    JOIN valid_grants g ON g.id = p.grant_id
+    JOIN grant_access_type gat ON gat.id = g.access_type_id
+    WHERE p.path_kind = 'grant'
   `);
 
-  // The same grant can arrive on two arms — a direct group membership and an ancestor of that
-  // group both name the same group id. Keep the strongest path per grant, in COVERAGE_VIA order.
-  const strongest = new Map();
-  const rank = { DIRECT: 0, GROUP: 1, PRINCIPAL: 2 };
-  for (const row of rows) {
-    const held = strongest.get(row.id);
-    if (!held || rank[row.via] < rank[held.via]) strongest.set(row.id, row);
-  }
-  return [...strongest.values()];
+  return rows.map((row) => {
+    let via = COVERAGE_VIA.GROUP;
+    if (row.subject_id === subject_id) via = COVERAGE_VIA.DIRECT;
+    else if (SYSTEM_PRINCIPAL_GROUP_IDS.includes(row.subject_id)) via = COVERAGE_VIA.PRINCIPAL;
+    return { ...row, via, via_group_id: via === COVERAGE_VIA.DIRECT ? null : row.subject_id };
+  });
 }
 
 /**

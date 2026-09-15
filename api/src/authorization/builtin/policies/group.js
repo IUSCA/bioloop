@@ -17,44 +17,37 @@ const isGroupAdmin = new GroupPolicy({
   name: 'isGroupAdmin',
   meta: { pathKind: 'admin' },
   requires: {
-    user: ['group_memberships'],
-    resource: ['id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, group) => user
-    .group_memberships
-    .some((membership) => membership.group_id === group.id && membership.role === 'ADMIN'),
+  evaluate: (user, group, context) => context.access_paths.kinds.has('admin'),
 });
 
 const isGroupMember = new GroupPolicy({
   name: 'isGroupMember',
   meta: { pathKind: 'member' },
   requires: {
-    user: ['effective_group_ids'],
-    resource: ['id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, group) => user
-    .effective_group_ids
-    .includes(group.id),
+  evaluate: (user, group, context) => context.access_paths.kinds.has('member'),
 });
 
 const hasGroupOversight = new GroupPolicy({
   name: 'hasGroupOversight',
   meta: { pathKind: 'oversight' },
   requires: {
-    user: ['oversight_group_ids'],
-    resource: ['id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, group) => user.oversight_group_ids.includes(group.id),
+  evaluate: (user, group, context) => context.access_paths.kinds.has('oversight'),
 });
 
 const canAccessResourcesOwnedByGroup = new GroupPolicy({
   name: 'canAccessResourcesOwnedByGroup',
   meta: { pathKind: 'grant' },
+  // A grant on a dataset or collection the group owns.
   requires: {
-    user: ['accessible_owner_group_ids'], // ids of groups that own resources U has grants on
-    resource: ['id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, group) => user.accessible_owner_group_ids.includes(group.id),
+  evaluate: (user, group, context) => context.access_paths.kinds.has('grant'),
 });
 
 /**
@@ -68,11 +61,11 @@ const isGroupContributor = new GroupPolicy({
   name: 'isGroupContributor',
   meta: { pathKind: 'member', rule: 'contributions_allowed' },
   requires: {
-    user: ['effective_group_ids'],
-    resource: ['id', 'allow_user_contributions'],
+    resource: ['allow_user_contributions'],
+    context: ['access_paths'],
   },
-  evaluate: (user, group) => group.allow_user_contributions === true
-    && user.effective_group_ids.includes(group.id),
+  evaluate: (user, group, context) => group.allow_user_contributions === true
+    && context.access_paths.kinds.has('member'),
 });
 
 /**

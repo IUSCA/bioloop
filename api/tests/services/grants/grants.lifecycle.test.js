@@ -270,6 +270,7 @@ describe('grants - lifecycle', () => {
     it('returns true when a valid grant exists', async () => {
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -280,6 +281,7 @@ describe('grants - lifecycle', () => {
       await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -320,6 +322,7 @@ describe('grants - lifecycle', () => {
     it('member inherits access via group membership', async () => {
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -330,6 +333,7 @@ describe('grants - lifecycle', () => {
       const outsider = await createTestUser('_gl_outsider');
       const has = await grantsService.userHasGrant({
         user_id: outsider.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -380,6 +384,7 @@ describe('grants - lifecycle', () => {
       });
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -408,6 +413,7 @@ describe('grants - lifecycle', () => {
 
       const has = await grantsService.userHasGrant({
         user_id: member.subject_id,
+        resource_type: 'DATASET',
         resource_id: dataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });

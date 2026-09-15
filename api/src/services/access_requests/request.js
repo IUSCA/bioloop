@@ -39,13 +39,8 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
 
   // Group request: subject must be a GROUP and requester must be ADMIN of that group
   if (subject.type === SUBJECT_TYPE.GROUP) {
-    const isAdmin = await tx.group_user.findFirst({
-      where: {
-        group_id: subject_id,
-        user_id: requester_id,
-        role: GROUP_MEMBER_ROLE.ADMIN,
-        removed_at: null,
-      },
+    const isAdmin = await tx.active_group_user.findFirst({
+      where: { group_id: subject_id, user_id: requester_id, role: GROUP_MEMBER_ROLE.ADMIN },
     });
 
     if (isAdmin) {

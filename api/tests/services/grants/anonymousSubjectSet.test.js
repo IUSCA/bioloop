@@ -9,8 +9,8 @@
  * every grant query unconditionally, so an anonymous caller would have resolved every
  * grant an admin meant for signed-in users.
  *
- * The tests are written against `getGrantAccessTypesForUser`, because that is what the
- * context hydrator calls on the request path.
+ * The tests are written against `getGrantAccessTypesForUser`, which reads the grant rows of
+ * `accessPathsQuery`, the statement the context hydrator's `access_paths` reads.
  *
  * @see docs/design/groups/profiles.md — A defect this work must fix first
  */

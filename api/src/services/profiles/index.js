@@ -180,7 +180,7 @@ function getGroupForProfile(group_id) {
     where: { id: group_id },
     include: {
       members: {
-        where: { role: 'ADMIN', removed_at: null },
+        where: { role: 'ADMIN' },
         include: { user: true },
       },
     },

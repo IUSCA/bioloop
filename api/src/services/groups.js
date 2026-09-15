@@ -4,6 +4,7 @@ const createError = require('http-errors');
 const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
+const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 
 const { generate_slug } = require('@/utils/slug');
 const audit = require('@/authorization/builtin/audit');
@@ -613,12 +614,7 @@ async function listGroupMembers(group_id, {
     const total = Number(totalRows[0].count);
 
     // Step 7: get direct members count for metadata
-    const directMembershipCount = await tx.group_user.count({
-      where: {
-        group_id,
-        removed_at: null,
-      },
-    });
+    const directMembershipCount = await tx.active_group_user.count({ where: { group_id } });
 
     return {
       metadata: {
@@ -784,9 +780,7 @@ async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    const membership = await tx.group_user.findFirst({
-      where: { group_id, user_id, removed_at: null },
-    });
+    const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
@@ -838,9 +832,7 @@ async function demoteAdminToMember(group_id, {
       throw createError.NotFound('Group not found');
     }
 
-    const membership = await tx.group_user.findFirst({
-      where: { group_id, user_id, removed_at: null },
-    });
+    const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 
     if (!membership) {
       throw createError.Conflict('User is not a member of the group.');
@@ -913,6 +905,9 @@ async function searchGroupsForUser({
     archivedClause = Prisma.sql`g.is_archived = ${is_archived}`;
   }
 
+  // Visibility is any path to the group, including a grant on a resource it owns, which the
+  // group page admits too. `admin` and `direct` filter on the caller's own membership row.
+  // @see src/authorization/builtin/accessPaths.js
   let membershipClause = Prisma.empty;
   if (scope === 'admin') {
     membershipClause = Prisma.sql`
@@ -923,13 +918,12 @@ async function searchGroupsForUser({
         gu.role IS NOT NULL
       `;
   } else if (scope === 'oversight') {
-    // only show groups user administers
     membershipClause = Prisma.sql`
-      og.id IS NOT NULL
+      p.oversight
     `;
   } else if (scope === 'all') {
     membershipClause = Prisma.sql`
-    (ag.id IS NOT NULL OR og.id IS NOT NULL)
+    p.id IS NOT NULL
   `;
   }
 
@@ -939,30 +933,28 @@ async function searchGroupsForUser({
   );
 
   const dataSql = Prisma.sql`
-    WITH all_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-    ),
-    oversight_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_oversight_groups
-      WHERE user_id = ${user_id}
+    WITH paths AS (
+      SELECT ap.resource_id AS id,
+        bool_or(ap.path_kind = 'oversight') AS oversight,
+        bool_or(ap.path_kind = 'member') AS member,
+        bool_or(ap.path_kind = 'grant') AS grant_holder
+      FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
+      GROUP BY ap.resource_id
     )
     SELECT 
       g.*, 
       COALESCE(
         gu.role::text,
-        CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END,
-        'TRANSITIVE_MEMBER'
+        CASE WHEN p.oversight THEN 'OVERSIGHT' END,
+        CASE WHEN p.member THEN 'TRANSITIVE_MEMBER' END,
+        CASE WHEN p.grant_holder THEN 'GRANT_HOLDER' END
       ) AS user_role,
       ( select count(*) from active_group_user where group_id = g.id ) as size,
       ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
     FROM "group" g
     -- 1-on-1 join because of unique constraint on (group_id, user_id)
-    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
-    LEFT JOIN oversight_groups og ON og.id = g.id -- 1-on-1 join because of distinct in CTE
-    LEFT JOIN all_groups ag ON ag.id = g.id -- 1-on-1 join because of distinct in CTE; for where clause
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN paths p ON p.id = g.id -- 1-on-1 join because the CTE groups by id
     ${finalWhereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     LIMIT ${limit} OFFSET ${offset}
@@ -971,21 +963,18 @@ async function searchGroupsForUser({
   // console.log(dataSql.sql, dataSql.values); // log the generated SQL for debugging
 
   const countSql = Prisma.sql`
-    WITH all_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_groups
-      WHERE user_id = ${user_id}
-    ),
-    oversight_groups AS (
-      SELECT DISTINCT group_id AS id
-      FROM effective_user_oversight_groups
-      WHERE user_id = ${user_id}
+    WITH paths AS (
+      SELECT ap.resource_id AS id,
+        bool_or(ap.path_kind = 'oversight') AS oversight,
+        bool_or(ap.path_kind = 'member') AS member,
+        bool_or(ap.path_kind = 'grant') AS grant_holder
+      FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
+      GROUP BY ap.resource_id
     )
     SELECT COUNT(DISTINCT g.id) as total_count
     FROM "group" g
-    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id} 
-    LEFT JOIN oversight_groups og ON og.id = g.id
-    LEFT JOIN all_groups ag ON ag.id = g.id
+    LEFT JOIN active_group_user gu ON gu.group_id = g.id AND gu.user_id = ${user_id}
+    LEFT JOIN paths p ON p.id = g.id
     ${finalWhereClause}
   `;
 
@@ -1331,12 +1320,8 @@ async function getGroupsWithoutActiveAdmins() {
 }
 
 async function isGroupAdmin(user_id) {
-  const row = await prisma.group_user.findFirst({
-    where: {
-      user_id,
-      role: GROUP_MEMBER_ROLE.ADMIN,
-      removed_at: null,
-    },
+  const row = await prisma.active_group_user.findFirst({
+    where: { user_id, role: GROUP_MEMBER_ROLE.ADMIN },
   });
   return row !== null;
 }

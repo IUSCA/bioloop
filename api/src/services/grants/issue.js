@@ -198,45 +198,6 @@ async function createGrant(data, granted_by) {
   return prisma.$transaction((tx) => _createGrant(tx, grantData));
 }
 
-/**
- * Check whether a non-revoked grant already exists that would overlap with the requested validity window.
- * Uses half-open interval semantics [valid_from, valid_until) matching the DB exclusion constraint.
- * Kept as an explicit pre-flight helper for callers that want early ORM-level feedback before hitting the DB.
- */
-// eslint-disable-next-line no-unused-vars
-async function _assertNoOverlappingGrant(tx, data) {
-  const newFrom = data.valid_from ? new Date(data.valid_from) : new Date();
-  const newUntil = data.valid_until ? new Date(data.valid_until) : null;
-
-  // Overlap condition for [newFrom, newUntil) vs [existingFrom, existingUntil):
-  //   existingFrom < newUntil  (infinity if newUntil is null → always true)
-  //   newFrom < existingUntil  (infinity if existingUntil is null → always true)
-  const conflicting = await tx.grant.findFirst({
-    where: {
-      subject_id: data.subject_id,
-      resource_id: data.resource_id,
-      access_type_id: Number(data.access_type_id),
-      revoked_at: null,
-      AND: [
-        // existingFrom < newUntil (skip if newUntil is null → ∞, so always overlaps)
-        ...(newUntil ? [{ valid_from: { lt: newUntil } }] : []),
-        // newFrom < existingUntil (existingUntil null → ∞, so always overlaps)
-        {
-          OR: [
-            { valid_until: null },
-            { valid_until: { gt: newFrom } },
-          ],
-        },
-      ],
-    },
-    select: { id: true },
-  });
-
-  if (conflicting) {
-    throw createError.Conflict(GRANT_OVERLAP_ERROR_MSG);
-  }
-}
-
 // ============================================================================
 // Grant Bulk Creation
 // ============================================================================

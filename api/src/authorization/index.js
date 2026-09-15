@@ -61,7 +61,7 @@ const restrictions = require('./builtin/restrictions');
 // once, before any action policy runs and after the restriction check.
 // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 const { isPlatformAdmin } = require('./builtin/policies/utils/index');
-const { findUnhydratableRequirements } = require('./core/requiresCheck');
+const { findUnhydratableRequirements, findAsyncTerms } = require('./core/requiresCheck');
 
 const PLATFORM_ADMIN = { policy: isPlatformAdmin, callerRole: 'PLATFORM_ADMIN' };
 
@@ -228,15 +228,44 @@ if (unhydratable.length) {
   throw new Error(`Policies declare attributes no hydrator supplies:\n  ${unhydratable.join('\n  ')}`);
 }
 
+// An async `evaluate` reads the database itself, so its `requires` understates what it reads
+// and no list statement can restate it. Its read belongs in a hydrator virtual attribute.
+// @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+const asyncTerms = findAsyncTerms(policyRegistry);
+if (asyncTerms.length) {
+  throw new Error(`Policies read the database inside evaluate:\n  ${asyncTerms.join('\n  ')}`);
+}
+
 // ============================================================================
 // SECTION 5: EXPORTS
 // Single export point for all authorization functionality
 // ============================================================================
 
+/**
+ * Whether the caller is a platform admin, read from `user_role` the way the engine reads it.
+ *
+ * A list handler asks this to choose between the unfiltered query and the one scoped to the
+ * caller. Reading the session's roles instead kept a demoted admin's unfiltered lists until
+ * the token expired. The request's policy context caches the answer.
+ *
+ * @param {import('express').Request} req
+ * @returns {Promise<boolean>}
+ * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 14
+ */
+async function callerIsPlatformAdmin(req) {
+  const id = req.user?.subject_id;
+  if (!id || req.user.is_anonymous) return false;
+  const user = await userHydrator.hydrate({
+    id, attributes: ['current_roles'], cache: req.policyContext?.cache?.user ?? new Map(),
+  });
+  return isPlatformAdmin.evaluate(user);
+}
+
 module.exports = {
   // Core authorization functions
   authorizeWithFilters,
   authorizeAction,
+  callerIsPlatformAdmin,
 
   // Restriction layer
   restrictions,

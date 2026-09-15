@@ -81,4 +81,31 @@ function findUnhydratableRequirements(policyRegistry, hydratorRegistry) {
   return [...new Set(problems)];
 }
 
-module.exports = { collectRequirements, findUnhydratableRequirements };
+/**
+ * Every leaf term whose `evaluate` is an async function.
+ *
+ * A term decides from the attributes it declares, which the hydrators fetch before `evaluate`
+ * runs. An async `evaluate` almost always means the term reads the database itself, so its
+ * `requires` understates what it reads and no compiler can turn it into SQL.
+ * @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+ * @param {import('./policies/PolicyRegistry')} policyRegistry
+ * @returns {string[]} `<resource type>.<action> (<term>)`, one per async term
+ */
+function findAsyncTerms(policyRegistry) {
+  const found = new Set();
+  const check = (where, policy) => policy.terms()
+    // `_evaluate` is the function the policy author wrote. `evaluate` is Policy's own async
+    // wrapper, which every term has.
+    .filter((term) => term._evaluate?.constructor?.name === 'AsyncFunction')
+    .forEach((term) => found.add(`${where} (${term.name})`));
+  policyRegistry.listTypes().forEach((resourceType) => {
+    const container = policyRegistry.get(resourceType);
+    container.getActionNames().forEach((action) => check(`${resourceType}.${action}`, container.getPolicy(action)));
+    Object.entries(container.export().attributeRules).forEach(([action, rules]) => {
+      rules.forEach((rule, index) => check(`${resourceType}.${action} attribute rule ${index}`, rule.policy));
+    });
+  });
+  return [...found];
+}
+
+module.exports = { collectRequirements, findUnhydratableRequirements, findAsyncTerms };

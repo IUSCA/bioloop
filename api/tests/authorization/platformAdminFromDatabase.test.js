@@ -17,7 +17,7 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
-const { authorizeAction } = require('@/authorization');
+const { authorizeAction, callerIsPlatformAdmin } = require('@/authorization');
 const { PrismaHydrator } = require('@/authorization/core/hydrators/PrismaHydrator');
 const { createTestUser, deleteUser } = require('../services/helpers');
 
@@ -77,5 +77,22 @@ describe('an admin whose session predates the role', () => {
   test('is allowed although the policy context was seeded with no role', async () => {
     const result = await readRecords(currentAdmin, { seededRoles: [] });
     expect(result.granted).toBe(true);
+  });
+});
+
+describe('a list handler choosing the unfiltered query', () => {
+  const request = (user, roles) => ({ user: { subject_id: user.subject_id, roles }, policyContext: freshContext() });
+
+  test('treats a session that still claims admin as an ordinary caller', async () => {
+    expect(await callerIsPlatformAdmin(request(formerAdmin, ['admin']))).toBe(false);
+  });
+
+  test('treats an admin whose session predates the role as an admin', async () => {
+    expect(await callerIsPlatformAdmin(request(currentAdmin, []))).toBe(true);
+  });
+
+  test('never treats the anonymous principal as an admin', async () => {
+    const req = { user: { subject_id: currentAdmin.subject_id, is_anonymous: true }, policyContext: freshContext() };
+    expect(await callerIsPlatformAdmin(req)).toBe(false);
   });
 });

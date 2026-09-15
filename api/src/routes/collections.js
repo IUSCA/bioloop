@@ -15,9 +15,9 @@ const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+  callerIsPlatformAdmin,
 } = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
-const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 
@@ -53,7 +53,7 @@ router.post(
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
 
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = collectionService.searchAllCollections(params);
     } else {
       promise = collectionService.searchCollectionsForUser({
@@ -274,7 +274,7 @@ router.get(
     });
 
     const resourceIds = data.map((d) => d.resource_id);
-    const viewable = isPlatformAdmin(req)
+    const viewable = (await callerIsPlatformAdmin(req))
       ? new Set(resourceIds)
       : await datasetService.viewableDatasetIds(req.user.subject_id, resourceIds);
 

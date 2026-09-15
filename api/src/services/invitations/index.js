@@ -83,8 +83,8 @@ async function createInvitation({
 
     // Someone who is already in the group does not need asking. Matched on the account's
     // address, normalised the same way the invitation's was.
-    const members = await tx.group_user.findMany({
-      where: { group_id, removed_at: null },
+    const members = await tx.active_group_user.findMany({
+      where: { group_id },
       select: { user: { select: { email: true } } },
     });
     if (members.some((m) => normalizeEmail(m.user?.email) === invited_email)) {

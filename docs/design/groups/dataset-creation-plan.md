@@ -172,8 +172,8 @@ objects, distinct staged trees, and distinct download links.
 `dataset.create` is `isDatasetOwningGroupAdmin`, so a member of a contributing group can
 create nothing. Add `contribute: Policy.or([isDatasetOwningGroupAdmin,
 isMemberOfContributingGroup])` to `api/src/authorization/builtin/policies/dataset.js`. The
-second policy needs `user.effective_group_ids` and `resource.allow_user_contributions`, and
-both are hydrated already. `dataset.create` keeps its meaning, so the existing v2 routes are
+second policy needs a `member` path to the owning group, read from the context attribute
+`access_paths`, and `resource.owner_group_allows_contributions`, and both are hydrated already. `dataset.create` keeps its meaning, so the existing v2 routes are
 unaffected.
 
 *Reuse:* the policy framework, both hydrators. *New:* one policy, one action.

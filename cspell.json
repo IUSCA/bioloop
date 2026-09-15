@@ -298,7 +298,14 @@
     "unhydratable",
     "Unhydratable",
     "unpoliced",
-    "Unpoliced"
+    "Unpoliced",
+    "millis",
+    "unioned",
+    "refetched",
+    "parameterised",
+    "singup",
+    "falsey",
+    "TOCTOU"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

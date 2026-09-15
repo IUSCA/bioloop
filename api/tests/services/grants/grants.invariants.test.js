@@ -234,6 +234,7 @@ describe('grants - invariants', () => {
     it('user in child group inherits access from parent group grant', async () => {
       const has = await grantsService.userHasGrant({
         user_id: transitiveUser.subject_id,
+        resource_type: 'DATASET',
         resource_id: transitiveDataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });
@@ -289,6 +290,7 @@ describe('grants - invariants', () => {
     it('a user with no group memberships has access through it', async () => {
       const has = await grantsService.userHasGrant({
         user_id: unaffiliatedUser.subject_id,
+        resource_type: 'DATASET',
         resource_id: principalDataset.resource_id,
         access_types: ['DATASET:VIEW_METADATA'],
       });

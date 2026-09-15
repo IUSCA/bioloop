@@ -21,8 +21,8 @@ const prisma = require('@/db');
 const { authorizeAction } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const collectionService = require('@/services/collections');
-const grantService = require('@/services/grants');
 const { AUTHENTICATED_USERS_GROUP_ID } = require('@/constants');
+const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 const {
   createTestUser,
   createTestGroup,
@@ -187,9 +187,10 @@ describe('every list agrees with the page it links to', () => {
   }, 30_000);
 });
 
-describe('the grant arm refuses to count every access type', () => {
-  test('accessibleDatasetIdsByGrantsQuery throws without access types', () => {
-    expect(() => grantService.accessibleDatasetIdsByGrantsQuery(viewer.subject_id)).toThrow(/access types/);
-    expect(() => grantService.accessibleDatasetIdsByGrantsQuery(viewer.subject_id, [])).toThrow(/access types/);
+describe('the path statement refuses to count every access type', () => {
+  test('accessPathsQuery throws on an empty type list', () => {
+    expect(() => accessPathsQuery({
+      userId: viewer.subject_id, resourceType: 'dataset', accessTypes: [],
+    })).toThrow(/accessTypes is empty/);
   });
 });

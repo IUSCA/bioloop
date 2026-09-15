@@ -14,6 +14,7 @@ const fetchService = require('./fetch');
 const issueService = require('./issue');
 const coverageService = require('./coverage');
 const helpers = require('./helpers');
+const holdings = require('./holdings');
 const { notifySubjectOfRevocation } = require('./notify');
 
 /**
@@ -149,6 +150,7 @@ module.exports = {
   revokeAllGrants,
 
   ...helpers,
+  ...holdings,
   ...fetchService,
   ...issueService,
   ...coverageService,

@@ -347,7 +347,7 @@ subject path.
 
 The 2026-09-03 design review argued for dropping both, in its finding 5. The invariant is
 already false for effective access: a grant to a user and a grant to their group overlap
-freely, because `subject_id` differs, and `userDatasetsQuery` has always taken the union of the
+freely, because `subject_id` differs, and the grant term has always taken the union of the
 subject paths. The constraint therefore forbids overlap on one path and permits it on every other.
 The review was correct about that, and it deferred the change at the time.
 

@@ -14,10 +14,11 @@ const auditService = require('@/services/audit');
 const profileService = require('@/services/profiles');
 const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
-const { createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray } = require('@/authorization');
+const {
+  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, callerIsPlatformAdmin,
+} = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
-const { isPlatformAdmin } = require('@/services/auth');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
 
@@ -53,7 +54,7 @@ router.post(
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = groupService.searchAllGroups({
         ...params, user_id: req.user.subject_id,
       });
@@ -175,7 +176,7 @@ router.post(
     // name at least one. A platform admin may still create one deliberately: the platform-admin
     // short-circuit administers every group, and `GET /groups/without-active-admin` lists the
     // groups in that state for repair.
-    if (!isPlatformAdmin(req) && admins.length === 0) {
+    if (!(await callerIsPlatformAdmin(req)) && admins.length === 0) {
       return next(createError.BadRequest('A child group needs at least one admin.'));
     }
 

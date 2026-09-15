@@ -184,13 +184,21 @@ describe('coverage that arrives through a collection', () => {
     await prisma.collection_dataset.deleteMany({ where: { dataset_id: dataset.resource_id } });
   });
 
-  test('a grant on a collection covers the datasets it holds', async () => {
-    await grant(member.subject_id, collection.id, listContentsId);
+  test('a dataset access type granted on a collection covers the datasets it holds', async () => {
+    await grant(member.subject_id, collection.id, downloadId);
 
     const coverage = await coverageOf(member.subject_id, dataset.resource_id);
 
     expect(coverage).toHaveLength(1);
     expect(coverage[0].via_collection_id).toBe(collection.id);
+  });
+
+  test('a collection access type covers no dataset in the collection', async () => {
+    // The engine never honours a collection type on a dataset, so coverage must not report it.
+    // @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+    await grant(member.subject_id, collection.id, listContentsId);
+
+    expect(await coverageOf(member.subject_id, dataset.resource_id)).toEqual([]);
   });
 
   test('a collection is covered only by grants on itself', async () => {
@@ -210,7 +218,7 @@ describe('labelling', () => {
       data: [{ collection_id: collection.id, dataset_id: dataset.resource_id }],
       skipDuplicates: true,
     });
-    await grant(childGroup.id, collection.id, listContentsId);
+    await grant(childGroup.id, collection.id, downloadId);
 
     const [row] = await labelCoverage(await coverageOf(member.subject_id, dataset.resource_id));
 

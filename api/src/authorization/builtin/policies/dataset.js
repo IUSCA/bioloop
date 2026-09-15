@@ -30,15 +30,9 @@ const isDatasetOwningGroupAdmin = new DatasetPolicy({
   name: 'isDatasetOwningGroupAdmin',
   meta: { pathKind: 'admin' },
   requires: {
-    user: ['group_memberships'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => user
-    .group_memberships
-    .some(
-      (membership) => membership.group_id === dataset.owner_group_id
-        && membership.role === 'ADMIN',
-    ),
+  evaluate: (user, dataset, context) => context.access_paths.kinds.has('admin'),
 });
 
 /**
@@ -50,10 +44,9 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
   name: 'hasDatasetOwningGroupOversight',
   meta: { pathKind: 'oversight' },
   requires: {
-    user: ['oversight_group_ids'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => user.oversight_group_ids.includes(dataset.owner_group_id),
+  evaluate: (user, dataset, context) => context.access_paths.kinds.has('oversight'),
 });
 
 /**
@@ -69,11 +62,11 @@ const isDatasetOwningGroupContributor = new DatasetPolicy({
   name: 'isDatasetOwningGroupContributor',
   meta: { pathKind: 'member', rule: 'contributions_allowed' },
   requires: {
-    user: ['effective_group_ids'],
-    resource: ['owner_group_id', 'owner_group_allows_contributions'],
+    resource: ['owner_group_allows_contributions'],
+    context: ['access_paths'],
   },
-  evaluate: (user, dataset) => dataset.owner_group_allows_contributions === true
-    && user.effective_group_ids.includes(dataset.owner_group_id),
+  evaluate: (user, dataset, context) => dataset.owner_group_allows_contributions === true
+    && context.access_paths.kinds.has('member'),
 });
 
 // ============================================================================
@@ -86,9 +79,8 @@ const isDatasetOwningGroupContributor = new DatasetPolicy({
  * Factory: returns a policy that checks whether the user has an active grant
  * of the specified access_type on this dataset.
  *
- * The check is a pure Set membership test against `context.active_grant_access_types`,
- * a Set<string> pre-fetched once per request by the ContextHydrator virtual attribute
- * `active_grant_access_types`.  No DB call fires inside evaluate().
+ * The check is a Set membership test against `context.access_paths.access_types`, the
+ * widened types of the caller's grant paths to this dataset. No DB call fires inside evaluate().
  */
 const userHasGrant = (access_type) => {
   if (!VALID_GRANT_NAMES.has(access_type)) {
@@ -98,11 +90,9 @@ const userHasGrant = (access_type) => {
     name: `userHasGrant(${access_type})`,
     meta: { pathKind: 'grant', accessType: access_type },
     requires: {
-      user: [],
-      resource: [],
-      context: ['active_grant_access_types'],
+      context: ['access_paths'],
     },
-    evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
+    evaluate: (user, dataset, context) => context.access_paths.access_types.has(access_type),
   });
 };
 

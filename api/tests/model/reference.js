@@ -246,6 +246,25 @@ function createReference(tables, world) {
    * `decide(u, a, r)`, restricted to the allowed bit and the paths.
    * @returns {{ allowed: boolean, paths: Object[], blockedBy: string|null }}
    */
+  /**
+   * The paths the action's terms find, before any restriction or deletion is consulted. A
+   * restriction blocks an action; it does not remove the relationship a path records, so the
+   * path statement, which reads never restrict, is compared with this.
+   */
+  const termPaths = (userId, resourceType, action, resourceId) => {
+    const user = users.get(userId);
+    if (!user) throw new Error(`reference: unknown user ${userId}`);
+    const row = tables.actions[resourceType]?.[action];
+    if (!row) throw new Error(`reference: unknown action ${resourceType}.${action}`);
+    const paths = [];
+    if (!user.anonymous && user.platform_admin) paths.push({ kind: 'platform_admin' });
+    row.terms.forEach((term) => {
+      const p = termPath(user, resourceType, resourceId, term);
+      if (p && !paths.some((q) => JSON.stringify(q) === JSON.stringify(p))) paths.push(p);
+    });
+    return paths;
+  };
+
   const decide = (userId, resourceType, action, resourceId, { ownerGroupId = null } = {}) => {
     const user = users.get(userId);
     if (!user) throw new Error(`reference: unknown user ${userId}`);
@@ -262,12 +281,7 @@ function createReference(tables, world) {
     }
     if (deletedBlocks(resourceType, action, resourceId)) return { allowed: false, paths: [], blockedBy: 'DELETED' };
 
-    const paths = [];
-    if (!user.anonymous && user.platform_admin) paths.push({ kind: 'platform_admin' });
-    row.terms.forEach((term) => {
-      const p = termPath(user, resourceType, resourceId, term);
-      if (p && !paths.some((q) => JSON.stringify(q) === JSON.stringify(p))) paths.push(p);
-    });
+    const paths = termPaths(userId, resourceType, action, resourceId);
     return { allowed: paths.length > 0, paths, blockedBy: null };
   };
 
@@ -277,7 +291,7 @@ function createReference(tables, world) {
   );
 
   return {
-    decide, standing, subjects, heldTypes, effectiveGroups, adminGroups, overseenGroups, restricted,
+    decide, termPaths, standing, subjects, heldTypes, effectiveGroups, adminGroups, overseenGroups, restricted,
   };
 }
 

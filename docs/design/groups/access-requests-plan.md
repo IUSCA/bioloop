@@ -314,11 +314,11 @@ the component failed the Vite transform outright.
 path, with each grant labelled by how it arrives. It is the query the three surfaces below all
 need, and it is written once.
 
-The union is the same one the authorization layer already uses in `userDatasetsQuery`: the
-subject itself, the groups it inherits from, the system principals, and, for a dataset, any
-collection holding it. A user subject inherits from `effective_user_groups`; a group subject
-inherits from its ancestors in `group_closure`. One query serves both, because the arm that
-does not apply returns no rows.
+The rows are the `grant` paths of `accessPathsQuery`, the statement the engine and the lists
+read: the subject itself, the groups it inherits from, the system principals, and, for a
+dataset, any collection holding it. A user subject inherits from `effective_user_groups`; a
+group subject inherits from its ancestors in `group_closure`. One statement serves both,
+because the arm that does not apply returns no rows.
 
 *New:* one service function. *Reuse:* the union already written in
 `services/grants/helpers.js`.

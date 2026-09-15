@@ -1,6 +1,5 @@
 const assert = require('assert');
 // const path = require('node:path');
-const { GROUP_MEMBER_ROLE } = require('@prisma/client');
 
 const config = require('config');
 const _ = require('lodash/fp');
@@ -11,8 +10,6 @@ const {
   DONE_STATUSES, INCLUDE_WORKFLOWS,
 } = require('@/constants');
 
-const grantService = require('@/services/grants');
-const { userHydrator } = require('@/authorization/builtin/hydrators/user');
 const fetchModule = require('./fetch');
 const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
@@ -158,75 +155,6 @@ async function softDelete(dataset_id, user_id) {
   });
 }
 
-async function userHasGrant({ user_id, dataset_id, access_type }) {
-  return grantService.userHasGrant({
-    user_id,
-    resource_type: 'DATASET',
-    resource_id: dataset_id,
-    access_types: [access_type],
-  });
-}
-
-/**
- * Explain why user can/cannot access a dataset
- * Returns all applicable grants and ownership paths
- * @param {number} user_id
- * @param {number} dataset_id
- * @param {string} action
- * @returns {Promise<Object>} Detailed explanation
- */
-async function explainDatasetAccess({ user_id, dataset_id, access_types }) {
-  // platformAdmin
-  // admin of owning group
-  // has oversight of owning group
-  // grants
-
-  const user = await userHydrator.hydrate({
-    id: user_id,
-    attributes: ['id', 'roles', 'group_memberships', 'oversight_group_ids', 'effective_group_ids'],
-  });
-
-  if (user.roles.includes('admin')) {
-    return {
-      granted: true,
-      reason: 'User is a platform admin',
-    };
-  }
-
-  const dataset = await prisma.dataset.findUniqueOrThrow({ where: { id: dataset_id } });
-
-  const adminGroupIds = user.group_memberships
-    .filter((gm) => gm.role === GROUP_MEMBER_ROLE.ADMIN)
-    .map((gm) => gm.group_id);
-  if (adminGroupIds.includes(dataset.owner_group_id)) {
-    return {
-      granted: true,
-      reason: 'User is an admin of the owning group',
-    };
-  }
-
-  if (user.oversight_group_ids.includes(dataset.owner_group_id)) {
-    return {
-      granted: true,
-      reason: 'User has oversight of the owning group',
-    };
-  }
-
-  const grants = await grantService.getUserDatasetGrants({ user_id, dataset_id, access_types });
-  if (grants.length > 0) {
-    return {
-      granted: true,
-      reason: 'User has grants on the dataset',
-      grants,
-    };
-  }
-
-  return {
-    granted: false,
-    reason: 'User does not have any applicable grants',
-  };
-}
-
 /**
  * Fetches source datasets (datasets this dataset was derived from).
  * Returns paginated results with optional filtering.
@@ -320,8 +248,6 @@ module.exports = {
   patchDataset,
   addState,
   softDelete,
-  userHasGrant,
-  explainDatasetAccess,
   getSourceDatasets,
   getDerivedDatasets,
   ...fetchModule,

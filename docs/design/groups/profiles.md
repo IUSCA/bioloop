@@ -263,9 +263,7 @@ const ANONYMOUS_PRINCIPAL = Object.freeze({
   is_anonymous: true,
   roles: [],
   group_memberships: [],
-  effective_group_ids: [],
   oversight_group_ids: [],
-  accessible_owner_group_ids: [],
 });
 ```
 

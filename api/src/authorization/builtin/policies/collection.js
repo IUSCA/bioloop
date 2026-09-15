@@ -21,12 +21,9 @@ const isCollectionAdmin = new CollectionPolicy({
   name: 'isCollectionAdmin',
   meta: { pathKind: 'admin' },
   requires: {
-    user: ['group_memberships'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, collection) => user
-    .group_memberships
-    .some((membership) => membership.group_id === collection.owner_group_id && membership.role === 'ADMIN'),
+  evaluate: (user, collection, context) => context.access_paths.kinds.has('admin'),
 });
 
 const userHasGrant = (access_type) => {
@@ -37,11 +34,9 @@ const userHasGrant = (access_type) => {
     name: `userHasGrant(${access_type})`,
     meta: { pathKind: 'grant', accessType: access_type },
     requires: {
-      user: [],
-      resource: [],
-      context: ['active_grant_access_types'],
+      context: ['access_paths'],
     },
-    evaluate: (user, dataset, context) => context.active_grant_access_types.has(access_type),
+    evaluate: (user, collection, context) => context.access_paths.access_types.has(access_type),
   });
 };
 
@@ -49,10 +44,9 @@ const hasCollectionOversight = new CollectionPolicy({
   name: 'hasCollectionOversight',
   meta: { pathKind: 'oversight' },
   requires: {
-    user: ['oversight_group_ids'],
-    resource: ['owner_group_id'],
+    context: ['access_paths'],
   },
-  evaluate: (user, collection) => user.oversight_group_ids.includes(collection.owner_group_id),
+  evaluate: (user, collection, context) => context.access_paths.kinds.has('oversight'),
 });
 
 /**

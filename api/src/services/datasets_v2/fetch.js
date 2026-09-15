@@ -1,10 +1,11 @@
 const _ = require('lodash/fp');
-const { Prisma, GROUP_MEMBER_ROLE } = require('@prisma/client');
+const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
 const { UPLOAD_STATUS_GROUPS } = require('@/constants');
+const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const { RESOURCE_SCOPES } = require('../resources');
 
 /**
@@ -339,44 +340,32 @@ async function searchAllDatasets({
 const LISTING_ACCESS_TYPE = 'DATASET:VIEW_METADATA';
 
 /**
+ * The path kinds each list scope reads. `member` is absent: on a dataset it records a
+ * contributor, which admits `contribute` and not reading.
+ * @see docs/design/groups/access-model.md — Paths and standing
+ */
+const DATASET_SCOPE_PATH_KINDS = {
+  [RESOURCE_SCOPES.ALL]: ['admin', 'oversight', 'grant'],
+  [RESOURCE_SCOPES.OWNED]: ['admin'],
+  [RESOURCE_SCOPES.GRANTS]: ['grant'],
+  [RESOURCE_SCOPES.OVERSIGHT]: ['oversight'],
+};
+
+/**
+ * The datasets a user reaches under one list scope, as the `accessible_ids` CTE.
+ * @see src/authorization/builtin/accessPaths.js
  * @param {string} user_id - subject id
  * @param {string} scope - one of RESOURCE_SCOPES
  * @param {string[]} grant_access_types - `satisfiedBy([LISTING_ACCESS_TYPE])`
  */
 function createAccessibleDatasetIdsCte(user_id, scope, grant_access_types) {
-  const includeAll = scope === RESOURCE_SCOPES.ALL;
-  const parts = [];
-
-  if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleDatasetIdsByGrantsQuery(user_id, grant_access_types)})`);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
-    parts.push(Prisma.sql`
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN active_group_user gu ON d.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-    `);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OVERSIGHT) {
-    parts.push(Prisma.sql`
-      SELECT d.resource_id
-      FROM "dataset" d
-      JOIN effective_user_oversight_groups eug 
-        ON eug.user_id = ${user_id} AND d.owner_group_id = eug.group_id
-    `);
-  }
-
-  if (parts.length === 0) {
-    // No known scope provided; return no rows to avoid granting access.
-    parts.push(Prisma.sql`SELECT NULL::text AS resource_id WHERE FALSE`);
-  }
-
+  const pathKinds = DATASET_SCOPE_PATH_KINDS[scope];
+  if (!pathKinds) throw new Error(`No dataset list scope named ${scope}`);
   return Prisma.sql`
     WITH accessible_ids AS (
-      ${Prisma.join(parts, '\n\nUNION\n\n')}
+      ${accessibleIdsQuery({
+    userId: user_id, resourceType: 'dataset', accessTypes: grant_access_types, pathKinds,
+  })}
     )
   `;
 }

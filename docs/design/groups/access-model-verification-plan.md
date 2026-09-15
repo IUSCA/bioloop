@@ -1245,6 +1245,46 @@ so `requires` becomes true again and a boot check can flag any async `evaluate`.
 - The harness stays green.
 - The median query count and latency of a detail-page check are measured before and after the change.
 
+**Result, 2026-09-15.** The builtin dataset, collection, and group terms, the three searches,
+expiring grants, and coverage read `accessPathsQuery`. The Paths and Lists arms compare it with
+the reference model, and the Engine, Creates, and Transitions arms stay green.
+
+- The group search now lists a group through a grant on a resource it owns. Five signed-in
+  cells in the covering world reach their group only that way, so the Lists arm could fail.
+- Expiring grants now include the grants an overseer may list.
+- Coverage no longer reports a collection access type as coverage of a dataset in the
+  collection. The engine never honoured one, so coverage was advising access nobody had.
+- The grant terms read `resource_owner_group_id` from the grant hydrator. No `evaluate` is
+  async, and the boot check refuses one.
+- The list handlers read platform admin from `user_role` through `callerIsPlatformAdmin`.
+- The Term forms arm is retired. Both grant term forms read `accessPathsQuery` now, so their
+  agreement is forced rather than found.
+
+A detail check was measured on 63 checks in the covering world, interleaving the Phase 3 commit
+with this phase's code three times each.
+
+| | median queries | max queries | median ms, three runs | p90 ms, three runs |
+|---|---|---|---|---|
+| before | 7 | 9 | 2.9, 4.8, 4.8 | 6.6, 7.9, 7.3 |
+| after | 3 | 5 | 5.0, 6.4, 7.9 | 7.4, 9.3, 11.3 |
+
+The query count fell as estimated. Latency rose in every pair, by about 1.5 to 3 ms at the median.
+The cause is not measured.
+
+Three departures from the plan as written:
+
+- **The scan allowlist is not only history readers.** It also names writes that set a column or
+  target the open row they change, a display count, and the owner-group eligibility reads Phase 6
+  moves to the restriction check. Each entry states its reason, and a stale entry fails.
+- **The views are Prisma models.** `group.members`, `collection.datasets`, and
+  `dataset.collections` read `active_group_user` and `active_collection_dataset`, and the base
+  relations take `_history` names. Unfiltered reads of removed rows became correct without
+  editing each caller. Prisma cannot order by a count through a view relation, so the platform
+  admin's collection search ranks by dataset count in memory.
+- **A create's check reads the owning group's paths.** A create has no resource id, so the
+  context identifiers carry the pre-fetched resource as `prospective`, and `access_paths` reads
+  the owning group's `admin`, `oversight`, and `member` rows.
+
 ### Phase 5: paths, standing, and projection
 
 This phase builds everything the target shape describes for paths and fields:

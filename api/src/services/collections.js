@@ -1,4 +1,4 @@
-const { Prisma, GROUP_MEMBER_ROLE, RESOURCE_TYPE } = require('@prisma/client');
+const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 const _ = require('lodash/fp');
 const createError = require('http-errors');
 const { randomUUID } = require('crypto');
@@ -12,7 +12,8 @@ const {
 } = audit;
 const grantService = require('@/services/grants');
 const restrictionService = require('@/services/restrictions');
-const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const { RESOURCE_SCOPES } = require('./resources');
 
 const PRISMA_COLLECTION_INCLUDES = {
@@ -414,22 +415,17 @@ async function getCollectionById(collection_id) {
   });
 }
 
-/** * Check if a user has a specific grant for a collection
- * @param {string} user_id - UUID of the user
- * @param {string} collection_id - UUID of the collection
- * @param {string} access_type - Access type to check (e.g. 'READ', 'WRITE')
- * @returns {Promise<boolean>} True if the user has the specified grant, false otherwise
- */
-async function userHasGrant({ user_id, collection_id, access_type }) {
-  return grantService.userHasGrant({
-    user_id,
-    resource_type: 'COLLECTION',
-    resource_id: collection_id,
-    access_types: [access_type],
-  });
-}
+/** The path kinds each list scope reads. @see docs/design/groups/access-model.md — Paths and standing */
+const COLLECTION_SCOPE_PATH_KINDS = {
+  [RESOURCE_SCOPES.ALL]: ['admin', 'oversight', 'grant'],
+  [RESOURCE_SCOPES.OWNED]: ['admin'],
+  [RESOURCE_SCOPES.GRANTS]: ['grant'],
+  [RESOURCE_SCOPES.OVERSIGHT]: ['oversight'],
+};
 
 /**
+ * The collections a user reaches under one list scope, as the `accessible_ids` CTE.
+ * @see src/authorization/builtin/accessPaths.js
  * @param {string} user_id - subject id
  * @param {string} scope - one of RESOURCE_SCOPES
  * @param {string[]} grant_access_types - `satisfiedBy(['COLLECTION:VIEW_METADATA'])`, the
@@ -437,39 +433,14 @@ async function userHasGrant({ user_id, collection_id, access_type }) {
  * @see docs/design/groups/decisions.md — 7. Access types imply one another
  */
 function buildAccessibleCollectionIdsCte(user_id, scope, grant_access_types) {
-  const includeAll = scope === RESOURCE_SCOPES.ALL;
-  const parts = [];
-
-  if (includeAll || scope === RESOURCE_SCOPES.GRANTS) {
-    parts.push(Prisma.sql`(${grantService.accessibleCollectionsByGrantsQuery(user_id, grant_access_types)})`);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OWNED) {
-    parts.push(Prisma.sql`
-      SELECT c.id
-      FROM "collection" c
-      JOIN active_group_user gu ON c.owner_group_id = gu.group_id
-      WHERE gu.user_id = ${user_id} AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-    `);
-  }
-
-  if (includeAll || scope === RESOURCE_SCOPES.OVERSIGHT) {
-    parts.push(Prisma.sql`
-      SELECT c.id
-      FROM "collection" c
-      JOIN effective_user_oversight_groups eug
-        ON eug.user_id = ${user_id} AND c.owner_group_id = eug.group_id
-    `);
-  }
-
-  if (parts.length === 0) {
-    // No known scope provided; return no rows to avoid granting access.
-    parts.push(Prisma.sql`SELECT NULL::text AS id WHERE FALSE`);
-  }
-
+  const pathKinds = COLLECTION_SCOPE_PATH_KINDS[scope];
+  if (!pathKinds) throw new Error(`No collection list scope named ${scope}`);
   return Prisma.sql`
     WITH accessible_ids AS (
-      ${Prisma.join(parts, '\n\nUNION\n\n')}
+      SELECT ids.resource_id AS id
+      FROM (${accessibleIdsQuery({
+    userId: user_id, resourceType: 'collection', accessTypes: grant_access_types, pathKinds,
+  })}) ids
     )
   `;
 }
@@ -629,19 +600,34 @@ async function searchAllCollections({
     where.owner_group_id = owner_group_id;
   }
 
-  // Handle sorting by computed '_count.datasets' field (dataset count)
-  const orderBy = sort_by === '_count.datasets'
-    ? { _count: { datasets: sort_order } }
-    : { [sort_by]: sort_order };
-
-  const collections = await prisma.collection.findMany({
-    where,
-    include: PRISMA_COLLECTION_INCLUDES,
-    take: limit,
-    skip: offset,
-    orderBy,
-  });
   const total = await prisma.collection.count({ where });
+
+  // `collection.datasets` reads the active_collection_dataset view, and Prisma cannot order by
+  // a count through a view relation. The count ranks the matching ids here, then pages them.
+  let collections;
+  if (sort_by === '_count.datasets') {
+    const counted = await prisma.collection.findMany({
+      where, select: { id: true, _count: { select: { datasets: true } } },
+    });
+    const direction = sort_order === 'desc' ? -1 : 1;
+    const pageIds = counted
+      .sort((x, y) => direction * (x._count.datasets - y._count.datasets) || x.id.localeCompare(y.id))
+      .slice(offset, offset + limit)
+      .map((c) => c.id);
+    const rows = await prisma.collection.findMany({
+      where: { id: { in: pageIds } }, include: PRISMA_COLLECTION_INCLUDES,
+    });
+    const byId = new Map(rows.map((c) => [c.id, c]));
+    collections = pageIds.map((id) => byId.get(id));
+  } else {
+    collections = await prisma.collection.findMany({
+      where,
+      include: PRISMA_COLLECTION_INCLUDES,
+      take: limit,
+      skip: offset,
+      orderBy: { [sort_by]: sort_order },
+    });
+  }
   return {
     metadata: { total, limit, offset },
     data: collections,
@@ -699,7 +685,7 @@ async function listDatasetsInCollection({
 }) {
   const where = {
     is_deleted: false,
-    collections: { some: { collection_id, removed_at: null } },
+    collections: { some: { collection_id } },
     ...(name ? { name: { contains: name, mode: 'insensitive' } } : {}),
   };
   const [datasets, total] = await Promise.all([
@@ -725,7 +711,6 @@ module.exports = {
   findCollectionsByDataset,
   findCollectionsByOwnerGroup,
   getCollectionById,
-  userHasGrant,
   searchCollectionsForUser,
   searchAllCollections,
   listDatasetsInCollection,

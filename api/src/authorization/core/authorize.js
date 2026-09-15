@@ -2,7 +2,7 @@
 const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
-const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
+const { resolveHydrators, hydrateEntities, contextIdentifiers } = require('./hydrationUtils');
 
 class AuthorizationError extends Error {
   constructor(message) {
@@ -138,7 +138,7 @@ async function authorizeWithFilters({
   // This reuses the caches populated in Phase 1 and does incremental hydration.
   // contextId is forwarded so the context hydrator uses the same cache key as Phase 1
   // and finds active_grant_access_types already resolved (zero additional DB calls).
-  const contextId = { ...identifiers, resourceType: policy.resourceType };
+  const contextId = contextIdentifiers(identifiers, policy.resourceType, preFetched);
 
   const attributeFilters = await evaluateAttributeFilters(
     attributeRules,

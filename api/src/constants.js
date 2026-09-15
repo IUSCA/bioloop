@@ -242,9 +242,7 @@ const ANONYMOUS_PRINCIPAL = Object.freeze({
   is_anonymous: true,
   roles: Object.freeze([]),
   group_memberships: Object.freeze([]),
-  effective_group_ids: Object.freeze([]),
   oversight_group_ids: Object.freeze([]),
-  accessible_owner_group_ids: Object.freeze([]),
 });
 
 // The service account every unattended write is credited to: the watch script, the workers,

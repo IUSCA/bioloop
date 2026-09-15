@@ -1,5 +1,3 @@
-const collectionService = require('@/services/collections');
-const datasetService = require('@/services/datasets_v2');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { mutating, reading } = require('../../core/policies/PolicyContainer');
@@ -15,36 +13,16 @@ class GrantPolicy extends Policy {
   }
 }
 
-async function getResourceOwningGroupId(grant) {
-  let resourceOwningGroupId;
-  if (grant.resource_type === 'DATASET') {
-    const dataset = await datasetService.getDatasetById(grant.resource_id);
-    resourceOwningGroupId = dataset.owner_group_id;
-  } else if (grant.resource_type === 'COLLECTION') {
-    const collection = await collectionService.getCollectionById(grant.resource_id);
-    resourceOwningGroupId = collection.owner_group_id;
-  } else {
-    throw new Error(`Unknown resource type: ${grant.resource_type}`);
-  }
-  return resourceOwningGroupId;
-}
-
 const isAdminOfResourceGroup = new GrantPolicy({
   name: 'isAdminOfResourceGroup',
   meta: { pathKind: 'admin' },
   requires: {
     user: ['group_memberships'],
-    resource: ['resource_id', 'resource_type'], // dataset_resource or collection_resource
+    resource: ['resource_owner_group_id'],
   },
-  evaluate: async (user, grant) => {
-    const adminOfGroupIds = user.group_memberships
-      .filter((membership) => membership.role === 'ADMIN')
-      .map((membership) => membership.group_id);
-
-    // fetch the resource to get the owning group id
-    const resourceOwningGroupId = await getResourceOwningGroupId(grant);
-    return adminOfGroupIds.includes(resourceOwningGroupId);
-  },
+  evaluate: (user, grant) => user.group_memberships.some(
+    (membership) => membership.role === 'ADMIN' && membership.group_id === grant.resource_owner_group_id,
+  ),
 });
 
 const hasOversightOfResourceGroup = new GrantPolicy({
@@ -52,15 +30,9 @@ const hasOversightOfResourceGroup = new GrantPolicy({
   meta: { pathKind: 'oversight' },
   requires: {
     user: ['oversight_group_ids'],
-    resource: ['resource_id', 'resource_type'], // dataset_resource or collection_resource
+    resource: ['resource_owner_group_id'],
   },
-  evaluate: async (user, grant) => {
-    const oversightGroupIds = user.oversight_group_ids || [];
-
-    // one of the resources (dataset or collection) will be null
-    const resourceOwningGroupId = await getResourceOwningGroupId(grant);
-    return oversightGroupIds.includes(resourceOwningGroupId);
-  },
+  evaluate: (user, grant) => user.oversight_group_ids.includes(grant.resource_owner_group_id),
 });
 
 const isSubject = new GrantPolicy({

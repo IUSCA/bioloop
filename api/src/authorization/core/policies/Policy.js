@@ -291,14 +291,15 @@ Policy.always = new Policy({
   // Confers no path: an action bound to it is filtered elsewhere, or is not access-controlled.
   meta: { pathKind: null, rule: 'always' },
   requires: { user: [], resource: [], context: [] },
-  evaluate: async () => true,
+  // Synchronous: a term decides from declared attributes and never awaits. @see requiresCheck.js
+  evaluate: () => true,
 });
 Policy.never = new Policy({
   name: 'never',
   resourceType: null,
   meta: { pathKind: null, rule: 'never' },
   requires: { user: [], resource: [], context: [] },
-  evaluate: async () => false,
+  evaluate: () => false,
 });
 
 module.exports = Policy;

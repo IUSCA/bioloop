@@ -13,12 +13,12 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+  callerIsPlatformAdmin,
 } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
-const { isPlatformAdmin } = require('@/services/auth');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { UPLOAD_STATUS_FILTERS } = require('@/constants');
 
@@ -350,7 +350,7 @@ router.get(
 
     // if user is platform admin, search all groups, otherwise search only groups the user has access to
     let promise;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       promise = datasetService.searchAllDatasets({
         filters, sort, pagination, includes,
       });

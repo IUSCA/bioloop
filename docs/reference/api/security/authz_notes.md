@@ -1,5 +1,20 @@
 # Notes: authorization engine read-through (2026-09-14/15)
 
+> **Superseded in part by Phase 4 of the access-model plan, 2026-09-15.** These notes record the
+> code as it was read. Since then:
+> - The builtin dataset, collection, and group terms read one context attribute, `access_paths`,
+>   from `accessPathsQuery`. The context attribute `active_grant_access_types` and the user
+>   facts `effective_group_ids` and `accessible_owner_group_ids` are gone.
+> - `userDatasetsQuery`, `userCollectionsQuery`, `accessibleDatasetIdsByGrantsQuery`,
+>   `accessibleCollectionsByGrantsQuery`, `ownerGroupIdsOfResourcesAccessibleByUserQuery`,
+>   `getUserDatasetGrants`, and `explainDatasetAccess` are deleted. `getGrantAccessTypesForUser`
+>   and `userHasGrant` live in `services/grants/holdings.js` and read `accessPathsQuery`.
+> - The grant terms read `resource_owner_group_id` from the grant hydrator, and no `evaluate` is
+>   async.
+> - List handlers call `callerIsPlatformAdmin(req)`, which reads `user_role`.
+> - `group.members`, `collection.datasets`, and `dataset.collections` read the active views.
+> @see docs/design/groups/access-model-verification-plan.md — Phase 4: the rule becomes a query
+
 Purpose: understand the engine and its tests fully before revising the access-model plan.
 Update after each file. Re-read before the next. Organised by theme (my choice), with file refs.
 

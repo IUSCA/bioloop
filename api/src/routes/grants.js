@@ -5,10 +5,9 @@ const { isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
-const { isPlatformAdmin } = require('@/services/auth');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
 const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
@@ -272,7 +271,7 @@ router.get(
     } = req.query;
 
     let grantsGrouped;
-    if (isPlatformAdmin(req)) {
+    if (await callerIsPlatformAdmin(req)) {
       // if platform admin, list all expiring grants
       grantsGrouped = await grantService.listExpiringGrants({
         within_days,

@@ -52,7 +52,8 @@ model dataset {
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
   owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
-  collections    collection_dataset[]
+  collection_history collection_dataset[]
+  collections        active_collection_dataset[]
   contributions  user_dataset_contribution[]
   resource_id    String                      @unique
   // Restrict: prevents deleting a resource row directly while this dataset still references it.
@@ -230,6 +231,7 @@ model user {
   // view under the attribute `group_memberships`.
   // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
   group_membership_history    group_user[]                @relation("user_memberships")
+  active_group_memberships    active_group_user[]         @relation("active_user_memberships")
   memberships_assigned        group_user[]                @relation("membership_assignor")
   memberships_removed         group_user[]                @relation("membership_remover")
   collection_datasets_added   collection_dataset[]        @relation("collection_dataset_adder")
@@ -549,7 +551,8 @@ model group {
 
   // Relations
   restrictions      restriction[]
-  members           group_user[]
+  membership_history group_user[]
+  members            active_group_user[]
   ancestor_edges    group_closure[]             @relation("group_descendants")
   descendant_edges  group_closure[]             @relation("group_ancestors")
   owned_datasets    dataset[]
@@ -596,7 +599,8 @@ model group_closure {
 // reviving the old one, so the gap in membership stays visible.
 //
 // Read through the `active_group_user` view rather than this table wherever the question is
-// "who is a member now?". The view applies both closing conditions.
+// "who is a member now?". The view applies both closing conditions. `group.members` reads the
+// view; `group.membership_history` reads this table.
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model group_user {
@@ -720,7 +724,8 @@ model collection {
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
   // Relations
-  datasets collection_dataset[]
+  dataset_history collection_dataset[]
+  datasets        active_collection_dataset[]
   // Restrict: prevents deleting a resource row directly while this collection still references it.
   // Reverse cascade (collection deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "collection" FOR EACH ROW: DELETE FROM resource WHERE id = OLD.id
@@ -740,6 +745,8 @@ model collection {
 // At most one open row per (collection_id, dataset_id), enforced by the partial unique index
 // `collection_dataset_one_open_membership` in the migration SQL. Read through the
 // `active_collection_dataset` view wherever the question is "what is in this collection now?".
+// `collection.datasets` and `dataset.collections` read the view; the `_history` relations read
+// this table.
 //
 // @see docs/design/groups/decisions.md — 1. Membership and collection history are preserved
 model collection_dataset {
@@ -1373,4 +1380,39 @@ enum ALERT_TYPE {
   INFO
   WARNING
   ERROR
+}
+
+// The views below are created by migrations. These blocks only let Prisma read them, so a
+// relation named for current state (`group.members`, `collection.datasets`,
+// `dataset.collections`) reads the view, and history is asked for by its own name.
+// @see docs/design/groups/access-model-verification-plan.md — Current state has one definition
+
+// Memberships in force: not removed, and not past valid_until.
+view active_group_user {
+  id          String            @unique
+  group_id    String
+  user_id     String
+  role        GROUP_MEMBER_ROLE
+  assigned_at DateTime          @db.Timestamp(6)
+  assigned_by String?
+  valid_until DateTime?         @db.Timestamp(6)
+  removed_at  DateTime?         @db.Timestamp(6)
+  removed_by  String?
+
+  group group @relation(fields: [group_id], references: [id])
+  user  user  @relation("active_user_memberships", fields: [user_id], references: [subject_id])
+}
+
+// Datasets currently in a collection: not removed.
+view active_collection_dataset {
+  id            String    @unique
+  collection_id String
+  dataset_id    String
+  added_at      DateTime  @db.Timestamp(6)
+  added_by      String?
+  removed_at    DateTime? @db.Timestamp(6)
+  removed_by    String?
+
+  collection collection @relation(fields: [collection_id], references: [id])
+  dataset    dataset    @relation(fields: [dataset_id], references: [resource_id])
 }

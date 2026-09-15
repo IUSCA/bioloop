@@ -15,12 +15,12 @@ why each change exists. Two defects the plan did not predict are recorded at the
 
 The read path is complete and correct. `getGrantAccessTypesForUser` widens what a subject
 holds, and `userHasGrant` widens what a check accepts. Both live in
-`services/grants/helpers.js`, and they are the only two callers of `accessTypeClosure`.
+`services/grants/holdings.js` and read the grant rows of `accessPathsQuery`.
 
-The policy layer inherits that for free. `ContextHydrator` calls
-`getGrantAccessTypesForUser` once per request and caches the widened set, so every
-`userHasGrant(...)` inside a policy is a set lookup against an already-closed set. No
-authorization decision can disagree with the order.
+The policy layer inherits that for free. `ContextHydrator` loads `access_paths` once per
+resource per request, with its grant types already widened, so every `userHasGrant(...)`
+inside a policy is a set lookup against an already-closed set. No authorization decision can
+disagree with the order.
 
 Restrictions stay separate, as decision 7 requires. `builtin/restrictions.js` keys on
 qualified policy actions such as `dataset.download`, never on access types, so widening a

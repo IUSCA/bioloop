@@ -1,5 +1,5 @@
-const grantService = require('@/services/grants');
 const { Hydrator, HydrationError } = require('../../core');
+const { loadAccessPaths } = require('../accessPaths');
 
 class ContextHydrator extends Hydrator {
   constructor({ appConfig }) {
@@ -52,8 +52,11 @@ class ContextHydrator extends Hydrator {
     // Cache key is scoped to the specific user+resource combination so that
     // grant-based context (e.g. active_grant_access_types) is correctly
     // isolated per resource within a single request.
+    // A create has no resource id, so the resource it would create keys the entry instead. The
+    // batch create route checks several owning groups in one request.
+    const resourceKey = id?.resource ?? (id?.prospective ? `new:${JSON.stringify(id.prospective)}` : 'null');
     const cacheKey = id
-      ? `${id.user ?? 'null'}:${id.resourceType ?? 'null'}:${id.resource ?? 'null'}`
+      ? `${id.user ?? 'null'}:${id.resourceType ?? 'null'}:${resourceKey}`
       : 'global';
 
     if (!cache.has(cacheKey)) cache.set(cacheKey, {});
@@ -100,34 +103,16 @@ const contextHydrator = new ContextHydrator({ appConfig: null });
 // ============================================================================
 
 /**
- * active_grant_access_types
+ * access_paths
  *
- * A Set<string> of all grant access-type names currently active for the
- * calling user on the requested resource.  Covers:
- *   - Direct USER grants on the resource
- *   - GROUP grants where the user is a transitive member of the subject group
- *   - For datasets: collection-level grants (USER or GROUP) on any collection
- *     that contains the dataset
+ * Every path by which the caller reaches the resource, from `accessPathsQuery`: the rows, their
+ * kinds, and the widened access types the grant rows carry. The builtin dataset, collection,
+ * and group terms decide from it, so a check reads the same statement a list does.
  *
- * Policies declare `requires: { context: ['active_grant_access_types'] }` and
- * evaluate with `context.active_grant_access_types.has(access_type)` — a pure
- * in-memory Set membership test after this single DB call.
- *
- * The result is cached under the `user:resourceType:resource` cache key for
- * the lifetime of the request, so evaluating N grant-based actions costs exactly
- * one DB round-trip regardless of how many policies are evaluated.
+ * Cached under the `user:resourceType:resource` key, so one query serves every action of a
+ * capability set and the attribute rules after it.
+ * @see docs/design/groups/access-model-verification-plan.md — The rule is a query
  */
-contextHydrator.registerVirtualAttribute(
-  'active_grant_access_types',
-  async ({ id }) => {
-    // id = { user, resource, resourceType } threaded from authorize()
-    if (!id?.user || !id?.resource || !id?.resourceType) return new Set();
-    return grantService.getGrantAccessTypesForUser(
-      id.user,
-      id.resource,
-      id.resourceType.toUpperCase(),
-    );
-  },
-);
+contextHydrator.registerVirtualAttribute('access_paths', async ({ id }) => loadAccessPaths(id));
 
 module.exports = { ContextHydrator, contextHydrator };

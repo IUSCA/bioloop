@@ -95,44 +95,6 @@ function summarize(disagreements) {
 }
 
 /**
- * The Term forms arm: the grant term is written twice, once per resource and once per list.
- * `getGrantAccessTypesForUser` answers which types a user holds on one dataset, and
- * `accessibleDatasetIdsByGrantsQuery` answers which datasets a user holds a type on. For every
- * signed-in user and every dataset access type, the two must agree about the cell's dataset.
- *
- * @returns {Promise<{ comparisons: number, disagreements: Object[] }>}
- */
-async function runTermFormsArm({
-  prisma, tables, fragments, ids,
-}) {
-  // Required lazily, so the Engine arm alone does not load the grants service.
-  // eslint-disable-next-line global-require
-  const grants = require('@/services/grants/helpers');
-  // eslint-disable-next-line global-require
-  const { satisfiedBy } = require('@/services/grants/accessTypeClosure');
-  const datasetTypes = tables.accessTypes.filter((t) => t.startsWith('DATASET:'));
-  const disagreements = [];
-  let comparisons = 0;
-  // An anonymous caller has no subject of its own to ask either form about.
-  for (const f of fragments.filter((frag) => !frag.user.anonymous)) {
-    const user = ids.get(f.user.id);
-    const datasetId = ids.get(f.dataset.id);
-    const held = await grants.getGrantAccessTypesForUser(user, datasetId, 'DATASET');
-    for (const type of datasetTypes) {
-      comparisons += 1;
-      const rows = await prisma.$queryRaw(grants.accessibleDatasetIdsByGrantsQuery(user, await satisfiedBy([type])));
-      const listed = rows.some((r) => r.resource_id === datasetId);
-      if (held.has(type) !== listed) {
-        disagreements.push({
-          cell: f.index, dims: f.cell, type, perResource: held.has(type), list: listed,
-        });
-      }
-    }
-  }
-  return { comparisons, disagreements };
-}
-
-/**
  * The Creates arm: `dataset.create` and `collection.create` decided as the create routes decide
  * them, with no resource id and the owning group named in the pre-fetched resource.
  *
@@ -179,5 +141,5 @@ async function runCreatesArm({
 }
 
 module.exports = {
-  runEngineArm, runTermFormsArm, runCreatesArm, summarize, RESOURCE_TYPES,
+  runEngineArm, runCreatesArm, summarize, RESOURCE_TYPES,
 };

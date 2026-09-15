@@ -21,6 +21,22 @@ function resolveHydrators(registry, policy) {
 }
 
 /**
+ * The identifiers a context loader receives: the check's user and resource, plus its resource
+ * type. A check with no resource id is a create, so the pre-fetched resource travels as
+ * `prospective`, letting a loader answer for a resource that does not exist yet.
+ *
+ * @param {Object} identifiers - `{ user, resource }`
+ * @param {string|null} resourceType
+ * @param {Object|null} [preFetched] - `{ user, resource, context }` seeds
+ * @returns {{ user, resource, resourceType, prospective?: Object }}
+ */
+function contextIdentifiers(identifiers, resourceType, preFetched = null) {
+  const id = { ...identifiers, resourceType };
+  if (identifiers.resource == null && preFetched?.resource) id.prospective = preFetched.resource;
+  return id;
+}
+
+/**
  * Hydrates user, resource, and context entities for a given policy in a single
  * parallel pass, reusing provided caches.
  *
@@ -36,8 +52,7 @@ function resolveHydrators(registry, policy) {
  * @param {Object} [options.preFetched=null]
  *   Optional pre-fetched data seeds ({ user, resource, context }).
  * @param {Object} [options.contextId=null]
- *   Optional explicit context id.  Defaults to
- *   `{ ...identifiers, resourceType: policy.resourceType }`.
+ *   Optional explicit context id.  Defaults to {@link contextIdentifiers}.
  * @returns {Promise<[Object, Object, Object]>} Resolved [user, resource, context] objects.
  */
 async function hydrateEntities({
@@ -48,7 +63,7 @@ async function hydrateEntities({
   preFetched = null,
   contextId = null,
 }) {
-  const resolvedContextId = contextId ?? { ...identifiers, resourceType: policy.resourceType };
+  const resolvedContextId = contextId ?? contextIdentifiers(identifiers, policy.resourceType, preFetched);
 
   return Promise.all([
     hydrators.user.hydrate({
@@ -74,4 +89,4 @@ async function hydrateEntities({
   ]);
 }
 
-module.exports = { resolveHydrators, hydrateEntities };
+module.exports = { resolveHydrators, hydrateEntities, contextIdentifiers };

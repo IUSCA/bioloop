@@ -29,7 +29,7 @@ const { modelTablesFrom } = require('./tables');
 const { outcomeSignature } = require('./decisionTable');
 const W = require('./worlds');
 const { writeWorld } = require('./dbWorld');
-const { runEngineArm, runTermFormsArm, runCreatesArm } = require('./engineArm');
+const { runEngineArm, runCreatesArm } = require('./engineArm');
 
 const CLASSIFIED = [
   {
@@ -80,13 +80,6 @@ test('every disagreement is classified', () => {
       + `reference ${JSON.stringify(d.reference)}, ${JSON.stringify(d.dims)}`);
   expect(unclassified).toEqual([]);
 });
-
-test('the two forms of the grant term agree row for row', async () => {
-  const { comparisons, disagreements } = await runTermFormsArm({ prisma, ...arm });
-  expect(comparisons).toBeGreaterThan(500);
-  expect(disagreements.map((d) => `${d.type} cell ${d.cell}: per-resource ${d.perResource}, list ${d.list}`))
-    .toEqual([]);
-}, 120_000);
 
 test('a create decided from the owning group agrees with the reference', async () => {
   // An archived owning group, or an archived ancestor of it, blocks a create. Before Phase 0 a

@@ -1,14 +1,14 @@
 const {
   Prisma,
-  GROUP_MEMBER_ROLE,
   RESOURCE_TYPE,
 } = require('@prisma/client');
 
 const prisma = require('@/db');
 
 const { GRANT_ACCESS_TYPE_CATEGORY_LABELS } = require('@/constants');
-const { enumToSql, buildWhereClause, createLikePattern } = require('@/utils/sql');
+const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
+const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const accessTypeClosure = require('./accessTypeClosure');
 
 /**
@@ -481,7 +481,9 @@ async function listExpiringGrants({
 }
 
 /**
- * List all grants that are expiring within a certain number of days on resources that are owned by groups that user is an admin of
+ * List all grants that are expiring within a certain number of days on resources the user may
+ * list grants for: those whose owning group they administer or oversee, as
+ * `grant.list_for_resource` decides.
  * @param {Object} params
  * @param {string} params.user_id - UUID of the user
  * @param {number} params.within_days - Number of days until expiration to filter by (e.g. 30 to find grants expiring within the next 30 days)
@@ -491,23 +493,12 @@ async function listExpiringGrantsForAdmin({
   user_id,
   within_days,
 }) {
+  const governing = ['admin', 'oversight'];
   const sql = Prisma.sql`
-      WITH admin_groups AS (
-        SELECT gu.group_id
-        FROM active_group_user gu
-        WHERE gu.user_id = ${user_id}
-          AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-      ),
-      owned_resources AS (
-        SELECT d.resource_id AS resource_id
-        FROM dataset d
-        JOIN admin_groups ag ON d.owner_group_id = ag.group_id
-
+      WITH owned_resources AS (
+        ${accessibleIdsQuery({ userId: user_id, resourceType: 'dataset', pathKinds: governing })}
         UNION
-
-        SELECT c.id AS resource_id
-        FROM collection c
-        JOIN admin_groups ag ON c.owner_group_id = ag.group_id
+        ${accessibleIdsQuery({ userId: user_id, resourceType: 'collection', pathKinds: governing })}
       )
       SELECT 
         g.subject_id,
