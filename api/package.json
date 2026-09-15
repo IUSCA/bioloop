@@ -19,7 +19,9 @@
     "email:dev": "vite --config src/notification/email-preview/vite.config.js",
     "notify:dummy": "node src/scripts/send_dummy_notification.js",
     "seed:prod": "node prisma/seed_baseline.js",
-    "seed:demo": "node prisma/seed_demo.js"
+    "seed:demo": "node prisma/seed_demo.js",
+    "model:table": "node tests/model/generateDecisionTable.js",
+    "test:db:setup": "node tests/setupTestDatabase.js"
   },
   "keywords": [],
   "author": "",
@@ -100,7 +102,10 @@
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
-    }
+    },
+    "setupFiles": [
+      "<rootDir>/tests/testDatabase.js"
+    ]
   },
   "_moduleAliases": {
     "@": "src"

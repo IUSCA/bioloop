@@ -30,8 +30,16 @@
  * });
  */
 class Policy {
+  /**
+   * @param {Object} [config.meta] - What this term means to the access model, when it is a
+   *   leaf term: `{ pathKind, accessType, rule }`. `pathKind` is one of `admin`, `oversight`,
+   *   `member`, `grant`, or `resource_rule`. A combinator carries no meta of its own.
+   *   @see docs/design/groups/access-model.md — Paths and standing
+   * @param {string} [config.operator] - `or`, `and`, or `not`, set by the combinators
+   * @param {Policy[]} [config.children] - the policies a combinator was built from
+   */
   constructor({
-    name, resourceType, requires, evaluate,
+    name, resourceType, requires, evaluate, meta = null, operator = null, children = null,
   }) {
     if (!name || typeof name !== 'string') {
       throw new Error('Policy name must be a non-empty string');
@@ -79,10 +87,43 @@ class Policy {
       throw new Error('Policy evaluate must be a function');
     }
 
+    if (operator !== null && !['or', 'and', 'not'].includes(operator)) {
+      throw new Error(`Policy operator must be or, and, or not; got ${operator}`);
+    }
+    if (children !== null && (!Array.isArray(children) || children.some((c) => !(c instanceof Policy)))) {
+      throw new Error('Policy children must be an array of Policy instances');
+    }
+
     this.name = name;
     this.resourceType = resourceType;
     this.requires = completeRequires;
     this._evaluate = evaluate;
+    // The tree a combinator was built from. A compiler walks it to turn `or` into a UNION;
+    // without it a composed policy is an opaque closure.
+    // @see docs/design/groups/access-model-verification-plan.md — What compilation needs from core
+    this.meta = meta ? Object.freeze({ ...meta }) : null;
+    this.operator = operator;
+    this.children = children ? Object.freeze([...children]) : null;
+  }
+
+  /**
+   * The leaf terms this policy is built from, in order, each once.
+   * A leaf is a policy with no operator.
+   * @returns {Policy[]}
+   */
+  terms() {
+    if (!this.operator) return [this];
+    const seen = new Set();
+    const out = [];
+    this.children.forEach((child) => {
+      child.terms().forEach((term) => {
+        if (!seen.has(term)) {
+          seen.add(term);
+          out.push(term);
+        }
+      });
+    });
+    return out;
   }
 
   async evaluate(user, resource, context) {
@@ -131,12 +172,7 @@ class Policy {
   }
 
   clone() {
-    return new Policy({
-      name: this.name,
-      resourceType: this.resourceType,
-      requires: this.requires,
-      evaluate: this._evaluate,
-    });
+    return this.cloneWithName(this.name);
   }
 
   cloneWithName(name) {
@@ -148,6 +184,9 @@ class Policy {
       resourceType: this.resourceType,
       requires: this.requires,
       evaluate: this._evaluate,
+      meta: this.meta,
+      operator: this.operator,
+      children: this.children,
     });
   }
 }
@@ -189,6 +228,8 @@ function or(policies, name = null) {
     name: name || `or(${policies.map((p) => p.name).join(',')})`,
     resourceType,
     requires: mergeRequires(...policies),
+    operator: 'or',
+    children: policies,
     evaluate: async (user, resource, ctx) => {
       // eslint-disable-next-line no-restricted-syntax
       for (const p of policies) {
@@ -210,6 +251,8 @@ function and(policies, name = null) {
     name: name || `and(${policies.map((p) => p.name).join(',')})`,
     resourceType,
     requires: mergeRequires(...policies),
+    operator: 'and',
+    children: policies,
     evaluate: async (user, resource, ctx) => {
       // eslint-disable-next-line no-restricted-syntax
       for (const p of policies) {
@@ -232,6 +275,8 @@ function not(policy, name = null) {
     name: name || `not(${policy.name})`,
     resourceType: policy.resourceType,
     requires: policy.requires,
+    operator: 'not',
+    children: [policy],
     evaluate: async (user, resource, ctx) => !(await policy.evaluate(user, resource, ctx)),
   });
 }
@@ -243,12 +288,15 @@ Policy.not = not;
 Policy.always = new Policy({
   name: 'always',
   resourceType: null,
+  // Confers no path: an action bound to it is filtered elsewhere, or is not access-controlled.
+  meta: { pathKind: null, rule: 'always' },
   requires: { user: [], resource: [], context: [] },
   evaluate: async () => true,
 });
 Policy.never = new Policy({
   name: 'never',
   resourceType: null,
+  meta: { pathKind: null, rule: 'never' },
   requires: { user: [], resource: [], context: [] },
   evaluate: async () => false,
 });

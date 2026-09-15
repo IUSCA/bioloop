@@ -11,7 +11,8 @@ const Policy = require('../../../core/policies/Policy');
  */
 const isPlatformAdmin = new Policy({
   name: 'isPlatformAdmin',
-  resourceType: null, // this policy is not tied to a specific resource type
+  resourceType: null,
+  meta: { pathKind: 'platform_admin' }, // this policy is not tied to a specific resource type
   requires: {
     user: ['roles'],
   },
@@ -30,6 +31,8 @@ const isPlatformAdmin = new Policy({
 const platformAdminOnly = new Policy({
   name: 'platformAdminOnly',
   resourceType: null,
+  // Confers no path. The action is reachable only through the platform-admin short-circuit.
+  meta: { pathKind: null, rule: 'platform_admin_only' },
   requires: {
     user: [],
   },

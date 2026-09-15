@@ -27,4 +27,21 @@ grantHydrator.registerVirtualAttribute('resource_type', async ({ id, hydrator })
   return grant.resource.type;
 });
 
+/**
+ * Whether the grant's subject is a user or a group.
+ *
+ * `isSubject`, `isAdminOfSubjectGroup`, and `hasOversightOfSubjectGroup` read it, and it is not
+ * a column on `grant`: the type lives on the `subject` row. Every route that reached these
+ * policies pre-fetched `subject_type` from its URL, so the gap stayed invisible until the boot
+ * check compared every declared requirement against what the hydrators can supply.
+ * @see docs/design/groups/access-model-verification-plan.md — The static checks that already exist
+ */
+grantHydrator.registerVirtualAttribute('subject_type', async ({ id, hydrator }) => {
+  const grant = await hydrator.prisma.grant.findUniqueOrThrow({
+    where: { id },
+    select: { subject: { select: { type: true } } },
+  });
+  return grant.subject.type;
+});
+
 module.exports = { grantHydrator };

@@ -76,9 +76,8 @@ describe('the action classification', () => {
     const unclassified = [];
     const duplicated = [];
 
-    const resourceTypes = ['group', 'collection', 'dataset', 'grant', 'access_request', 'user'];
-
-    resourceTypes.forEach((resourceType) => {
+    // Every registered container, so one a derived app adds is covered without editing this file.
+    policyRegistry.listTypes().forEach((resourceType) => {
       const container = policyRegistry.get(resourceType);
       container.getActionNames().forEach((action) => {
         const qualified = `${resourceType}.${action}`;
@@ -95,9 +94,8 @@ describe('the action classification', () => {
   });
 
   test('names no action that does not exist', () => {
-    const resourceTypes = ['group', 'collection', 'dataset', 'grant', 'access_request', 'user'];
     const registered = new Set();
-    resourceTypes.forEach((resourceType) => {
+    policyRegistry.listTypes().forEach((resourceType) => {
       policyRegistry.get(resourceType).getActionNames().forEach((action) => {
         registered.add(`${resourceType}.${action}`);
       });

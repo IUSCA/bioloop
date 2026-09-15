@@ -70,6 +70,8 @@ const MUTATING_ACTIONS = new Set([
   // access_request
   'access_request.create',
   'access_request.update',
+  'access_request.submit',
+  'access_request.withdraw',
   'access_request.review',
 ]);
 
@@ -78,6 +80,8 @@ const MUTATING_ACTIONS = new Set([
  * the two together cover every registered action, and neither contains an action twice.
  */
 const READING_ACTIONS = new Set([
+  // audit
+  'audit.read_records',
   // group
   'group.view_metadata',
   // Reading, and deliberately still available on an archived group. An archived group that

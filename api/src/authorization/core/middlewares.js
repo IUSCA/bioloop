@@ -5,6 +5,7 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { authorizeWithFilters } = require('./authorize');
 const Policy = require('./policies/Policy');
 const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
+const { PrismaHydrator } = require('./hydrators/PrismaHydrator');
 
 /**
  * Initializes the policy execution context with request-scoped caches.
@@ -63,7 +64,7 @@ function initializePolicyContext(req, res, next) {
     };
     if (req.user) {
       // pre-populate user cache with the requester if available
-      req.policyContext.cache.user.set(req.user.subject_id, req.user);
+      req.policyContext.cache.user.set(PrismaHydrator.cacheKey('user', req.user.subject_id), req.user);
     }
   }
   next();

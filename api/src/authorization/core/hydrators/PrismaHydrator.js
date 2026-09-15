@@ -19,6 +19,19 @@ class PrismaHydrator extends Hydrator {
     this.virtualLoaders = new Map();
   }
 
+  /**
+   * The key a record is cached under. Keyed by model as well as id, because the resource cache
+   * is one Map shared by every resource type in a request, and two types authorized under the
+   * same id would otherwise share a record. Code that seeds a cache uses this rather than
+   * building the key itself.
+   * @param {string} modelName
+   * @param {string|number|null} id
+   * @returns {string}
+   */
+  static cacheKey(modelName, id) {
+    return id != null ? `${modelName}:${id}` : `${modelName}:global`;
+  }
+
   /* Registers a virtual attribute loader function for an attribute that is not a column or relation in the Prisma model.
     - attrName: name of the virtual attribute
   * - loaderFn: async function that takes an object with shape { id,
@@ -48,6 +61,17 @@ class PrismaHydrator extends Hydrator {
     }
 
     this.virtualLoaders.set(attrName, loaderFn);
+  }
+
+  /**
+   * Whether this hydrator can supply an attribute: a column, a relation, or a registered
+   * virtual attribute. The boot check reads it so an unhydratable requirement fails at
+   * startup rather than as a 500 on the first request that needs it.
+   * @param {string} attr
+   * @returns {boolean}
+   */
+  canHydrate(attr) {
+    return this.schemaMap.has(attr) || this.virtualLoaders.has(attr);
   }
 
   // given a model name and an array of attribute names, returns an object classifying the attributes into columns,
@@ -121,7 +145,7 @@ class PrismaHydrator extends Hydrator {
       throw new HydrationError(`[${this.model}] Cannot hydrate: preFetched must be an object`);
     }
 
-    const cacheKey = id != null ? `${id}` : 'global';
+    const cacheKey = PrismaHydrator.cacheKey(this.model, id);
     if (!cache.has(cacheKey)) cache.set(cacheKey, {});
     const recordCache = cache.get(cacheKey);
 

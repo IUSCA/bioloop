@@ -323,7 +323,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_request', 'update'),
+  authorize('access_request', 'submit'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Submit an access request'
@@ -400,7 +400,7 @@ router.post(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('access_request', 'update'),
+  authorize('access_request', 'withdraw'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Access Requests']
     // #swagger.summary = 'Withdraw an access request'

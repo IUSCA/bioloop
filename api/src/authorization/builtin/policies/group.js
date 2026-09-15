@@ -1,17 +1,21 @@
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { mutating, reading } = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
 
 class GroupPolicy extends Policy {
-  constructor({ name, requires, evaluate }) {
+  constructor({
+    name, requires, evaluate, meta,
+  }) {
     super({
-      name, resourceType: 'group', requires, evaluate,
+      name, resourceType: 'group', requires, evaluate, meta,
     });
   }
 }
 
 const isGroupAdmin = new GroupPolicy({
   name: 'isGroupAdmin',
+  meta: { pathKind: 'admin' },
   requires: {
     user: ['group_memberships'],
     resource: ['id'],
@@ -23,6 +27,7 @@ const isGroupAdmin = new GroupPolicy({
 
 const isGroupMember = new GroupPolicy({
   name: 'isGroupMember',
+  meta: { pathKind: 'member' },
   requires: {
     user: ['effective_group_ids'],
     resource: ['id'],
@@ -34,6 +39,7 @@ const isGroupMember = new GroupPolicy({
 
 const hasGroupOversight = new GroupPolicy({
   name: 'hasGroupOversight',
+  meta: { pathKind: 'oversight' },
   requires: {
     user: ['oversight_group_ids'],
     resource: ['id'],
@@ -43,6 +49,7 @@ const hasGroupOversight = new GroupPolicy({
 
 const canAccessResourcesOwnedByGroup = new GroupPolicy({
   name: 'canAccessResourcesOwnedByGroup',
+  meta: { pathKind: 'grant' },
   requires: {
     user: ['accessible_owner_group_ids'], // ids of groups that own resources U has grants on
     resource: ['id'],
@@ -52,6 +59,7 @@ const canAccessResourcesOwnedByGroup = new GroupPolicy({
 
 const isMemberContributionsAllowed = new GroupPolicy({
   name: 'isMemberContributionsAllowed',
+  meta: { pathKind: 'resource_rule', rule: 'contributions_allowed' },
   requires: {
     resource: ['allow_user_contributions'],
   },
@@ -68,6 +76,7 @@ const isMemberContributionsAllowed = new GroupPolicy({
  */
 const isProfilePublic = new GroupPolicy({
   name: 'isProfilePublic',
+  meta: { pathKind: 'resource_rule', rule: 'profile_public' },
   requires: {
     resource: ['profile_visibility'],
   },
@@ -82,6 +91,7 @@ const isProfilePublic = new GroupPolicy({
  */
 const isProfileVisibleToSignedInUser = new GroupPolicy({
   name: 'isProfileVisibleToSignedInUser',
+  meta: { pathKind: 'resource_rule', rule: 'profile_signed_in' },
   requires: {
     user: ['is_anonymous'],
     resource: ['profile_visibility'],
@@ -147,52 +157,52 @@ groupPolicies
     { policy: canAccessResourcesOwnedByGroup, role: CallerRole.RESOURCE_ACCESS },
   ])
   .actions({
-    create: platformAdminOnly,
-    create_child: isGroupAdmin,
+    create: mutating(platformAdminOnly),
+    create_child: mutating(isGroupAdmin),
 
-    archive: isGroupAdmin,
-    unarchive: platformAdminOnly,
+    archive: mutating(isGroupAdmin),
+    unarchive: mutating(platformAdminOnly),
 
-    view_metadata: Policy.or([isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup]),
+    view_metadata: reading(Policy.or([isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup])),
 
     // The one action an unauthenticated caller can satisfy. It reads the profile and
     // nothing else; view_metadata stays as it was.
-    view_profile: Policy.or([
+    view_profile: reading(Policy.or([
       isGroupAdmin,
       isGroupMember,
       hasGroupOversight,
       canAccessResourcesOwnedByGroup,
       isProfilePublic,
       isProfileVisibleToSignedInUser,
-    ]),
-    edit_metadata: isGroupAdmin,
-    list: Policy.always, // database query will contains filters based on user's access, so no policy needed here
-    view_hierarchy: platformAdminOnly,
-    list_invalid: platformAdminOnly,
-    view_audit_logs: Policy.or([isGroupAdmin, hasGroupOversight]),
+    ])),
+    edit_metadata: mutating(isGroupAdmin),
+    list: reading(Policy.always), // database query will contains filters based on user's access, so no policy needed here
+    view_hierarchy: reading(platformAdminOnly),
+    list_invalid: reading(platformAdminOnly),
+    view_audit_logs: reading(Policy.or([isGroupAdmin, hasGroupOversight])),
 
-    view_members: Policy.or([isGroupMember, hasGroupOversight]),
-    view_ancestors: Policy.or([isGroupMember, hasGroupOversight]),
+    view_members: reading(Policy.or([isGroupMember, hasGroupOversight])),
+    view_ancestors: reading(Policy.or([isGroupMember, hasGroupOversight])),
 
     // all descendants
-    view_descendants: Policy.or([isGroupAdmin, hasGroupOversight]),
+    view_descendants: reading(Policy.or([isGroupAdmin, hasGroupOversight])),
 
-    add_member: isGroupAdmin,
-    remove_member: isGroupAdmin,
-    edit_member_role: isGroupAdmin,
+    add_member: mutating(isGroupAdmin),
+    remove_member: mutating(isGroupAdmin),
+    edit_member_role: mutating(isGroupAdmin),
 
     // Issuing and withdrawing an invitation. An invitation is an add_member that has not
     // happened yet and carries the same authority, so this is not a narrower rule than
     // add_member; it is a separate action because it is separately restrictable.
     // @see docs/design/groups/invitations.md — Authorization
-    invite: isGroupAdmin,
+    invite: mutating(isGroupAdmin),
     // Reading the list is split from issuing because the two differ under ARCHIVED: a frozen
     // group takes no new invitations, and the outstanding ones are exactly what an admin
     // needs to see while it is frozen.
-    view_invitations: isGroupAdmin,
+    view_invitations: reading(isGroupAdmin),
 
-    add_dataset: Policy.or([isGroupAdmin, isMemberContributionsAllowed]),
-    add_collection: isGroupAdmin,
+    add_dataset: mutating(Policy.or([isGroupAdmin, isMemberContributionsAllowed])),
+    add_collection: mutating(isGroupAdmin),
   })
   .attributes({
     // * - any action

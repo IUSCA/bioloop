@@ -144,6 +144,14 @@ the type lives on the `resource` row — so `builtin/hydrators/grant.js` resolve
 entry in `hydratorRegistry` gets `createDefaultHydrator`, which has no virtual attributes at
 all, so adding a policy requirement to such a model is where this bites.
 
+**Both are now caught before a request.** `authorization/index.js` runs
+`findUnhydratableRequirements` at boot and throws, listing each term, attribute rule, and
+transition whose requirement no hydrator can supply. That check found `grant.subject_type`
+missing on 2026-09-15, and the API refused to start until a virtual attribute was added.
+A boot throw shows as nodemon crash-looping in the API log. It can prove only that a name
+resolves. `tests/authorization/hydrateEveryAttribute.test.js` hydrates every declared attribute
+against a seeded row, so a loader that throws fails there.
+
 `tests/authorization/grantHydrator.test.js` shows the shape: call
 `hydrator.hydrate({ id, attributes })` — an object, not positional arguments — and assert the
 attribute resolves.
@@ -185,23 +193,56 @@ This was live until 2026-09-14. The `VIEW_SENSITIVE_METADATA` rule sat below the
 `tests/authorization/dataset.attribute_filters.test.js` only checked that a rule naming
 `staged_path` existed, which is why it passed.
 
+`tests/authorization/attributeRuleOrdering.test.js` projects every rule list over a
+representative row and reports each earlier rule that hides a field a later rule shows. It
+pins the one known case, `dataset.*` rule 1 (oversight) above rule 2 (sensitive metadata).
+Fixing a list, or breaking one, changes that pinned report.
+
 Assert reachability by running the decision, not by reading the rule list.
 `tests/services/grants/grantHolderAttributes.test.js` grants each access type and checks what
 `authorizeAction(...).filter(dataset)` returns. Against the old order it failed three of four
 cases.
 
-## A restriction check with no target allows the action
+## A restriction check with no target throws
 
-`restrictionTargetFor` in `builtin/restrictions.js` resolves a grant or an access request to its
-resource only through the pre-fetched resource. With none, it returns null, and a null target
-blocks nothing. Create actions have no resource id and get null the same way.
+`checkRestriction` in `builtin/restrictions.js` first asks `actionCouldBeBlocked`. A reading
+action returns null there without a query. For a restrictable action, `restrictionTargetFor`
+resolves the target, and a missing one is a `RestrictionTargetError` that names the action.
 
-So an `authorize('grant', 'revoke')` with no `preFetchedResourceFn` is never checked against
-`ARCHIVED`. On 2026-09-14 five routes had this shape, filed as L1 T11. When adding a mutating
-route on a grant or an access request, pass `preFetchedResourceFn` returning `resource_id`, and
-test it by archiving the collection and calling the route.
+- A group resolves by its id. A root group being created has no parent, so nothing restricts it.
+- A dataset or collection resolves by resource id. A create resolves by the `owner_group_id` the
+  pre-fetched resource names, so creating under an archived group, or a child of one, is blocked.
+- A grant or access request resolves through `preFetched.resource_id`, and otherwise by reading
+  the row's `resource_id`. An id naming no row returns null, so the service answers with its 404.
 
-@see docs/design/groups/access-model-verification-plan.md — Totality: combinations with no answer
+Until 2026-09-15 a missing target returned null and allowed the action. Five routes relied on
+that shape. `tests/services/restrictions/restrictionTargets.test.js` archives a collection and
+checks review, update, and revoke are refused. A new mutating route with neither an id nor a
+pre-fetched resource now throws in its first test rather than passing silently.
+
+## Actions declare their restriction class and transition beside their policy
+
+A container's `.actions({...})` takes `mutating(policy, transition?)` or `reading(policy)` from
+`core/policies/PolicyContainer.js`. `getRestrictionClass(action)` and `getTransition(action)`
+read them back. `tests/authorization/registryCompleteness.test.js` fails on an action with no
+class, and checks the declaration against `MUTATING_ACTIONS` and `READING_ACTIONS` until
+Phase 6 derives those lists from it.
+
+Every leaf term carries `meta`: `{ pathKind }`, with `accessType` for a grant term, or
+`{ pathKind: null, rule }` for `always`, `never`, and `platform_admin_only`. `Policy.or`, `and`,
+and `not` keep `operator` and `children`, and `policy.terms()` lists the unique leaves. The
+tables under `builtin/tables` and the reference model under `api/tests/model` read only these.
+A new term with no `meta` fails the completeness test.
+
+`access_request` has separate `submit` and `withdraw` actions. The routes authorize those, not
+`update`. Each carries a transition row naming the states it moves between.
+
+## Cache keys carry the model name
+
+The resource cache is one Map shared by every resource type in a request. `PrismaHydrator.cacheKey(model, id)`
+returns `<model>:<id>`. Code that seeds a cache, such as `core/middlewares.js` and
+`middleware/auth.js` for the user, must call it rather than use the bare id. A bare key is
+a silent miss, not an error.
 
 ## Probing the engine from a script
 

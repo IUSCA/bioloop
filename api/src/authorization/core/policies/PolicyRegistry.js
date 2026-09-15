@@ -17,6 +17,16 @@ class PolicyRegistry {
     this.registry.set(resourceType, policyContainer);
   }
 
+  /**
+   * Every registered resource type, in registration order. Completeness checks iterate this
+   * rather than a literal list, so a container a derived app registers is covered without
+   * editing the check.
+   * @returns {string[]}
+   */
+  listTypes() {
+    return Array.from(this.registry.keys());
+  }
+
   get(resourceType) {
     const policyContainer = this.registry.get(resourceType);
     if (!policyContainer) {

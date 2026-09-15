@@ -220,7 +220,7 @@ describe('PrismaHydrator.hydrate() - DB fetch', () => {
 
   it('does not call the DB for attributes already in the cache', async () => {
     const cache = new Map();
-    cache.set('1', { id: 1, name: 'Cached' });
+    cache.set('User:1', { id: 1, name: 'Cached' });
     await hydrator.hydrate({ id: 1, attributes: ['name'], cache });
     expect(prismaClient.User.findUniqueOrThrow).not.toHaveBeenCalled();
   });
@@ -257,14 +257,14 @@ describe('PrismaHydrator.hydrate() - preFetched', () => {
 
   it('does not overwrite cached values with preFetched values', async () => {
     const cache = new Map();
-    cache.set('1', { id: 1, name: 'CachedName' });
+    cache.set('User:1', { id: 1, name: 'CachedName' });
     await hydrator.hydrate({
       id: 1,
       attributes: ['name'],
       cache,
       preFetched: { name: 'PreFetchedName', id: 1 },
     });
-    expect(cache.get('1').name).toBe('CachedName');
+    expect(cache.get('User:1').name).toBe('CachedName');
   });
 });
 
@@ -306,7 +306,7 @@ describe('PrismaHydrator.hydrate() - virtual attributes', () => {
     hydrator.registerVirtualAttribute('alwaysTrue', async () => true);
     const cache = new Map();
     await hydrator.hydrate({ id: 99, attributes: ['alwaysTrue'], cache });
-    expect(cache.get('99').id).toBe(99);
+    expect(cache.get('User:99').id).toBe(99);
   });
 
   it('does not re-run virtual loaders for already-cached virtual attributes', async () => {

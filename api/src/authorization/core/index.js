@@ -28,7 +28,10 @@ const { evaluateAttributeFilters, createFilterFunction } = require('./attributeF
 // Middleware
 const { initializePolicyContext, createAuthorizationMiddlewareFunction } = require('./middlewares');
 
+const { findUnhydratableRequirements } = require('./requiresCheck');
+
 module.exports = {
+  findUnhydratableRequirements,
   // Policy classes
   Policy,
   PolicyContainer,

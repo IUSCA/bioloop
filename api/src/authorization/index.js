@@ -61,6 +61,7 @@ const restrictions = require('./builtin/restrictions');
 // once, before any action policy runs and after the restriction check.
 // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 const { isPlatformAdmin } = require('./builtin/policies/utils/index');
+const { findUnhydratableRequirements } = require('./core/requiresCheck');
 
 const PLATFORM_ADMIN = { policy: isPlatformAdmin, callerRole: 'PLATFORM_ADMIN' };
 
@@ -210,6 +211,15 @@ async function authorizeAction(resourceType, action, {
     permission.callerRole = callerRole;
   }
   return permission;
+}
+
+// Every attribute a policy, an attribute rule, or a transition row declares must be one a
+// hydrator can supply. An unmet requirement is a 500 on the first ordinary request that
+// evaluates it, so it fails here, at startup, instead.
+// @see docs/design/groups/access-model-verification-plan.md — The static checks that already exist
+const unhydratable = findUnhydratableRequirements(policyRegistry, hydratorRegistry);
+if (unhydratable.length) {
+  throw new Error(`Policies declare attributes no hydrator supplies:\n  ${unhydratable.join('\n  ')}`);
 }
 
 // ============================================================================

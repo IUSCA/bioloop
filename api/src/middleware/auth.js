@@ -1,6 +1,7 @@
 const createError = require('http-errors');
 const _ = require('lodash/fp');
 
+const { PrismaHydrator } = require('@/authorization/core/hydrators/PrismaHydrator');
 const authService = require('../services/auth');
 const { setIntersection } = require('../utils');
 const { ac } = require('../services/accesscontrols');
@@ -94,7 +95,7 @@ function optionalAuthenticate(req, res, next) {
     // A shallow copy, because the hydrator writes the id back onto whatever object it
     // finds in the cache and the principal is frozen. req.user stays the frozen shared
     // object, so nothing downstream can mutate the principal every anonymous request uses.
-    req.policyContext.cache.user.set(req.user.subject_id, { ...req.user });
+    req.policyContext.cache.user.set(PrismaHydrator.cacheKey('user', req.user.subject_id), { ...req.user });
   }
   next();
 }

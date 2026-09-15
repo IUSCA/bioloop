@@ -1,6 +1,63 @@
 const Policy = require('./Policy');
 
 /**
+ * The restriction classes an action may declare. A restriction type blocks by class, so an
+ * action that declares none cannot be classified and the completeness checks refuse it.
+ * @see docs/design/groups/access-model.md — The decision rule
+ */
+const RESTRICTION_CLASS = Object.freeze({
+  MUTATING: 'mutating',
+  READING: 'reading',
+});
+
+/**
+ * A transition row: the states of the resource that admit an action, and the states it leaves.
+ *
+ * @typedef {Object} Transition
+ * @property {string[]} requires - resource attributes `stateOf` reads
+ * @property {function(Object): string} stateOf - the resource's current state
+ * @property {string[]} from - states that admit the action
+ * @property {string[]} to - states the action may leave behind
+ * @see docs/design/groups/access-model.md — The transition table
+ */
+
+function validateTransition(qualifiedName, transition) {
+  if (transition == null) return null;
+  const {
+    requires, stateOf, from, to,
+  } = transition;
+  if (!Array.isArray(requires) || requires.some((r) => typeof r !== 'string')) {
+    throw new Error(`Transition for ${qualifiedName}: requires must be an array of strings`);
+  }
+  if (typeof stateOf !== 'function') {
+    throw new Error(`Transition for ${qualifiedName}: stateOf must be a function`);
+  }
+  if (!Array.isArray(from) || from.length === 0 || !Array.isArray(to) || to.length === 0) {
+    throw new Error(`Transition for ${qualifiedName}: from and to must be non-empty arrays`);
+  }
+  return Object.freeze({
+    requires: [...requires], stateOf, from: [...from], to: [...to],
+  });
+}
+
+/**
+ * Declares an action that changes state. `transition` is optional.
+ * @param {Policy} policy
+ * @param {Transition} [transition]
+ */
+function mutating(policy, transition = null) {
+  return { policy, restriction: RESTRICTION_CLASS.MUTATING, transition };
+}
+
+/**
+ * Declares an action that only reads.
+ * @param {Policy} policy
+ */
+function reading(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.READING, transition: null };
+}
+
+/**
  * PolicyContainer - A singleton container for managing resource policies
  * Automatically names policies based on resource type and action names
  */
@@ -12,6 +69,7 @@ class PolicyContainer {
       description,
     };
     this._actions = {};
+    this._actionMeta = {};
     this._attributeRules = {};
     this._roles = [];
     this._frozen = false;
@@ -21,14 +79,54 @@ class PolicyContainer {
    * Register a single action with its policy
    * Automatically names the policy as {resourceType}.{actionName}
    */
-  action(actionName, policy, renamePolicy = true) {
+  action(actionName, declaration, renamePolicy = true) {
     if (this._frozen) {
       throw new Error(`PolicyContainer for ${this.meta.resourceType} is frozen. Cannot register new actions.`);
     }
 
     const qualifiedName = `${this.meta.resourceType}.${actionName}`;
+    // A bare policy declares no restriction class. `mutating(policy)` and `reading(policy)`
+    // declare one beside it, which is what the restriction layer and the tables read.
+    const { policy, restriction = null, transition = null } = declaration instanceof Policy
+      ? { policy: declaration }
+      : (declaration || {});
+    if (!(policy instanceof Policy)) {
+      throw new Error(`Action ${qualifiedName} must be a Policy or a declaration holding one`);
+    }
+    if (restriction !== null && !Object.values(RESTRICTION_CLASS).includes(restriction)) {
+      throw new Error(`Action ${qualifiedName}: unknown restriction class ${restriction}`);
+    }
     this._actions[actionName] = renamePolicy ? policy.cloneWithName(qualifiedName) : policy.clone();
+    this._actionMeta[actionName] = Object.freeze({
+      restriction,
+      transition: validateTransition(qualifiedName, transition),
+    });
     return this;
+  }
+
+  /**
+   * The restriction class an action declared, or null when it declared none.
+   * @param {string} actionName
+   * @returns {string|null}
+   */
+  getRestrictionClass(actionName) {
+    this.getPolicy(actionName);
+    return this._actionMeta[actionName].restriction;
+  }
+
+  /**
+   * The transition row an action declared, or null for an action any state admits.
+   * @param {string} actionName
+   * @returns {Transition|null}
+   */
+  getTransition(actionName) {
+    this.getPolicy(actionName);
+    return this._actionMeta[actionName].transition;
+  }
+
+  /** Whether `freeze()` has been called. */
+  isFrozen() {
+    return this._frozen;
   }
 
   /**
@@ -280,6 +378,7 @@ class PolicyContainer {
   freeze() {
     this._frozen = true;
     Object.freeze(this._actions);
+    Object.freeze(this._actionMeta);
     Object.freeze(this._attributeRules);
     Object.freeze(this._roles);
     Object.freeze(this.meta);
@@ -293,6 +392,7 @@ class PolicyContainer {
     return {
       meta: { ...this.meta },
       actions: { ...this._actions },
+      actionMeta: { ...this._actionMeta },
       attributeRules: { ...this._attributeRules },
       roles: [...this._roles],
     };
@@ -300,3 +400,6 @@ class PolicyContainer {
 }
 
 module.exports = PolicyContainer;
+module.exports.RESTRICTION_CLASS = RESTRICTION_CLASS;
+module.exports.mutating = mutating;
+module.exports.reading = reading;

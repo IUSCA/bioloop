@@ -294,7 +294,9 @@
     "WCAG",
     "weakcb",
     "webassets",
-    "zenodo"
+    "zenodo",
+    "unhydratable",
+    "Unhydratable"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

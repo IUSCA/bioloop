@@ -29,6 +29,11 @@ class ContextHydrator extends Hydrator {
     this.virtualLoaders.set(attrName, loaderFn);
   }
 
+  /** Whether a virtual loader is registered for the attribute. @see PrismaHydrator#canHydrate */
+  canHydrate(attr) {
+    return this.virtualLoaders.has(attr);
+  }
+
   /**
    * @param {Object}           options
    * @param {Object|null}      options.id          - Identifiers object `{ user, resource, resourceType }`

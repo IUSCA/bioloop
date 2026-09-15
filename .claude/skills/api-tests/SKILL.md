@@ -22,9 +22,30 @@ A foreground call has the same trap. The Bash tool keeps the directory a previou
 into, so after a UI command jest reports `No tests found` and names `.../bioloop/ui` as the
 directory it searched. The pattern is fine; the directory is wrong.
 
-`--runInBand` is not optional. The service suites talk to the **real development database**
-on `localhost:5432` and the concurrency suites deliberately race transactions against real
-constraints. Running them in parallel produces failures that mean nothing.
+`--runInBand` is not optional. The service suites talk to a **real database** and the
+concurrency suites deliberately race transactions against real constraints. Running them in
+parallel produces failures that mean nothing.
+
+## The suites run against `app_test`, not the development database
+
+Jest's `setupFiles` loads `api/tests/testDatabase.js`, which sets `DATABASE_URL` to
+`<DATABASE_DB>_test` on the same server (`app_test` on `localhost:5433` here) before anything
+opens a Prisma client. `src/db.js` loads `.env` through dotenv-safe, which never overrides a
+variable already set, so the override holds. The running API and the browser keep the
+development database, and suites no longer see rows a person created by clicking around.
+
+- **Create and seed it once:** `CREATE DATABASE app_test` as the `.env` user, then
+  `npm run test:db:setup`, which runs `prisma migrate deploy` and `prisma db seed` against it.
+  Run the same script after adding a migration.
+- **Resetting it is a person's step.** Prisma refuses `prisma migrate reset` when an AI agent
+  invokes it, and demands consent given in a message sent after the refusal. An earlier
+  "you may reset the database" does not count. Do not set
+  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` yourself, and do not drop the database by
+  another route to get around it; ask.
+- **Two suites still reach the development database:** `tests/routes/health.test.js` and
+  `tests/routes/auth/singup.test.js` call the running API on port 3030 through `tests/request.js`.
+- A standalone script that requires `@/db` outside jest reaches the **development** database
+  unless it requires `tests/testDatabase.js` first.
 
 ## Never use `git stash` to get a baseline
 
@@ -370,8 +391,9 @@ for (const type of types) expect(held.has(type.name)).toBe(true);
 
 Four consecutive full runs on 2026-09-09 produced three different single-test failures and
 one clean run, in `issueGrants.concurrency`, `coverage`, and `auth.invite`. Each one passed
-on a targeted rerun of its own file, several times over. The suites share one development
-database, and `tests/routes/` additionally shares one running API.
+on a targeted rerun of its own file, several times over. At the time the suites shared the
+development database with the running API. They now share `app_test` only with each other,
+so interference between suites remains possible and interference from clicking around does not.
 
 So the order is: rerun the failing file alone, then rerun it a few times. Only if it fails
 there is it worth reading as a defect. Going the other way — assuming a full-run failure is

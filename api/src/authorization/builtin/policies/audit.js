@@ -1,4 +1,5 @@
 const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { reading } = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
 
 /**
@@ -26,8 +27,8 @@ const auditPolicies = new PolicyContainer({
 // action before any of these run, so repeating the term here would be dead weight.
 // platformAdminOnly says that nobody else qualifies.
 auditPolicies.actions({
-  read_records: platformAdminOnly,
-});
+  read_records: reading(platformAdminOnly),
+}).freeze();
 
 module.exports = {
   auditPolicies,

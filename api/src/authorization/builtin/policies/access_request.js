@@ -1,16 +1,20 @@
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
+const { mutating, reading } = require('../../core/policies/PolicyContainer');
 
 class AccessRequestPolicy extends Policy {
-  constructor({ name, requires, evaluate }) {
+  constructor({
+    name, requires, evaluate, meta,
+  }) {
     super({
-      name, resourceType: 'access_request', requires, evaluate,
+      name, resourceType: 'access_request', requires, evaluate, meta,
     });
   }
 }
 
 const isRequester = new AccessRequestPolicy({
   name: 'isRequester',
+  meta: { pathKind: 'self' },
   requires: {
     user: ['subject_id'],
     resource: ['requester_id'],
@@ -20,6 +24,7 @@ const isRequester = new AccessRequestPolicy({
 
 const isAdminOfResourceGroup = new AccessRequestPolicy({
   name: 'isAdminOfResourceGroup',
+  meta: { pathKind: 'admin' },
   requires: {
     user: ['group_memberships'],
     resource: ['resource2'],
@@ -39,6 +44,7 @@ const isAdminOfResourceGroup = new AccessRequestPolicy({
 
 const hasOversightOfResourceGroup = new AccessRequestPolicy({
   name: 'hasOversightOfResourceGroup',
+  meta: { pathKind: 'oversight' },
   requires: {
     user: ['oversight_group_ids'],
     resource: ['resource2'],
@@ -90,6 +96,17 @@ const hasOversightOfResourceGroup = new AccessRequestPolicy({
 //   },
 // });
 
+/**
+ * Reads an access request's lifecycle state for the transition table.
+ * @see docs/design/groups/access-model.md — The transition table
+ */
+const requestState = (from, to) => ({
+  requires: ['status'],
+  stateOf: (request) => request.status,
+  from,
+  to,
+});
+
 // Define policies for access requests
 const accessRequestPolicies = new PolicyContainer({
   resourceType: 'access_request',
@@ -99,9 +116,18 @@ const accessRequestPolicies = new PolicyContainer({
 
 accessRequestPolicies
   .actions({
-    read: Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup]),
-    review: isAdminOfResourceGroup,
-    update: isRequester,
+    read: reading(Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup])),
+    review: mutating(
+      isAdminOfResourceGroup,
+      requestState(['UNDER_REVIEW'], ['APPROVED', 'PARTIALLY_APPROVED', 'REJECTED']),
+    ),
+    update: mutating(isRequester, requestState(['DRAFT'], ['DRAFT'])),
+    // Submitting and withdrawing were bound to `update`. They are separate actions because the
+    // transition table admits them in different states, and the capability map can only say
+    // "Withdraw" when withdraw is an action of its own.
+    // @see docs/design/groups/access-model.md — The transition table
+    submit: mutating(isRequester, requestState(['DRAFT'], ['UNDER_REVIEW'])),
+    withdraw: mutating(isRequester, requestState(['DRAFT', 'UNDER_REVIEW'], ['WITHDRAWN'])),
     // The meaningful check on creation is on the resource being asked for, not on the
     // request. A create body names a `resource_id` and no resource type, so which policy
     // container applies is not known until the `resource` row is read; the route reads it
@@ -112,7 +138,7 @@ accessRequestPolicies
     // restriction reaches request creation. The subject rules — self, or a group the
     // requester administers — stay in `_validateAccessRequestSubject`.
     // @see docs/design/groups/access-requests-plan.md — A1
-    create: Policy.always,
+    create: mutating(Policy.always),
   })
   .attributes({
     '*': [
