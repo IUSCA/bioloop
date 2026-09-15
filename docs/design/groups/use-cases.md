@@ -181,7 +181,7 @@ These users are the operational backbone, and they push the system hardest.
 
 17. **Deactivate or archive a group** — `Next` · **foundation**
     * Outcome: a finished grant stops changing, and its history stays readable.
-    * Why foundation: archiving is a prohibition, and the model has no way to express one. The design currently lists about thirty forbidden actions in prose, and three are enforced. Either archiving is expressed through a general denial rule or that prose list keeps growing. See Q6.
+    * Why foundation: archiving forbids about thirty actions. It is resource state, checked by the service after authorization, and one table lists what it forbids. See [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 ### 2.2 Membership management
 
@@ -456,7 +456,7 @@ its own.
 | Q3. Does "owning group" mean governance only? | **Governance only.** Attribution is a separate relationship, designed later. `owner_group_id` must never be widened to carry it. |
 | Q4. Will Bioloop exchange access decisions with other institutions? | **Undecided, and it can stay that way.** Consent codes are captured at registration because that information decays; nothing enforces them. |
 | Q5. Can a collection span groups? | **No.** A separate non-authorization concept for describing a set of datasets comes later. |
-| Q6. Should inheritance be breakable? | **Yes, by a restriction layer that composes by AND**, never by subtracting from grants. One restriction type ships: archiving. |
+| Q6. Should inheritance be breakable? | **Yes, by a restriction layer that composes by AND**, never by subtracting from grants. No restriction type ships yet, and archiving is resource state. |
 | Q7. Is a role an enum or a row? | **An enum.** Validity columns on `group_user` give membership an expiry without the row-based model. |
 | Q8. Do access types imply one another? | **Yes.** A seeded partial order, closed over at evaluation time. |
 
@@ -473,7 +473,7 @@ constraint that keeps it possible.
 | 59 — non-null owning group | **Built.** Datasets that had no owner were moved into an archived quarantine group. |
 | A.1 — a principal for people who are not logged in | **Principal built.** `Public` sits alongside `Authenticated Users`. Serving unauthenticated requests is deferred. |
 | 43 — time-bound membership | **Unblocked.** `group_user` carries `valid_until`; a service and UI change with no migration remains. |
-| 17, 39, 45, 46, 47 — a way to say no | **Primitive built.** Restrictions compose by AND, with archiving as the only type. The rest become a seed row each. |
+| 17, 39, 45, 46, 47 — a way to say no | **Hook built.** Every action passes the restriction check, which allows every action until restriction types are specified. |
 | 38 — an order over access types | **Built.** A seeded partial order, closed over once at startup. |
 | 4, 55 — explanation from the deciding query | **Constraint accepted.** The access-type closure and the restriction check both run inside the deciding query. |
 | 58 — derived datasets no more open than their sources | **Withdrawn.** Built, then removed. Derived and source access are independent — see [decision 10](./decisions.md). |
@@ -514,7 +514,6 @@ either wiring to finish or code to delete.
 - **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
 - **`group.add_dataset`** and **`group.add_collection`** are defined and never passed to `authorize()`.
 - **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
-- **Dataset unarchive.** The archive route exists; the unarchive route is commented out, the service has no counterpart, and the UI has no call. A dataset archived through the UI cannot be brought back through it.
 
 ### Enforcement holes
 

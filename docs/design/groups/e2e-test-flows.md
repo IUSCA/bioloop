@@ -177,7 +177,7 @@ does a descendant admin see anything of a sibling branch.
 
 ### A3 — Archiving freezes a group without erasing it · `Next` · `journey`
 
-Covers use case 17 and [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive).
+Covers use case 17 and [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 **Actor** Alice, then Bob, then Priya.
 **Given** Wong Lab is active, owns `PCM230203`, and has Bob as a member.
@@ -190,20 +190,21 @@ the audit log.
 a dataset owned by Wong Lab, edit collection membership, or invite anybody. Each of those
 controls is absent from the page rather than present and failing.
 **When** Priya opens the archived Wong Lab.
-**Then** Priya is refused the same mutations Alice was refused, because a restriction applies
-to a platform admin too.
+**Then** Priya is refused the same mutations Alice was refused, because archived state binds a
+platform admin too.
 **And** Priya alone is offered unarchive.
 
-### A4 — Archiving reaches descendants and their resources · `Next` · `boundary`
+### A4 — Archiving covers the group and what it owns, not its sub-groups · `Next` · `boundary`
 
-Covers the propagation rule in [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive).
+Covers [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
-**Actor** Alice.
-**Given** Wong Lab is archived and Wong Sequencing is not.
-**When** Alice opens Wong Sequencing, and then `PCM230203`.
-**Then** both read as frozen, and both say the reason names the ancestor rather than
-themselves.
-**And never** is a mutating control offered on either.
+**Actor** Alice, then an admin of Wong Sequencing.
+**Given** Wong Lab is archived, and Wong Sequencing, beneath it, is not.
+**When** Alice opens `PCM230203`, which Wong Lab owns.
+**Then** it reads as frozen, and the reason names Wong Lab.
+**When** the admin of Wong Sequencing opens Wong Sequencing.
+**Then** it reads as active, and its mutating controls are offered.
+**And never** does Wong Sequencing report Wong Lab's archive as its own.
 
 ### A5 — A group admin cannot unarchive their own group · `MVP` · `boundary`
 
@@ -753,18 +754,18 @@ absent from every list she sees.
 
 ---
 
-## K. Restrictions applied uniformly
+## K. Archived state applied uniformly
 
-### K1 — A restriction outranks a platform admin · `Next` · `boundary`
+### K1 — Archived state binds a platform admin · `Next` · `boundary`
 
-Covers the ordering rule in [Design](./design.md#restrictions-apply-to-platform-admins).
+Covers [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 **Actor** Priya.
 **Given** Wong Lab is archived.
 **Then** every mutating control on Wong Lab and its resources is absent for Priya, exactly as
 it is for Alice, with unarchive as the sole exception.
 
-### K2 — A reading action survives a restriction · `Next` · `invariant`
+### K2 — A reading action survives archiving · `Next` · `invariant`
 
 **Then** on an archived group, every read — metadata, members, grants, audit, outstanding
 invitations — still works for whoever could read it before.
@@ -881,7 +882,7 @@ honest.
 | Group reparenting | No control offers it |
 | Access renewal | A request cannot be filed as a renewal |
 | Cross-group collections | A collection cannot take another group's dataset |
-| Dataset unarchive | Recorded as a known gap, not as a working control |
+| Restoring a deleted dataset | Deletion cannot be undone, so no control offers it |
 | Access history as of a past date | Not offered; membership history is still readable |
 | Compliance reports | Not offered |
 | Training or agreement preconditions | No dataset presents one |
@@ -922,7 +923,7 @@ in [Deliberately absent](#p-deliberately-absent).
 ## What this suite is not for
 
 **It is not a unit test of the authorization engine.** The order over access types, the
-closure table, and the restriction propagation each deserve tests close to the code, where a
+closure table, and the state checks each deserve tests close to the code, where a
 case costs milliseconds rather than seconds. This suite asserts that the engine's answers
 reach the screen intact.
 

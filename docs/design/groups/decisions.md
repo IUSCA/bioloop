@@ -126,8 +126,8 @@ corrected rather than kept.
 ## 6. Restrictions compose by AND; grants stay additive
 
 **Decision.** Add a restriction layer evaluated before grants. A restriction is a row
-attached to a resource or a group that blocks an action. It never cancels a grant and never
-references one.
+attached to one resource that blocks an action on that resource. It never cancels a grant and
+never references one.
 
 ```
 allowed = no restriction blocks this  AND  some grant permits it
@@ -143,27 +143,25 @@ Adding a restriction can only narrow access, so it cannot surprise somebody with
 did not have. Both Synapse and Terra converged on this shape independently, as Access
 Requirements and as Authorization Domains, and neither built negative permissions.
 
-**Scope for this pass:** the table, the evaluation hook, and exactly one restriction type,
-`ARCHIVED`. This is a net deletion of design surface. Archiving is currently about thirty
-forbidden actions written out in prose, of which three are enforced; under one rule, all of
-them hold.
+**Scope.** The evaluation hook. Every action passes the restriction check, at every level that
+decides access: a single decision, a capability map, and a list. No restriction type ships. How a
+restriction is specified is deferred, and until then the check allows every action.
 
-Three properties are settled now because they sit in the evaluation path:
+Resource state is not a restriction. [Decision 17](#_17-resource-state-is-checked-after-authorization)
+places it after authorization.
 
-- **The hook goes in with one type.** A policy written against a pure union assumes access
-  only grows. Adding the AND later means revisiting every one.
-- **Propagation.** A restriction on a group applies to its descendants and to the resources
-  it governs. Implemented for `ARCHIVED`, inherited by every later type.
-- **Whether a restriction can be lifted is a property of the type, not the row.** `ARCHIVED` is liftable by a
-  platform admin. A future agreement-based restriction should not be liftable at all, only
-  satisfiable, which is the point Terra makes by never allowing an authorization domain to
-  be removed.
+Two properties are settled now because they sit in the evaluation path:
 
-**Known tension.** Archiving blocks mutation by anyone; a data use agreement blocks reading
-by one person until they have signed. One is a blanket prohibition on writes, the other a
-per-subject condition on reads. One table with a type that declares which actions it blocks
-covers both, but this is the seam to re-examine when the second restriction type arrives
-rather than to design for speculatively now.
+- **The hook goes in before any type needs it.** A policy written against a pure union
+  assumes access only grows. Adding the AND later means revisiting every one.
+- **Whether a restriction can be lifted is a property of the type, not the row.** An admin lifts
+  some types. An agreement is satisfied by each person accepting it and is never lifted on their
+  behalf, which is the point Terra makes by never allowing an authorization domain to be removed.
+
+**A restriction reaches only the resource it names.** It does not flow to other resources through
+the group tree. The group tree records governance, and a restriction comes from the data: a
+consent form, a provider's contract, a classification, or a publication date. Applying one rule to
+many resources is an explicit action that writes a row for each.
 
 ## 7. Access types imply one another
 
@@ -301,9 +299,9 @@ repetition, and it deletes the terms rather than adding a layer. This was the on
 the review's finding 1 worth taking; the rest of that finding, making groups resources, was
 rejected as decision 4.
 
-**What a short-circuit must not skip.** Restrictions still apply. An archived group is
-archived for a platform admin too, which is already how the restriction layer behaves and
-must stay that way.
+**What a short-circuit must not skip.** Restrictions still apply, and so does resource state.
+An archived group is archived for a platform admin too, because the service that performs an
+action checks the state after authorization, whoever is asking.
 
 ## 12. Owning-group members get a seeded grant, not structural read
 
@@ -424,13 +422,13 @@ reason. A later reader who disagrees is reopening one row, not the model.
 |---|---|---|---|
 | 1 | A removed member holds a direct grant | The grant stays. | A grant names its subject, not a membership. Grants only add, so removing a membership cannot reach a row it never created. |
 | 2 | Archiving a group, with pending invitations and open requests | Both stay. Acceptance answers `invalid` while archived. Updating, submitting, withdrawing, and reviewing a request are refused while archived, and the expiry job closes what is under review. | Archiving closes a boundary without mutating what sits inside it. Unarchiving restores every row as it was. |
-| 3 | Archiving a collection restricts its datasets | No. | A restriction on a resource reaches that resource alone. The datasets belong to the owning group, which is not archived. |
-| 4 | Grants on a soft-deleted dataset | Metadata stays readable to those who could read it. Every mutating action and every data-plane action is refused. Lists exclude it unless asked. | A deleted dataset is preserved as metadata, and its bytes are gone. A grant cannot confer access to bytes that no longer exist. |
+| 3 | Archiving a collection restricts its datasets | No. | Archiving is the state of the collection alone. The datasets belong to the owning group, which is not archived. |
+| 4 | Grants on a deleted dataset | Metadata stays readable to those who could read it. Every mutating action and every data-plane action is refused. Lists exclude it unless asked. | A deleted dataset is preserved as metadata, and its bytes are gone. A grant cannot confer access to bytes that no longer exist. |
 | 5 | A soft-deleted user's memberships and grants | They stay. The account does not count as an admin. | Soft deletion is reversible and login is refused. Closing rows would make the reversal lossy. |
 | 6 | Deleting a collection | Refused when the collection has ever contained a dataset or has any access request. Archive it instead. | Decision 1 preserves history, and a cascade delete destroys it. Refusing keeps deletion for the one case with no history. |
 | 7 | An admin leaves while a request they filed for the group is under review | It stays reviewable. | The request's subject is the group, which still exists. Filing was authorized when it happened. |
 | 8 | A grant to Public on a resource makes its owning group's page visible | No. A system-principal grant does not count toward `canAccessResourcesOwnedByGroup`. | The group page shows who the group is to people with a relationship to it. A world-readable dataset is not a relationship. |
-| 9 | A child of an archived group owns new datasets | No. | The restriction reaches descendants. The engine now resolves a create to its owning group, and the service guards read the view. |
+| 9 | A child of an archived group owns new datasets | Yes. | Archiving covers the group itself and what it owns. A sub-group keeps its own state. See decision 17. |
 | 10 | Zero admins | Allowed at creation and reported by the no-active-admins list. A change never takes a group from one admin to none. | Seeded cores and platform-created groups start with none. The harm is losing the last admin, not never having one. |
 | 11 | The seeded grant on an ownership change | Deferred with ownership transfer. No route changes a dataset's owner. | Decision 15 defers the transfer flow, and the one accidental path is closed. |
 | 12 | Batch shapes | A batch a person submits is atomic and names every invalid item. A batch a machine submits reports each item's result. | A person fixes the input and resubmits. A watch script needs to keep going past one bad directory. |
@@ -441,6 +439,33 @@ reason. A later reader who disagrees is reopening one row, not the model.
 | 17 | Download tokens after revocation | The token lifetime is the accepted window. | The download server is outside this system and trusts its own tokens. The window is stated rather than hidden. |
 | 18 | What the UI may compute | A v2 page gates only on what the API sent, plus display-only facts. | Every client re-derivation found by the UI reading disagreed with the server in some state. |
 | 19 | Leaving quarantine | The legacy create into the archived quarantine group is the intended state until cut-over. Moving a dataset out is ownership transfer, deferred with decision 15. | The workers still create through v1, and a platform admin can unarchive, reassign, and re-archive in the meantime. |
+
+## 17. Resource state is checked after authorization
+
+**Decision.** Authorization answers what a caller could do on a resource. Whether the resource's
+state admits the action is a separate question. The service that performs the action answers it,
+after authorization.
+
+Resource state is every lifecycle fact about the resource itself: an archived group or collection,
+a deleted dataset, and the status an access request, an invitation, or a grant is in. The
+service checks it inside the transaction that holds the row lock and refuses with 409. A platform
+admin is refused the same way. The UI reads the state flags, such as `is_archived`, for badges and
+labels.
+
+Archiving covers the group or collection itself and the resources it owns. A sub-group keeps its
+own state until someone archives it.
+
+Checking state inside the authorization layer is the alternative, and it has three costs. A check
+made before the transaction is not the check that holds, because the state can change before the
+write. The same state gets two answers, a refusal from the authorization layer and a 409 from the
+service. And every container needs a mapping to the thing whose state is checked.
+
+**Two answers reach the UI.** `_meta.capabilities` holds what the caller could do, and
+`_meta.available_actions` holds what the resource's state admits. A page shows a control when the
+caller could act, and enables it when the state admits the action. A control whose state cannot
+return, such as Review on a decided request, is hidden instead. Sending both keeps an admin's
+authority visible on an archived group, where a merged list would hide it. See the
+[Restrictions and resource state plan](./restrictions-plan.md#the-two-answers-in-the-response).
 
 ## Raised and deferred
 
@@ -472,6 +497,6 @@ its own table and lifecycle and borrowed nothing from grants or access requests.
 **Serving unauthenticated requests** is deferred by decision 3. The principal exists; the
 route path does not.
 
-**The second restriction type** is deferred by decision 6. Only `ARCHIVED` ships.
+**Restriction types** are deferred by decision 6. None ships, and the check allows every action.
 
 **Attribution and funding** were deferred by decision 8 and taken up by decision 13.

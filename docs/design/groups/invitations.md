@@ -363,9 +363,9 @@ There is no `email.*` block. SMTP configuration already exists under `smtp`, rea
 `isGroupAdmin`. They are separate because every action declares a restriction class, and these
 fall on opposite sides.
 
-`group.invite` is declared `mutating`, so an archived group takes no new invitations — the
-same reasoning that makes `dataset.contribute` mutating. That does more than change a status code:
-a blocked capability is absent from the capability map, so the UI never offers the button on an
+`group.invite` is declared `mutating`, and archiving forbids mutating actions, so an archived
+group takes no new invitations. The service checks the group's state after authorization and
+refuses with 409. The UI reads what the group's state admits, so it never offers the button on an
 archived group rather than offering it and failing.
 
 `group.view_invitations` is declared `reading` and survives archiving. The admin explaining
@@ -384,7 +384,7 @@ changing one is an argument for changing the other, and here it is not.
 ```
 
 **Logic:**
-1. Validate group exists and is not archived → `403` if archived
+1. Validate group exists and is not archived → `409` if archived
 2. Normalize email: `normalizeEmail(body.email)`
 3. Check if a user with this email is already a direct member → `400 Already a member`
 4. Check for a `PENDING` invite for `(group_id, email)` → `200 { status: 'already_invited' }` (idempotent; no duplicate email sent)
@@ -846,7 +846,7 @@ Six phases, one commit each, `invitations-phase-1` through `-6`, on 2026-09-09.
 | The transaction and one `hooks.run` call — the whole legacy edit | `api/src/services/user.js` |
 | `POST`, `GET`, `DELETE /groups/:id/invitations` | `api/src/routes/groups.js` |
 | `POST /auth/invite/check` and `/apply` | `api/src/routes/auth/invite.js` |
-| `group.invite` and `group.view_invitations`, sorted into the restriction sets | `authorization/builtin/policies/group.js`, `authorization/builtin/restrictions.js` |
+| `group.invite` and `group.view_invitations`, with their restriction classes | `authorization/builtin/policies/group.js` |
 | `invitations.ttl_days`, `portal.base_url`, `PORTAL_BASE_URL` | `api/config/` |
 
 No expiry cron. Expiry is `PENDING AND expires_at < now()`, computed at query time.

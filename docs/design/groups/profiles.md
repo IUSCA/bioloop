@@ -248,7 +248,7 @@ to the existing `view_metadata` arms.
 
 `view_profile` is declared with `reading(...)`. A test asserts that every registered action
 declares a restriction class. An archived group keeps serving its public profile, because
-`ARCHIVED` blocks the `mutating` class only.
+archiving forbids `mutating` actions only.
 
 ### The anonymous principal
 

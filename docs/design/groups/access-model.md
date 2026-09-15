@@ -36,11 +36,14 @@ Four planes produce the tuple.
 | Plane | Question | Where it lives |
 |---|---|---|
 | Authority | who may act | the policies inside `.actions({...})` |
-| Restriction | whether the state blocks it | the restriction class of the action, and `effective_restriction` |
+| Restriction | whether a restriction blocks it | the restriction check every action passes, which allows every action until restriction types are specified |
 | Projection | which fields the caller sees | the attribute rules inside `.attributes({...})` |
 | Disclosure | what a refusal reveals | the refusal shapes below |
 
 A consumer that returns the right boolean and the wrong field set disagrees with the model.
+
+Resource state is not a plane of the decision. The service that performs an action checks it after
+authorization, as [The state check](#the-state-check) describes.
 
 ## Base relations
 
@@ -56,8 +59,9 @@ set of facts over time.
 | `contains(c, d, interval)` | collection `c` holds dataset `d` | `collection_dataset` |
 | `grant(s, r, t, interval, revoked)` | subject `s` holds access type `t` on `r` | `grant` |
 | `implies(t, t2)` | holding `t` satisfies a check for `t2` | `grant_access_type_implication` |
-| `restriction(target, type, interval)` | the target is one group or one resource | `restriction` |
-| `deleted(d)` | dataset `d` is soft-deleted | `dataset.is_deleted` |
+| `restriction(r, type, interval)` | a restriction on resource `r`; no type is specified yet | none |
+| `deleted(d)` | dataset `d` is deleted, which cannot be undone | `dataset.is_deleted` |
+| `archived(x)` | group or collection `x` is archived | `group.is_archived`, `collection.is_archived` |
 | `system_principal(g)` | `g` is Public or Authenticated Users | seeded ids |
 | `quarantine(g)` | `g` is the seeded `Unassigned Datasets` group, which its seed archives | seeded id |
 | `seeded_grant(g, r)` | the owning-group grant written when `r` was created | `grant.creation_type = SYSTEM_BOOTSTRAP` |
@@ -83,16 +87,16 @@ Each derived relation has one definition, and every consumer reads that definiti
 - **`has_admin(g)`** holds when some account that is not deleted has an active `ADMIN` membership in `g`. It is the one definition the last-admin rule and the no-active-admins report both read.
 - **`subjects(u)`** holds `u`, every group `u` is an effective member of, Authenticated Users when `u` is signed in, and Public.
 - **`holds(u, r, t)`** holds when some active grant has its subject in `subjects(u)`, names `r` or a collection that actively contains `r`, and carries a type that implies `t` through the closure.
-- **`restricted(r, a)`** holds when an active restriction blocks the restriction class of `a`. The restriction may sit on `r`, on the owning group of `r`, or on an ancestor of that group. Every action declares one of three classes: `mutating`, `reading`, or `data`, which reads a dataset's bytes. ARCHIVED blocks `mutating`. DELETED holds on every soft-deleted dataset and blocks `mutating` and `data`. Neither blocks `unarchive`.
+- **`restricted(u, r, a)`** holds when a restriction on `r` blocks the restriction class of `a` for `u`. Every action declares one of three classes: `mutating`, `reading`, or `data`, which reads a dataset's bytes. No restriction type is specified, so `restricted` never holds today.
 - **`precondition(a, x)`** holds when the state of `x` admits `a`, according to the transition table below.
+- **`state_admits(a, r)`** holds when `precondition(a, r)` holds; when `a` is not `mutating`, or is `unarchive`, or neither `r` nor its owning group is archived; and when `a` is `reading`, or `r` is not a deleted dataset.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
 
 ## The decision rule
 
 ```text
 allowed(u, a, r) =
-  not restricted(r, a)
-  and precondition(a, r)
+  not restricted(u, r, a)
   and ( platform_admin(u)
         or resource_rule(a, r)
         or structural(u, a, r)
@@ -109,11 +113,26 @@ allowed(u, a, r) =
 `platform_admin(u)` is read from `user_role` once per request. The JWT carries identity, not
 authority, so a role revoked after login stops applying on the next request.
 
-The restriction check runs before the platform-admin check. An archived group is archived for a
-platform admin too.
+The restriction check runs before the platform-admin check, so a restriction binds a platform
+admin too.
 
-A create action has no resource yet. Its restriction target is the owning group it names, so an
-archived owner or an archived ancestor of that owner blocks it.
+## The state check
+
+An allowed action runs only when the resource's state admits it:
+
+```text
+performed(u, a, r) = allowed(u, a, r) and state_admits(a, r)
+```
+
+The authorization layer answers `allowed`. The service that performs the action checks
+`state_admits` after it, inside its transaction and under the row lock, and refuses with 409. A
+platform admin is refused the same way.
+
+Archiving covers the group or collection itself and the resources it owns. A sub-group keeps its
+own state. A create action has no resource yet, so its state check reads the owning group it
+names.
+
+@see [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization)
 
 ## Paths and standing
 
@@ -184,10 +203,10 @@ failed. The reason goes to the log.
 | Status | When | What the caller learns |
 |---|---|---|
 | 401 | no session, or an expired one | nothing about any resource |
-| 403 | a signed-in caller who holds standing on the resource, refused an action; or any refusal by a container other than dataset, collection, or group | the action is refused, and a restriction names itself |
+| 403 | a signed-in caller who holds standing on the resource, refused an action; or any refusal by a container other than dataset, collection, or group | the action is refused |
 | 404 | an unknown id, or a caller with no standing on the dataset, collection, or group the URL names | nothing: the two causes answer identically |
 | 400 | a malformed body, or a client-supplied fact that disagrees with the row | which field is wrong |
-| 409 | a state guard, a stale `expected_version`, a lost race, or a conflicting in-flight request | the state that refused it; a request conflict names its `preset_ids` and `access_type_ids` |
+| 409 | a state check, a stale `expected_version`, a lost race, or a conflicting in-flight request | the state that refused it; a request conflict names its `preset_ids` and `access_type_ids` |
 | 200 `invalid` | `POST /auth/invite/check` for any bad token | one message for every cause |
 
 The 403 for a caller with standing follows [Design](./design.md#foundational-invariants): a user
@@ -233,8 +252,7 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 | A `resource` row never outlives its dataset | a database trigger |
 | A grant blocks a hard delete | `ON DELETE RESTRICT` |
 | One update per version | optimistic `expected_version`, 409 on a stale write |
-| `is_archived` agrees with the restriction table | one transaction, and `restrictions.test.js` |
-| A service change to a restricted group or collection is refused | `isRestricted` on `effective_restriction`, inside the transaction that holds the row lock, and `serviceGuards.test.js` |
+| An action the resource's state does not admit is refused | the state check, inside the transaction that holds the row lock |
 | A collection with history is never deleted | `deleteCollection`, under the collection row lock, and the `delete` transition row |
 | A group that has an admin keeps one | `assertAdminsRemain`, inside the removal or demotion transaction, under the group row lock |
 | A collection's datasets share its owning group | `addDatasets`, and the absence of any route that changes a dataset's owner |
@@ -243,8 +261,8 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 
 ## The transition table
 
-A stateful resource admits an action only in the states listed. The capability map consults
-this table, so a capability is never offered in a state that would refuse it.
+A stateful resource admits an action only in the states listed. The state check reads this table,
+together with archiving and dataset deletion.
 
 ### Access requests
 
@@ -294,10 +312,15 @@ A v2 page may gate on a capability the API sent, on standing the API sent, and o
 fact. It does not re-derive restriction, identity, state, grant activity, implication, or
 whether a caller may request access.
 
+A page shows a control when its action is in `_meta.capabilities`, and enables it when the action
+is also in `_meta.available_actions`. A control whose state cannot return, such as Review on a
+decided request or Revoke on a revoked grant, is hidden instead of disabled.
+
 | Response shape | Producer | Read by | Pinned by |
 |---|---|---|---|
-| `_meta.capabilities` on a detail route | the engine, filtered by restriction and transition | every `[id]` page through `can()` | the capabilities arm |
-| `request_access` in a detail route's capabilities | `mayRequestAccess`: signed in, and no restriction blocks `access_request.create` | the dataset and collection Overview tabs | the list rows arm, through the restriction batch |
+| `_meta.capabilities` on a detail route | the engine: what the caller could do, less what a restriction blocks | every `[id]` page through `can()` | the capabilities arm |
+| `_meta.available_actions` on a detail route and a list row | the state table: what the resource's state admits | every page, to enable a control it shows | `api/tests/services/state/state.test.js` |
+| `request_access` in a detail route's capabilities | `mayRequestAccess`: signed in, no restriction blocks `access_request.create`, and the resource's state admits a request | the dataset and collection Overview tabs | the list rows arm, through the restriction batch |
 | `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | `tests/model/standingArm.test.js`, `tests/model/badgeCoverage.test.js` |
 | `_meta.capabilities` and `_meta.standing` on a list row | `decideRows`, the detail route's composition for each row | list pages, cards, and the request cards | `tests/model/listRowsArm.test.js` |
 | the fields of a list row or a related row | `projectRows`, each row's own read decision | list pages, lineage, and the group tree | `tests/model/relatedRowsArm.test.js`, `tests/services/grants/relatedLineage.test.js` |
@@ -306,7 +329,7 @@ whether a caller may request access.
 | list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | the list arm |
 | `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
 | refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
-| the actions a restriction type blocks | `blockedActions`, from each action's restriction class | the archive dialogs, through `restrictionLabels.js` | `tests/model/restrictionLabels.test.js` |
+| the actions archiving forbids | the state table, from each action's restriction class | the archive dialogs, through `restrictionLabels.js` | `tests/model/restrictionLabels.test.js` |
 | a user directory search | `searchDirectory`: three characters, ten people, four fields | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
 | eligible owner groups | `dataset.contribute` decided on each candidate the path statement names | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
 | a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | the projection arm |

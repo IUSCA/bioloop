@@ -331,8 +331,8 @@ When `group.is_archived = true`, the following actions are disallowed:
 
 **Governance Authority:**
 * Create new grants for resources owned by the group
-* Revoke existing grants (except via platform admin for incident response)
-* Transfer ownership of datasets from the group (except via platform admin override)
+* Revoke existing grants
+* Transfer ownership of datasets from the group
 * Create new datasets owned by the group
 * Edit group metadata (except for archival notes or administrative timestamps)
 
@@ -352,7 +352,19 @@ For clarity, these actions **are** allowed:
 * Oversight visibility (ancestor admins over archived descendants)
 * Evaluate existing grants
 * Run audit reports and explain historical access decisions
-* Platform admin incident response (all actions, with audit trail)
+* Unarchiving, by a platform admin
+
+#### How Archiving Is Enforced
+
+Archiving is the state of the group. It covers the group itself and the datasets and collections
+it owns. A sub-group keeps its own state until someone archives it.
+
+The service that performs an action checks the state after authorization, inside its transaction,
+and refuses with 409. A platform admin is refused the same way, so the prohibitions above bind
+everyone until a platform admin unarchives the group. The UI reads `is_archived` for badges and
+labels.
+
+@see [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization)
 
 #### Reversibility: Unarchiving
 
@@ -689,10 +701,9 @@ and [decision 7](./decisions.md#_7-access-types-imply-one-another) for the order
 ## Restrictions
 
 Grants only ever add. Nothing in a purely additive model can say "no", so a governance
-decision that has to stop access — a lab closing, a hold pending review — has nowhere to live.
+decision that has to stop access has nowhere to live.
 
-A **restriction** is that missing half. It is a durable row, like a grant, and it composes with
-grants by AND:
+A **restriction** is that missing half. It composes with grants by AND:
 
 > allowed = no restriction blocks this action AND some grant permits it
 
@@ -701,37 +712,33 @@ a restriction. This is deliberately not a negative grant: negative grants make e
 depend on the order rules are evaluated in, and the reason somebody cannot reach a dataset
 stops being answerable.
 
-### What a restriction attaches to
+### Every action passes the check
 
-A restriction attaches to exactly one of a group or a resource, and reaches:
+Every action passes the restriction check at every level that decides access: a single decision,
+the capability map, and a list. A container a derived app registers passes it too. Every
+registered action declares a restriction class, and a test asserts the classification is
+exhaustive, so an action added later cannot fall outside the check.
 
-* the group it names, and every descendant group
-* every dataset and collection those groups govern
-* or, when it names a resource directly, that resource alone
+No restriction type is specified yet. How a restriction is written, stored, and satisfied is
+deferred, and until then the check allows every action.
 
-So archiving a lab freezes the lab, its sub-labs, and everything any of them owns, from one row.
+### What a restriction reaches
 
-### What it blocks
-
-Each restriction type names the actions it blocks. Every registered policy action is classified
-as mutating or reading, and the classification is asserted to be exhaustive by a test, so an
-action added later cannot quietly fall outside every restriction type.
-
-`ARCHIVED` is the only type that ships. It blocks every mutating action, and exempts only the
-three `unarchive` actions — otherwise an archived group could never be reopened.
+A restriction reaches only the resource it names. It does not flow through the group tree or
+through a collection.
 
 ### Restrictions apply to platform admins
 
-The platform-admin short-circuit runs **after** the restriction check. An archived group is
-archived for a platform admin too. This is the point of a governance boundary: it is not a
-permission level that seniority passes through.
+The platform-admin short-circuit runs **after** the restriction check, so a restriction binds a
+platform admin too. This is the point of a governance boundary: it is not a permission level that
+seniority passes through.
 
-### Archiving is expressed through it
+### Resource state is not a restriction
 
-`is_archived` remains as a denormalised column, because listings, filters, and badges read it
-on every page and a join through the restriction view would be the wrong shape for that. The
-restriction row is the authority; the column is a cache of it, and a test asserts the two agree
-for every group and collection.
+Archiving a group or a collection, and deleting a dataset, change the resource's state. The
+service that performs an action checks that state after authorization. See
+[How Archiving Is Enforced](#how-archiving-is-enforced) and
+[decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization).
 
 @see [decision 6](./decisions.md#_6-restrictions-compose-by-and-grants-stay-additive)
 
@@ -1246,12 +1253,12 @@ whether the effect cascades, refuses the operation, or leaves the record with a 
 
 | Operation | Grants | Pending invitations | Open access requests | Other records |
 |---|---|---|---|---|
-| Archive a group | leave; archiving does not mutate access | leave; acceptance answers `invalid` while archived | leave; update, submit, withdraw, and review are refused while archived | descendants are restricted through `effective_restriction` |
+| Archive a group | leave; archiving does not mutate access | leave; acceptance answers `invalid` while archived | leave; update, submit, withdraw, and review are refused while archived | the group and what it owns; its sub-groups keep their own state |
 | Unarchive a group | leave | leave; acceptance works again | leave; actions work again | none |
-| Archive a collection | leave | none | leave; refused while archived, as for a group | contained datasets are not restricted |
+| Archive a collection | leave | none | leave; refused while archived, as for a group | contained datasets are not archived |
 | Remove a member | leave the member's direct grants; group grants stop reaching them | leave invitations they sent; an invitation is the group's offer | leave requests they filed for the group | refuse when it would leave a group with an admin without one |
 | Demote an admin | leave | leave | leave | refuse when it would leave a group with an admin without one |
-| Soft-delete a dataset | leave; mutating and data-plane actions are refused | none | leave; mutating actions on them are refused | `collection_dataset` rows stay as history |
+| Delete a dataset | leave; mutating and data-plane actions are refused | none | leave; mutating actions on them are refused | `collection_dataset` rows stay as history; the archived files are removed, and deletion cannot be undone |
 | Soft-delete a user | leave | leave | leave | memberships stay; the account no longer counts as an admin |
 | Delete a collection | deleted with it, when deletion is allowed | none | refuse deletion when any exists | refuse deletion when it has ever contained a dataset |
 | Change a dataset's owner | refused: no route changes it | none | none | ownership transfer is deferred by decision 15 |
@@ -1379,6 +1386,7 @@ This design establishes a **minimal but complete authorization core** built on f
    * **Grants** only ever add; **restrictions** only ever subtract
    * They compose by AND, and neither can overcome the other
    * A restriction applies to platform admins too, because a governance boundary is not a permission level
+   * Resource state, such as archiving, is checked by the service after authorization
 
 ### Implementation Foundations
 
