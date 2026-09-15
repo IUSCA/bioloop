@@ -37,20 +37,34 @@ archiving and restrictions.
 Authorization answers what a caller could do on a resource. The service that performs the action
 answers whether the resource's state admits it.
 
-A **state check** refuses an action the resource's state does not admit. Each service that
-performs an action calls one helper inside its transaction, after taking the row lock, and throws
-409. A platform admin is refused the same way.
+A **state check** refuses an action the resource's state does not admit. The service that
+performs the action fetches the resource inside its transaction, after taking the row lock, and
+asks whether the action is possible. A refusal is a 409, and a platform admin is refused the same
+way.
 
-The state check reads one **state table**. It lists, for each state, the restriction classes it
-forbids and the actions it exempts:
+Which actions a state admits is business logic, and it belongs to the resource. The state layer is
+therefore split the way authorization is. `state/core/` is framework code that knows nothing about
+this application, `state/builtin/` holds one file per resource type, and `state/custom/` is the
+extension point a derived app fills.
 
-- An archived group or collection forbids `mutating` actions, except `unarchive`.
-- A deleted dataset forbids `mutating` and `data` actions. Deleting a dataset sets `is_deleted`
-  and removes its archived files, and it cannot be undone.
-- The transition table forbids an action outside the states its row lists.
+- **A resource's file declares one rule per action.** A rule is a pure function of the resource
+  and returns a refusal or nothing. An action no state limits declares `always`.
+- **A rule declares the fields it reads.** The caller fetches them and passes the row in, so the
+  layer runs no query and takes no transaction. A list fetches the fields once for the page and
+  runs the rules over its rows. A field a rule needs and the caller did not fetch is a programming
+  error naming the field.
+- **A startup check keeps the two layers in step.** Every action a policy container declares has a
+  rule, no rule names an action no container declares, and every container has a state file.
 
-The transition table moves here from the capability map. A request's status is resource state
-by the same definition as `is_archived`. Decided 2026-09-15.
+An archived group refuses its own mutating actions, an archived collection and an archived owning
+group refuse a collection's, and a deleted dataset refuses both mutation and every read of its
+bytes. Each of those sentences is one resource's rule rather than a row in a shared table, so a
+resource whose business differs says so in its own file. Deleting a dataset sets `is_deleted` and
+removes its archived files, and it cannot be undone.
+
+The transition rows move out of the policy containers into the state files. A request's status is
+resource state by the same definition as `is_archived`. Decided 2026-09-15, and the per-resource
+shape on 2026-09-16.
 
 ### D2. Archiving covers the group itself
 
@@ -107,8 +121,8 @@ route and list row.
 |---|---|---|
 | `checkRestriction`, step 1 of `createDecisionPipeline` | `ARCHIVED` and `DELETED` by target | the restriction check, which blocks nothing |
 | `filterRestrictedCapabilities` | restriction types by target | the restriction check; state leaves the capability map |
-| `applyTransitions` in the capability map | hides actions the transition table forbids | moves to the state table |
-| `decideRows` batch | `restrictionTypesByTarget` per page | the restriction check per page; state per page for the second answer |
+| `applyTransitions` in the capability map | hides actions the transition table forbids | moves to the resource's state file |
+| `decideRows` batch | `restrictionTypesByTarget` per page | the restriction check per page; each list fetches the fields its rules read and runs them over its rows |
 | `accessibleIdsQuery` and the list builders | no restriction predicate | a restriction predicate that is `TRUE` |
 | `isRestricted` guards, 11 sites in `groups.js`, `collections.js`, `profiles/index.js`, `invitations/index.js` | `effective_restriction`, following the group tree | the state check over the target's own column and its owning group's |
 | Mutating services with no guard, such as promote, demote, and grant create and revoke | refused only by the engine | the state check, added |
@@ -118,15 +132,15 @@ route and list row.
 | Access request review on an archived or deleted resource | refused by the engine | the state check in the review service |
 | `mayRequestAccess` | `checkRestriction` on `access_request.create` | the restriction check, and the resource's state |
 | `restrictionTargetFor` | maps six containers to a group or a resource | removed; the restriction check needs no target while it blocks nothing |
-| `RESTRICTION_TYPES`, `typeBlocks`, `blockedActions`, `effectiveRestrictionTypes` | the two types | removed; the state table answers what archiving forbids |
+| `RESTRICTION_TYPES`, `typeBlocks`, `blockedActions`, `effectiveRestrictionTypes` | the two types | removed; each resource's state file answers what its states forbid |
 | `restriction`, `restriction_type`, `effective_restriction` | the two types' rows and view | removed by D4 |
-| `GET /v2/restrictions/:type/blocked-actions` and the two archive dialogs | `ARCHIVED` blocked actions | a state route, such as `GET /v2/states/archived/forbidden-actions`, from the state table |
+| `GET /v2/restrictions/:type/blocked-actions` and the two archive dialogs | `ARCHIVED` blocked actions | `GET /v2/states/:resource_type/archived/forbidden-actions`, from that resource's rules |
 | `restrictionLabels.js` and its test | labels for `ARCHIVED` | labels for the archived state |
 | `restriction class` on every action | read by the restriction types | read by the state table; kept for restrictions once they are specified |
 | The refusal `Blocked by a ARCHIVED restriction` | 403 from the middleware | 409 from the service |
 | The "archived column agrees with the restriction row" test | asserts a cache | removed; the column is the authority |
 | `currentStateScan.test.js` | flags `is_archived: false` | archive reads go through the state check |
-| `reference.js` `restricted` and `deletedBlocks` | one function over types | a state function; `restricted` is always false |
+| `reference.js` `restricted` and `deletedBlocks` | one function over types | the state containers per resource; `restricted` is always false |
 | `worlds.js` restriction dimension | none, dataset, collection, owning group, parent group | an archive dimension over the resource and its owning group |
 | `engineArm`, `operationSequences`, `serviceGuards`, `restrictions`, `restrictionTargets` tests | restriction types | state checks, and a test checker that blocks one action |
 | `e2e/src/specs/restrictions/archive.spec.js` | 403 on a blocked action; A4 asserts descendants frozen | 409; A4 asserts a sub-group stays active |
@@ -166,43 +180,62 @@ filed as L2 T20. Phase 2 fixes it with the state check on `updateAccessRequest`.
 Each phase ends with its tests green, a browser check where a page changed, the skills updated,
 and a commit.
 
-### Phase 1: the state table and the state check
+### Phase 1: the state layer
 
-No behaviour changes in this phase.
+No behaviour changes in this phase. Nothing calls the layer until Phase 2.
 
-`api/src/services/state.js` holds three things:
+**`api/src/state/core/`, the framework.**
 
-- **`STATE_RULES`.** `archived` forbids the `mutating` class except `unarchive`. `deleted` forbids
-  `mutating` and `data`.
-- **`stateOf(client, { resourceType, id })`.** It reads the columns that decide the state:
-  - a group's `is_archived`;
-  - a collection's `is_archived`, and its owning group's;
-  - a dataset's `is_deleted`, and its owning group's `is_archived`;
-  - an access request's `status`, and the state of the resource it names;
-  - a grant's `revoked_at`, and the state of the resource it names;
-  - an invitation's `status`, and its group's `is_archived`.
-- **`assertStateAdmits(tx, { resourceType, action, id })`.** It reads `stateOf`, applies
-  `STATE_RULES` and the action's transition row, and throws 409 naming the state, such as "This
-  group is archived." A create passes `owner_group_id` in place of `id`.
+- **`StateContainer`.** One per resource type. `rules({...})` takes a rule for each action and
+  freezes. `getRule`, `getActionNames`, and `requiredFields` read them back.
+- **`rules.js`.** `rule({ requires, check })`, `always`, and `refuse(message)`. `requires` lists
+  field paths on the object the caller passes, such as `owner_group.is_archived`.
+- **`StateRegistry`.** `register`, `get`, and `listTypes`, as the policy registry has.
+- **`engine.js`.** `check(resourceType, action, resource)` returns a refusal or null.
+  `assertPossible(...)` throws 409. `availableActions(resourceType, resource)` lists what the state
+  admits. `requiredFields(resourceType)` gives a caller the union to fetch. All of them are pure,
+  and a missing field throws an error naming the path.
+- **`findStateGaps(policyRegistry, stateRegistry)`.** The three lists the startup check throws on:
+  a container with no state file, an action with no rule, and a rule naming no action.
 
-`statesByTarget(resourceType, ids)` reads the same columns for a page of rows, and
-`admittedActions(resourceType, state)` lists the actions a state admits. Both read the policy
-registry, so a container registered in `custom/` inherits the rules.
+**`api/src/state/builtin/`, one file per resource.** Each file starts with the behaviour the
+restriction types have today, so Phase 1 changes no decision.
 
-The transition rows stay beside their actions, declared with `mutating(policy, transition)`. The
-capability map keeps reading them until Phase 3.
+- **`group.js`.** An archived group refuses its mutating actions. `archive` refuses an archived
+  group, and `unarchive` an active one. Reading is always possible.
+- **`collection.js`.** An archived collection, or one whose owning group is archived, refuses its
+  mutating actions. `delete` refuses a collection with history. `create` reads the owning group.
+- **`dataset.js`.** A deleted dataset refuses its mutating actions and every read of its bytes. An
+  archived owning group refuses the mutating actions and leaves the bytes readable.
+- **`access_request.js`.** `update`, `submit`, and `withdraw` read the status. `review` needs
+  `UNDER_REVIEW` and refuses an archived or deleted target. `create` reads the target.
+- **`grant.js`.** `revoke` refuses a revoked grant, and an archived or deleted target. `create`
+  reads the target.
+- **`invitation.js`.** `accept` and `cancel` need a `PENDING` invitation and an unarchived group.
+  The container is `standalone`, because invitations have no policy container, and the startup
+  check allows a standalone container to name actions no container declares.
+- **`user.js` and `audit.js`.** Every action is `always`.
+- **`targets.js`.** `readTargetState(client, resourceId)` reads whether the dataset or collection a
+  grant or a request names is archived or deleted. A caller uses it to build the fields those rules
+  read, so the query is written once rather than in each service.
 
-**Tests:** `api/tests/services/state/state.test.js` asserts, over the registry, that an archived
-target admits no `mutating` action but `unarchive`, a deleted dataset admits no `data` action,
-each transition row admits only its `from` states, and a throwaway `custom/` container inherits
-the rules.
+**`api/src/state/index.js`** builds the registry, runs `findStateGaps` against the policy registry,
+and throws when a list is not empty. The API refuses to start on a mismatch.
+
+**Tests.**
+
+- `api/tests/state/rules.test.js` drives every rule as a pure function, with no database: each
+  state of a resource against each of its actions.
+- `api/tests/state/sync.test.js` asserts the three gap lists are empty for the shipped registries,
+  and that a policy container with no state file, a rule naming no action, and a caller that omits
+  a required field each fail.
 
 **Exit:** the tests pass, and no decision changes.
 
 ### Phase 2: every service checks state
 
-Each service below calls `assertStateAdmits` inside its transaction, after its row lock. A service
-with no transaction or lock gains both.
+Each service below fetches the fields its resource's rules read, inside its transaction and after
+its row lock, and calls `assertPossible`. A service with no transaction or lock gains both.
 
 - **`services/groups.js`.**
   - `updateGroupMetadata`, `addGroupMembers`, and `removeGroupMembers` switch from `isRestricted`.
@@ -248,7 +281,7 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
 
 **Tests:**
 
-- `api/tests/services/state/serviceStateChecks.test.js` maps each `mutating` and `data` action to
+- `api/tests/state/serviceStateChecks.test.js` maps each `mutating` and `data` action to
   the service call that performs it. It calls each against an archived target, against a target
   whose owning group is archived, and, for `data`, against a deleted dataset. Each answers 409.
   Removing one check by hand makes it fail.
@@ -268,10 +301,10 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
 - **`authorization/core/pipeline.js`** keeps the restriction step and `refuse`, with `blockedBy`
   for types specified later. The platform-admin branch stops calling `applyTransitions`.
 - **`authorization/core/capabilities.js`.** `evaluateCapabilitySet` stops calling
-  `applyTransitions`. The transition logic moves into `admittedActions`.
+  `applyTransitions`, which is removed with the transition rows. The state files carry them.
 - **`authorization/index.js`.**
-  - `decideEachRow` calls the restriction checker for the page. It reads `statesByTarget` for the
-    second answer.
+  - `decideEachRow` calls the restriction checker for the page. Each list route fetches the fields
+    its rules read and runs `availableActions` over its rows for the second answer.
   - `mayRequestAccess` reads the restriction checker and the resource's state.
 - **List SQL.** `accessibleIdsQuery` gains a `restrictionPredicate` argument that defaults to
   `TRUE`. The list builders pass it:
@@ -287,7 +320,8 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
   - `GET /access-requests/:id`;
   - every `decideRows` and `projectRows` caller.
 - **`routes/restrictions.js`** becomes `routes/states.js`, which serves
-  `GET /v2/states/archived/forbidden-actions`.
+  `GET /v2/states/:resource_type/archived/forbidden-actions` by running that resource's rules
+  against its own row with `is_archived` set.
 - **`services/restrictions.js`.** `isRestricted`, `applyRestriction`, `liftRestriction`, and
   `restrictionHistory` are removed. The archive services stop writing restriction rows.
 
@@ -300,7 +334,8 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
   SQL applies the predicate.
 - `api/tests/model/reference.js`:
   - `restricted` is always false;
-  - `stateAdmits` applies one-step archive, deletion, and the transition rows;
+  - `stateAdmits` reads the state containers, so the model and the code share one statement of
+    what each state admits;
   - `decide` no longer returns `ARCHIVED` or `DELETED`.
 - `worlds.js` replaces its restriction dimension with `archived`, with the values none, the
   resource, and the owning group.
@@ -309,9 +344,9 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
   `npm run model:table` regenerates the decision table.
 - `operationSequences.test.js`:
   - asserts a sub-group stays mutable;
-  - verifies with `assertStateAdmits`;
+  - verifies with `check` from the state layer;
   - drops the archived-column invariant.
-- `restrictions.test.js` becomes `state.test.js` cases. `restrictionTargets.test.js` is removed.
+- `restrictions.test.js` becomes cases under `tests/state/`. `restrictionTargets.test.js` is removed.
 - `platformAdminShortCircuit.test.js` asserts 409 for a platform admin on an archived target.
 - `restrictionLabels.test.js` reads the state route.
 - `groups.invitations.test.js` moves from 403 to 409.

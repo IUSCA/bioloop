@@ -471,6 +471,38 @@ Measured on 2026-09-15 on a scratch branch. A fully declared container, with `re
 check in place it fails on "resource type throwaway". A `THROWAWAY` value on `GROUP_MEMBER_ROLE`
 fails the enum check.
 
+## Resource state is a separate layer, in `src/state/`
+
+What a caller may do is authorization. What the resource's current state admits is a different
+question, answered after it, and a refusal there is a 409 rather than a 403. `src/state/` holds
+that layer, split the way this one is: `core/` is framework code, `builtin/` has one file per
+resource type, and `custom/` is the extension point.
+
+Which actions a state admits is business logic and belongs to the resource, so there is no table
+keyed by restriction class. An archived group refuses its own mutations; an archived collection
+also reads its owning group's column, one step up; a deleted dataset refuses mutation and every
+read of its bytes and keeps its record readable. Each of those sentences lives in that resource's
+file.
+
+Three things follow for a caller.
+
+- **A rule is pure, and the caller fetches.** `requires` names the field paths the rule reads, such
+  as `owner_group.is_archived`. A service reads the row inside its transaction after its row lock
+  and calls `assertPossible`, which throws 409. A list fetches the fields once for the page and
+  calls `availableActions` per row. `requiredFields(type)` gives the union to select.
+- **A missing field is an error, not a false.** `check` throws naming the path, so a caller that
+  selected too little fails loudly instead of deciding from `undefined`.
+- **The two layers are kept in step at startup.** `findStateGaps` reports a policy container with
+  no state file, an action with no rule, and a rule naming no action, and `src/state/index.js`
+  throws on any of them. An action no state limits declares `always`. A resource with no policy
+  container, as an invitation has none, declares `standalone: true`.
+
+The restriction class stays on each action, for restrictions once they are specified. State rules
+never read it. `tests/state/rules.test.js` drives every rule with no database, and
+`tests/state/sync.test.js` pins the startup check.
+
+@see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was
