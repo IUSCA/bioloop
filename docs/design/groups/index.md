@@ -29,6 +29,7 @@ to file. When two pages disagree, Decisions is the record of intent.
 - [Profiles](./profiles.md) — the public face of a group or collection, and unauthenticated access
 - [Access and requests plan](./access-requests-plan.md) — the ordered work for requesting and reviewing access
 - [Access type order plan](./access-type-order-plan.md) — the ordered work to make the rest of the system agree with the access-type partial order
+- [Access model verification plan](./access-model-verification-plan.md) — the ordered work to state the access model formally and test every consumer against it
 - [Dashboard plan](./dashboard-plan.md) — the ordered work for the landing page at `/v2/home`
 - [Group invitations](./invitations.md) — built, except the signup mismatch dialog
 - [UI information architecture](./ui-information-architecture.md) — how the pages are organised
