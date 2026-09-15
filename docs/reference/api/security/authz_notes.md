@@ -1937,3 +1937,302 @@ because a dataset with no upload log is a row nothing downstream would ever pick
     conventions, and a fourth (`isDatasetNameAvailable`) that returns `{available}`. This is
     item 70's batch-shape problem again at the level of a single predicate, and it is the
     cheapest possible illustration for the plan's opening argument.
+
+## CORRECTION 6 — F6 IS RETRACTED. The invariant test exists.
+
+`tests/services/restrictions/restrictions.test.js:290`:
+
+```js
+describe('the denormalised is_archived column', () => {
+  test('agrees with the restriction table for every group and collection', ...)
+```
+
+and at :127, inside `describe('an archived group')`, `test('writes a restriction row alongside
+is_archived')`.
+
+**Why I got it wrong.** I grepped `tests/services/restrictions.test.js`. The real path is
+`tests/services/restrictions/restrictions.test.js` — a subdirectory. grep printed hits from the
+other two files in the same command and said nothing about the file that did not exist, so
+"no hits" read as "no such test". My own §19 notes, written from actually reading the file,
+recorded the assertion correctly. I trusted a later grep over an earlier read.
+
+**Lesson for the rest of this work:** a negative grep result is only evidence when the path is
+confirmed to exist. Check `ls` before concluding absence, especially against notes that say
+otherwise.
+
+So: the invitations comment is ACCURATE, the plan doc's existing invariant bullet is correct as
+written, and F6 is removed from the defect list. Five defects remain (F1–F5).
+
+### What survives, narrower and still worth stating
+
+The agreement test compares ROW SETS: the set of groups with `is_archived = true` against the
+set with an open ARCHIVED restriction row. It proves the two are written together. It does NOT
+compare REACH, and cannot, because reach is a different question: `effective_restriction`
+expands through `group_closure` while the column never does. A child of an archived parent has
+`is_archived = false` and no restriction row of its own, so it is correctly absent from BOTH
+sets, and the test passes exactly as it should.
+
+That is why 64b stands on its own evidence and does not need F6: the gap is not drift between
+the column and the table, it is that line 2 asks a single-row question where line 1 asks a
+closure question.
+
+### Corrected counts
+
+- `ARCHIVED_ERROR_MESSAGE`: FOUR declarations (not five), four different strings, four services
+  — groups.js:22, collections.js:25, profiles/index.js:19, invitations/index.js:25.
+- Guard read sites: ELEVEN — groups 349, 658, 709; collections 123, 317, 370; profiles 111;
+  invitations 82, 285, 342, 391 — plus one SQL predicate (`g.is_archived = false` in
+  addDatasets). My earlier "eight" missed the three later invitation sites and the two
+  destructured collection sites.
+
+## §32 UI read-through (2026-09-15): how the v2 UI consumes API state for gating and projection
+
+Read in full: `ui/src/router/index.js`, `ui/src/services/api.js`, `ui/src/services/v2/*.js` (all
+12), `ui/src/stores/auth.js`, `ui/src/stores/v2/uiPersona.js`, every page under
+`ui/src/pages/v2/`, every component under `ui/src/components/v2/` (access-requests, grants,
+grants/issue, groups, collections, datasets, profiles, dashboard, audit, chips, Badge, RoleBadge,
+AuthorityBanner), `ui/src/components/layout/Sidebar/*`, `ui/src/constants.js` (sidebar), and
+`ui/src/components/filebrowser/FileTable.vue` (download gating). Nothing was run. All claims
+below are from reading; line numbers are as of the working tree on the `access-model` branch.
+
+### 32.1 The four sources of "who am I" in the UI
+
+The UI has FOUR independent sources of caller identity/authority, and no page says which one
+it is using or why.
+
+| Source | Where it comes from | What reads it |
+|---|---|---|
+| S1 JWT profile in localStorage | `stores/auth.js` — `hasRole('admin')` from token `roles` (case-insensitive), `canAdmin`, `canOperate`, `user.subject_id` | Sidebar `admin_items`/`operator_items` (`Sidebar/index.vue:15,21`); `pages/v2/groups/index.vue:21,168,178` (Create Group button + default scope); `MyAccessTab.vue`, `UserToken.vue`, `access-requests/[id].vue:189` (`requester_id === auth.user.subject_id`) |
+| S2 `uiPersona` from `GET /v2/users/me` | `stores/v2/uiPersona.js`; API computes `platform_admin \| group_admin \| standard_user` from `auth.isPlatformAdmin(req)` (JWT roles again) and `groupService.isGroupAdmin(subject_id)` (`api/src/routes/users_v2/index.js:15-40`, with a NOTE saying "not used for access control") | `pages/v2/home.vue` (whole page shape), `pages/v2/collections/index.vue:216` (`canCreate`), `RequestSubjectSelector.vue` ("A group I administer") |
+| S3 `_meta.capabilities` + `_meta.caller_role` on detail GETs | `authorize(..., { shouldDeriveCapabilities, shouldDeriveCallerRole })` on `GET /v2/groups/:id`, `/v2/collections/:id` (`routes/collections.js:78-88`), `/v2/datasets/:id` (`routes/datasets_v2/index.js:376-390`), `/v2/access-requests/:id` | Every `[id]` page via `can(x)`; `RoleBadge`; the `GRANT_HOLDER` literal gates |
+| S4 per-row flags on list rows | `user_role` (SQL, groups list); `_meta.can_view_metadata` / `_meta.can_request_stage` on collection datasets (`routes/collections.js:240-292`, computed by re-running the check per row) | `home.vue:278,379,702,729`, `GroupCard`, `CollectionDatasetsTab.vue:102,276,280` |
+
+Consequences:
+- S1 and S2 both bottom out in the JWT `roles` claim for platform admin, so the "platform admin
+  is a JWT snapshot" finding (review item, API side) is reproduced twice in the UI. Persona is
+  fetched once per session and never invalidated when a group membership changes.
+- S1 (`auth.canAdmin`) is v1's RBAC vocabulary ("admin", "operator", "user") reused as a v2
+  gate. The groups list page and the sidebar are the only v2 surfaces that use it. The
+  collections list uses S2 for the same decision ("can this caller create?"). Same question,
+  two sources, and neither is the API's answer to `authorize('group','create')`.
+- S3 is the only source the plan's model actually defines (capabilities = the set of actions
+  the decision rule allows). S1, S2, S4 are not derivable from the plan's vocabulary today.
+
+### 32.2 Gating patterns catalogued (with the representative site for each)
+
+P1 **Capability gate** — `can('x')` over `_meta.capabilities`. The dominant and correct
+pattern. `groups/[id]/index.vue:125-168` has twelve of them.
+
+P2 **Capability AND restriction re-derived client-side** — `can('x') && !group.is_archived`
+(`groups/[id]/index.vue:125-168`), `can('archive') && is_archived === false`
+(`collections/[id]/index.vue`), `canArchive && !dataset.is_deleted`
+(`DatasetOverviewTab.vue:107`). The API already folds the restriction layer into the
+capability set (restriction check precedes policy; `MUTATING_ACTIONS` are stripped on an
+archived target), so the client-side `&& !is_archived` is redundant when the API is right and
+masking when it is wrong. Two independent definitions of "restricted" that can drift: the API
+uses `effective_restriction` (closure-aware); the UI uses the row's own `is_archived` (not
+closure-aware) — same shape as 64b on the API side.
+
+P3 **Role-literal gate** — `callerRole === 'GRANT_HOLDER'` decides whether the Access tab
+exists: `datasets/[id]/index.vue:120` (`can('manage_grants') || GRANT_HOLDER`) versus
+`collections/[id]/index.vue:91` (`can('list_grants') || GRANT_HOLDER`). Dataset has no
+`list_grants` action, so a dataset OVERSEER (ancestor admin) gets no Access tab even though the
+API lets them list grants; a collection overseer does. Also `home.vue:702,729` branches on
+`user_role === "OVERSIGHT"` / `"TRANSITIVE_MEMBER"` strings, and `RoleBadge.vue` has no entry
+for `RESOURCE_ACCESS` (renders the raw token). Role names are therefore a UI contract with no
+owner: the API derives them by first-match attribute rules, the UI hardcodes them in five
+places, and the plan currently says the badge vocabulary is undefined.
+
+P4 **Identity re-derived client-side** — `request.requester_id === auth.user?.subject_id`
+(`access-requests/[id].vue:189`) gates Withdraw; `UserToken.vue` renders "you" by the same
+comparison. The API has a `withdraw` capability it could hand down; the UI computes it from S1
+instead, so a stale localStorage user (or a platform admin looking at someone else's request)
+gets a different answer than the API's `authorize`.
+
+P5 **State-machine re-derived client-side** — `canReview = capabilities.has('review') &&
+status === 'UNDER_REVIEW'` (`access-requests/[id].vue:181-184`); `canWithdraw` requires
+`status ∈ {DRAFT, UNDER_REVIEW}`; `AccessRequestCard.vue` `canAct && status === 'UNDER_REVIEW'`.
+The status precondition is duplicated because the API's capability is state-blind (the
+policy for `review` does not read `status`). This is the UI-side symptom of review item
+"resource state (status machines) missing from the decision rule": the UI has to know the
+machine because the capability does not encode it.
+
+P6 **"Active grant" computed two different ways** — `GrantsBySubjectPanel.vue:135,141`:
+active ⇔ `revoked_at === null` (ignores expiry entirely); `SubjectPanelHeader.vue:99`: active ⇔
+`revoked_at == null && daysUntilExpiry >= 0` (ignores `valid_from`, and `daysUntilExpiry`
+floors to whole days so a grant expiring later today reads as active with 0 days). Neither
+matches the SQL definition (`valid_from <= now() AND (valid_until IS NULL OR valid_until >
+now()) AND revoked_at IS NULL`). Two client definitions, one server definition, none the same.
+
+P7 **Inverse-capability gate** — "Request Access" appears when `!canIssueGrants`
+(`DatasetOverviewTab.vue:221`), i.e. the UI infers "may request" from "may not grant". The API
+has a `request_access`-shaped decision (the create route for access requests), which is not
+what is being tested. A platform admin who can grant is never offered Request Access (fine); a
+member of an archived group who cannot grant is offered it (the request will 403/409).
+`DatasetRequestsTab.vue`/`CollectionRequestsTab.vue`: `canReview` selects WHICH list is
+fetched (pending-for-review vs requested-by-me), so a reviewer never sees their own requests on
+the resource tab. That is a projection decision made by the client from a capability, not a
+capability decision.
+
+P8 **Projection-presence gate** — `showsMemberUploads = allow_user_contributions != null`
+(`GroupOverviewTab.vue:222-224`) with a comment saying the API's attribute filter decides.
+This is the one place the UI consciously relies on projection as the signal. It works only
+because `allow_user_contributions` is NOT NULL in the schema; it would silently hide the cell
+for any nullable field. It also means the API's attribute rule set is a UI contract: a change
+to `group_attributes` that starts returning the field to non-members changes what the UI
+shows, with no test on either side.
+
+P9 **Client-side implication reasoning** — `RevokeGrantModal.vue:233-281` decides whether
+revoking grant G still leaves the subject with access type T by walking `accessTypeMap[..].implies`
+over `siblingGrants` (the subject's other DIRECT grants on this resource only). It ignores
+group-path and collection-path coverage, so "they will lose X" is wrong whenever coverage
+comes through a group or collection. Contrast `useSubjectCoverage.js` and
+`GrantPreviewRow.coverageNote`, which ask the API (`getCoverageForSubject`, `computeEffectiveGrants`)
+for exactly this and get `via = DIRECT|GROUP|PRINCIPAL`, `via_collection_name`. Two grant
+surfaces, one asks the server, one re-implements a subset.
+
+P10 **No route-level gating on v2 pages** — `router/index.js:49-62` honours
+`meta.requiresRoles`, but no `pages/v2/**` route declares it. Every v2 page relies on the API
+403 (and the `ErrorState` component distinguishing "refusal from failure"). `audit-logs.vue`
+has no guard and no sidebar entry (constants.sidebar lists home, groups, collections,
+datasets, access-requests only). `datasets/index.vue` has `canCreate = ref(true)`, hard-coded.
+This is fine as a security posture (the API is the gate) but means the plan's "UI checks"
+deliverable is really "the UI shows the right controls", not "the UI enforces".
+
+P11 **401 handling is global logout** — `services/api.js:30-32` redirects any 401 to
+`/auth/logout`. `stores/auth.js:133-149` treats 403/404/409 on invitation acceptance as
+"definitive, clear the held token" and only 403 as "refused". Public profile pages use bare
+axios (`services/v2/publicProfiles.js`) so a 401 there does not log the user out. The refusal
+shape the UI expects is therefore: 401 ⇒ session dead; 403 ⇒ show refusal; 404 ⇒ "gone or
+never yours" (indistinguishable by design, matches design.md's existence corollary); 409 ⇒
+conflict copy (`RequestAccessForm.vue` in-flight conflict alert reads `preset_ids`/`access_type_ids`
+from the 409 body). The plan's refusal table needs all four plus the 409 body contract.
+
+P12 **Per-row capability flags vs capability arrays** — collection datasets carry
+`_meta.can_view_metadata`/`_meta.can_request_stage` (booleans named after the action), computed
+by the route re-running the check per row (`routes/collections.js:240-292`). Detail routes
+carry `_meta.capabilities` (an array of action names). Group lists carry `user_role` (a
+role, not a capability). Three shapes for "what may the caller do with this row". The
+plan should pick one (array of action names on every row that needs it) or the UI keeps
+three code paths.
+
+P13 **Download and copy-path surfaces** — `DatasetDownloadModalV2.vue` offers three options:
+per-file download (FileTable, gated by `showDownload` prop passed from the page's
+`can('download')`), archive download via `getBundleDownloadInfo` (API mints the scoped
+token; comment: "The v2 endpoint enforces the dataset.download grant; the legacy one does
+not"), and "IU Storage" copy-path, which is gated by nothing and logs via the v1 statistics
+endpoint. The copy-path option leaks `config.paths.download/<stage_alias>` to anyone who can
+open the modal; whether that is a decision surface belongs in the plan's downloads item.
+
+P14 **Edit modals do not carry capabilities** — `DatasetEditMetadataModal`, `GroupEditMetadataModal`,
+`CollectionEditMetadataModal`, the three archive modals, `CollectionAddDatasetModal`,
+`RevokeAllGrantsModal` all assume the parent gated them and surface `err.response.data.message`
+on failure. `DatasetEditMetadataModal` and `DatasetArchiveConfirmModal` swallow the API
+message and show a fixed string ("Failed to update dataset.", "Failed to delete dataset.")
+so a 403 with a reason is invisible. Also `DatasetArchiveConfirmModal` is titled "Delete
+Dataset" and calls `DatasetService.archive` — the UI vocabulary (delete) and the action
+vocabulary (archive) disagree on the same button.
+
+P15 **Group/collection archive modals state the rules in prose** — `GroupArchiveConfirmModal`
+lists PRESERVED/PROHIBITED AFTER ARCHIVE ("Create new grants or revoke existing grants",
+"Create new datasets", "only a Platform Admin can unarchive"); `CollectionArchiveConfirmModal`
+similarly ("Update grants"). These are hand-written restatements of `MUTATING_ACTIONS` and
+`ARCHIVED_EXEMPT_ACTIONS`. Nothing ties them to the constants, so they are a fifth place the
+restriction semantics live (after the four `ARCHIVED_ERROR_MESSAGE` strings). The plan's
+restriction table should be the source these strings are generated from or checked against.
+
+P16 **Subject selection offers PUBLIC/AUTHENTICATED principals** — `SubjectSelector.vue`
+quick-selects `constants.PUBLIC_GROUP` and `constants.AUTHENTICATED_USERS_GROUP` alongside the
+owner group. So grants to system principals are a first-class UI path, and `coverageReason`
+already handles `via === 'PRINCIPAL'`. The plan's world dimensions must include "grant to a
+system principal" as a subject kind, not only user/group.
+
+P17 **Access-type implication is enforced client-side in the request/issue forms** —
+`AccessTypeSelector.toggle` removes implied types when a wider type is picked, and
+`RequestAccessForm.heldReasons` expands coverage rows through `implies`. Whether the API
+also normalises (rejects a request naming both X and its implied Y) is not checked by the UI;
+if it does not, the same request submitted by API and by UI produce different item sets.
+
+P18 **`isRequestingForSelf` compares subject ids** (`RequestDetailsCard.vue`,
+`RequestContextHeader.vue`) — correct, and the comment records a previous bug where user id
+was compared to subject id. Worth a line in the plan: the UI carries both `user.id` and
+`user.subject_id` and mixes them; every identity comparison in the UI should be over
+`subject_id`.
+
+P19 **List pages lose standing; detail pages have it** — `groups/index.vue` scope filter
+(`mine|all` default from `auth.canAdmin`), `collections/index.vue` scope
+(`ownership|grants|oversight`), `datasets/index.vue`. The scope names are the plan's "path
+kinds" surfaced as UI filters, so the plan's list-standing item has a UI counterpart: the
+filter vocabulary is a contract too.
+
+P20 **Dead or half-built authority UI** — `AuthorityBanner.vue` is imported nowhere;
+`DatasetAssociatedDatasetsTab.vue:239` has a `TODO: Implement request access flow`; the same
+tab links with `row.rowData.id` (`:60`) where every other v2 page links with `resource_id`
+(check which the API returns on that row — if it is the dataset row id, the link 404s).
+
+### 32.3 Gaps the plan must cover (UI-side additions to the review items)
+
+G1 The plan's UI section is five lines and its scan looks for role/persona/user_role
+literals. That finds P3 and nothing else. It needs a scan for every pattern above.
+
+G2 The plan defines capabilities but not: caller_role vocabulary, per-row capability flags,
+persona, list scopes, or the refusal-shape contract the UI decodes. All five are UI contracts
+today.
+
+G3 The plan should state that the UI is never the gate (P10) and derive from that what the
+UI may compute itself. Proposed rule: the UI may show/hide on a capability the API sent and
+on a display-only fact; it may NOT re-derive restriction (P2), identity (P4), state (P5),
+grant activity (P6), implication (P9), or "may request" (P7). Each of those becomes a
+capability or a projected field the API sends.
+
+G4 Projection-presence gating (P8) means the attribute rules are a UI contract. Either the
+plan lists which fields the UI reads as "present ⇒ permitted" and pins them with a test, or
+the UI stops doing it and the API sends a capability instead.
+
+G5 Three "active grant" definitions (P6) ⇒ the plan's grant table needs one definition and
+the API should send `is_active` (or the UI should stop computing it).
+
+G6 The restriction prose in the archive modals (P15) and the persona NOTE ("not used for
+access control") are stated rationales; the plan should list them as claims to check.
+
+G7 `GET /v2/users` via `UserSearchSelect` is reachable from any subject picker, so the
+anti-enumeration item from the API review has a concrete UI consumer that would break if the
+API were fixed naïvely. The plan needs to say what a non-admin subject search returns.
+
+### 32.4 How the current plan can address these
+
+- Add a "UI consumption contract" deliverable: for each response shape the UI gates on
+  (`_meta.capabilities`, `_meta.caller_role`, per-row `_meta.can_*`, `user_role`, `uiPersona`,
+  list `scope`, refusal codes 401/403/404/409 + 409 body), one table row: producer, consumer
+  files, whether it is derivable from the decision rule, and the test that pins it.
+- Fold P2/P4/P5/P6/P7/P9 into the model as capabilities the API sends (`withdraw`, `review`
+  already state-aware, `request_access`, `is_active` on grants, `would_lose` on revoke preview)
+  and mark the client re-derivations as code to delete, not to keep in sync.
+- Extend the UI scan in the plan from "role literals" to the full pattern list P1–P20, and
+  make the scan output a table the plan can re-run.
+- Move the archive-modal prose and the ARCHIVED_ERROR_MESSAGE strings under the same
+  restriction table so one source generates or checks all of them.
+- Add the system principals (PUBLIC, AUTHENTICATED) as a subject kind in the world dimensions,
+  with the `via = PRINCIPAL` coverage path as the reason.
+
+## §33 Plan updated (2026-09-15)
+
+`docs/design/groups/access-model-verification-plan.md` now carries the 20 review items and the
+§32 UI findings. What changed, by section: base relations gain `quarantine`, `seeded_grant`,
+`profile_visibility`, `contributions_allowed`, `status`; derived relations gain `precondition`
+and `resource_rule`; the decision rule gains both and states the platform-admin session
+snapshot; "Three tables" is now "Four tables" (transition table added, `Policy.always` list
+actions and the `.actions()` slot noted); projection text corrected (`'*'` ignores other paths,
+grant listing leaks user rows); refusal table corrected (403 rationale) and extended to
+401/403/404/400/409 + 409 body; agreement table gains platform-admin (engine reads JWT),
+has-an-admin (three counts), and three UI rows; totality gains unpoliced lists, quarantine exit,
+`Policy.always`; new "Disclosure consumers outside the router" (GET /v2/users, notifications,
+cache) and "The UI is a consumer with four sources of truth" findings sections; operations
+table gains toggle-contributions, visibility change, revoke seeded grant, owner-change/collection
+note; invariant table gains same-owner invariant; lists keep per-row standing; badge vocabulary
+is a Phase 1 deliverable; persona section covers sidebar/`auth.canAdmin`/`datasets/index.vue`;
+"Where the tables live" resolves the tables.js contradiction and the custom/ row mechanism;
+reference-model independence caveat; worlds gain stale-session admin, quarantine, seeded grant,
+resource-rule and state dimensions, constraint list (840,000 pairs, ~19M decisions); four new
+arms (Transitions, Session, Row flags, Unpoliced lists); ten known disagreements; UI layer
+section rewritten (rule, contract, scan); Phases 1/2/5/6 extended; decisions 14–19 added.
