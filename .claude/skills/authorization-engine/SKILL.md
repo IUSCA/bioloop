@@ -225,11 +225,17 @@ pre-fetched resource now throws in its first test rather than passing silently.
 
 ## Actions declare their restriction class and transition beside their policy
 
-A container's `.actions({...})` takes `mutating(policy, transition?)` or `reading(policy)` from
-`core/policies/PolicyContainer.js`. `getRestrictionClass(action)` and `getTransition(action)`
-read them back. `tests/authorization/registryCompleteness.test.js` fails on an action with no
-class, and checks the declaration against `MUTATING_ACTIONS` and `READING_ACTIONS` until
-Phase 6 derives those lists from it.
+A container's `.actions({...})` takes `mutating(policy, transition?)`, `reading(policy)`, or
+`readingData(policy)` from `core/policies/PolicyContainer.js`. `getRestrictionClass(action)` and
+`getTransition(action)` read them back. `tests/authorization/registryCompleteness.test.js`
+fails on an action with no class.
+
+`RESTRICTION_TYPES` in `builtin/restrictions.js` says which classes each type blocks: ARCHIVED
+blocks `mutating`, and DELETED blocks `mutating` and `data`. Both exempt `unarchive`. No list
+names actions, so a new action is classified by its own row. `typeBlocks` reads the class from
+the registry on first use, because the registry module requires `restrictions.js` while it
+builds. DELETED has no restriction rows: `effective_restriction` derives it from
+`dataset.is_deleted`.
 
 Every leaf term carries `meta`: `{ pathKind }`, with `accessType` for a grant term, or
 `{ pathKind: null, rule }` for `always`, `never`, and `platform_admin_only`. `Policy.or`, `and`,
@@ -391,6 +397,41 @@ UI file as text.
   has no such row.
 - The middleware's platform-admin branch applies transitions too. Before Phase 5 it returned
   every action as true, so a platform admin was offered Unarchive on an active group.
+
+## One pipeline decides for the middleware and for `authorizeAction`
+
+`core/pipeline.js` `createDecisionPipeline` is the only decision path. The middleware in
+`core/middlewares.js` builds one and `authorization/index.js` builds another from the same
+arguments; `authorizeAction` is that second one. The order is restriction checker, platform-admin
+policy, then the action's policy. Capabilities pass through `applyTransitions` or
+`evaluateCapabilitySet` and then `filterRestrictedCapabilities` on both branches, so a caller of
+`authorizeAction` no longer needs to filter them again.
+
+A refusal carries `status`. With `concealRefusalsWithoutStanding`, which the application sets, a
+refusal on a named resource is 404 when `deriveStanding` finds nothing and the caller is not a
+platform admin, and 403 otherwise. A route that decides in its handler answers with
+`decision.status` rather than a literal 403. `refusalMessage(permission)` gives the text. A
+caller refused `view_metadata` still gets `standing` when the call asked for it, because a
+public-profile reader stands on a group they cannot open.
+
+Routes with no resource id, such as `POST /grants` or a create, always answer 403.
+
+## A record with no id is never cached
+
+A create decision has `identifiers.resource === null` and names its owning group in
+`preFetched.resource`. `PrismaHydrator.hydrate` keys its cache by id, and pre-fetched keys never
+overwrite cached ones, so before 2026-09-15 two creates in one request shared the
+`dataset:global` entry. The second was decided on the first one's `owner_group_id`: the bulk
+create route authorized a later group on the earlier group's facts. The hydrator now builds a
+record with no id for that call alone. `tests/authorization/nullIdHydration.test.js` pins it, and
+any loop that decides several creates through one `req.policyContext` depends on it.
+
+## DELETED is derived, not written
+
+`effective_restriction` has an arm that reads `dataset.is_deleted` and emits type DELETED, so no
+code path writes a DELETED restriction row and every soft delete, v1 or v2, is covered. The
+service guards call `isRestricted(tx, target)` from `services/restrictions.js`, which reads the
+same view, so a guard refuses a soft-deleted dataset's collection target only through its owner.
 
 ## Keeping this current
 

@@ -217,7 +217,7 @@ async function deriveStanding({
 
   const terms = [];
   policyContainer.getActionNames()
-    .filter((action) => policyContainer.getRestrictionClass(action) === PolicyContainer.RESTRICTION_CLASS.READING)
+    .filter((action) => policyContainer.getRestrictionClass(action) !== PolicyContainer.RESTRICTION_CLASS.MUTATING)
     .forEach((action) => policyContainer.getPolicy(action).terms().forEach((term) => {
       if (term.meta?.pathKind && !terms.includes(term)) terms.push(term);
     }));

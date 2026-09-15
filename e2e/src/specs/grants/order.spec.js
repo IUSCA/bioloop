@@ -1,5 +1,5 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden, expectNotForbidden } = require('../../assertions/parity');
+const { expectConcealed, expectForbidden, expectNotForbidden } = require('../../assertions/parity');
 const { grantsOnResource, grantsHeldBy } = require('../../world/grants');
 
 /**
@@ -69,7 +69,7 @@ test('D1 — a dataset is born with an owner and exactly one grant', async ({ wo
   // Bob is an ordinary member of the owning lab and reads it through that grant.
   await expectNotForbidden(bob.api, 'GET', `/v2/datasets/${dataset.resource_id}/files`);
   // Frank is outside the branch and reads nothing.
-  await expectForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
+  await expectConcealed(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
 });
 
 test('D2 — revoking the owning-group grant removes members\' access, not ownership', async ({ world, as }) => {
@@ -84,7 +84,7 @@ test('D2 — revoking the owning-group grant removes members\' access, not owner
   });
 
   // Bob loses the dataset entirely, because the grant was the whole of his access.
-  await expectForbidden(bob.api, 'GET', `/v2/datasets/${dataset.resource_id}/files`);
+  await expectConcealed(bob.api, 'GET', `/v2/datasets/${dataset.resource_id}/files`);
 
   // Alice still governs it. Governance comes from ownership, consumption from grants, and
   // revoking one must not touch the other.
@@ -100,7 +100,7 @@ test('F3 — one grant covers what it implies, and the list holds one row', asyn
   const [alice, frank] = await Promise.all([as('alice'), as('frank')]);
   const dataset = await createDataset(alice, world, 'requestLab', 'f3-implies');
 
-  await expectForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
+  await expectConcealed(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
 
   await issueGrant(alice, {
     subjectId: world.people.frank.subject_id,
@@ -184,7 +184,7 @@ test('F5 — revocation takes effect immediately, on every surface', async ({ wo
   // anywhere is the failure this flow exists to catch.
   for (const path of ['', '/files', '/files/tree', '/files/bundle/download_info']) {
     // eslint-disable-next-line no-await-in-loop
-    await expectForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}${path}`);
+    await expectConcealed(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}${path}`);
   }
 
   // And it leaves his list.
@@ -198,7 +198,7 @@ test('F2 — a grant to a group reaches its descendants, and not its parent', as
   // Owned by the sibling lab, so nobody in the Wong branch reaches it to begin with.
   const erin = await as('erin');
   const dataset = await createDataset(erin, world, 'siblingLab', 'f2-transitive');
-  await expectForbidden(carol.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
+  await expectConcealed(carol.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
 
   // Granted to the lab. Carol is a member of the sub-lab beneath it and not of the lab
   // directly, so reaching it proves the grant travelled down the hierarchy.
@@ -219,7 +219,7 @@ test('F2 — a grant to a group reaches its descendants, and not its parent', as
     justification: 'F2: granted to the sub-lab only.',
   });
   await expectNotForbidden(carol.api, 'GET', `/v2/datasets/${leafOnly.resource_id}`);
-  await expectForbidden(bob.api, 'GET', `/v2/datasets/${leafOnly.resource_id}`);
+  await expectConcealed(bob.api, 'GET', `/v2/datasets/${leafOnly.resource_id}`);
 });
 
 test('F9 — every grant row says where it came from', async ({ world, as }) => {

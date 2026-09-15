@@ -132,35 +132,15 @@
                   <ul
                     class="space-y-1 text-sm text-rose-800 dark:text-rose-200"
                   >
-                    <li class="flex items-start gap-2">
+                    <li
+                      v-for="label in prohibited"
+                      :key="label"
+                      class="flex items-start gap-2"
+                    >
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
                       />
-                      Add / remove members
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create new grants or revoke existing grants
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create new datasets
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Create collections
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Modify collection contents
+                      {{ label }}
                     </li>
                   </ul>
                 </div>
@@ -223,6 +203,8 @@
 import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import GroupService from "@/services/v2/groups";
+import RestrictionService from "@/services/v2/restrictions";
+import { prohibitedLabels } from "@/services/v2/restrictionLabels";
 
 const props = defineProps({
   /** ID of the group being archived/unarchived. */
@@ -250,9 +232,33 @@ const confirmationText = ref("");
 const confirmationInput = ref(null);
 const loading = ref(false);
 
+// What archiving stops, from the restriction layer: every action ARCHIVED blocks on the
+// group and on everything it governs.
+const blockedActions = ref([]);
+const prohibited = computed(() =>
+  prohibitedLabels(blockedActions.value, [
+    "group",
+    "collection",
+    "dataset",
+    "grant",
+    "access_request",
+  ]),
+);
+
+async function loadBlockedActions() {
+  try {
+    const res = await RestrictionService.blockedActions("ARCHIVED");
+    blockedActions.value = res.data.blocked_actions;
+  } catch {
+    // Nothing is listed rather than a list that may be wrong.
+    blockedActions.value = [];
+  }
+}
+
 function show() {
   confirmationText.value = "";
   visible.value = true;
+  if (!props.isArchived) loadBlockedActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();

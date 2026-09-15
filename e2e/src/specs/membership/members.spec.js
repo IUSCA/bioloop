@@ -1,5 +1,5 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden, expectNotForbidden } = require('../../assertions/parity');
+const { expectConcealed, expectForbidden, expectNotForbidden } = require('../../assertions/parity');
 
 /**
  * Phase 5a — membership.
@@ -52,8 +52,8 @@ test('B1 — adding a member changes what they reach, and promoting stops at the
   });
   const dataset = await createDatasetIn(alice, world, lab, 'b1-dataset');
 
-  // Before: Frank belongs to the sibling branch and reaches none of it.
-  await expectForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
+  // Before: Frank belongs to the sibling branch and reaches none of it, not even its existence.
+  await expectConcealed(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
 
   await alice.api.post(`/groups/${lab.id}/members`, {
     members: [{ user_id: world.people.frank.subject_id }],
@@ -98,7 +98,7 @@ test('B2 — removing a member removes their access and keeps the record', async
   await alice.api.del(`/groups/${lab.id}/members/${world.people.frank.subject_id}`);
 
   // The access goes with the membership, on the direct route as well as in the listing.
-  await expectForbidden(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
+  await expectConcealed(frank.api, 'GET', `/v2/datasets/${dataset.resource_id}`);
   const listed = await frank.api.get(`/v2/datasets?name=${encodeURIComponent(dataset.name)}`);
   expect(listed.data.map((d) => d.name)).not.toContain(dataset.name);
 

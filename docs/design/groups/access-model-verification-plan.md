@@ -1369,6 +1369,68 @@ The sidebar needed no change. Its `auth.canAdmin` gates only the v1 admin items.
 - A descendant of a group archived mid-transaction is refused by line 2, not only by line 1.
 - Reverting one decided effect by hand makes the suite fail. That proves the suite can see the effect.
 
+**Result, 2026-09-15.** Action rows declare a restriction class, and the restriction types read
+their blocked actions from those rows. The eleven guard sites call `isRestricted` under the
+transaction they open. The operation-sequence suite runs clean at its default budget. The full
+API suite passes, 102 suites, and `public.cache.test.js` passes on its own.
+
+- `RESTRICTION_CLASS` holds `mutating`, `reading`, and `data`. ARCHIVED blocks the mutating
+  class, and DELETED blocks the mutating and data classes. Both exempt `unarchive`.
+  `MUTATING_ACTIONS` and `READING_ACTIONS` are deleted, and `engineArm.test.js` classifies no
+  disagreement.
+- `serviceGuards.test.js` archives a parent group inside an open transaction and then adds a
+  member to its child. Line 2 refuses the change with a 409.
+- The four archive messages are one, `RESTRICTED_MESSAGE`.
+- The group and collection archive dialogs list the actions `GET /v2/restrictions/:type/blocked-actions`
+  returns. `restrictionLabels.test.js` fails when a blocked action has no label.
+- A collection that has held a dataset, or has any access request, refuses deletion. The
+  capability map leaves `delete` out, and `deleteCollection` answers 409 under a row lock.
+- A search of `GET /v2/users` by a caller who is not a platform admin needs three characters.
+  It returns at most ten people and four fields.
+- `/my-pending-reviews` reads the admin rows of `accessPathsQuery`. `/eligible-owner-groups`
+  reads the caller's group path rows and decides `dataset.contribute` for each candidate.
+- `operationSequences.test.js` runs 30 sequences of up to 25 commands over 17 operations. It
+  compares the database with the operations table, and the engine with the reference model,
+  after every command. Removing the `isRestricted` guard from `addGroupMembers` made it fail on
+  seed 617108713: adding a user to an archived group's child answered 200, not 409.
+- Every operations-table cell has an assertion. The sequence suite holds eleven rows. The
+  profile cache cell is `public.cache.test.js`. The owner-change cell is
+  `route_policy_bindings.test.js`. Reparenting is not built.
+
+One bug was found and fixed on the way. `PrismaHydrator` cached a record with no id under the
+key `dataset:global`. Two creates in one request were then decided on the first owning group.
+`/eligible-owner-groups` offered a member a group that refuses contributions.
+`nullIdHydration.test.js` pins it.
+
+Nine departures from the plan as written:
+
+- **DELETED is a restriction type derived in `effective_restriction`.** Decision 4 needed a
+  soft-deleted dataset to refuse data-plane actions. A `restriction` row written at soft-delete
+  could drift from `dataset.is_deleted`, so the view reads the column.
+- **The archive dialogs read an endpoint, not a column.** The blocked actions come from the
+  registry, which the UI cannot import.
+- **The middleware and `authorizeAction` share one pipeline, `createDecisionPipeline`.** A
+  refusal on a named resource answers 404 when the caller holds no standing on it, and 403
+  otherwise. The e2e specs expect the
+  new status through `expectConcealed`, and they were not run, because the development database
+  holds the demo world and not the flows cast.
+- **A refusal carries standing when standing was asked for.** The Standing arm found refused
+  callers with resource-rule standing reported as having none.
+- **`/requested-by-me` and `/reviewed-by-me` read the caller's own rows by column.** Neither
+  list is scoped by a path. Each row is decided by `decideRows` for `read`.
+- **The eligibility decision moved to the route.** `listOwnerGroupCandidates` returns path
+  rows, and the route asks the engine. The service no longer restates the contribute rule.
+- **Collection deletion is a transition on a hydrator virtual attribute, `has_history`.** The
+  service guard repeats the count under a row lock, because the capability map is read before
+  the transaction.
+- **Two commands and two cells are checked narrower than the table.** Soft-deleting a user
+  writes the flag with Prisma, because no v2 service deletes an account. Invitations and
+  requests are checked as the invitation token's status and the `review` restriction, not as
+  rows in the model world.
+- **Four commands skip restricted targets.** Promote, demote, grant, and revoke generate no
+  command on a restricted target. Their services open no guard, so line 1 refuses them.
+  `restrictions.test.js` covers that refusal through `checkRestriction`.
+
 ### Phase 7: keep it true
 
 The v2 page patterns gain a checklist item. A new enum value, action, operation, or restriction

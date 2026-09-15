@@ -140,7 +140,9 @@ router.post(
       preFetched: { user: req.user, context: { req } },
     });
     if (!decision.granted) {
-      return next(createError.Forbidden('Not permitted to request access to this resource'));
+      return next(decision.status === 404
+        ? createError.NotFound('Resource not found')
+        : createError.Forbidden('Not permitted to request access to this resource'));
     }
 
     // The same rule grant creation applies: a COLLECTION access type cannot be asked for on

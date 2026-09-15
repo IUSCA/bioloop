@@ -1,7 +1,7 @@
 const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
-const { mutating, reading } = require('../../core/policies/PolicyContainer');
+const { mutating, reading, readingData } = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
 const { dataset: PUBLIC_ATTRIBUTES } = require('./base_attributes');
 
@@ -164,7 +164,7 @@ datasetPolicies
     // Grant holders need an explicit list_files grant — view_metadata
     // alone does NOT imply the ability to enumerate files.
     // ------------------------------------------------------------------
-    list_files: reading(Policy.or([
+    list_files: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:LIST_FILES'),
@@ -181,17 +181,17 @@ datasetPolicies
     // type order carries the rest: DOWNLOAD, COMPUTE, and REMOTE_ACCESS all imply
     // LIST_FILES, so any of them satisfies this check.
     // @see docs/design/groups/decisions.md — 7. Access types imply one another
-    read_data: reading(Policy.or([
+    read_data: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:LIST_FILES'),
     ])),
 
-    download: reading(Policy.or([
+    download: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:DOWNLOAD'),
     ])),
 
-    compute: reading(Policy.or([
+    compute: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:COMPUTE'),
     ])),
@@ -199,7 +199,7 @@ datasetPolicies
     // Reading the dataset in place, from the path the storage layer exposes. The access type
     // was grantable with nothing checking it, so granting it conferred file listing through
     // the order and nothing named remote access.
-    remote_access: reading(Policy.or([
+    remote_access: readingData(Policy.or([
       isDatasetOwningGroupAdmin,
       userHasGrant('DATASET:REMOTE_ACCESS'),
     ])),

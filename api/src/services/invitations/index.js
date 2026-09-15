@@ -4,6 +4,7 @@ const createError = require('http-errors');
 const { Prisma, GROUP_MEMBER_ROLE, INVITATION_STATUS } = require('@prisma/client');
 
 const prisma = require('@/db');
+const { isRestricted, RESTRICTED_MESSAGE } = require('@/services/restrictions');
 const logger = require('@/services/logger');
 const { normalizeEmail } = require('@/utils/email');
 const audit = require('@/authorization/builtin/audit');
@@ -21,8 +22,6 @@ const { sendInvitationEmail } = require('./notify');
  *
  * @see docs/design/groups/invitations.md
  */
-
-const ARCHIVED_ERROR_MESSAGE = 'Group is archived';
 
 /**
  * 256 bits of randomness as 43 base64url characters.
@@ -76,10 +75,10 @@ async function createInvitation({
 
   const result = await prisma.$transaction(async (tx) => {
     const groupRows = await tx.$queryRaw`
-      SELECT is_archived FROM "group" g WHERE g.id = ${group_id} FOR UPDATE;
+      SELECT id FROM "group" g WHERE g.id = ${group_id} FOR UPDATE;
     `;
     if (groupRows.length === 0) throw createError.NotFound('Group not found');
-    if (groupRows[0].is_archived) throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    if (await isRestricted(tx, { group_id })) throw createError.Conflict(RESTRICTED_MESSAGE);
 
     // Someone who is already in the group does not need asking. Matched on the account's
     // address, normalised the same way the invitation's was.
@@ -275,14 +274,15 @@ async function applyPendingInvitations({ email, user_subject_id, tx }) {
 
   const invitations = await tx.group_invitation.findMany({
     where: usableInvitation({ invited_email }),
-    include: { group: { select: { id: true, name: true, is_archived: true } } },
+    include: { group: { select: { id: true, name: true } } },
   });
 
   const applied = [];
   const skipped = [];
 
   for (const invitation of invitations) {
-    if (invitation.group.is_archived) {
+    // eslint-disable-next-line no-await-in-loop
+    if (await isRestricted(tx, { group_id: invitation.group_id })) {
       // eslint-disable-next-line no-await-in-loop
       await tx.group_invitation.update({
         where: { id: invitation.id },
@@ -324,7 +324,7 @@ async function checkInvitationToken(token) {
 
   const invitation = await prisma.group_invitation.findUnique({
     where: { token },
-    include: { group: { select: { name: true, is_archived: true } } },
+    include: { group: { select: { name: true } } },
   });
 
   if (!invitation) {
@@ -339,7 +339,7 @@ async function checkInvitationToken(token) {
     logger.info(`Invitation ${invitation.id} check failed: expired ${invitation.expires_at.toISOString()}`);
     return { status: 'invalid' };
   }
-  if (invitation.group.is_archived) {
+  if (await isRestricted(prisma, { group_id: invitation.group_id })) {
     logger.info(`Invitation ${invitation.id} check failed: group is archived`);
     return { status: 'invalid' };
   }
@@ -376,7 +376,7 @@ async function acceptInvitationByToken({ token, user }) {
 
     const invitation = await tx.group_invitation.findUnique({
       where: { id: rows[0].id },
-      include: { group: { select: { id: true, name: true, is_archived: true } } },
+      include: { group: { select: { id: true, name: true } } },
     });
 
     // Checked before the group, so that someone holding a forwarded link learns nothing about
@@ -388,7 +388,7 @@ async function acceptInvitationByToken({ token, user }) {
 
     // Reported rather than thrown, because a throw here would roll the transaction back and
     // take the cancellation with it. The invitation is closed afterwards, outside.
-    if (invitation.group.is_archived) {
+    if (await isRestricted(tx, { group_id: invitation.group_id })) {
       return { archived: true, invitation_id: invitation.id };
     }
 
@@ -430,5 +430,4 @@ module.exports = {
   applyPendingInvitations,
   grantMembership,
   usableInvitation,
-  ARCHIVED_ERROR_MESSAGE,
 };

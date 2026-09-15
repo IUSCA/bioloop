@@ -13,180 +13,75 @@ const prisma = require('@/db');
  * @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
  */
 
-/**
- * Every policy action that changes state, as `${resourceType}.${action}`.
- *
- * ARCHIVED blocks exactly these and leaves reading alone. The list is written out rather
- * than inferred from a naming convention, because a convention silently fails to cover an
- * action somebody adds later; a test asserts every registered action appears in this set or
- * in READING_ACTIONS, so a new action cannot be forgotten.
- */
-const MUTATING_ACTIONS = new Set([
-  // group
-  'group.create',
-  'group.create_child',
-  'group.archive',
-  'group.edit_metadata',
-  'group.add_member',
-  'group.remove_member',
-  'group.edit_member_role',
-  'group.add_dataset',
-  'group.add_collection',
-  'group.unarchive',
-  // Issuing or withdrawing an invitation. An archived group takes no new members by either
-  // route, the same reasoning that puts dataset.contribute here.
-  'group.invite',
-
-  // collection
-  'collection.create',
-  'collection.edit_metadata',
-  'collection.add_dataset',
-  'collection.remove_dataset',
-  'collection.transfer_ownership',
-  'collection.delete',
-  'collection.archive',
-  'collection.manage_grants',
-  'collection.review_access_requests',
-  'collection.unarchive',
-
-  // dataset
-  'dataset.create',
-  // Ingestion into a group. Mutating, so an archived group accepts no new datasets by
-  // either route: a group under restriction should not keep growing.
-  'dataset.contribute',
-  'dataset.edit_metadata',
-  'dataset.edit',
-  'dataset.archive',
-  'dataset.transfer_ownership',
-  'dataset.request_stage',
-  'dataset.manage_grants',
-  'dataset.review_access_requests',
-  'dataset.unarchive',
-
-  // grant
-  'grant.create',
-  'grant.revoke',
-
-  // access_request
-  'access_request.create',
-  'access_request.update',
-  'access_request.submit',
-  'access_request.withdraw',
-  'access_request.review',
-]);
+const { RESTRICTION_CLASS } = require('../core/policies/PolicyContainer');
 
 /**
- * Every policy action that only reads. Kept beside the mutating set so a test can assert
- * the two together cover every registered action, and neither contains an action twice.
+ * The restriction classes each restriction type blocks, and the actions it exempts.
+ *
+ * An action's class is declared on its own row, with `mutating`, `reading`, or `readingData`,
+ * so an action is classified where it is written and the registry completeness test refuses
+ * one that is not. Nothing here lists actions by name except the exemptions.
+ *
+ * - **ARCHIVED** blocks every mutation. Archiving is a governance boundary closure: creating
+ *   and revoking grants, changing membership, and changing collection contents all stop, and
+ *   reading goes on.
+ * - **DELETED** blocks every mutation and every read of the bytes. A soft-deleted dataset
+ *   stays as metadata, and a grant cannot confer access to bytes that are gone.
+ *
+ * `unarchive` is exempt from both. It lifts the restriction archiving applied, and blocking it
+ * would leave an archived resource impossible to restore. Moving a dataset out of the archived
+ * `Unassigned Datasets` group is ownership transfer, which is deferred.
+ *
+ * @see docs/design/groups/access-model.md — The decision rule
+ * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, rows 2 and 4
  */
-const READING_ACTIONS = new Set([
-  // audit
-  'audit.read_records',
-  // group
-  'group.view_metadata',
-  // Reading, and deliberately still available on an archived group. An archived group that
-  // published a profile keeps serving it, with the archived badge showing.
-  'group.view_profile',
-  // Seeing which invitations are outstanding. Reading, and deliberately still available on
-  // an archived group: the admin who has to explain why nobody can join needs the list.
-  'group.view_invitations',
-  'group.view_hierarchy',
-  'group.list_invalid',
-  'group.view_audit_logs',
-  'group.view_members',
-  'group.view_ancestors',
-  'group.view_descendants',
-
-  // collection
-  'collection.view_metadata',
-  'collection.view_profile',
-  'collection.list_datasets',
-  'collection.list_grants',
-  'collection.view_audit_logs',
-
-  // dataset
-  'dataset.view_metadata',
-  'dataset.view_sensitive_metadata',
-  'dataset.list_files',
-  'dataset.read_data',
-  'dataset.download',
-  'dataset.compute',
-  'dataset.remote_access',
-  'dataset.view_audit_logs',
-  'dataset.view_workflows',
-  'dataset.view_collections',
-  'dataset.view_source_datasets',
-  'dataset.view_derived_datasets',
-
-  // grant
-  'grant.read',
-  'grant.list_for_resource',
-  'grant.list_for_subject',
-  'grant.view_coverage',
-
-  // access_request
-  'access_request.read',
-
-  // user
-  'user.list',
-]);
+const RESTRICTION_TYPES = Object.freeze({
+  ARCHIVED: Object.freeze({ blocks: [RESTRICTION_CLASS.MUTATING], exempt: ['unarchive'] }),
+  DELETED: Object.freeze({ blocks: [RESTRICTION_CLASS.MUTATING, RESTRICTION_CLASS.DATA], exempt: ['unarchive'] }),
+});
 
 /**
- * The only mutations ARCHIVED allows.
- *
- * `unarchive` is the act of lifting the restriction itself. Blocking it would make an
- * archived group or collection impossible to restore, which is the one shape of exemption
- * a restriction type always needs.
- *
- * Nothing else is exempt. Archiving is a governance boundary closure, and the archive
- * dialog already promises users that creating and revoking grants, changing membership,
- * and modifying collection contents all stop. Ownership transfer was exempted for a while,
- * so that datasets could be moved out of the archived `Unassigned Datasets` group without
- * unarchiving it; that made the rule harder to state for the sake of one workflow, and a
- * platform admin can unarchive, reassign, and re-archive instead, which leaves an audit
- * record of each step.
- * @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
- *
- * These are exemptions of the ARCHIVED type, not a claim that they read rather than write.
- * A future restriction type decides its own.
+ * The registry the classes are read from. Required on first use, because the registry module
+ * requires this one while it builds.
  */
-const ARCHIVED_EXEMPT_ACTIONS = new Set([
-  'group.unarchive',
-  'collection.unarchive',
-  'dataset.unarchive',
-]);
-
-/**
- * Which actions each restriction type blocks.
- *
- * One type today. When a second arrives — an unsigned data use agreement blocks *reading*
- * by one person, rather than writing by everybody — this is the seam to re-examine, because
- * that type is per-subject and this map is not.
- */
-const BLOCKED_ACTIONS_BY_TYPE = {
-  ARCHIVED: new Set(
-    [...MUTATING_ACTIONS].filter((action) => !ARCHIVED_EXEMPT_ACTIONS.has(action)),
-  ),
-};
+function registry() {
+  // eslint-disable-next-line global-require
+  return require('..').policyRegistry;
+}
 
 /**
  * Whether a restriction of the given type blocks the given qualified action.
  * @param {string} typeName
  * @param {string} qualifiedAction - `${resourceType}.${action}`
+ * @throws {Error} when no container registers the action
  */
 function typeBlocks(typeName, qualifiedAction) {
-  const blocked = BLOCKED_ACTIONS_BY_TYPE[typeName];
+  const type = RESTRICTION_TYPES[typeName];
   // An unknown type blocks nothing rather than everything: a restriction type seeded
   // without a matching entry here is a gap to report, not a reason to lock the platform.
-  return blocked ? blocked.has(qualifiedAction) : false;
+  if (!type) return false;
+  const [resourceType, action] = qualifiedAction.split('.');
+  if (type.exempt.includes(action)) return false;
+  return type.blocks.includes(registry().get(resourceType).getRestrictionClass(action));
 }
 
 /**
- * Whether any restriction type defined today could block this qualified action. Reading is
- * never blocked, so most checks stop here without a query.
+ * Every registered action a restriction type blocks, as `${resourceType}.${action}`.
+ * @param {string} typeName
+ * @returns {string[]}
+ */
+function blockedActions(typeName) {
+  return registry().listTypes().flatMap((resourceType) => registry().get(resourceType).getActionNames()
+    .map((action) => `${resourceType}.${action}`))
+    .filter((qualified) => typeBlocks(typeName, qualified));
+}
+
+/**
+ * Whether any restriction type defined today could block this qualified action. Reading a
+ * record is never blocked, so most checks stop here without a query.
  */
 function actionCouldBeBlocked(qualifiedAction) {
-  return Object.keys(BLOCKED_ACTIONS_BY_TYPE)
+  return Object.keys(RESTRICTION_TYPES)
     .some((typeName) => typeBlocks(typeName, qualifiedAction));
 }
 
@@ -333,15 +228,13 @@ async function checkRestriction({
 }
 
 module.exports = {
-  MUTATING_ACTIONS,
-  READING_ACTIONS,
-  BLOCKED_ACTIONS_BY_TYPE,
+  RESTRICTION_TYPES,
   typeBlocks,
+  blockedActions,
   effectiveRestrictionTypes,
   restrictionTypesByTarget,
   blockingRestriction,
   restrictionTargetFor,
   checkRestriction,
-  ARCHIVED_EXEMPT_ACTIONS,
   RestrictionTargetError,
 };

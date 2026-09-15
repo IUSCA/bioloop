@@ -41,8 +41,31 @@ router.get(
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Groups the caller may create a dataset in'
-    const groups = await datasetService.listEligibleOwnerGroups(req.user);
-    res.json(groups);
+
+    // Each candidate is decided by `dataset.contribute`, the action the creation routes
+    // authorize, so a group offered here is one they admit and one they admit is offered.
+    const everyGroup = await callerIsPlatformAdmin(req);
+    const candidates = await datasetService.listOwnerGroupCandidates({ user_id: req.user.subject_id, everyGroup });
+    const eligible = [];
+    for (const { path_kinds, ...group } of candidates) {
+      // eslint-disable-next-line no-await-in-loop
+      const decision = await authorizeAction('dataset', 'contribute', {
+        identifiers: { user: req.user.subject_id, resource: null },
+        policyExecutionContext: req.policyContext,
+        preFetched: {
+          user: req.user,
+          resource: { owner_group_id: group.id, owner_group_allows_contributions: group.allow_user_contributions },
+          context: { req },
+        },
+      });
+      if (decision.granted) {
+        let admitted_by = 'CONTRIBUTOR';
+        if (everyGroup) admitted_by = 'PLATFORM_ADMIN';
+        else if (path_kinds.includes('admin')) admitted_by = 'ADMIN';
+        eligible.push({ ...group, admitted_by });
+      }
+    }
+    res.json(eligible);
   }),
 );
 

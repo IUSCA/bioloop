@@ -23,7 +23,6 @@ const PRISMA_COLLECTION_INCLUDES = {
   owner_group: true,
 };
 const CONFLICT_ERROR_MESSAGE = 'Collection was updated by another process. Please refresh and try again.';
-const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived collection.';
 
 function make_slug_unique_fn(tx) {
   return async (_slug) => {
@@ -120,9 +119,9 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
       where: { id: collection_id },
     });
 
-    // if current collection is archived, prevent any updates
-    if (currentCollection.is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    // The second line behind the middleware's restriction check.
+    if (await restrictionService.isRestricted(tx, { resource_id: collection_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     // if name is being updated, generate a new slug, otherwise keep existing slug
@@ -244,6 +243,24 @@ async function unarchiveCollection(collection_id, actor_id) {
  */
 async function deleteCollection(collection_id, actor_id) {
   return prisma.$transaction(async (tx) => {
+    // Locked first, so a dataset added concurrently either lands before the history check or
+    // waits for the delete. `addDatasets` takes the same lock.
+    const locked = await tx.$queryRaw`SELECT id FROM collection WHERE id = ${collection_id} FOR UPDATE`;
+    if (locked.length === 0) throw createError.NotFound('Collection not found');
+
+    // A collection that has ever held a dataset, or that anybody has asked access to, carries
+    // history that decision 1 preserves. It is archived instead.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
+    const [datasetRows, requestRows] = await Promise.all([
+      tx.collection_dataset.count({ where: { collection_id } }),
+      tx.access_request.count({ where: { resource_id: collection_id } }),
+    ]);
+    if (datasetRows > 0 || requestRows > 0) {
+      throw createError.Conflict(
+        'A collection that has held a dataset or has an access request cannot be deleted. Archive it instead.',
+      );
+    }
+
     // grant.resource is onDelete: Restrict, so a collection carrying any grant cannot be
     // deleted while those rows stand. Every collection now carries at least the owning
     // group's seeded grant, so this is not an edge case.
@@ -307,16 +324,15 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     // Any concurrent transaction trying to FOR UPDATE the same row will block.
     // So all addDatasets and removeDatasets calls for the same collection_id are serialized.
     const collectionRows = await tx.$queryRaw`
-      SELECT is_archived FROM collection
+      SELECT id FROM collection
       WHERE id = ${collection_id}
       FOR UPDATE;
     `;
     if (collectionRows.length === 0) {
       throw createError.NotFound('Collection not found');
     }
-    const { is_archived } = collectionRows[0];
-    if (is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    if (await restrictionService.isRestricted(tx, { resource_id: collection_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     const createdRecords = await tx.$queryRaw`
@@ -360,16 +376,15 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     // Any concurrent transaction trying to FOR UPDATE the same row will block.
     // So all addDatasets and removeDatasets calls for the same collection_id are serialized.
     const collectionRows = await tx.$queryRaw`
-      SELECT is_archived FROM collection
+      SELECT id FROM collection
       WHERE id = ${collection_id}
       FOR UPDATE;
     `;
     if (collectionRows.length === 0) {
       throw createError.NotFound('Collection not found');
     }
-    const { is_archived } = collectionRows[0];
-    if (is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    if (await restrictionService.isRestricted(tx, { resource_id: collection_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     // Close the row rather than deleting it. A collection grant conferred access to whatever

@@ -3,6 +3,7 @@ const createError = require('http-errors');
 const config = require('config');
 
 const prisma = require('@/db');
+const { isRestricted, RESTRICTED_MESSAGE } = require('@/services/restrictions');
 const audit = require('@/authorization/builtin/audit');
 const validate = require('./validate');
 
@@ -16,7 +17,6 @@ const validate = require('./validate');
  */
 
 const CONFLICT_ERROR_MESSAGE = 'This profile was changed by somebody else. Reload and try again.';
-const ARCHIVED_ERROR_MESSAGE = 'This resource is archived and cannot be edited.';
 
 const VISIBILITIES = Object.values(PROFILE_VISIBILITY);
 
@@ -108,7 +108,9 @@ async function updateProfile({
 }) {
   return prisma.$transaction(async (tx) => {
     const current = await tx[model].findUniqueOrThrow({ where: { id } });
-    if (current.is_archived) throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    // A group is a restriction target by its id, and a collection by its resource id.
+    const target = model === 'group' ? { group_id: id } : { resource_id: id };
+    if (await isRestricted(tx, target)) throw createError.Conflict(RESTRICTED_MESSAGE);
 
     const update = buildProfileUpdate(body, current.metadata);
     if (!update) throw createError.BadRequest('No profile fields were supplied.');

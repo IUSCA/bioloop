@@ -18,9 +18,9 @@ const restrictionService = require('@/services/restrictions');
 const { policyRegistry, restrictions } = require('@/authorization');
 
 const {
-  MUTATING_ACTIONS,
-  READING_ACTIONS,
-  ARCHIVED_EXEMPT_ACTIONS,
+  RESTRICTION_TYPES,
+  typeBlocks,
+  blockedActions,
   blockingRestriction,
   effectiveRestrictionTypes,
 } = restrictions;
@@ -72,44 +72,40 @@ afterAll(async () => {
 }, 30_000);
 
 describe('the action classification', () => {
-  test('covers every registered policy action exactly once', () => {
-    const unclassified = [];
-    const duplicated = [];
-
-    // Every registered container, so one a derived app adds is covered without editing this file.
-    policyRegistry.listTypes().forEach((resourceType) => {
-      const container = policyRegistry.get(resourceType);
-      container.getActionNames().forEach((action) => {
-        const qualified = `${resourceType}.${action}`;
-        const inMutating = MUTATING_ACTIONS.has(qualified);
-        const inReading = READING_ACTIONS.has(qualified);
-        if (!inMutating && !inReading) unclassified.push(qualified);
-        if (inMutating && inReading) duplicated.push(qualified);
-      });
-    });
-
-    // A new action that nobody classified would silently escape every restriction.
-    expect(unclassified).toEqual([]);
-    expect(duplicated).toEqual([]);
+  const rows = () => policyRegistry.listTypes().flatMap((resourceType) => {
+    const container = policyRegistry.get(resourceType);
+    return container.getActionNames().map((action) => ({
+      qualified: `${resourceType}.${action}`, action, restriction: container.getRestrictionClass(action),
+    }));
   });
 
-  test('names no action that does not exist', () => {
-    const registered = new Set();
-    policyRegistry.listTypes().forEach((resourceType) => {
-      policyRegistry.get(resourceType).getActionNames().forEach((action) => {
-        registered.add(`${resourceType}.${action}`);
-      });
-    });
-
-    [...MUTATING_ACTIONS, ...READING_ACTIONS, ...ARCHIVED_EXEMPT_ACTIONS].forEach((qualified) => {
-      expect(registered.has(qualified)).toBe(true);
-    });
+  // Every registered container, so one a derived app adds is covered without editing this file.
+  test('ARCHIVED blocks every mutation except unarchive, and nothing else', () => {
+    const expected = rows().filter((r) => r.restriction === 'mutating' && r.action !== 'unarchive')
+      .map((r) => r.qualified);
+    expect(blockedActions('ARCHIVED').sort()).toEqual(expected.sort());
+    // Forced unless both classes occur: a registry of mutations alone would pass trivially.
+    expect(rows().some((r) => r.restriction === 'reading')).toBe(true);
   });
 
-  test('every ARCHIVED exemption is a mutation', () => {
-    ARCHIVED_EXEMPT_ACTIONS.forEach((qualified) => {
-      expect(MUTATING_ACTIONS.has(qualified)).toBe(true);
-    });
+  test('DELETED also blocks reading the bytes, and still leaves reading the record', () => {
+    expect(typeBlocks('DELETED', 'dataset.download')).toBe(true);
+    expect(typeBlocks('DELETED', 'dataset.list_files')).toBe(true);
+    expect(typeBlocks('DELETED', 'dataset.edit_metadata')).toBe(true);
+    expect(typeBlocks('DELETED', 'dataset.view_metadata')).toBe(false);
+    expect(typeBlocks('ARCHIVED', 'dataset.download')).toBe(false);
+  });
+
+  test('every exemption names a registered mutation', () => {
+    Object.values(RESTRICTION_TYPES).forEach(({ exempt }) => exempt.forEach((action) => {
+      const holders = rows().filter((r) => r.action === action);
+      expect([action, holders.length > 0]).toEqual([action, true]);
+      holders.forEach((r) => expect([r.qualified, r.restriction]).toEqual([r.qualified, 'mutating']));
+    }));
+  });
+
+  test('an action no container registers is an error, not an allowance', () => {
+    expect(() => typeBlocks('ARCHIVED', 'dataset.no_such_action')).toThrow();
   });
 });
 

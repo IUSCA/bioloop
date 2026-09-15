@@ -1,9 +1,10 @@
 const {
-  Prisma, ACCESS_REQUEST_STATUS, GROUP_MEMBER_ROLE,
+  Prisma, ACCESS_REQUEST_STATUS,
 } = require('@prisma/client');
 
 const prisma = require('@/db');
 const { enumToSql, buildWhereClause } = require('@/utils/sql');
+const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 const { withGrantCounts, getAccessSummaryForRequest } = require('./access_summary');
 
 const INCLUDES_CONFIG = {
@@ -124,33 +125,24 @@ async function getRequestsPendingReviewForUser({
 }) {
   const statusFilter = Prisma.sql`ar.status = ${enumToSql(ACCESS_REQUEST_STATUS.UNDER_REVIEW)}`;
   const resourceFilter = resource_id ? Prisma.sql`ar.resource_id = ${resource_id}` : Prisma.empty;
-  const typeFilter = resource_type ? Prisma.sql`r.type = ${enumToSql(resource_type)}` : Prisma.empty;
-  const whereClause = buildWhereClause([statusFilter, resourceFilter, typeFilter], 'AND');
+  // Reviewable is the admin path on the resource, read from the path statement the review
+  // action's own rule compiles to, not written here a second time.
+  // @see docs/design/groups/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+  const reviewable = Prisma.sql`ar.resource_id IN (
+    SELECT p.resource_id FROM (${accessPathsQuery({ userId: reviewer_id, resourceType: 'dataset' })}) p
+    WHERE p.path_kind = 'admin'
+    UNION
+    SELECT p.resource_id FROM (${accessPathsQuery({ userId: reviewer_id, resourceType: 'collection' })}) p
+    WHERE p.path_kind = 'admin'
+  )`;
+  const typeFilter = resource_type
+    ? Prisma.sql`EXISTS (SELECT 1 FROM resource r WHERE r.id = ar.resource_id AND r.type = ${enumToSql(resource_type)})`
+    : Prisma.empty;
+  const whereClause = buildWhereClause([statusFilter, reviewable, resourceFilter, typeFilter], 'AND');
 
   const dataSql = Prisma.sql`
-    WITH reviewer_admin_groups AS (
-      SELECT gu.group_id
-      FROM active_group_user gu
-      WHERE gu.user_id = ${reviewer_id}
-        AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-    ),
-    owned_resources AS (
-      SELECT r.id AS resource_id, r.type
-      FROM resource r
-      JOIN dataset d ON d.resource_id = r.id
-      JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
-
-      UNION
-
-      SELECT r.id AS resource_id, r.type
-      FROM resource r
-      JOIN collection c ON c.id = r.id
-      JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
-    )
     SELECT ar.*
     FROM access_request ar
-    JOIN owned_resources r
-      ON ar.resource_id = r.resource_id
     ${whereClause}
     ORDER BY ${Prisma.raw(sort_by)} ${Prisma.raw(sort_order)}
     OFFSET ${offset}
@@ -158,29 +150,8 @@ async function getRequestsPendingReviewForUser({
   `;
 
   const countSql = Prisma.sql`
-    WITH reviewer_admin_groups AS (
-      SELECT gu.group_id
-      FROM active_group_user gu
-      WHERE gu.user_id = ${reviewer_id}
-        AND gu.role = ${enumToSql(GROUP_MEMBER_ROLE.ADMIN)}
-    ),
-    owned_resources AS (
-      SELECT r.id AS resource_id, r.type
-      FROM resource r
-      JOIN dataset d ON d.resource_id = r.id
-      JOIN reviewer_admin_groups rag ON d.owner_group_id = rag.group_id
-
-      UNION
-
-      SELECT r.id AS resource_id, r.type
-      FROM resource r
-      JOIN collection c ON c.id = r.id
-      JOIN reviewer_admin_groups rag ON c.owner_group_id = rag.group_id
-    )
     SELECT COUNT(*) AS total_count
     FROM access_request ar
-    JOIN owned_resources r
-      ON ar.resource_id = r.resource_id
     ${whereClause}
   `;
 

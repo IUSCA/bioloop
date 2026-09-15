@@ -38,12 +38,12 @@ function precedenceRows() {
   });
 }
 
-/** The path kinds the reading actions of a container can put in standing. */
+/** The path kinds the non-mutating actions of a container can put in standing. */
 function standingKinds(resourceType) {
   const container = policyRegistry.get(resourceType);
   const kinds = new Set(['platform_admin']);
   container.getActionNames()
-    .filter((action) => container.getRestrictionClass(action) === PolicyContainer.RESTRICTION_CLASS.READING)
+    .filter((action) => container.getRestrictionClass(action) !== PolicyContainer.RESTRICTION_CLASS.MUTATING)
     .forEach((action) => container.getPolicy(action).terms()
       .filter((term) => term.meta?.pathKind)
       .forEach((term) => kinds.add(term.meta.pathKind)));

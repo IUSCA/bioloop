@@ -1,5 +1,5 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden, expectNotForbidden } = require('../../assertions/parity');
+const { expectConcealed, expectForbidden, expectNotForbidden } = require('../../assertions/parity');
 
 /**
  * Phase 2 — the refusal spine, on discovery.
@@ -90,12 +90,13 @@ test('E2 — a collection holds only its own group\'s datasets', async ({ world,
  * `authorize('access_request', 'create')` is `Policy.always` and the service validated only
  * the request's *subject*, so anyone holding a resource UUID could file against a resource
  * invisible to them — and the reply confirmed the resource was real. Measured here: a
- * stranger's request against the lab's dataset is refused 403.
+ * stranger's request against the lab's dataset is refused, and answered 404 as if the dataset
+ * did not exist.
  */
 test('G3 — a request against an invisible resource is refused', async ({ world, as }) => {
   const frank = await as('frank');
 
-  await expectForbidden(frank.api, 'POST', '/access-requests', {
+  await expectConcealed(frank.api, 'POST', '/access-requests', {
     type: 'NEW',
     resource_id: world.datasets.labPrimary.resource_id,
     subject_id: world.people.frank.subject_id,

@@ -8,6 +8,9 @@ const Policy = require('./Policy');
 const RESTRICTION_CLASS = Object.freeze({
   MUTATING: 'mutating',
   READING: 'reading',
+  // Reads the bytes of a resource rather than its record. A deleted dataset keeps its record
+  // and has no bytes, so a restriction can block this class and leave reading alone.
+  DATA: 'data',
 });
 
 /**
@@ -55,6 +58,14 @@ function mutating(policy, transition = null) {
  */
 function reading(policy) {
   return { policy, restriction: RESTRICTION_CLASS.READING, transition: null };
+}
+
+/**
+ * Declares an action that reads a resource's bytes.
+ * @param {Policy} policy
+ */
+function readingData(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.DATA, transition: null };
 }
 
 /**
@@ -316,3 +327,4 @@ module.exports = PolicyContainer;
 module.exports.RESTRICTION_CLASS = RESTRICTION_CLASS;
 module.exports.mutating = mutating;
 module.exports.reading = reading;
+module.exports.readingData = readingData;

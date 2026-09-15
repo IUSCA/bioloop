@@ -118,12 +118,14 @@ function body(overrides = {}) {
 }
 
 describe('POST /access-requests is gated on the resource', () => {
-  test('a user who cannot see the dataset is refused', async () => {
+  test('a user who cannot see the dataset is refused as if it did not exist', async () => {
     currentUser = outsider;
 
     const res = await request(app).post('/access-requests').send(body());
 
-    expect(res.status).toBe(403);
+    // No standing on the dataset, so the answer is the one an unknown id gets.
+    // @see docs/design/groups/access-model.md — Refusal shapes
+    expect(res.status).toBe(404);
 
     const filed = await prisma.access_request.count({
       where: { requester_id: outsider.subject_id, resource_id: dataset.resource_id },

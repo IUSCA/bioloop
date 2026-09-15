@@ -130,7 +130,9 @@ const runControl = (verb) => asyncHandler(async (req, res, next) => {
     preFetched: { user: req.user, context: { req } },
   });
   if (!decision.granted) {
-    return next(createError.Forbidden(`Not permitted to ${verb} runs on this dataset`));
+    return next(decision.status === 404
+      ? createError.NotFound('Workflow not found for this dataset')
+      : createError.Forbidden(`Not permitted to ${verb} runs on this dataset`));
   }
 
   logger.info(`${verb} workflow ${workflow_id} on dataset ${dataset_id}`);

@@ -88,6 +88,31 @@ async function expectForbidden(api, method, url, body) {
 }
 
 /**
+ * Asserts the API answered this caller as if the resource did not exist.
+ *
+ * A caller with no standing on a resource is refused with 404, the answer an unknown id gets, so
+ * the refusal confirms nothing. A caller who stands on the resource and is refused an action
+ * gets 403, which `expectForbidden` asserts.
+ *
+ * A 404 alone could be a route that was never mounted. Pair every use with a caller who reaches
+ * the same URL, as `expectForbidden` is paired with `expectNotForbidden`.
+ *
+ * @see docs/design/groups/access-model.md — Refusal shapes
+ */
+async function expectConcealed(api, method, url, body) {
+  const status = await api.status(method, url, body);
+  expect(
+    status,
+    `${method} ${url} was rejected by validation (400) before authorization ran.`,
+  ).not.toBe(400);
+  expect(
+    status,
+    `expected ${method} ${url} to be concealed from a caller with no standing (404), got ${status}`,
+  ).toBe(404);
+  return status;
+}
+
+/**
  * Asserts authorization did *not* refuse this caller, without requiring the call to succeed.
  *
  * The pair to `expectForbidden`, and the only honest positive control where the handler
@@ -106,6 +131,7 @@ async function expectNotForbidden(api, method, url, body) {
 }
 
 module.exports = {
+  expectConcealed,
   REFUSALS,
   expectRefused,
   expectAllowed,

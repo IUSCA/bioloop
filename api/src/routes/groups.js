@@ -15,7 +15,7 @@ const profileService = require('@/services/profiles');
 const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
 const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray,
+  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, refusalMessage,
   callerIsPlatformAdmin, projectRows,
 } = require('@/authorization');
 const {
@@ -248,7 +248,7 @@ router.get(
     });
 
     if (!permission.granted) {
-      return next(createError(403, 'Forbidden'));
+      return next(createError(permission.status, refusalMessage(permission)));
     }
 
     res.json({

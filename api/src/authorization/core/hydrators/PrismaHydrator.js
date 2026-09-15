@@ -145,9 +145,12 @@ class PrismaHydrator extends Hydrator {
       throw new HydrationError(`[${this.model}] Cannot hydrate: preFetched must be an object`);
     }
 
+    // A record with no id, such as the resource of a create, has nothing to key a cache entry
+    // on. Two creates in one request name different owning groups, and a shared entry would
+    // answer the second with the first one's attributes, so such a record lives for this call.
     const cacheKey = PrismaHydrator.cacheKey(this.model, id);
-    if (!cache.has(cacheKey)) cache.set(cacheKey, {});
-    const recordCache = cache.get(cacheKey);
+    if (id != null && !cache.has(cacheKey)) cache.set(cacheKey, {});
+    const recordCache = id != null ? cache.get(cacheKey) : {};
 
     // merge pre-fetched attributes, but do not overwrite keys already present in the cache
     // Use structuredClone for deep cloning
@@ -192,7 +195,7 @@ class PrismaHydrator extends Hydrator {
       }));
     }
 
-    cache.set(cacheKey, recordCache);
+    if (id != null) cache.set(cacheKey, recordCache);
     return recordCache;
   }
 }

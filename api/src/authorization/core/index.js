@@ -26,7 +26,8 @@ const {
 const { evaluateAttributeFilters, createFilterFunction } = require('./attributeFilters');
 
 // Middleware
-const { initializePolicyContext, createAuthorizationMiddlewareFunction } = require('./middlewares');
+const { initializePolicyContext, createAuthorizationMiddlewareFunction, refusalMessage } = require('./middlewares');
+const { createDecisionPipeline } = require('./pipeline');
 
 const { findUnhydratableRequirements } = require('./requiresCheck');
 
@@ -56,5 +57,7 @@ module.exports = {
   // Middleware
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
+  createDecisionPipeline,
+  refusalMessage,
   toCapabilitiesArray,
 };

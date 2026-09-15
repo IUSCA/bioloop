@@ -35,7 +35,7 @@ const ALLOWLIST = [
     file: 'services/system.js', line: 'where: { is_archived: false },', reason: DISPLAY, count: 2,
   },
   {
-    file: 'services/datasets_v2/ownership.js', line: 'is_archived: false', reason: RESTRICTION, count: 3,
+    file: 'services/datasets_v2/ownership.js', line: 'is_archived: false', reason: RESTRICTION, count: 1,
   },
 ];
 

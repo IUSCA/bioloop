@@ -246,10 +246,9 @@ supplies `true` through `preFetched` and the loader never runs.
 The collection policies take the same two terms against `collection.profile_visibility`, added
 to the existing `view_metadata` arms.
 
-`view_profile` must be added to `READING_ACTIONS` in
-`api/src/authorization/builtin/restrictions.js`. A test asserts that every registered action
-appears in `READING_ACTIONS` or `MUTATING_ACTIONS`, and it fails until the entry exists. An
-archived group keeps serving its public profile, because `ARCHIVED` blocks mutation only.
+`view_profile` is declared with `reading(...)`. A test asserts that every registered action
+declares a restriction class. An archived group keeps serving its public profile, because
+`ARCHIVED` blocks the `mutating` class only.
 
 ### The anonymous principal
 

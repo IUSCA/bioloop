@@ -287,6 +287,18 @@ What made them work, after the selectors were found by running them rather than 
   the result row renders `name || email`. So search by the username the world handed you and
   click by the display name, which a spec has to look up.
 
+## A refusal without standing is 404
+
+A caller with no standing on the resource a URL names gets 404, the answer an unknown id gets. A
+caller who stands on it and is refused an action gets 403, and so does any call that names no
+resource, such as `POST /grants`. `expectConcealed` in `src/assertions/parity.js` asserts 404
+exactly, and `expectForbidden` still asserts 403. Pair `expectConcealed` with a caller who reaches
+the same URL, because a 404 alone could be a route that was never mounted.
+
+The suite borrows the flows cast from `api/prisma/seed_data/flows_world.js`. The demo world the
+development database usually holds has no `priya`, so the suite cannot run against it until the
+flows world is seeded.
+
 ## Keeping this current
 
 When a phase teaches something this page does not mention — a response shape that surprised

@@ -5,8 +5,7 @@
  * `policyRegistry.listTypes()`, so a container a derived app registers is covered without
  * editing this file.
  *
- * - Every action declares a restriction class, and the declaration agrees with the
- *   restriction layer's own lists until those lists are derived from it.
+ * - Every action declares a restriction class, which is what the restriction layer reads.
  * - Every leaf term says which path kind it confers, or names the rule it is instead.
  * - Every container is frozen.
  * - Every transition row names only states the schema's enum defines.
@@ -25,12 +24,10 @@ require('module-alias/register');
 const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 
 const { policyRegistry, hydratorRegistry } = require('@/authorization');
-const { MUTATING_ACTIONS, READING_ACTIONS } = require('@/authorization/builtin/restrictions');
 const {
   buildActionTable, buildTermTable, buildTransitionTable,
 } = require('@/authorization/builtin/tables');
 const { findUnhydratableRequirements } = require('@/authorization/core/requiresCheck');
-const { RESTRICTION_CLASS } = require('@/authorization/core/policies/PolicyContainer');
 
 const PATH_KINDS = ['platform_admin', 'admin', 'oversight', 'member', 'grant', 'resource_rule', 'self'];
 
@@ -46,16 +43,6 @@ test('every action declares a restriction class', () => {
   const unclassified = actions.filter((row) => !row.restriction)
     .map((row) => `${row.resource_type}.${row.action}`);
   expect(unclassified).toEqual([]);
-});
-
-test('each declared class agrees with the restriction layer', () => {
-  actions.forEach((row) => {
-    const qualified = `${row.resource_type}.${row.action}`;
-    let listed = 'unlisted';
-    if (MUTATING_ACTIONS.has(qualified)) listed = RESTRICTION_CLASS.MUTATING;
-    if (READING_ACTIONS.has(qualified)) listed = RESTRICTION_CLASS.READING;
-    expect([qualified, row.restriction]).toEqual([qualified, listed]);
-  });
 });
 
 test('every leaf term names its path kind or its rule', () => {

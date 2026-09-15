@@ -33,12 +33,18 @@ const props = defineProps({
 const emit = defineEmits(["select"]);
 
 const RESULT_COUNT = 5;
+// The directory answers a caller who is not a platform admin only for a search of at least
+// three characters, and with at most ten rows.
+// @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 15
+const MIN_SEARCH_LENGTH = 3;
+const MAX_ROWS = 10;
 
 async function searchUsers(searchQuery) {
+  if ((searchQuery ?? "").trim().length < MIN_SEARCH_LENGTH) return [];
   try {
     const res = await UserService.getAll({
-      search: searchQuery,
-      take: RESULT_COUNT + props.excludeIds.length,
+      search: searchQuery.trim(),
+      take: Math.min(RESULT_COUNT + props.excludeIds.length, MAX_ROWS),
     });
     const value = res.data?.users || [];
     return value

@@ -83,7 +83,7 @@ Each derived relation has one definition, and every consumer reads that definiti
 - **`has_admin(g)`** holds when some account that is not deleted has an active `ADMIN` membership in `g`. It is the one definition the last-admin rule and the no-active-admins report both read.
 - **`subjects(u)`** holds `u`, every group `u` is an effective member of, Authenticated Users when `u` is signed in, and Public.
 - **`holds(u, r, t)`** holds when some active grant has its subject in `subjects(u)`, names `r` or a collection that actively contains `r`, and carries a type that implies `t` through the closure.
-- **`restricted(r, a)`** holds when an active restriction blocks the restriction class of `a`. The restriction may sit on `r`, on the owning group of `r`, or on an ancestor of that group.
+- **`restricted(r, a)`** holds when an active restriction blocks the restriction class of `a`. The restriction may sit on `r`, on the owning group of `r`, or on an ancestor of that group. Every action declares one of three classes: `mutating`, `reading`, or `data`, which reads a dataset's bytes. ARCHIVED blocks `mutating`. DELETED holds on every soft-deleted dataset and blocks `mutating` and `data`. Neither blocks `unarchive`.
 - **`precondition(a, x)`** holds when the state of `x` admits `a`, according to the transition table below.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
 
@@ -234,6 +234,8 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 | A grant blocks a hard delete | `ON DELETE RESTRICT` |
 | One update per version | optimistic `expected_version`, 409 on a stale write |
 | `is_archived` agrees with the restriction table | one transaction, and `restrictions.test.js` |
+| A service change to a restricted group or collection is refused | `isRestricted` on `effective_restriction`, inside the transaction that holds the row lock, and `serviceGuards.test.js` |
+| A collection with history is never deleted | `deleteCollection`, under the collection row lock, and the `delete` transition row |
 | A group that has an admin keeps one | `assertAdminsRemain`, inside the removal or demotion transaction, under the group row lock |
 | A collection's datasets share its owning group | `addDatasets`, and the absence of any route that changes a dataset's owner |
 | Access-request status moves only along the transition table | a `WHERE status = ...` guard on each write |
@@ -303,7 +305,10 @@ whether a caller may request access.
 | the revoke preview | `previewRevoke`, from coverage over every path | `RevokeGrantModal` | `tests/services/grants/revokePreview.test.js` |
 | list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | the list arm |
 | `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
-| refusal status and the 409 body | the routes | `ErrorState` and the request form | the refusal arm |
+| refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
+| the actions a restriction type blocks | `blockedActions`, from each action's restriction class | the archive dialogs, through `restrictionLabels.js` | `tests/model/restrictionLabels.test.js` |
+| a user directory search | `searchDirectory`: three characters, ten people, four fields | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
+| eligible owner groups | `dataset.contribute` decided on each candidate the path statement names | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
 | a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | the projection arm |
 
 ## Decision surfaces outside the engine

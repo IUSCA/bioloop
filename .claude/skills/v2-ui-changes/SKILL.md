@@ -559,6 +559,17 @@ Every demo cast member holds only the `user` role, and `dev-login` refuses `priy
 remove it after: `prisma.user_role.create({ data: { user_id: frank.id, role_id: adminRole.id } })`,
 then `deleteMany` the same row.
 
+## The archive dialogs list what the restriction layer blocks
+
+`GroupArchiveConfirmModal.vue` and `CollectionArchiveConfirmModal.vue` fetch
+`GET /v2/restrictions/ARCHIVED/blocked-actions` when shown and render `prohibitedLabels` from
+`services/v2/restrictionLabels.js`. A new mutating action needs an entry in `ACTION_LABELS`;
+`api/tests/model/restrictionLabels.test.js` fails until it has one. If the fetch fails, the list
+is empty rather than guessed.
+
+The subject pickers search `GET /v2/users` only from three characters and ask for at most ten
+rows, because a caller who is not a platform admin is refused anything else.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a new trap, a

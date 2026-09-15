@@ -1,6 +1,6 @@
 const { test, expect } = require('../../fixtures');
 const {
-  expectRefused, expectForbidden, expectNotForbidden, expectAbsentButPresent,
+  expectRefused, expectForbidden, expectNotForbidden, expectAbsentButPresent, expectConcealed,
 } = require('../../assertions/parity');
 const { recordApiCalls, expectAllRefused } = require('../../assertions/replay');
 
@@ -106,12 +106,11 @@ test('N1 — the file plane is refused by authorization, not by accident', async
 
   for (const stranger of [frank, quinn]) {
     for (const path of everyRoute) {
-      // 403 exactly, not "any refusal". These routes used to answer 404 to a platform admin
-      // because the fixture holds no file rows, which would have passed on a build with the
-      // policy removed. The listing routes no longer do that, but the strict assertion is
-      // what keeps the next such route honest.
+      // 404 exactly, not "any refusal": a stranger holds no standing on the dataset, so the
+      // refusal is the answer an unknown id gets. The control below is what keeps a route that
+      // 404s for everybody from passing.
       // eslint-disable-next-line no-await-in-loop
-      await expectForbidden(stranger.api, 'GET', path(id));
+      await expectConcealed(stranger.api, 'GET', path(id));
     }
   }
 

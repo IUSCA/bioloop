@@ -31,17 +31,7 @@ const W = require('./worlds');
 const { writeWorld } = require('./dbWorld');
 const { runEngineArm, runCreatesArm } = require('./engineArm');
 
-const CLASSIFIED = [
-  {
-    name: 'a deleted dataset still admits mutating and data-plane actions',
-    decided: 'decisions.md 16, row 4',
-    removedIn: 'Phase 6, operation effects',
-    matches: (d) => d.resourceType === 'dataset'
-      && d.dims.deleted === 'yes'
-      && d.reference.blockedBy === 'DELETED'
-      && d.engine.allowed === true,
-  },
-];
+const CLASSIFIED = [];
 
 let result;
 let written;

@@ -22,9 +22,8 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const {
-  authorizeAction, decideRows, policyRegistry, restrictions, toCapabilitiesArray,
+  authorizeAction, decideRows, evaluateCapabilitySet, hydratorRegistry, policyRegistry, toCapabilitiesArray,
 } = require('@/authorization');
-const { filterRestrictedCapabilities } = require('@/authorization/core/middlewares');
 const { PrismaHydrator } = require('@/authorization/core/hydrators/PrismaHydrator');
 const { ANONYMOUS_PRINCIPAL } = require('@/constants');
 
@@ -68,21 +67,23 @@ const ID_OF = { dataset: (d) => d.resource_id, collection: (c) => c.id, group: (
 const WORLD_ID = { dataset: (f) => f.dataset.id, collection: (f) => f.collection.id, group: (f) => f.owner.id };
 
 async function detailMeta(resourceType, user, id, anonymous) {
+  const identifiers = { user, resource: id };
   const decision = await authorizeAction(resourceType, 'view_metadata', {
-    identifiers: { user, resource: id },
+    identifiers,
     policyExecutionContext: freshContext(anonymous),
     shouldDeriveCapabilities: true,
     shouldDeriveStanding: true,
   });
-  const capabilities = await filterRestrictedCapabilities({
-    capabilities: decision.capabilities ?? {},
-    resourceType,
-    resourceId: id,
-    restrictionChecker: restrictions.checkRestriction,
-  });
+  // What the action policies alone allow, before any restriction, for the forcing count below.
+  const unrestricted = decision.granted ? await evaluateCapabilitySet({
+    policyContainer: policyRegistry.get(resourceType),
+    identifiers,
+    hydratorRegistry,
+    policyExecutionContext: freshContext(anonymous),
+  }) : {};
   return {
-    capabilities: toCapabilitiesArray(capabilities),
-    unrestricted: toCapabilitiesArray(decision.capabilities ?? {}),
+    capabilities: toCapabilitiesArray(decision.capabilities ?? {}),
+    unrestricted: toCapabilitiesArray(unrestricted),
     standing: decision.standing ?? [],
   };
 }
@@ -114,7 +115,7 @@ test('every list row carries the capabilities and standing its detail route repo
       for (const [i, id] of ids.entries()) {
         const expected = await detailMeta(resourceType, user, id, anonymous);
         compared += 1;
-        if (expected.capabilities.length !== expected.unrestricted.length) restricted += 1;
+        if (expected.unrestricted.some((a) => !expected.capabilities.includes(a))) restricted += 1;
         if (!expected.capabilities.includes('view_metadata')) unopenable += 1;
         if (canonical(metas[i]) !== canonical(expected)) {
           wrong.push(`cell ${f.index} ${resourceType} row ${i}: `

@@ -104,7 +104,7 @@
       </VaCard>
 
       <VaCard
-        v-if="props.canArchive && !props.dataset.is_deleted"
+        v-if="props.canArchive"
         class="border border-solid border-red-200 dark:border-red-800"
       >
         <VaCardContent>

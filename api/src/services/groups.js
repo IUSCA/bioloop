@@ -20,7 +20,6 @@ const PRISMA_GROUP_INCLUDES = {};
 
 // eslint-disable-next-line max-len
 const CONFLICT_ERROR_MESSAGE = 'Failed to update group metadata due to concurrent modification. Please refresh and try again.';
-const ARCHIVED_ERROR_MESSAGE = 'Cannot modify an archived group.';
 
 /** Helper function to create audit records for group member role changes
  * @param {Prisma.TransactionClient} tx - Prisma transaction client
@@ -346,9 +345,9 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
       where: { id: group_id },
     });
 
-    // ensure group is not archived before allowing metadata updates
-    if (currentGroup.is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    // The second line behind the middleware's restriction check.
+    if (await restrictionService.isRestricted(tx, { group_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     if (data.name && data.name !== currentGroup.name) {
@@ -677,18 +676,18 @@ async function removeGroupMembers(group_id, {
   return prisma.$transaction(async (tx) => {
     // lock the group row to prevent concurrent modifications (e.g. adding members) while we're modifying memberships
     const groupRecords = await tx.$queryRaw`
-      SELECT is_archived
+      SELECT id
       FROM "group" g
       where g.id = ${group_id}
       FOR UPDATE;
     `;
 
-    // validate group exists and is not archived before allowing membership removals
+    // validate group exists and is not restricted before allowing membership removals
     if (groupRecords.length === 0) {
       throw createError.NotFound('Group not found');
     }
-    if (groupRecords[0].is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    if (await restrictionService.isRestricted(tx, { group_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     await assertAdminsRemain(tx, group_id, user_ids);
@@ -732,7 +731,7 @@ async function removeGroupMembers(group_id, {
 async function addGroupMembers(group_id, { user_ids, actor_id }) {
   return prisma.$transaction(async (tx) => {
     const groupRows = await tx.$queryRaw`
-      SELECT is_archived
+      SELECT id
       FROM "group" g
       where g.id = ${group_id}
       FOR UPDATE;
@@ -740,8 +739,8 @@ async function addGroupMembers(group_id, { user_ids, actor_id }) {
     if (groupRows.length === 0) {
       throw createError.NotFound('Group not found');
     }
-    if (groupRows[0].is_archived) {
-      throw createError.Conflict(ARCHIVED_ERROR_MESSAGE);
+    if (await restrictionService.isRestricted(tx, { group_id })) {
+      throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
     }
 
     const createdRecords = await tx.$queryRaw`

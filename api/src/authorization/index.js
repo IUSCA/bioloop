@@ -34,9 +34,11 @@ const {
   // Middleware
   initializePolicyContext,
   createAuthorizationMiddlewareFunction,
+  createDecisionPipeline,
+  refusalMessage,
 
   // capabilities
-  evaluateCapabilitySet, applyTransitions,
+  evaluateCapabilitySet,
   CapabilityEvaluationError,
   deriveStanding,
   toCapabilitiesArray,
@@ -67,7 +69,7 @@ const { findUnhydratableRequirements, findAsyncTerms } = require('./core/require
 const PLATFORM_ADMIN = { policy: isPlatformAdmin };
 const { expandPath } = require('./builtin/standing');
 const { accessPathsByResource, RESOURCE_TYPES } = require('./builtin/accessPaths');
-const { filterRestrictedCapabilities } = require('./core/middlewares');
+const { filterRestrictedCapabilities } = require('./core/pipeline');
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
@@ -75,6 +77,7 @@ const { contextHydrator } = require('./builtin/hydrators/context');
 const { accessRequestHydrator } = require('./builtin/hydrators/access_request');
 const { datasetHydrator } = require('./builtin/hydrators/dataset');
 const { grantHydrator } = require('./builtin/hydrators/grant');
+const { collectionHydrator } = require('./builtin/hydrators/collection');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
@@ -111,6 +114,7 @@ hydratorRegistry.register('context', contextHydrator);
 hydratorRegistry.register('access_request', accessRequestHydrator);
 hydratorRegistry.register('dataset', datasetHydrator);
 hydratorRegistry.register('grant', grantHydrator);
+hydratorRegistry.register('collection', collectionHydrator);
 
 // Register custom hydrators (add yours here in derived apps)
 
@@ -125,7 +129,20 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
   restrictions.checkRestriction,
   PLATFORM_ADMIN,
   expandPath,
+  // A caller with no standing on a resource is answered as if it did not exist.
+  // @see docs/design/groups/access-model.md — Refusal shapes
+  { concealRefusalsWithoutStanding: true },
 );
+
+// The same pipeline the middleware runs, for routes that decide in the handler.
+const decide = createDecisionPipeline({
+  policyRegistry,
+  hydratorRegistry,
+  restrictionChecker: restrictions.checkRestriction,
+  platformAdmin: PLATFORM_ADMIN,
+  expandPath,
+  concealRefusalsWithoutStanding: true,
+});
 
 // inject hydrate registry into core authorizeWithFilters function
 async function authorizeWithFilters({
@@ -141,88 +158,20 @@ async function authorizeWithFilters({
   });
 }
 
-// helper function to resolve policy and attribute rules for a given resourceType and action,
-// then call authorizeWithFilters
-async function authorizeAction(resourceType, action, {
-  identifiers,
-  policyExecutionContext,
-  preFetched,
-  shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
-  shouldDeriveStanding = false, // whether to derive the caller's standing, as permission.standing
-}) {
-  // get the policy
-  // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
-  const policyContainer = policyRegistry.get(resourceType);
-  const policy = policyContainer.getPolicy(action);
-  const attributeRules = policyContainer.getAttributeRules(action);
-
-  // allowed = no restriction blocks this AND some grant permits it.
-  const blockedBy = await restrictions.checkRestriction({
-    resourceType,
-    action,
-    resourceId: identifiers.resource,
-    preFetchedResource: preFetched?.resource,
-  });
-  if (blockedBy) {
-    return { granted: false, filter: null, blockedBy };
-  }
-
-  // A platform admin is allowed every action, so the action's own policy is not consulted.
-  // After the restriction check, for the same reason as in the middleware.
-  // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
-  const adminResult = await authorizeWithFilters({
-    policy: PLATFORM_ADMIN.policy,
-    // Everything, always. An empty rule set makes a filter that strips every field.
-    attributeRules: [{ policy: Policy.always, attribute_filters: ['*'] }],
-    identifiers,
-    registry: hydratorRegistry,
-    policyExecutionContext,
-    preFetched,
-  });
-  if (adminResult.granted) {
-    if (shouldDeriveCapabilities) {
-      // Every action, less those the resource's state forbids. @see core/capabilities.js
-      adminResult.capabilities = await applyTransitions({
-        policyContainer,
-        capabilities: Object.fromEntries(policyContainer.getActionNames().map((name) => [name, true])),
-        identifiers,
-        hydratorRegistry,
-        caches: { resource: policyExecutionContext?.cache?.resource },
-        preFetched,
-      });
-    }
-    if (shouldDeriveStanding) {
-      adminResult.standing = [{ kind: 'platform_admin' }].concat(await deriveStanding({
-        policyContainer, identifiers, hydratorRegistry, policyExecutionContext, preFetched, expandPath,
-      }));
-    }
-    return adminResult;
-  }
-
-  const permission = await authorizeWithFilters({
-    policy,
-    attributeRules,
-    identifiers,
-    registry: hydratorRegistry,
-    policyExecutionContext,
-    preFetched,
-  });
-
-  if (shouldDeriveCapabilities) {
-    const capabilities = await evaluateCapabilitySet({
-      policyContainer,
-      identifiers,
-      hydratorRegistry,
-      policyExecutionContext,
-    });
-    permission.capabilities = capabilities;
-  }
-  if (shouldDeriveStanding) {
-    permission.standing = await deriveStanding({
-      policyContainer, identifiers, hydratorRegistry, policyExecutionContext, preFetched, expandPath,
-    });
-  }
-  return permission;
+/**
+ * Decide one action in a route handler, through the pipeline the middleware runs.
+ *
+ * Returns the permission: `granted`, `filter`, and, when asked, `capabilities` and `standing`.
+ * A refusal carries `status`, 404 or 403, and `blockedBy` when a restriction refused it.
+ *
+ * @param {string} resourceType
+ * @param {string} action
+ * @param {Object} options - `identifiers`, `policyExecutionContext`, `preFetched`,
+ *   `shouldDeriveCapabilities`, and `shouldDeriveStanding`
+ * @see docs/design/groups/access-model-verification-plan.md — One pipeline
+ */
+async function authorizeAction(resourceType, action, options) {
+  return decide(resourceType, action, options);
 }
 
 /**
@@ -419,6 +368,7 @@ module.exports = {
   // Middleware
   initializePolicyContext,
   createAuthorizationMiddleware,
+  refusalMessage,
   // Policy framework
   Policy,
   PolicyContainer,

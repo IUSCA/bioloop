@@ -120,23 +120,15 @@
                   <ul
                     class="space-y-1 text-sm text-rose-800 dark:text-rose-200"
                   >
-                    <li class="flex items-start gap-2">
+                    <li
+                      v-for="label in prohibited"
+                      :key="label"
+                      class="flex items-start gap-2"
+                    >
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
                       />
-                      Add / remove datasets
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Modify collection contents
-                    </li>
-                    <li class="flex items-start gap-2">
-                      <span
-                        class="mt-1 inline-block h-2 w-2 rounded-full bg-rose-700 dark:bg-rose-200"
-                      />
-                      Update grants
+                      {{ label }}
                     </li>
                   </ul>
                 </div>
@@ -199,6 +191,8 @@
 import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import CollectionService from "@/services/v2/collections";
+import RestrictionService from "@/services/v2/restrictions";
+import { prohibitedLabels } from "@/services/v2/restrictionLabels";
 
 const props = defineProps({
   /** ID of the collection being archived/unarchived. */
@@ -220,9 +214,31 @@ const confirmationText = ref("");
 const confirmationInput = ref(null);
 const loading = ref(false);
 
+// What archiving stops, from the restriction layer: every action ARCHIVED blocks on the
+// collection, and on the grants and requests that name it.
+const blockedActions = ref([]);
+const prohibited = computed(() =>
+  prohibitedLabels(blockedActions.value, [
+    "collection",
+    "grant",
+    "access_request",
+  ]),
+);
+
+async function loadBlockedActions() {
+  try {
+    const res = await RestrictionService.blockedActions("ARCHIVED");
+    blockedActions.value = res.data.blocked_actions;
+  } catch {
+    // Nothing is listed rather than a list that may be wrong.
+    blockedActions.value = [];
+  }
+}
+
 function show() {
   confirmationText.value = "";
   visible.value = true;
+  if (!props.isArchived) loadBlockedActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();

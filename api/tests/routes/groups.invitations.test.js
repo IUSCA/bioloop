@@ -106,9 +106,11 @@ describe('who may invite', () => {
     expect((await post({ email: 'dana@university.edu' })).status).toBe(403);
   });
 
-  test('someone outside the group may not', async () => {
+  test('someone outside the group may not, and is not told the group exists', async () => {
+    // No standing on the group, so the refusal is the answer an unknown id gets.
+    // @see docs/design/groups/access-model.md — Refusal shapes
     currentUser = outsider;
-    expect((await post({ email: 'dana@university.edu' })).status).toBe(403);
+    expect((await post({ email: 'dana@university.edu' })).status).toBe(404);
   });
 
   test('reading the list and cancelling need the same admin authority', async () => {

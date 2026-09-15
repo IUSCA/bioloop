@@ -430,6 +430,33 @@ assertion above was exactly that, and it was a genuine bug in the assertion.
   `npm run model:table` wrapper once failed inside a chained background command while the direct
   call succeeded; the cause was not isolated.
 
+## The operation-sequence suite
+
+`tests/model/operationSequences.test.js` drives random command sequences with fast-check
+`fc.commands` and `fc.asyncModelRun`. Each run builds a small world through the services, reads it
+back into the reference model's world shape as the starting model, and after every command
+compares the database snapshot, the engine against `createReference`, and the archived column
+against the open restriction.
+
+- `MODEL_SEQUENCE_RUNS`, `MODEL_SEQUENCE_COMMANDS`, and `MODEL_SEQUENCE_SEED` set the budget and
+  replay a seed. Measured on 2026-09-15: 6 runs of 12 commands took 11 s, 30 of 25 took 51 s.
+- Count command kinds inside `Command.run`. What `fc.commands` iterates are wrapper objects, so
+  `constructor.name` over them reports one kind.
+- A group's parent is the `group_closure` row at depth 1. The `group` table has no parent column,
+  and a snapshot that reads one silently flattens the tree.
+- Under zsh, `set -- $var` does not split words, so a budget loop over `"2 8" "6 12"` passes NaN.
+  Write each run out.
+- The suite counts refused commands and fails when none ran, because a run with no refusal never
+  reached a guard.
+- Pass `size: 'max'` to `fc.commands`. Without it, sequences stayed short, and removing the
+  `isRestricted` guard from `addGroupMembers` still passed 30 runs. With it, seed 617108713 fails
+  on adding a user to the child of an archived group.
+- Revert a guard for that check by copying the file aside and restoring it with a plain copy.
+  `cp -i` prompts, and a background task blocked on the prompt never restores the file.
+- Two operations-table cells sit outside the suite. The profile cache lifetime is
+  `tests/routes/public.cache.test.js`, and the owner-change refusal is
+  `tests/authorization/route_policy_bindings.test.js`.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

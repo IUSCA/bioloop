@@ -360,15 +360,15 @@ There is no `email.*` block. SMTP configuration already exists under `smtp`, rea
 | Apply invite token | — | Authenticated user, email must match the invitation |
 
 **Two policy actions rather than one, and not because different people hold them.** Both are
-`isGroupAdmin`. They are separate because the restriction layer sorts every action into
-mutating or reading, and these fall on opposite sides.
+`isGroupAdmin`. They are separate because every action declares a restriction class, and these
+fall on opposite sides.
 
-`group.invite` is in `MUTATING_ACTIONS`, so an archived group takes no new invitations — the
-same reasoning that puts `dataset.contribute` there. That does more than change a status code:
+`group.invite` is declared `mutating`, so an archived group takes no new invitations — the
+same reasoning that makes `dataset.contribute` mutating. That does more than change a status code:
 a blocked capability is absent from the capability map, so the UI never offers the button on an
 archived group rather than offering it and failing.
 
-`group.view_invitations` is in `READING_ACTIONS` and survives archiving. The admin explaining
+`group.view_invitations` is declared `reading` and survives archiving. The admin explaining
 why nobody can join is exactly the person who needs to see what is outstanding.
 
 The test is not whether the two want the same rule today. It is whether an argument for

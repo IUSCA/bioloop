@@ -56,8 +56,6 @@ const ALLOWED = [
   [RAW, 'components/v2/access-requests/RequestDetailsCard.vue', '!!props.request?.requester_id', 'self label'],
   [RAW, 'components/v2/groups/GroupCreateModal.vue', 'auth.user?.subject_id ?', 'the new group\'s admin list'],
   [RAW, 'components/v2/groups/EditGroupMemberRoleModal.vue', '!!props.member?.user?.subject_id', 'form validity'],
-  // Decision 4 blocks mutations on a soft-deleted dataset in Phase 6; until then this copy stays.
-  [RAW, 'components/v2/datasets/DatasetOverviewTab.vue', 'canArchive && !props.dataset.is_deleted', 'Phase 6'],
   // A decided request shows its outcome; no control depends on it.
   [STATUS, 'pages/v2/access-requests/[id].vue', '"PARTIALLY_APPROVED", "REJECTED"].includes(', 'outcome section'],
   [STATUS, 'components/v2/access-requests/AccessRequestCard.vue', 'DECIDED.includes(props.request.status)', 'outcome'],

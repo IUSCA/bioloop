@@ -86,8 +86,41 @@ async function restrictionHistory({ group_id = null, resource_id = null }) {
   });
 }
 
+/**
+ * What a service guard says when a restriction refuses a change.
+ */
+const RESTRICTED_MESSAGE = 'This is archived, or belongs to an archived group, and cannot be changed.';
+
+/**
+ * Whether any restriction is in force on a group or a resource, following the group tree.
+ *
+ * The service guards call this inside the transaction that holds their row lock. It reads
+ * `effective_restriction`, the view the authorization middleware reads, so the two lines ask
+ * the same question: a child of a group archived between the middleware's check and the write
+ * is refused here too.
+ * @see docs/design/groups/access-model-verification-plan.md — The restriction layer keeps its three lines
+ *
+ * @param {Object} client - the Prisma client or a transaction client
+ * @param {{group_id?: string, resource_id?: string}} target - exactly one of the two
+ * @returns {Promise<boolean>}
+ */
+async function isRestricted(client, { group_id = null, resource_id = null }) {
+  if ((group_id === null) === (resource_id === null)) {
+    throw new Error('A restriction check names exactly one of a group or a resource');
+  }
+  const clause = group_id
+    ? Prisma.sql`group_id = ${group_id}`
+    : Prisma.sql`resource_id = ${resource_id}`;
+  const [row] = await client.$queryRaw(Prisma.sql`
+    SELECT EXISTS (SELECT 1 FROM effective_restriction WHERE ${clause}) AS restricted
+  `);
+  return row.restricted;
+}
+
 module.exports = {
   RESTRICTION_TYPE,
+  RESTRICTED_MESSAGE,
+  isRestricted,
   applyRestriction,
   liftRestriction,
   restrictionHistory,

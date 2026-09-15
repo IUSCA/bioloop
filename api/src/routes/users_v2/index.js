@@ -1,4 +1,5 @@
 const express = require('express');
+const createError = require('http-errors');
 const { query } = require('express-validator');
 
 // const logger = require('@/services/logger');
@@ -7,6 +8,7 @@ const { validate } = require('@/middleware/validators');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const groupService = require('@/services/groups');
+const directory = require('@/services/user_directory');
 
 const router = express.Router();
 
@@ -43,6 +45,20 @@ router.get(
     const {
       search, sortBy, sort_order, skip, take,
     } = req.query;
+
+    // Only a platform admin reads the whole directory, with roles and last login. Everyone
+    // else searches it and gets names and addresses for a few matches.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 15
+    if (!(await callerIsPlatformAdmin(req))) {
+      const term = search.trim();
+      if (term.length < directory.SEARCH_LENGTH_BEFORE_DISCLOSURE) {
+        return next(createError.BadRequest(
+          `search must be at least ${directory.SEARCH_LENGTH_BEFORE_DISCLOSURE} characters`,
+        ));
+      }
+      const users = await directory.searchDirectory({ search: term, take });
+      return res.json({ metadata: { count: users.length }, users });
+    }
 
     const { users, count } = await userService.findAll({
       search,
