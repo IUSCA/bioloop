@@ -45,7 +45,7 @@ function refusalMessage({ status, blockedBy }) {
  * @param {Object} [platformAdmin] - see `createDecisionPipeline`
  * @param {Function} [expandPath] - see `createDecisionPipeline`
  * @param {Object} [options]
- * @param {boolean} [options.concealRefusalsWithoutStanding] - see `createDecisionPipeline`
+ * @param {string[]} [options.concealRefusalsWithoutStanding] - see `createDecisionPipeline`
  */
 function createAuthorizationMiddlewareFunction(
   policyRegistry,
@@ -54,7 +54,7 @@ function createAuthorizationMiddlewareFunction(
   restrictionChecker = null,
   platformAdmin = null,
   expandPath = null,
-  { concealRefusalsWithoutStanding = false } = {},
+  { concealRefusalsWithoutStanding = [] } = {},
 ) {
   const decide = createDecisionPipeline({
     policyRegistry,

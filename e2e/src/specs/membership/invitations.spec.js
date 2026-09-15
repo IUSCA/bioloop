@@ -1,5 +1,5 @@
 const { test, expect } = require('../../fixtures');
-const { expectForbidden } = require('../../assertions/parity');
+const { expectConcealed, expectForbidden } = require('../../assertions/parity');
 const { waitForInvitationToken, mailMark } = require('../../world/mail');
 
 /**
@@ -184,9 +184,9 @@ test('C6 — an admin cannot cancel another group\'s invitation', async ({ world
   const [invitation] = (await invitationsOf(alice, group.id))
     .filter((i) => i.invited_email.toLowerCase() === address.toLowerCase());
 
-  // Erin administers a different group. Governance is local, and cancelling an invitation is
-  // governance.
-  await expectForbidden(erin.api, 'DELETE', `/groups/${group.id}/invitations/${invitation.id}`);
+  // Erin administers a sibling group and holds no standing on this one, so the refusal is the
+  // answer an unknown id gets. Governance is local, and cancelling an invitation is governance.
+  await expectConcealed(erin.api, 'DELETE', `/groups/${group.id}/invitations/${invitation.id}`);
 
   // It is still pending afterwards — the refusal did not half-apply.
   const [after] = (await invitationsOf(alice, group.id))

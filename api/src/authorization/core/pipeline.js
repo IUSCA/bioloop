@@ -53,8 +53,10 @@ const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
  * After a grant, capabilities and standing are derived when asked for. Capabilities pass
  * through the transition table and the restriction checker on both branches.
  *
- * A refusal carries `status`. With `concealRefusalsWithoutStanding`, a refusal on a named
- * resource is 404 when the caller holds no standing on it, and 403 when they do.
+ * A refusal carries `status`. For a resource type listed in `concealRefusalsWithoutStanding`, a
+ * refusal on a named resource is 404 when the caller holds no standing on it, and 403 when they
+ * do. Every other container answers 403: its id may name a resource of another type, such as the
+ * dataset whose grants are listed, and its own terms say nothing about standing on that resource.
  *
  * @param {Object} params
  * @param {PolicyRegistry} params.policyRegistry
@@ -67,7 +69,7 @@ const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
  * @param {Object} [params.platformAdmin] - `{ policy }`, an application fact for the same reason.
  *   @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
  * @param {Function} [params.expandPath] - `(term, entities) => paths`, passed to `deriveStanding`.
- * @param {boolean} [params.concealRefusalsWithoutStanding]
+ * @param {string[]} [params.concealRefusalsWithoutStanding] - resource types whose refusals are concealed
  * @returns {function(string, string, Object): Promise<Object>}
  * @see docs/design/groups/access-model-verification-plan.md — One pipeline
  * @see docs/design/groups/access-model.md — Refusal shapes
@@ -79,7 +81,7 @@ function createDecisionPipeline({
   restrictionChecker = null,
   platformAdmin = null,
   expandPath = null,
-  concealRefusalsWithoutStanding = false,
+  concealRefusalsWithoutStanding = [],
 }) {
   const evaluateAdmin = ({ identifiers, policyExecutionContext, preFetched }) => authorizeWithFilters({
     policy: platformAdmin.policy,
@@ -113,7 +115,7 @@ function createDecisionPipeline({
     const { identifiers } = request;
     const refusal = { ...fields, granted: false, status: 403 };
     const named = identifiers.resource != null && identifiers.user != null;
-    const conceal = concealRefusalsWithoutStanding && named;
+    const conceal = named && concealRefusalsWithoutStanding.includes(request.resourceType);
     if (identifiers.user == null || !(conceal || shouldDeriveStanding)) return refusal;
 
     const isAdmin = Boolean(platformAdmin) && (await evaluateAdmin(request)).granted;

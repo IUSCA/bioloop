@@ -184,8 +184,8 @@ failed. The reason goes to the log.
 | Status | When | What the caller learns |
 |---|---|---|
 | 401 | no session, or an expired one | nothing about any resource |
-| 403 | a signed-in caller who holds standing on the resource, refused an action | the action is refused, and a restriction names itself |
-| 404 | an unknown id, or a caller with no standing on the resource | nothing: the two causes answer identically |
+| 403 | a signed-in caller who holds standing on the resource, refused an action; or any refusal by a container other than dataset, collection, or group | the action is refused, and a restriction names itself |
+| 404 | an unknown id, or a caller with no standing on the dataset, collection, or group the URL names | nothing: the two causes answer identically |
 | 400 | a malformed body, or a client-supplied fact that disagrees with the row | which field is wrong |
 | 409 | a state guard, a stale `expected_version`, a lost race, or a conflicting in-flight request | the state that refused it; a request conflict names its `preset_ids` and `access_type_ids` |
 | 200 `invalid` | `POST /auth/invite/check` for any bad token | one message for every cause |

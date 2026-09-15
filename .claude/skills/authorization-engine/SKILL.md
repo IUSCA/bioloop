@@ -329,7 +329,11 @@ asked for by name. `tx.active_group_user.findFirst(...)` reads one membership in
 Prisma cannot `orderBy` a relation count through a view relation. It fails with
 `Unknown argument _count`. `searchAllCollections` ranks by the counted relation in memory.
 
-Writes still go to the base models. A view model has no create or update.
+Writes still go to the base models. A view model has no create or update. That includes a nested
+write: `collection.create({ data: { datasets: { create: [...] } } })` fails with `Unknown argument
+create`, and only `connect` is offered. Write through `dataset_history`. `createCollection` did this
+until 2026-09-15, and no API test created a collection with `dataset_ids`, so the e2e world build
+found it as a 500 on `POST /collections`.
 
 `tests/authorization/currentStateScan.test.js` fails on `removed_at: null`, `revoked_at: null`, or
 `is_archived: false` in `api/src` outside its allowlist. Each entry names why it is not a read of
@@ -407,7 +411,11 @@ policy, then the action's policy. Capabilities pass through `applyTransitions` o
 `evaluateCapabilitySet` and then `filterRestrictedCapabilities` on both branches, so a caller of
 `authorizeAction` no longer needs to filter them again.
 
-A refusal carries `status`. With `concealRefusalsWithoutStanding`, which the application sets, a
+A refusal carries `status`. `concealRefusalsWithoutStanding` lists the resource types whose
+refusals are concealed, and the application passes `RESOURCE_TYPES`: dataset, collection, and
+group. Any other container answers 403, because its id may name another type's resource. The
+grant listing authorizes `grant` on a dataset id, and a member of the owning group holds no
+grant-container term, so concealing there answered them 404. For a listed type, a
 refusal on a named resource is 404 when `deriveStanding` finds nothing and the caller is not a
 platform admin, and 403 otherwise. A route that decides in its handler answers with
 `decision.status` rather than a literal 403. `refusalMessage(permission)` gives the text. A
@@ -425,6 +433,19 @@ overwrite cached ones, so before 2026-09-15 two creates in one request shared th
 create route authorized a later group on the earlier group's facts. The hydrator now builds a
 record with no id for that call alone. `tests/authorization/nullIdHydration.test.js` pins it, and
 any loop that decides several creates through one `req.policyContext` depends on it.
+
+## Rows from the extended Prisma client cannot be structured-cloned
+
+`api/src/db.js` extends the client with computed result fields: `grant.expiry`, `grant.is_active`,
+and `access_request_item.requested_expiry` and `approved_expiry`. Objects carrying them make
+`structuredClone` throw `DataCloneError: #<Object> could not be cloned`. `PrismaHydrator` copies
+pre-fetched attributes and fetched records with `copyTree` from `utils/expression` instead.
+
+It surfaced when `decideRows` passed whole access-request rows as the pre-fetched resource, and
+`GET /access-requests/requested-by-me` answered 500 for any caller with a request. The dataset
+list did not fail, because its policies read only `access_paths` from the context. When a clone
+fails, walk the object's own properties and check `util.types.isProxy`; the item inside the row,
+not the row, is the object Prisma wraps. `tests/authorization/hydrateExtendedRows.test.js` pins it.
 
 ## DELETED is derived, not written
 

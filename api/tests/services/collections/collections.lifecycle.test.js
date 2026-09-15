@@ -112,6 +112,22 @@ describe('collections - lifecycle', () => {
       expect(c.slug).not.toMatch(/\s/);
     });
 
+    // `collection.datasets` reads the active_collection_dataset view, so a create that wrote
+    // through it failed with a Prisma validation error.
+    it('holds the datasets it was created with', async () => {
+      const c = await collectionsService.createCollection(
+        {
+          name: `With Datasets ${Date.now()}`,
+          owner_group_id: ownerGroup.id,
+          dataset_ids: [dsA.resource_id, dsB.resource_id],
+        },
+        { actor_id: actor.subject_id },
+      );
+      collectionIds.push(c.id);
+      const held = await prisma.active_collection_dataset.findMany({ where: { collection_id: c.id } });
+      expect(held.map((r) => r.dataset_id).sort()).toEqual([dsA.resource_id, dsB.resource_id].sort());
+    });
+
     it('creates a COLLECTION_CREATED audit row', async () => {
       const c = await newCollection('_create_audit');
       const audit = await prisma.authorization_audit.findFirst({

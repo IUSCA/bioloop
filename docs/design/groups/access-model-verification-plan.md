@@ -1249,6 +1249,11 @@ so `requires` becomes true again and a boot check can flag any async `evaluate`.
 expiring grants, and coverage read `accessPathsQuery`. The Paths and Lists arms compare it with
 the reference model, and the Engine, Creates, and Transitions arms stay green.
 
+Found by the e2e run after Phase 7. Pointing `collection.datasets` at the
+`active_collection_dataset` view broke `createCollection` with `dataset_ids`, which still wrote
+through that relation. No API test created a collection with datasets. The create now writes
+through `dataset_history`, and `collections.lifecycle.test.js` covers it.
+
 - The group search now lists a group through a grant on a resource it owns. Five signed-in
   cells in the covering world reach their group only that way, so the Lists arm could fail.
 - Expiring grants now include the grants an overseer may list.
@@ -1355,6 +1360,13 @@ Six departures from the plan as written:
 
 The sidebar needed no change. Its `auth.canAdmin` gates only the v1 admin items.
 
+Found by the e2e run after Phase 7. `GET /access-requests/requested-by-me` answered 500 for any
+caller with a request. `decideRows` passes each row as the pre-fetched resource, and
+`PrismaHydrator` copied it with `structuredClone`, which rejects the computed fields the extended
+Prisma client puts on `access_request_item`. The hydrator copies with `copyTree` now, and
+`hydrateExtendedRows.test.js` covers it. The harness spec still asserted `uiPersona`, and now
+asserts the three facts `/v2/users/me` returns.
+
 ### Phase 6: restrictions, operations, and creates
 
 - The eleven `is_archived` guard sites call one `isRestricted` helper reading `effective_restriction`, inside the transactions they already open. The four message constants become one, and the archive confirmation modals read their prohibited-action lists from the restriction class column.
@@ -1413,7 +1425,11 @@ Nine departures from the plan as written:
   refusal on a named resource answers 404 when the caller holds no standing on it, and 403
   otherwise. The e2e specs expect the
   new status through `expectConcealed`, and they were not run, because the development database
-  holds the demo world and not the flows cast.
+  holds the demo world and not the flows cast. When they ran after Phase 7, B4 and F10 found the
+  rule too wide. `GET /grants/resource/DATASET/:id` authorizes the `grant` container on a dataset
+  id, and a member of the owning group holds no grant-container term, so they were answered 404.
+  Concealment now applies only to dataset, collection, and group, and `refusalStatus.test.js`
+  covers both answers.
 - **A refusal carries standing when standing was asked for.** The Standing arm found refused
   callers with resource-rule standing reported as having none.
 - **`/requested-by-me` and `/reviewed-by-me` read the caller's own rows by column.** Neither

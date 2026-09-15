@@ -170,5 +170,6 @@ function projectObject(source, allowedPaths) {
 }
 
 module.exports = {
+  copyTree,
   projectObject,
 };

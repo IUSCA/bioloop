@@ -129,9 +129,9 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
   restrictions.checkRestriction,
   PLATFORM_ADMIN,
   expandPath,
-  // A caller with no standing on a resource is answered as if it did not exist.
+  // A caller with no standing on a dataset, collection, or group is answered as if it did not exist.
   // @see docs/design/groups/access-model.md — Refusal shapes
-  { concealRefusalsWithoutStanding: true },
+  { concealRefusalsWithoutStanding: RESOURCE_TYPES },
 );
 
 // The same pipeline the middleware runs, for routes that decide in the handler.
@@ -141,7 +141,7 @@ const decide = createDecisionPipeline({
   restrictionChecker: restrictions.checkRestriction,
   platformAdmin: PLATFORM_ADMIN,
   expandPath,
-  concealRefusalsWithoutStanding: true,
+  concealRefusalsWithoutStanding: RESOURCE_TYPES,
 });
 
 // inject hydrate registry into core authorizeWithFilters function

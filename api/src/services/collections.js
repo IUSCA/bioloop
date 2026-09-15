@@ -68,7 +68,8 @@ async function createCollection(data, { actor_id }) {
       owner_group_id: data.owner_group_id,
     };
     if (data.dataset_ids && data.dataset_ids.length > 0) {
-      createData.datasets = {
+      // `datasets` reads the active_collection_dataset view; rows are written to the history table.
+      createData.dataset_history = {
         create: data.dataset_ids?.map((dataset_id) => ({
           dataset_id,
           added_by: actor_id,

@@ -36,22 +36,25 @@ test('the world is built, and its shape is what the flows assume', async ({ worl
 test('a group admin signs in as themselves, not as a platform admin', async ({ as }) => {
   const alice = await as('alice');
 
-  // `/v2/users/me` answers `{ user, uiPersona }` — the profile is nested, and the persona
-  // is the server's own answer to "what kind of caller is this".
+  // `/v2/users/me` answers `{ user, is_platform_admin, admin_group_count, oversight_group_count }`.
+  // The profile is nested, and the three facts are the server's answer to "what kind of caller is this".
   const me = await alice.api.get('/v2/users/me');
   expect(me.user.username).toBe(alice.person.username);
 
   // The engine allows a platform admin every action before any policy runs, so a suite
   // driven as one exercises nothing. Alice must not be one.
   expect(me.user.roles || []).not.toContain('admin');
-  expect(me.uiPersona).toBe('group_admin');
+  expect(me.is_platform_admin).toBe(false);
+  expect(me.admin_group_count).toBeGreaterThan(0);
 });
 
 test('the zero-access user reaches none of this run\'s resources', async ({ world, as }) => {
   const quinn = await as('quinn');
 
   const me = await quinn.api.get('/v2/users/me');
-  expect(me.uiPersona).toBe('standard_user');
+  expect(me.is_platform_admin).toBe(false);
+  expect(me.admin_group_count).toBe(0);
+  expect(me.oversight_group_count).toBe(0);
 
   // Scoped to this run's own dataset rather than to an empty listing. The seed grants both
   // system principals access to seeded datasets on purpose, so "sees nothing at all" is not

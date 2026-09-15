@@ -289,9 +289,11 @@ What made them work, after the selectors were found by running them rather than 
 
 ## A refusal without standing is 404
 
-A caller with no standing on the resource a URL names gets 404, the answer an unknown id gets. A
-caller who stands on it and is refused an action gets 403, and so does any call that names no
-resource, such as `POST /grants`. `expectConcealed` in `src/assertions/parity.js` asserts 404
+A caller with no standing on the dataset, collection, or group a URL names gets 404, the answer an
+unknown id gets. A caller who stands on it and is refused an action gets 403, and so does any call
+that names no resource, such as `POST /grants`. A route that authorizes another container gets
+403 whoever asks: `GET /grants/resource/DATASET/:id` authorizes `grant` on the dataset id, so B4
+and F10 assert 403 for a member of the owning lab. `expectConcealed` in `src/assertions/parity.js` asserts 404
 exactly, and `expectForbidden` still asserts 403. Pair `expectConcealed` with a caller who reaches
 the same URL, because a 404 alone could be a route that was never mounted.
 
