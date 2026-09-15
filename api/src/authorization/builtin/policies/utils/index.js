@@ -40,7 +40,23 @@ const platformAdminOnly = new Policy({
   evaluate: () => false,
 });
 
+/**
+ * Reads whether a group or a collection is archived, for the transition table. Archiving leaves
+ * an active resource archived and unarchiving the reverse, so neither is offered in the state
+ * it would refuse.
+ * @param {string[]} from - `ACTIVE`, `ARCHIVED`, or both
+ * @param {string[]} to
+ * @see docs/design/groups/access-model.md — The transition table
+ */
+const archivedState = (from, to) => ({
+  requires: ['is_archived'],
+  stateOf: (resource) => (resource.is_archived ? 'ARCHIVED' : 'ACTIVE'),
+  from,
+  to,
+});
+
 module.exports = {
   isPlatformAdmin,
   platformAdminOnly,
+  archivedState,
 };

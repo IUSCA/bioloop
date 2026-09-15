@@ -370,25 +370,6 @@ function createAccessibleDatasetIdsCte(user_id, scope, grant_access_types) {
   `;
 }
 
-/**
- * Which of `resource_ids` the user can open, by the same rule the dataset list uses.
- *
- * A platform admin is not special-cased here; the caller checks for one first.
- * @param {string} user_id - subject id
- * @param {string[]} resource_ids - dataset resource ids
- * @returns {Promise<Set<string>>}
- */
-async function viewableDatasetIds(user_id, resource_ids) {
-  if (resource_ids.length === 0) return new Set();
-  const grant_access_types = await grantService.satisfiedBy([LISTING_ACCESS_TYPE]);
-  const rows = await prisma.$queryRaw(Prisma.sql`
-    ${createAccessibleDatasetIdsCte(user_id, RESOURCE_SCOPES.ALL, grant_access_types)}
-    SELECT resource_id FROM accessible_ids
-    WHERE resource_id IN (${Prisma.join(resource_ids)})
-  `);
-  return new Set(rows.map((r) => r.resource_id));
-}
-
 async function searchDatasetsForUser({
   user_id, filters, pagination, sort, includes,
 }) {
@@ -464,7 +445,6 @@ module.exports = {
   getDatasetById,
   searchAllDatasets,
   searchDatasetsForUser,
-  viewableDatasetIds,
   getDatasetsByOwnerGroup,
   getDatasetsByCollection,
 };

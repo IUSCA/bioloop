@@ -209,12 +209,12 @@
 <script setup>
 import * as datetime from "@/services/datetime";
 import CollectionService from "@/services/v2/collections";
-import { useUIPersonaStore } from "@/stores/v2/uiPersona";
+import { useMeStore } from "@/stores/v2/me";
 
-const uiPersonaStore = useUIPersonaStore();
-const canCreate = computed(
-  () => uiPersonaStore.isPlatformAdmin || uiPersonaStore.isGroupAdmin,
-);
+// `collection.create` needs an admin of the owning group, so the offer needs some group to own it.
+const me = useMeStore();
+me.ensureLoaded();
+const canCreate = computed(() => me.isPlatformAdmin || me.adminGroupCount > 0);
 
 // const props = defineProps({});
 // data

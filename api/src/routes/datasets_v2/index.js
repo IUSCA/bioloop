@@ -13,8 +13,9 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-  callerIsPlatformAdmin,
+  callerIsPlatformAdmin, mayRequestAccess, projectRows,
 } = require('@/authorization');
+const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
@@ -316,7 +317,6 @@ router.get(
     query('resource_id').optional().isUUID(),
     query('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)),
   ]),
-  authorize('dataset', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'List and search datasets'
@@ -361,8 +361,14 @@ router.get(
     }
 
     const { metadata, data } = await promise;
-    const filteredData = data.map((dataset) => req.permission.filter(dataset));
-    res.json({ metadata, data: filteredData });
+    // The query scopes the rows; each row's own decision projects it.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    res.json({
+      metadata,
+      data: await projectRows('dataset', data, {
+        req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
+      }),
+    });
   }),
 );
 
@@ -373,7 +379,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('dataset', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
+  authorize('dataset', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveStanding: true }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get a dataset by ID'
@@ -388,8 +394,9 @@ router.get(
     res.json({
       ...req.permission.filter(dataset),
       _meta: {
-        caller_role: req.permission.callerRole,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
+        standing: req.permission.standing,
+        capabilities: toCapabilitiesArray(req.permission.capabilities)
+          .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
       },
     });
   }),
@@ -606,10 +613,11 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getSourceDatasets(dataset.id, { limit, offset });
 
-    // Filter each source dataset through permission filters
-    const filteredData = data.map((sourceDataset) => req.permission.filter(sourceDataset));
-
-    res.json({ metadata, data: filteredData });
+    // Each source dataset has its own owning group, so each is projected by its own decision.
+    const projected = await projectRows('dataset', data, {
+      req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
+    });
+    res.json({ metadata, data: projected });
   }),
 );
 
@@ -635,10 +643,11 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getDerivedDatasets(dataset.id, { limit, offset });
 
-    // Filter each derived dataset through permission filters
-    const filteredData = data.map((derivedDataset) => req.permission.filter(derivedDataset));
-
-    res.json({ metadata, data: filteredData });
+    // Each derived dataset has its own owning group, so each is projected by its own decision.
+    const projected = await projectRows('dataset', data, {
+      req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
+    });
+    res.json({ metadata, data: projected });
   }),
 );
 

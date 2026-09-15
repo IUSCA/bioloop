@@ -8,6 +8,7 @@ const prisma = require('@/db');
 const { GRANT_ACCESS_TYPE_CATEGORY_LABELS } = require('@/constants');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
+const { isGrantActive } = require('@/utils/grantValidity');
 const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const accessTypeClosure = require('./accessTypeClosure');
 
@@ -59,8 +60,8 @@ const GRANT_INCLUDES = {
 };
 
 /**
- * Post-processes an array of grants from a raw SQL result to add the Expiry
- * computed field (mirrors the db.js Prisma client extension for ORM queries).
+ * Post-processes an array of grants from a raw SQL result to add the `expiry` and `is_active`
+ * computed fields (mirrors the db.js Prisma client extension for ORM queries).
  * @param {Array} grants
  * @returns {Array}
  */
@@ -68,6 +69,7 @@ function addExpiryToGrants(grants) {
   return grants.map((g) => ({
     ...g,
     expiry: Expiry.fromValue(g.valid_until).toJSON(),
+    is_active: isGrantActive(g),
   }));
 }
 

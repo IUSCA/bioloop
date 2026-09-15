@@ -233,11 +233,11 @@ view_profile: Policy.or([
 ]),
 ```
 
-**Attribute rules short-circuit on the first matching policy; they do not combine.** An
-action-specific rule list also replaces the `'*'` wildcard block entirely rather than adding
-to it. So the `view_profile` rules are written out in full, most privileged first, and the
-last arm is `Policy.always` — everything reaching attribute evaluation has already been
-granted the action, so the catch-all needs no condition of its own.
+**Attribute rules combine by union.** A caller sees every key that any matching rule shows.
+An action-specific rule list replaces the `'*'` wildcard block entirely rather than adding to
+it. So the `view_profile` rules are written out in full, and the last arm is `Policy.always`.
+Everything reaching attribute evaluation has already been granted the action, so the catch-all
+needs no condition of its own.
 
 `is_anonymous` is registered as a virtual attribute on `userHydrator` that returns `false`. A
 real user never carries the field, so the loader answers for them; the anonymous principal

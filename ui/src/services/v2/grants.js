@@ -75,6 +75,15 @@ export default {
   },
 
   /**
+   * What revoking a grant leaves its subject: for the grant's type and each type it implies,
+   * the other grants that still confer it.
+   * @param {string} id - grant UUID
+   */
+  revokePreview(id) {
+    return api.get(`/grants/${id}/revoke-preview`);
+  },
+
+  /**
    * Revoke all active grants for a subject on a resource in a single transaction.
    * @param {'USER'|'GROUP'} subject_type
    * @param {string} subject_id

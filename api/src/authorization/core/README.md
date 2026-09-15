@@ -270,7 +270,7 @@ Hydrators only fetch attributes not already in cache:
 ### Short-Circuit Evaluation
 - `Policy.or()`: Returns `true` on first matching policy
 - `Policy.and()`: Returns `false` on first failing policy
-- Attribute rules: Returns first matching rule's filters
+- Attribute rules: evaluated in full; the response is the union of every matching rule's projection
 
 ## Extending the Framework
 

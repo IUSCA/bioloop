@@ -15,8 +15,12 @@ const profileService = require('@/services/profiles');
 const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
 const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, callerIsPlatformAdmin,
+  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray,
+  callerIsPlatformAdmin, projectRows,
 } = require('@/authorization');
+const {
+  PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES,
+} = require('@/authorization/builtin/policies/group');
 const { pickNonNil } = require('@/utils');
 const prisma = require('@/db');
 // const collectionService = require('@/services/collections');
@@ -36,7 +40,6 @@ router.post(
     body('is_archived').optional().isBoolean(),
     body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
   ]),
-  authorize('group', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Search groups by name or description'
@@ -64,8 +67,15 @@ router.post(
       });
     }
     const { metadata, data } = await promise;
-    const filteredGroups = data.map((g) => req.permission.filter(g));
-    res.json({ metadata, data: filteredGroups });
+    // The query scopes the rows; each row's own decision projects it. `depth` and `_count` come
+    // from the search, not the group.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    res.json({
+      metadata,
+      data: await projectRows('group', data, {
+        req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth', '_count'],
+      }),
+    });
   }),
 );
 
@@ -198,7 +208,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('group', 'view_metadata', { shouldDeriveCallerRole: true, shouldDeriveCapabilities: true }),
+  authorize('group', 'view_metadata', { shouldDeriveStanding: true, shouldDeriveCapabilities: true }),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Get group details by ID'
@@ -212,7 +222,7 @@ router.get(
       // caller could not already see. @see docs/design/groups/profiles.md — Schema
       citation: profileService.resolveCitation(group, 'groups'),
       _meta: {
-        caller_role: req.permission.callerRole,
+        standing: req.permission.standing,
         capabilities: toCapabilitiesArray(req.permission.capabilities),
       },
     });
@@ -230,10 +240,10 @@ router.get(
     const group = await groupService.getGroupBySlug(slug);
 
     const permission = await authorizeAction('group', 'view_metadata', {
-      identifiers: { group_id: group.id },
-      policyExecutionContext: req.policyExecutionContext,
-      preFetched: { resource: group },
-      shouldDeriveCallerRole: true,
+      identifiers: { user: req.user?.subject_id, resource: group.id },
+      policyExecutionContext: req.policyContext,
+      preFetched: { user: req.user, resource: group },
+      shouldDeriveStanding: true,
       shouldDeriveCapabilities: true,
     });
 
@@ -244,7 +254,7 @@ router.get(
     res.json({
       ...permission.filter(group),
       _meta: {
-        caller_role: permission.callerRole,
+        standing: permission.standing,
         capabilities: toCapabilitiesArray(permission.capabilities),
       },
     });
@@ -716,8 +726,10 @@ router.get(
 
     const { id } = req.params;
     const ancestors = await groupService.getGroupAncestors(id);
-    const filteredAncestors = ancestors.map((a) => req.permission.filter(a));
-    res.json(filteredAncestors);
+    // An ancestor's own decision projects it; the caller's standing here says nothing about it.
+    res.json(await projectRows('group', ancestors, {
+      req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth'],
+    }));
   }),
 );
 
@@ -741,8 +753,9 @@ router.get(
       max_depth,
       search_term: search_term?.trim(),
     });
-    const filteredDescendants = descendants.map((d) => req.permission.filter(d));
-    res.json(filteredDescendants);
+    res.json(await projectRows('group', descendants, {
+      req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth'],
+    }));
   }),
 );
 

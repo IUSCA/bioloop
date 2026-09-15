@@ -2,7 +2,7 @@ const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { mutating, reading } = require('../../core/policies/PolicyContainer');
-const { platformAdminOnly } = require('./utils/index');
+const { platformAdminOnly, archivedState } = require('./utils/index');
 const { PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES } = require('./group');
 
 const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
@@ -75,14 +75,6 @@ const isProfileVisibleToSignedInUser = new CollectionPolicy({
     && ['PUBLIC', 'AUTHENTICATED'].includes(collection.profile_visibility),
 });
 
-const CallerRole = Object.freeze({
-  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  ADMIN: 'ADMIN',
-  MEMBER: 'MEMBER',
-  OVERSIGHT: 'OVERSIGHT',
-  GRANT_HOLDER: 'GRANT_HOLDER',
-});
-
 const collectionPolicies = new PolicyContainer({
   resourceType: 'collection',
   version: '1.0.0',
@@ -139,7 +131,6 @@ collectionPolicies
       isProfileVisibleToSignedInUser,
     ])),
 
-    list: reading(Policy.always), // anyone can list collections, but the results will be filtered based on their permissions
     list_datasets: reading(Policy.or([
       isCollectionAdmin,
       hasCollectionOversight,
@@ -150,25 +141,14 @@ collectionPolicies
     remove_dataset: mutating(isCollectionAdmin),
     transfer_ownership: mutating(isCollectionAdmin),
     delete: mutating(isCollectionAdmin),
-    archive: mutating(isCollectionAdmin),
-    unarchive: mutating(platformAdminOnly),
+    archive: mutating(isCollectionAdmin, archivedState(['ACTIVE'], ['ARCHIVED'])),
+    unarchive: mutating(platformAdminOnly, archivedState(['ARCHIVED'], ['ACTIVE'])),
 
     list_grants: reading(Policy.or([isCollectionAdmin, hasCollectionOversight])),
     manage_grants: mutating(isCollectionAdmin),
     review_access_requests: mutating(isCollectionAdmin),
     view_audit_logs: reading(Policy.or([isCollectionAdmin, hasCollectionOversight])),
   })
-  .roles([
-    { policy: isCollectionAdmin, role: CallerRole.ADMIN },
-    { policy: hasCollectionOversight, role: CallerRole.OVERSIGHT },
-    {
-      // COLLECTION:LIST_CONTENTS implies COLLECTION:VIEW_METADATA, so one check answers
-      // whether the caller holds any collection grant.
-      // @see docs/design/groups/decisions.md — 7. Access types imply one another
-      policy: userHasGrant('COLLECTION:VIEW_METADATA'),
-      role: CallerRole.GRANT_HOLDER,
-    },
-  ])
   .attributes({
   // all attributes are viewable/editable by admins, but for non-admins we restrict some attributes that might leak
   // sensitive information about the collection or its datasets
@@ -186,9 +166,8 @@ collectionPolicies
         attribute_filters: PUBLIC_ATTRIBUTES.concat(PROFILE_ATTRIBUTES),
       },
     ],
-    // Rules short-circuit on the first matching policy rather than combining, so these run
-    // most-privileged first and the catch-all sits last. Anyone reaching this point has
-    // already been granted view_profile.
+    // A caller sees the union of every matching rule. Anyone reaching this point has already
+    // been granted view_profile.
     view_profile: [
       {
         policy: Policy.or([isCollectionAdmin, hasCollectionOversight]),
@@ -203,20 +182,11 @@ collectionPolicies
         attribute_filters: PUBLIC_PROFILE_ATTRIBUTES,
       },
     ],
-    list: [
-      {
-        // for listing, we can't uniformly apply the attribute filters because
-        // different collections in the list might have different permissions, so we will apply the PUBLIC_ATTRIBUTES filter
-        policy: Policy.always,
-        attribute_filters: PUBLIC_ATTRIBUTES,
-      },
-    ],
   })
   .freeze();
 
 module.exports = {
   collectionPolicies,
-  CallerRole,
   PUBLIC_ATTRIBUTES,
   PUBLIC_PROFILE_ATTRIBUTES,
   PROFILE_ATTRIBUTES,

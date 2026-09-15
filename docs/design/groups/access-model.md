@@ -295,11 +295,14 @@ whether a caller may request access.
 | Response shape | Producer | Read by | Pinned by |
 |---|---|---|---|
 | `_meta.capabilities` on a detail route | the engine, filtered by restriction and transition | every `[id]` page through `can()` | the capabilities arm |
-| `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | the standing arm |
-| `_meta.capabilities` and `_meta.standing` on a list row | the path rows for that row | list pages and cards | the row-flags arm |
-| `is_active` on a grant row | `valid_grants` | the grant panels | the grants tests |
+| `request_access` in a detail route's capabilities | `mayRequestAccess`: signed in, and no restriction blocks `access_request.create` | the dataset and collection Overview tabs | the list rows arm, through the restriction batch |
+| `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | `tests/model/standingArm.test.js`, `tests/model/badgeCoverage.test.js` |
+| `_meta.capabilities` and `_meta.standing` on a list row | `decideRows`, the detail route's composition for each row | list pages, cards, and the request cards | `tests/model/listRowsArm.test.js` |
+| the fields of a list row or a related row | `projectRows`, each row's own read decision | list pages, lineage, and the group tree | `tests/model/relatedRowsArm.test.js`, `tests/services/grants/relatedLineage.test.js` |
+| `is_active` on a grant row | `isGrantActive`, the predicate of `valid_grants` | the grant panels | `tests/services/grants/isActive.test.js` |
+| the revoke preview | `previewRevoke`, from coverage over every path | `RevokeGrantModal` | `tests/services/grants/revokePreview.test.js` |
 | list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | the list arm |
-| `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | the persona test |
+| `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
 | refusal status and the 409 body | the routes | `ErrorState` and the request form | the refusal arm |
 | a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | the projection arm |
 

@@ -202,11 +202,17 @@ import DatasetService from "@/services/v2/datasets";
 
 const addDatasetModal = ref(null);
 
-// Whether to offer the button at all. The list of groups the user may create in is fetched
-// by the picker inside the modal; asking here as well would be a second round trip to show
-// or hide one button, so the button is always offered and the picker explains when there is
-// no group to choose. A user with no eligible group sees the reason rather than a dead end.
-const canCreate = ref(true);
+// Offered when some group would accept a dataset from this user. The picker inside the modal
+// lists those groups; this asks the same endpoint so the button is never a dead end.
+const canCreate = ref(false);
+onMounted(async () => {
+  try {
+    const { data } = await DatasetService.eligibleOwnerGroups();
+    canCreate.value = (data ?? []).length > 0;
+  } catch {
+    canCreate.value = false;
+  }
+});
 
 const datasets = ref([]);
 const error = ref(null);

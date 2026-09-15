@@ -105,6 +105,8 @@ const props = defineProps({
   canArchive: { type: Boolean, default: false },
   canUnarchive: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
+  // `request_access`: filing a request on this collection would be accepted.
+  canRequestAccess: { type: Boolean, default: false },
   canAddDataset: { type: Boolean, default: false },
 });
 
@@ -159,7 +161,7 @@ const quickActions = computed(() => {
       label: "Grant access",
       onClick: () => emitAction("grant-access", "grants", "issue-grants"),
     });
-  } else {
+  } else if (props.canRequestAccess) {
     actions.push({
       icon: "mdi-account-question",
       label: "Request access",

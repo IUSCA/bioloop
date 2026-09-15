@@ -122,12 +122,12 @@
           :group="group"
           :ancestors="ancestors"
           :counts="counts"
-          :can-edit="can('edit_metadata') && !group.is_archived"
-          :can-archive="can('archive') && !group.is_archived"
-          :can-unarchive="can('unarchive') && group.is_archived"
-          :can-add-member="can('add_member') && !group.is_archived"
-          :can-create-subgroup="can('create_child') && !group.is_archived"
-          :can-create-collection="can('add_collection') && !group.is_archived"
+          :can-edit="can('edit_metadata')"
+          :can-archive="can('archive')"
+          :can-unarchive="can('unarchive')"
+          :can-add-member="can('add_member')"
+          :can-create-subgroup="can('create_child')"
+          :can-create-collection="can('add_collection')"
           @toggle-archive="openArchiveModal"
           @update="fetchGroupData"
           @action-requested="handleActionRequested"
@@ -137,9 +137,9 @@
           ref="membersTabRef"
           v-else-if="activeTab === 'members'"
           :group-id="props.id"
-          :can-add="can('add_member') && !group.is_archived"
-          :can-remove="can('remove_member') && !group.is_archived"
-          :can-edit-role="can('edit_member_role') && !group.is_archived"
+          :can-add="can('add_member')"
+          :can-remove="can('remove_member')"
+          :can-edit-role="can('edit_member_role')"
           :can-invite="can('invite')"
           @count-changed="handleMembersUpdate"
           @invite="openAddMemberModal"
@@ -149,7 +149,7 @@
           ref="subgroupsTabRef"
           v-else-if="activeTab === 'subgroups'"
           :group="group"
-          :can-create="can('create_child') && !group.is_archived"
+          :can-create="can('create_child')"
           @count-changed="handleSubgroupsUpdate"
         />
 
@@ -157,7 +157,7 @@
           v-else-if="activeTab === 'datasets'"
           :group-id="props.id"
           :group="group"
-          :can-create="can('add_dataset') && !group.is_archived"
+          :can-create="can('add_dataset')"
           @count-changed="handleDatasetsUpdate"
         />
 
@@ -165,7 +165,7 @@
           ref="collectionsTabRef"
           v-else-if="activeTab === 'collections'"
           :group="group"
-          :can-create="can('add_collection') && !group.is_archived"
+          :can-create="can('add_collection')"
           @count-changed="handleCollectionsUpdate"
         />
 
@@ -220,6 +220,7 @@ import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
 import ProfileService from "@/services/v2/profiles";
+import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -275,8 +276,9 @@ const avatarUrl = computed(() =>
   ProfileService.groupAvatarUrl(props.id, group.value?.avatar_key),
 );
 
-const callerRole = computed(() => group.value?._meta?.caller_role);
-// const isOversight = computed(() => callerRole.value === "OVERSIGHT");
+const callerRole = computed(() =>
+  badgeFor(group.value?._meta?.standing, "group"),
+);
 const capabilities = computed(
   () => new Set(group.value?._meta?.capabilities ?? []),
 );

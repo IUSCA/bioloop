@@ -935,20 +935,12 @@ async function searchGroupsForUser({
   const dataSql = Prisma.sql`
     WITH paths AS (
       SELECT ap.resource_id AS id,
-        bool_or(ap.path_kind = 'oversight') AS oversight,
-        bool_or(ap.path_kind = 'member') AS member,
-        bool_or(ap.path_kind = 'grant') AS grant_holder
+        bool_or(ap.path_kind = 'oversight') AS oversight
       FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
       GROUP BY ap.resource_id
     )
     SELECT 
       g.*, 
-      COALESCE(
-        gu.role::text,
-        CASE WHEN p.oversight THEN 'OVERSIGHT' END,
-        CASE WHEN p.member THEN 'TRANSITIVE_MEMBER' END,
-        CASE WHEN p.grant_holder THEN 'GRANT_HOLDER' END
-      ) AS user_role,
       ( select count(*) from active_group_user where group_id = g.id ) as size,
       ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
     FROM "group" g
@@ -965,9 +957,7 @@ async function searchGroupsForUser({
   const countSql = Prisma.sql`
     WITH paths AS (
       SELECT ap.resource_id AS id,
-        bool_or(ap.path_kind = 'oversight') AS oversight,
-        bool_or(ap.path_kind = 'member') AS member,
-        bool_or(ap.path_kind = 'grant') AS grant_holder
+        bool_or(ap.path_kind = 'oversight') AS oversight
       FROM (${accessPathsQuery({ userId: user_id, resourceType: 'group' })}) ap
       GROUP BY ap.resource_id
     )
@@ -1076,10 +1066,6 @@ async function searchAllGroups({
       )
       SELECT 
         g.*,
-        COALESCE(
-          gu.role::text,
-          CASE WHEN og.id IS NOT NULL THEN 'OVERSIGHT' END
-        ) AS user_role,
         ( select count(*) from active_group_user where group_id = g.id ) as size,
         ( select count(*)-1 from group_closure gc where gc.descendant_id = g.id ) as depth -- for sorting
       FROM "group" g
@@ -1319,14 +1305,33 @@ async function getGroupsWithoutActiveAdmins() {
   });
 }
 
-async function isGroupAdmin(user_id) {
-  const row = await prisma.active_group_user.findFirst({
-    where: { user_id, role: GROUP_MEMBER_ROLE.ADMIN },
-  });
-  return row !== null;
+/**
+ * How many groups a user administers and how many they oversee, from the membership views.
+ *
+ * Oversight is a strict descendant of a group the user administers, so a group can count in
+ * both. The dashboard and the list pages read these facts to choose what to offer; no decision
+ * reads them.
+ *
+ * @param {string} user_id - subject id
+ * @returns {Promise<{admin_group_count: number, oversight_group_count: number}>}
+ * @see docs/design/groups/access-model-verification-plan.md — The persona goes
+ */
+async function governanceCounts(user_id) {
+  const [row] = await prisma.$queryRaw(Prisma.sql`
+    SELECT
+      (SELECT COUNT(DISTINCT group_id) FROM active_group_user
+        WHERE user_id = ${user_id} AND role = ${sqlUtils.enumToSql(GROUP_MEMBER_ROLE.ADMIN)}) AS admin_group_count,
+      (SELECT COUNT(DISTINCT group_id) FROM effective_user_oversight_groups
+        WHERE user_id = ${user_id}) AS oversight_group_count
+  `);
+  return {
+    admin_group_count: Number(row.admin_group_count),
+    oversight_group_count: Number(row.oversight_group_count),
+  };
 }
 
 module.exports = {
+  governanceCounts,
   createGroup,
   getGroupById,
   getGroupBySlug,
@@ -1346,5 +1351,4 @@ module.exports = {
   getGroupAncestors,
   getGroupDescendants,
   getGroupsWithoutActiveAdmins,
-  isGroupAdmin,
 };

@@ -1305,6 +1305,56 @@ This phase builds everything the target shape describes for paths and fields:
 **Exit:** the standing, projection, related-row, transitions, and row-flag arms are green, and
 the UI scan passes with an empty allowlist beyond display-only text.
 
+**Result, 2026-09-15.** Detail routes send `_meta.standing`, and every list row carries
+`_meta.capabilities` and `_meta.standing` from `decideRows`. The Standing, List rows, and Related
+rows arms compare them with the reference model and with the detail route's own composition. The
+full API suite passes, 96 suites.
+
+- `projectObject` copies containers with `copyTree` and keeps `Date`, `BigInt`, and `Decimal`.
+  Attribute rules merge their projections, and the ordering test now checks union.
+- `deriveCallerRole`, `.roles()`, and `user_role` are gone. The badge reads standing through one
+  precedence table, and `badgeCoverage.test.js` checks every standing kind has a row.
+- `request_access` is appended on the dataset and collection detail routes. `withdraw` and
+  `review` come from the transition table. Grant rows carry `is_active`, pinned to
+  `valid_grants`. `GET /grants/:id/revoke-preview` reads coverage over every path, and
+  `RevokeGrantModal` no longer walks `implies`.
+- The lineage, ancestor, and descendant routes project each row by its own decision. The
+  lineage tab linked rows by the integer id, which the detail route refuses; it links by
+  `resource_id` now.
+- `base_attributes.grant` names every field, and grouped lists project subject, resource, and
+  coverage rows.
+- `/v2/users/me` returns `is_platform_admin`, `admin_group_count`, and
+  `oversight_group_count`. `stores/v2/me.js` replaces `uiPersona`, and no v2 file reads
+  `auth.canAdmin`.
+- The four `Policy.always` list actions are retired, and list routes bind no `authorize()`.
+- The Access tab shows for every viewer, and `MyAccessTab` lists the caller's standing.
+- `uiScan.test.js` runs in the API suite and passes.
+
+A browser check on the development database confirmed the dashboard, group list, and group page
+for an overseer. A temporary platform-admin role on a caller with no memberships was offered
+Archive and not Unarchive on an active group, then removed.
+
+Six departures from the plan as written:
+
+- **Group and collection `archive` and `unarchive` gained transition rows.** The plan says the
+  capability map already omits a blocked action. It did for ARCHIVED, but `unarchive` is exempt
+  from ARCHIVED and `archive` was offered on an archived resource. The middleware's platform-admin
+  branch also returned every action without consulting transitions. Both are fixed, and the
+  twelve client copies on the group and collection pages are deleted.
+- **A list row's badge leaves out `platform_admin`.** It would repeat on every row, so
+  `rowBadgeFor` shows the caller's relation to the row itself. The detail badge keeps it.
+- **List rows are decided one at a time over batched reads.** The plan joins lists on the path
+  statement. A page reads its paths and restrictions once and then runs each row through the
+  detail composition, which is what the List rows arm checks.
+- **The UI scan's status rule covers access-request statuses only.** Workflow, upload, import,
+  and invitation states are not in the access model's transition table.
+- **The dataset overview keeps `canArchive && !is_deleted`.** Nothing blocks a mutation on a
+  soft-deleted dataset until decision 4 lands in Phase 6. The scan allowlists it with that reason.
+- **A resource's Requests tab still picks its list from `canReview`.** Every request list row
+  carries `_meta`, and the single resource-scoped list is filed as L1 T16.
+
+The sidebar needed no change. Its `auth.canAdmin` gates only the v1 admin items.
+
 ### Phase 6: restrictions, operations, and creates
 
 - The eleven `is_archived` guard sites call one `isRestricted` helper reading `effective_restriction`, inside the transactions they already open. The four message constants become one, and the archive confirmation modals read their prohibited-action lists from the restriction class column.

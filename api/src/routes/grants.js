@@ -1,16 +1,20 @@
 const express = require('express');
+const createError = require('http-errors');
 const { param, query, body } = require('express-validator');
 const _ = require('lodash/fp');
 const { isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin, projectRows } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
 const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
+
+const { projectObject } = require('@/utils/expression');
+const baseAttributes = require('@/authorization/builtin/policies/base_attributes');
 
 const router = express.Router();
 
@@ -261,7 +265,6 @@ router.get(
   validate([
     query('within_days').default(30).isInt({ min: 1 }).toInt(),
   ]),
-  authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List grants that are expiring soon (grouped by resource and source)'
@@ -285,12 +288,21 @@ router.get(
     // The service groups by subject and resource. Destructuring `source` here dropped the
     // subject from every row and added an undefined key, so a caller could not say who
     // held the access that is about to lapse.
-    const filteredGrants = grantsGrouped.map(({ subject, resource, grants }) => ({
-      subject,
-      resource,
-      grants: grants.map((g) => req.permission.filter(g)),
+    // Each grant is projected by the caller's `grant.read` decision on it.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    const projected = await projectRows('grant', grantsGrouped.flatMap((group) => group.grants), {
+      req, idOf: (g) => g.id, publicAttributes: [], action: 'read',
+    });
+    let taken = 0;
+    res.json(grantsGrouped.map(({ subject, resource, grants }) => {
+      const own = projected.slice(taken, taken + grants.length);
+      taken += grants.length;
+      return {
+        subject: projectObject(subject, baseAttributes.subject),
+        resource: projectObject(resource, baseAttributes.resource),
+        grants: own,
+      };
     }));
-    res.json(filteredGrants);
   }),
 );
 
@@ -302,7 +314,6 @@ router.get(
     query('resource_id').optional().isUUID(),
     query('expiring_within_days').optional().isInt({ min: 1 }).toInt(),
   ]),
-  authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List my grants'
@@ -315,9 +326,10 @@ router.get(
       expiring_within_days,
     });
 
-    const filteredData = rows.map((g) => req.permission.filter(g));
-
-    res.json(filteredData);
+    // Each grant is projected by the caller's `grant.read` decision on it.
+    res.json(await projectRows('grant', rows, {
+      req, idOf: (g) => g.id, publicAttributes: [], action: 'read',
+    }));
   }),
 );
 
@@ -334,6 +346,27 @@ router.get(
 
     const grant = await grantService.getGrantById(req.params.id);
     res.status(200).json(req.permission.filter(grant));
+  }),
+);
+
+// What revoking a grant leaves its subject, for the confirmation modal. The coverage it reads
+// counts every path, so the modal never tells an admin a subject loses access they keep.
+// @see docs/design/groups/access-model-verification-plan.md — The UI layer
+router.get(
+  '/:id/revoke-preview',
+  validate([
+    param('id').isUUID(),
+  ]),
+  authorize('grant', 'revoke'),
+  asyncHandler(async (req, res, next) => {
+    // #swagger.tags = ['Grants']
+    // #swagger.summary = 'Preview what revoking a grant leaves its subject'
+    const preview = await grantService.previewRevoke(req.params.id);
+    if (!preview) return next(createError.NotFound('Grant not found'));
+    return res.json(preview.map((row) => ({
+      ...row,
+      still_conferred_by: row.still_conferred_by.map((c) => projectObject(c, baseAttributes.coverage)),
+    })));
   }),
 );
 
@@ -417,7 +450,7 @@ router.get(
     });
 
     const filteredData = grouped.map(({ resource, grants }) => ({
-      resource,
+      resource: projectObject(resource, baseAttributes.resource),
       grants: grants.map((g) => req.permission.filter(g)),
     }));
 
@@ -461,7 +494,7 @@ router.get(
     });
 
     const filteredData = grouped.map(({ subject, grants }) => ({
-      subject,
+      subject: projectObject(subject, baseAttributes.subject),
       grants: grants.map((g) => req.permission.filter(g)),
     }));
 
@@ -526,7 +559,8 @@ router.get(
     const coverage = await grantService.getEffectiveCoverage({
       subject_id, resource_id, resource_type,
     });
-    res.json(await grantService.labelCoverage(coverage));
+    const labelled = await grantService.labelCoverage(coverage);
+    res.json(labelled.map((row) => projectObject(row, baseAttributes.coverage)));
   }),
 );
 

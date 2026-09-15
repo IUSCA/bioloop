@@ -70,9 +70,8 @@
  * One row in a list of access requests, on the queue page and on both resource tabs.
  *
  * It carries the requester, the subject, the resource, the status, and the item count, and
- * nothing else: the decision detail belongs on the request detail page. The three call sites
- * previously passed `canAct` and `canReview` for the same idea and the component read
- * neither, so both are `canAct` now.
+ * nothing else: the decision detail belongs on the request detail page. The Review button reads
+ * the row's `_meta.capabilities`, which every access-request list sends.
  *
  * @see docs/design/groups/access-requests-plan.md — B2
  */
@@ -84,11 +83,6 @@ const props = defineProps({
   request: {
     type: Object,
     required: true,
-  },
-  /** Whether the viewer may decide this request. The Review button is offered only then. */
-  canAct: {
-    type: Boolean,
-    default: false,
   },
 });
 
@@ -136,8 +130,9 @@ const timeLabel = computed(() => {
   return datetime.fromNowShort(at);
 });
 
-const canReviewThis = computed(
-  () => props.canAct && props.request.status === "UNDER_REVIEW",
+// `review` arrives only while the request is under review and the viewer may decide it.
+const canReviewThis = computed(() =>
+  (props.request._meta?.capabilities ?? []).includes("review"),
 );
 
 const DECIDED = ["APPROVED", "PARTIALLY_APPROVED"];

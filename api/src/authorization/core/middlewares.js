@@ -4,7 +4,7 @@ const _ = require('lodash/fp');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { authorizeWithFilters } = require('./authorize');
 const Policy = require('./policies/Policy');
-const { evaluateCapabilitySet, deriveCallerRole } = require('./capabilities');
+const { evaluateCapabilitySet, deriveStanding, applyTransitions } = require('./capabilities');
 const { PrismaHydrator } = require('./hydrators/PrismaHydrator');
 
 /**
@@ -79,10 +79,12 @@ function initializePolicyContext(req, res, next) {
  *   Returns the name of a restriction that blocks this action, or null. Injected rather
  *   than imported so the core engine stays free of any knowledge of restrictions.
  *   @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
- * @param {Object} [platformAdmin] - Optional `{ policy, callerRole }`. When the policy grants,
+ * @param {Object} [platformAdmin] - Optional `{ policy }`. When the policy grants,
  *   every action is allowed without consulting the action's own policy. Injected for the same
  *   reason as the restriction checker: the role name and the policy are application facts.
  *   @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
+ * @param {Function} [expandPath] - Optional `(term, entities) => paths`, passed to
+ *   `deriveStanding`, which turns a held term into the paths it stands for.
  */
 function createAuthorizationMiddlewareFunction(
   policyRegistry,
@@ -90,13 +92,14 @@ function createAuthorizationMiddlewareFunction(
   events,
   restrictionChecker = null,
   platformAdmin = null,
+  expandPath = null,
 ) {
   return _.curry((resourceType, action, {
     requesterFn = (req) => req.user, // default requester extractor from req.user
     resourceIdFn = (req) => req.params?.id, // default resource ID extractor from req.params.id
     preFetchedResourceFn = null, // optional fn(req) => object with pre-fetched resource attributes (e.g. for create actions where the resource does not yet exist)
     shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
-    shouldDeriveCallerRole = false, // whether to derive caller role and include it in the policy execution context
+    shouldDeriveStanding = false, // whether to derive the caller's standing, as req.permission.standing
   } = {}) => {
     // get the policy
     // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
@@ -159,9 +162,15 @@ function createAuthorizationMiddlewareFunction(
           req.permission = adminResult;
 
           if (shouldDeriveCapabilities) {
-            const capabilities = Object.fromEntries(
-              policyContainer.getActionNames().map((name) => [name, true]),
-            );
+            // Every action, less those the resource's state forbids, as in `authorizeAction`.
+            const capabilities = await applyTransitions({
+              policyContainer,
+              capabilities: Object.fromEntries(policyContainer.getActionNames().map((name) => [name, true])),
+              identifiers,
+              hydratorRegistry,
+              caches: { resource: policyExecutionContext?.cache?.resource },
+              preFetched: { resource: preFetchedResource },
+            });
             // Restrictions still bite. An admin is offered no button an archived
             // resource would refuse.
             req.permission.capabilities = restrictionChecker
@@ -170,8 +179,10 @@ function createAuthorizationMiddlewareFunction(
               })
               : capabilities;
           }
-          if (shouldDeriveCallerRole) {
-            req.permission.callerRole = platformAdmin.callerRole;
+          if (shouldDeriveStanding) {
+            req.permission.standing = [{ kind: 'platform_admin' }].concat(await deriveStanding({
+              policyContainer, identifiers, hydratorRegistry, policyExecutionContext, expandPath,
+            }));
           }
 
           return next();
@@ -214,11 +225,10 @@ function createAuthorizationMiddlewareFunction(
           })
           : capabilities;
       }
-      if (shouldDeriveCallerRole) {
-        const callerRole = await deriveCallerRole({
-          policyContainer, identifiers, hydratorRegistry, policyExecutionContext,
+      if (shouldDeriveStanding) {
+        req.permission.standing = await deriveStanding({
+          policyContainer, identifiers, hydratorRegistry, policyExecutionContext, expandPath,
         });
-        req.permission.callerRole = callerRole;
       }
 
       next();

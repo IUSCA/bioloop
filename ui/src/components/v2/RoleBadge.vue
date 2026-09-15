@@ -87,6 +87,16 @@ const ROLES = {
     icon: "mdi-account-arrow-right-outline",
     text: "Member (Transitive)",
   },
+  RESOURCE_ACCESS: {
+    color: "violet",
+    icon: "mdi-certificate-outline",
+    text: "Resource Access",
+  },
+  PROFILE_VIEWER: {
+    color: "neutral",
+    icon: "mdi-card-account-details-outline",
+    text: "Profile Viewer",
+  },
 };
 
 const role = computed(

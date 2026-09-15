@@ -395,3 +395,28 @@ describe('projectObject — property-based tests', () => {
     );
   });
 });
+
+describe('projectObject keeps value types and copies containers', () => {
+  it('a negation leaves BigInt and Date values as they are', () => {
+    const when = new Date('2026-09-15T00:00:00Z');
+    const source = { id: 1n, created_at: when, secret: 'x' };
+    const result = projectObject(source, ['*', '!secret']);
+    expect(result).toEqual({ id: 1n, created_at: when });
+    expect(result.created_at).toBeInstanceOf(Date);
+  });
+
+  it("'*' does not share a nested object with the source", () => {
+    const source = { owner: { name: 'lab', email: 'a@b' } };
+    const result = projectObject(source, ['*']);
+    delete result.owner.email;
+    expect(source.owner.email).toBe('a@b');
+  });
+
+  it('a whole subtree named by a path is a copy', () => {
+    const source = { owner: { name: 'lab' }, tags: [{ label: 't' }] };
+    const result = projectObject(source, ['owner', 'tags[*]']);
+    result.owner.name = 'changed';
+    result.tags[0].label = 'changed';
+    expect(source).toEqual({ owner: { name: 'lab' }, tags: [{ label: 't' }] });
+  });
+});

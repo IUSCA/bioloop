@@ -69,12 +69,15 @@ describe('the paths stay behind view_sensitive_metadata', () => {
   });
 });
 
-describe('listing returns the public set', () => {
-  test('list hands out exactly the public attributes, for every caller', () => {
-    // Structural role or not, a listing is the same shape, so is_staged now shows on the
-    // dataset list as well as the detail page.
-    const rules = datasetPolicies.getAttributeRules('list');
-    expect(rules).toHaveLength(1);
-    expect(rules[0].attribute_filters).toEqual(PUBLIC_ATTRIBUTES);
+describe('a list binds to the read action it filters on', () => {
+  test('the dataset container has no list action of its own', () => {
+    // Each list row is projected by its own view_metadata decision, and a row the caller
+    // cannot open shows the public set.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    expect(datasetPolicies.hasAction('list')).toBe(false);
+  });
+
+  test('the public set a row falls back to still says whether staging finished', () => {
+    expect(PUBLIC_ATTRIBUTES).toContain('is_staged');
   });
 });

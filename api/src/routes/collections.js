@@ -15,11 +15,12 @@ const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-  callerIsPlatformAdmin,
+  callerIsPlatformAdmin, decideRows, mayRequestAccess, projectRows,
 } = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
+const { PUBLIC_ATTRIBUTES: COLLECTION_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/collection');
 
 const router = express.Router();
 
@@ -41,7 +42,6 @@ router.post(
     body('dataset_id').optional().isUUID(),
     body('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)), // owned = collections owned by groups I belong to, accessible = collections I have any access to
   ]),
-  authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Search collections by name or description'
@@ -64,8 +64,14 @@ router.post(
     }
 
     const { metadata, data } = await promise;
-    const filteredData = data.map((collection) => req.permission.filter(collection));
-    res.json({ metadata, data: filteredData });
+    // The query scopes the rows; each row's own decision projects it.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    res.json({
+      metadata,
+      data: await projectRows('collection', data, {
+        req, idOf: (c) => c.id, publicAttributes: COLLECTION_PUBLIC_ATTRIBUTES, relationAttributes: ['_count'],
+      }),
+    });
   }),
 );
 
@@ -75,7 +81,7 @@ router.get(
   validate([
     param('id').isUUID(),
   ]),
-  authorize('collection', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveCallerRole: true }),
+  authorize('collection', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveStanding: true }),
   asyncHandler(async (req, res) => {
     const collection = await collectionService.getCollectionById(req.params.id, req.user.subject_id);
     // res.json(req.permission.filter(collection));
@@ -86,8 +92,9 @@ router.get(
       // @see docs/design/groups/profiles.md — Schema
       citation: profileService.resolveCitation(collection, 'collections'),
       _meta: {
-        caller_role: req.permission.callerRole,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
+        standing: req.permission.standing,
+        capabilities: toCapabilitiesArray(req.permission.capabilities)
+          .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
       },
     });
   }),
@@ -218,9 +225,8 @@ router.delete(
 /**
  * Whether the caller may stage one dataset.
  *
- * The collection datasets list and the stage route both ask this, so the staging a row offers
- * and the answer the stage route gives cannot disagree. The policy context is shared across
- * calls in one request, so the caller is hydrated once however many datasets are checked.
+ * The bulk stage route asks this for each dataset. The policy context is shared across calls in
+ * one request, so the caller is hydrated once however many datasets are checked.
  * @param {import('express').Request} req
  * @param {string} resource_id
  * @returns {Promise<boolean>}
@@ -239,10 +245,9 @@ async function canRequestStage(req, resource_id) {
  *
  * Browsing a collection does not mean every dataset in it opens: a bare
  * COLLECTION:LIST_CONTENTS grant confers the first and not the second. Each row carries
- * `_meta.can_view_metadata`, so the page shows a row that will not open as plain text and offers a
- * request on the collection rather than a link onto a refusal. Each row also carries
- * `_meta.can_request_stage`, from the check the stage route makes, so the page offers staging
- * only where that route would accept it.
+ * `_meta.capabilities` and `_meta.standing` from `decideRows`. A row without `view_metadata`
+ * shows as plain text, and the page offers a request on the collection rather than a link onto
+ * a refusal. A row offers staging only with `request_stage`, the action the stage route checks.
  *
  * Rows carry the dataset's public attributes whoever the caller is, the rule `dataset.list`
  * applies.
@@ -273,27 +278,10 @@ router.get(
       sort_order: req.query.sort_order,
     });
 
-    const resourceIds = data.map((d) => d.resource_id);
-    const viewable = (await callerIsPlatformAdmin(req))
-      ? new Set(resourceIds)
-      : await datasetService.viewableDatasetIds(req.user.subject_id, resourceIds);
-
-    // One at a time, as bulkStage does, so the first call fills the shared policy context.
-    const stageable = new Set();
-    for (const d of data) {
-      // eslint-disable-next-line no-await-in-loop
-      if (await canRequestStage(req, d.resource_id)) stageable.add(d.resource_id);
-    }
-
+    const metas = await decideRows('dataset', data, { req, idOf: (d) => d.resource_id });
     res.json({
       metadata,
-      data: data.map((d) => ({
-        ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d),
-        _meta: {
-          can_view_metadata: viewable.has(d.resource_id),
-          can_request_stage: stageable.has(d.resource_id),
-        },
-      })),
+      data: data.map((d, i) => ({ ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d), _meta: metas[i] })),
     });
   }),
 );

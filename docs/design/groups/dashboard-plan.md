@@ -82,10 +82,10 @@ calling a v1 domain service, which the [v2 cut-over](../v2-cutover.md) forbids.
 The mockup and the backlog item both predate a run of work that moved several of their
 open problems. Each item below was confirmed by reading the code, not the backlog.
 
-**Persona detection is a served value.** `GET /v2/users/me` returns `uiPersona` as
-`platform_admin`, `group_admin`, or `standard_user`, and `stores/v2/uiPersona.js` already
-wraps it. Two other pages use the store. The dashboard does not need to infer a role from a
-group search.
+**What the dashboard shows is chosen from served facts.** `GET /v2/users/me` returns
+`is_platform_admin`, `admin_group_count`, and `oversight_group_count`, read from `user_role`
+and the membership views. `stores/v2/me.js` wraps them, and three other surfaces use the store.
+The dashboard does not need to infer a role from a group search.
 
 **The datasets a caller can reach is one query.** `GET /v2/datasets?scope=grants` returns
 every dataset reachable through a grant, including grants made to a group the caller
@@ -93,9 +93,9 @@ belongs to and grants made to a collection holding the dataset. The backlog item
 convenience does not exist; it does.
 
 **A group listing labels how the caller reaches each group.**
-`POST /groups/search` with `scope: 'all'` returns `user_role` on every row, valued `ADMIN`,
-`MEMBER`, `OVERSIGHT`, or `TRANSITIVE_MEMBER`, plus `size` as the member count. `RoleBadge`
-already maps all four. The member view's transitive-membership note needs no new endpoint.
+`POST /groups/search` with `scope: 'all'` returns `_meta.standing` on every row, plus `size`
+as the member count. `rowBadgeFor` turns standing into `ADMIN`, `MEMBER`, `OVERSIGHT`,
+`TRANSITIVE_MEMBER`, or `RESOURCE_ACCESS`, and `RoleBadge` maps each. The member view's transitive-membership note needs no new endpoint.
 
 **An access request carries its own access summary.** Every one of the three request
 listings runs `withGrantCounts`, so each row arrives with `access_summary`. `AccessRequestCard`
@@ -248,7 +248,7 @@ inbox to hold the caller's own submitted requests beside the queue. The tab is t
 **Datasets I can reach** lists `scope=grants` with `include_owner_group=true`, capped at
 five, each row linking to the dataset.
 
-**My groups** lists `scope: 'all'` and renders `RoleBadge` from `user_role`, so a
+**My groups** lists `scope: 'all'` and renders `RoleBadge` from each row's standing, so a
 transitive membership is labelled as one. A short note under the panel says that membership
 of a group makes you a member of its ancestors.
 

@@ -176,12 +176,31 @@ async function evaluateCapabilitySet({
   });
 }
 
-async function deriveCallerRole({
+/**
+ * Every path by which the caller reaches the resource: the caller's standing.
+ *
+ * Standing is the set of reasons the caller may read the resource, so it is read from the terms
+ * of every action the container declares as reading. Each term that holds contributes the paths
+ * `expandPath` returns for it; by default one path, `{ kind, rule }`, from the term's meta. A
+ * term with no path kind contributes nothing. Paths are unique by value.
+ *
+ * @param {Object} options
+ * @param {PolicyContainer} options.policyContainer
+ * @param {Object} options.identifiers - `{ user, resource }`
+ * @param {HydratorRegistry} options.hydratorRegistry
+ * @param {Object} [options.policyExecutionContext] - shares the request's caches
+ * @param {Object} [options.preFetched] - `{ user, resource, context }` seeds
+ * @param {Function} [options.expandPath] - `(term, { user, resource, context }) => Object[]`
+ * @returns {Promise<Object[]>} the paths, each with at least `kind`
+ * @see docs/design/groups/access-model-verification-plan.md — A decision returns its paths
+ */
+async function deriveStanding({
   policyContainer,
   identifiers,
   hydratorRegistry,
   policyExecutionContext = null,
   preFetched = null,
+  expandPath = null,
 }) {
   if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
     throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
@@ -196,28 +215,45 @@ async function deriveCallerRole({
     throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
   }
 
-  const policy = policyContainer.getRoleDerivationPolicy();
+  const terms = [];
+  policyContainer.getActionNames()
+    .filter((action) => policyContainer.getRestrictionClass(action) === PolicyContainer.RESTRICTION_CLASS.READING)
+    .forEach((action) => policyContainer.getPolicy(action).terms().forEach((term) => {
+      if (term.meta?.pathKind && !terms.includes(term)) terms.push(term);
+    }));
+  if (terms.length === 0) return [];
 
+  const policy = Policy.or(terms);
   const caches = {
     user: policyExecutionContext?.cache?.user || new Map(),
     resource: policyExecutionContext?.cache?.resource || new Map(),
     context: policyExecutionContext?.cache?.context || new Map(),
   };
-
-  const hydrators = resolveHydrators(hydratorRegistry, policy);
   const [user, resource, context] = await hydrateEntities({
     policy,
     identifiers,
-    hydrators,
+    hydrators: resolveHydrators(hydratorRegistry, policy),
     caches,
     preFetched,
   });
 
-  const role = await policy.evaluate(user, resource, context);
-  if (!role) {
-    return null;
-  }
-  return role;
+  const expand = expandPath ?? ((term) => [
+    term.meta.rule ? { kind: term.meta.pathKind, rule: term.meta.rule } : { kind: term.meta.pathKind },
+  ]);
+  const seen = new Set();
+  const paths = [];
+  const held = await Promise.all(terms.map((term) => term.evaluate(user, resource, context)));
+  terms.forEach((term, index) => {
+    if (!held[index]) return;
+    expand(term, { user, resource, context }).forEach((path) => {
+      const key = JSON.stringify(path);
+      if (!seen.has(key)) {
+        seen.add(key);
+        paths.push(path);
+      }
+    });
+  });
+  return paths;
 }
 
 function toCapabilitiesArray(capabilitiesObj) {
@@ -234,7 +270,7 @@ function toCapabilitiesArray(capabilitiesObj) {
 module.exports = {
   evaluateCapabilitySet,
   CapabilityEvaluationError,
-  deriveCallerRole,
+  deriveStanding,
   toCapabilitiesArray,
   applyTransitions,
 };

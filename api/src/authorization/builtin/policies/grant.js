@@ -122,7 +122,6 @@ grantPolicies
       isAdminOfResourceGroup,
       hasOversightOfResourceGroup,
     ])),
-    list: reading(Policy.always), // listing grants is allowed, but the results will be filtered based on the user's permissions
   })
   .attributes({
     '*': [

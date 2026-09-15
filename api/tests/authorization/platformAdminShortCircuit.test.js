@@ -106,10 +106,10 @@ describe('a platform admin is allowed every action', () => {
   test('the caller role is PLATFORM_ADMIN', async () => {
     const result = await authorizeAction('dataset', 'view_metadata', {
       identifiers: { user: admin.subject_id, resource: dataset.resource_id },
-      shouldDeriveCallerRole: true,
+      shouldDeriveStanding: true,
     });
 
-    expect(result.callerRole).toBe('PLATFORM_ADMIN');
+    expect(result.standing[0]).toEqual({ kind: 'platform_admin' });
   });
 
   test('no attribute is filtered out', async () => {

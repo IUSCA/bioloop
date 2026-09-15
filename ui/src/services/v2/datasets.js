@@ -62,7 +62,7 @@ export default {
 
   /**
    * Get a single dataset by ID (resource_id).
-   * Returns dataset with _meta: { caller_role, capabilities }.
+   * Returns dataset with _meta: { standing, capabilities }.
    */
   get(id) {
     return api.get(`/v2/datasets/${id}`);

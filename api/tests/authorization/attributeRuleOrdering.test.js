@@ -1,9 +1,10 @@
 /**
  * attributeRuleOrdering.test.js
  *
- * An attribute rule list stops at the first rule whose policy matches. That is safe only when
- * every earlier rule's projection is a superset of every later rule's, because a caller who
- * matches two rules then loses nothing by getting the earlier one.
+ * A caller who matches several attribute rules sees the union of what each rule shows, so the
+ * order rules are declared in decides nothing. The test checks that for every pair of rules in
+ * every list, and keeps the report of lists that are not ordered by set inclusion: those are the
+ * lists first-match would have got wrong.
  *
  * Filter lists cannot be compared as patterns: `['*']` and `['id', 'name']` are orderable only
  * against a row. So each list is projected over one representative row per resource type,
@@ -25,6 +26,7 @@ const { Prisma } = require('@prisma/client');
 
 const { policyRegistry } = require('@/authorization');
 const { projectObject } = require('@/utils/expression');
+const { createFilterFunction } = require('@/authorization/core/attributeFilters');
 
 const MODEL_OF = {
   group: 'group',
@@ -81,8 +83,9 @@ function keyPaths(obj, prefix = '') {
   return entries.flatMap(([k, v]) => keyPaths(v, prefix ? `${prefix}.${k}` : k));
 }
 
-function unorderedLists() {
-  const report = [];
+/** Every list's representative row, rules, and each rule's projected key set. */
+function projectedLists() {
+  const lists = [];
   policyRegistry.listTypes().forEach((resourceType) => {
     const modelName = MODEL_OF[resourceType];
     if (!modelName) return;
@@ -90,26 +93,49 @@ function unorderedLists() {
     Object.entries(attributeRules).forEach(([action, rules]) => {
       const row = scalarRow(modelName);
       rules.forEach((rule) => rule.attribute_filters.forEach((f) => fillPath(row, f)));
-      const projected = rules.map((rule) => new Set(keyPaths(projectObject(row, rule.attribute_filters))));
-      projected.forEach((earlier, i) => {
-        projected.slice(i + 1).forEach((later, offset) => {
-          const missing = [...later].filter((k) => !earlier.has(k));
-          if (missing.length) {
-            const later_index = i + 1 + offset;
-            const fields = missing.sort().join(', ');
-            report.push(`${resourceType}.${action}: rule ${i} lacks ${fields} that rule ${later_index} shows`);
-          }
-        });
+      const keys = rules.map((rule) => new Set(keyPaths(projectObject(row, rule.attribute_filters))));
+      lists.push({
+        resourceType, action, row, rules, keys,
+      });
+    });
+  });
+  return lists;
+}
+
+function unorderedLists() {
+  const report = [];
+  projectedLists().forEach(({ resourceType, action, keys }) => {
+    keys.forEach((earlier, i) => {
+      keys.slice(i + 1).forEach((later, offset) => {
+        const missing = [...later].filter((k) => !earlier.has(k));
+        if (missing.length) {
+          const fields = missing.sort().join(', ');
+          report.push(`${resourceType}.${action}: rule ${i} lacks ${fields} that rule ${i + 1 + offset} shows`);
+        }
       });
     });
   });
   return report;
 }
 
-test('every attribute rule list is ordered by set inclusion, except the pinned ones', () => {
-  // Pinned. The dataset oversight rule sits above the sensitive-metadata grant rule, so an
-  // overseer who also holds DATASET:VIEW_SENSITIVE_METADATA sees the overseer's fields and
-  // loses the paths. Phase 5 replaces first-match with the union over path kinds.
+test('a caller matching two rules sees every key either rule shows', () => {
+  const lost = [];
+  projectedLists().forEach(({
+    resourceType, action, row, rules, keys,
+  }) => {
+    rules.forEach((a, i) => rules.slice(i + 1).forEach((b, offset) => {
+      const j = i + 1 + offset;
+      const seen = new Set(keyPaths(createFilterFunction([a.attribute_filters, b.attribute_filters])(row)));
+      const missing = [...keys[i], ...keys[j]].filter((k) => !seen.has(k));
+      if (missing.length) lost.push(`${resourceType}.${action} rules ${i}+${j}: ${[...new Set(missing)].sort()}`);
+    }));
+  });
+  expect(lost).toEqual([]);
+});
+
+test('the lists first-match would get wrong are still the known ones', () => {
+  // The dataset oversight rule sits above the sensitive-metadata grant rule. Under first-match an
+  // overseer who also held DATASET:VIEW_SENSITIVE_METADATA lost these paths; the union keeps them.
   expect(unorderedLists()).toEqual([
     'dataset.*: rule 1 lacks archive_path, origin_path, staged_path that rule 2 shows',
   ]);

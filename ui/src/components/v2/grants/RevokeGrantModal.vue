@@ -211,50 +211,35 @@ const visible = ref(false);
 const loading = ref(false);
 const grant = ref(null);
 const subject = ref(null);
-const siblingGrants = ref([]);
-
 /**
- * The subject's other live grants on this resource, which decide what removing this one
- * actually changes. Access types carry a partial order, so a grant can be redundant with a
- * wider one, and a wider one can be the only source of several narrower capabilities.
- * @see docs/design/groups/decisions.md — 7. Access types imply one another
+ * The API's revoke preview: for this grant's type and each type it implies, the other grants
+ * that still confer it, through any path. The modal reports it and decides nothing itself.
+ * @see docs/design/groups/access-model-verification-plan.md — The UI layer
  */
-const otherLiveGrants = computed(() =>
-  (siblingGrants.value ?? []).filter(
-    (g) => g.id !== grant.value?.id && g.revoked_at === null,
-  ),
-);
+const preview = ref([]);
 
-/** A live grant of a wider type that will still confer this access afterwards. */
+/** Another grant that will still confer this grant's own access afterwards. */
 const stillConferredBy = computed(() => {
-  const id = grant.value?.access_type_id;
-  if (id == null) return null;
-  const holder = otherLiveGrants.value.find((g) =>
-    (props.accessTypeMap[g.access_type_id]?.implies ?? []).includes(id),
+  const own = preview.value.find(
+    (row) => row.access_type_id === grant.value?.access_type_id,
   );
+  const holder = own?.still_conferred_by?.[0];
   return holder
-    ? (props.accessTypeMap[holder.access_type_id]?.description ??
-        props.accessTypeMap[holder.access_type_id]?.name)
+    ? (holder.access_type_description ?? holder.access_type_name)
     : null;
 });
 
 /** What else goes away, because this grant was the only thing conferring it. */
-const alsoRemoved = computed(() => {
-  const id = grant.value?.access_type_id;
-  if (id == null) return [];
-
-  const suppliedByOthers = new Set();
-  for (const g of otherLiveGrants.value) {
-    suppliedByOthers.add(g.access_type_id);
-    for (const implied of props.accessTypeMap[g.access_type_id]?.implies ?? [])
-      suppliedByOthers.add(implied);
-  }
-
-  return (props.accessTypeMap[id]?.implies ?? [])
-    .filter((implied) => !suppliedByOthers.has(implied))
-    .map((implied) => props.accessTypeMap[implied]?.description)
-    .filter(Boolean);
-});
+const alsoRemoved = computed(() =>
+  preview.value
+    .filter(
+      (row) =>
+        row.access_type_id !== grant.value?.access_type_id &&
+        !row.still_conferred_by.length,
+    )
+    .map((row) => props.accessTypeMap[row.access_type_id]?.description)
+    .filter(Boolean),
+);
 
 const subjectName = computed(() => {
   if (!subject.value) return "—";
@@ -275,11 +260,21 @@ const accessType = computed(() => {
   );
 });
 
-function show({ grant: g, subject: s, siblingGrants: siblings }) {
+async function show({ grant: g, subject: s }) {
   grant.value = g;
   subject.value = s;
-  siblingGrants.value = siblings ?? [];
+  preview.value = [];
   visible.value = true;
+  loading.value = true;
+  try {
+    const { data } = await GrantService.revokePreview(g.id);
+    preview.value = data;
+  } catch (err) {
+    console.error("Failed to preview revocation:", err);
+    toast.error("Could not work out what removing this grant changes.");
+  } finally {
+    loading.value = false;
+  }
 }
 
 function hide() {

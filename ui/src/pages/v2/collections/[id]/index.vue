@@ -86,10 +86,7 @@
               </span>
             </span>
           </VaTab>
-          <VaTab
-            name="grants"
-            v-if="can('list_grants') || callerRole === 'GRANT_HOLDER'"
-          >
+          <VaTab name="grants">
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -114,6 +111,7 @@
           :can-archive="canArchive"
           :can-unarchive="canUnarchive"
           :can-issue-grants="can('manage_grants')"
+          :can-request-access="can('request_access')"
           :can-add-dataset="can('add_dataset')"
           @update="fetchCollectionData"
           @toggle-archive="openArchiveModal"
@@ -143,11 +141,12 @@
           @count-changed="fetchGrantsCount"
         />
 
-        <!-- A grant holder sees why they can see this collection, never the grant table. -->
+        <!-- Every other viewer sees why they can see this collection, never the grant table. -->
         <MyAccessTab
           v-else-if="activeTab === 'grants'"
           resource-type="COLLECTION"
           :resource-id="collection.id"
+          :standing="collection._meta?.standing"
         />
 
         <CollectionRequestsTab
@@ -183,6 +182,7 @@ import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import GrantService from "@/services/v2/grants";
+import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -203,19 +203,17 @@ const requestsTabRef = ref(null);
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
 );
-const callerRole = computed(() => collection.value?._meta?.caller_role);
+const callerRole = computed(() =>
+  badgeFor(collection.value?._meta?.standing, "collection"),
+);
 
 function can(action) {
   return capabilities.value.has(action);
 }
 
-const canArchive = computed(
-  () => can("archive") && collection.value?.is_archived === false,
-);
+const canArchive = computed(() => can("archive"));
 
-const canUnarchive = computed(
-  () => can("unarchive") && collection.value?.is_archived === true,
-);
+const canUnarchive = computed(() => can("unarchive"));
 
 function setNavBreadcrumbs(c) {
   const items = [{ label: "Collections", to: "/v2/collections" }];

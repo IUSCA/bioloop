@@ -18,7 +18,7 @@
             </div>
 
             <VaButton
-              v-if="auth.canAdmin"
+              v-if="me.isPlatformAdmin"
               preset="primary"
               icon="add"
               @click="openCreateGroupModal"
@@ -95,9 +95,9 @@
 
 <script setup>
 import GroupService from "@/services/v2/groups";
-import { useAuthStore } from "@/stores/auth";
+import { useMeStore } from "@/stores/v2/me";
 
-const auth = useAuthStore();
+const me = useMeStore();
 
 // ── State ─────────────────────────────────────────────────────────────────
 const searchTerm = ref("");
@@ -165,7 +165,7 @@ watch([searchTerm, activeScope], () => {
 
 function resetFilters() {
   searchTerm.value = "";
-  activeScope.value = auth.canAdmin ? "all" : "mine";
+  activeScope.value = me.isPlatformAdmin ? "all" : "mine";
 }
 
 watch(currentPage, () => {
@@ -173,9 +173,11 @@ watch(currentPage, () => {
 });
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────
-onMounted(() => {
-  // Default scope: platform admins see all, others see mine
-  activeScope.value = auth.canAdmin ? "all" : "mine";
+onMounted(async () => {
+  // Default scope: platform admins see all, others see mine. Only a platform admin creates a
+  // root group, so the same fact decides the Create Group offer.
+  await me.ensureLoaded();
+  activeScope.value = me.isPlatformAdmin ? "all" : "mine";
   fetchGroups();
 });
 

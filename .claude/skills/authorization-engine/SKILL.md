@@ -175,33 +175,36 @@ the fix, so it measures something.
 
 A grant on a collection may carry dataset access types, and those count for the datasets in
 it. A collection access type never counts for a dataset. The collection Datasets tab reads
-`GET /collections/:id/datasets`, which lists every dataset and marks each with
-`_meta.can_view_metadata`, so browsing and opening can differ row by row.
+`GET /collections/:id/datasets`, which lists every dataset and gives each row
+`_meta.capabilities` and `_meta.standing` from `decideRows`. A row without `view_metadata` does
+not open, so browsing and opening can differ row by row.
 
 Check a list change against the live API per persona: call the list, then the page for every
 row it returns, and expect no 403.
 
-## Attribute rules stop at the first match, so grant rules run widest first
+## Attribute rules combine by union
 
-`attributeFilters.js` evaluates a rule list in order and returns the first rule whose policy
-passes. Every dataset access type implies `DATASET:VIEW_METADATA`, and the hydrated grant set
-is already closed over the order. A `userHasGrant('DATASET:VIEW_METADATA')` rule therefore
-matches every grant holder, and any grant rule placed below it never runs.
+`evaluateAttributeFilters` returns the field list of every rule whose policy matches, and
+`createFilterFunction` merges the projections by key. A negation in one rule removes a key only
+when no other matching rule keeps it. Rule order decides nothing.
 
-This was live until 2026-09-14. The `VIEW_SENSITIVE_METADATA` rule sat below the
-`VIEW_METADATA` rule, so no grant holder ever received paths or `num_files`. The unit test in
-`tests/authorization/dataset.attribute_filters.test.js` only checked that a rule naming
-`staged_path` existed, which is why it passed.
+It used to stop at the first match. The `VIEW_SENSITIVE_METADATA` rule once sat below the
+`VIEW_METADATA` rule, so no grant holder received paths, and an overseer who also held the
+sensitive grant still lost `staged_path` until Phase 5. Do not reintroduce a short-circuit to save
+evaluation: every builtin term reads `access_paths`, which is already cached for the resource.
 
-`tests/authorization/attributeRuleOrdering.test.js` projects every rule list over a
-representative row and reports each earlier rule that hides a field a later rule shows. It
-pins the one known case, `dataset.*` rule 1 (oversight) above rule 2 (sensitive metadata).
-Fixing a list, or breaking one, changes that pinned report.
+`tests/authorization/attributeRuleOrdering.test.js` checks that a caller matching any two rules sees
+every key either shows, and still reports the lists first-match would get wrong.
 
 Assert reachability by running the decision, not by reading the rule list.
 `tests/services/grants/grantHolderAttributes.test.js` grants each access type and checks what
-`authorizeAction(...).filter(dataset)` returns. Against the old order it failed three of four
-cases.
+`authorizeAction(...).filter(dataset)` returns.
+
+`projectObject` copies plain objects and arrays and leaves `Date`, `BigInt`, and `Decimal` values as
+they are. A projection never shares a nested object with the source row.
+
+Write any shell heredoc that carries backticks with a quoted delimiter (`<<'EOF'`). An unquoted
+one runs each backticked word as a command and silently drops it from the text.
 
 ## A restriction check with no target throws
 
@@ -344,6 +347,50 @@ lists the registered actions.
 `authorizeAction` expects `identifiers: { user, resource }`. Passing `{ group_id }` throws
 `AuthorizationError: [policy:isPlatformAdmin] User identifier is required`. `GET /groups/slug/:slug`
 does exactly that, which is how it was found.
+
+## A list decides each row; no decision covers a page
+
+The four `Policy.always` list actions are gone (decision 16). A list route binds no `authorize()`.
+Its query scopes the rows, and `projectRows` in `src/authorization/index.js` projects each row by
+that row's own read decision. A row the caller cannot read shows the public attribute list the
+route passes. `relationAttributes` keeps fields that describe the row's place in the list, such
+as `depth` or `_count`, whatever the decision.
+
+Never project another resource's row with `req.permission.filter`. That filter was decided for
+the resource in the URL. The lineage and ancestor routes did this, so an owning-group admin's
+`['*']` reached datasets and groups owned by someone else.
+
+`decideRows` gives each row `_meta.capabilities` and `_meta.standing` with the detail route's
+composition. For a dataset, a collection, or a group it reads the page's paths once with
+`accessPathsByResource` and the restrictions once with `restrictionTypesByTarget`, then seeds
+each row's check. Other containers, such as `access_request`, fall back to
+`filterRestrictedCapabilities` per row. `tests/model/listRowsArm.test.js` compares the batch
+against the single-row composition, and `tests/model/relatedRowsArm.test.js` counts rows where
+the parent's projection would have differed.
+
+## Standing replaces the first-match role
+
+`deriveStanding` collects every term with `meta.pathKind` from the container's reading actions
+and expands each held term through `expandPath` in `builtin/standing.js`. A platform admin's
+standing starts with `platform_admin` and lists every other path too.
+
+A dataset never has a `member` path in standing. Its only member term serves `contribute`, which
+is mutating. The standing arm's coverage list says so; do not add it back.
+
+The badge is a display function in `ui/src/services/v2/standing.js`. `badgeFor` walks
+`BADGE_PRECEDENCE`, and `rowBadgeFor` drops `platform_admin` on list rows, where it would repeat
+on every row. `tests/model/badgeCoverage.test.js` checks every standing kind has a row, reading the
+UI file as text.
+
+## Derived capabilities and state the capability map carries
+
+- `request_access` is not an action. `mayRequestAccess` appends it on the dataset and collection
+  detail routes when a signed-in caller could file a request that no restriction blocks.
+- Group and collection `archive` and `unarchive` carry `archivedState` transition rows, so
+  neither is offered in the state that refuses it. Dataset `archive` means the tape archive and
+  has no such row.
+- The middleware's platform-admin branch applies transitions too. Before Phase 5 it returned
+  every action as true, so a platform admin was offered Unarchive on an active group.
 
 ## Keeping this current
 

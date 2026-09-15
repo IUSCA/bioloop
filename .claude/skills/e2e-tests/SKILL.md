@@ -129,7 +129,7 @@ Verified against the running API. Each of these cost a debugging cycle.
 | `POST /groups/:id/invitations` | Refuses a **400** for somebody who is already a member — the escalation path C4 describes never opens. |
 | `POST /auth/invite/check` | Public, and answers `{status: 'valid'\|'invalid'}` and nothing else. A reason would make it an oracle for someone else's invitation. |
 | `GET /groups/:id/members` | Current members only. A removed member is gone from it; the record of their membership lives in `GET /groups/:id/audit` as `GROUP_MEMBER_ADDED` / `GROUP_MEMBER_REMOVED`. |
-| `GET /v2/users/me` | Returns `{user, uiPersona}`; the profile is nested. |
+| `GET /v2/users/me` | Returns `{user, is_platform_admin, admin_group_count, oversight_group_count}`; the profile is nested. |
 | `GET /grants/:subject_type/:subject_id/:resource_type/:resource_id/coverage` | An **array**, each row carrying `access_type_name`, `via` (`DIRECT` or `GROUP`) and `via_group_id`. It lists what is actually held, not the narrower types the order implies — so a subject holding `DOWNLOAD` shows one row, not three. |
 | `GET /grants/resource/...` grouping | Grouped by subject: `{subject: {id, type, user, group}, grants: [...]}`. Use the subject grouping to count what one subject holds; filtering a flat list by access type cannot answer "one row or three". |
 | `GET /v2/datasets/:id` | Wants the **resource UUID**. The integer `dataset.id` is a 400, and the page renders the same "Failed to load dataset" it shows for a refusal. |

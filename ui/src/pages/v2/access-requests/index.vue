@@ -73,7 +73,6 @@
               v-for="req in pendingRequests"
               :key="req.id"
               :request="req"
-              :can-act="true"
               @review="openReviewModal"
               @view="viewRequest"
             />
@@ -120,7 +119,6 @@
               v-for="req in reviewedRequests"
               :key="req.id"
               :request="req"
-              :can-act="false"
               @view="viewRequest"
             />
           </div>
@@ -166,7 +164,6 @@
               v-for="req in myRequests"
               :key="req.id"
               :request="req"
-              :can-act="false"
               @view="viewRequest"
             />
           </div>

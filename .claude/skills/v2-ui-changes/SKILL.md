@@ -536,6 +536,29 @@ is an auto-import directory, so adding a file there regenerates `ui/auto-imports
 The console shows 401s from `/api/notifications/stream` on every page, before and after
 login. They are unrelated to any style change.
 
+## A page gates on capabilities, standing, and display-only facts
+
+A v2 page may gate on `_meta.capabilities`, on `_meta.standing`, and on a fact that only changes
+text. It may not re-derive restriction, identity, request state, grant activity, implication, or
+"may request" from raw fields. The API sends each of those: the capability map omits a restricted
+or wrong-state action, grant rows carry `is_active`, `withdraw` and `review` come from the
+transition table, `request_access` is a derived capability, and `GET /grants/:id/revoke-preview`
+answers what revoking leaves.
+
+`api/tests/model/uiScan.test.js` enforces this. A new badge or label that reads a raw field needs an
+`ALLOWED` row with its reason. A gate needs a capability from the API instead.
+
+`stores/v2/me.js` holds the three facts from `GET /v2/users/me`: `isPlatformAdmin`,
+`adminGroupCount`, and `oversightGroupCount`. Call `ensureLoaded()` before reading them. No v2 file
+reads `auth.canAdmin`.
+
+## The demo world has no platform admin
+
+Every demo cast member holds only the `user` role, and `dev-login` refuses `priya` and
+`test_user` there. To check a platform-admin view, add the role to `frank` for the check and
+remove it after: `prisma.user_role.create({ data: { user_id: frank.id, role_id: adminRole.id } })`,
+then `deleteMany` the same row.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a new trap, a

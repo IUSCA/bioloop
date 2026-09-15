@@ -14,7 +14,7 @@
         Myself
       </button>
       <button
-        v-if="uiPersona.isGroupAdmin"
+        v-if="me.adminGroupCount > 0"
         @click="selectedMode = 'group'"
         :class="[
           'px-3 py-2 text-sm font-medium rounded-lg transition-all',
@@ -76,7 +76,7 @@
 
 <script setup>
 import { useAuthStore } from "@/stores/auth";
-import { useUIPersonaStore } from "@/stores/v2/uiPersona";
+import { useMeStore } from "@/stores/v2/me";
 
 const props = defineProps({
   modelValue: {
@@ -88,7 +88,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const auth = useAuthStore();
-const uiPersona = useUIPersonaStore();
+const me = useMeStore();
 const selectedMode = ref("myself");
 const selectedGroup = ref(null);
 
@@ -121,10 +121,7 @@ function handleGroupSelect(group) {
 
 // Initialize with current user on mount
 onMounted(async () => {
-  // Ensure persona is loaded
-  if (!uiPersona.isLoaded) {
-    await uiPersona.fetchPersona();
-  }
+  await me.ensureLoaded();
 
   if (!props.modelValue && auth.user?.subject_id) {
     selectMyself();

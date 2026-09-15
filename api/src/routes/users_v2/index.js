@@ -5,8 +5,7 @@ const { query } = require('express-validator');
 const userService = require('@/services/user');
 const { validate } = require('@/middleware/validators');
 const asyncHandler = require('@/middleware/asyncHandler');
-const { createAuthorizationMiddleware: authorize } = require('@/authorization');
-const auth = require('@/services/auth');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const groupService = require('@/services/groups');
 
 const router = express.Router();
@@ -15,28 +14,16 @@ router.get(
   '/me',
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Users']
-    // returns the authenticated user's dashboard role information
+    // #swagger.summary = 'The signed-in user, and three facts pages use to choose what to offer'
 
-    const isPlatformAdmin = auth.isPlatformAdmin(req);
-
-    let isGroupAdmin = false;
-    if (!isPlatformAdmin) {
-      isGroupAdmin = await groupService.isGroupAdmin(req.user.subject_id);
-    }
-
-    // NOTE: these values are used for UI routing/dashboard selection only.
-    // They are not used for access control.
-    let uiPersona = 'standard_user';
-    if (isPlatformAdmin) {
-      uiPersona = 'platform_admin';
-    } else if (isGroupAdmin) {
-      uiPersona = 'group_admin';
-    }
-
-    return res.json({
-      user: req.user,
-      uiPersona,
-    });
+    // Read from `user_role` and the membership views, as the engine reads them. The pages use
+    // these to choose sections and offers; every action is still decided by its own route.
+    // @see docs/design/groups/access-model-verification-plan.md — The persona goes
+    const [is_platform_admin, counts] = await Promise.all([
+      callerIsPlatformAdmin(req),
+      groupService.governanceCounts(req.user.subject_id),
+    ]);
+    return res.json({ user: req.user, is_platform_admin, ...counts });
   }),
 );
 

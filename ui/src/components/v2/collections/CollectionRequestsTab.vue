@@ -49,7 +49,6 @@
                 v-for="request in requests"
                 :key="request.id"
                 :request="request"
-                :can-act="props.canReview"
                 @review="openReviewModal"
                 @view="viewRequest"
               />

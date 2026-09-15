@@ -1,8 +1,12 @@
 <template>
   <div class="px-6 py-8">
     <Transition name="fade-slide" mode="out-in">
-      <!-- Until the persona is known, nothing about the page's shape is decided. -->
-      <div v-if="persona.loading || !settled" key="loading" class="space-y-6">
+      <!-- Until the facts are known, nothing about the page's shape is decided. -->
+      <div
+        v-if="(me.loading || !settled) && !me.error"
+        key="loading"
+        class="space-y-6"
+      >
         <VaSkeleton variant="text" height="34px" width="280px" />
         <VaSkeleton variant="text" height="20px" width="380px" />
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -10,12 +14,12 @@
         </div>
       </div>
 
-      <div v-else-if="!persona.uiPersona" key="error" class="py-12">
+      <div v-else-if="!me.isLoaded" key="error" class="py-12">
         <ErrorState
           title="Could not work out what this page should show"
-          :error="persona.error"
+          :error="me.error"
           subject="this dashboard"
-          @retry="persona.fetchPersona"
+          @retry="me.fetchMe"
         />
       </div>
 
@@ -84,7 +88,7 @@
           Platform sections sit on top for a platform admin. Two signals, both with a
           query behind them; the rest of the mockup's alert panel had none.
         -->
-        <template v-if="persona.isPlatformAdmin">
+        <template v-if="me.isPlatformAdmin">
           <p
             class="-mb-4 text-xs font-semibold uppercase tracking-wider va-text-secondary"
           >
@@ -211,7 +215,6 @@
                   v-for="req in pendingReviews"
                   :key="req.id"
                   :request="req"
-                  can-act
                   @view="viewRequest"
                   @review="viewRequest"
                 />
@@ -275,8 +278,8 @@
                   </template>
                   <template #right>
                     <RoleBadge
-                      v-if="group.user_role"
-                      :role-name="group.user_role"
+                      v-if="groupBadge(group)"
+                      :role-name="groupBadge(group)"
                     />
                   </template>
                 </DashboardListRow>
@@ -375,8 +378,8 @@
                 </template>
                 <template #right>
                   <RoleBadge
-                    v-if="group.user_role"
-                    :role-name="group.user_role"
+                    v-if="groupBadge(group)"
+                    :role-name="groupBadge(group)"
                   />
                 </template>
               </DashboardListRow>
@@ -448,9 +451,9 @@
 /**
  * The landing page at `/v2/home`.
  *
- * One page composed of sections, each rendered when the caller's persona and data
- * warrant it, rather than three disjoint dashboards. A group admin files access requests
- * and holds grants like anyone else, so the personal sections render for every persona.
+ * One page composed of sections, each rendered when the caller's facts from `/v2/users/me`
+ * and data warrant it, rather than three disjoint dashboards. A group admin files access
+ * requests and holds grants like anyone else, so the personal sections render for everyone.
  *
  * This page owns every call. A section component is presentational and takes its rows as
  * props, so two panels never ask the same question twice.
@@ -466,12 +469,13 @@ import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantsService from "@/services/v2/grants";
 import GroupService from "@/services/v2/groups";
+import { rowBadgeFor } from "@/services/v2/standing";
 import { formatBytes, maybePluralize } from "@/services/utils";
-import { useUIPersonaStore } from "@/stores/v2/uiPersona";
+import { useMeStore } from "@/stores/v2/me";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
-const persona = useUIPersonaStore();
+const me = useMeStore();
 
 /** How many days ahead the expiring-grants query looks. */
 const EXPIRY_WINDOW_DAYS = 30;
@@ -633,7 +637,7 @@ async function load() {
     );
   }
 
-  if (persona.isPlatformAdmin) {
+  if (me.isPlatformAdmin) {
     calls.push(
       attempt("Platform totals", async () => {
         const [groups, datasets, collections] = await Promise.all([
@@ -668,7 +672,8 @@ async function load() {
 
 // ── Presentation ─────────────────────────────────────────────────────────────
 
-const isAdmin = computed(() => persona.isGroupAdmin || persona.isPlatformAdmin);
+// The governance sections show for a platform admin and for anyone who administers or oversees a group.
+const isAdmin = computed(() => me.governs);
 
 const router = useRouter();
 
@@ -694,12 +699,17 @@ function datasetSubtitle(dataset) {
   return parts.join(" · ");
 }
 
+/** The badge a group row shows, from its `_meta.standing`. */
+function groupBadge(group) {
+  return rowBadgeFor(group._meta?.standing, "group");
+}
+
 /**
  * An admin row says what the caller governs there; an oversight row says plainly that
  * they cannot act, because the badge alone reads as authority.
  */
 function governedGroupSubtitle(group) {
-  if (group.user_role === "OVERSIGHT") {
+  if (groupBadge(group) === "OVERSIGHT") {
     return "read-only — you can see this group, and cannot act on it";
   }
   return groupSubtitle(group);
@@ -726,7 +736,7 @@ const heroMeta = computed(() => {
 });
 
 const hasTransitiveMembership = computed(() =>
-  myGroups.value.some((g) => g.user_role === "TRANSITIVE_MEMBER"),
+  myGroups.value.some((g) => groupBadge(g) === "TRANSITIVE_MEMBER"),
 );
 
 /**
@@ -744,7 +754,7 @@ const hasNoAccessAtAll = computed(
 );
 
 const hero = computed(() => {
-  if (persona.isPlatformAdmin) {
+  if (me.isPlatformAdmin) {
     return {
       eyebrow: "Platform admin",
       title: "System overview",
@@ -754,7 +764,7 @@ const hero = computed(() => {
     };
   }
 
-  if (persona.isGroupAdmin) {
+  if (me.adminGroupCount > 0) {
     return {
       eyebrow: "Group admin",
       title: `Hello, ${firstName.value}`,
@@ -762,6 +772,16 @@ const hero = computed(() => {
         ? `${maybePluralize(pendingReviewTotal.value, "access request")} waiting for your decision.`
         : "Nothing is waiting for your decision right now.",
       roleName: "ADMIN",
+    };
+  }
+
+  if (me.oversightGroupCount > 0) {
+    return {
+      eyebrow: "Oversight",
+      title: `Hello, ${firstName.value}`,
+      description:
+        "You can see the groups beneath the ones you administer, and cannot act on them.",
+      roleName: "OVERSIGHT",
     };
   }
 
@@ -774,7 +794,7 @@ const hero = computed(() => {
 });
 
 const statCards = computed(() => {
-  if (persona.isPlatformAdmin) {
+  if (me.isPlatformAdmin) {
     return [
       {
         label: "Groups",
@@ -803,7 +823,7 @@ const statCards = computed(() => {
     ];
   }
 
-  if (persona.isGroupAdmin) {
+  if (me.governs) {
     return [
       {
         label: "Pending reviews",
@@ -854,12 +874,12 @@ const statCards = computed(() => {
   ];
 });
 
-// The store fetches the persona from its own onMounted, so this page waits for the
-// answer rather than asking a second time.
+// The page asks for the facts once and loads its sections when they arrive.
+me.ensureLoaded();
 watch(
-  () => [persona.loading, persona.uiPersona],
-  () => {
-    if (!persona.loading && persona.uiPersona && !settled.value) load();
+  () => me.isLoaded,
+  (loaded) => {
+    if (loaded && !settled.value) load();
   },
   { immediate: true },
 );

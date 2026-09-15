@@ -115,10 +115,7 @@
               </span>
             </span>
           </VaTab>
-          <VaTab
-            name="grants"
-            v-if="can('manage_grants') || callerRole === 'GRANT_HOLDER'"
-          >
+          <VaTab name="grants">
             <span class="flex items-center gap-1.5">
               Access
               <span v-if="counts.grants !== null" class="tab-count-badge">
@@ -164,6 +161,7 @@
           :can-edit="can('edit_metadata')"
           :can-archive="can('archive')"
           :can-issue-grants="can('manage_grants')"
+          :can-request-access="can('request_access')"
           :can-download="can('download')"
           :can-request-stage="can('request_stage')"
           :can-view-workflows="can('view_workflows')"
@@ -208,11 +206,12 @@
           @count-changed="fetchGrantsCount"
         />
 
-        <!-- A grant holder sees why they can see this dataset, never the grant table. -->
+        <!-- Every other viewer sees why they can see this dataset, never the grant table. -->
         <MyAccessTab
           v-else-if="activeTab === 'grants'"
           resource-type="DATASET"
           :resource-id="dataset.resource_id"
+          :standing="dataset._meta?.standing"
         />
 
         <DatasetRequestsTab
@@ -260,6 +259,7 @@ import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GrantService from "@/services/v2/grants";
+import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
 // const route = useRoute();
@@ -290,7 +290,9 @@ const requestTabRef = ref(null);
 const capabilities = computed(
   () => new Set(dataset.value?._meta?.capabilities ?? []),
 );
-const callerRole = computed(() => dataset.value?._meta?.caller_role);
+const callerRole = computed(() =>
+  badgeFor(dataset.value?._meta?.standing, "dataset"),
+);
 
 const isUpload = computed(
   () =>

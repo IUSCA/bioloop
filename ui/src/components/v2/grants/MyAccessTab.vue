@@ -20,7 +20,17 @@
           />
         </div>
 
-        <ul v-else-if="rows.length" class="mt-4 space-y-3">
+        <ul v-else-if="rows.length || structural.length" class="mt-4 space-y-3">
+          <li
+            v-for="path in structural"
+            :key="path.key"
+            class="flex items-start gap-3"
+          >
+            <i-mdi-shield-account-outline
+              class="mt-0.5 shrink-0 text-lg va-text-secondary"
+            />
+            <p class="text-sm font-medium">{{ path.text }}</p>
+          </li>
           <li v-for="row in rows" :key="row.id" class="flex items-start gap-3">
             <i-mdi-key-outline
               class="mt-0.5 shrink-0 text-lg va-text-secondary"
@@ -40,8 +50,8 @@
         <div v-else class="py-12 px-6">
           <EmptyState
             icon="mdi-key-outline"
-            title="No grants reach you"
-            :message="`Nothing currently grants you access to this ${noun}.`"
+            title="No access reaches you"
+            :message="`Nothing currently gives you access to this ${noun}.`"
             :show-clear-filters="false"
           />
         </div>
@@ -52,10 +62,12 @@
 
 <script setup>
 /**
- * The Access tab a grant holder sees: every grant that reaches them on this resource, and
- * the path each one arrives by. It never lists another subject's grants.
+ * The Access tab a caller sees when they do not manage grants: every path in their standing,
+ * then every grant that reaches them and the path each one arrives by. It never lists another
+ * subject's grants.
  *
  * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
+ * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
  */
 import * as datetime from "@/services/datetime";
 import GrantService from "@/services/v2/grants";
@@ -70,7 +82,30 @@ const props = defineProps({
   },
   /** A dataset's resource_id, or a collection's id. */
   resourceId: { type: String, required: true },
+  /** `_meta.standing` from the detail route. Grant paths are listed from coverage instead. */
+  standing: { type: Array, default: () => [] },
 });
+
+/** What each path that is not a grant says about the caller, in the reader's words. */
+const PATH_TEXT = {
+  platform_admin: () => "You are a platform admin",
+  admin: () => "You administer the group that owns it",
+  oversight: () =>
+    "You oversee the group that owns it, through a parent group you administer",
+  resource_rule: (path) =>
+    path.rule === "profile_public"
+      ? "Its profile is public"
+      : "Its profile is visible to signed-in users",
+};
+
+const structural = computed(() =>
+  props.standing
+    .filter((path) => PATH_TEXT[path.kind])
+    .map((path, index) => ({
+      key: `${path.kind}-${path.group_id ?? path.rule ?? index}`,
+      text: PATH_TEXT[path.kind](path),
+    })),
+);
 
 const auth = useAuthStore();
 

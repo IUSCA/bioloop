@@ -46,7 +46,7 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Ownership transfer | `authority_transfer` **(table only, [decision 15](./decisions.md))** | none, and `route_policy_bindings.test.js` holds it that way | none | none |
 | Invitations | `group_invitation`, `INVITATION_STATUS`, partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` | `/groups/:id/invitations`, `POST /auth/invite/check` and `/apply` | `services/invitations/` | `pages/invite.vue`, `GroupInvitationsTab.vue`, `AddGroupMemberModal.vue` |
 | Invitation email | — | — | `notification/types.js` `TYPES.INVITE`, `notification/templates/invite.mjml.hbs`, `services/invitations/notify.js` | — |
-| Dashboard | — | none of its own; it composes eleven existing calls | `routes/users_v2/index.js` → `uiPersona` | `pages/v2/home.vue`, `components/v2/dashboard/`, `stores/v2/uiPersona.js` |
+| Dashboard | — | none of its own; it composes eleven existing calls | `routes/users_v2/index.js` → `governanceCounts` | `pages/v2/home.vue`, `components/v2/dashboard/`, `stores/v2/me.js` |
 | Lifecycle hooks | — | — | `services/hooks/` — a generic `USER_CREATED` registry `createUser` runs, wired in `services/hooks/subscribers.js` | — |
 
 Key entry points:

@@ -28,6 +28,7 @@ BigInt.prototype.toJSON = function () {
 
 const { PrismaClient } = require('@prisma/client');
 const Expiry = require('./utils/expiry');
+const { isGrantActive } = require('./utils/grantValidity');
 
 const prisma = new PrismaClient({
   // log: ['query', 'info', 'warn', 'error'],
@@ -52,6 +53,12 @@ const prisma = new PrismaClient({
         needs: { valid_until: true },
         compute(grant) {
           return Expiry.fromValue(grant.valid_until);
+        },
+      },
+      is_active: {
+        needs: { valid_from: true, valid_until: true, revoked_at: true },
+        compute(grant) {
+          return isGrantActive(grant);
         },
       },
     },

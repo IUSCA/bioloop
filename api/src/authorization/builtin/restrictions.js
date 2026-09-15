@@ -87,7 +87,6 @@ const READING_ACTIONS = new Set([
   // Reading, and deliberately still available on an archived group. An archived group that
   // published a profile keeps serving it, with the archived badge showing.
   'group.view_profile',
-  'group.list',
   // Seeing which invitations are outstanding. Reading, and deliberately still available on
   // an archived group: the admin who has to explain why nobody can join needs the list.
   'group.view_invitations',
@@ -101,7 +100,6 @@ const READING_ACTIONS = new Set([
   // collection
   'collection.view_metadata',
   'collection.view_profile',
-  'collection.list',
   'collection.list_datasets',
   'collection.list_grants',
   'collection.view_audit_logs',
@@ -109,7 +107,6 @@ const READING_ACTIONS = new Set([
   // dataset
   'dataset.view_metadata',
   'dataset.view_sensitive_metadata',
-  'dataset.list',
   'dataset.list_files',
   'dataset.read_data',
   'dataset.download',
@@ -126,7 +123,6 @@ const READING_ACTIONS = new Set([
   'grant.list_for_resource',
   'grant.list_for_subject',
   'grant.view_coverage',
-  'grant.list',
 
   // access_request
   'access_request.read',
@@ -213,6 +209,27 @@ async function effectiveRestrictionTypes({ group_id = null, resource_id = null }
     SELECT DISTINCT type_name FROM effective_restriction WHERE ${clause}
   `);
   return rows.map((r) => r.type_name);
+}
+
+/**
+ * The restriction types in force on each of several groups or resources, from one statement.
+ *
+ * A list offers capabilities on every row. Reading the types once per page, and testing each
+ * action with `typeBlocks`, gives the answer `checkRestriction` gives one action at a time.
+ *
+ * @param {string} resourceType - `group`, `dataset`, or `collection`
+ * @param {string[]} ids - group ids for a group, resource ids otherwise
+ * @returns {Promise<Map<string, string[]>>} an entry for every id
+ */
+async function restrictionTypesByTarget(resourceType, ids) {
+  const byId = new Map(ids.map((id) => [id, []]));
+  if (!ids.length) return byId;
+  const column = resourceType === 'group' ? Prisma.raw('group_id') : Prisma.raw('resource_id');
+  const rows = await prisma.$queryRaw(Prisma.sql`
+    SELECT DISTINCT ${column} AS id, type_name FROM effective_restriction WHERE ${column} IN (${Prisma.join(ids)})
+  `);
+  rows.forEach((r) => byId.get(r.id)?.push(r.type_name));
+  return byId;
 }
 
 /**
@@ -321,6 +338,7 @@ module.exports = {
   BLOCKED_ACTIONS_BY_TYPE,
   typeBlocks,
   effectiveRestrictionTypes,
+  restrictionTypesByTarget,
   blockingRestriction,
   restrictionTargetFor,
   checkRestriction,

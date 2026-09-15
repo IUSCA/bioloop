@@ -3,7 +3,7 @@
  *
  * A list shows a dataset or a collection only when its page opens for the caller. For each
  * grant shape below, the dataset list, the collection list, and the collection page's
- * per-row flag must all agree with the `view_metadata` decision the page itself makes.
+ * per-row capabilities must all agree with the `view_metadata` decision the page itself makes.
  *
  * The shapes that matter most are the ones where a grant implies nothing across resource
  * types. A bare COLLECTION:LIST_CONTENTS lets a caller open the collection and not the
@@ -18,7 +18,7 @@ global.__basedir = path.join(__dirname, '..', '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
-const { authorizeAction } = require('@/authorization');
+const { authorizeAction, decideRows } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const collectionService = require('@/services/collections');
 const { AUTHENTICATED_USERS_GROUP_ID } = require('@/constants');
@@ -172,13 +172,19 @@ describe('every list agrees with the page it links to', () => {
       limit: 100,
       offset: 0,
     });
-    const viewable = await datasetService.viewableDatasetIds(viewer.subject_id, [dataset.resource_id]);
+    const [tabRow] = await decideRows('dataset', [dataset], {
+      req: {
+        user: { subject_id: viewer.subject_id },
+        policyContext: { cache: { user: new Map(), resource: new Map(), context: new Map() } },
+      },
+      idOf: (d) => d.resource_id,
+    });
 
     expect({
       page: datasetPage.granted,
       datasetList: datasetList.data.some((d) => d.resource_id === dataset.resource_id),
-      collectionTabFlag: viewable.has(dataset.resource_id),
-    }).toEqual({ page: datasetOpens, datasetList: datasetOpens, collectionTabFlag: datasetOpens });
+      collectionTabRow: tabRow.capabilities.includes('view_metadata'),
+    }).toEqual({ page: datasetOpens, datasetList: datasetOpens, collectionTabRow: datasetOpens });
 
     expect({
       page: collectionPage.granted,

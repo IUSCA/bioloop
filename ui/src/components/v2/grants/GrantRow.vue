@@ -2,7 +2,7 @@
   <div
     :class="[
       'flex flex-col gap-1 py-2.5 px-3 border-b border-solid border-gray-200 dark:border-gray-700 last:border-b-0',
-      props.grant.revoked_at !== null ? 'opacity-60' : '',
+      props.grant.is_active ? '' : 'opacity-60',
     ]"
   >
     <!-- The label leads and the identifier follows in gray, because an admin reads this tab. -->
@@ -11,7 +11,7 @@
       show-identifier
       :label-class="[
         'text-base font-medium text-gray-900 dark:text-gray-100',
-        props.grant.revoked_at !== null ? 'line-through' : '',
+        props.grant.is_active ? '' : 'line-through',
       ]"
     />
 
@@ -27,7 +27,7 @@
          those should find them here rather than expect another row.
          @see docs/design/groups/decisions.md — 7. Access types imply one another -->
     <span
-      v-if="alsoConfers.length && props.grant.revoked_at === null"
+      v-if="alsoConfers.length && props.grant.is_active"
       class="text-sm text-gray-500 dark:text-gray-500 mt-0.5"
     >
       Also confers {{ alsoConfers.join(", ") }}
@@ -50,8 +50,8 @@
       >
         System
       </Badge>
-      <Badge v-if="props.grant.revoked_at !== null" color="neutral">
-        Removed
+      <Badge v-if="!props.grant.is_active" color="neutral">
+        {{ props.grant.revoked_at ? "Removed" : "Inactive" }}
       </Badge>
       <Badge v-if="props.grant.source_preset" color="violet" :uppercase="false">
         {{ props.grant.source_preset.name }}
@@ -79,7 +79,7 @@
 
     <!-- Revoke Button -->
     <button
-      v-if="props.canRevoke && props.grant.revoked_at === null"
+      v-if="props.canRevoke && props.grant.is_active"
       type="button"
       class="mt-1 self-start text-sm px-3 py-1.5 rounded-md border border-solid text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
       @click.stop="emit('revoke', props.grant)"

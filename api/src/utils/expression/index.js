@@ -111,6 +111,26 @@ function removePath(target, segments) {
 }
 
 /**
+ * Copies the plain objects and arrays of a tree, and keeps every other value as it is.
+ *
+ * A `Date`, a `BigInt`, a Prisma `Decimal`, and a `Buffer` pass through unchanged, so a
+ * projection keeps their types. A JSON round trip threw on `BigInt` and turned a `Date` into a
+ * string. Copying the containers means no projection shares a nested object with the source.
+ *
+ * @param {any} value
+ * @returns {any}
+ */
+function copyTree(value) {
+  if (Array.isArray(value)) return value.map(copyTree);
+  if (value === null || typeof value !== 'object') return value;
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return value;
+  const out = proto === null ? Object.create(null) : {};
+  for (const key of Object.keys(value)) out[key] = copyTree(value[key]);
+  return out;
+}
+
+/**
  * Projects a source object down to only the allowed attribute paths.
  *
  * Paths prefixed with '!' are negations: they are removed from the result
@@ -139,13 +159,11 @@ function projectObject(source, allowedPaths) {
     }
   }
 
-  if (negationPaths.length > 0) {
-    // Deep-clone so that negation removals never mutate the source (leaf values
-    // and whole-subtree inclusions can share references with the source).
-    result = JSON.parse(JSON.stringify(result));
-    for (const path of negationPaths) {
-      removePath(result, parsePath(path));
-    }
+  // Leaf values and whole-subtree inclusions still point into the source here. Copying the
+  // containers keeps negation removals, and any later change to the response, off the source.
+  result = copyTree(result);
+  for (const path of negationPaths) {
+    removePath(result, parsePath(path));
   }
 
   return result;

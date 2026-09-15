@@ -96,13 +96,6 @@ const userHasGrant = (access_type) => {
   });
 };
 
-const callerRoles = Object.freeze({
-  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  ADMIN: 'ADMIN',
-  OVERSIGHT: 'OVERSIGHT',
-  GRANT_HOLDER: 'GRANT_HOLDER',
-});
-
 // ============================================================================
 // POLICY CONTAINER
 // ============================================================================
@@ -164,8 +157,6 @@ datasetPolicies
       hasDatasetOwningGroupOversight,
       userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
     ])),
-
-    list: reading(Policy.always), // anyone can list, but service layer filters to only what they have access to
 
     // ------------------------------------------------------------------
     // FILE LISTINGS
@@ -336,9 +327,9 @@ datasetPolicies
         ),
       },
 
-      // The grant rules run widest first. The first matching rule wins, and every dataset
-      // access type implies DATASET:VIEW_METADATA, so a rule placed below that one never runs.
-      // tests/services/grants/grantHolderAttributes.test.js runs each access type through it.
+      // A caller sees the union of every matching rule, so an overseer who also holds a
+      // sensitive-metadata grant sees the paths. tests/services/grants/grantHolderAttributes.test.js
+      // runs each access type through these rules.
 
       // Grant holders (view_sensitive_metadata): adds infrastructure paths
       {
@@ -362,12 +353,6 @@ datasetPolicies
       {
         policy: userHasGrant('DATASET:VIEW_METADATA'),
         attribute_filters: PUBLIC_ATTRIBUTES,
-      },
-    ],
-    list: [
-      {
-        policy: Policy.always,
-        attribute_filters: PUBLIC_ATTRIBUTES, // listing only returns public attributes, even for structural roles
       },
     ],
     view_source_datasets: [
@@ -399,18 +384,6 @@ datasetPolicies
       },
     ],
   })
-  .roles([
-    { policy: isDatasetOwningGroupAdmin, role: callerRoles.ADMIN },
-    { policy: hasDatasetOwningGroupOversight, role: callerRoles.OVERSIGHT },
-    {
-      // Every dataset access type implies DATASET:VIEW_METADATA, so one check answers
-      // "does this caller hold any grant on this dataset". Listing the others changed
-      // nothing, because the hydrated set is already closed over the order.
-      // @see docs/design/groups/decisions.md — 7. Access types imply one another
-      policy: userHasGrant('DATASET:VIEW_METADATA'),
-      role: callerRoles.GRANT_HOLDER,
-    },
-  ])
   .freeze();
 
 module.exports = { datasetPolicies };

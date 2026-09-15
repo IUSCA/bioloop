@@ -239,11 +239,11 @@ is not signed in. @see [Profiles](./profiles.md) — What each audience sees.
 **The Datasets tab is gated on the grant, and opening a row is gated again.** The tab needs
 `COLLECTION:LIST_CONTENTS`. It lists every dataset in the collection, with each dataset's
 public attributes. Opening a dataset needs `DATASET:VIEW_METADATA`, and no collection access
-type implies it. `GET /collections/:id/datasets` therefore marks each row with
-`_meta.can_view_metadata`. The tab shows a row that will not open as plain text, not as a link.
-Each row also carries `_meta.can_request_stage`, from the `request_stage` check the stage
-route makes. The tab shows the Stage button and the row checkboxes only when some row on the
-page can be staged.
+type implies it. `GET /collections/:id/datasets` therefore gives each row
+`_meta.capabilities` and `_meta.standing`, the same shape a dataset's detail route returns.
+The tab shows a row without `view_metadata` as plain text, not as a link. The tab shows the
+Stage button and the row checkboxes only when some row on the page has `request_stage`, the
+action the stage route checks.
 
 **A browsable collection offers the next step.** When any row will not open, the tab offers a
 request for access on the collection. That request may name dataset access types, because

@@ -1,7 +1,7 @@
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { mutating, reading } = require('../../core/policies/PolicyContainer');
-const { platformAdminOnly } = require('./utils/index');
+const { platformAdminOnly, archivedState } = require('./utils/index');
 
 class GroupPolicy extends Policy {
   constructor({
@@ -109,14 +109,6 @@ const groupPolicies = new PolicyContainer({
   description: 'Policies for Group resource',
 });
 
-const CallerRole = Object.freeze({
-  PLATFORM_ADMIN: 'PLATFORM_ADMIN',
-  ADMIN: 'ADMIN',
-  MEMBER: 'MEMBER',
-  OVERSIGHT: 'OVERSIGHT',
-  RESOURCE_ACCESS: 'RESOURCE_ACCESS',
-});
-
 const PUBLIC_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', '_count.members',
   // A tagline sits at the same sensitivity as the description already here: one line an
@@ -152,18 +144,12 @@ const PROFILE_ATTRIBUTES = [
 // action before any of these run, so repeating the term here would be dead weight.
 // @see docs/design/groups/decisions.md — 11. Platform admin is one check in the engine
 groupPolicies
-  .roles([
-    { policy: isGroupAdmin, role: CallerRole.ADMIN },
-    { policy: hasGroupOversight, role: CallerRole.OVERSIGHT },
-    { policy: isGroupMember, role: CallerRole.MEMBER },
-    { policy: canAccessResourcesOwnedByGroup, role: CallerRole.RESOURCE_ACCESS },
-  ])
   .actions({
     create: mutating(platformAdminOnly),
     create_child: mutating(isGroupAdmin),
 
-    archive: mutating(isGroupAdmin),
-    unarchive: mutating(platformAdminOnly),
+    archive: mutating(isGroupAdmin, archivedState(['ACTIVE'], ['ARCHIVED'])),
+    unarchive: mutating(platformAdminOnly, archivedState(['ARCHIVED'], ['ACTIVE'])),
 
     view_metadata: reading(Policy.or([isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup])),
 
@@ -178,7 +164,6 @@ groupPolicies
       isProfileVisibleToSignedInUser,
     ])),
     edit_metadata: mutating(isGroupAdmin),
-    list: reading(Policy.always), // database query will contains filters based on user's access, so no policy needed here
     view_hierarchy: reading(platformAdminOnly),
     list_invalid: reading(platformAdminOnly),
     view_audit_logs: reading(Policy.or([isGroupAdmin, hasGroupOversight])),
@@ -244,9 +229,8 @@ groupPolicies
         attribute_filters: ['*', '!assignor', '!assigned_by'],
       },
     ],
-    // Rules short-circuit on the first matching policy rather than combining, so these run
-    // most-privileged first and the catch-all sits last. Anyone reaching this point has
-    // already been granted view_profile, which is why the last arm needs no condition.
+    // A caller sees the union of every matching rule. Anyone reaching this point has already
+    // been granted view_profile, which is why the last arm needs no condition.
     view_profile: [
       {
         policy: Policy.or([isGroupAdmin, hasGroupOversight]),
@@ -265,20 +249,11 @@ groupPolicies
         attribute_filters: PUBLIC_PROFILE_ATTRIBUTES.concat(['admins[*].id', 'admins[*].name']),
       },
     ],
-    list: [
-      {
-        policy: Policy.always,
-        attribute_filters: PUBLIC_ATTRIBUTES.concat([
-          'created_at', 'allow_user_contributions', 'user_role', 'depth', 'path',
-        ]),
-      },
-    ],
   })
   .freeze();
 
 module.exports = {
   groupPolicies,
-  CallerRole,
   PUBLIC_ATTRIBUTES,
   PUBLIC_PROFILE_ATTRIBUTES,
   PROFILE_ATTRIBUTES,

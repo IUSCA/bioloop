@@ -127,7 +127,6 @@ import AccessRequestService from "@/services/v2/access-requests";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
 import { useNavStore } from "@/stores/nav";
-import { useAuthStore } from "@/stores/auth";
 
 // The file-based router passes the path parameter as a prop; declaring it also stops it
 // falling through as an attribute onto this page's fragment root.
@@ -139,7 +138,6 @@ const props = defineProps({
 });
 
 const nav = useNavStore();
-const auth = useAuthStore();
 
 const request = ref(null);
 const loading = ref(true);
@@ -178,17 +176,10 @@ const capabilities = computed(
   () => new Set(request.value?._meta?.capabilities ?? []),
 );
 
-const canReview = computed(
-  () =>
-    capabilities.value.has("review") &&
-    request.value?.status === "UNDER_REVIEW",
-);
-
-const canWithdraw = computed(
-  () =>
-    request.value?.requester_id === auth.user?.subject_id &&
-    ["DRAFT", "UNDER_REVIEW"].includes(request.value?.status),
-);
+// The transition table decides both: `review` only while under review, `withdraw` only for the
+// requester and only before a decision.
+const canReview = computed(() => capabilities.value.has("review"));
+const canWithdraw = computed(() => capabilities.value.has("withdraw"));
 
 const summary = computed(() => request.value?.access_summary ?? null);
 

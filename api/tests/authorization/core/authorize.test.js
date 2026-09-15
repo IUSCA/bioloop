@@ -314,10 +314,11 @@ describe('authorizeWithFilters()', () => {
       expect(filtered).toHaveProperty('secret', 'visible');
     });
 
-    it('first matching attribute rule wins (short-circuit)', async () => {
+    it('a caller matching two attribute rules sees the union of their fields', async () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => true });
-      // Two rules; first matches → should get its filters
+      // Both rules match, so the response keeps every key either rule shows.
+      // @see docs/design/groups/access-model-verification-plan.md — Projection: a path list, not a field set
       const rule1 = { policy: Policy.always, attribute_filters: ['id'] };
       const rule2 = { policy: Policy.always, attribute_filters: ['name'] };
       const result = await authorizeWithFilters({
@@ -326,9 +327,8 @@ describe('authorizeWithFilters()', () => {
         identifiers: { user: 1 },
         registry,
       });
-      const filtered = result.filter({ id: 1, name: 'Alice' });
-      expect(filtered).toHaveProperty('id');
-      expect(filtered).not.toHaveProperty('name');
+      const filtered = result.filter({ id: 1, name: 'Alice', secret: 'x' });
+      expect(filtered).toEqual({ id: 1, name: 'Alice' });
     });
   });
 

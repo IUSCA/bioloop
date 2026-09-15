@@ -218,7 +218,7 @@
 
           <!-- The counterpart of Grant Access, as on the collection Overview. -->
           <ActionButton
-            v-if="!props.canIssueGrants"
+            v-if="props.canRequestAccess && !props.canIssueGrants"
             icon="mdi-account-question"
             icon-color="text-emerald-500"
             title="Request Access"
@@ -297,6 +297,8 @@ const props = defineProps({
   canEdit: { type: Boolean, default: false },
   canArchive: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
+  // `request_access`: filing a request on this dataset would be accepted.
+  canRequestAccess: { type: Boolean, default: false },
   canDownload: { type: Boolean, default: false },
   // Staging is its own authority. Being able to download a dataset that is already staged
   // does not imply being able to ask for it to be staged again.

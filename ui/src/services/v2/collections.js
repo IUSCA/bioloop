@@ -52,8 +52,8 @@ export default {
   },
 
   /**
-   * List datasets within the collection. Each row carries `_meta.can_view_metadata`,
-   * because a caller may browse a collection holding datasets they cannot open.
+   * List datasets within the collection. Each row carries `_meta.capabilities` and
+   * `_meta.standing`, because a caller may browse a collection holding datasets they cannot open.
    * @param {string} id
    * @param {{limit?: number, offset?: number, name?: string, sort_by?: string, sort_order?: string}} [params]
    */

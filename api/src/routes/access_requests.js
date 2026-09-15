@@ -9,7 +9,7 @@ const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const grantService = require('@/services/grants');
 const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray,
+  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, decideRows,
 } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
@@ -54,7 +54,8 @@ router.get(
       resource_type: req.query.resource_type,
     });
     // TODO: attribute filter
-    res.json(requests);
+    const metas = await decideRows('access_request', requests.data, { req, idOf: (r) => r.id, action: 'read' });
+    res.json({ ...requests, data: requests.data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
 
@@ -192,7 +193,8 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    res.json({ metadata, data });
+    const metas = await decideRows('access_request', data, { req, idOf: (r) => r.id, action: 'read' });
+    res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
 
@@ -226,7 +228,8 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    res.json({ metadata, data });
+    const metas = await decideRows('access_request', data, { req, idOf: (r) => r.id, action: 'read' });
+    res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
 

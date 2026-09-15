@@ -129,4 +129,42 @@ async function labelCoverage(coverage) {
   }));
 }
 
-module.exports = { getEffectiveCoverage, labelCoverage, COVERAGE_VIA };
+/**
+ * What revoking one grant leaves its subject: for the grant's access type and each type it
+ * implies, the other valid grants that still confer it.
+ *
+ * Coverage reads `accessPathsQuery`, so a grant to a group the subject belongs to, to a system
+ * principal, or on a collection holding the dataset counts, as it does for every other check.
+ * A type with no other grant is one the subject loses.
+ *
+ * @param {string} grant_id
+ * @returns {Promise<Array<{access_type_id: number, still_conferred_by: Object[]}>|null>}
+ *   the grant's own type first, then its implied types; null when no grant has the id
+ * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ */
+async function previewRevoke(grant_id) {
+  const grant = await prisma.grant.findUnique({
+    where: { id: grant_id },
+    select: {
+      id: true, subject_id: true, resource_id: true, access_type_id: true, resource: { select: { type: true } },
+    },
+  });
+  if (!grant) return null;
+  const impliedIds = await accessTypeClosure.impliedIdsByAccessTypeId();
+  const confers = [grant.access_type_id, ...(impliedIds.get(grant.access_type_id) ?? [])];
+  const others = (await labelCoverage(await getEffectiveCoverage({
+    subject_id: grant.subject_id,
+    resource_id: grant.resource_id,
+    resource_type: grant.resource.type,
+    access_type_ids: confers,
+  }))).filter((row) => row.id !== grant.id);
+  return confers.map((accessTypeId) => ({
+    access_type_id: accessTypeId,
+    still_conferred_by: others.filter((row) => row.access_type_id === accessTypeId
+      || (impliedIds.get(row.access_type_id) ?? []).includes(accessTypeId)),
+  }));
+}
+
+module.exports = {
+  getEffectiveCoverage, labelCoverage, previewRevoke, COVERAGE_VIA,
+};

@@ -14,33 +14,45 @@ auto-imports.
 
 ## Capability gating
 
-The API returns a `_meta` field on a single-resource response carrying the caller's role
-and the actions they are allowed to take:
+The API returns a `_meta` field on a single-resource response. It carries the caller's
+standing and the actions they are allowed to take. Standing is the list of paths by which
+the caller reads the resource:
 
 ```javascript
 {
   id: "…",
   // …resource fields…
   _meta: {
-    caller_role: "PLATFORM_ADMIN" | "ADMIN" | "OVERSIGHT" | "MEMBER" | "GRANT_HOLDER",
+    standing: [
+      { kind: "oversight", group_id: "…" },
+      { kind: "grant", grant_id: "…", access_type: "DATASET:DOWNLOAD", collection_id: null },
+    ],
     capabilities: ["view_metadata", "edit_metadata", "archive", "list_grants", …]
   }
 }
 ```
 
-Every detail page turns that into a `can()` predicate and drives tab and action
-visibility from it:
+A path's `kind` is `platform_admin`, `admin`, `oversight`, `member`, `grant`, or
+`resource_rule`. A `member` path also says whether the membership is `direct`.
+
+Every detail page turns capabilities into a `can()` predicate and drives tab and action
+visibility from it. The badge is a display function of standing and gates nothing:
 
 ```javascript
+import { badgeFor } from "@/services/v2/standing";
+
 const capabilities = computed(
   () => new Set(collection.value?._meta?.capabilities ?? []),
 );
-const callerRole = computed(() => collection.value?._meta?.caller_role);
+const callerRole = computed(() =>
+  badgeFor(collection.value?._meta?.standing, "collection"),
+);
 function can(action) {
   return capabilities.value.has(action);
 }
 
-const showAccessTab = computed(() => can("list_grants"));
+// The Access tab shows for every viewer; the grant table only for a grant manager.
+const showGrantTable = computed(() => can("list_grants"));
 const canEdit = computed(() => can("edit_metadata") && !collection.value?.is_archived);
 ```
 

@@ -99,7 +99,9 @@
               >
                 <template #cell(name)="{ row }">
                   <RouterLink
-                    v-if="row.rowData._meta?.can_view_metadata"
+                    v-if="
+                      row.rowData._meta?.capabilities?.includes('view_metadata')
+                    "
                     :to="`/v2/datasets/${row.rowData.resource_id}`"
                     class="text-sm font-medium hover:underline"
                     style="color: var(--va-primary)"
@@ -273,11 +275,11 @@ const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 // Staging is authorized per dataset, so offer it only when some row on this page accepts it.
 // The stage route still checks every dataset it is asked to stage.
 const canStage = computed(() =>
-  datasets.value.some((d) => d._meta?.can_request_stage),
+  datasets.value.some((d) => d._meta?.capabilities?.includes("request_stage")),
 );
 
 const hasRowsThatWillNotOpen = computed(() =>
-  datasets.value.some((d) => !d._meta?.can_view_metadata),
+  datasets.value.some((d) => !d._meta?.capabilities?.includes("view_metadata")),
 );
 
 const areFiltersActive = computed(() => {

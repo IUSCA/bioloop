@@ -416,6 +416,20 @@ The exception is a failure that is *reproducible* in a full run and absent from 
 one, which points at real shared state rather than at timing. The concurrency count
 assertion above was exactly that, and it was a genuine bug in the assertion.
 
+## Fixtures and raw queries that do not do what they look like
+
+- `createTestGroup(actorId)` does not make the actor an admin. A test that needs one adds a row:
+  `prisma.group_user.createMany({ data: [{ group_id, user_id: subject_id, role: 'ADMIN' }] })`.
+  `relatedLineage.test.js` first failed with both admins refused for this reason.
+- `prisma.$queryRaw` on `SELECT * FROM "grant"` throws "Failed to deserialize column of type
+  'tsrange'". The `valid_period` column is unsupported by the raw client. Name the columns.
+- The UI has no test runner. `tests/model/uiScan.test.js` and `tests/model/badgeCoverage.test.js`
+  run in the API suite and read `ui/src` as text. A scan allowlist entry that matches nothing
+  fails the scan, so delete an entry when its line goes.
+- Run `node tests/model/generateDecisionTable.js` directly after changing a policy container. The
+  `npm run model:table` wrapper once failed inside a chained background command while the direct
+  call succeeded; the cause was not isolated.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

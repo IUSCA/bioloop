@@ -46,7 +46,6 @@
             emit('revoke', {
               grant: $event,
               subject: props.subject,
-              siblingGrants: activeExpandedGrants,
             })
           "
           @navigate-to-request="emit('navigate-to-request', $event)"
@@ -131,14 +130,12 @@ const expandedError = ref(null);
 // ── Expanded grants (sorted: active first, revoked last) ─────────────────────
 
 const activeExpandedGrants = computed(() =>
-  expandedGrants.value
-    ? expandedGrants.value.filter((g) => g.revoked_at === null)
-    : [],
+  expandedGrants.value ? expandedGrants.value.filter((g) => g.is_active) : [],
 );
 
 const sortedExpandedGrants = computed(() => {
   if (!expandedGrants.value) return [];
-  const revoked = expandedGrants.value.filter((g) => g.revoked_at !== null);
+  const revoked = expandedGrants.value.filter((g) => !g.is_active);
   return [...activeExpandedGrants.value, ...revoked];
 });
 

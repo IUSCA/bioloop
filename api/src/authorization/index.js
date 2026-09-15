@@ -11,6 +11,7 @@
  */
 
 const prisma = require('@/db');
+const { projectObject } = require('@/utils/expression');
 
 // ============================================================================
 // SECTION 1: IMPORT CORE FRAMEWORK (never edit this section)
@@ -37,7 +38,7 @@ const {
   // capabilities
   evaluateCapabilitySet, applyTransitions,
   CapabilityEvaluationError,
-  deriveCallerRole,
+  deriveStanding,
   toCapabilitiesArray,
 } = require('./core');
 
@@ -63,7 +64,10 @@ const restrictions = require('./builtin/restrictions');
 const { isPlatformAdmin } = require('./builtin/policies/utils/index');
 const { findUnhydratableRequirements, findAsyncTerms } = require('./core/requiresCheck');
 
-const PLATFORM_ADMIN = { policy: isPlatformAdmin, callerRole: 'PLATFORM_ADMIN' };
+const PLATFORM_ADMIN = { policy: isPlatformAdmin };
+const { expandPath } = require('./builtin/standing');
+const { accessPathsByResource, RESOURCE_TYPES } = require('./builtin/accessPaths');
+const { filterRestrictedCapabilities } = require('./core/middlewares');
 
 // Builtin hydrators
 const { userHydrator } = require('./builtin/hydrators/user');
@@ -120,6 +124,7 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
   undefined,
   restrictions.checkRestriction,
   PLATFORM_ADMIN,
+  expandPath,
 );
 
 // inject hydrate registry into core authorizeWithFilters function
@@ -143,7 +148,7 @@ async function authorizeAction(resourceType, action, {
   policyExecutionContext,
   preFetched,
   shouldDeriveCapabilities = false, // whether to derive capabilities and include them in the policy execution context
-  shouldDeriveCallerRole = false, // whether to derive caller role and include it in the policy execution context
+  shouldDeriveStanding = false, // whether to derive the caller's standing, as permission.standing
 }) {
   // get the policy
   // fail fast if policy container or policy is not found to avoid returning a middleware that always fails at runtime
@@ -186,8 +191,10 @@ async function authorizeAction(resourceType, action, {
         preFetched,
       });
     }
-    if (shouldDeriveCallerRole) {
-      adminResult.callerRole = PLATFORM_ADMIN.callerRole;
+    if (shouldDeriveStanding) {
+      adminResult.standing = [{ kind: 'platform_admin' }].concat(await deriveStanding({
+        policyContainer, identifiers, hydratorRegistry, policyExecutionContext, preFetched, expandPath,
+      }));
     }
     return adminResult;
   }
@@ -210,13 +217,149 @@ async function authorizeAction(resourceType, action, {
     });
     permission.capabilities = capabilities;
   }
-  if (shouldDeriveCallerRole) {
-    const callerRole = await deriveCallerRole({
-      policyContainer, identifiers, hydratorRegistry, policyExecutionContext,
+  if (shouldDeriveStanding) {
+    permission.standing = await deriveStanding({
+      policyContainer, identifiers, hydratorRegistry, policyExecutionContext, preFetched, expandPath,
     });
-    permission.callerRole = callerRole;
   }
   return permission;
+}
+
+/**
+ * `decideRows`, keeping each row's decision so a caller can project the row by it.
+ * @returns {Promise<Array<{decision: Object, meta: {capabilities: string[], standing: Object[]}}>>}
+ */
+async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_metadata' }) {
+  if (!rows.length) return [];
+  const user = req.user?.subject_id;
+  const ids = rows.map(idOf);
+  const batched = RESOURCE_TYPES.includes(resourceType);
+  const [pathsById, restrictionsById] = await Promise.all([
+    batched && user && !req.user.is_anonymous
+      ? accessPathsByResource({ userId: user, resourceType, resourceIds: ids })
+      : null,
+    batched ? restrictions.restrictionTypesByTarget(resourceType, ids) : null,
+  ]);
+
+  const metas = [];
+  // One row at a time, so the first check fills the shared policy context for the rest.
+  for (const [index, row] of rows.entries()) {
+    const id = ids[index];
+    // eslint-disable-next-line no-await-in-loop
+    const decision = await authorizeAction(resourceType, action, {
+      identifiers: { user, resource: id },
+      policyExecutionContext: req.policyContext,
+      preFetched: {
+        user: req.user,
+        resource: row,
+        context: pathsById ? { access_paths: pathsById.get(id) } : undefined,
+      },
+      shouldDeriveCapabilities: true,
+      shouldDeriveStanding: true,
+    });
+    const held = decision.capabilities ?? {};
+    let capabilities;
+    if (restrictionsById) {
+      const types = restrictionsById.get(id);
+      capabilities = Object.fromEntries(Object.entries(held).map(([name, granted]) => [
+        name,
+        granted && !types.some((type) => restrictions.typeBlocks(type, `${resourceType}.${name}`)),
+      ]));
+    } else {
+      // eslint-disable-next-line no-await-in-loop
+      capabilities = await filterRestrictedCapabilities({
+        capabilities: held,
+        resourceType,
+        resourceId: id,
+        preFetchedResource: row,
+        restrictionChecker: restrictions.checkRestriction,
+      });
+    }
+    metas.push({
+      decision,
+      meta: { capabilities: toCapabilitiesArray(capabilities), standing: decision.standing ?? [] },
+    });
+  }
+  return metas;
+}
+
+/**
+ * Each list row's `_meta`: the capabilities and standing the detail route reports for it.
+ *
+ * Every row is decided with the detail route's composition: the detail action with
+ * capabilities and standing, less the capabilities a restriction in force blocks. A row the
+ * caller cannot open lacks the detail action, which is how a collection's datasets tab tells
+ * the two apart. For a dataset, a collection, or a group, the page's paths and restrictions
+ * are read once and seed every row.
+ *
+ * @param {string} resourceType
+ * @param {Object[]} rows - the list's rows, unprojected, used to seed each check
+ * @param {Object} options
+ * @param {import('express').Request} options.req
+ * @param {(row: Object) => string} options.idOf - the id a check binds: `resource_id` for a dataset
+ * @param {string} [options.action] - the action the detail route authorizes
+ * @returns {Promise<Array<{capabilities: string[], standing: Object[]}>>} in row order
+ * @see docs/design/groups/access-model-verification-plan.md — Paths replace the first-match role
+ */
+async function decideRows(resourceType, rows, options) {
+  return (await decideEachRow(resourceType, rows, options)).map(({ meta }) => meta);
+}
+
+/**
+ * Rows of a list, each projected by its own read decision.
+ *
+ * A list binds to the read action it filters on, so no decision covers the whole page. A
+ * lineage row or an ancestor group has its own owning group and its own paths, and a list
+ * query's scope says nothing about which fields each row shows. A row the caller may read is
+ * projected by that row's rules for `action`. Any other row shows `publicAttributes`. Each row
+ * carries `_meta` from `decideRows`.
+ *
+ * @param {string} resourceType
+ * @param {Object[]} rows
+ * @param {Object} options
+ * @param {import('express').Request} options.req
+ * @param {(row: Object) => string} options.idOf
+ * @param {string[]} options.publicAttributes - what a row shows a caller who cannot read it
+ * @param {string[]} [options.relationAttributes] - fields that describe the row's place in the
+ *   list rather than the row, such as `depth`, kept whatever the row's decision
+ * @param {string} [options.action] - the read action, `view_metadata` unless named
+ * @returns {Promise<Object[]>}
+ * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+ * @see docs/design/groups/access-model-verification-plan.md — Projection applied to rows it was not decided for
+ */
+async function projectRows(resourceType, rows, {
+  req, idOf, publicAttributes, relationAttributes = [], action = 'view_metadata',
+}) {
+  const decided = await decideEachRow(resourceType, rows, { req, idOf, action });
+  return rows.map((row, index) => {
+    const { decision, meta } = decided[index];
+    const projected = decision.granted ? decision.filter(row) : projectObject(row, publicAttributes);
+    relationAttributes.forEach((name) => { if (name in row) projected[name] = row[name]; });
+    return { ...projected, _meta: meta };
+  });
+}
+
+/**
+ * Whether the caller may file an access request on a resource whose metadata they can view.
+ *
+ * `POST /access-requests` admits a signed-in caller who can view the resource when no
+ * restriction blocks `access_request.create` on it. A detail route has already decided the
+ * view, so this asks the rest, and the page offers Request Access only where filing succeeds.
+ *
+ * @param {import('express').Request} req
+ * @param {string} resourceId - a dataset's resource id or a collection's id
+ * @returns {Promise<boolean>}
+ * @see docs/design/groups/access-model-verification-plan.md — The UI layer
+ */
+async function mayRequestAccess(req, resourceId) {
+  if (!req.user?.subject_id || req.user.is_anonymous) return false;
+  const blockedBy = await restrictions.checkRestriction({
+    resourceType: 'access_request',
+    action: 'create',
+    resourceId: null,
+    preFetchedResource: { resource_id: resourceId },
+  });
+  return !blockedBy;
 }
 
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a
@@ -266,6 +409,9 @@ module.exports = {
   authorizeWithFilters,
   authorizeAction,
   callerIsPlatformAdmin,
+  decideRows,
+  projectRows,
+  mayRequestAccess,
 
   // Restriction layer
   restrictions,
@@ -289,6 +435,6 @@ module.exports = {
   // capabilities
   evaluateCapabilitySet,
   CapabilityEvaluationError,
-  deriveCallerRole,
+  deriveStanding,
   toCapabilitiesArray,
 };
