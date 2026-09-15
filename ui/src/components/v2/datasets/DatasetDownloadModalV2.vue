@@ -209,7 +209,7 @@ function show() {
 }
 
 .access-option-tag {
-  @apply inline-block px-1.5 py-0.5 rounded text-[10px] font-medium leading-none
+  @apply inline-block px-1.5 py-0.5 rounded text-[0.625rem] font-medium leading-none
     bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300;
 }
 

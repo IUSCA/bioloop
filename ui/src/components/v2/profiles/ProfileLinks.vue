@@ -17,7 +17,7 @@
             style="color: var(--va-secondary)"
           />
           <span class="flex flex-col gap-px min-w-0">
-            <span class="text-[13px] font-medium">{{ link.label }}</span>
+            <span class="text-xs-plus font-medium">{{ link.label }}</span>
             <span
               class="text-xs truncate"
               :class="{ 'font-mono': link.type === 'ror' }"

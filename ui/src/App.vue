@@ -21,6 +21,7 @@
 
 <script setup>
 import UploadTray from "@/components/v2/datasets/create/UploadTray.vue";
+import { applyFontSize } from "@/composables/useFontSize";
 import router from "@/router";
 import envService from "@/services/env";
 import { useAuthStore } from "@/stores/auth";
@@ -38,6 +39,7 @@ const loading = ref(false);
 
 const nav = useNavStore();
 const isDark = useDark();
+applyFontSize();
 
 const setViewType = () => {
   ui.setMobileView(!(breakpoint.xl || breakpoint.lg || breakpoint.md));

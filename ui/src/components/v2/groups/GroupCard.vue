@@ -61,14 +61,14 @@
           <!-- Top-level vs subgroup -->
           <span
             v-if="group.depth === 0"
-            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
+            class="inline-flex items-center gap-1 text-2xs text-slate-600 dark:text-slate-400"
           >
             <i-mdi-star-outline class="text-xs" />
             Top-level group
           </span>
           <span
             v-else
-            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
+            class="inline-flex items-center gap-1 text-2xs text-slate-600 dark:text-slate-400"
           >
             <i-mdi-layers-outline class="text-xs" />
             Subgroup
@@ -77,7 +77,7 @@
           <!-- Contributions status -->
           <span
             v-if="group.is_archived"
-            class="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400"
+            class="inline-flex items-center gap-1 text-2xs text-slate-600 dark:text-slate-400"
           >
             <i-mdi-lock-outline class="text-xs" />
             Archived

@@ -309,6 +309,9 @@
     "useAuditCategories": true,
     "useAuditRecord": true,
     "useAuditTimestamp": true,
-    "useChangeTracker": true
+    "useChangeTracker": true,
+    "FONT_SIZES": true,
+    "applyFontSize": true,
+    "useFontSize": true
   }
 }

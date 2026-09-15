@@ -188,7 +188,7 @@ tinted-transparent, because it reads on both themes without a second color decis
 ```
 text-{hue}-700 bg-{hue}-500/10 dark:text-{hue}-400 dark:bg-{hue}-400/10
 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5
-text-[11px] font-semibold uppercase tracking-wide
+text-2xs font-semibold uppercase tracking-wide
 ```
 
 It takes a meaning or a reserved identity tone, a size from `sm`, `base`, `lg`, and an
@@ -253,8 +253,25 @@ One scale, and headings do not improvise.
 | Empty or error state title | `text-base font-semibold` |
 | Card title, section heading | `text-sm font-semibold` |
 | Body | `text-sm` |
+| Compact value, such as a fact's value or a quick action link | `text-xs-plus` |
 | Caption, helper, tag | `text-xs` |
+| Compact label, such as a small badge or the label above a fact | `text-2xs` |
 | Metric value | `text-2xl font-semibold` |
+
+Every font size is in rem. The root font size is what a user's text-size setting changes,
+and a px size ignores it. Text written as `text-[11px]` stays small while the text around it
+grows.
+
+`text-2xs` (0.6875rem) and `text-xs-plus` (0.8125rem) are defined in
+`ui/tailwind.config.js`. They are two deliberate steps between Tailwind's own, 11px and 13px
+at the default root. Use them rather than `text-[11px]` or `text-[13px]`. Write a genuine
+one-off size in rem as well, such as `text-[0.625rem]`.
+
+A user picks Small, Medium, or Large text on the profile page. `FontSizeSelector` offers the
+choice, and `ui/src/composables/useFontSize.js` saves it in local storage. `applyFontSize`
+runs once from `App.vue` and sets the root font size to 100%, 110%, or 120%. The setting
+belongs to the browser, not the account. Rem spacing grows with the text, including the
+`13rem` sidebar, so check a new page at 120% in a 1024px window.
 
 A heading carries a size and a weight and nothing else. Spacing utilities are fine, and so
 is a color that means something, such as the red on a Danger Zone heading. An explicit
@@ -293,7 +310,7 @@ Card padding is `p-4`. Page-level horizontal padding is `px-6`. Empty and error 
 `py-12`.
 
 A card's own heading is `.v2-card-title`, defined once in `ui/src/styles/main.css`. It is
-uppercase, 12px, and widely tracked, so it reads as a section marker rather than as a second
+uppercase, at the `text-xs` size, and widely tracked, so it reads as a section marker rather than as a second
 title competing with the page's `<h1>`. A card heading is not `text-lg font-semibold`; that
 size belongs to the page title alone.
 
@@ -419,6 +436,7 @@ track shadow in `GroupAllowMemberContribSwitch.vue`, a dropdown padding override
 - Is every class name a complete literal, never built by interpolation? Tailwind cannot see
   `bg-${hue}-500`, and the class will be missing with no error and no visible failure.
 - Is every border paired with `border-solid`?
+- Is every font size in rem, never px?
 - Do slots render unconditionally, so a caller's content cannot be silently dropped?
 - Is the radius `rounded-lg`, the body text `text-sm`, and muted text at least
   `text-gray-600` in light mode?

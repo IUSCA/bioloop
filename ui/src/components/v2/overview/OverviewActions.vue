@@ -13,7 +13,7 @@
 
           <button
             type="button"
-            class="flex items-center gap-3 -mx-2 px-2 py-2 rounded-md text-[13px] font-medium text-left bg-transparent border-0 cursor-pointer"
+            class="flex items-center gap-3 -mx-2 px-2 py-2 rounded-md text-xs-plus font-medium text-left bg-transparent border-0 cursor-pointer"
             :class="
               action.danger
                 ? 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'

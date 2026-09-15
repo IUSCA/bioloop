@@ -36,7 +36,7 @@
     </va-card>
 
     <!-- Color theme switcher -->
-    <va-card class="mt-5">
+    <!-- <va-card class="mt-5">
       <va-card-content>
         <div class="flex flex-col gap-5">
           <div class="flex items-center gap-3">
@@ -49,11 +49,14 @@
           </div>
         </div>
       </va-card-content>
-    </va-card>
+    </va-card> -->
+
+    <FontSizeSelector class="mt-5" />
   </div>
 </template>
 
 <script setup>
+import FontSizeSelector from "@/components/v2/preferences/FontSizeSelector.vue";
 import config from "@/config";
 import { useAuthStore } from "@/stores/auth";
 import { useColors } from "vuestic-ui";

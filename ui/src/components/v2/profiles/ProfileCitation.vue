@@ -19,7 +19,7 @@
         that is copied rather than read.
       -->
       <p
-        class="font-mono text-[11.5px] leading-relaxed break-all rounded-md px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-solid border-gray-200 dark:border-gray-700"
+        class="font-mono text-[0.71875rem] leading-relaxed break-all rounded-md px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-solid border-gray-200 dark:border-gray-700"
       >
         {{ props.citation }}
       </p>

@@ -120,7 +120,7 @@ const groupName = ref("");
 // The step number badge, written out so Tailwind's scanner sees a complete class string.
 const STEP =
   "flex-none grid place-items-center w-5 h-5 rounded-full bg-blue-600 " +
-  "text-white text-[11px] font-semibold";
+  "text-white text-2xs font-semibold";
 const groupId = ref("");
 const retrying = ref(false);
 // Held here rather than read back from the URL, which is cleared on mount.

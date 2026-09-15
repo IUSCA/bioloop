@@ -502,6 +502,40 @@ named 'test_user'". Sign in as `alice` or another of the flows cast instead.
 macOS has no `timeout` command, and `npm run build` fails with "Missing script" unless it
 runs from `ui/`.
 
+## Measuring what a larger root font size does
+
+A user text-size setting works by changing the font size on `<html>`. To test it, set
+`document.documentElement.style.fontSize = '120%'` on a loaded page, with no reload. The DOM
+stays identical, so each text element's computed `font-size` can be compared against a 100%
+baseline taken from the same page, in DOM order. An element whose ratio stays at 1 is pinned
+in px.
+
+Things learned doing it on 2026-09-14:
+
+- Vuestic's own icons (`va-button__left-icon`, sort and select toggles) are 14-24px and never
+  scale. Expect them in every unscaled list, and do not chase them.
+- `document.documentElement.scrollHeight` barely moves, because the layout scrolls inside
+  `#main`. Measure sideways overflow and the sidebar width instead. The sidebar is `13rem`, so
+  it grows and takes width from the content column.
+- A page with content still arriving gives a mismatched element count between scales. Wait
+  for `networkidle` plus a pause before the baseline.
+- `body` sets `15px` in `base.css`, yet no plain text measured stuck at 15px. Do not rely on
+  that rule to explain an unscaled element.
+- `/users`, `/datasets/1`, and `/stats` already scroll sideways at 100% or nearly so. Measure
+  a baseline before blaming a change for their overflow.
+
+Use `text-2xs` and `text-xs-plus` for the 11px and 13px steps. A `text-[Npx]` class is the
+thing this measurement finds.
+
+The user's setting lives in `composables/useFontSize.js`, under the local storage key
+`font-size`. Two side effects to expect. VueUse's `useStorage` writes the default `small`
+into storage on first read, so a fresh browser already holds a value. And `src/composables`
+is an auto-import directory, so adding a file there regenerates `ui/auto-imports.d.ts` and
+`ui/.eslintrc-auto-import.json`. Commit both with the change.
+
+The console shows 401s from `/api/notifications/stream` on every page, before and after
+login. They are unrelated to any style change.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a new trap, a

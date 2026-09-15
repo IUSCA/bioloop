@@ -148,7 +148,7 @@ That made the change safe to apply while v1 is live, and it is applied. The stor
 moved with it, because a name-keyed archive path loses data the moment two groups share a
 name. [Dataset storage](./groups/dataset-storage.md) is the record.
 
-One of two places the groups work has edited legacy code, and the reason is that storage layout
+One of three places the groups work has edited legacy code, and the reason is that storage layout
 and the naming constraint are shared substrate rather than a v2 feature. Legacy behaviour is
 unchanged.
 
@@ -172,6 +172,21 @@ no invitations in the table the handler does nothing, so legacy behaviour is unc
 This is the shape a granted carve-out should take: an extension point in the old code, and the
 feature itself somewhere else. It is not a precedent for editing v1 generally.
 [Invitations](./groups/invitations.md) is the record.
+
+### Done ahead of the cut-over: a text-size setting on the profile page
+
+A user's text-size choice needs a home on the profile page, and the only profile page is
+legacy. The feature lives in the v2 tree. `components/v2/preferences/FontSizeSelector.vue`
+renders the choice, and `composables/useFontSize.js` saves it and applies it.
+
+Two legacy files each gained an import and one line. `pages/profile.vue` mounts
+`<FontSizeSelector>`, and `App.vue` calls `applyFontSize()`. Neither knows the sizes, the
+storage key, or how the size is applied. With nothing saved, the root font size stays at the
+browser default, so legacy behaviour is unchanged.
+
+A replacement profile page must mount `FontSizeSelector`. A replacement app shell must keep the
+`applyFontSize()` call. [V2 design system](../contributing/v2-design-system.md#typography) is
+the record.
 
 ### What only the cut-over may do
 

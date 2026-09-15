@@ -13,7 +13,7 @@
             {{ stat.value }}
           </p>
           <p
-            class="mt-1.5 text-[11px] font-semibold uppercase tracking-wide va-text-secondary"
+            class="mt-1.5 text-2xs font-semibold uppercase tracking-wide va-text-secondary"
           >
             {{ stat.label }}
           </p>

@@ -20,7 +20,7 @@
         <button
           v-if="props.canEdit"
           type="button"
-          class="flex items-center gap-1.5 p-0 text-[13px] font-medium text-left bg-transparent border-0 cursor-pointer text-inherit hover:underline"
+          class="flex items-center gap-1.5 p-0 text-xs-plus font-medium text-left bg-transparent border-0 cursor-pointer text-inherit hover:underline"
           title="Change whether members may add datasets to this group"
           @click="openEditModal"
         >

@@ -96,7 +96,7 @@ const props = defineProps({
 
 // Class strings are complete literals so Tailwind's scanner can see them.
 const SIZES = {
-  sm: { chip: "text-[11px] px-1.5 py-0.5 rounded-md", icon: "text-sm" },
+  sm: { chip: "text-2xs px-1.5 py-0.5 rounded-md", icon: "text-sm" },
   base: { chip: "text-sm px-2 py-1 rounded-md", icon: "text-base" },
   lg: { chip: "text-base px-3 py-1.5 rounded-lg", icon: "text-lg" },
 };

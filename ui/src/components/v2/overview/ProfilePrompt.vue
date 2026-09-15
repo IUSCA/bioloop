@@ -8,7 +8,7 @@
       style="color: var(--va-secondary)"
     />
     <div class="flex-1 min-w-0">
-      <p class="text-[13px] font-semibold">
+      <p class="text-xs-plus font-semibold">
         This {{ props.kind }} has no profile yet
       </p>
       <!-- The second sentence is addressed to whoever would write one, so a reader who

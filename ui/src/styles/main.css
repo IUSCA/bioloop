@@ -59,7 +59,7 @@ a:hover {
    * @see docs/contributing/v2-design-system.md
    */
   .v2-card-title {
-    font-size: 12px;
+    font-size: theme("fontSize.xs[0]");
     font-weight: 600;
     line-height: 1.2;
     text-transform: uppercase;
@@ -95,7 +95,7 @@ a:hover {
     height: 1rem;
     padding: 0 0.375rem;
     border-radius: 9999px;
-    font-size: 13px;
+    font-size: theme("fontSize.xs-plus");
     font-weight: 600;
     background-color: rgb(219 234 254);
     color: rgb(29 78 216);
