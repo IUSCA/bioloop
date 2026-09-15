@@ -1238,6 +1238,28 @@ Audit record includes:
 * Timestamp
 * Provenance
 
+### Operation Effects
+
+Every operation that changes access has a decided effect on the records around it. Each cell says
+whether the effect cascades, refuses the operation, or leaves the record with a stated reason.
+[Decision 16](./decisions.md) carries the reasons for the choices that were open.
+
+| Operation | Grants | Pending invitations | Open access requests | Other records |
+|---|---|---|---|---|
+| Archive a group | leave; archiving does not mutate access | leave; acceptance answers `invalid` while archived | leave; update, submit, withdraw, and review are refused while archived | descendants are restricted through `effective_restriction` |
+| Unarchive a group | leave | leave; acceptance works again | leave; actions work again | none |
+| Archive a collection | leave | none | leave; refused while archived, as for a group | contained datasets are not restricted |
+| Remove a member | leave the member's direct grants; group grants stop reaching them | leave invitations they sent; an invitation is the group's offer | leave requests they filed for the group | refuse when it would leave a group with an admin without one |
+| Demote an admin | leave | leave | leave | refuse when it would leave a group with an admin without one |
+| Soft-delete a dataset | leave; mutating and data-plane actions are refused | none | leave; mutating actions on them are refused | `collection_dataset` rows stay as history |
+| Soft-delete a user | leave | leave | leave | memberships stay; the account no longer counts as an admin |
+| Delete a collection | deleted with it, when deletion is allowed | none | refuse deletion when any exists | refuse deletion when it has ever contained a dataset |
+| Change a dataset's owner | refused: no route changes it | none | none | ownership transfer is deferred by decision 15 |
+| Toggle `allow_user_contributions` | leave | none | none | every effective member's `contribute` follows the new value at once |
+| Change `profile_visibility` | leave | none | none | the public profile cache may serve the old page for up to 300 seconds |
+| Revoke the seeded owning-group grant | members lose grant-path read; admins keep the structural path | none | leave | none |
+| Reparent a group | not built | not built | not built | not built |
+
 ### Other Lifecycle Operations
 
 * Deprecation (admin of owning group)

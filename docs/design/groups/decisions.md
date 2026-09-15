@@ -409,6 +409,39 @@ so the question is answered where it is asked. Anyone adding a route, a policy a
 UI affordance for ownership transfer is reopening this decision, not finishing an
 implementation.
 
+## 16. The access model's open questions have answers
+
+**Decision.** The nineteen questions the
+[access model verification plan](./access-model-verification-plan.md#decisions-the-model-forces)
+raised are answered below. Each answer is stated in [Access model](./access-model.md) or in the
+operations table of [Design — Lifecycle Management](./design.md#lifecycle-management), and each
+answer that differs from what the code did is implemented by a phase of that plan.
+
+The answers were taken during implementation, without a separate review, so each carries its
+reason. A later reader who disagrees is reopening one row, not the model.
+
+| # | Question | Answer | Reason |
+|---|---|---|---|
+| 1 | A removed member holds a direct grant | The grant stays. | A grant names its subject, not a membership. Grants only add, so removing a membership cannot reach a row it never created. |
+| 2 | Archiving a group, with pending invitations and open requests | Both stay. Acceptance answers `invalid` while archived. Updating, submitting, withdrawing, and reviewing a request are refused while archived, and the expiry job closes what is under review. | Archiving closes a boundary without mutating what sits inside it. Unarchiving restores every row as it was. |
+| 3 | Archiving a collection restricts its datasets | No. | A restriction on a resource reaches that resource alone. The datasets belong to the owning group, which is not archived. |
+| 4 | Grants on a soft-deleted dataset | Metadata stays readable to those who could read it. Every mutating action and every data-plane action is refused. Lists exclude it unless asked. | A deleted dataset is preserved as metadata, and its bytes are gone. A grant cannot confer access to bytes that no longer exist. |
+| 5 | A soft-deleted user's memberships and grants | They stay. The account does not count as an admin. | Soft deletion is reversible and login is refused. Closing rows would make the reversal lossy. |
+| 6 | Deleting a collection | Refused when the collection has ever contained a dataset or has any access request. Archive it instead. | Decision 1 preserves history, and a cascade delete destroys it. Refusing keeps deletion for the one case with no history. |
+| 7 | An admin leaves while a request they filed for the group is under review | It stays reviewable. | The request's subject is the group, which still exists. Filing was authorized when it happened. |
+| 8 | A grant to Public on a resource makes its owning group's page visible | No. A system-principal grant does not count toward `canAccessResourcesOwnedByGroup`. | The group page shows who the group is to people with a relationship to it. A world-readable dataset is not a relationship. |
+| 9 | A child of an archived group owns new datasets | No. | The restriction reaches descendants. The engine now resolves a create to its owning group, and the service guards read the view. |
+| 10 | Zero admins | Allowed at creation and reported by the no-active-admins list. A change never takes a group from one admin to none. | Seeded cores and platform-created groups start with none. The harm is losing the last admin, not never having one. |
+| 11 | The seeded grant on an ownership change | Deferred with ownership transfer. No route changes a dataset's owner. | Decision 15 defers the transfer flow, and the one accidental path is closed. |
+| 12 | Batch shapes | A batch a person submits is atomic and names every invalid item. A batch a machine submits reports each item's result. | A person fixes the input and resubmits. A watch script needs to keep going past one bad directory. |
+| 13 | Import as a decision surface | It stays a service check with its rule stated in the model. | It reads the import source row, which no policy container addresses. Binding it adds an action nobody else checks. |
+| 14 | The platform-admin snapshot | The engine reads `user_role` once per request. | A revoked role should stop working on the next request, not after the token expires. |
+| 15 | The user directory | A caller who is not a platform admin gets name, username, and email for at most ten matches of a search term of at least three characters, and never roles or last login. | The subject pickers need a search. A directory with roles and login times is enumeration. |
+| 16 | The `Policy.always` list actions | They retire. A list binds to the read action it filters on. | An action no policy restricts is a row the action table cannot describe. |
+| 17 | Download tokens after revocation | The token lifetime is the accepted window. | The download server is outside this system and trusts its own tokens. The window is stated rather than hidden. |
+| 18 | What the UI may compute | A v2 page gates only on what the API sent, plus display-only facts. | Every client re-derivation found by the UI reading disagreed with the server in some state. |
+| 19 | Leaving quarantine | The legacy create into the archived quarantine group is the intended state until cut-over. Moving a dataset out is ownership transfer, deferred with decision 15. | The workers still create through v1, and a platform admin can unarchive, reassign, and re-archive in the meantime. |
+
 ## Raised and deferred
 
 Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
