@@ -2,8 +2,8 @@
 title: Restrictions and resource state plan
 order: 9
 status: active
-implemented: none
-last_verified: 2026-09-15
+implemented: shipped
+last_verified: 2026-09-16
 ---
 
 # Restrictions and resource state plan
@@ -12,6 +12,11 @@ The ordered work to separate resource state from authorization, and to leave a r
 on every action that allows everything until restrictions are specified.
 
 Nothing in this plan adds a feature to MVP scope.
+
+**All six phases are built and verified as of 2026-09-16.** Each phase carries its own as-built
+section. One item is outstanding and is not code: three of the phase 5 browser checks need a real
+group archived and then unarchived, which is a change to shared state, so they wait on that
+decision. The phase 5 as-built names all three.
 
 The decisions are recorded in [Decisions](../decisions.md): decision 6 for restrictions, and
 [decision 17](../decisions.md#_17-resource-state-is-checked-after-authorization) for resource
