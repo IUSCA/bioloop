@@ -10,7 +10,8 @@ what makes groups, collections, and datasets behave identically without a compon
 library to enforce it. This page covers only what is specific to those pages —
 [UI coding standards](./ui-coding-standards.md) and
 [Vue 3 and Tailwind](./conventions/vue3-tailwind.md) cover everything else, including
-auto-imports.
+auto-imports. [V2 UI vocabulary](./v2-ui-vocabulary.md) lists the words these pages show
+for access-control concepts.
 
 ## Capability gating
 

@@ -27,13 +27,13 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
   });
 
   if (!subject) {
-    throw createError.NotFound('Subject not found');
+    throw createError.NotFound('User or group not found');
   }
 
   // Self-request: subject must exactly match requester subject and must be a USER subject
   if (subject_id === requester_id) {
     if (subject.type !== SUBJECT_TYPE.USER) {
-      throw createError.Forbidden('Self access request must target a user subject');
+      throw createError.Forbidden('A request for yourself must name a user, not a group');
     }
     return;
   }

@@ -6,6 +6,8 @@ description: Operational technique for changing the v2 Vue UI in this repository
 # Changing the v2 UI
 
 The visual rules live in [docs/contributing/v2-design-system.md](../../../docs/contributing/v2-design-system.md).
+The words user-facing text uses for access control live in
+[docs/contributing/v2-ui-vocabulary.md](../../../docs/contributing/v2-ui-vocabulary.md).
 This skill is the operational half: how to find out what is actually true, and how to
 make a change across many files without breaking things that looked unrelated.
 

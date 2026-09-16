@@ -85,11 +85,16 @@
         <!-- The rail: what the request produced, what else reaches the subject, and who
              asked for what. -->
         <div class="flex flex-col gap-4 min-w-0">
-          <RequestOutcomeCard v-if="summary && isDecided" :summary="summary" />
+          <RequestOutcomeCard
+            v-if="summary && isDecided"
+            :summary="summary"
+            :subject-name="subjectName"
+          />
           <SubjectCoverageCard
             v-if="summary?.covered_elsewhere?.length"
             :rows="summary.covered_elsewhere"
             :decided="isDecided"
+            :subject-name="subjectName"
           />
           <RequestDetailsCard :request="request" />
         </div>
@@ -141,6 +146,12 @@ const props = defineProps({
 const nav = useNavStore();
 
 const request = ref(null);
+const subjectName = computed(
+  () =>
+    request.value?.subject?.user?.name ||
+    request.value?.subject?.group?.name ||
+    null,
+);
 const loading = ref(true);
 const error = ref(null);
 const withdrawing = ref(false);

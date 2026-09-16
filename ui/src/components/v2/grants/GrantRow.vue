@@ -51,7 +51,7 @@
         System
       </Badge>
       <Badge v-if="!props.grant.is_active" color="neutral">
-        {{ props.grant.revoked_at ? "Removed" : "Inactive" }}
+        {{ props.grant.revoked_at ? "Revoked" : "Inactive" }}
       </Badge>
       <Badge v-if="props.grant.source_preset" color="violet" :uppercase="false">
         {{ props.grant.source_preset.name }}

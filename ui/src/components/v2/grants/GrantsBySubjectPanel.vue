@@ -72,7 +72,7 @@
               })
             "
           >
-            Remove All Access
+            Revoke All Access
           </va-button>
         </div>
       </template>

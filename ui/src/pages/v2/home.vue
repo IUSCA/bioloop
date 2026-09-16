@@ -439,7 +439,7 @@
           -->
           <p class="text-xs va-text-secondary mt-3">
             A row names the owning group. The dataset's Access tab says which
-            grant carried the access.
+            permission carried the access.
           </p>
         </DashboardSection>
       </div>

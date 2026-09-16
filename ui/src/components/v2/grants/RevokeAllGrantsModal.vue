@@ -20,7 +20,7 @@
           <h2
             class="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100"
           >
-            Remove All Access
+            Revoke All Access
           </h2>
         </div>
       </div>
@@ -41,7 +41,7 @@
             <p
               class="text-sm font-medium text-amber-800 dark:text-amber-300 leading-5"
             >
-              Remove all access immediately
+              Revoke all access immediately
             </p>
             <p
               class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
@@ -49,8 +49,9 @@
               All
               <strong class="font-semibold">{{ grants.length }}</strong>
               active access permission{{ grants.length === 1 ? "" : "s" }} for
-              this subject will be permanently removed immediately. This action
-              cannot be undone and each removal is recorded in the audit log.
+              {{ subjectName }} will be permanently revoked immediately. This
+              action cannot be undone and each revocation is recorded in the
+              audit log.
             </p>
           </div>
         </div>
@@ -132,8 +133,8 @@
               class="shrink-0 mt-0.5 text-base"
             />
             <span>
-              The subject will lose all access listed above immediately upon
-              confirmation.
+              {{ subjectName }} will lose all access listed above immediately
+              upon confirmation.
             </span>
           </li>
           <li
@@ -171,7 +172,7 @@
           @click="revokeAll"
         >
           <Icon icon="mdi-shield-off-outline" class="mr-1 text-base" />
-          Remove All Access
+          Revoke All Access
         </VaButton>
       </div>
     </template>
@@ -234,13 +235,13 @@ async function revokeAll() {
     );
     const count = res.data?.revoked ?? grants.value.length;
     toast.success(
-      `${count} access permission${count === 1 ? "" : "s"} removed successfully.`,
+      `${count} access permission${count === 1 ? "" : "s"} revoked successfully.`,
     );
     emit("update");
     hide();
   } catch (err) {
     console.error("Failed to revoke all grants:", err);
-    toast.error(err?.response?.data?.message ?? "Failed to remove access.");
+    toast.error(err?.response?.data?.message ?? "Failed to revoke access.");
   } finally {
     loading.value = false;
   }

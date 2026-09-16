@@ -158,7 +158,7 @@ class Review {
     }
 
     this.reviewerName = await resolveEntityName(prisma, 'user', this.reviewerId);
-    this.subjectName = this.request.subject.user?.name || this.request.subject.group?.name || 'Unknown Subject';
+    this.subjectName = this.request.subject.user?.name || this.request.subject.group?.name || 'Unknown user or group';
     this.resourceOwnerGroupId = this.request.resource?.dataset?.owner_group_id
       || this.request.resource?.collection?.owner_group_id;
 

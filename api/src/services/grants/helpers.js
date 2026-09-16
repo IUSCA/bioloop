@@ -179,7 +179,7 @@ async function assertItemsRequestable(tx, items) {
   if (grantOnlyTypes.length > 0) {
     const names = grantOnlyTypes.map((t) => t.name).join(', ');
     throw createError.BadRequest(
-      `access_type ${names} cannot be requested; an admin of the owning group grants it directly`,
+      `access_type ${names} cannot be requested; an admin of the owning group gives it directly`,
     );
   }
   if (grantOnlyPresetItems.length > 0) {

@@ -14,7 +14,8 @@ grants, access requests, audit, and dashboard screens described in the
 layer: Tailwind over custom CSS, the documentation block on every component, auto-imports,
 and the shared services. [V2 page patterns](./v2-page-patterns.md) governs capability
 gating, fetching, and tab structure. This page adds the visual decisions those two leave
-open.
+open. [V2 UI vocabulary](./v2-ui-vocabulary.md) governs the words the screens show for
+access-control concepts.
 
 ::: info Snapshot
 Class counts were measured across the 128 `.vue` files under `ui/src/pages/v2/` and

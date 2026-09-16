@@ -30,8 +30,8 @@
         color="info"
         class="mt-3 text-sm"
       >
-        This request gave no new permissions. Anything approved was already covered by
-        access the subject holds.
+        This request gave no new permissions. Anything approved was already
+        covered by access {{ who }} holds.
       </Alert>
       <Alert
         v-else-if="props.summary.live === 0"
@@ -71,7 +71,14 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  /** The name of the user or group the request is for. */
+  subjectName: {
+    type: String,
+    default: null,
+  },
 });
+
+const who = computed(() => props.subjectName || "the user or group");
 
 const stats = computed(() => [
   {

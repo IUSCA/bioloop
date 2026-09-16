@@ -10,7 +10,7 @@
     class="inline-flex items-center gap-2 px-3 py-2 text-sm rounded border border-solid bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-200"
   >
     <i-mdi-help-circle-outline class="text-base" />
-    Unknown subject
+    Unknown user or group
   </div>
 </template>
 

@@ -21,7 +21,7 @@ const {
 // ============================================================================
 
 const GRANT_OVERLAP_ERROR_MSG = 'An active permission with overlapping validity already exists'
-  + ' for this subject, resource, and access type';
+  + ' for this user or group, resource, and access type';
 
 /**
  * Create a grant (direct authorization)

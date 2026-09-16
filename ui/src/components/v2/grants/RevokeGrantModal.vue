@@ -20,7 +20,7 @@
           <h2
             class="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100"
           >
-            Remove Access
+            Revoke Access
           </h2>
         </div>
       </div>
@@ -41,12 +41,12 @@
             <p
               class="text-sm font-medium text-amber-800 dark:text-amber-300 leading-5"
             >
-              Access will be removed immediately
+              Access will be revoked immediately
             </p>
             <p
               class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
             >
-              This access will be permanently removed and cannot be undone. This
+              This access will be permanently revoked and cannot be undone. This
               action is recorded in the audit log.
             </p>
           </div>
@@ -77,7 +77,7 @@
             class="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400 text-lg"
           />
           <p class="text-sm text-amber-800 dark:text-amber-300 leading-5">
-            Also removes {{ alsoRemoved.join(", ") }}.
+            Also revokes {{ alsoRemoved.join(", ") }}.
           </p>
         </div>
 
@@ -149,7 +149,7 @@
               class="shrink-0 mt-0.5 text-base"
             />
             <span>
-              The subject will lose access associated with this permission
+              {{ subjectName }} will lose access associated with this permission
               immediately upon confirmation.
             </span>
           </li>
@@ -188,7 +188,7 @@
           @click="revokeGrant"
         >
           <Icon icon="mdi-shield-off-outline" class="mr-1 text-base" />
-          Remove Access
+          Revoke Access
         </VaButton>
       </div>
     </template>
@@ -271,7 +271,7 @@ async function show({ grant: g, subject: s }) {
     preview.value = data;
   } catch (err) {
     console.error("Failed to preview revocation:", err);
-    toast.error("Could not work out what removing this permission changes.");
+    toast.error("Could not work out what revoking this permission changes.");
   } finally {
     loading.value = false;
   }
@@ -287,12 +287,12 @@ async function revokeGrant() {
   loading.value = true;
   try {
     await GrantService.revoke(grant.value.id);
-    toast.success("Access removed successfully.");
+    toast.success("Access revoked successfully.");
     emit("update");
     hide();
   } catch (err) {
     console.error("Failed to revoke grant:", err);
-    toast.error(err?.response?.data?.message ?? "Failed to remove access.");
+    toast.error(err?.response?.data?.message ?? "Failed to revoke access.");
   } finally {
     loading.value = false;
   }
