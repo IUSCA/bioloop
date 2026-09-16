@@ -117,9 +117,9 @@ const props = defineProps({
 const ORDER = ["new", "supersede", "existing"];
 
 const SECTION_LABELS = {
-  new: "New grants",
+  new: "New permissions",
   supersede: "Extending expiry",
-  existing: "Skipped — existing grant is broader",
+  existing: "Skipped — existing permission is broader",
 };
 
 const grouped = computed(() => {

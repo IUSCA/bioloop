@@ -88,7 +88,7 @@
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
                       />
-                      All existing grants
+                      All existing permissions
                     </li>
                     <li class="flex items-start gap-2">
                       <span

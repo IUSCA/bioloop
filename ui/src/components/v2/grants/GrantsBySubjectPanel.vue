@@ -15,7 +15,7 @@
         class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-2"
       >
         <i-mdi-loading class="animate-spin" />
-        <span>Loading grant details…</span>
+        <span>Loading access details…</span>
       </div>
 
       <!-- Error State -->

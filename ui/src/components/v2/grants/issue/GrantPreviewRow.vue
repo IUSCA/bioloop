@@ -66,7 +66,7 @@ const fmt = (d) => (d?.type === "never" ? "never" : datetime.date(d?.value));
 const note = computed(() => {
   const { type, expiry, existingGrant } = props.row;
 
-  if (type === "new") return `Will be granted · expires ${fmt(expiry)}`;
+  if (type === "new") return `Will be given · expires ${fmt(expiry)}`;
   if (type === "existing") {
     // existing grant with equal or later valid_until than the approved_until - existing grant remains effective
     // Approving this item writes nothing, so the covering grant is the whole explanation.
@@ -78,14 +78,14 @@ const note = computed(() => {
       const wider =
         existingGrant?.access_type?.description ??
         existingGrant?.access_type?.name ??
-        "a wider grant";
+        "a wider permission";
       return `Already conferred by “${wider}” expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
     }
-    return `Already covered by a grant expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
+    return `Already covered by a permission expiring ${fmt(existingGrant?.expiry)} — nothing will be written`;
   }
   if (type === "supersede") {
     // existing grant with earlier valid_until than the approved_until - new grant would supersede the existing grant
-    return `Expiry ${fmt(existingGrant?.expiry)} → ${fmt(expiry)} · extending existing grant`;
+    return `Expiry ${fmt(existingGrant?.expiry)} → ${fmt(expiry)} · extending existing permission`;
   }
   return "";
 });

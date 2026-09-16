@@ -186,7 +186,7 @@ const quickActions = computed(() => {
   if (props.canIssueGrants) {
     actions.push({
       icon: "mdi-key",
-      label: "Grant access",
+      label: "Give access",
       disabled: !stateAdmits("manage_grants"),
       disabledReason: ARCHIVED_REASON,
       onClick: () => emitAction("grant-access", "grants", "issue-grants"),

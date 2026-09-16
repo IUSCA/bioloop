@@ -179,8 +179,8 @@
                 <span class="font-semibold">
                   {{ props.parentGroup.name }}
                 </span>
-                and all ancestor groups. Any grants assigned to parent groups
-                automatically apply to this subgroup. This is structural and
+                and all ancestor groups. Any access given to parent groups
+                automatically applies to this subgroup. This is structural and
                 cannot be restricted.
               </ModernAlert>
 

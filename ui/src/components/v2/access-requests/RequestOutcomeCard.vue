@@ -30,7 +30,7 @@
         color="info"
         class="mt-3 text-sm"
       >
-        This request issued no grants. Anything approved was already covered by
+        This request gave no new permissions. Anything approved was already covered by
         access the subject holds.
       </Alert>
       <Alert
@@ -40,7 +40,7 @@
       >
         Nothing from this request is in force any more.
         <template v-if="props.summary.last_revoked_at">
-          The last grant was revoked
+          The last permission was revoked
           {{ datetime.fromNowShort(props.summary.last_revoked_at)
           }}<template v-if="props.summary.last_revocation_type">
             ({{ props.summary.last_revocation_type.toLowerCase() }})</template

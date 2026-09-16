@@ -190,14 +190,14 @@ describe('a grant', () => {
   test('a revoked grant is revoked once', () => {
     expect(admits('grant', 'revoke', active)).toBe(true);
     expect(refusalFor('grant', 'revoke', { revoked_at: new Date(), target }))
-      .toBe('This grant is already revoked.');
+      .toBe('This permission is already revoked.');
   });
 
   test("the resource's state stops access changing", () => {
     expect(refusalFor('grant', 'revoke', { revoked_at: null, target: { ...target, archived: true } }))
-      .toBe('The dataset this grant concerns is archived, so its access cannot change.');
+      .toBe('The dataset this permission applies to is archived, so its access cannot change.');
     expect(refusalFor('grant', 'create', { target: { ...target, deleted: true } }))
-      .toBe('The dataset this grant concerns is deleted.');
+      .toBe('The dataset this permission applies to is deleted.');
   });
 
   test('reading a grant is always possible', () => {

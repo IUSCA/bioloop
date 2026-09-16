@@ -363,7 +363,7 @@ router.get(
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'Preview what revoking a grant leaves its subject'
     const preview = await grantService.previewRevoke(req.params.id);
-    if (!preview) return next(createError.NotFound('Grant not found'));
+    if (!preview) return next(createError.NotFound('Permission not found'));
     return res.json(preview.map((row) => ({
       ...row,
       still_conferred_by: row.still_conferred_by.map((c) => projectObject(c, baseAttributes.coverage)),

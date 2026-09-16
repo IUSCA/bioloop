@@ -17,9 +17,9 @@
         <div>
           <h2 class="text-xl font-semibold">Create Collection</h2>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Collections group datasets for scalable access management. One grant
+            Collections group datasets for scalable access management. Access given
             on a collection extends to all its datasets and to all members of
-            the granted group.
+            the group it is given to.
           </p>
         </div>
       </div>
@@ -90,8 +90,8 @@
                 <span class="font-semibold italic">
                   {{ formData.selectedOwnerGroup?.name }}
                 </span>
-                can add or remove datasets, create grants, or modify this
-                collection. No group can grant access to data it does not own.
+                can add or remove datasets, give access, or modify this
+                collection. No group can give access to data it does not own.
                 All datasets added must also be owned by
                 <span class="font-semibold italic">
                   {{ formData.selectedOwnerGroup?.name }} </span
@@ -108,8 +108,8 @@
               <span class="font-semibold italic">
                 {{ formData.selectedOwnerGroup?.name }}
               </span>
-              can be added. Adding a dataset changes effective access for all
-              current grant holders on this collection.
+              can be added. Adding a dataset changes effective access for everyone
+              who has access to this collection.
             </ModernAlert>
 
             <DatasetSearchSelect

@@ -149,7 +149,7 @@
               class="shrink-0 mt-0.5 text-base"
             />
             <span>
-              The subject will lose access associated with this grant
+              The subject will lose access associated with this permission
               immediately upon confirmation.
             </span>
           </li>
@@ -271,7 +271,7 @@ async function show({ grant: g, subject: s }) {
     preview.value = data;
   } catch (err) {
     console.error("Failed to preview revocation:", err);
-    toast.error("Could not work out what removing this grant changes.");
+    toast.error("Could not work out what removing this permission changes.");
   } finally {
     loading.value = false;
   }

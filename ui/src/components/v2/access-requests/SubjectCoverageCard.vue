@@ -53,7 +53,7 @@ const props = defineProps({
 
 const blurb = computed(() =>
   props.decided
-    ? "Access the subject holds by another path. Revoking this request's grants does not remove it."
+    ? "Access the subject holds by another path. Revoking the access this request gave does not remove it."
     : "Access the subject already holds by another path. Approving this does not create it.",
 );
 

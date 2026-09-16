@@ -146,7 +146,7 @@
                   <template v-else>
                     No datasets are currently available to you in this group.
                     This group may have no datasets, or you may not have been
-                    granted access. Contact your group administrator for
+                    given access. Contact your group administrator for
                     assistance.
                   </template>
                 </template>

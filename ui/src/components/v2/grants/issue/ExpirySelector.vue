@@ -28,11 +28,11 @@
     <p>
       <span class="text-xs va-text-secondary">
         <span v-if="isNever"
-          >The grant will remain active until manually revoked</span
+          >This access will remain active until manually revoked</span
         >
 
         <span v-else>
-          The grant will automatically expire at
+          This access will automatically expire at
           {{ datetime.displayDateTime(dateValue) }} ({{
             datetime.fromNow(dateValue, true)
           }}

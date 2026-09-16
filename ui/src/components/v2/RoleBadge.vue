@@ -75,7 +75,7 @@ const ROLES = {
   GRANT_HOLDER: {
     color: "violet",
     icon: "mdi-certificate-outline",
-    text: "Grant Holder",
+    text: "Has Access",
   },
   MEMBER: {
     color: "sky",

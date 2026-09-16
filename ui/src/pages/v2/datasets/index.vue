@@ -239,7 +239,7 @@ function openAddDataset() {
 const scopeFilters = [
   { label: "All", value: "all" },
   { label: "Ownership", value: "ownership" },
-  { label: "Grants", value: "grants" },
+  { label: "Access", value: "grants" },
   { label: "Oversight", value: "oversight" },
 ];
 

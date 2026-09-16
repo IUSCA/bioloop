@@ -124,11 +124,11 @@ const noun = computed(() =>
 function grantedVia(row) {
   let to;
   if (row.via === "DIRECT") {
-    to = "Granted to you";
+    to = "Given to you";
   } else if (row.via === "PRINCIPAL") {
-    to = `Granted to ${row.via_group_name}, which includes every signed-in user`;
+    to = `Given to ${row.via_group_name}, which includes every signed-in user`;
   } else {
-    to = `Granted to ${row.via_group_name ?? "a group"}, a group you belong to`;
+    to = `Given to ${row.via_group_name ?? "a group"}, a group you belong to`;
   }
   return row.via_collection_name
     ? `${to}, through the collection ${row.via_collection_name}`

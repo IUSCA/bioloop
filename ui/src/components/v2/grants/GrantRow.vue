@@ -64,7 +64,7 @@
     <!-- Date Row -->
     <div class="flex items-center gap-1.5 text-sm mt-1">
       <span class="text-gray-600 dark:text-gray-400"
-        >Granted {{ datetime.date(props.grant.valid_from) }}</span
+        >Given {{ datetime.date(props.grant.valid_from) }}</span
       >
       <span class="text-gray-400 dark:text-gray-500">·</span>
       <span :class="expiryTextClass">{{ expiryText }}</span>

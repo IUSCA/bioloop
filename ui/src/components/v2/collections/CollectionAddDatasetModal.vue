@@ -51,7 +51,7 @@
             class="mt-0.5 text-sm text-amber-700 dark:text-amber-400/80 leading-5"
           >
             Adding datasets expands this collection's authorization footprint.
-            All subjects with active grants on this collection will
+            All subjects with active permissions on this collection will
             <strong class="font-semibold">immediately gain access</strong>
             to any newly added datasets. This operation is audited.
           </p>

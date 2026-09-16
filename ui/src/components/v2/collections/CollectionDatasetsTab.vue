@@ -216,7 +216,7 @@
                   <template v-else>
                     No datasets are currently available to you in this
                     collection. This collection may have no datasets, or you may
-                    not have been granted access. Contact the administrator for
+                    not have been given access. Contact the administrator for
                     assistance.
                   </template>
                 </template>

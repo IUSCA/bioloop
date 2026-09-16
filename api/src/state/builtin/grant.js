@@ -14,11 +14,11 @@ const { rule, always, refuse } = require('../core/rules');
 function targetRefusal(grant) {
   const { target } = grant;
   if (target.deleted) {
-    return refuse(`The ${target.kind} this grant concerns is deleted.`, { state: 'deleted' });
+    return refuse(`The ${target.kind} this permission applies to is deleted.`, { state: 'deleted' });
   }
   if (target.archived) {
     return refuse(
-      `The ${target.kind} this grant concerns is archived, so its access cannot change.`,
+      `The ${target.kind} this permission applies to is archived, so its access cannot change.`,
       { state: 'archived' },
     );
   }
@@ -42,7 +42,7 @@ const grantState = new StateContainer({
   revoke: rule({
     requires: ['revoked_at', 'target.archived', 'target.deleted', 'target.kind'],
     check: (grant) => (grant.revoked_at != null
-      ? refuse('This grant is already revoked.', { state: 'revoked' })
+      ? refuse('This permission is already revoked.', { state: 'revoked' })
       : targetRefusal(grant)),
   }),
 

@@ -73,10 +73,10 @@
           color="warning"
           title="Nothing has been shared with you yet"
         >
-          Access here is granted, never assumed. A dataset stays invisible to
-          you until an admin of the group that owns it grants you access, or
-          adds you to that group. An empty page means nothing has been shared
-          with you, not that the platform is empty.
+          Access here is given, never assumed. A dataset stays invisible to you
+          until an admin of the group that owns it gives you access, or adds you
+          to that group. An empty page means nothing has been shared with you,
+          not that the platform is empty.
           <template #actions>
             <VaButton preset="primary" size="small" to="/v2/datasets">
               Browse what I can see
@@ -222,7 +222,7 @@
             </DashboardSection>
 
             <DashboardSection
-              title="Grants expiring soon"
+              title="Access expiring soon"
               :subtitle="`Within ${EXPIRY_WINDOW_DAYS} days, grouped by who holds them`"
               :count="expiringGrants.length"
               :count-color="expiringGrants.length > 0 ? 'warning' : 'neutral'"
@@ -230,8 +230,8 @@
               <EmptyState
                 v-if="expiringGrants.length === 0"
                 icon="mdi-clock-check-outline"
-                title="No grant lapses soon"
-                message="A grant with an end date inside the window appears here, so access does not lapse unnoticed."
+                title="No access expires soon"
+                message="Access with an end date inside the window appears here, so it does not lapse unnoticed."
                 :show-clear-filters="false"
                 class="py-8"
               />
@@ -361,7 +361,7 @@
               v-if="myGroups.length === 0"
               icon="mdi-account-group-outline"
               title="You are not in any group"
-              message="A group admin adds you, or invites you by email. Groups are how a lab's data reaches its people without a grant each time."
+              message="A group admin adds you, or invites you by email. Groups are how a lab's data reaches its people without giving access to each person."
               :show-clear-filters="false"
               class="py-8"
             />
@@ -394,8 +394,8 @@
                 class="text-xs va-text-secondary mt-1"
               >
                 Membership of a group also makes you a member of every group
-                above it. Membership alone does not grant access to data; a
-                grant does.
+                above it. Membership alone does not give access to data; a
+                permission does.
               </p>
             </div>
           </DashboardSection>
@@ -403,7 +403,7 @@
 
         <DashboardSection
           title="Datasets I can reach"
-          subtitle="Through a grant to you, to a group you belong to, or to a collection"
+          subtitle="Through access given to you, to a group you belong to, or to a collection"
           :count="reachableDatasets"
           to="/v2/datasets"
           link-label="Browse datasets →"
@@ -628,7 +628,7 @@ async function load() {
       }),
       // Unpaginated and grouped by subject and resource, so the count is the array
       // length and the panel in phase 3 reads the same rows.
-      attempt("Grants expiring soon", async () => {
+      attempt("Access expiring soon", async () => {
         const { data } = await GrantsService.expiringGrants({
           within_days: EXPIRY_WINDOW_DAYS,
         });
@@ -844,7 +844,7 @@ const statCards = computed(() => {
         color: "info",
       },
       {
-        label: `Grants expiring in ${EXPIRY_WINDOW_DAYS} days`,
+        label: `Access expiring in ${EXPIRY_WINDOW_DAYS} days`,
         value: expiringGrants.value.length,
         icon: "mdi-clock-alert",
         color: "danger",

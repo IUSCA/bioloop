@@ -11,7 +11,7 @@
           class="text-3xl text-gray-300 dark:text-gray-600 mx-auto mb-2"
         />
         <p class="text-sm text-gray-500 dark:text-gray-400">
-          Approve at least one item to preview the grants that will be issued.
+          Approve at least one item to preview the access that will be given.
         </p>
       </div>
 
@@ -44,7 +44,7 @@
         :rows="responseRows"
         :loading="loading"
         :error="error"
-        description="What will actually be granted based on your decisions"
+        description="What will actually be given based on your decisions"
       />
     </div>
   </div>
@@ -144,7 +144,7 @@ const fetchEffectiveGrants = async () => {
     console.error("Failed to compute effective grants:", err);
     error.value =
       err.response?.data?.message ||
-      "Failed to preview grants. Please try again.";
+      "Failed to preview access. Please try again.";
     responseRows.value = [];
   } finally {
     loading.value = false;

@@ -84,7 +84,7 @@
               <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 {{ subject?.type === "GROUP" ? "Group" : "User" }}
                 &middot;
-                {{ grants.length }} active grant{{
+                {{ grants.length }} active permission{{
                   grants.length === 1 ? "" : "s"
                 }}
                 will be revoked
@@ -94,7 +94,7 @@
               class="shrink-0 text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-full ring-1 ring-red-200 dark:ring-red-700/50"
             >
               {{ grants.length }}
-              grant{{ grants.length === 1 ? "" : "s" }}
+              permission{{ grants.length === 1 ? "" : "s" }}
             </span>
           </div>
 

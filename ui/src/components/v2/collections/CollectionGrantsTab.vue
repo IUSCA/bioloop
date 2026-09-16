@@ -72,7 +72,7 @@
             :title="stateAdmits('manage_grants') ? null : DISABLED_REASON"
             @click="openIssueGrantModal"
           >
-            Grant Access
+            Give Access
           </VaButton>
         </div>
       </VaCardContent>
@@ -98,7 +98,7 @@
           >
             <EmptyState
               title="No access configured"
-              message="Grant access to specific users or groups to give them permission to use this collection."
+              message="Give specific users or groups permission to use this collection."
               :showClearFilters="false"
               @reset="fetchGrants"
               :show-clear-filters="false"

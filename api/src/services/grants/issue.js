@@ -20,7 +20,7 @@ const {
 // Grant Creation
 // ============================================================================
 
-const GRANT_OVERLAP_ERROR_MSG = 'An active grant with overlapping validity already exists'
+const GRANT_OVERLAP_ERROR_MSG = 'An active permission with overlapping validity already exists'
   + ' for this subject, resource, and access type';
 
 /**

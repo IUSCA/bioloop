@@ -16,9 +16,9 @@
             <Icon :icon="constants.icons.grant" class="text-2xl" />
           </div>
           <div>
-            <h2 class="text-xl font-semibold">Grant Access</h2>
+            <h2 class="text-xl font-semibold">Give Access</h2>
             <span class="text-sm text-gray-600 dark:text-gray-400">
-              Grant access to a user or group
+              Give access to a user or group
             </span>
           </div>
         </div>
@@ -40,7 +40,7 @@
             :disabled="!enableGrantButton"
             @click="confirm"
           >
-            Grant Access
+            Give Access
           </VaButton>
         </div>
       </div>
@@ -257,11 +257,11 @@ const selectionSummary = computed(() => {
   const parts = [];
   if (grantCountsByType.value.new)
     parts.push(
-      `create ${maybePluralize(grantCountsByType.value.new, "new grant")}`,
+      `create ${maybePluralize(grantCountsByType.value.new, "new permission")}`,
     );
   if (grantCountsByType.value.supersede)
     parts.push(
-      `extend ${maybePluralize(grantCountsByType.value.supersede, "existing grant")}`,
+      `extend ${maybePluralize(grantCountsByType.value.supersede, "existing permission")}`,
     );
   if (
     grantCountsByType.value.new > 0 ||
@@ -270,7 +270,7 @@ const selectionSummary = computed(() => {
     const subjectName = subject.value?.user?.name || subject.value?.group?.name;
     return `This will ${parts.join(", ")} for ${subjectName}`;
   } else {
-    return "No changes will be made to existing grants";
+    return "No changes will be made to existing permissions";
   }
 });
 
@@ -330,7 +330,7 @@ function confirm() {
       hide();
     })
     .catch((err) => {
-      const msg = err?.response?.data?.message || "Failed to issue grants";
+      const msg = err?.response?.data?.message || "Failed to give access";
       toast.error(msg);
     })
     .finally(() => {
@@ -385,7 +385,8 @@ debouncedWatch(
       })
       .catch((err) => {
         previewError.value =
-          err?.response?.data?.message || "Failed to compute effective grants";
+          err?.response?.data?.message ||
+          "Failed to preview the change in access";
       })
       .finally(() => {
         previewLoading.value = false;

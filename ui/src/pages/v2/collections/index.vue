@@ -182,8 +182,7 @@
                 <template v-else>
                   No collections are currently available to you in this group.
                   This group may have no collections, or you may not have been
-                  granted access. Contact your group administrator for
-                  assistance.
+                  given access. Contact your group administrator for assistance.
                 </template>
               </template>
               <template v-if="canCreate" #actions>

@@ -219,10 +219,10 @@
             :disabled="!stateAdmits('manage_grants')"
             icon="mdi-key"
             icon-color="text-amber-500"
-            title="Grant Access"
+            title="Give Access"
             :description="
               stateAdmits('manage_grants')
-                ? 'Grant access to users or groups'
+                ? 'Give access to users or groups'
                 : ARCHIVED_REASON
             "
             hover-theme="blue"

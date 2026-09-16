@@ -14,7 +14,7 @@
  */
 
 const MEMBERSHIP = "Add or remove members, or change their roles";
-const GRANTS = "Create new grants or revoke existing grants";
+const GRANTS = "Give access or revoke existing access";
 const REQUESTS = "File, change, or review access requests";
 const DATASETS = "Create or import datasets";
 const COLLECTIONS = "Create collections";

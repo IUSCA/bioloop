@@ -63,7 +63,7 @@
             icon="add"
             @click="openIssueGrantModal"
           >
-            Grant Access
+            Give Access
           </VaButton>
         </div>
       </VaCardContent>
@@ -89,7 +89,7 @@
           >
             <EmptyState
               title="No access configured"
-              message="Grant access to specific users or groups to give them permission to use this dataset."
+              message="Give specific users or groups permission to use this dataset."
               @reset="fetchGrants"
               :showClearFilters="false"
               :show-clear-filters="false"

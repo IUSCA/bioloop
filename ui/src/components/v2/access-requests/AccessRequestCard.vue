@@ -151,7 +151,7 @@ const accessNote = computed(() => {
   if (summary.issued === 0) return null;
   if (summary.live === 0) return "No live access from this request";
   if (summary.live < summary.issued) {
-    return `${summary.live} of ${summary.issued} grants still live`;
+    return `${summary.live} of ${summary.issued} permissions still live`;
   }
   return null;
 });

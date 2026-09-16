@@ -44,7 +44,7 @@
                 </p>
                 <p class="text-sm text-gray-600 dark:text-gray-300">
                   The group will return to active state and members, resources,
-                  and grants can be managed again.
+                  and access can be managed again.
                 </p>
               </div>
             </div>
@@ -88,7 +88,7 @@
                       <span
                         class="mt-1 inline-block h-2 w-2 rounded-full bg-emerald-800 dark:bg-emerald-200"
                       />
-                      All existing grants
+                      All existing permissions
                     </li>
                     <li class="flex items-start gap-2">
                       <span
