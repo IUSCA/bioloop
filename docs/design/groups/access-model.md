@@ -88,8 +88,12 @@ Each derived relation has one definition, and every consumer reads that definiti
 - **`subjects(u)`** holds `u`, every group `u` is an effective member of, Authenticated Users when `u` is signed in, and Public.
 - **`holds(u, r, t)`** holds when some active grant has its subject in `subjects(u)`, names `r` or a collection that actively contains `r`, and carries a type that implies `t` through the closure.
 - **`restricted(u, r, a)`** holds when a restriction on `r` blocks the restriction class of `a` for `u`. Every action declares one of three classes: `mutating`, `reading`, or `data`, which reads a dataset's bytes. No restriction type is specified, so `restricted` never holds today.
-- **`precondition(a, x)`** holds when the state of `x` admits `a`, according to the transition table below.
-- **`state_admits(a, r)`** holds when `precondition(a, r)` holds; when `a` is not `mutating`, or is `unarchive`, or neither `r` nor its owning group is archived; and when `a` is `reading`, or `r` is not a deleted dataset.
+- **`open(r)`** holds when a dataset is not deleted and its owning group is not archived, or when neither a collection nor its owning group is archived.
+- **`precondition(a, x)`** holds when the status of an access request, an invitation, or a grant admits `a`, according to the transition table below.
+- **`state_admits(a, r)`** holds when the state of `r` admits `a`.
+  - For a group, a collection, or a dataset, it follows the action's restriction class. A `mutating` action needs neither `r` nor its owning group archived. A deleted dataset also refuses every `data` action. A `reading` action is always admitted.
+  - Four actions have their own rule. `archive` needs `r` not archived, and a collection's owning group not archived. `unarchive` needs `r` archived. A create reads only the owning group it names. A collection that has held a dataset or has any access request refuses `delete`.
+  - For an access request, an invitation, or a grant, it is `precondition(a, r)`, together with `open` on the resource or group the row names, as the transition table lists.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
 
 ## The decision rule
@@ -129,8 +133,15 @@ The authorization layer answers `allowed`. The service that performs the action 
 platform admin is refused the same way.
 
 Archiving covers the group or collection itself and the resources it owns. A sub-group keeps its
-own state. A create action has no resource yet, so its state check reads the owning group it
-names.
+own state. A dataset in an archived collection keeps its own state too, because a collection
+contains datasets and does not own them. A create action has no resource yet, so its state check
+reads the owning group it names.
+
+The rules live in `api/src/state/builtin/`, one container per resource type. Invitations have a
+container of their own, although they have no policy container. A service calls
+`state.assertPossible` with the row it locked. A response reports the same rules as
+`_meta.available_actions`, through `state.availableActions`. The server refuses to start when a
+policy action has no state rule.
 
 @see [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization)
 
@@ -258,26 +269,28 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 | A grant blocks a hard delete | `ON DELETE RESTRICT` |
 | One update per version | optimistic `expected_version`, 409 on a stale write |
 | An action the resource's state does not admit is refused | the state check, inside the transaction that holds the row lock |
-| A collection with history is never deleted | `deleteCollection`, under the collection row lock, and the `delete` transition row |
+| A collection with history is never deleted | the collection `delete` state rule, asserted by `deleteCollection` under the collection row lock |
 | A group that has an admin keeps one | `assertAdminsRemain`, inside the removal or demotion transaction, under the group row lock |
 | A collection's datasets share its owning group | `addDatasets`, and the absence of any route that changes a dataset's owner |
-| Access-request status moves only along the transition table | a `WHERE status = ...` guard on each write |
+| Access-request status moves only along the transition table | the access-request state rules, and a `WHERE status = ...` guard on each write for the request that loses a race |
 | No duplicate in-flight request | application code, read then write |
 
 ## The transition table
 
-A stateful resource admits an action only in the states listed. The state check reads this table,
-together with archiving and dataset deletion.
+A stateful resource admits an action only in the states listed. The state rules in
+`api/src/state/builtin/` enforce this table. A group, a collection, and a dataset have no status,
+and `state_admits` above states what their archived and deleted states admit. **Open** in the
+tables means `open` holds for the resource the row names.
 
 ### Access requests
 
 | Action | From | To |
 |---|---|---|
-| `create` | none | `DRAFT` |
+| `create` | none, resource open | `DRAFT` |
 | `update` | `DRAFT` | `DRAFT` |
-| `submit` | `DRAFT` | `UNDER_REVIEW` |
+| `submit` | `DRAFT`, resource open | `UNDER_REVIEW` |
 | `withdraw` | `DRAFT`, `UNDER_REVIEW` | `WITHDRAWN` |
-| `review` | `UNDER_REVIEW` | `APPROVED`, `PARTIALLY_APPROVED`, or `REJECTED` |
+| `review` | `UNDER_REVIEW`, resource open | `APPROVED`, `PARTIALLY_APPROVED`, or `REJECTED` |
 | expiry, run by the system | `UNDER_REVIEW` | `EXPIRED` |
 | `read` | every state | unchanged |
 
@@ -286,15 +299,15 @@ together with archiving and dataset deletion.
 | Action | From | To |
 |---|---|---|
 | `group.invite` | none | `PENDING` |
-| cancel, bound to `group.invite` | `PENDING` | `CANCELLED` |
+| cancel, bound to `group.invite` | `PENDING`, group not archived | `CANCELLED` |
 | accept, by token | `PENDING`, unexpired, group not archived | `ACCEPTED` |
 
 ### Grants
 
 | Action | From | To |
 |---|---|---|
-| `create` | none | active |
-| `revoke` | not revoked | revoked, `MANUAL` |
+| `create` | none, resource open | active |
+| `revoke` | not revoked, resource open | revoked, `MANUAL` |
 | supersession, run by the system | active | revoked, `SUPERSEDED` |
 | expiry, by time | active | expired; no row changes |
 
@@ -323,21 +336,21 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 
 | Response shape | Producer | Read by | Pinned by |
 |---|---|---|---|
-| `_meta.capabilities` on a detail route | the engine: what the caller could do, less what a restriction blocks | every `[id]` page through `can()` | the capabilities arm |
-| `_meta.available_actions` on a detail route and a list row | the state table: what the resource's state admits | every page, to enable a control it shows | `api/tests/services/state/state.test.js` |
-| `request_access` in a detail route's capabilities | `mayRequestAccess`: signed in, no restriction blocks `access_request.create`, and the resource's state admits a request | the dataset and collection Overview tabs | the list rows arm, through the restriction batch |
+| `_meta.capabilities` on a detail route | the engine: what the caller could do, less what a restriction blocks | every `[id]` page through `can()` | `tests/model/engineArm.test.js` for the decision each capability reports, and `tests/model/transitionsArm.test.js` for access requests; no test compares a route's list with the reference model |
+| `_meta.available_actions` on a detail route and a list row | `state.availableActions`, from each resource type's state rules | every page, to enable a control it shows | `tests/state/rules.test.js`, `tests/model/stateArm.test.js`, `tests/routes/stateRefusals.test.js` |
+| `request_access` in a detail route's capabilities | `mayRequestAccess`: signed in, no restriction blocks `access_request.create`, and the resource's state admits a request | the dataset and collection Overview tabs | no API test |
 | `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | `tests/model/standingArm.test.js`, `tests/model/badgeCoverage.test.js` |
 | `_meta.capabilities` and `_meta.standing` on a list row | `decideRows`, the detail route's composition for each row | list pages, cards, and the request cards | `tests/model/listRowsArm.test.js` |
 | the fields of a list row or a related row | `projectRows`, each row's own read decision | list pages, lineage, and the group tree | `tests/model/relatedRowsArm.test.js`, `tests/services/grants/relatedLineage.test.js` |
 | `is_active` on a grant row | `isGrantActive`, the predicate of `valid_grants` | the grant panels | `tests/services/grants/isActive.test.js` |
 | the revoke preview | `previewRevoke`, from coverage over every path | `RevokeGrantModal` | `tests/services/grants/revokePreview.test.js` |
-| list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | the list arm |
+| list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | `tests/model/listsArm.test.js`, for the `all` scope |
 | `/v2/users/me` facts | `user_role` and the membership views | the dashboard, the groups list, and the subject selector | `tests/services/groups/governanceCounts.test.js` |
 | refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
 | the actions archiving forbids | each resource type's own state rules, through `GET /v2/states/:type/archived/forbidden-actions` | the archive dialogs, through `stateLabels.js` | `tests/model/stateLabels.test.js` |
 | a user directory search | `searchDirectory`: three characters, ten people, four fields | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
 | eligible owner groups | `dataset.contribute` decided on each candidate the path statement names | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
-| a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | the projection arm |
+| a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | no test |
 
 ## Decision surfaces outside the engine
 
@@ -347,6 +360,9 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 
 ## Extension
 
-Every table and every check is stated over the registries. A container a derived app registers in
-`custom/` carries its own action rows, restriction classes, attribute rules, and transition rows,
-and the completeness checks iterate the registry rather than a literal list.
+Every table and every check is stated over the registries. A derived app registers two containers
+for a new resource type. The policy container in `api/src/authorization/custom/` carries its
+actions, their restriction classes, and its attribute rules. The state container in
+`api/src/state/custom/` carries a state rule for every one of those actions. The completeness
+checks iterate the registries rather than a literal list, and the server refuses to start while the
+two disagree.
