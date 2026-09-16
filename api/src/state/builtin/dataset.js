@@ -53,8 +53,7 @@ const datasetState = new StateContainer({
   manage_grants: notWhileDeletedOrOwnerArchived,
   review_access_requests: notWhileDeletedOrOwnerArchived,
 
-  // Phase 2 renames this pair: the operation is delete, and it cannot be undone.
-  archive: rule({
+  delete: rule({
     requires: ['is_deleted', 'owner_group.is_archived'],
     check: (dataset) => {
       if (dataset.is_deleted) {
@@ -69,7 +68,6 @@ const datasetState = new StateContainer({
       return null;
     },
   }),
-  unarchive: always,
 
   list_files: notWhileDeleted,
   read_data: notWhileDeleted,

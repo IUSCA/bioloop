@@ -3,9 +3,10 @@ const createError = require('http-errors');
 const config = require('config');
 
 const prisma = require('@/db');
-const { isRestricted, RESTRICTED_MESSAGE } = require('@/services/restrictions');
+const state = require('@/state');
 const audit = require('@/authorization/builtin/audit');
 const validate = require('./validate');
+const avatarService = require('./avatar');
 
 /**
  * Reading and writing the profile of a group or a collection.
@@ -103,14 +104,71 @@ function buildProfileUpdate(body, currentMetadata) {
   };
 }
 
+/**
+ * What a collection's state rules read beyond its own columns: its owning group's archived state.
+ * A group's rules read only its own column, so it needs no include.
+ */
+const stateInclude = (model) => (model === 'collection'
+  ? { include: { owner_group: { select: { is_archived: true } } } }
+  : {});
+
+/**
+ * Replaces a profile picture, and removes the file the new one displaced.
+ *
+ * The write lives here rather than in the route, so the state check runs on the same path as
+ * every other profile edit. The old file is removed only after the new key is committed, so a
+ * failure leaves the previous picture serving.
+ *
+ * @param {Object} params
+ * @param {'group'|'collection'} params.model
+ * @param {string} params.id
+ * @param {string} params.avatar_key - the stored file name
+ * @returns {Promise<{id: string, avatar_key: string}>}
+ */
+async function replaceAvatar({ model, id, avatar_key }) {
+  const { previous, updated } = await prisma.$transaction(async (tx) => {
+    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
+    state.assertPossible(model, 'edit_metadata', current);
+
+    const row = await tx[model].update({
+      where: { id },
+      data: { avatar_key },
+      select: { id: true, avatar_key: true },
+    });
+    return { previous: current.avatar_key, updated: row };
+  });
+
+  await avatarService.removeAvatar(previous);
+  return updated;
+}
+
+/**
+ * Removes a profile picture. The profile falls back to the resource's kind icon.
+ *
+ * @param {Object} params
+ * @param {'group'|'collection'} params.model
+ * @param {string} params.id
+ * @returns {Promise<{id: string, avatar_key: null}>}
+ */
+async function removeProfileAvatar({ model, id }) {
+  const previous = await prisma.$transaction(async (tx) => {
+    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
+    state.assertPossible(model, 'edit_metadata', current);
+
+    await tx[model].update({ where: { id }, data: { avatar_key: null } });
+    return current.avatar_key;
+  });
+
+  await avatarService.removeAvatar(previous);
+  return { id, avatar_key: null };
+}
+
 async function updateProfile({
   model, id, body, expected_version, actor_id, auditTarget, auditEvent,
 }) {
   return prisma.$transaction(async (tx) => {
-    const current = await tx[model].findUniqueOrThrow({ where: { id } });
-    // A group is a restriction target by its id, and a collection by its resource id.
-    const target = model === 'group' ? { group_id: id } : { resource_id: id };
-    if (await isRestricted(tx, target)) throw createError.Conflict(RESTRICTED_MESSAGE);
+    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
+    state.assertPossible(model, 'edit_metadata', current);
 
     const update = buildProfileUpdate(body, current.metadata);
     if (!update) throw createError.BadRequest('No profile fields were supplied.');
@@ -205,6 +263,8 @@ module.exports = {
   profileUrl,
   updateGroupProfile,
   updateCollectionProfile,
+  replaceAvatar,
+  removeProfileAvatar,
   getGroupForProfile,
   getCollectionForProfile,
   ...validate,

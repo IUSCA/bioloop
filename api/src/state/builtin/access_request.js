@@ -48,9 +48,12 @@ const accessRequestState = new StateContainer({
     requires: ['status'],
     check: statusRefusal([DRAFT], 'a draft can be edited'),
   }),
+  // Submitting puts the request in front of a reviewer, so a resource whose access has stopped
+  // changing refuses it here rather than at review.
   submit: rule({
-    requires: ['status'],
-    check: statusRefusal([DRAFT], 'a draft can be submitted'),
+    requires: ['status', 'target.archived', 'target.deleted', 'target.kind'],
+    check: (request) => targetRefusal(request)
+      || statusRefusal([DRAFT], 'a draft can be submitted')(request),
   }),
   withdraw: rule({
     requires: ['status'],

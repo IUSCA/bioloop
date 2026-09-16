@@ -6,10 +6,10 @@
 const {
   Prisma, GRANT_REVOCATION_TYPE,
 } = require('@prisma/client');
-const createError = require('http-errors');
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder } = require('@/authorization/builtin/audit');
+const state = require('@/state');
 const fetchService = require('./fetch');
 const issueService = require('./issue');
 const coverageService = require('./coverage');
@@ -31,9 +31,12 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
       where: { id: grant_id },
       select: { resource_id: true, revoked_at: true },
     });
-    if (grantToRevoke.revoked_at !== null) {
-      throw createError.NotFound('Grant not found or already revoked');
-    }
+    // An already revoked grant, and a resource whose access has stopped changing, are states
+    // rather than missing rows, so each answers 409.
+    state.assertPossible('grant', 'revoke', {
+      ...grantToRevoke,
+      target: await state.readTargetState(tx, grantToRevoke.resource_id),
+    });
 
     // Capture the revoking authority (owner group of the resource at revocation time)
     const revoking_authority_id = await helpers.getResourceOwnerGroupId(tx, grantToRevoke.resource_id);
@@ -85,12 +88,19 @@ async function revokeAllGrants(subject_id, resource_id, { actor_id, reason }) {
   return prisma.$transaction(async (tx) => {
     const activeGrants = await tx.grant.findMany({
       where: { subject_id, resource_id, revoked_at: null },
-      select: { id: true },
+      select: { id: true, revoked_at: true },
     });
 
     if (activeGrants.length === 0) {
       return [];
     }
+
+    // The check reads a row that was fetched, not a literal restating the filter above. Every
+    // row here is open, so the first one answers for the batch.
+    state.assertPossible('grant', 'revoke', {
+      ...activeGrants[0],
+      target: await state.readTargetState(tx, resource_id),
+    });
 
     // Capture revoking authority once — same resource for all grants
     const revoking_authority_id = await helpers.getResourceOwnerGroupId(tx, resource_id);

@@ -16,7 +16,7 @@ require('module-alias/register');
 
 const { policyRegistry, Policy, PolicyContainer } = require('@/authorization');
 const {
-  stateRegistry, engine, StateContainer, StateRegistry, rule, always, refuse,
+  stateRegistry, engine, StateContainer, StateRegistry, rule, always, refuse, verifyInSync,
 } = require('@/state');
 
 const PolicyRegistry = require('@/authorization/core/policies/PolicyRegistry');
@@ -43,6 +43,10 @@ test('the shipped registries agree', () => {
     missingRules: [],
     phantomRules: [],
   });
+});
+
+test('the startup check passes, and it is what src/index.js calls before listening', () => {
+  expect(() => verifyInSync()).not.toThrow();
 });
 
 test('every policy container has a state container, and the standalone one is extra', () => {

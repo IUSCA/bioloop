@@ -2,6 +2,7 @@ const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 const createError = require('http-errors');
 
 const prisma = require('@/db');
+const state = require('@/state');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
@@ -22,6 +23,10 @@ async function withdrawRequest({ request_id, requester_id }) {
         subject: { include: { user: true, group: true } },
       },
     });
+
+    // Withdrawing reads the status only. A requester may withdraw from a resource that has
+    // since been archived, because closing their own request takes nothing away.
+    state.assertPossible('access_request', 'withdraw', currentRequest);
 
     // Update status to WITHDRAWN
     const updated = await tx.access_request.updateMany({

@@ -292,6 +292,48 @@ state. Both are v1 code, so they are recorded in [v2 cut-over](../../v2-cutover.
 
 **Exit:** the new tests pass, the full API suite passes, and the engine still refuses first.
 
+**As built, 2026-09-15.** Every service listed above asks the state layer, and three of them
+departed from the description here.
+
+`bulkStage` checks the row its caller passes rather than fetching state itself. A first version
+queried the page's state fields inside the service, which made a pure decision depend on the
+database, broke a unit test that fabricates dataset rows, and had no sensible answer for a row
+the query did not return. The collection stage route widened its own query instead, with
+`includes: { owner_group: true }`, and `bulkStage` documents the fields a caller supplies.
+
+`addDatasets` now runs the state check before its validation query rather than after, and the
+query lost its `g.is_archived = false` predicate. The join already ties the dataset's owning
+group to the collection's, so that predicate restated exactly what the state rule reads. An
+archived collection or owning group answers 409, and only an unknown, deleted, or foreign
+dataset answers 400. This closes the split answer the findings above record.
+
+`revokeAllGrants` passes a grant row it fetched to the check. Building `{ revoked_at: null }`
+inline restated the filter of the query above it, which `currentStateScan` reports as a service
+restating a current-state view.
+
+The dataset rename landed whole: `dataset.delete` in the policy container and the state file,
+`DELETE /v2/datasets/:id` in the route, no `dataset.unarchive` anywhere, and
+`DatasetDeleteConfirmModal` in the UI. `npm run model:table` regenerated
+[the decision table](../generated/access-decisions.md), whose only change is that rename.
+
+The model suite carried the pre-D2 premise in nine places, which was the bulk of the work.
+Seven command expectations in `operationSequences.test.js` moved from `groupRestricted`, which
+walks ancestors, to the group's own archived column, and `resourceRestricted` split in two:
+`resourceStateRefuses` reads one step, for the commands that drive services, and the
+ancestor-walking predicate is left for the engine's `checkRestriction` expectation, which
+`effective_restriction` still answers until Phase 3 removes it.
+
+Verified: 108 suites and 1178 tests pass. The concurrency case is not a forced tie — over 40
+iterations the membership change committed 14 times and was refused 26 times, with no iteration
+producing a refusal beside a member or a success without one. `tests/services/grants/coverage.test.js`
+failed once in a 20-suite subset on an ancestor-inheritance assertion and has not reproduced
+since, in that same subset or in the full suite; it builds its own fixtures and nothing in this
+phase touches its path, so it is recorded here as an order-dependent flake rather than as fixed.
+
+Two findings above are untouched and move to Phase 3: `GET /grants/:id/revoke-preview` still
+binds the mutating `grant.revoke`, and `POST /collections/:id/stage` is still gated by
+`collection.view_metadata` with each dataset's own state checked inside `bulkStage`.
+
 ### Phase 3: the engine stops reading state
 
 - **`authorization/builtin/restrictions.js`** becomes one checker that returns `null` for every

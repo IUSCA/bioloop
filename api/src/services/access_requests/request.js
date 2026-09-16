@@ -4,6 +4,7 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
+const state = require('@/state');
 const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
@@ -68,6 +69,11 @@ async function _validateAccessRequestSubject(tx, requester_id, subject_id) {
  */
 async function _createAccessRequest(tx, data, requester_id) {
   await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
+
+  // A request is worth filing only on a resource whose state still admits access changes.
+  state.assertPossible('access_request', 'create', {
+    target: await state.readTargetState(tx, data.resource_id),
+  });
 
   // Create the access request
   const accessRequest = await tx.access_request.create({
@@ -144,10 +150,8 @@ async function updateAccessRequest(request_id, actor_id, data) {
     if (rows.length === 0) {
       throw createError.NotFound();
     }
-    const { status } = rows[0];
-    if (status !== ACCESS_REQUEST_STATUS.DRAFT) {
-      throw createError.Conflict('Request is not in DRAFT status');
-    }
+    // The WHERE guards below keep the write atomic; this names the state first.
+    state.assertPossible('access_request', 'update', rows[0]);
 
     if (data.purpose) {
       await tx.access_request.update({
@@ -284,9 +288,11 @@ async function _assertNoInFlightRequests(tx, request) {
 async function _submitRequest(tx, request_id, actor_id) {
   // Fetch the request with items for pre-flight validation
   const request = await _getRequestById(tx, request_id);
-  if (!request || request.status !== ACCESS_REQUEST_STATUS.DRAFT) {
-    throw createError.Conflict('Request is no longer in DRAFT status');
-  }
+  if (!request) throw createError.NotFound('Request not found');
+  state.assertPossible('access_request', 'submit', {
+    status: request.status,
+    target: await state.readTargetState(tx, request.resource_id),
+  });
 
   // assert request has at least one item
   if (!request.access_request_items || request.access_request_items.length === 0) {

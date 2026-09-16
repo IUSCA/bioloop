@@ -414,11 +414,13 @@ router.post(
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Stage datasets in a collection'
 
+    // The owning group comes along because each row's state is checked before it is staged,
+    // and the rule reads that group's archived column. One query for the page, not one per row.
     const { data: members } = await datasetService.getDatasetsByCollection(req.params.id, {
       filters: { is_deleted: false },
       pagination: { limit: workflowService.MAX_BULK_STAGE + 1 },
       sort: { sort_by: 'name', sort_order: 'asc' },
-      includes: {},
+      includes: { owner_group: true },
     });
 
     const requested = req.body.dataset_ids;

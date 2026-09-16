@@ -50,7 +50,7 @@ export const ACTION_LABELS = {
   "dataset.edit_metadata": DETAILS,
   "dataset.edit": DETAILS,
   "dataset.request_stage": "Stage datasets",
-  "dataset.archive": "Archive datasets to tape",
+  "dataset.delete": "Delete datasets",
   "group.archive": "Archive subgroups",
   "collection.archive": "Archive collections",
   "collection.delete": "Delete collections",

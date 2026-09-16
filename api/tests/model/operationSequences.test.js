@@ -228,9 +228,25 @@ const archived = (world, target) => world.restrictions.some((r) => r.type === 'A
 const groupRestricted = (world, id) => ancestorsAndSelf(world, id).some((g) => archived(world, g));
 const collectionRow = (world, id) => world.collections.find((c) => c.id === id);
 const datasetRow = (world, id) => world.datasets.find((d) => d.id === id);
+/**
+ * Whether the engine's restriction check refuses this resource. `effective_restriction`
+ * propagates down the group tree, so an archived ancestor restricts a descendant's resources.
+ * Only the `checkRestriction` expectation in `verify` uses this; Phase 3 removes it.
+ */
 const resourceRestricted = (world, id) => {
   const row = collectionRow(world, id) ?? datasetRow(world, id);
   return archived(world, id) || groupRestricted(world, row.owner);
+};
+
+/**
+ * Whether the resource's own state refuses a change to it. A collection or dataset reads its
+ * own column and its owning group's, one step, never an ancestor chain: archiving a group
+ * covers that group and what it owns, and a sub-group keeps its own state.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+const resourceStateRefuses = (world, id) => {
+  const row = collectionRow(world, id) ?? datasetRow(world, id);
+  return archived(world, id) || archived(world, row.owner);
 };
 const membership = (world, user, group) => world.memberships.find((m) => m.user === user && m.group === group);
 const isDeletedUser = (world, user) => world.users.find((u) => u.id === user)?.deleted === true;
@@ -266,7 +282,7 @@ class AddMember extends Command {
     const status = await statusOf(groupsService.addGroupMembers(real.ids.get(this.group), {
       user_ids: [real.ids.get(this.user)], actor_id: real.users.carol.subject_id,
     }));
-    if (groupRestricted(model.world, this.group)) {
+    if (archived(model.world, this.group)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);
       model.refused += 1;
     } else {
@@ -287,7 +303,7 @@ class RemoveMember extends Command {
     const status = await statusOf(groupsService.removeGroupMembers(real.ids.get(this.group), {
       user_ids: [real.ids.get(this.user)], actor_id: real.users.carol.subject_id,
     }));
-    if (groupRestricted(model.world, this.group) || wouldLoseLastAdmin(model.world, this.user, this.group)) {
+    if (archived(model.world, this.group) || wouldLoseLastAdmin(model.world, this.user, this.group)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);
       model.refused += 1;
     } else {
@@ -304,7 +320,7 @@ class Promote extends Command {
   constructor(user, group) { super(); Object.assign(this, { user, group }); }
 
   check(model) {
-    return membership(model.world, this.user, this.group)?.role === 'MEMBER' && !groupRestricted(model.world, this.group);
+    return membership(model.world, this.user, this.group)?.role === 'MEMBER' && !archived(model.world, this.group);
   }
 
   async apply(model, real) {
@@ -321,7 +337,7 @@ class Demote extends Command {
   constructor(user, group) { super(); Object.assign(this, { user, group }); }
 
   check(model) {
-    return membership(model.world, this.user, this.group)?.role === 'ADMIN' && !groupRestricted(model.world, this.group);
+    return membership(model.world, this.user, this.group)?.role === 'ADMIN' && !archived(model.world, this.group);
   }
 
   async apply(model, real) {
@@ -343,7 +359,7 @@ class Demote extends Command {
 class ArchiveGroup extends Command {
   constructor(group) { super(); this.group = group; }
 
-  check(model) { return !groupRestricted(model.world, this.group); }
+  check(model) { return !archived(model.world, this.group); }
 
   async apply(model, real) {
     await groupsService.archiveGroup(real.ids.get(this.group), real.users.carol.subject_id);
@@ -371,7 +387,7 @@ class ArchiveCollection extends Command {
   constructor(collection) { super(); this.collection = collection; }
 
   check(model) {
-    return Boolean(collectionRow(model.world, this.collection)) && !resourceRestricted(model.world, this.collection);
+    return Boolean(collectionRow(model.world, this.collection)) && !resourceStateRefuses(model.world, this.collection);
   }
 
   async apply(model, real) {
@@ -408,10 +424,14 @@ class AddToCollection extends Command {
     const status = await statusOf(collectionsService.addDatasets(real.ids.get(this.collection), {
       dataset_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
     }));
-    if (resourceRestricted(model.world, this.collection) || datasetRow(model.world, this.dataset).deleted) {
-      // A deleted dataset or an archived owner is refused before the lock (400); an archived
-      // collection or ancestor under it (409).
-      expect([this.toString(), [400, 409].includes(status)]).toEqual([this.toString(), true]);
+    if (resourceStateRefuses(model.world, this.collection)) {
+      // The collection's state answers first, so an archived collection or an archived owning
+      // group is a conflict. @see decision 17
+      expect([this.toString(), status]).toEqual([this.toString(), 409]);
+      model.refused += 1;
+    } else if (datasetRow(model.world, this.dataset).deleted) {
+      // A deleted dataset is a bad dataset list, which is the caller's error, not a state.
+      expect([this.toString(), status]).toEqual([this.toString(), 400]);
       model.refused += 1;
     } else {
       expect([this.toString(), status]).toEqual([this.toString(), 200]);
@@ -434,7 +454,7 @@ class RemoveFromCollection extends Command {
     const status = await statusOf(collectionsService.removeDatasets(real.ids.get(this.collection), {
       dataset_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
     }));
-    if (resourceRestricted(model.world, this.collection)) {
+    if (resourceStateRefuses(model.world, this.collection)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);
       model.refused += 1;
     } else {
@@ -452,7 +472,7 @@ class DeleteCollection extends Command {
   constructor(collection) { super(); this.collection = collection; }
 
   check(model) {
-    return Boolean(collectionRow(model.world, this.collection)) && !resourceRestricted(model.world, this.collection);
+    return Boolean(collectionRow(model.world, this.collection)) && !resourceStateRefuses(model.world, this.collection);
   }
 
   async apply(model, real) {
@@ -478,7 +498,7 @@ class IssueGrant extends Command {
 
   check(model) {
     const exists = datasetRow(model.world, this.resource) || collectionRow(model.world, this.resource);
-    return Boolean(exists) && !resourceRestricted(model.world, this.resource)
+    return Boolean(exists) && !resourceStateRefuses(model.world, this.resource)
       && !datasetRow(model.world, this.resource)?.deleted
       && !model.world.grants.some((g) => g.subject === this.subject && g.resource === this.resource);
   }
@@ -510,7 +530,7 @@ class RevokeGrant extends Command {
   constructor(pick) { super(); this.pick = pick; }
 
   target(model) {
-    const revocable = model.world.grants.filter((g) => !resourceRestricted(model.world, g.resource)
+    const revocable = model.world.grants.filter((g) => !resourceStateRefuses(model.world, g.resource)
       && !datasetRow(model.world, g.resource)?.deleted);
     return revocable.length ? revocable[this.pick % revocable.length] : null;
   }
@@ -538,7 +558,7 @@ class ToggleContributions extends Command {
       expected_version: current.version,
       actor_id: real.users.carol.subject_id,
     }));
-    if (groupRestricted(model.world, this.group)) {
+    if (archived(model.world, this.group)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);
       model.refused += 1;
     } else {
@@ -564,7 +584,7 @@ class ChangeVisibility extends Command {
       expected_version: current.version,
       actor_id: real.users.carol.subject_id,
     }));
-    if (groupRestricted(model.world, this.group)) {
+    if (archived(model.world, this.group)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);
       model.refused += 1;
     } else {
@@ -579,7 +599,13 @@ class ChangeVisibility extends Command {
 class SoftDeleteDataset extends Command {
   constructor(dataset) { super(); this.dataset = dataset; }
 
-  check(model) { return !datasetRow(model.world, this.dataset).deleted; }
+  // Deleting is a governance change, so an archived owning group refuses it the way it refuses
+  // an edit. The dataset itself has no archived state: its lifecycle ends here.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  check(model) {
+    return !datasetRow(model.world, this.dataset).deleted
+      && !resourceStateRefuses(model.world, this.dataset);
+  }
 
   async apply(model, real) {
     await datasetService.softDelete(real.datasets[this.dataset].id, real.users.alice.id);
@@ -614,9 +640,17 @@ async function verify(model, real, command) {
 
   // 1. Effects.
   expect([label, normalize(actual)]).toEqual([label, normalize(model.world)]);
+  // An invitation is answered through the state layer, which reads the inviting group's own
+  // archived column. Archiving an ancestor closes that ancestor and what it owns, and leaves a
+  // sub-group to be archived in its own right, so `lab` keeps issuing valid tokens while
+  // `center` is archived. Every command above expects the same, through `resourceStateRefuses`
+  // for a collection or dataset, which is why none of them consults an ancestor. The
+  // ancestor-walking `resourceRestricted` is left for the engine's restriction check below,
+  // because `effective_restriction` does propagate down the tree until Phase 3 removes it.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   const { status: invitation } = await invitationsService.checkInvitationToken(real.invitation.token);
   expect([label, 'invitation', invitation])
-    .toEqual([label, 'invitation', groupRestricted(model.world, 'lab') ? 'invalid' : 'valid']);
+    .toEqual([label, 'invitation', archived(model.world, 'lab') ? 'invalid' : 'valid']);
   for (const d of DATASETS) {
     const blocked = await restrictions.checkRestriction({
       resourceType: 'access_request', action: 'review', preFetchedResource: { resource_id: real.ids.get(d) },

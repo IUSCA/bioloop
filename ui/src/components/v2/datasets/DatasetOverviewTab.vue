@@ -104,7 +104,7 @@
       </VaCard>
 
       <VaCard
-        v-if="props.canArchive"
+        v-if="props.canDelete"
         class="border border-solid border-red-200 dark:border-red-800"
       >
         <VaCardContent>
@@ -295,7 +295,7 @@ const props = defineProps({
     default: () => ({ grants: null, requests: null, workflows: null }),
   },
   canEdit: { type: Boolean, default: false },
-  canArchive: { type: Boolean, default: false },
+  canDelete: { type: Boolean, default: false },
   canIssueGrants: { type: Boolean, default: false },
   // `request_access`: filing a request on this dataset would be accepted.
   canRequestAccess: { type: Boolean, default: false },

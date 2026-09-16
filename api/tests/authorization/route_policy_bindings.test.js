@@ -52,13 +52,16 @@ describe('archiving and unarchiving are separate authorities', () => {
     expect(unarchive).toEqual([`${resourceType}.unarchive`]);
   });
 
-  test('a dataset is the exception, and says so in its policies', () => {
-    // Both are isDatasetOwningGroupAdmin, so the dataset archive route may bind either.
-    // The point is that the policy container decides, not the route.
+  test('a dataset has neither action, because it deletes instead', () => {
+    // A dataset's lifecycle ends at delete: the record stays, the archived files go, and there
+    // is no undo. So the pairing above does not apply to it, and the two action names it
+    // would need are absent rather than merely unbound.
+    // @see docs/design/groups/design.md — Operation Effects
     const { datasetPolicies } = require('@/authorization/builtin/policies/dataset');
-    expect(datasetPolicies.hasAction('archive')).toBe(true);
-    expect(datasetPolicies.hasAction('unarchive')).toBe(true);
-    expect(policiesFor(datasetRoutes, 'post', '/:id/archive')).toEqual(['dataset.archive']);
+    expect(datasetPolicies.hasAction('archive')).toBe(false);
+    expect(datasetPolicies.hasAction('unarchive')).toBe(false);
+    expect(datasetPolicies.hasAction('delete')).toBe(true);
+    expect(policiesFor(datasetRoutes, 'delete', '/:id')).toEqual(['dataset.delete']);
   });
 });
 

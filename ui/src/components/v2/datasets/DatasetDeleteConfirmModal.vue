@@ -65,7 +65,7 @@ const confirmInput = ref("");
 async function onConfirm() {
   loading.value = true;
   try {
-    await DatasetService.archive(props.datasetId);
+    await DatasetService.delete(props.datasetId);
     toast.success("Dataset deleted successfully.");
     reset();
     visible.value = false;

@@ -234,11 +234,13 @@ describe('cancelling', () => {
   });
 
   test('cancelling twice is refused rather than silently rewriting the record', async () => {
+    // A cancelled invitation is a state the row is in, not a row that is missing, so the second
+    // call answers 409. @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
     const { invitation } = await invite('dana@university.edu');
     await invitationService.cancelInvitation({ group_id: group.id, invitation_id: invitation.id });
     await expect(invitationService.cancelInvitation({
       group_id: group.id, invitation_id: invitation.id,
-    })).rejects.toMatchObject({ status: 404 });
+    })).rejects.toMatchObject({ status: 409 });
   });
 });
 

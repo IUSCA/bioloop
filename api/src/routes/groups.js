@@ -22,7 +22,6 @@ const {
   PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES,
 } = require('@/authorization/builtin/policies/group');
 const { pickNonNil } = require('@/utils');
-const prisma = require('@/db');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
 
@@ -355,17 +354,12 @@ router.put(
     // #swagger.summary = 'Replace the group profile picture'
     if (!req.file) return next(createError.BadRequest('No image was uploaded.'));
 
-    const current = await prisma.group.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { avatar_key: true },
+    // The write lives in the service, where the state check runs for every profile edit.
+    const updated = await profileService.replaceAvatar({
+      model: 'group',
+      id: req.params.id,
+      avatar_key: req.file.filename,
     });
-    const updated = await prisma.group.update({
-      where: { id: req.params.id },
-      data: { avatar_key: req.file.filename },
-      select: { id: true, avatar_key: true },
-    });
-    // Only after the new key is committed, so a failure leaves the old picture serving.
-    await avatarService.removeAvatar(current.avatar_key);
     return res.json(updated);
   }),
 );
@@ -378,16 +372,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Remove the group profile picture'
-    const current = await prisma.group.findUniqueOrThrow({
-      where: { id: req.params.id },
-      select: { avatar_key: true },
-    });
-    await prisma.group.update({
-      where: { id: req.params.id },
-      data: { avatar_key: null },
-    });
-    await avatarService.removeAvatar(current.avatar_key);
-    res.json({ id: req.params.id, avatar_key: null });
+    res.json(await profileService.removeProfileAvatar({ model: 'group', id: req.params.id }));
   }),
 );
 

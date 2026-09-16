@@ -317,7 +317,7 @@ router.put(
     // validated:
     // - user has permission to update request
     // - if purpose or items are provided, they are well-formed and items are unique
-    const request = await accessRequestsService.updateAccessRequest(req.params.id, data, req.user.subject_id);
+    const request = await accessRequestsService.updateAccessRequest(req.params.id, req.user.subject_id, data);
     res.json(req.permission.filter(request));
   }),
 );

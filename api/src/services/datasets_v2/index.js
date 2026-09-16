@@ -4,6 +4,8 @@ const assert = require('assert');
 const config = require('config');
 const _ = require('lodash/fp');
 const prisma = require('@/db');
+// Named `resourceState` because a dataset's own `state` column already owns the short name.
+const resourceState = require('@/state');
 const wfService = require('@/services/workflow');
 
 const {
@@ -15,6 +17,7 @@ const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
 const attributionModule = require('./attribution');
 const ownershipModule = require('./ownership');
+const { readDatasetStateFields } = require('./stateFields');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,24 +101,28 @@ async function getStats(type) {
  * Partially updates a dataset. Merges metadata and handles bundle upsert.
  */
 async function patchDataset(id, data) {
-  const current = await prisma.dataset.findFirstOrThrow({ where: { id } });
-  const { metadata, bundle, ...rest } = data;
+  return prisma.$transaction(async (tx) => {
+    resourceState.assertPossible('dataset', 'edit_metadata', await readDatasetStateFields(tx, id, { forUpdate: true }));
 
-  const updateData = _.omitBy(_.isUndefined)(rest);
-  updateData.metadata = _.merge(current.metadata)(metadata);
+    const current = await tx.dataset.findFirstOrThrow({ where: { id } });
+    const { metadata, bundle, ...rest } = data;
 
-  if (bundle) {
-    updateData.bundle = { upsert: { create: bundle, update: bundle } };
-  }
+    const updateData = _.omitBy(_.isUndefined)(rest);
+    updateData.metadata = _.merge(current.metadata)(metadata);
 
-  return prisma.dataset.update({
-    where: { id },
-    data: updateData,
-    include: {
-      ...INCLUDE_WORKFLOWS,
-      source_datasets: true,
-      derived_datasets: true,
-    },
+    if (bundle) {
+      updateData.bundle = { upsert: { create: bundle, update: bundle } };
+    }
+
+    return tx.dataset.update({
+      where: { id },
+      data: updateData,
+      include: {
+        ...INCLUDE_WORKFLOWS,
+        source_datasets: true,
+        derived_datasets: true,
+      },
+    });
   });
 }
 
@@ -133,6 +140,13 @@ async function addState(dataset_id, state, metadata) {
  * Always writes an audit log entry.
  */
 async function softDelete(dataset_id, user_id) {
+  // Deleting removes the archived files and cannot be undone, so a dataset already deleted is a
+  // conflict rather than a second delete.
+  await prisma.$transaction(async (tx) => {
+    const fields = await readDatasetStateFields(tx, dataset_id, { forUpdate: true });
+    resourceState.assertPossible('dataset', 'delete', fields);
+  });
+
   const dataset = await prisma.dataset.findFirstOrThrow({
     where: { id: dataset_id },
     include: INCLUDE_WORKFLOWS,

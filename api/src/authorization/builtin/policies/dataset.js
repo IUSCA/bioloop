@@ -221,8 +221,10 @@ datasetPolicies
     // Oversight is read-only and never includes mutation authority.
     // ------------------------------------------------------------------
     edit_metadata: mutating(isDatasetOwningGroupAdmin),
-    archive: mutating(isDatasetOwningGroupAdmin),
-    unarchive: mutating(isDatasetOwningGroupAdmin),
+    // A dataset has no archive: its lifecycle ends at delete, which removes the archived
+    // files and cannot be undone. Groups and collections archive; datasets do not.
+    // @see docs/design/groups/design.md — Operation Effects
+    delete: mutating(isDatasetOwningGroupAdmin),
     transfer_ownership: mutating(isDatasetOwningGroupAdmin),
     edit: mutating(platformAdminOnly),
 

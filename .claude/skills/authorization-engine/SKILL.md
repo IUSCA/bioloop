@@ -503,6 +503,36 @@ never read it. `tests/state/rules.test.js` drives every rule with no database, a
 
 @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
 
+## Four things that bite when adding a state check to a service
+
+- **A list passes its rows; it never re-queries inside the loop.** `bulkStage` takes dataset rows
+  and calls `check` on each one, because the caller already fetched the page. Putting a lookup
+  inside the loop makes a pure decision depend on the database, turns a unit test that fabricates
+  rows into one that needs fixtures, and leaves nothing sensible to do when a row is missing. The
+  caller widens its own query instead: the collection stage route passes
+  `includes: { owner_group: true }`.
+- **The state check goes before the service's own validation, not after.** `addDatasets` used to
+  answer 400 from a bespoke predicate for an archived owning group and 409 from the state check
+  inside its transaction. The two answer different questions, so the state check runs first and
+  the validation query keeps only what it alone decides: unknown, deleted, or foreign datasets.
+  A predicate the state rule already covers is a duplicate to delete, not a second opinion.
+- **A dataset is addressed two ways.** Services take the numeric `dataset.id`; routes, the
+  authorization layer, and `collection_dataset` take `resource_id`. `readDatasetStateFields`
+  accepts either, and `services/datasets_v2/files.js` resolves one to the other with
+  `resolveDatasetRowId`. A test passing `dataset.id` where a service wants `resource_id` fails as
+  a validation error rather than as a type error, so check which the function reads.
+- **Most of these services return nothing.** `addGroupMembers` and friends return whatever their
+  `$transaction` callback returns, which is often `undefined`. Assert on the row, with
+  `activeMembership` or a re-read, rather than on the return value.
+
+## A dataset deletes; it does not archive
+
+Groups and collections archive, reversibly, and archiving is authorized separately from
+unarchiving. A dataset's lifecycle ends at `dataset.delete`: the record stays, the archived files
+go, and there is no undo. The route is `DELETE /v2/datasets/:id`, there is no `dataset.unarchive`,
+and `route_policy_bindings.test.js` asserts both action names are absent from the dataset policy
+container so the pairing test cannot silently start applying to it.
+
 ## Keeping this current
 
 When a session hits engine behaviour this page does not explain — an injection point that was

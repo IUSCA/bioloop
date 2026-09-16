@@ -159,7 +159,7 @@
           :dataset="dataset"
           :counts="counts"
           :can-edit="can('edit_metadata')"
-          :can-archive="can('archive')"
+          :can-delete="can('delete')"
           :can-issue-grants="can('manage_grants')"
           :can-request-access="can('request_access')"
           :can-download="can('download')"
@@ -240,8 +240,8 @@
         />
       </div>
 
-      <!-- Archive confirm modal -->
-      <DatasetArchiveConfirmModal
+      <!-- Delete confirm modal -->
+      <DatasetDeleteConfirmModal
         ref="deleteModal"
         :dataset-id="dataset.resource_id"
         :dataset-name="dataset.name"

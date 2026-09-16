@@ -133,9 +133,9 @@ describe('a dataset', () => {
   });
 
   test('deleting refuses a dataset already deleted, and one whose owning group is archived', () => {
-    expect(admits('dataset', 'archive', open)).toBe(true);
-    expect(refusalFor('dataset', 'archive', deleted)).toBe('This dataset is already deleted.');
-    expect(refusalFor('dataset', 'archive', ownerArchived))
+    expect(admits('dataset', 'delete', open)).toBe(true);
+    expect(refusalFor('dataset', 'delete', deleted)).toBe('This dataset is already deleted.');
+    expect(refusalFor('dataset', 'delete', ownerArchived))
       .toBe("This dataset's owning group is archived, so the dataset cannot be deleted.");
   });
 
@@ -164,6 +164,12 @@ describe('an access request', () => {
       .toBe('The dataset this request concerns is deleted.');
     expect(refusalFor('access_request', 'create', { target: { kind: 'collection', archived: true, deleted: false } }))
       .toBe('The collection this request concerns is archived.');
+  });
+
+  test('submitting reads the resource too, because review would issue grants', () => {
+    expect(admits('access_request', 'submit', draft)).toBe(true);
+    expect(refusalFor('access_request', 'submit', { ...draft, target: { ...target, archived: true } }))
+      .toBe('The dataset this request concerns is archived.');
   });
 
   test('the status decides which step is next', () => {

@@ -78,11 +78,11 @@ export default {
   },
 
   /**
-   * Archive (soft-delete) a dataset.
+   * Delete a dataset, keeping its record.
    * @param {string} id - dataset resource_id
    */
-  archive(id) {
-    return api.post(`/v2/datasets/${id}/archive`);
+  delete(id) {
+    return api.delete(`/v2/datasets/${id}`);
   },
 
   /**

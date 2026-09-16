@@ -592,17 +592,25 @@ router.patch(
   }),
 );
 
-// ── Archive ──────────────────────────────────────────────────────────────────
+// ── Delete ───────────────────────────────────────────────────────────────────
 
-router.post(
-  '/:id/archive',
+/**
+ * Deletes a dataset.
+ *
+ * A dataset has no archived state: deleting one keeps its record, removes its archived files,
+ * and cannot be undone. The verb and the method say so, unlike the groups and collections
+ * routes, which archive reversibly.
+ * @see docs/design/groups/design.md — Operation Effects
+ */
+router.delete(
+  '/:id',
   validate([
     param('id').isUUID(),
   ]),
-  authorize('dataset', 'archive'),
+  authorize('dataset', 'delete'),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
-    // #swagger.summary = 'Archive (soft-delete) a dataset'
+    // #swagger.summary = 'Delete a dataset, keeping its record'
 
     const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
     if (!dataset) {
@@ -712,22 +720,6 @@ router.get(
 //     // #swagger.tags = ['datasets']
 //     // #swagger.summary = 'Append a state to a dataset'
 //     await datasetService.addState(req.params.id, req.body.state, req.body.metadata);
-//     res.sendStatus(204);
-//   }),
-// );
-
-// // ── Delete (soft) ────────────────────────────────────────────────────────────
-
-// router.delete(
-//   '/:id',
-//   validate([
-//     param('id').isInt().toInt(),
-//   ]),
-//   authorize('dataset', 'archive'),
-//   asyncHandler(async (req, res) => {
-//     // #swagger.tags = ['datasets']
-//     // #swagger.summary = 'Soft-delete a dataset'
-//     await datasetService.softDelete(req.params.id, req.user.id);
 //     res.sendStatus(204);
 //   }),
 // );

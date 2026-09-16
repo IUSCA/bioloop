@@ -19,6 +19,7 @@ const app = require('./app');
 const logger = require('./services/logger');
 const { validateGrantAccessTypes } = require('./scripts/validateGrantAccessTypes');
 const { getAccessTypeClosure } = require('./services/grants/accessTypeClosure');
+const { verifyInSync } = require('./state');
 const { registerHandlers } = require('./notification/notificationBus');
 const { closeAllQueues } = require('./notification/queue/queues');
 
@@ -37,6 +38,10 @@ const host = config.get('express.host');
 
 async function init() {
   await validateGrantAccessTypes();
+  // The state rules and the policy containers must describe the same actions. A mismatch is a
+  // renamed action whose state check was dropped, so the process refuses to start.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  verifyInSync();
   // Build the access-type closure before serving, so the first request does not pay for it
   // and a cyclic graph stops the process rather than one request.
   // @see docs/design/groups/decisions.md — 7. Access types imply one another

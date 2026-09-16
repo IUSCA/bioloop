@@ -2142,11 +2142,15 @@ open the modal; whether that is a decision surface belongs in the plan's downloa
 P14 **Edit modals do not carry capabilities** — `DatasetEditMetadataModal`, `GroupEditMetadataModal`,
 `CollectionEditMetadataModal`, the three archive modals, `CollectionAddDatasetModal`,
 `RevokeAllGrantsModal` all assume the parent gated them and surface `err.response.data.message`
-on failure. `DatasetEditMetadataModal` and `DatasetArchiveConfirmModal` swallow the API
+on failure. `DatasetEditMetadataModal` and `DatasetDeleteConfirmModal` swallow the API
 message and show a fixed string ("Failed to update dataset.", "Failed to delete dataset.")
-so a 403 with a reason is invisible. Also `DatasetArchiveConfirmModal` is titled "Delete
-Dataset" and calls `DatasetService.archive` — the UI vocabulary (delete) and the action
-vocabulary (archive) disagree on the same button.
+so a 403 with a reason is invisible.
+
+*Resolved 2026-09-15, second half:* the component was `DatasetArchiveConfirmModal`, titled
+"Delete Dataset" and calling `DatasetService.archive`, so the UI vocabulary and the action
+vocabulary disagreed on the same button. The action is now `dataset.delete` on
+`DELETE /v2/datasets/:id`, and the component is `DatasetDeleteConfirmModal`. The swallowed
+message is untouched and still open.
 
 P15 **Group/collection archive modals state the rules in prose** — `GroupArchiveConfirmModal`
 lists PRESERVED/PROHIBITED AFTER ARCHIVE ("Create new grants or revoke existing grants",

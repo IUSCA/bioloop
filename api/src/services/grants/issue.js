@@ -9,6 +9,7 @@ const Expiry = require('@/utils/expiry');
 const audit = require('@/authorization/builtin/audit');
 const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
 const prisma = require('@/db');
+const state = require('@/state');
 const accessTypeClosure = require('./accessTypeClosure');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const {
@@ -530,6 +531,11 @@ class GrantIssueService {
    * @param {Object} options - Additional options for issuing grants.
    */
   async issue(tx, items) {
+    // Issuing changes who reaches the resource, so the resource's state decides whether it may.
+    state.assertPossible('grant', 'create', {
+      target: await state.readTargetState(tx, this.resource_id),
+    });
+
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);
     await this._hydrateMetadata(tx);
     this.accessTypeIdToPresetId = await this._buildAccessTypeIdToPresetIdMap(tx);

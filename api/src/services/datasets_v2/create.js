@@ -5,6 +5,8 @@ const CONSTANTS = require('@/constants');
 const logger = require('@/services/logger');
 const grantService = require('@/services/grants');
 const prisma = require('@/db');
+// Named `resourceState` because a dataset's own `state` column already owns the short name.
+const resourceState = require('@/state');
 
 function normalize_name(name) {
   return (name || '')
@@ -115,6 +117,14 @@ async function createDataset({ tx = null, data, actor_id = null }) {
   // reachable by nobody.
   // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
   const run = async (client) => {
+    // An archived group takes no new dataset. Only the owning group's own column is read, so a
+    // group under an archived parent still accepts one.
+    const owner_group = await client.group.findUniqueOrThrow({
+      where: { id: data.owner_group_id ?? data.owner_group?.connect?.id },
+      select: { is_archived: true },
+    });
+    resourceState.assertPossible('dataset', 'create', { owner_group });
+
     // Scoped to the owning group, matching the unique key. A global check would report a
     // conflict for a name another group holds, which both blocks a legitimate create and
     // tells the caller that the other group holds it.

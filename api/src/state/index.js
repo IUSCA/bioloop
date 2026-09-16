@@ -1,7 +1,5 @@
 const createError = require('http-errors');
 
-const { policyRegistry } = require('@/authorization');
-
 const StateContainer = require('./core/StateContainer');
 const StateRegistry = require('./core/StateRegistry');
 const engine = require('./core/engine');
@@ -92,14 +90,27 @@ const availableActions = (resourceType, resource) => engine.availableActions(sta
  */
 const requiredFields = (resourceType, actions = null) => engine.requiredFields(stateRegistry, resourceType, actions);
 
-// Every action a policy container declares must have a state rule, and no rule may name an action
-// nothing declares. A mismatch is a renamed action with its state check silently dropped, so it
-// fails here, at startup, rather than as a missing refusal in production.
-const gaps = engine.findStateGaps(policyRegistry, stateRegistry);
-const reported = Object.entries(gaps).filter(([, list]) => list.length);
-if (reported.length) {
-  throw new Error(`The state rules and the policy containers disagree:\n  ${
-    reported.map(([kind, list]) => `${kind}: ${list.join(', ')}`).join('\n  ')}`);
+/**
+ * Throws unless every action a policy container declares has a state rule, and every rule names
+ * an action some container declares.
+ *
+ * A mismatch is a renamed action whose state check was silently dropped, so `src/index.js` calls
+ * this at startup and the API refuses to start. It is a call rather than a check at module load,
+ * because the authorization registry is read here and a service that requires this module must not
+ * depend on which of the two loaded first.
+ *
+ * @throws {Error} naming every disagreement
+ */
+function verifyInSync() {
+  // eslint-disable-next-line global-require
+  const { policyRegistry } = require('@/authorization');
+
+  const gaps = engine.findStateGaps(policyRegistry, stateRegistry);
+  const reported = Object.entries(gaps).filter(([, list]) => list.length);
+  if (reported.length) {
+    throw new Error(`The state rules and the policy containers disagree:\n  ${
+      reported.map(([kind, list]) => `${kind}: ${list.join(', ')}`).join('\n  ')}`);
+  }
 }
 
 module.exports = {
@@ -109,6 +120,7 @@ module.exports = {
   assertPossible,
   availableActions,
   requiredFields,
+  verifyInSync,
   ...targets,
 
   // The framework, for a test or a derived app

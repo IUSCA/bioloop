@@ -294,8 +294,11 @@ describe('grants - lifecycle', () => {
         try {
           await grantsService.revokeGrant(grant.id, { actor_id: actor.subject_id });
         } catch (error) {
-          // NotFoundError: Grant not found or already revoked
-          if (error.name !== 'NotFoundError') {
+          // A missing grant is a 404 and an already-revoked one is a 409, because revoking is
+          // the state the row is in rather than a row that is gone. This cleanup only needs the
+          // grant to end up revoked, so both answers mean it is.
+          // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+          if (![404, 409].includes(error.status)) {
             throw error;
           }
         }

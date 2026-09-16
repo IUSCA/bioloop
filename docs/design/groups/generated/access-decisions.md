@@ -47,14 +47,14 @@ Cells evaluated: 110. Distinct rows: 113.
 | dataset | (none) | ARCHIVED | (none) |
 | dataset | (none) | ARCHIVED,DELETED | (none) |
 | dataset | (none) | DELETED | (none) |
-| dataset | admin + grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) + member + rule(contributions_allowed) | - | archive, compute, contribute, create, download, edit_metadata, list_files, manage_grants, read_data, remote_access, request_stage, review_access_requests, transfer_ownership, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin + grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) | ARCHIVED | compute, download, list_files, read_data, remote_access, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin + grant(DATASET:VIEW_METADATA) | ARCHIVED,DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin + platform_admin | ARCHIVED,DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin + platform_admin | DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin | ARCHIVED | compute, download, list_files, read_data, remote_access, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | admin | ARCHIVED,DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) + platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin + grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) + member + rule(contributions_allowed) | - | compute, contribute, create, delete, download, edit_metadata, list_files, manage_grants, read_data, remote_access, request_stage, review_access_requests, transfer_ownership, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin + grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) | ARCHIVED | compute, download, list_files, read_data, remote_access, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin + grant(DATASET:VIEW_METADATA) | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin + platform_admin | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin + platform_admin | DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin | ARCHIVED | compute, download, list_files, read_data, remote_access, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | admin | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) + platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) | - | list_files, read_data, view_metadata |
 | dataset | grant(DATASET:LIST_FILES) + grant(DATASET:VIEW_METADATA) | ARCHIVED | list_files, read_data, view_metadata |
 | dataset | grant(DATASET:LIST_SOURCE_DATASETS) + grant(DATASET:VIEW_METADATA) | ARCHIVED | view_metadata, view_source_datasets |
@@ -62,15 +62,15 @@ Cells evaluated: 110. Distinct rows: 113.
 | dataset | grant(DATASET:VIEW_METADATA) + oversight | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | grant(DATASET:VIEW_METADATA) | ARCHIVED,DELETED | view_metadata |
 | dataset | member(transitive) + rule(contributions_allowed) | - | contribute |
-| dataset | oversight + platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | oversight + platform_admin | ARCHIVED,DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | oversight + platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | oversight + platform_admin | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | oversight | - | list_files, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | oversight | ARCHIVED | list_files, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | oversight | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | dataset | oversight | DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | platform_admin | - | archive, compute, contribute, create, download, edit, edit_metadata, list_files, manage_grants, read_data, remote_access, request_stage, review_access_requests, transfer_ownership, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
-| dataset | platform_admin | ARCHIVED,DELETED | unarchive, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | platform_admin | - | compute, contribute, create, delete, download, edit, edit_metadata, list_files, manage_grants, read_data, remote_access, request_stage, review_access_requests, transfer_ownership, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | platform_admin | ARCHIVED | compute, download, list_files, read_data, remote_access, view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
+| dataset | platform_admin | ARCHIVED,DELETED | view_audit_logs, view_collections, view_derived_datasets, view_metadata, view_sensitive_metadata, view_source_datasets, view_workflows |
 | group | (none) | - | (none) |
 | group | (none) | ARCHIVED | (none) |
 | group | admin + grant + member + rule(contributions_allowed) + rule(profile_public) + rule(profile_signed_in) | - | add_collection, add_dataset, add_member, archive, create_child, edit_member_role, edit_metadata, invite, remove_member, view_ancestors, view_audit_logs, view_descendants, view_invitations, view_members, view_metadata, view_profile |

@@ -2,10 +2,13 @@ const assert = require('assert');
 const config = require('config');
 
 const prisma = require('@/db');
+const state = require('@/state');
 const logger = require('@/services/logger');
 const wfService = require('@/services/workflow');
 const { DONE_STATUSES } = require('@/constants');
 const createError = require('http-errors');
+
+const { readDatasetStateFields } = require('./stateFields');
 
 /**
  * The workflows a caller may launch on a dataset, and the policy action each one needs.
@@ -146,6 +149,14 @@ function get_wf_body(wf_name) {
 async function createWorkflow({ dataset, wf_name, initiator_id }) {
   const wf_body = get_wf_body(wf_name);
 
+  // The action a run needs is config, so the state check reads the same entry rather than
+  // naming one here. A run nothing maps to is refused before the workflow service is called.
+  const action = policyActionFor(wf_name);
+  if (!action) {
+    throw createError.BadRequest(`No policy action is defined for workflow ${wf_name}`);
+  }
+  state.assertPossible('dataset', action, await readDatasetStateFields(prisma, dataset.id));
+
   const active_same_name = dataset.workflows
     .filter((wf) => wf.name === wf_body.name)
     .filter((wf) => !DONE_STATUSES.includes(wf.status));
@@ -208,7 +219,10 @@ async function startStageRun(dataset, initiator_id) {
  * Both collaborators are injected so the decision and the side effect stay separable, and so
  * a test can drive the buckets without a workflow service.
  *
- * @param {object[]} datasets - rows with `id`, `resource_id`, `name`, and `is_staged`
+ * @param {object[]} datasets - rows with `id`, `resource_id`, `name`, and `is_staged`, plus the
+ *   fields the dataset's `request_stage` state rule reads: `is_deleted` and
+ *   `owner_group.is_archived`. A list query supplies them for the whole page, and
+ *   `requiredFields('dataset', ['request_stage'])` names them.
  * @param {object} options
  * @param {function(string): Promise<boolean>} options.permits - whether the caller may stage
  *   the dataset with that resource id
@@ -223,12 +237,20 @@ async function bulkStage(datasets, { permits, startRun = startStageRun, initiato
 
   for (const dataset of datasets) {
     const summary = { resource_id: dataset.resource_id, name: dataset.name };
+    // The rule is a pure function of the row, and the caller fetched the page in one query, so
+    // the fields are already here. Querying per row, or re-querying the page, would make this
+    // function depend on the database for something its argument already carries.
+    const refusal = state.check('dataset', 'request_stage', dataset);
 
     // eslint-disable-next-line no-await-in-loop
     const allowed = await permits(dataset.resource_id);
 
     if (!allowed) {
       denied.push(summary);
+    } else if (refusal) {
+      // A state refusal is not a permission refusal: the caller may stage it, and the dataset
+      // cannot be staged right now.
+      skipped.push({ ...summary, reason: refusal.message });
     } else if (dataset.is_staged) {
       skipped.push({ ...summary, reason: 'already staged' });
     } else {
