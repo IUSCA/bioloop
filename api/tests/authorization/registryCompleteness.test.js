@@ -68,10 +68,11 @@ test('the access-request rules speak about real statuses, and only real ones', (
   // A rule that named a status the enum does not hold would refuse forever without saying so.
   // Every real status is answered, and each answer is a decision rather than a throw.
   const target = { kind: 'dataset', archived: false, deleted: false };
+  const subject = { kind: 'user', archived: false };
   Object.values(ACCESS_REQUEST_STATUS).forEach((status) => {
     state.stateRegistry.get('access_request').getActionNames().forEach((action) => {
       const label = `${action}:${status}`;
-      expect([label, typeof state.check('access_request', action, { status, target })])
+      expect([label, typeof state.check('access_request', action, { status, target, subject })])
         .toEqual([label, 'object']);
     });
   });
@@ -88,8 +89,9 @@ test('a status the request is not in refuses the step, and the one it is in admi
   // Forced unless the rules discriminate: a container that admitted everything would pass the
   // two checks above.
   const target = { kind: 'dataset', archived: false, deleted: false };
-  expect(state.check('access_request', 'submit', { status: 'DRAFT', target })).toBeNull();
-  expect(state.check('access_request', 'submit', { status: 'APPROVED', target })).not.toBeNull();
+  const subject = { kind: 'user', archived: false };
+  expect(state.check('access_request', 'submit', { status: 'DRAFT', target, subject })).toBeNull();
+  expect(state.check('access_request', 'submit', { status: 'APPROVED', target, subject })).not.toBeNull();
 });
 
 test('every declared requirement is hydratable', () => {

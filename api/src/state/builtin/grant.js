@@ -8,6 +8,10 @@ const { rule, always, refuse } = require('../core/rules');
  * than a second revocation. Issuing and revoking both read the resource's state as well, because
  * an archived resource's access stops changing.
  *
+ * Issuing also reads the group the grant is for: an archived group is frozen, so it takes no new
+ * access. Revoking does not read it. The grant sits on a resource another group governs, and that
+ * group is not frozen, so its admins must still be able to take the access away.
+ *
  * @see docs/design/groups/design.md — Grants: The Core Authorization Primitive
  */
 
@@ -31,12 +35,19 @@ const grantState = new StateContainer({
   examples: {
     // An open grant on an archived resource. The dialog asking what archiving stops does not
     // know which kind of resource, so the example names it generically.
-    archived: { revoked_at: null, target: { kind: 'resource', archived: true, deleted: false } },
+    archived: {
+      revoked_at: null,
+      target: { kind: 'resource', archived: true, deleted: false },
+      subject: { kind: 'user', archived: false },
+    },
   },
 }).rules({
   create: rule({
-    requires: ['target.archived', 'target.deleted', 'target.kind'],
-    check: targetRefusal,
+    requires: ['target.archived', 'target.deleted', 'target.kind', 'subject.archived'],
+    check: (grant) => targetRefusal(grant)
+      || (grant.subject.archived
+        ? refuse('This access is for an archived group, which cannot be given new access.', { state: 'archived' })
+        : null),
   }),
 
   revoke: rule({

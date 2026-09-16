@@ -96,10 +96,38 @@ async function readCollectionStateFields(client, collectionId) {
  * @param {Object} request - as `INCLUDES_CONFIG` returns it
  * @returns {Object} the row the rules read
  */
+/** What a subject row fetches for `subjectOf`. */
+const SUBJECT_SELECT = { group: { select: { is_archived: true } } };
+
+/**
+ * The state of the user or group a grant or a request is for. Only a group has one: an archived
+ * group is frozen, so it takes no new access and none of its requests move.
+ *
+ * A subject fetched without its `group` relation is refused rather than read as a user, because
+ * reading it as a user would silently admit what an archived group must refuse.
+ *
+ * @see docs/design/groups/design.md — Lifecycle Management
+ */
+function subjectOf(subject) {
+  if (!subject || !('group' in subject)) {
+    throw new Error('subjectOf needs a subject row fetched with its group');
+  }
+  return subject.group
+    ? { kind: 'group', archived: subject.group.is_archived === true }
+    : { kind: 'user', archived: false };
+}
+
+/** The state of one subject, or null when no such subject exists. */
+async function readSubjectState(client, subjectId) {
+  const subject = await client.subject.findUnique({ where: { id: subjectId }, select: SUBJECT_SELECT });
+  return subject ? subjectOf(subject) : null;
+}
+
 function requestStateFields(request) {
   return {
     status: request.status,
     target: request.resource ? targetOf(request.resource) : { kind: 'resource', archived: false, deleted: false },
+    subject: subjectOf(request.subject),
   };
 }
 
@@ -109,5 +137,8 @@ module.exports = {
   readTargetState,
   readTargetStates,
   readCollectionStateFields,
+  SUBJECT_SELECT,
+  subjectOf,
+  readSubjectState,
   requestStateFields,
 };

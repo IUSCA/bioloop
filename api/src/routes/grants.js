@@ -410,12 +410,18 @@ router.get(
     // well as its own `revoked_at`. The batch reader fetches the archived and deleted columns
     // the rules need; the hydrated resource above does not carry the owning group.
     const targets = await state.readTargetStates(prisma, grouped.map(({ resource }) => resource.id));
+    // Every grant here is for the one user or group in the path.
+    const subjectState = await state.readSubjectState(prisma, subject_id);
 
     const filteredData = grouped.map(({ resource, grants }) => ({
       resource: projectObject(resource, baseAttributes.resource),
       grants: grants.map((g) => ({
         ...req.permission.filter(g),
-        _meta: { available_actions: state.availableActions('grant', { ...g, target: targets.get(resource.id) }) },
+        _meta: {
+          available_actions: state.availableActions('grant', {
+            ...g, target: targets.get(resource.id), subject: subjectState,
+          }),
+        },
       })),
     }));
 
@@ -462,14 +468,18 @@ router.get(
     // and only `revoked_at` separates the rows.
     const target = await state.readTargetState(prisma, resource_id);
     if (!target) throw createError.NotFound('Resource not found');
-
-    const filteredData = grouped.map(({ subject, grants }) => ({
-      subject: projectObject(subject, baseAttributes.subject),
-      grants: grants.map((g) => ({
-        ...req.permission.filter(g),
-        _meta: { available_actions: state.availableActions('grant', { ...g, target }) },
-      })),
-    }));
+    // Each group of rows is for one user or group, fetched with its group relation, so issuing
+    // reads its state from the row already here.
+    const filteredData = grouped.map(({ subject, grants }) => {
+      const subjectState = state.subjectOf(subject);
+      return {
+        subject: projectObject(subject, baseAttributes.subject),
+        grants: grants.map((g) => ({
+          ...req.permission.filter(g),
+          _meta: { available_actions: state.availableActions('grant', { ...g, target, subject: subjectState }) },
+        })),
+      };
+    });
 
     res.json(filteredData);
   }),
@@ -571,10 +581,11 @@ router.get(
     // separates the rows. The resource is the one in the path, so its state is a single read.
     const target = await state.readTargetState(prisma, resource_id);
     if (!target) throw createError.NotFound('Resource not found');
+    const subjectState = await state.readSubjectState(prisma, subject_id);
 
     const filteredGrants = grants.map((g) => ({
       ...req.permission.filter(g),
-      _meta: { available_actions: state.availableActions('grant', { ...g, target }) },
+      _meta: { available_actions: state.availableActions('grant', { ...g, target, subject: subjectState }) },
     }));
     res.json(filteredGrants);
   }),

@@ -15,7 +15,7 @@
 
 const MEMBERSHIP = "Add or remove members, or change their roles";
 const GRANTS = "Give access or revoke existing access";
-const REQUESTS = "File, change, or review access requests";
+const REQUESTS = "File, change, withdraw, or review access requests";
 const DATASETS = "Create or import datasets";
 const COLLECTIONS = "Create collections";
 const CONTENTS = "Modify collection contents";
@@ -32,7 +32,9 @@ export const ACTION_LABELS = {
   "dataset.manage_grants": GRANTS,
   "collection.manage_grants": GRANTS,
   "access_request.create": REQUESTS,
+  "access_request.update": REQUESTS,
   "access_request.submit": REQUESTS,
+  "access_request.withdraw": REQUESTS,
   "access_request.review": REQUESTS,
   "dataset.review_access_requests": REQUESTS,
   "collection.review_access_requests": REQUESTS,

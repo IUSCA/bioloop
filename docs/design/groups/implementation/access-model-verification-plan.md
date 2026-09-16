@@ -758,4 +758,3 @@ These are the gaps between the goal and what shipped. A later plan takes them up
 - **Pairs, not triples.** The database arms cover every pair of dimension values, so a defect that needs three conditions at once can pass. Each cell also holds one grant, so overlapping grants are never modelled.
 - **Five types outside the model.** Grants, access requests, invitations, users, and audit are decided by example tests, not by the reference model.
 - **Request facts.** Grant routes read `resource_id` and `resource_type` from the URL or the body.
-- **A design and a rule disagree.** The operations table says an archived group's access requests refuse `update` and `withdraw`. The access-request state rules check only the status for those two actions.

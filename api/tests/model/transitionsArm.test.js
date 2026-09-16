@@ -87,6 +87,7 @@ const callers = () => [['requester', requester], ['group admin', admin], ['platf
 const stateRow = (status) => ({
   status,
   target: { kind: 'dataset', archived: false, deleted: false },
+  subject: { kind: 'user', archived: false },
 });
 
 describe.each(Object.values(ACCESS_REQUEST_STATUS))('a request in %s', (status) => {

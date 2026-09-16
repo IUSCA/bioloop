@@ -56,6 +56,10 @@ let group;
 let dataset;
 let collection;
 let grant;
+/** An active group, and access the archived group holds on a collection it owns. */
+let otherGroup;
+let otherCollection;
+let heldByGroup;
 
 beforeAll(async () => {
   admin = await createTestUser('_sr_admin');
@@ -73,6 +77,17 @@ beforeAll(async () => {
     access_type_id: await getAccessTypeId('COLLECTION:VIEW_METADATA'),
     granted_by: admin.subject_id,
   });
+  otherGroup = await createTestGroup(admin.subject_id, '_sr_other');
+  await prisma.group_user.create({
+    data: { group_id: otherGroup.id, user_id: admin.subject_id, role: 'ADMIN' },
+  });
+  otherCollection = await createTestCollection(otherGroup.id, admin.subject_id, '_sr_other_coll');
+  heldByGroup = await createTestGrant({
+    subject_id: group.id,
+    resource_id: otherCollection.id,
+    access_type_id: await getAccessTypeId('COLLECTION:VIEW_METADATA'),
+    granted_by: admin.subject_id,
+  });
   await invitationService.createInvitation({
     group_id: group.id,
     email: '_sr_invitee@example.org',
@@ -84,7 +99,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.group_invitation.deleteMany({ where: { group_id: group.id } }).catch(() => {});
-  await deleteGrants([grant.id]).catch(() => {});
+  await deleteGrants([grant.id, heldByGroup.id]).catch(() => {});
+  await deleteCollection(otherCollection.id).catch(() => {});
+  await deleteGroup(otherGroup.id).catch(() => {});
   await deleteCollection(collection.id).catch(() => {});
   await deleteDataset(dataset.id).catch(() => {});
   await deleteGroup(group.id).catch(() => {});
@@ -200,6 +217,19 @@ describe('an archived group', () => {
     // resource's state rather than a missing capability.
     const onCollection = await request(app).get(`/collections/${collection.id}`);
     expect(onCollection.body._meta.capabilities).toContain('manage_grants');
+  });
+
+  test("access it holds on another group's collection can still be revoked", async () => {
+    // The by-subject list reads the group's own state for the issue answer and the collection's
+    // for revocation. The collection belongs to an active group, so revoking stays open.
+    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 2
+    const res = await request(app).get(`/grants/subject/GROUP/${group.id}`);
+    expect(res.status).toBe(200);
+    const rows = res.body.flatMap((r) => r.grants);
+    expect(rows.map((r) => r.id)).toContain(heldByGroup.id);
+    const held = rows.find((r) => r.id === heldByGroup.id);
+    expect(held._meta.available_actions).toContain('revoke');
+    expect(held._meta.available_actions).not.toContain('create');
   });
 
   test('its invitations withhold withdrawal', async () => {

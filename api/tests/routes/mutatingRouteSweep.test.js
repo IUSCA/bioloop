@@ -97,10 +97,9 @@ const ADMITTED_WHILE_ARCHIVED = {
   // A root group has no parent, so no archived state reaches its creation. Creating a
   // sub-group under an archived group is `group.create_child`, which is refused.
   'group.create': 'a root group is created under nothing',
-  // A draft belongs to its requester, and archiving the resource they asked about is not a
-  // reason to trap their own draft. Filing, submitting, and reviewing are all refused.
-  'access_request.update': 'a requester may still edit their own draft',
-  'access_request.withdraw': 'a requester may still withdraw their own request',
+  // No access-request step is here. Archiving freezes a request, withdrawing and editing a draft
+  // included, so every one of them is refused.
+  // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 2
 };
 
 test('an archived resource refuses every mutating route bound to it', () => {

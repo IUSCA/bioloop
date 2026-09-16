@@ -315,7 +315,10 @@ async function mayRequestAccess(req, resourceId) {
   // rule, so the page must not offer it. The rule reads the resource the request would name.
   // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   const target = await state.readTargetState(prisma, resourceId);
-  return target === null || state.check('access_request', 'create', { target }) === null;
+  // The request is the caller's own until they choose a group on the form, and a user has no
+  // archived state. A group chosen later is checked when the request is filed.
+  return target === null
+    || state.check('access_request', 'create', { target, subject: { kind: 'user', archived: false } }) === null;
 }
 
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a

@@ -332,6 +332,8 @@ When `group.is_archived = true`, the following actions are disallowed:
 **Governance Authority:**
 * Create new grants for resources owned by the group
 * Revoke existing grants
+* Create new grants whose subject is the group
+* File, update, submit, withdraw, or review access requests on resources owned by the group, or on behalf of the group
 * Transfer ownership of datasets from the group
 * Create new datasets owned by the group
 * Edit group metadata (except for archival notes or administrative timestamps)
@@ -352,6 +354,9 @@ For clarity, these actions **are** allowed:
 * Oversight visibility (ancestor admins over archived descendants)
 * Evaluate existing grants
 * Run audit reports and explain historical access decisions
+* Read access requests, which stay exactly as they were so that unarchiving resumes them
+* Revoke a grant the group holds on a resource another, active group owns. That group is not frozen, so its admins keep the power to take access away.
+* Expire a request under review on time. The expiry job acts on the clock rather than on a person's action, the same way a grant still expires by time.
 * Unarchiving, by a platform admin
 
 #### How Archiving Is Enforced
@@ -1290,8 +1295,8 @@ whether the effect cascades, refuses the operation, or leaves the record with a 
 
 | Operation | Grants | Pending invitations | Open access requests | Other records |
 |---|---|---|---|---|
-| Archive a group | leave; archiving does not mutate access | leave; acceptance answers `invalid` while archived | leave; update, submit, withdraw, and review are refused while archived | the group and what it owns; its sub-groups keep their own state |
-| Unarchive a group | leave | leave; acceptance works again | leave; actions work again | none |
+| Archive a group | leave; archiving does not mutate access. No grant is issued on what it owns or to the group itself, and a grant on what it owns cannot be revoked. A grant the group holds on another group's resource can still be revoked | leave; acceptance answers `invalid` while archived | leave; nothing is cancelled. Every step, withdrawing included, is refused while archived, for requests on what it owns and for requests on behalf of the group. The expiry job still closes what is under review | the group and what it owns; its sub-groups keep their own state |
+| Unarchive a group | leave | leave; acceptance works again | leave; every step resumes where it stopped | none |
 | Archive a collection | leave | none | leave; refused while archived, as for a group | contained datasets are not archived |
 | Remove a member | leave the member's direct grants; group grants stop reaching them | leave invitations they sent; an invitation is the group's offer | leave requests they filed for the group | refuse when it would leave a group with an admin without one |
 | Demote an admin | leave | leave | leave | refuse when it would leave a group with an admin without one |

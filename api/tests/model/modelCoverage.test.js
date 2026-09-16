@@ -59,7 +59,9 @@ const REACHED = {
     // status, so including it would report every status as one a step can be taken in.
     .filter((action) => state.requiredFields('access_request', [action]).includes('status'))
     .some((action) => state.check('access_request', action, {
-      status, target: { kind: 'dataset', archived: false, deleted: false },
+      status,
+      target: { kind: 'dataset', archived: false, deleted: false },
+      subject: { kind: 'user', archived: false },
     }) === null)),
 };
 

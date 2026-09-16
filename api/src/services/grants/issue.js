@@ -534,6 +534,7 @@ class GrantIssueService {
     // Issuing changes who reaches the resource, so the resource's state decides whether it may.
     state.assertPossible('grant', 'create', {
       target: await state.readTargetState(tx, this.resource_id),
+      subject: await state.readSubjectState(tx, this.subject_id),
     });
 
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);

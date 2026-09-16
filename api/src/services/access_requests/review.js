@@ -178,6 +178,7 @@ class Review {
       state.assertPossible('access_request', 'review', {
         status: this.request.status,
         target: await state.readTargetState(tx, this.request.resource_id),
+        subject: await state.readSubjectState(tx, this.request.subject_id),
       });
 
       // Update request with review outcome first to ensure request is locked for concurrent modifications (e.g.

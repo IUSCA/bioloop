@@ -73,6 +73,7 @@ async function _createAccessRequest(tx, data, requester_id) {
   // A request is worth filing only on a resource whose state still admits access changes.
   state.assertPossible('access_request', 'create', {
     target: await state.readTargetState(tx, data.resource_id),
+    subject: await state.readSubjectState(tx, data.subject_id),
   });
 
   // Create the access request
@@ -140,7 +141,7 @@ async function updateAccessRequest(request_id, actor_id, data) {
     // get a row-level lock on the request to prevent concurrent updates
     // Ensure request is still in DRAFT to prevent updates on requests that are already submitted or closed
     const rows = await tx.$queryRaw`
-      SELECT id, status
+      SELECT id, status, resource_id, subject_id
       FROM access_request 
       WHERE 
         id = ${request_id}
@@ -151,7 +152,11 @@ async function updateAccessRequest(request_id, actor_id, data) {
       throw createError.NotFound();
     }
     // The WHERE guards below keep the write atomic; this names the state first.
-    state.assertPossible('access_request', 'update', rows[0]);
+    state.assertPossible('access_request', 'update', {
+      status: rows[0].status,
+      target: await state.readTargetState(tx, rows[0].resource_id),
+      subject: await state.readSubjectState(tx, rows[0].subject_id),
+    });
 
     if (data.purpose) {
       await tx.access_request.update({
@@ -292,6 +297,7 @@ async function _submitRequest(tx, request_id, actor_id) {
   state.assertPossible('access_request', 'submit', {
     status: request.status,
     target: await state.readTargetState(tx, request.resource_id),
+    subject: await state.readSubjectState(tx, request.subject_id),
   });
 
   // assert request has at least one item

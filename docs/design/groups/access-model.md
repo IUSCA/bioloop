@@ -89,11 +89,12 @@ Each derived relation has one definition, and every consumer reads that definiti
 - **`holds(u, r, t)`** holds when some active grant has its subject in `subjects(u)`, names `r` or a collection that actively contains `r`, and carries a type that implies `t` through the closure.
 - **`restricted(u, r, a)`** holds when a restriction on `r` blocks the restriction class of `a` for `u`. Every action declares one of three classes: `mutating`, `reading`, or `data`, which reads a dataset's bytes. No restriction type is specified, so `restricted` never holds today.
 - **`open(r)`** holds when a dataset is not deleted and its owning group is not archived, or when neither a collection nor its owning group is archived.
+- **`for_archived_group(x)`** holds when the access request or grant `x` is for a group, and that group is archived. A request or a grant for a user never is.
 - **`precondition(a, x)`** holds when the status of an access request, an invitation, or a grant admits `a`, according to the transition table below.
 - **`state_admits(a, r)`** holds when the state of `r` admits `a`.
   - For a group, a collection, or a dataset, it follows the action's restriction class. A `mutating` action needs neither `r` nor its owning group archived. A deleted dataset also refuses every `data` action. A `reading` action is always admitted.
   - Four actions have their own rule. `archive` needs `r` not archived, and a collection's owning group not archived. `unarchive` needs `r` archived. A create reads only the owning group it names. A collection that has held a dataset or has any access request refuses `delete`.
-  - For an access request, an invitation, or a grant, it is `precondition(a, r)`, together with `open` on the resource or group the row names, as the transition table lists.
+  - For an access request, an invitation, or a grant, it is `precondition(a, r)`, together with `open` on the resource or group the row names, and for a request or an issue `not for_archived_group(r)`, as the transition table lists.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
 
 ## The decision rule
@@ -136,6 +137,12 @@ Archiving covers the group or collection itself and the resources it owns. A sub
 own state. A dataset in an archived collection keeps its own state too, because a collection
 contains datasets and does not own them. A create action has no resource yet, so its state check
 reads the owning group it names.
+
+Archiving freezes what it covers. No step of an access request moves while its resource is not
+open or while it is for an archived group, withdrawing included, and nothing is cancelled. No
+grant is issued to an archived group. A grant the group already holds on another group's resource
+can still be revoked, because that resource's group is not frozen. The expiry job still closes a
+request under review, because it runs on time rather than on a person's action.
 
 The rules live in `api/src/state/builtin/`, one container per resource type. Invitations have a
 container of their own, although they have no policy container. A service calls
@@ -280,17 +287,18 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 A stateful resource admits an action only in the states listed. The state rules in
 `api/src/state/builtin/` enforce this table. A group, a collection, and a dataset have no status,
 and `state_admits` above states what their archived and deleted states admit. **Open** in the
-tables means `open` holds for the resource the row names.
+tables means `open` holds for the resource the row names. **Frozen** means the row is not open,
+or `for_archived_group` holds.
 
 ### Access requests
 
 | Action | From | To |
 |---|---|---|
-| `create` | none, resource open | `DRAFT` |
-| `update` | `DRAFT` | `DRAFT` |
-| `submit` | `DRAFT`, resource open | `UNDER_REVIEW` |
-| `withdraw` | `DRAFT`, `UNDER_REVIEW` | `WITHDRAWN` |
-| `review` | `UNDER_REVIEW`, resource open | `APPROVED`, `PARTIALLY_APPROVED`, or `REJECTED` |
+| `create` | none, not frozen | `DRAFT` |
+| `update` | `DRAFT`, not frozen | `DRAFT` |
+| `submit` | `DRAFT`, not frozen | `UNDER_REVIEW` |
+| `withdraw` | `DRAFT` or `UNDER_REVIEW`, not frozen | `WITHDRAWN` |
+| `review` | `UNDER_REVIEW`, not frozen | `APPROVED`, `PARTIALLY_APPROVED`, or `REJECTED` |
 | expiry, run by the system | `UNDER_REVIEW` | `EXPIRED` |
 | `read` | every state | unchanged |
 
@@ -306,7 +314,7 @@ tables means `open` holds for the resource the row names.
 
 | Action | From | To |
 |---|---|---|
-| `create` | none, resource open | active |
+| `create` | none, not frozen | active |
 | `revoke` | not revoked, resource open | revoked, `MANUAL` |
 | supersession, run by the system | active | revoked, `SUPERSEDED` |
 | expiry, by time | active | expired; no row changes |

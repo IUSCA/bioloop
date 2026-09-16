@@ -24,9 +24,13 @@ async function withdrawRequest({ request_id, requester_id }) {
       },
     });
 
-    // Withdrawing reads the status only. A requester may withdraw from a resource that has
-    // since been archived, because closing their own request takes nothing away.
-    state.assertPossible('access_request', 'withdraw', currentRequest);
+    // Archiving freezes the request, withdrawal included, so this reads the resource and the
+    // group it is for as well as the status.
+    state.assertPossible('access_request', 'withdraw', {
+      status: currentRequest.status,
+      target: await state.readTargetState(tx, currentRequest.resource_id),
+      subject: await state.readSubjectState(tx, currentRequest.subject_id),
+    });
 
     // Update status to WITHDRAWN
     const updated = await tx.access_request.updateMany({

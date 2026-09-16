@@ -23,6 +23,8 @@ const collectionsService = require('@/services/collections');
 const datasetsService = require('@/services/datasets_v2');
 const grantsService = require('@/services/grants');
 const invitationsService = require('@/services/invitations');
+const accessRequestsService = require('@/services/access_requests');
+const Expiry = require('@/utils/expiry');
 const {
   activeMembership,
   createTestUser,
@@ -32,6 +34,7 @@ const {
   createTestCollection,
   createTestGrant,
   getAccessTypeId,
+  deleteAccessRequests,
   deleteCollection,
   deleteDataset,
   deleteGrantsForResource,
@@ -50,8 +53,22 @@ let invitation;
 /** An archived parent with an active child, for the one-step rule. */
 let parent;
 let child;
+/** A dataset the active child owns, so its own state admits every change. */
+let openDataset;
+/** Access the archived group holds on that dataset, given before archiving. */
+let heldByArchived;
+/** Requests filed before archiving: two on the archived group's dataset, one for the group itself. */
+let draftOnArchived;
+let reviewOnArchived;
+let draftForArchivedGroup;
+let viewMetadataId;
 
 const conflict = expect.objectContaining({ status: 409 });
+/** A 409 that names the archived resource or group, so a version conflict cannot pass for it. */
+const frozenBy = (words) => expect.objectContaining({ status: 409, message: expect.stringContaining(words) });
+const RESOURCE_ARCHIVED = 'this request concerns is archived';
+const GROUP_ARCHIVED_REQUEST = 'The group this request is for is archived';
+const GROUP_ARCHIVED_GRANT = 'for an archived group';
 
 beforeAll(async () => {
   actor = await createTestUser('_scs_actor');
@@ -82,6 +99,33 @@ beforeAll(async () => {
     data: { group_id: child.id, user_id: actor.subject_id, role: 'ADMIN' },
   });
 
+  viewMetadataId = await getAccessTypeId('DATASET:VIEW_METADATA');
+  openDataset = await createTestDataset(child.id, '_scs_open_ds');
+  heldByArchived = await createTestGrant({
+    subject_id: archived.id,
+    resource_id: openDataset.resource_id,
+    access_type_id: viewMetadataId,
+    granted_by: actor.subject_id,
+  });
+  draftOnArchived = await accessRequestsService.createAccessRequest({
+    type: 'NEW',
+    resource_id: dataset.resource_id,
+    subject_id: joiner.subject_id,
+    items: [{ access_type_id: await getAccessTypeId('DATASET:DOWNLOAD') }],
+  }, joiner.subject_id);
+  reviewOnArchived = await accessRequestsService.createAndSubmitAccessRequest({
+    type: 'NEW',
+    resource_id: dataset.resource_id,
+    subject_id: joiner.subject_id,
+    items: [{ access_type_id: await getAccessTypeId('DATASET:LIST_FILES') }],
+  }, joiner.subject_id);
+  draftForArchivedGroup = await accessRequestsService.createAccessRequest({
+    type: 'NEW',
+    resource_id: openDataset.resource_id,
+    subject_id: archived.id,
+    items: [{ access_type_id: await getAccessTypeId('DATASET:DOWNLOAD') }],
+  }, actor.subject_id);
+
   await groupsService.archiveGroup(archived.id, actor.subject_id);
   await groupsService.archiveGroup(parent.id, actor.subject_id);
 }, 60_000);
@@ -90,7 +134,10 @@ afterAll(async () => {
   await groupsService.unarchiveGroup(archived.id, actor.subject_id).catch(() => {});
   await groupsService.unarchiveGroup(parent.id, actor.subject_id).catch(() => {});
   await prisma.group_invitation.deleteMany({ where: { group_id: archived.id } });
+  await deleteAccessRequests({ requesterIds: [actor.subject_id, joiner.subject_id] }).catch(() => {});
   await deleteGrantsForResource(dataset.resource_id).catch(() => {});
+  await deleteGrantsForResource(openDataset.resource_id).catch(() => {});
+  await deleteDataset(openDataset.id).catch(() => {});
   await deleteCollection(collection.id).catch(() => {});
   await deleteDataset(dataset.id).catch(() => {});
   await deleteGroup(child.id).catch(() => {});
@@ -184,6 +231,72 @@ describe('a dataset owned by an archived group', () => {
     await expect(grantsService.revokeAllGrants(joiner.subject_id, dataset.resource_id, {
       actor_id: actor.subject_id,
     })).rejects.toEqual(conflict);
+  });
+});
+
+// Archiving freezes a request: no step moves, withdrawing included, and nothing is cancelled.
+// @see docs/design/groups/design.md — Lifecycle Management
+describe('a request on a dataset an archived group owns', () => {
+  test('refuses an edit and a withdrawal, as it refuses a submission and a review', async () => {
+    await expect(accessRequestsService.updateAccessRequest(draftOnArchived.id, joiner.subject_id, {
+      purpose: 'refused while archived',
+    })).rejects.toEqual(frozenBy(RESOURCE_ARCHIVED));
+    await expect(accessRequestsService.withdrawRequest({
+      request_id: draftOnArchived.id, requester_id: joiner.subject_id,
+    })).rejects.toEqual(frozenBy(RESOURCE_ARCHIVED));
+    await expect(accessRequestsService.withdrawRequest({
+      request_id: reviewOnArchived.id, requester_id: joiner.subject_id,
+    })).rejects.toEqual(frozenBy(RESOURCE_ARCHIVED));
+    await expect(accessRequestsService.submitRequest(draftOnArchived.id, joiner.subject_id))
+      .rejects.toEqual(frozenBy(RESOURCE_ARCHIVED));
+  });
+
+  test('stays exactly as it was, so unarchiving resumes it', async () => {
+    const rows = await prisma.access_request.findMany({
+      where: { id: { in: [draftOnArchived.id, reviewOnArchived.id] } },
+      select: { id: true, status: true },
+    });
+    expect(Object.fromEntries(rows.map((r) => [r.id, r.status]))).toEqual({
+      [draftOnArchived.id]: 'DRAFT',
+      [reviewOnArchived.id]: 'UNDER_REVIEW',
+    });
+  });
+});
+
+describe('an archived group as the one access is for', () => {
+  test('takes no new access, while an active group does', async () => {
+    const issueTo = (subject_id) => prisma.$transaction((tx) => grantsService.issueGrants(tx, {
+      subject_id,
+      resource_id: openDataset.resource_id,
+      granted_by: actor.subject_id,
+      justification: 'serviceStateChecks',
+    }, [{ access_type_id: viewMetadataId, approved_expiry: Expiry.never() }]));
+
+    await expect(issueTo(archived.id)).rejects.toEqual(frozenBy(GROUP_ARCHIVED_GRANT));
+    // The sensitivity pair: the same dataset and access type, for a group that is not archived.
+    await issueTo(child.id);
+    expect(await prisma.grant.count({
+      where: { subject_id: child.id, resource_id: openDataset.resource_id, revoked_at: null },
+    })).toBe(1);
+  });
+
+  test('has no request filed for it, and the one it has does not move', async () => {
+    await expect(accessRequestsService.createAccessRequest({
+      type: 'NEW',
+      resource_id: openDataset.resource_id,
+      subject_id: archived.id,
+      items: [{ access_type_id: viewMetadataId }],
+    }, actor.subject_id)).rejects.toEqual(frozenBy(GROUP_ARCHIVED_REQUEST));
+    await expect(accessRequestsService.withdrawRequest({
+      request_id: draftForArchivedGroup.id, requester_id: actor.subject_id,
+    })).rejects.toEqual(frozenBy(GROUP_ARCHIVED_REQUEST));
+  });
+
+  test('can still have its access revoked by the group that governs the resource', async () => {
+    // The dataset belongs to an active group, whose admins keep the power to take access away.
+    await grantsService.revokeGrant(heldByArchived.id, { actor_id: actor.subject_id });
+    const row = await prisma.grant.findUnique({ where: { id: heldByArchived.id } });
+    expect(row.revoked_at).not.toBeNull();
   });
 });
 
