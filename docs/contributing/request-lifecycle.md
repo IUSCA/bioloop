@@ -103,6 +103,11 @@ A rule is a pure function of the row the caller fetched, so the service asks it 
 transaction that makes the change, after its row lock. A refusal is **409**, not 403: the caller
 is not lacking authority, the resource is not in a state that admits the change.
 
+The states and the moves between them are specified by
+[the transition table](/design/groups/access-model.md#the-transition-table); the rule files are
+where that table is enforced. The state layer also covers `invitation`, which has no policy
+container of its own because invitations are authorized as actions on their group.
+
 State binds everyone, platform admins included. Archiving reaches the group itself and the
 datasets and collections it owns, and stops there: a sub-group keeps its own state until
 somebody archives it.
@@ -131,14 +136,18 @@ button only when its action is in the list.
 The **filter** is a function that removes the fields a caller may not see from an object. It is
 built from the container's **attribute rules**, which pair a policy with a list of fields.
 
-### Refusals: 401, 403, and 404
+### Refusals: 401, 403, 404, and 409
 
 - **401** means no valid token.
 - **403** means the caller stands on the resource and is refused this action.
 - **404** means the caller has no standing on the dataset, collection, or group the URL names.
   An unknown id answers the same way, so a stranger cannot tell the two apart.
+- **409** means the resource's state does not admit the action. The caller's authority is not in
+  question, which is why it is not 403.
 
-Every other container answers a refusal with 403. See
+The first three are authorization answering. The fourth is the resource answering, and it comes
+from a different layer at a later point in the request. Every container answers an authorization
+refusal with 403 unless standing is absent. See
 [Refusal shapes](/design/groups/access-model.md#refusal-shapes).
 
 ## The fixed part of every request
@@ -252,22 +261,32 @@ The middleware stores the result as `req.permission` and calls `next()`.
 
 ### 4. The handler
 
-The handler loads the dataset through `datasetService.getDatasetById`. It responds with the
-filtered dataset and a `_meta` block:
+The handler loads the dataset through `datasetService.getDatasetById`, asking for its owning
+group, and responds with the filtered dataset and a `_meta` block carrying both answers:
 
 ```javascript
+const dataset = await datasetService.getDatasetById(req.params.id, {
+  includes: { owner_group: true },
+});
 res.json({
   ...req.permission.filter(dataset),
   _meta: {
     standing: req.permission.standing,
     capabilities: toCapabilitiesArray(req.permission.capabilities)
       .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
+    available_actions: state.availableActions('dataset', dataset),
   },
 });
 ```
 
-`toCapabilitiesArray` turns the map of action to boolean into a list of granted names. The UI
-reads `_meta.capabilities` to decide which buttons to show.
+`toCapabilitiesArray` turns the map of action to boolean into a list of granted names.
+
+The `includes` is what makes the second answer free. A dataset has no archived column of its own,
+so its rules read `owner_group.is_archived`, and the group arrives with the row the handler
+already fetched. `state.availableActions` is a pure call on that row and issues no query.
+
+`request_access` is the one capability computed outside the action tables, so it has no state
+rule and never appears in `available_actions`.
 
 ### The same request from other callers
 
@@ -287,8 +306,9 @@ POST /groups/2a91…/members
 { "members": [{ "user_id": "c4d0…" }] }
 ```
 
-This request changes data, so a restriction can block it. It also has a second restriction
-check inside the database transaction. The route is in `api/src/routes/groups.js`:
+This request changes data, so it passes two different gates. Authorization decides whether Alice
+may add a member, before the handler runs. The group's own state decides whether it is accepting
+changes at all, inside the database transaction. The route is in `api/src/routes/groups.js`:
 
 ```javascript
 router.post(
@@ -317,8 +337,8 @@ In `api/src/authorization/builtin/policies/group.js`, the action is `add_member:
 The engine calls the injected restriction checker before any policy runs. No restriction type is
 specified, so the builtin checker returns `null` for every action and the pipeline continues.
 
-Whether the lab is archived is not asked here. That is the lab's own state, and the service
-asks it in step 3.
+Whether the lab is archived is not asked here, and it is not what the restriction checker is for.
+That is the lab's own state, and the service asks a different layer about it in step 3.
 
 ### 2. The platform-admin check and the policy
 
@@ -327,11 +347,12 @@ Alice is not a platform admin. `isGroupAdmin` requires `context.access_paths`, a
 grants. The route asked for no capabilities or standing, so the middleware sets `req.permission`
 and calls `next()`.
 
-### 3. The service opens a transaction and checks again
+### 3. The service asks the state layer, inside a transaction
 
-The middleware checked the restriction before the handler ran. Another request could archive the
-group in between. So `addGroupMembers` in `api/src/services/groups.js` checks again, inside the
-transaction that makes the change:
+Nothing so far has asked whether the group is accepting changes. Authorization answered a
+different question, and it answered it before the handler ran, so another request could archive
+the group in between. `addGroupMembers` in `api/src/services/groups.js` therefore asks
+`src/state` inside the transaction that makes the change:
 
 ```javascript
 return prisma.$transaction(async (tx) => {
@@ -391,7 +412,9 @@ query for the whole page seeds every row's check.
 ## Where to read next
 
 - [Access model](/design/groups/access-model.md): the decision rule, standing, projection, and the transition table.
-- [V2 page patterns](./v2-page-patterns.md): how the UI consumes `_meta.capabilities` and `_meta.standing`.
+- [V2 page patterns](./v2-page-patterns.md): how the UI consumes `_meta.capabilities`,
+  `_meta.available_actions`, and `_meta.standing`, and which of the two answers hides a control
+  rather than disabling it.
 - `api/src/authorization/custom/README.md`: adding a resource type in a derived application.
 
 ## Keeping this page current

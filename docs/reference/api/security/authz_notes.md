@@ -26,7 +26,8 @@
 > `effective_restriction` recorded here — its four arms, its `group_closure` join, and the
 > descendant reach that follows from it — was accurate when taken and is the premise decision D2
 > reversed: archiving now covers a group and what it owns, one step, and a sub-group keeps its
-> own state. The transition table is gone too; a request's status is read by its state rules.
+> own state. The transition table is not gone: `access-model.md` still specifies it, and the
+> per-resource state rules under `src/state/builtin/` are where it is now enforced.
 > @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the engine stops reading state
 
 Purpose: understand the engine and its tests fully before revising the access-model plan.
