@@ -8,7 +8,8 @@
  * - Every value of every enum a decision reads appears in a generated world, or is listed
  *   below with the reason no decision reads it. A value added to the schema fails here until
  *   it is placed in one or the other.
- * - The access types and restriction types the worlds use are exactly the ones the app defines.
+ * - The access types the worlds use are exactly the ones the app defines, and the archived
+ *   dimension puts every resource type's archived state into some world.
  * - The covering set covers every feasible pair of dimension values.
  * - Every dimension has a sensitivity pair: two cells differing only in that dimension that the
  *   reference model decides differently. A dimension without one is data that cannot test it.
@@ -28,8 +29,7 @@ require('module-alias/register');
 const Prisma = require('@prisma/client');
 
 const { policyRegistry } = require('@/authorization');
-const { buildTransitionTable } = require('@/authorization/builtin/tables');
-const { RESTRICTION_TYPE } = require('@/services/restrictions');
+const state = require('@/state');
 
 const { modelTablesFrom } = require('./tables');
 const { MODELLED_RESOURCE_TYPES } = require('./reference');
@@ -49,9 +49,18 @@ const REACHED = {
   PROFILE_VISIBILITY: [...world.groups, ...world.collections].map((r) => r.profile_visibility),
   GRANT_CREATION_TYPE: world.grants.map((g) => g.creation_type),
   GRANT_REVOCATION_TYPE: world.grants.map((g) => g.revocation_type),
-  ACCESS_REQUEST_STATUS: buildTransitionTable(policyRegistry)
-    .filter((row) => row.resource_type === 'access_request')
-    .flatMap((row) => [...row.from, ...row.to]),
+  // The statuses some step is possible in, read from the request's own state rules rather
+  // than from a table beside the policies. A status no action admits is terminal, and each
+  // one is listed below with the step that produced it.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  ACCESS_REQUEST_STATUS: Object.values(Prisma.ACCESS_REQUEST_STATUS).filter((status) => state
+    .stateRegistry.get('access_request').getActionNames()
+    // Only the steps whose rule reads the status. Reading a request is possible in every
+    // status, so including it would report every status as one a step can be taken in.
+    .filter((action) => state.requiredFields('access_request', [action]).includes('status'))
+    .some((action) => state.check('access_request', action, {
+      status, target: { kind: 'dataset', archived: false, deleted: false },
+    }) === null)),
 };
 
 /**
@@ -70,9 +79,10 @@ const NOT_READ = {
   // where the grant came from. The worlds carry MANUAL and SYSTEM_BOOTSTRAP only because
   // they mirror seeded rows.
   GRANT_CREATION_TYPE: ['ACCESS_REQUEST'],
-  // An expired request is set by the expiry job, not by a policed action, and no action
-  // moves a request out of it.
-  ACCESS_REQUEST_STATUS: ['EXPIRED'],
+  // The statuses a request ends in. No step is possible in them, which is what makes them
+  // terminal, so each is named here with the step that wrote it. An expired request is set by
+  // the expiry job rather than by a policed action.
+  ACCESS_REQUEST_STATUS: ['APPROVED', 'PARTIALLY_APPROVED', 'REJECTED', 'WITHDRAWN', 'EXPIRED'],
 };
 
 const ENUMS = [...new Set([...Object.keys(REACHED), ...Object.keys(NOT_READ)])];
@@ -128,9 +138,23 @@ test('the worlds use exactly the access types the app defines', () => {
   expect([...new Set(W.ACCESS_TYPES)].sort()).toEqual([...new Set(tables.accessTypes)].sort());
 });
 
-test('the worlds use exactly the restriction types the app defines', () => {
-  const used = new Set(world.restrictions.map((r) => r.type));
-  expect([...used].sort()).toEqual(Object.values(RESTRICTION_TYPE).sort());
+test('the worlds reach the archived state of every resource type that has one', () => {
+  // The archived state is a column on the row now, so the worlds are searched for the rows
+  // rather than for restriction rows pointing at them. A resource type whose state rules read
+  // an archived column, and that no world archives, is a dimension the data cannot test.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  const archivedIn = {
+    group: world.groups.some((g) => g.archived === true),
+    collection: world.collections.some((c) => c.archived === true),
+    // A dataset has no archived column: what reaches one is its owning group's state.
+    dataset: world.datasets.some((d) => world.groups.find((g) => g.id === d.owner)?.archived === true),
+  };
+  Object.entries(archivedIn).forEach(([type, reached]) => {
+    expect([`${type} archived somewhere`, reached]).toEqual([`${type} archived somewhere`, true]);
+  });
+  // Forced unless a world leaves it open too: a harness that archived everything would pass
+  // the check above and test nothing.
+  expect(world.groups.some((g) => !g.archived)).toBe(true);
 });
 
 test('the covering set covers every feasible pair', () => {

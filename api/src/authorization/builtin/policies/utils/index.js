@@ -48,15 +48,7 @@ const platformAdminOnly = new Policy({
  * @param {string[]} to
  * @see docs/design/groups/access-model.md — The transition table
  */
-const archivedState = (from, to) => ({
-  requires: ['is_archived'],
-  stateOf: (resource) => (resource.is_archived ? 'ARCHIVED' : 'ACTIVE'),
-  from,
-  to,
-});
-
 module.exports = {
   isPlatformAdmin,
   platformAdminOnly,
-  archivedState,
 };

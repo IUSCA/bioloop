@@ -80,7 +80,7 @@ Ten access types exist. Their order is a forest.
 
 Each derived relation has one definition, and every consumer reads that definition.
 
-- **`active(x, now)`** holds when `x` is not removed, revoked, or lifted, its start is not after `now`, and its end is null or after `now`. The views `active_group_user`, `valid_grants`, `active_collection_dataset`, and `effective_restriction` are this predicate.
+- **`active(x, now)`** holds when `x` is not removed or revoked, its start is not after `now`, and its end is null or after `now`. The views `active_group_user`, `valid_grants`, and `active_collection_dataset` are this predicate.
 - **`effective_member(u, g)`** holds when `u` has an active membership in `g` or in any descendant of `g`. Membership flows upward.
 - **`admin(u, g)`** holds when `u` has an active `ADMIN` membership in `g` itself. Authority does not flow.
 - **`oversees(u, g)`** holds when `u` is admin of a strict ancestor of `g`.

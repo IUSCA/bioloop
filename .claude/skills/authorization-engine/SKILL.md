@@ -206,36 +206,37 @@ they are. A projection never shares a nested object with the source row.
 Write any shell heredoc that carries backticks with a quoted delimiter (`<<'EOF'`). An unquoted
 one runs each backticked word as a command and silently drops it from the text.
 
-## A restriction check with no target throws
+## The restriction checker allows everything, and the seam is still live
 
-`checkRestriction` in `builtin/restrictions.js` first asks `actionCouldBeBlocked`. A reading
-action returns null there without a query. For a restrictable action, `restrictionTargetFor`
-resolves the target, and a missing one is a `RestrictionTargetError` that names the action.
+`checkRestriction` in `builtin/restrictions.js` returns `null` for every action. Archiving and
+deletion are resource state, answered by `src/state` from the services, so no restriction type
+is specified and nothing blocks. The seam itself stays: the engine calls the checker before any
+policy, and an application can inject one that blocks.
 
-- A group resolves by its id. A root group being created has no parent, so nothing restricts it.
-- A dataset or collection resolves by resource id. A create resolves by the `owner_group_id` the
-  pre-fetched resource names, so creating under an archived group, or a child of one, is blocked.
-- A grant or access request resolves through `preFetched.resource_id`, and otherwise by reading
-  the row's `resource_id`. An id naming no row returns null, so the service answers with its 404.
+Do not treat the no-op as dead code. `tests/authorization/restrictionSeam.test.js` injects a
+checker that blocks one dataset action and asserts all three places a restriction acts — the
+decision carries `blockedBy`, the capability map turns the action to `false` rather than dropping
+the key, and `filterRestrictedCapabilities` does the same over a list row. It also asserts the
+builtin checker blocks none of the 50-odd registered actions, which is what makes the rest of
+that file a test of the seam rather than of a coincidence.
 
-Until 2026-09-15 a missing target returned null and allowed the action. Five routes relied on
-that shape. `tests/services/restrictions/restrictionTargets.test.js` archives a collection and
-checks review, update, and revoke are refused. A new mutating route with neither an id nor a
-pre-fetched resource now throws in its first test rather than passing silently.
+An earlier layer resolved a target per resource type and threw when it could not find one. That
+whole failure mode is gone with the target resolution; what replaced it is that each service
+asks the resource's own state under its row lock.
 
-## Actions declare their restriction class and transition beside their policy
+## Actions declare their restriction class beside their policy
 
-A container's `.actions({...})` takes `mutating(policy, transition?)`, `reading(policy)`, or
-`readingData(policy)` from `core/policies/PolicyContainer.js`. `getRestrictionClass(action)` and
-`getTransition(action)` read them back. `tests/authorization/registryCompleteness.test.js`
-fails on an action with no class.
+A container's `.actions({...})` takes `mutating(policy)`, `reading(policy)`, or
+`readingData(policy)` from `core/policies/PolicyContainer.js`, and `getRestrictionClass(action)`
+reads it back. `tests/authorization/registryCompleteness.test.js` fails on an action with no
+class.
 
-`RESTRICTION_TYPES` in `builtin/restrictions.js` says which classes each type blocks: ARCHIVED
-blocks `mutating`, and DELETED blocks `mutating` and `data`. Both exempt `unarchive`. No list
-names actions, so a new action is classified by its own row. `typeBlocks` reads the class from
-the registry on first use, because the registry module requires `restrictions.js` while it
-builds. DELETED has no restriction rows: `effective_restriction` derives it from
-`dataset.is_deleted`.
+The three classes are load-bearing even with no restriction in force. `core/capabilities.js`
+selects the non-mutating actions by class, `tests/model/badgeCoverage.test.js` and
+`standingArm.test.js` key off it, and the reference model's `stateAdmits` derives its answer
+from the class rather than from the state rules — which is what keeps that oracle independent
+of the code it checks. The name `getRestrictionClass` outlived the layer it was named for; the
+values are `mutating`, `reading`, and `data`.
 
 Every leaf term carries `meta`: `{ pathKind }`, with `accessType` for a grant term, or
 `{ pathKind: null, rule }` for `always`, `never`, and `platform_admin_only`. `Policy.or`, `and`,
@@ -372,9 +373,13 @@ the resource in the URL. The lineage and ancestor routes did this, so an owning-
 
 `decideRows` gives each row `_meta.capabilities` and `_meta.standing` with the detail route's
 composition. For a dataset, a collection, or a group it reads the page's paths once with
-`accessPathsByResource` and the restrictions once with `restrictionTypesByTarget`, then seeds
-each row's check. Other containers, such as `access_request`, fall back to
-`filterRestrictedCapabilities` per row. `tests/model/listRowsArm.test.js` compares the batch
+`accessPathsByResource`, then seeds each row's check. Every row passes through
+`filterRestrictedCapabilities`, which costs nothing while the builtin checker blocks nothing.
+
+A list row's second answer is `_meta.available_actions`, which `projectRows` adds when the
+caller passes `availableActionsOf`. A list that did not fetch the fields a state rule reads must
+pass nothing rather than guess: the dataset search gates it on `include_owner_group`, because a
+rule throws rather than decide from a field the caller did not fetch. `tests/model/listRowsArm.test.js` compares the batch
 against the single-row composition, and `tests/model/relatedRowsArm.test.js` counts rows where
 the parent's projection would have differed.
 
@@ -447,12 +452,12 @@ list did not fail, because its policies read only `access_paths` from the contex
 fails, walk the object's own properties and check `util.types.isProxy`; the item inside the row,
 not the row, is the object Prisma wraps. `tests/authorization/hydrateExtendedRows.test.js` pins it.
 
-## DELETED is derived, not written
+## A deleted dataset is answered by its own state rules
 
-`effective_restriction` has an arm that reads `dataset.is_deleted` and emits type DELETED, so no
-code path writes a DELETED restriction row and every soft delete, v1 or v2, is covered. The
-service guards call `isRestricted(tx, target)` from `services/restrictions.js`, which reads the
-same view, so a guard refuses a soft-deleted dataset's collection target only through its owner.
+There is no DELETED restriction and no view deriving one. `state/builtin/dataset.js` reads
+`is_deleted` directly: a deleted dataset refuses every change and every data-plane action, and
+still admits reading its record. `readDatasetStateFields` fetches the row a caller needs, by
+either id form, and takes `FOR UPDATE` when asked.
 
 ## A new container fails the suite until it is placed
 

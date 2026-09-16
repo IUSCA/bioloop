@@ -1,6 +1,6 @@
 const { authorizeWithFilters } = require('./authorize');
 const Policy = require('./policies/Policy');
-const { evaluateCapabilitySet, deriveStanding, applyTransitions } = require('./capabilities');
+const { evaluateCapabilitySet, deriveStanding } = require('./capabilities');
 
 /**
  * Turn off the capabilities a restriction blocks.
@@ -51,7 +51,7 @@ const ALL_ATTRIBUTES = [{ policy: Policy.always, attribute_filters: ['*'] }];
  * 3. The action's policy and attribute rules.
  *
  * After a grant, capabilities and standing are derived when asked for. Capabilities pass
- * through the transition table and the restriction checker on both branches.
+ * through the restriction checker on both branches.
  *
  * A refusal carries `status`. For a resource type listed in `concealRefusalsWithoutStanding`, a
  * refusal on a named resource is 404 when the caller holds no standing on it, and 403 when they
@@ -151,15 +151,13 @@ function createDecisionPipeline({
       const permission = await evaluateAdmin(request);
       if (permission.granted) {
         if (shouldDeriveCapabilities) {
-          // Every action, less those the resource's state forbids and a restriction blocks.
-          permission.capabilities = await restrict(await applyTransitions({
-            policyContainer,
-            capabilities: Object.fromEntries(policyContainer.getActionNames().map((name) => [name, true])),
-            identifiers,
-            hydratorRegistry,
-            caches: { resource: policyExecutionContext?.cache?.resource },
-            preFetched,
-          }), request);
+          // Every action, less those a restriction blocks. What the resource's state admits is
+          // a separate answer, reported beside this one.
+          // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+          permission.capabilities = await restrict(
+            Object.fromEntries(policyContainer.getActionNames().map((name) => [name, true])),
+            request,
+          );
         }
         if (shouldDeriveStanding) {
           permission.standing = [{ kind: 'platform_admin' }].concat(await standingOf(policyContainer, request));

@@ -34,6 +34,12 @@ const notWhileArchived = rule({
 const collectionState = new StateContainer({
   resourceType: 'collection',
   description: "What a collection's archived state and its history admit",
+  examples: {
+    // The archived state in force, however it arrived: the collection's own column and its
+    // owning group's. A dialog asking what archiving forbids wants the whole answer, and the
+    // two sources refuse the same actions, so naming both states it once.
+    archived: { is_archived: true, owner_group: { is_archived: true }, has_history: false },
+  },
 }).rules({
   // A create has no row yet. The state it is placed into is the owning group's.
   create: rule({

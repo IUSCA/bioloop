@@ -14,42 +14,15 @@ const RESTRICTION_CLASS = Object.freeze({
 });
 
 /**
- * A transition row: the states of the resource that admit an action, and the states it leaves.
+ * Declares an action that changes state.
  *
- * @typedef {Object} Transition
- * @property {string[]} requires - resource attributes `stateOf` reads
- * @property {function(Object): string} stateOf - the resource's current state
- * @property {string[]} from - states that admit the action
- * @property {string[]} to - states the action may leave behind
- * @see docs/design/groups/access-model.md — The transition table
- */
-
-function validateTransition(qualifiedName, transition) {
-  if (transition == null) return null;
-  const {
-    requires, stateOf, from, to,
-  } = transition;
-  if (!Array.isArray(requires) || requires.some((r) => typeof r !== 'string')) {
-    throw new Error(`Transition for ${qualifiedName}: requires must be an array of strings`);
-  }
-  if (typeof stateOf !== 'function') {
-    throw new Error(`Transition for ${qualifiedName}: stateOf must be a function`);
-  }
-  if (!Array.isArray(from) || from.length === 0 || !Array.isArray(to) || to.length === 0) {
-    throw new Error(`Transition for ${qualifiedName}: from and to must be non-empty arrays`);
-  }
-  return Object.freeze({
-    requires: [...requires], stateOf, from: [...from], to: [...to],
-  });
-}
-
-/**
- * Declares an action that changes state. `transition` is optional.
+ * Which states admit the action is not declared here: it is business logic owned by the
+ * resource, and `src/state/builtin/<resource>.js` states it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  * @param {Policy} policy
- * @param {Transition} [transition]
  */
-function mutating(policy, transition = null) {
-  return { policy, restriction: RESTRICTION_CLASS.MUTATING, transition };
+function mutating(policy) {
+  return { policy, restriction: RESTRICTION_CLASS.MUTATING };
 }
 
 /**
@@ -57,7 +30,7 @@ function mutating(policy, transition = null) {
  * @param {Policy} policy
  */
 function reading(policy) {
-  return { policy, restriction: RESTRICTION_CLASS.READING, transition: null };
+  return { policy, restriction: RESTRICTION_CLASS.READING };
 }
 
 /**
@@ -65,7 +38,7 @@ function reading(policy) {
  * @param {Policy} policy
  */
 function readingData(policy) {
-  return { policy, restriction: RESTRICTION_CLASS.DATA, transition: null };
+  return { policy, restriction: RESTRICTION_CLASS.DATA };
 }
 
 /**
@@ -97,7 +70,7 @@ class PolicyContainer {
     const qualifiedName = `${this.meta.resourceType}.${actionName}`;
     // A bare policy declares no restriction class. `mutating(policy)` and `reading(policy)`
     // declare one beside it, which is what the restriction layer and the tables read.
-    const { policy, restriction = null, transition = null } = declaration instanceof Policy
+    const { policy, restriction = null } = declaration instanceof Policy
       ? { policy: declaration }
       : (declaration || {});
     if (!(policy instanceof Policy)) {
@@ -107,10 +80,7 @@ class PolicyContainer {
       throw new Error(`Action ${qualifiedName}: unknown restriction class ${restriction}`);
     }
     this._actions[actionName] = renamePolicy ? policy.cloneWithName(qualifiedName) : policy.clone();
-    this._actionMeta[actionName] = Object.freeze({
-      restriction,
-      transition: validateTransition(qualifiedName, transition),
-    });
+    this._actionMeta[actionName] = Object.freeze({ restriction });
     return this;
   }
 
@@ -122,16 +92,6 @@ class PolicyContainer {
   getRestrictionClass(actionName) {
     this.getPolicy(actionName);
     return this._actionMeta[actionName].restriction;
-  }
-
-  /**
-   * The transition row an action declared, or null for an action any state admits.
-   * @param {string} actionName
-   * @returns {Transition|null}
-   */
-  getTransition(actionName) {
-    this.getPolicy(actionName);
-    return this._actionMeta[actionName].transition;
   }
 
   /** Whether `freeze()` has been called. */

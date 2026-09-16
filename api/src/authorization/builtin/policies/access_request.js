@@ -100,13 +100,6 @@ const hasOversightOfResourceGroup = new AccessRequestPolicy({
  * Reads an access request's lifecycle state for the transition table.
  * @see docs/design/groups/access-model.md — The transition table
  */
-const requestState = (from, to) => ({
-  requires: ['status'],
-  stateOf: (request) => request.status,
-  from,
-  to,
-});
-
 // Define policies for access requests
 const accessRequestPolicies = new PolicyContainer({
   resourceType: 'access_request',
@@ -119,24 +112,22 @@ accessRequestPolicies
     read: reading(Policy.or([isRequester, isAdminOfResourceGroup, hasOversightOfResourceGroup])),
     review: mutating(
       isAdminOfResourceGroup,
-      requestState(['UNDER_REVIEW'], ['APPROVED', 'PARTIALLY_APPROVED', 'REJECTED']),
     ),
-    update: mutating(isRequester, requestState(['DRAFT'], ['DRAFT'])),
-    // Submitting and withdrawing were bound to `update`. They are separate actions because the
-    // transition table admits them in different states, and the capability map can only say
+    update: mutating(isRequester),
+    // Submitting and withdrawing are actions of their own rather than uses of `update`, because
+    // the request's state admits them in different statuses and the capability map can only say
     // "Withdraw" when withdraw is an action of its own.
-    // @see docs/design/groups/access-model.md — The transition table
-    submit: mutating(isRequester, requestState(['DRAFT'], ['UNDER_REVIEW'])),
-    withdraw: mutating(isRequester, requestState(['DRAFT', 'UNDER_REVIEW'], ['WITHDRAWN'])),
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+    submit: mutating(isRequester),
+    withdraw: mutating(isRequester),
     // The meaningful check on creation is on the resource being asked for, not on the
     // request. A create body names a `resource_id` and no resource type, so which policy
     // container applies is not known until the `resource` row is read; the route reads it
     // and authorizes `view_metadata` on the dataset or collection itself.
-    //
-    // This binding is not decorative. `restrictionTargetFor` follows an access_request
-    // through to `preFetchedResource.resource_id`, so it is the path by which an ARCHIVED
-    // restriction reaches request creation. The subject rules — self, or a group the
-    // requester administers — stay in `_validateAccessRequestSubject`.
+    // Whether the resource is archived or deleted is not asked here. The request's own state
+    // rule for `create` reads the resource it names, and the service refuses with 409. The
+    // subject rules — self, or a group the requester administers — stay in
+    // `_validateAccessRequestSubject`.
     // @see docs/design/groups/implementation/access-requests-plan.md — A1
     create: mutating(Policy.always),
   })

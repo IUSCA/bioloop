@@ -1,7 +1,7 @@
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { mutating, reading } = require('../../core/policies/PolicyContainer');
-const { platformAdminOnly, archivedState } = require('./utils/index');
+const { platformAdminOnly } = require('./utils/index');
 
 class GroupPolicy extends Policy {
   constructor({
@@ -148,8 +148,8 @@ groupPolicies
     create: mutating(platformAdminOnly),
     create_child: mutating(isGroupAdmin),
 
-    archive: mutating(isGroupAdmin, archivedState(['ACTIVE'], ['ARCHIVED'])),
-    unarchive: mutating(platformAdminOnly, archivedState(['ARCHIVED'], ['ACTIVE'])),
+    archive: mutating(isGroupAdmin),
+    unarchive: mutating(platformAdminOnly),
 
     view_metadata: reading(Policy.or([isGroupMember, hasGroupOversight, canAccessResourcesOwnedByGroup])),
 

@@ -396,6 +396,104 @@ binds the mutating `grant.revoke`, and `POST /collections/:id/stage` is still ga
 **Exit:** every test above passes, the Engine, List rows, Standing, and Transitions arms agree
 with the reference model, and the full API suite passes.
 
+**As built, 2026-09-15.** The engine stops reading state, and five things departed from the
+description above.
+
+`accessibleIdsQuery` gained the `restrictionPredicate` argument, defaulting to `TRUE`, but no
+call site passes it. Two of the five builders named above — `searchGroupsForUser` and
+`getRequestsPendingReviewForUser` — call `accessPathsQuery` directly and cannot take it at all.
+Threading a constant `TRUE` through the other four would add a parameter nobody reads, so the
+seam sits on the query and the call sites are left until a restriction type exists to put in it.
+
+That departure was not free, and the full suite is what found the cost.
+`GET /v2/datasets/eligible-owner-groups` offered archived groups as dataset owners. Its
+candidates query deliberately did not filter them, and its docstring said why: every candidate
+is decided by `dataset.contribute`, so "an archived group, a closed group, and a group the rule
+does not admit drop out there, by the rule itself rather than by a copy of it here". That
+rationale depended on the engine reading archive state, which this phase removed, so the list
+stopped excluding them while `getOwnerGroupForAuthorization` still refused the same group when a
+create arrived. `listOwnerGroupCandidates` now excludes archived groups in both branches, and
+its docstring says the exclusion is the group's own state rather than something the engine
+answers. The lesson is the one the repository's cleanup rule states: a stated rationale is a
+claim to recheck when its premise is reversed, and this one read as correct while being false.
+
+One more consequence of the same kind. `collection.delete` was withheld from the capability map
+through the restriction checker, which read the `has_history` virtual attribute; with the checker
+allowing everything, a collection with history was offered `delete`. The refusal has not moved
+anywhere unexpected — the service still answers 409 from the same `has_history` under its lock —
+but the answer a page reads moved from `capabilities` to `available_actions`.
+`tests/services/collections/deleteRefusal.test.js` now asserts both halves: the admin keeps the
+capability, because having history is not a loss of authority, and the collection's state
+withholds the action. Phase 5 must read `available_actions` for this button, not capabilities.
+
+The collection hydrator's `has_history` virtual attribute is now unread by any policy. It is left
+in place because `readCollectionStateFields` computes the same two counts for the state layer and
+Phase 5 may want the hydrated form; if it does not, it is dead weight to remove there.
+
+`_meta.available_actions` reaches the five detail routes and two list routes, not every
+`decideRows` and `projectRows` caller. `projectRows` takes an `availableActionsOf` option, so
+the remaining nine call sites are one line each — but a state rule throws rather than decide
+from a field the caller did not fetch, and most list queries do not fetch those fields. The
+dataset search gates its answer on `include_owner_group` for exactly that reason. Adding a
+per-row query to a list to answer a UI convenience is a performance decision rather than a
+mechanical edit, so the rest wait for Phase 5, which will say which lists the UI actually reads
+it from.
+
+Each state container declares its named states as `examples`, and the engine gained
+`forbiddenActions(resourceType, stateName)`, which runs the resource's own rules against its own
+example. `GET /v2/states/:resource_type/:state_name/forbidden-actions` serves it, so the archive
+dialogs and the 409 a service returns come from one statement. The collection's archived example
+sets its own column **and** its owning group's: the two refuse the same actions, and naming both
+is what makes a group's archive dialog and a collection's agree. The dialogs now ask per resource
+type, because what a state forbids is the resource's answer, and the UI service was renamed to
+`states.js` with it.
+
+Two tests exist that the plan did not name, and both answer gaps the plan's own list would have
+left. `tests/authorization/restrictionSeam.test.js` injects a checker that blocks one action and
+asserts the decision, the capability map, and a list row, then asserts the builtin checker blocks
+none of the registered actions — without it the no-op seam had no coverage at all and could break
+unnoticed. `tests/routes/mutatingRouteSweep.test.js` walks the router stacks through
+`middleware.authorizes` and checks every route bound to a `mutating` action against its
+resource's archived example, with five exemptions each carrying its reason: `unarchive` on a group
+and a collection, `group.create` for a root group, and `access_request.update` and `withdraw`,
+which a requester may still take on their own draft. The sweep found those three admitted
+mutations, and each is correct rather than a hole.
+
+`restrictions.test.js` was reduced rather than transplanted. `tests/state/rules.test.js` already
+drives every rule as a pure function and `serviceStateChecks.test.js` already covers each 409, so
+what moved to `tests/state/archivedState.test.js` is only what needs a database: that archiving
+writes the column, that it refuses changes to the datasets the group owns while leaving their
+bytes readable, and that a sub-group and the datasets **it** owns stay mutable. That last case
+inverts what the old test asserted, and reading it off the rules would be circular, which is why
+it keeps a real group tree.
+
+Three consequences of the removal were found by sweeping rather than by the plan. The
+`access_request` policy and the access-requests route both carried comments crediting
+`restrictionTargetFor` with stopping a request on an archived dataset; the request's own state
+rule does that now. `refusalMessage` still formats a `blockedBy` no builtin checker sets, which
+is correct for an injected one and now says so. And the UI's label table named three actions the
+archived state admits — `group.create`, `access_request.update`, and `access_request.withdraw` —
+which `stateLabels.test.js` caught from the other direction.
+
+`getRestrictionClass` is now a misnomer: the layer it was named for is gone, but the three
+classes are load-bearing in `core/capabilities.js`, in two model arms, and in the reference
+model's `stateAdmits`. Renaming it to an action-kind accessor is filed in `.todo` rather than
+folded in here.
+
+Verified: 111 suites and 1187 tests, of which 1186 pass. The one failure is
+`tests/services/grants/anonymousSubjectSet.test.js`, on "a grant to Public also reaches a
+signed-in caller", and it is recorded as a flake rather than as fixed because that is what the
+measurements support. It failed once in a full run and once when run alone, then passed 6/6
+twice alone and passed when run by name with the other five skipped. Nothing in this phase
+touches its path: `getGrantAccessTypesForUser` reads `accessPathsQuery`, and the only change to
+that file is the `restrictionPredicate` argument on `accessibleIdsQuery`, a different function;
+`git status` shows `services/grants/`, `constants.js`, and `builtin/standing.js` untouched. Its
+own `afterEach` comment names the mechanism — two of its tests contend for the `grant_no_overlap`
+exclusion constraint on the same collection and access type — so the likely cause is inside the
+file rather than in the phase. It is the third suite this work has seen fail only intermittently,
+with `tests/routes/health.test.js` and `tests/services/grants/coverage.test.js`, and the three
+are listed together in the api-tests skill.
+
 ### Phase 4: storage
 
 - A migration drops `effective_restriction`, `active_restriction`, `restriction`, and

@@ -14,6 +14,20 @@
 > - List handlers call `callerIsPlatformAdmin(req)`, which reads `user_role`.
 > - `group.members`, `collection.datasets`, and `dataset.collections` read the active views.
 > @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+>
+> **Superseded further by Phase 3 of the restrictions plan, 2026-09-15.** Every finding below
+> about the restriction layer records a layer that no longer decides anything. `checkRestriction`
+> returns null for every action; `RESTRICTION_TYPES`, `typeBlocks`, `blockedActions`,
+> `effectiveRestrictionTypes`, `restrictionTypesByTarget`, `blockingRestriction`,
+> `restrictionTargetFor`, and `RestrictionTargetError` are gone, as are `isRestricted`,
+> `applyRestriction`, `liftRestriction`, and `restrictionHistory`. Archiving and deletion are
+> resource state, declared per resource under `src/state/builtin/` and asserted by each service
+> inside its transaction, after its row lock, answering 409 rather than 403. The reading of
+> `effective_restriction` recorded here — its four arms, its `group_closure` join, and the
+> descendant reach that follows from it — was accurate when taken and is the premise decision D2
+> reversed: archiving now covers a group and what it owns, one step, and a sub-group keeps its
+> own state. The transition table is gone too; a request's status is read by its state rules.
+> @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the engine stops reading state
 
 Purpose: understand the engine and its tests fully before revising the access-model plan.
 Update after each file. Re-read before the next. Organised by theme (my choice), with file refs.

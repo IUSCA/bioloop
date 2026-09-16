@@ -6,8 +6,8 @@
  * expired membership, a revoked and a not-yet-started grant, a collection row that was taken
  * out. Every name carries a run tag, so two runs never collide on a unique column.
  *
- * The system principals and the quarantine group are the seeded rows, not copies. The
- * quarantine group's ARCHIVED restriction is seeded too, so the world's copy is not written.
+ * The system principals and the quarantine group are the seeded rows, not copies, and the
+ * quarantine group is archived by its own seed.
  *
  * Require `tests/testDatabase.js` first. This module writes thousands of rows.
  *
@@ -40,8 +40,8 @@ const safe = (s) => s.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 async function writeWorld(prisma, world) {
   const tag = `mw${Date.now().toString(36)}`;
   const ids = new Map();
-  // Before every membership, grant, and restriction row the world writes, so a removal or an
-  // end date never precedes its start.
+  // Before every membership and grant row the world writes, so a removal or an end date
+  // never precedes its start.
   const longAgo = new Date(world.now.getTime() - 90 * 24 * HOUR);
   const past = new Date(world.now.getTime() - HOUR);
 
@@ -96,6 +96,8 @@ async function writeWorld(prisma, world) {
           archive_key: safe(name),
           allow_user_contributions: g.allow_user_contributions === true,
           profile_visibility: g.profile_visibility ?? 'PRIVATE',
+          is_archived: g.archived === true,
+          archived_at: g.archived === true ? longAgo : null,
         }],
       });
       created.groups.push(id);
@@ -143,7 +145,13 @@ async function writeWorld(prisma, world) {
     await prisma.resource.create({ data: { id, type: RESOURCE_TYPE.COLLECTION } });
     await prisma.collection.createMany({
       data: [{
-        id, name, slug: safe(name), owner_group_id: ids.get(c.owner), profile_visibility: c.profile_visibility ?? 'PRIVATE',
+        id,
+        name,
+        slug: safe(name),
+        owner_group_id: ids.get(c.owner),
+        profile_visibility: c.profile_visibility ?? 'PRIVATE',
+        is_archived: c.archived === true,
+        archived_at: c.archived === true ? longAgo : null,
       }],
     });
     ids.set(c.id, id);
@@ -183,28 +191,6 @@ async function writeWorld(prisma, world) {
     });
   }
 
-  for (const r of world.restrictions) {
-    const onQuarantine = r.group && world.groups.find((g) => g.id === r.group)?.quarantine;
-    if (!onQuarantine) {
-      await prisma.restriction.create({
-        data: {
-          type_name: r.type,
-          group_id: r.group ? ids.get(r.group) : null,
-          resource_id: r.resource ? ids.get(r.resource) : null,
-          applied_at: longAgo,
-        },
-      });
-      // `is_archived` is the restriction's denormalisation, which services still read.
-      if (r.group) {
-        await prisma.group.update({ where: { id: ids.get(r.group) }, data: { is_archived: true, archived_at: longAgo } });
-      } else if (world.collections.some((c) => c.id === r.resource)) {
-        await prisma.collection.update({
-          where: { id: ids.get(r.resource) }, data: { is_archived: true, archived_at: longAgo },
-        });
-      }
-    }
-  }
-
   async function cleanup() {
     const resourceIds = created.resources;
     const groupIds = created.groups;
@@ -212,9 +198,6 @@ async function writeWorld(prisma, world) {
     const subjects = [...groupIds, ...userSubjects];
     await prisma.grant.deleteMany({
       where: { OR: [{ resource_id: { in: resourceIds } }, { subject_id: { in: subjects } }] },
-    });
-    await prisma.restriction.deleteMany({
-      where: { OR: [{ group_id: { in: groupIds } }, { resource_id: { in: resourceIds } }] },
     });
     await prisma.collection_dataset.deleteMany({ where: { collection_id: { in: resourceIds } } });
     await prisma.collection.deleteMany({ where: { id: { in: resourceIds } } });

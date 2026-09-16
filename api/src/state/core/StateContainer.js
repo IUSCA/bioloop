@@ -14,14 +14,41 @@ class StateContainer {
    * @param {boolean} [params.standalone] - true for a resource with no policy container, such as
    *   an invitation. The startup check then allows its actions to name no policy action.
    * @param {string} [params.description]
+   * @param {Object<string, Object>} [params.examples] - a named row per state worth naming, such
+   *   as `archived`. A dialog asks what a state forbids before entering it, and only the resource
+   *   knows what being in that state looks like: an archived collection reads its own column, an
+   *   archived dataset reads its owning group's.
    */
-  constructor({ resourceType, standalone = false, description = '' }) {
+  constructor({
+    resourceType, standalone = false, description = '', examples = {},
+  }) {
     if (!resourceType || typeof resourceType !== 'string') {
       throw new Error('A state container needs a resourceType');
     }
     this.meta = Object.freeze({ resourceType, standalone, description });
+    this._examples = Object.freeze({ ...examples });
     this._rules = {};
     this._frozen = false;
+  }
+
+  /** @returns {string[]} the states this container names a row for */
+  getExampleNames() {
+    return Object.keys(this._examples);
+  }
+
+  /**
+   * The row standing for one named state.
+   * @param {string} name
+   * @returns {Object}
+   * @throws {Error} when the container names no such state
+   */
+  getExample(name) {
+    const row = this._examples[name];
+    if (!row) {
+      throw new Error(`The state container for ${this.meta.resourceType} names no ${name} state. `
+        + `Declare one as an example in src/state/builtin/${this.meta.resourceType}.js`);
+    }
+    return row;
   }
 
   /**

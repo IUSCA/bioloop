@@ -92,17 +92,24 @@ request. A second check in the same request reuses the facts instead of querying
 A route can hand over facts it already holds as **pre-fetched** values, so the hydrator does not
 fetch them again.
 
-### Restrictions
+### Resource state
 
-A **restriction** freezes something. Archiving a group puts an `ARCHIVED` restriction on it,
-and it reaches every group, dataset, and collection beneath it. A soft-deleted dataset carries a
-`DELETED` restriction.
+A resource's **state** decides which actions it admits. An archived group admits no change to
+itself or to what it owns. A deleted dataset keeps its record, admits no change, and has no
+files to read. A decided access request is a record and never changes again.
 
-The database view `effective_restriction` lists every restriction in force, following the group
-tree. `ARCHIVED` blocks every `mutating` action. `DELETED` blocks `mutating` and `readingData`
-actions. Both leave `unarchive` alone, so a restriction can always be lifted.
+Each resource type declares its own rules, in one file per resource under `api/src/state/builtin/`.
+A rule is a pure function of the row the caller fetched, so the service asks it inside the
+transaction that makes the change, after its row lock. A refusal is **409**, not 403: the caller
+is not lacking authority, the resource is not in a state that admits the change.
 
-A restriction binds everyone, platform admins included.
+State binds everyone, platform admins included. Archiving reaches the group itself and the
+datasets and collections it owns, and stops there: a sub-group keeps its own state until
+somebody archives it.
+
+A **restriction** is a separate idea — a rule somebody applies to a resource, which the engine
+consults before every policy. No restriction type is specified yet, so the builtin checker
+allows everything.
 
 ### The platform admin
 
@@ -295,21 +302,14 @@ router.post(
 
 Authentication and validation run as in the simple example.
 
-### 1. The restriction check does real work
+### 1. The restriction check allows it
 
 In `api/src/authorization/builtin/policies/group.js`, the action is `add_member: mutating(isGroupAdmin)`.
-Because it is `mutating`, an `ARCHIVED` restriction could block it, so `checkRestriction`
-continues past its first test:
+The engine calls the injected restriction checker before any policy runs. No restriction type is
+specified, so the builtin checker returns `null` for every action and the pipeline continues.
 
-1. `restrictionTargetFor` maps the request to a target. For a group, the target is the group id itself.
-2. `blockingRestriction` reads the restriction types in force from `effective_restriction` for that group.
-3. It returns the first type that blocks `group.add_member`, or `null`.
-
-The lab is active, so the result is `null` and the pipeline continues.
-
-When the lab or any ancestor is archived, the result is `'ARCHIVED'`. The pipeline refuses, and
-`refuse` works out the status. Alice administers the lab, so she has standing and gets 403. The
-message says `Blocked by a ARCHIVED restriction`.
+Whether the lab is archived is not asked here. That is the lab's own state, and the service
+asks it in step 3.
 
 ### 2. The platform-admin check and the policy
 
@@ -326,18 +326,17 @@ transaction that makes the change:
 
 ```javascript
 return prisma.$transaction(async (tx) => {
-  const groupRows = await tx.$queryRaw`SELECT id FROM "group" g where g.id = ${group_id} FOR UPDATE;`;
-  if (groupRows.length === 0) throw createError.NotFound('Group not found');
-  if (await restrictionService.isRestricted(tx, { group_id })) {
-    throw createError.Conflict(restrictionService.RESTRICTED_MESSAGE);
-  }
+  state.assertPossible('group', 'add_member', await lockGroupForState(tx, group_id));
+
   // INSERT INTO group_user … ON CONFLICT … DO NOTHING RETURNING user_id
   // createMembershipAuditRecords(tx, …)
 });
 ```
 
-- `FOR UPDATE` locks the group row until the transaction ends, so an archive of the same group waits.
-- `isRestricted` in `api/src/services/restrictions.js` reads the same `effective_restriction` view as the middleware.
+- `lockGroupForState` selects the group `FOR UPDATE`, so an archive of the same group waits until
+  this transaction ends, and returns the row the state rule reads. A missing row is 404.
+- `assertPossible` runs the group's `add_member` rule against that locked row and throws 409 when
+  the state refuses. The row it reads is the row the insert will see.
 - The insert skips a user who is already an active member, and returns only the users it added.
 - The audit records are written in the same transaction, so a membership change and its audit row commit together.
 
@@ -362,9 +361,10 @@ A Prisma "record not found" error is turned into 404 by `prismaNotFoundHandler` 
 | `members` is empty, or a `user_id` is not a UUID | `validate` | 400 |
 | Bob, a member of the lab | the policy refuses; `refuse` finds a `member` path | 403 `Forbidden` |
 | Frank, with no path to the lab | the policy refuses; `refuse` finds no standing | 404 `Not Found` |
-| Alice, and the lab or an ancestor is archived | the restriction check; `refuse` finds her `admin` path | 403 `Blocked by a ARCHIVED restriction` |
-| A platform admin, and the lab is archived | the restriction check, which runs before the admin check | 403 |
-| The lab is archived after the middleware and before the insert | `isRestricted` in the service | 409 |
+| Alice, and the lab is archived | `assertPossible` in the service, under the row lock | 409 `This group is archived, so it cannot be changed.` |
+| A platform admin, and the lab is archived | the same check; being a platform admin is not a reason an archived group accepts a change | 409 |
+| The lab's parent is archived, and the lab is not | nothing refuses it | 204 |
+| The lab is archived after the middleware and before the insert | `assertPossible`, which reads the locked row | 409 |
 | The group was deleted after the middleware | the `FOR UPDATE` select finds no row | 404 `Group not found` |
 
 ## When a route decides in its handler

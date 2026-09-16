@@ -14,6 +14,17 @@ const {
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
+const state = require('@/state');
+
+/**
+ * What one request's state admits, for a list row. The rows are fetched with their resource,
+ * so this reads no database.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+const availableActionsFor = (request) => state.availableActions(
+  'access_request',
+  state.requestStateFields(request),
+);
 
 // Which policy container governs a resource of each type.
 const POLICY_RESOURCE_TYPE = {
@@ -55,7 +66,13 @@ router.get(
     });
     // TODO: attribute filter
     const metas = await decideRows('access_request', requests.data, { req, idOf: (r) => r.id, action: 'read' });
-    res.json({ ...requests, data: requests.data.map((r, i) => ({ ...r, _meta: metas[i] })) });
+    res.json({
+      ...requests,
+      data: requests.data.map((r, i) => ({
+        ...r,
+        _meta: { ...metas[i], available_actions: availableActionsFor(r) },
+      })),
+    });
   }),
 );
 
@@ -84,10 +101,11 @@ router.post(
     body('submit').optional().isBoolean().toBoolean(),
     // body('previous_grant_ids').optional().isArray({ min: 1 }).custom((arr) => arr.every(isUUID)), not implemented yet
   ]),
-  // The restriction half of authorization. `restrictionTargetFor` follows an access_request
-  // through to the resource it concerns, so this is what stops a request being filed against
-  // a dataset in an archived group. The policy half is `Policy.always`; the real check is on
-  // the resource and runs in the handler, because the body carries no resource type.
+  // The policy half is `Policy.always`; the real authorization check is on the resource and
+  // runs in the handler, because the body carries no resource type. What stops a request being
+  // filed against a dataset in an archived group is the request's own state rule, which the
+  // service asserts and which answers 409.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   authorize('access_request', 'create', {
     preFetchedResourceFn: (req) => ({ resource_id: req.body.resource_id }),
   }),
@@ -254,6 +272,10 @@ router.get(
       ...req.permission.filter(request),
       _meta: {
         capabilities: toCapabilitiesArray(req.permission.capabilities),
+        // The request's status and the state of the resource it names, from the row already
+        // fetched with its resource. A reviewer holds `review` on a decided request; the
+        // request is what refuses it.
+        available_actions: state.availableActions('access_request', state.requestStateFields(request)),
       },
     });
   }),

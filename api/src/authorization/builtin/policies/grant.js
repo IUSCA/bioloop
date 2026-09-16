@@ -99,12 +99,7 @@ grantPolicies
     // A grant is revoked once. Supersession and expiry are the system's transitions, not an
     // action anybody takes.
     // @see docs/design/groups/access-model.md — The transition table
-    revoke: mutating(isAdminOfResourceGroup, {
-      requires: ['revoked_at'],
-      stateOf: (grant) => (grant.revoked_at ? 'REVOKED' : 'ACTIVE'),
-      from: ['ACTIVE'],
-      to: ['REVOKED'],
-    }),
+    revoke: mutating(isAdminOfResourceGroup),
     list_for_resource: reading(Policy.or([isAdminOfResourceGroup, hasOversightOfResourceGroup])),
     list_for_subject: reading(Policy.or([isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup])),
 

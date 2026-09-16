@@ -83,6 +83,16 @@ function assertPossible(resourceType, action, resource) {
 const availableActions = (resourceType, resource) => engine.availableActions(stateRegistry, resourceType, resource);
 
 /**
+ * What a named state forbids, for the dialog that confirms entering it.
+ * @param {string} resourceType
+ * @param {string} stateName - a state the resource's container names, such as `archived`
+ * @returns {Array<{action: string, message: string}>}
+ * @throws {Error} when the container names no such state
+ */
+const forbiddenActions = (resourceType, stateName) => engine
+  .forbiddenActions(stateRegistry, resourceType, stateName);
+
+/**
  * Every field a resource type's rules read, so a caller can fetch them in one query.
  * @param {string} resourceType
  * @param {string[]} [actions]
@@ -119,6 +129,7 @@ module.exports = {
   check,
   assertPossible,
   availableActions,
+  forbiddenActions,
   requiredFields,
   verifyInSync,
   ...targets,

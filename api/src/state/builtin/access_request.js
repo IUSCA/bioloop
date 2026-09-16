@@ -38,6 +38,14 @@ function targetRefusal(request) {
 const accessRequestState = new StateContainer({
   resourceType: 'access_request',
   description: "What a request's status and its resource's state admit",
+  examples: {
+    // A draft on an archived resource. The status is the one that admits the most steps, so
+    // every action this lists is refused by the archived resource rather than by the status.
+    archived: {
+      status: ACCESS_REQUEST_STATUS.DRAFT,
+      target: { kind: 'resource', archived: true, deleted: false },
+    },
+  },
 }).rules({
   create: rule({
     requires: ['target.archived', 'target.deleted', 'target.kind'],

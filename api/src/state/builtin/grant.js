@@ -28,6 +28,11 @@ function targetRefusal(grant) {
 const grantState = new StateContainer({
   resourceType: 'grant',
   description: "What a grant's revoked state and its resource's state admit",
+  examples: {
+    // An open grant on an archived resource. The dialog asking what archiving stops does not
+    // know which kind of resource, so the example names it generically.
+    archived: { revoked_at: null, target: { kind: 'resource', archived: true, deleted: false } },
+  },
 }).rules({
   create: rule({
     requires: ['target.archived', 'target.deleted', 'target.kind'],

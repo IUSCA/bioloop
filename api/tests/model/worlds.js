@@ -3,8 +3,8 @@
  *
  * A cell is one assignment of a value to every dimension, for one user and one dataset. A
  * world is the set of rows a cell describes: groups, memberships, a dataset, a collection,
- * grants, and restrictions. The same world is built in memory for the reference model and,
- * in Phase 3, in the database for the engine.
+ * and grants. The same world is built in memory for the reference model and in the database
+ * for the engine.
  *
  * The full product of the dimensions is far too large for the database, so the harness uses
  * two reductions and reports their sizes.
@@ -41,7 +41,11 @@ const DATASET_DIMENSIONS = Object.freeze({
   grant_route: ['dataset', 'collection', 'removed_collection_row'],
   grant_type: ACCESS_TYPES,
   grant_validity: ['active', 'revoked', 'superseded', 'expired', 'not_started'],
-  restriction: ['none', 'dataset', 'collection', 'owning_group', 'parent_group'],
+  // The archived state, on the row that carries it. A dataset has no archived column, so the
+  // values name a collection, the owning group, or the group above it. `parent_group` is kept
+  // because it is the discriminating case: archiving a parent must not reach what a child owns.
+  // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
+  archived: ['none', 'collection', 'owning_group', 'parent_group'],
   deleted: ['no', 'yes'],
   owner: ['ordinary', 'quarantine'],
   seeded_grant: ['present', 'revoked'],
@@ -75,7 +79,7 @@ function feasible(cell) {
     // The quarantine group's columns are seeded, not chosen.
     if (has('profile_visibility') && cell.profile_visibility !== 'PRIVATE') return false;
     if (has('contributions') && cell.contributions !== 'off') return false;
-    if (has('restriction') && ['parent_group', 'owning_group'].includes(cell.restriction)) return false;
+    if (has('archived') && ['parent_group', 'owning_group'].includes(cell.archived)) return false;
   }
   return true;
 }
@@ -193,7 +197,12 @@ function materialize(cell, index, shared) {
   const future = new Date(now.getTime() + 30 * DAY);
 
   const grand = { id: id('grand'), parent: null };
-  const parent = { id: id('parent'), parent: grand.id, allow_user_contributions: false };
+  const parent = {
+    id: id('parent'),
+    parent: grand.id,
+    allow_user_contributions: false,
+    archived: cell.archived === 'parent_group',
+  };
   const owner = cell.owner === 'quarantine'
     ? {
       id: shared.quarantineId,
@@ -201,12 +210,14 @@ function materialize(cell, index, shared) {
       quarantine: true,
       profile_visibility: 'PRIVATE',
       allow_user_contributions: false,
+      archived: true,
     }
     : {
       id: id('owner'),
       parent: parent.id,
       allow_user_contributions: cell.contributions === 'on',
       profile_visibility: cell.profile_visibility,
+      archived: cell.archived === 'owning_group',
     };
   const child = { id: id('child'), parent: owner.id };
   const sibling = { id: id('sibling'), parent: parent.id };
@@ -245,6 +256,7 @@ function materialize(cell, index, shared) {
     id: id('collection'),
     owner: owner.id,
     profile_visibility: cell.owner === 'quarantine' ? 'PRIVATE' : cell.profile_visibility,
+    archived: cell.archived === 'collection',
   };
   const contains = [{
     collection: collection.id, dataset: dataset.id, removed: cell.grant_route === 'removed_collection_row',
@@ -285,15 +297,6 @@ function materialize(cell, index, shared) {
     },
   ];
 
-  const restrictions = [];
-  switch (cell.restriction) {
-    case 'dataset': restrictions.push({ resource: dataset.id, type: 'ARCHIVED' }); break;
-    case 'collection': restrictions.push({ resource: collection.id, type: 'ARCHIVED' }); break;
-    case 'owning_group': restrictions.push({ group: owner.id, type: 'ARCHIVED' }); break;
-    case 'parent_group': restrictions.push({ group: parent.id, type: 'ARCHIVED' }); break;
-    default: break;
-  }
-
   return {
     cell,
     index,
@@ -310,7 +313,6 @@ function materialize(cell, index, shared) {
     memberships,
     contains,
     grants,
-    restrictions,
   };
 }
 
@@ -333,7 +335,10 @@ function buildWorld(cells, { now = new Date('2026-09-15T12:00:00Z') } = {}) {
     groups: [
       { id: shared.publicId, parent: null, system_principal: 'PUBLIC' },
       { id: shared.authenticatedId, parent: null, system_principal: 'AUTHENTICATED' },
-      { id: shared.quarantineId, parent: null, quarantine: true },
+      // The quarantine group is archived by its own seed.
+      {
+        id: shared.quarantineId, parent: null, quarantine: true, archived: true,
+      },
       ...fragments.flatMap((f) => f.groups),
     ],
     memberships: fragments.flatMap((f) => f.memberships),
@@ -341,11 +346,6 @@ function buildWorld(cells, { now = new Date('2026-09-15T12:00:00Z') } = {}) {
     collections: fragments.map((f) => f.collection),
     contains: fragments.flatMap((f) => f.contains),
     grants: fragments.flatMap((f) => f.grants),
-    // The quarantine group is archived by its own seed.
-    restrictions: [
-      { group: shared.quarantineId, type: 'ARCHIVED' },
-      ...fragments.flatMap((f) => f.restrictions),
-    ],
   };
   return { world, fragments, shared };
 }

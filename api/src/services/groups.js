@@ -13,7 +13,6 @@ const { AuditBuilder } = audit;
 const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
-const restrictionService = require('@/services/restrictions');
 const state = require('@/state');
 const assert = require('assert');
 
@@ -460,15 +459,6 @@ async function archiveGroup(group_id, actor_id) {
       include: PRISMA_GROUP_INCLUDES,
     });
 
-    // The restriction is what evaluation reads; is_archived above is its denormalisation
-    // for listings and the UI badge. Written in the same transaction so they cannot drift.
-    // @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-    await restrictionService.applyRestriction(tx, {
-      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
-      group_id,
-      actor_id,
-    });
-
     // create audit record for group archival
     const builder = new AuditBuilder(tx, { actor_id });
     await builder
@@ -495,12 +485,6 @@ async function unarchiveGroup(group_id, actor_id) {
         archived_at: null,
       },
       include: PRISMA_GROUP_INCLUDES,
-    });
-
-    await restrictionService.liftRestriction(tx, {
-      type_name: restrictionService.RESTRICTION_TYPE.ARCHIVED,
-      group_id,
-      actor_id,
     });
 
     // create audit record for group unarchival

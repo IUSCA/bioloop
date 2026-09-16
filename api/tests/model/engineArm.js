@@ -55,7 +55,7 @@ async function runEngineArm({
             identifiers: { user, resource: ids.get(worldResource) },
             policyExecutionContext: context,
           });
-          engine = { allowed: result.granted === true, blockedBy: result.blockedBy ?? null };
+          engine = { allowed: result.granted === true };
         } catch (err) {
           engine = { error: `${err.name}: ${err.message}` };
         }
@@ -98,9 +98,10 @@ function summarize(disagreements) {
  * The Creates arm: `dataset.create` and `collection.create` decided as the create routes decide
  * them, with no resource id and the owning group named in the pre-fetched resource.
  *
- * A create has no resource yet, so a cell whose restriction or deletion sits on the resource
- * itself says nothing about a create and is skipped. The owning group and its ancestors carry
- * the restrictions that must block it.
+ * Authorization does not read the state of the group a create names: whether that group is
+ * archived is the create's own state rule, which the service asserts and which answers 409.
+ * So every cell is decided here, and the archived dimension changes nothing this arm sees.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * @returns {Promise<{ decisions: number, disagreements: Object[] }>}
  */
@@ -110,9 +111,7 @@ async function runCreatesArm({
   const ref = createReference(tables, world);
   const disagreements = [];
   let decisions = 0;
-  const relevant = fragments.filter((f) => ['none', 'owning_group', 'parent_group'].includes(f.cell.restriction)
-    && f.cell.deleted === 'no');
-  for (const f of relevant) {
+  for (const f of fragments) {
     const anonymous = f.user.anonymous === true;
     const user = anonymous ? ANONYMOUS_PRINCIPAL.subject_id : ids.get(f.user.id);
     for (const resourceType of ['dataset', 'collection']) {
@@ -126,7 +125,7 @@ async function runCreatesArm({
           policyExecutionContext: freshContext(anonymous),
           preFetched: { resource: { owner_group_id: ids.get(f.owner.id) } },
         });
-        engine = { allowed: result.granted === true, blockedBy: result.blockedBy ?? null };
+        engine = { allowed: result.granted === true };
       } catch (err) {
         engine = { error: `${err.name}: ${err.message}` };
       }

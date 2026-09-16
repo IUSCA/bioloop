@@ -11,8 +11,15 @@ const { normalize_name } = require('./create');
  * A platform admin gets every group that is not a system principal. Anyone else gets the groups
  * the path statement gives them an `admin` or `member` path on, each row carrying the path kinds
  * found. `GET /v2/datasets/eligible-owner-groups` decides `dataset.contribute` on every
- * candidate, so an archived group, a closed group, and a group the rule does not admit drop out
- * there, by the rule itself rather than by a copy of it here.
+ * candidate, so a closed group and a group the rule does not admit drop out there, by the rule
+ * itself rather than by a copy of it here.
+ *
+ * An archived group is excluded here instead. Authorization no longer reads a resource's state,
+ * so `dataset.contribute` says nothing about whether the group is archived: that is the group's
+ * own state, and for a dataset that does not exist yet it is what the `dataset.create` rule
+ * reads. `getOwnerGroupForAuthorization` refuses the same group when a create actually arrives,
+ * so this list and that gate agree.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * The two system principals are excluded. `Public` and `Authenticated Users` are rows in the
  * group table so a grant can name them as a subject, but neither has members nor a place in the
@@ -36,7 +43,7 @@ async function listOwnerGroupCandidates({ user_id, everyGroup }) {
 
   if (everyGroup) {
     const groups = await prisma.group.findMany({
-      where: { id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS } },
+      where: { id: { notIn: SYSTEM_PRINCIPAL_GROUP_IDS }, is_archived: false },
       select,
       orderBy: { name: 'asc' },
     });
@@ -53,7 +60,7 @@ async function listOwnerGroupCandidates({ user_id, everyGroup }) {
   const kindsById = new Map(rows.map((row) => [row.resource_id, row.path_kinds]));
 
   const groups = await prisma.group.findMany({
-    where: { id: { in: [...kindsById.keys()], notIn: SYSTEM_PRINCIPAL_GROUP_IDS } },
+    where: { id: { in: [...kindsById.keys()], notIn: SYSTEM_PRINCIPAL_GROUP_IDS }, is_archived: false },
     select,
     orderBy: { name: 'asc' },
   });

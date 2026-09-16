@@ -25,6 +25,10 @@ const notWhileArchived = rule({
 const groupState = new StateContainer({
   resourceType: 'group',
   description: "What a group's archived state admits",
+  examples: {
+    // The dialog that asks an admin to confirm archiving runs the rules against this.
+    archived: { is_archived: true },
+  },
 }).rules({
   // A root group has no parent, so nothing carries state into its creation.
   create: always,

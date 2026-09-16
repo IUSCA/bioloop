@@ -20,6 +20,7 @@ const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
+const state = require('@/state');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { UPLOAD_STATUS_FILTERS } = require('@/constants');
 
@@ -389,7 +390,13 @@ router.get(
     res.json({
       metadata,
       data: await projectRows('dataset', data, {
-        req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
+        req,
+        idOf: (d) => d.resource_id,
+        publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
+        // The dataset's rules read its owning group, which this list fetches only when asked.
+        // Without it the rows carry capabilities alone rather than a state answer guessed from
+        // a field nobody fetched.
+        availableActionsOf: includes.owner_group ? (d) => state.availableActions('dataset', d) : null,
       }),
     });
   }),
@@ -420,6 +427,9 @@ router.get(
         standing: req.permission.standing,
         capabilities: toCapabilitiesArray(req.permission.capabilities)
           .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
+        // The other answer: what this dataset's state admits, whoever is asking. The row is
+        // fetched with its owning group above, which is what the rules read.
+        available_actions: state.availableActions('dataset', dataset),
       },
     });
   }),

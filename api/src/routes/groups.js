@@ -14,6 +14,7 @@ const auditService = require('@/services/audit');
 const profileService = require('@/services/profiles');
 const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
+const state = require('@/state');
 const {
   createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, refusalMessage,
   callerIsPlatformAdmin, projectRows,
@@ -223,6 +224,10 @@ router.get(
       _meta: {
         standing: req.permission.standing,
         capabilities: toCapabilitiesArray(req.permission.capabilities),
+        // What the caller holds, and what the group's state admits, are separate answers. The
+        // UI offers the intersection, so an archived group shows its buttons out of reach
+        // rather than missing.
+        available_actions: state.availableActions('group', group),
       },
     });
   }),
@@ -255,6 +260,7 @@ router.get(
       _meta: {
         standing: permission.standing,
         capabilities: toCapabilitiesArray(permission.capabilities),
+        available_actions: state.availableActions('group', group),
       },
     });
   }),

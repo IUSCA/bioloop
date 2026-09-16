@@ -64,6 +64,50 @@ async function readTargetStates(client, resourceIds) {
   return new Map(resources.map((resource) => [resource.id, targetOf(resource)]));
 }
 
+/**
+ * The fields a collection's state rules read, including the history that decides `delete`.
+ *
+ * `has_history` is two counts rather than a column, so a caller that wants the collection's
+ * available actions cannot read them off the collection row.
+ *
+ * @param {Object} client - a transaction client, or the Prisma client
+ * @param {string} collectionId
+ * @returns {Promise<Object>} the row the rules read
+ */
+async function readCollectionStateFields(client, collectionId) {
+  const collection = await client.collection.findUniqueOrThrow({
+    where: { id: collectionId },
+    select: { id: true, is_archived: true, owner_group: { select: { is_archived: true } } },
+  });
+  const [datasetRows, requestRows] = await Promise.all([
+    client.collection_dataset.count({ where: { collection_id: collectionId } }),
+    client.access_request.count({ where: { resource_id: collectionId } }),
+  ]);
+  return { ...collection, has_history: datasetRows > 0 || requestRows > 0 };
+}
+
+/**
+ * The fields an access request's state rules read, from a request already fetched with its
+ * `resource` and that resource's dataset or collection.
+ *
+ * No query: the detail and list routes include the resource already, and a request's rules read
+ * its status and the state of what it names.
+ *
+ * @param {Object} request - as `INCLUDES_CONFIG` returns it
+ * @returns {Object} the row the rules read
+ */
+function requestStateFields(request) {
+  return {
+    status: request.status,
+    target: request.resource ? targetOf(request.resource) : { kind: 'resource', archived: false, deleted: false },
+  };
+}
+
 module.exports = {
-  TARGET_SELECT, targetOf, readTargetState, readTargetStates,
+  TARGET_SELECT,
+  targetOf,
+  readTargetState,
+  readTargetStates,
+  readCollectionStateFields,
+  requestStateFields,
 };

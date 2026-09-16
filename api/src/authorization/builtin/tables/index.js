@@ -2,10 +2,13 @@
  * The access model's tables, built from the policy registry.
  *
  * The tables are not a second copy of the policies. Each container declares, beside every
- * policy, the facts the model needs: a path kind on each term, a restriction class and an
- * optional transition row on each action. These builders read those declarations and lay
- * them out as rows, so a container a derived app registers contributes its own rows and
- * nothing in `builtin/` is edited.
+ * policy, the facts the model needs: a path kind on each term and a restriction class on each
+ * action. These builders read those declarations and lay them out as rows, so a container a
+ * derived app registers contributes its own rows and nothing in `builtin/` is edited.
+ *
+ * Which states admit an action is not here. That is the resource's own business logic, and
+ * `src/state/builtin/<resource>.js` states it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * A wrong row is not something the verification harness can catch, because the reference
  * model reads these same tables. The tables are the specification, checked by review and by
@@ -52,8 +55,7 @@ function buildTermTable(registry) {
  * One row per registered action.
  * @param {import('../../core/policies/PolicyRegistry')} registry
  * @returns {Array<{resource_type: string, action: string, restriction: string|null,
- *   path_kinds: string[], access_types: string[], rules: string[], operator: string|null,
- *   transition: {from: string[], to: string[]}|null}>}
+ *   path_kinds: string[], access_types: string[], rules: string[], operator: string|null}>}
  */
 function buildActionTable(registry) {
   const rows = [];
@@ -62,7 +64,6 @@ function buildActionTable(registry) {
     container.getActionNames().forEach((action) => {
       const policy = container.getPolicy(action);
       const terms = policy.terms();
-      const transition = container.getTransition(action);
       rows.push({
         resource_type: resourceType,
         action,
@@ -71,7 +72,6 @@ function buildActionTable(registry) {
         access_types: [...new Set(terms.map((t) => t.meta?.accessType).filter(Boolean))],
         rules: [...new Set(terms.map((t) => t.meta?.rule).filter(Boolean))],
         operator: policy.operator,
-        transition: transition ? { from: transition.from, to: transition.to } : null,
       });
     });
   });
@@ -106,19 +106,8 @@ function buildAttributeTable(registry) {
   return rows;
 }
 
-/**
- * One row per action that declares a transition.
- * @param {import('../../core/policies/PolicyRegistry')} registry
- */
-function buildTransitionTable(registry) {
-  return buildActionTable(registry)
-    .filter((row) => row.transition)
-    .map(({ resource_type, action, transition }) => ({ resource_type, action, ...transition }));
-}
-
 module.exports = {
   buildTermTable,
   buildActionTable,
   buildAttributeTable,
-  buildTransitionTable,
 };

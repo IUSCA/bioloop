@@ -5,7 +5,7 @@
  *
  * - A combinator keeps its operator and its children, so a compiler can walk `or` into a
  *   UNION instead of holding an opaque closure.
- * - An action declares its restriction class and, for a stateful resource, its transition
+ * - An action declares its restriction class
  *   row, beside its policy.
  * - The registry lists its types, so a completeness check iterates it instead of a literal list.
  *
@@ -66,18 +66,15 @@ describe('a combinator keeps its tree', () => {
   });
 });
 
-describe('an action declares its restriction class and transition', () => {
-  const transition = {
-    requires: ['status'],
-    stateOf: (r) => r.status,
-    from: ['DRAFT'],
-    to: ['UNDER_REVIEW'],
-  };
+describe('an action declares its restriction class', () => {
+  // Which states admit the action is not declared here. It is the resource's business logic,
+  // and `src/state/builtin/<resource>.js` states it.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
 
   test('mutating() and reading() declare a class; a bare policy declares none', () => {
     const container = new PolicyContainer({ resourceType: 'thing' })
       .actions({
-        edit: mutating(term('e'), transition),
+        edit: mutating(term('e')),
         view: reading(term('v')),
         legacy: term('l'),
       })
@@ -86,8 +83,6 @@ describe('an action declares its restriction class and transition', () => {
     expect(container.getRestrictionClass('edit')).toBe(RESTRICTION_CLASS.MUTATING);
     expect(container.getRestrictionClass('view')).toBe(RESTRICTION_CLASS.READING);
     expect(container.getRestrictionClass('legacy')).toBeNull();
-    expect(container.getTransition('edit')).toMatchObject({ from: ['DRAFT'], to: ['UNDER_REVIEW'] });
-    expect(container.getTransition('view')).toBeNull();
     expect(container.isFrozen()).toBe(true);
   });
 
@@ -96,10 +91,8 @@ describe('an action declares its restriction class and transition', () => {
     expect(() => container.getRestrictionClass('nope')).toThrow("Action 'nope' not found");
   });
 
-  test('a malformed transition is refused at registration', () => {
+  test('an unknown restriction class is refused at registration', () => {
     const container = new PolicyContainer({ resourceType: 'thing' });
-    expect(() => container.actions({ edit: mutating(term('e'), { ...transition, from: [] }) }))
-      .toThrow('from and to must be non-empty');
     expect(() => container.actions({ edit: { policy: term('e'), restriction: 'sometimes' } }))
       .toThrow('unknown restriction class');
   });

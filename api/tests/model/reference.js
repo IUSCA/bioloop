@@ -14,15 +14,10 @@
  * @see docs/design/groups/implementation/access-model-verification-plan.md — Reference model
  */
 
-const ARCHIVED = 'ARCHIVED';
-
 /** Actions that read the bytes of a dataset. Refused on a deleted dataset. @see decision 16, row 4 */
 const DATA_PLANE_ACTIONS = new Set([
   'list_files', 'read_data', 'download', 'compute', 'remote_access', 'request_stage',
 ]);
-
-/** Restriction exemptions: lifting a restriction is never blocked by it. */
-const RESTRICTION_EXEMPT_ACTIONS = new Set(['unarchive']);
 
 /** The resource types this model decides. `modelCoverage.test.js` fails on a registered type in neither this list nor its own. */
 const MODELLED_RESOURCE_TYPES = ['group', 'dataset', 'collection'];
@@ -32,14 +27,13 @@ const MODELLED_RESOURCE_TYPES = ['group', 'dataset', 'collection'];
  * @property {Date} now
  * @property {Array<{id, anonymous?: boolean, platform_admin?: boolean}>} users
  * @property {Array<{id, parent?: string|null, system_principal?: 'PUBLIC'|'AUTHENTICATED'|null,
- *   allow_user_contributions?: boolean, profile_visibility?: string}>} groups
+ *   allow_user_contributions?: boolean, profile_visibility?: string, archived?: boolean}>} groups
  * @property {Array<{user, group, role: 'MEMBER'|'ADMIN', removed?: boolean, valid_until?: Date|null}>} memberships
  * @property {Array<{id, owner, deleted?: boolean}>} datasets
- * @property {Array<{id, owner, profile_visibility?: string}>} collections
+ * @property {Array<{id, owner, profile_visibility?: string, archived?: boolean}>} collections
  * @property {Array<{collection, dataset, removed?: boolean}>} contains
  * @property {Array<{id, subject_type: 'USER'|'GROUP', subject, resource, access_type,
  *   valid_from?: Date|null, valid_until?: Date|null, revoked?: boolean}>} grants
- * @property {Array<{group?: string, resource?: string, type: string, lifted?: boolean}>} restrictions
  */
 
 /**
@@ -57,8 +51,8 @@ function createReference(tables, world) {
 
   // ---- time ---------------------------------------------------------------------------------
 
-  /** `active(x, now)`: not removed, revoked, or lifted, started, and not ended. */
-  const active = (row) => !row.removed && !row.revoked && !row.lifted
+  /** `active(x, now)`: not removed or revoked, started, and not ended. */
+  const active = (row) => !row.removed && !row.revoked
     && (row.valid_from == null || row.valid_from <= now)
     && (row.valid_until == null || row.valid_until > now);
 
@@ -171,22 +165,54 @@ function createReference(tables, world) {
     return null;
   };
 
-  /** `restricted(r, a)`. A create names its owning group as `resourceId`'s owner. */
-  const restricted = (resourceType, action, resourceId, ownerGroupId = null) => {
-    const row = tables.actions[resourceType]?.[action];
-    if (!row || row.restriction !== 'mutating' || RESTRICTION_EXEMPT_ACTIONS.has(action)) return false;
-    const owner = ownerGroupId ?? ownerOf(resourceType, resourceId);
-    const reachedGroups = owner ? new Set(selfAndAncestors(owner)) : new Set();
-    return world.restrictions.some((r) => r.type === ARCHIVED && active(r)
-      && ((r.resource && r.resource === resourceId) || (r.group && reachedGroups.has(r.group))));
+  // ---- the state layer ----------------------------------------------------------------------
+
+  /** The archived column on the resource itself. A dataset has none. */
+  const ownArchived = (resourceType, resourceId) => {
+    if (resourceType === 'group') return groups.get(resourceId)?.archived === true;
+    if (resourceType === 'collection') return collections.get(resourceId)?.archived === true;
+    return false;
   };
 
-  /** A deleted dataset refuses every mutation and every data-plane read. @see decision 16, row 4 */
-  const deletedBlocks = (resourceType, action, resourceId) => {
-    if (resourceType !== 'dataset' || !datasets.get(resourceId)?.deleted) return false;
-    if (action === 'unarchive') return false;
-    const row = tables.actions.dataset[action];
-    return row.restriction === 'mutating' || DATA_PLANE_ACTIONS.has(action);
+  /**
+   * Whether the archived state reaches the resource. One step: the resource's own column, or
+   * the column of the group that owns it. An archived group covers what it owns and leaves a
+   * sub-group to be archived in its own right, so this never walks the tree.
+   * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
+   */
+  const stateArchived = (resourceType, resourceId) => ownArchived(resourceType, resourceId)
+    || groups.get(ownerOf(resourceType, resourceId))?.archived === true;
+
+  /**
+   * `stateAdmits(r, a)`: whether the resource's current state admits the action. The oracle for
+   * `src/state`, and the second of the two answers a response carries.
+   *
+   * It is written from the action's restriction class rather than from the state rules, so the
+   * two are independent statements of the same thing. Archiving closes governance and leaves
+   * reading open, the bytes included. Deleting a dataset keeps its record and takes its files,
+   * so it refuses the data plane too.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  const stateAdmits = (resourceType, action, resourceId) => {
+    const row = tables.actions[resourceType]?.[action];
+    if (!row) throw new Error(`reference: unknown action ${resourceType}.${action}`);
+    // A root group has no parent, so nothing carries state into its creation.
+    if (resourceType === 'group' && action === 'create') return true;
+    // A create has no row yet, so the state it is placed into is the owning group's. The
+    // harness names an existing resource to reach its owner, and that resource's own state
+    // says nothing about a create beside it.
+    if (action === 'create') return groups.get(ownerOf(resourceType, resourceId))?.archived !== true;
+
+    if (action === 'archive') return !stateArchived(resourceType, resourceId);
+    // The way out of the archived state, read from the resource's own column.
+    if (action === 'unarchive') return ownArchived(resourceType, resourceId);
+
+    const mutating = row.restriction === 'mutating';
+    if (resourceType === 'dataset' && datasets.get(resourceId)?.deleted) {
+      return !(mutating || row.restriction === 'data');
+    }
+    return !(mutating && stateArchived(resourceType, resourceId));
   };
 
   /** Whether one leaf term holds, and the path it contributes when it does. */
@@ -246,13 +272,8 @@ function createReference(tables, world) {
   };
 
   /**
-   * `decide(u, a, r)`, restricted to the allowed bit and the paths.
-   * @returns {{ allowed: boolean, paths: Object[], blockedBy: string|null }}
-   */
-  /**
-   * The paths the action's terms find, before any restriction or deletion is consulted. A
-   * restriction blocks an action; it does not remove the relationship a path records, so the
-   * path statement, which reads never restrict, is compared with this.
+   * The paths the action's terms find. A resource's state does not remove the relationship a
+   * path records: an archived group still has its admins, and they still hold their standing.
    */
   const termPaths = (userId, resourceType, action, resourceId) => {
     const user = users.get(userId);
@@ -268,7 +289,14 @@ function createReference(tables, world) {
     return paths;
   };
 
-  const decide = (userId, resourceType, action, resourceId, { ownerGroupId = null } = {}) => {
+  /**
+   * `decide(u, a, r)`: the allowed bit and the paths, from the grants and the group tree alone.
+   *
+   * What the resource's state admits is not part of this. Authorization answers what the caller
+   * could do, `stateAdmits` answers what the resource admits, and a service asks both.
+   * @returns {{ allowed: boolean, paths: Object[] }}
+   */
+  const decide = (userId, resourceType, action, resourceId) => {
     if (!MODELLED_RESOURCE_TYPES.includes(resourceType)) {
       throw new Error(`reference: ${resourceType} is not a modelled resource type`);
     }
@@ -282,13 +310,8 @@ function createReference(tables, world) {
       );
     }
 
-    if (restricted(resourceType, action, resourceId, ownerGroupId)) {
-      return { allowed: false, paths: [], blockedBy: ARCHIVED };
-    }
-    if (deletedBlocks(resourceType, action, resourceId)) return { allowed: false, paths: [], blockedBy: 'DELETED' };
-
     const paths = termPaths(userId, resourceType, action, resourceId);
-    return { allowed: paths.length > 0, paths, blockedBy: null };
+    return { allowed: paths.length > 0, paths };
   };
 
   /** Standing: the paths for the resource's read action. */
@@ -297,7 +320,16 @@ function createReference(tables, world) {
   );
 
   return {
-    decide, termPaths, standing, subjects, heldTypes, effectiveGroups, adminGroups, overseenGroups, restricted,
+    decide,
+    stateAdmits,
+    stateArchived,
+    termPaths,
+    standing,
+    subjects,
+    heldTypes,
+    effectiveGroups,
+    adminGroups,
+    overseenGroups,
   };
 }
 

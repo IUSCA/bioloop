@@ -172,12 +172,15 @@ function accessPathsQuery({
  * @param {string[]} [args.pathKinds] - defaults to every kind
  * @returns {Prisma.Sql}
  */
-function accessibleIdsQuery({ pathKinds = PATH_KINDS, ...args }) {
+function accessibleIdsQuery({
+  pathKinds = PATH_KINDS, restrictionPredicate = Prisma.sql`TRUE`, ...args
+}) {
   if (!pathKinds.length) throw new Error('accessibleIdsQuery: pathKinds is empty');
   return Prisma.sql`
     SELECT DISTINCT p.resource_id
     FROM (${accessPathsQuery(args)}) p
     WHERE p.path_kind IN (${Prisma.join(pathKinds)})
+      AND ${restrictionPredicate}
   `;
 }
 

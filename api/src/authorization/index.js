@@ -11,6 +11,7 @@
  */
 
 const prisma = require('@/db');
+const state = require('@/state');
 const { projectObject } = require('@/utils/expression');
 
 // ============================================================================
@@ -183,12 +184,9 @@ async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_met
   const user = req.user?.subject_id;
   const ids = rows.map(idOf);
   const batched = RESOURCE_TYPES.includes(resourceType);
-  const [pathsById, restrictionsById] = await Promise.all([
-    batched && user && !req.user.is_anonymous
-      ? accessPathsByResource({ userId: user, resourceType, resourceIds: ids })
-      : null,
-    batched ? restrictions.restrictionTypesByTarget(resourceType, ids) : null,
-  ]);
+  const pathsById = batched && user && !req.user.is_anonymous
+    ? await accessPathsByResource({ userId: user, resourceType, resourceIds: ids })
+    : null;
 
   const metas = [];
   // One row at a time, so the first check fills the shared policy context for the rest.
@@ -206,24 +204,14 @@ async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_met
       shouldDeriveCapabilities: true,
       shouldDeriveStanding: true,
     });
-    const held = decision.capabilities ?? {};
-    let capabilities;
-    if (restrictionsById) {
-      const types = restrictionsById.get(id);
-      capabilities = Object.fromEntries(Object.entries(held).map(([name, granted]) => [
-        name,
-        granted && !types.some((type) => restrictions.typeBlocks(type, `${resourceType}.${name}`)),
-      ]));
-    } else {
-      // eslint-disable-next-line no-await-in-loop
-      capabilities = await filterRestrictedCapabilities({
-        capabilities: held,
-        resourceType,
-        resourceId: id,
-        preFetchedResource: row,
-        restrictionChecker: restrictions.checkRestriction,
-      });
-    }
+    // eslint-disable-next-line no-await-in-loop
+    const capabilities = await filterRestrictedCapabilities({
+      capabilities: decision.capabilities ?? {},
+      resourceType,
+      resourceId: id,
+      preFetchedResource: row,
+      restrictionChecker: restrictions.checkRestriction,
+    });
     metas.push({
       decision,
       meta: { capabilities: toCapabilitiesArray(capabilities), standing: decision.standing ?? [] },
@@ -238,8 +226,12 @@ async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_met
  * Every row is decided with the detail route's composition: the detail action with
  * capabilities and standing, less the capabilities a restriction in force blocks. A row the
  * caller cannot open lacks the detail action, which is how a collection's datasets tab tells
- * the two apart. For a dataset, a collection, or a group, the page's paths and restrictions
- * are read once and seed every row.
+ * the two apart. For a dataset, a collection, or a group, the page's paths are read once and
+ * seed every row.
+ *
+ * What each row's state admits is the other answer, and a list route adds it as
+ * `available_actions` from the fields its own query fetched.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * @param {string} resourceType
  * @param {Object[]} rows - the list's rows, unprojected, used to seed each check
@@ -272,32 +264,41 @@ async function decideRows(resourceType, rows, options) {
  * @param {string[]} [options.relationAttributes] - fields that describe the row's place in the
  *   list rather than the row, such as `depth`, kept whatever the row's decision
  * @param {string} [options.action] - the read action, `view_metadata` unless named
+ * @param {(row: Object) => string[]} [options.availableActionsOf] - what the row's state admits,
+ *   read from the fields the list's own query fetched. Omitted when a list does not fetch them,
+ *   because a state rule refuses to decide from a field the caller did not fetch.
+ *   @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  * @returns {Promise<Object[]>}
  * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
  * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection applied to rows it was not decided for
  */
 async function projectRows(resourceType, rows, {
   req, idOf, publicAttributes, relationAttributes = [], action = 'view_metadata',
+  availableActionsOf = null,
 }) {
   const decided = await decideEachRow(resourceType, rows, { req, idOf, action });
   return rows.map((row, index) => {
     const { decision, meta } = decided[index];
     const projected = decision.granted ? decision.filter(row) : projectObject(row, publicAttributes);
     relationAttributes.forEach((name) => { if (name in row) projected[name] = row[name]; });
-    return { ...projected, _meta: meta };
+    const full = availableActionsOf ? { ...meta, available_actions: availableActionsOf(row) } : meta;
+    return { ...projected, _meta: full };
   });
 }
 
 /**
  * Whether the caller may file an access request on a resource whose metadata they can view.
  *
- * `POST /access-requests` admits a signed-in caller who can view the resource when no
- * restriction blocks `access_request.create` on it. A detail route has already decided the
- * view, so this asks the rest, and the page offers Request Access only where filing succeeds.
+ * `POST /access-requests` admits a signed-in caller who can view the resource. Two things can
+ * still refuse it: a restriction the application injects, and the request's own state rule for
+ * `create`, which reads the state of the resource the request would name. A detail route has
+ * already decided the view, so this asks the rest, and the page offers Request Access only
+ * where filing would succeed.
  *
  * @param {import('express').Request} req
  * @param {string} resourceId - a dataset's resource id or a collection's id
  * @returns {Promise<boolean>}
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
  */
 async function mayRequestAccess(req, resourceId) {
@@ -308,7 +309,13 @@ async function mayRequestAccess(req, resourceId) {
     resourceId: null,
     preFetchedResource: { resource_id: resourceId },
   });
-  return !blockedBy;
+  if (blockedBy) return false;
+
+  // Filing a request on an archived or deleted resource is refused by the request's own state
+  // rule, so the page must not offer it. The rule reads the resource the request would name.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+  const target = await state.readTargetState(prisma, resourceId);
+  return target === null || state.check('access_request', 'create', { target }) === null;
 }
 
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a

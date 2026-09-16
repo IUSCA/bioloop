@@ -5,17 +5,14 @@
  * operations table decides. The model starts from the world the services built and then changes
  * only as the table says each command should change it.
  *
- * After every command, three checks run:
+ * After every command, two checks run:
  *
  * 1. **Effects.** The database, read back into the reference model's world shape, equals the
- *    model: memberships, grants, collection contents, restrictions, deletions, and group
- *    settings. Two cells the world shape does not hold are checked directly: a pending invitation
- *    is valid exactly while its group is unrestricted, and reviewing a request on a dataset is
- *    refused exactly while the dataset is restricted or deleted.
+ *    model: memberships, grants, collection contents, archived columns, deletions, and group
+ *    settings. One cell the world shape does not hold is checked directly: a pending invitation
+ *    is valid exactly while its own group is not archived.
  * 2. **Agreement.** The engine and the reference model, run on the model's world, decide the same
  *    for every user and resource on reading, editing, contributing, and downloading.
- * 3. **Invariants.** The archived column and the open ARCHIVED restriction agree on every group
- *    and collection.
  *
  * A command the table refuses — removing a last admin, deleting a collection with history,
  * changing a restricted group or collection — is run too, and must be refused with nothing
@@ -43,7 +40,7 @@ const fc = require('fast-check');
 const _ = require('lodash/fp');
 
 const prisma = require('@/db');
-const { authorizeAction, policyRegistry, restrictions } = require('@/authorization');
+const { authorizeAction, policyRegistry } = require('@/authorization');
 const groupsService = require('@/services/groups');
 const collectionsService = require('@/services/collections');
 const grantsService = require('@/services/grants');
@@ -141,7 +138,7 @@ async function snapshot(real) {
   const collectionIds = COLLECTIONS.map((c) => ids.get(c));
   const resourceIds = [...DATASETS.map((d) => ids.get(d)), ...collectionIds];
 
-  const [groups, parents, users, memberships, datasets, collections, contains, grants, open] = await Promise.all([
+  const [groups, parents, users, memberships, datasets, collections, contains, grants] = await Promise.all([
     prisma.group.findMany({ where: { id: { in: groupIds } } }),
     prisma.group_closure.findMany({ where: { descendant_id: { in: groupIds }, depth: 1 } }),
     prisma.user.findMany({ where: { subject_id: { in: USERS.map((u) => ids.get(u)) } } }),
@@ -155,9 +152,6 @@ async function snapshot(real) {
       JOIN grant_access_type gat ON gat.id = g.access_type_id
       JOIN subject s ON s.id = g.subject_id
       WHERE g.resource_id = ANY(${resourceIds}::text[])`,
-    prisma.restriction.findMany({
-      where: { lifted_at: null, OR: [{ group_id: { in: groupIds } }, { resource_id: { in: resourceIds } }] },
-    }),
   ]);
   return {
     world: {
@@ -171,12 +165,16 @@ async function snapshot(real) {
           parent: back.get(parents.find((edge) => edge.descendant_id === g.id)?.ancestor_id) ?? null,
           allow_user_contributions: g.allow_user_contributions,
           profile_visibility: g.profile_visibility,
+          archived: g.is_archived,
         })),
       ],
       memberships: memberships.map((m) => ({ user: back.get(m.user_id), group: back.get(m.group_id), role: m.role })),
       datasets: datasets.map((d) => ({ id: back.get(d.resource_id), owner: back.get(d.owner_group_id), deleted: d.is_deleted })),
       collections: collections.map((c) => ({
-        id: back.get(c.id), owner: back.get(c.owner_group_id), profile_visibility: c.profile_visibility,
+        id: back.get(c.id),
+        owner: back.get(c.owner_group_id),
+        profile_visibility: c.profile_visibility,
+        archived: c.is_archived,
       })),
       contains: contains.map((row) => ({ collection: back.get(row.collection_id), dataset: back.get(row.dataset_id) })),
       grants: grants.map((g) => ({
@@ -186,13 +184,6 @@ async function snapshot(real) {
         resource: back.get(g.resource_id),
         access_type: g.access_type,
       })),
-      restrictions: open.map((r) => ({
-        ...(r.group_id ? { group: back.get(r.group_id) } : { resource: back.get(r.resource_id) }), type: r.type_name,
-      })),
-    },
-    archivedColumn: {
-      ...Object.fromEntries(groups.map((g) => [back.get(g.id), g.is_archived])),
-      ...Object.fromEntries(collections.map((c) => [back.get(c.id), c.is_archived])),
     },
   };
 }
@@ -204,39 +195,24 @@ function normalize(world) {
     users: sorted(world.users, (u) => `${u.id}|${Boolean(u.deleted)}`),
     groups: sorted(
       world.groups.filter((g) => !g.system_principal),
-      (g) => `${g.id}|${g.parent}|${Boolean(g.allow_user_contributions)}|${g.profile_visibility}`,
+      (g) => `${g.id}|${g.parent}|${Boolean(g.allow_user_contributions)}|${g.profile_visibility}`
+        + `|${Boolean(g.archived)}`,
     ),
     memberships: sorted(world.memberships, (m) => `${m.user}|${m.group}|${m.role}`),
     datasets: sorted(world.datasets, (d) => `${d.id}|${d.owner}|${Boolean(d.deleted)}`),
-    collections: sorted(world.collections, (c) => `${c.id}|${c.owner}|${c.profile_visibility}`),
+    collections: sorted(world.collections, (c) => `${c.id}|${c.owner}|${c.profile_visibility}|${Boolean(c.archived)}`),
     contains: sorted(world.contains, (row) => `${row.collection}|${row.dataset}`),
     grants: sorted(world.grants, (g) => `${g.id}|${g.subject}|${g.resource}|${g.access_type}`),
-    restrictions: sorted(world.restrictions, (r) => `${r.group ?? r.resource}|${r.type}`),
   };
 }
 
 // ---- what the model knows -------------------------------------------------------------------
 
 const groupOf = (world, id) => world.groups.find((g) => g.id === id);
-const ancestorsAndSelf = (world, id) => {
-  const out = [];
-  for (let g = groupOf(world, id); g; g = g.parent ? groupOf(world, g.parent) : null) out.push(g.id);
-  return out;
-};
-const archived = (world, target) => world.restrictions.some((r) => r.type === 'ARCHIVED'
-  && (r.group === target || r.resource === target));
-const groupRestricted = (world, id) => ancestorsAndSelf(world, id).some((g) => archived(world, g));
 const collectionRow = (world, id) => world.collections.find((c) => c.id === id);
 const datasetRow = (world, id) => world.datasets.find((d) => d.id === id);
-/**
- * Whether the engine's restriction check refuses this resource. `effective_restriction`
- * propagates down the group tree, so an archived ancestor restricts a descendant's resources.
- * Only the `checkRestriction` expectation in `verify` uses this; Phase 3 removes it.
- */
-const resourceRestricted = (world, id) => {
-  const row = collectionRow(world, id) ?? datasetRow(world, id);
-  return archived(world, id) || groupRestricted(world, row.owner);
-};
+/** The archived column on a group or a collection. A dataset has none. */
+const archived = (world, target) => (groupOf(world, target) ?? collectionRow(world, target))?.archived === true;
 
 /**
  * Whether the resource's own state refuses a change to it. A collection or dataset reads its
@@ -363,8 +339,9 @@ class ArchiveGroup extends Command {
 
   async apply(model, real) {
     await groupsService.archiveGroup(real.ids.get(this.group), real.users.carol.subject_id);
-    // Grants, invitations, and requests are left; descendants are restricted through the view.
-    model.world.restrictions.push({ group: this.group, type: 'ARCHIVED' });
+    // Grants, invitations, and requests are left. A sub-group keeps its own state, so nothing
+    // below this group changes. @see decision 16, row 6
+    groupOf(model.world, this.group).archived = true;
   }
 
   toString() { return `archive ${this.group}`; }
@@ -377,7 +354,7 @@ class UnarchiveGroup extends Command {
 
   async apply(model, real) {
     await groupsService.unarchiveGroup(real.ids.get(this.group), real.users.carol.subject_id);
-    model.world.restrictions = model.world.restrictions.filter((r) => r.group !== this.group);
+    groupOf(model.world, this.group).archived = false;
   }
 
   toString() { return `unarchive ${this.group}`; }
@@ -392,8 +369,8 @@ class ArchiveCollection extends Command {
 
   async apply(model, real) {
     await collectionsService.archiveCollection(real.ids.get(this.collection), real.users.alice.subject_id);
-    // Contained datasets are not restricted. @see decision 16, row 3
-    model.world.restrictions.push({ resource: this.collection, type: 'ARCHIVED' });
+    // A contained dataset keeps its own state. @see decision 16, row 3
+    collectionRow(model.world, this.collection).archived = true;
   }
 
   toString() { return `archive ${this.collection}`; }
@@ -406,7 +383,7 @@ class UnarchiveCollection extends Command {
 
   async apply(model, real) {
     await collectionsService.unarchiveCollection(real.ids.get(this.collection), real.users.alice.subject_id);
-    model.world.restrictions = model.world.restrictions.filter((r) => r.resource !== this.collection);
+    collectionRow(model.world, this.collection).archived = false;
   }
 
   toString() { return `unarchive ${this.collection}`; }
@@ -632,37 +609,23 @@ class SoftDeleteUser extends Command {
   toString() { return `soft-delete ${this.user}`; }
 }
 
-// ---- the three checks -----------------------------------------------------------------------
+// ---- the two checks -------------------------------------------------------------------------
 
 async function verify(model, real, command) {
   const label = command.toString();
-  const { world: actual, archivedColumn } = await snapshot(real);
+  const { world: actual } = await snapshot(real);
 
-  // 1. Effects.
+  // 1. Effects. The archived column is part of the comparison, so a missed archive write fails
+  // here rather than in an invariant of its own.
   expect([label, normalize(actual)]).toEqual([label, normalize(model.world)]);
   // An invitation is answered through the state layer, which reads the inviting group's own
   // archived column. Archiving an ancestor closes that ancestor and what it owns, and leaves a
   // sub-group to be archived in its own right, so `lab` keeps issuing valid tokens while
-  // `center` is archived. Every command above expects the same, through `resourceStateRefuses`
-  // for a collection or dataset, which is why none of them consults an ancestor. The
-  // ancestor-walking `resourceRestricted` is left for the engine's restriction check below,
-  // because `effective_restriction` does propagate down the tree until Phase 3 removes it.
+  // `center` is archived. Every command above reads one step for the same reason.
   // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   const { status: invitation } = await invitationsService.checkInvitationToken(real.invitation.token);
   expect([label, 'invitation', invitation])
     .toEqual([label, 'invitation', archived(model.world, 'lab') ? 'invalid' : 'valid']);
-  for (const d of DATASETS) {
-    const blocked = await restrictions.checkRestriction({
-      resourceType: 'access_request', action: 'review', preFetchedResource: { resource_id: real.ids.get(d) },
-    });
-    const expected = resourceRestricted(model.world, d) || datasetRow(model.world, d).deleted;
-    expect([label, `review on ${d}`, Boolean(blocked)]).toEqual([label, `review on ${d}`, expected]);
-  }
-
-  // 3. Invariants.
-  [...GROUPS, ...model.world.collections.map((c) => c.id)].forEach((id) => {
-    expect([label, id, archivedColumn[id]]).toEqual([label, id, archived(model.world, id)]);
-  });
 
   // 2. Agreement.
   const reference = createReference(tables, model.world);

@@ -191,7 +191,7 @@
 import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import CollectionService from "@/services/v2/collections";
-import RestrictionService from "@/services/v2/restrictions";
+import StateService from "@/services/v2/states";
 import { prohibitedLabels } from "@/services/v2/restrictionLabels";
 
 const props = defineProps({
@@ -214,21 +214,21 @@ const confirmationText = ref("");
 const confirmationInput = ref(null);
 const loading = ref(false);
 
-// What archiving stops, from the restriction layer: every action ARCHIVED blocks on the
-// collection, and on the grants and requests that name it.
+// What archiving stops, from each resource type's own state rules. A group's archive dialog
+// lists the collection, and the grants and requests that name it.
+const ARCHIVE_SCOPE = ["collection", "grant", "access_request"];
 const blockedActions = ref([]);
-const prohibited = computed(() =>
-  prohibitedLabels(blockedActions.value, [
-    "collection",
-    "grant",
-    "access_request",
-  ]),
-);
+const prohibited = computed(() => prohibitedLabels(blockedActions.value, ARCHIVE_SCOPE));
 
 async function loadBlockedActions() {
   try {
-    const res = await RestrictionService.blockedActions("ARCHIVED");
-    blockedActions.value = res.data.blocked_actions;
+    // One call per resource type, because what archiving forbids is the resource's answer.
+    const answers = await Promise.all(
+      ARCHIVE_SCOPE.map((type) => StateService.forbiddenActions(type, "archived")),
+    );
+    blockedActions.value = answers.flatMap((res, i) =>
+      res.data.forbidden_actions.map((f) => `${ARCHIVE_SCOPE[i]}.${f.action}`),
+    );
   } catch {
     // Nothing is listed rather than a list that may be wrong.
     blockedActions.value = [];

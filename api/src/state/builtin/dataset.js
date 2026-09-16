@@ -37,6 +37,12 @@ const notWhileDeleted = rule({
 const datasetState = new StateContainer({
   resourceType: 'dataset',
   description: "What a dataset's deleted state and its owning group's archived state admit",
+  examples: {
+    // A dataset has no archived column. The archived state that reaches one is its owning
+    // group's, which is what the group's archive dialog lists for the datasets it owns.
+    archived: { is_deleted: false, owner_group: { is_archived: true } },
+    deleted: { is_deleted: true, owner_group: { is_archived: false } },
+  },
 }).rules({
   create: rule({
     requires: ['owner_group.is_archived'],

@@ -34,6 +34,11 @@ const invitationState = new StateContainer({
   resourceType: 'invitation',
   standalone: true,
   description: "What an invitation's status and its group's archived state admit",
+  examples: {
+    // A pending invitation to an archived group, so the status admits both steps and the
+    // group's state is what refuses them.
+    archived: { status: INVITATION_STATUS.PENDING, group: { is_archived: true } },
+  },
 }).rules({
   accept: pendingAndOpen('accepted'),
   cancel: pendingAndOpen('withdrawn'),

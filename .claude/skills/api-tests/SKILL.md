@@ -448,9 +448,69 @@ against the open restriction.
   Write each run out.
 - The suite counts refused commands and fails when none ran, because a run with no refusal never
   reached a guard.
+## Give jest an absolute path, and check the output file before trusting a result
+
+The working directory drifts. A `cd api && ...` inside one Bash call does not persist, and after
+a backgrounded command the session lands back at the repository root. Three failures in one
+session came from this: two `sed` reads that reported "No such file or directory" for files that
+existed, and a full-suite run that reported **exit 127** — `./node_modules/.bin/jest` not found.
+
+The last one is the shape to fear. The background task completed, the notification said so, and
+the output file held one line of shell error instead of a test summary. A run that never happened
+looks exactly like a run that finished, so a summary claiming the suite passed would have been
+fabricated from an empty file.
+
+So: write `/Users/.../api/node_modules/.bin/jest` and an absolute output path, every time. Then
+read the first line of the output before reading the summary — if it is a shell error, there are
+no results. And never pipe jest through `grep`: the pipeline's exit code is grep's, so a failing
+suite reports success.
+
+## Suites that fail only in the full run
+
+Four suites have now failed intermittently, with no change in between:
+`tests/routes/health.test.js`, `tests/services/grants/coverage.test.js`,
+`tests/services/invitations/invitation.hook.test.js` (on "the subject row goes too, so no orphan
+is left for grants to name"), and `tests/services/grants/anonymousSubjectSet.test.js` (on "a
+grant to Public also reaches a signed-in caller"). Each builds its own fixtures and each passed
+on its own afterwards.
+
+The last one is the instructive case, because it failed **alone** once too, so "passes alone" is
+not by itself proof of interference. What settled it was the distribution: one failure in a full
+run, one alone, then 6/6 twice alone and a pass when run by name with its siblings skipped. Its
+own `afterEach` says two of its tests contend for the `grant_no_overlap` exclusion constraint on
+one collection and access type, which is a mechanism inside the file. So run a suspect three or
+four times before concluding anything, and report the counts rather than the last result.
+
+So before chasing one of these, rerun it alone. A pass alone and a failure in the full run is
+cross-suite interference, and the honest report is to record it as order-dependent rather than
+to claim a fix. What would actually settle it is a run with `--runInBand` and a seeded order, or
+finding the suite that leaves a row behind — neither has been done, and saying so is better than
+a fix nobody verified.
+
+## A forcing check dies with the feature it forced
+
+A test that counts the interesting cases in its own data and fails when the count is zero is the
+right shape: it stops a suite passing because nothing exercised the property. But when the
+feature stops existing, that count becomes 0 by construction and the check fails on data that
+cannot contain the case.
+
+`tests/model/listRowsArm.test.js` counted rows that lose a capability to a restriction. Once
+`checkRestriction` allowed everything, no world could produce one, and the arm failed on a
+property that was no longer false but impossible. The honest move is not to delete the line: it
+now asserts `restricted` is exactly 0, says why in a comment, and names
+`tests/authorization/restrictionSeam.test.js`, which injects a blocking checker so the property
+is still tested somewhere. Deleting it would leave a reader unable to tell whether the case was
+retired or forgotten.
+
+So when a layer becomes a no-op, grep its tests for `toBeGreaterThan(0)` before running them.
+Each hit is either a property that moved, and should say where, or one that is genuinely gone.
+
 - Pass `size: 'max'` to `fc.commands`. Without it, sequences stayed short, and removing the
-  `isRestricted` guard from `addGroupMembers` still passed 30 runs. With it, seed 617108713 fails
-  on adding a user to the child of an archived group.
+  archived guard from `addGroupMembers` still passed 30 runs. With it, seed 617108713 failed.
+  Measured in September 2026, when that guard was `isRestricted` and an archived group reached
+  its descendants' resources; the guard is now `state.assertPossible('group', 'add_member', ...)`
+  and reaches one step, so the counterexample that seed found is no longer a refusal. The lesson
+  about `size` stands and is what the finding is kept for.
 - Revert a guard for that check by copying the file aside and restoring it with a plain copy.
   `cp -i` prompts, and a background task blocked on the prompt never restores the file.
 - Put a revert experiment in a script file and run it with `bash file.sh`. A heredoc typed into

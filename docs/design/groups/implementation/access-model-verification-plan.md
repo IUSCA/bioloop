@@ -15,6 +15,18 @@ The design record stays in [Design](../design.md) and [Decisions](../decisions.m
 carries the formal statement of the problem, the findings behind it, the target shape, the
 test harness, and the sequence.
 
+> **The restriction layer this page describes was removed, 2026-09-15.** Every statement below
+> about restrictions records what was true when measured, and the findings are kept for that
+> reason. What changed: the engine no longer reads a resource's state, `checkRestriction` allows
+> every action, and whether a resource admits an action is answered per resource type under
+> `src/state/builtin/`, asserted by each service inside its transaction with 409. So the
+> `effective_restriction` reach described here, the `restrictionTargetFor` target resolution, the
+> `MUTATING_ACTIONS`/`READING_ACTIONS` pairing, and the three-line restriction argument no longer
+> describe the code. The action classes `mutating`, `reading`, and `data` do survive, and the
+> harness arms described here still run, with `stateAdmits` added to the reference model as the
+> oracle for the state layer.
+> @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the engine stops reading state
+
 ## The problem, stated formally
 
 Manual testing keeps finding cases nobody considered. Each one gets fixed where it surfaced.

@@ -5,10 +5,10 @@
  * route's composition for each row alone. The detail route decides `view_metadata` with
  * capabilities and standing, then turns off the capabilities a restriction blocks.
  *
- * `decideRows` reads a page's paths and restrictions in one statement each and seeds every row's
- * check with them, so a row that picked up another row's paths or restrictions shows up here.
- * Each page holds a fragment's own resources and the next two fragments', so a page mixes rows
- * the caller reaches with rows they do not.
+ * `decideRows` reads a page's paths in one statement and seeds every row's check with them, so a
+ * row that picked up another row's paths shows up here. Each page holds a fragment's own
+ * resources and the next two fragments', so a page mixes rows the caller reaches with rows they
+ * do not.
  *
  * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
@@ -126,7 +126,15 @@ test('every list row carries the capabilities and standing its detail route repo
   }
   expect(wrong).toEqual([]);
   expect(compared).toBeGreaterThan(300);
-  // Forced unless some rows lose a capability to a restriction and some rows do not open.
-  expect(restricted).toBeGreaterThan(0);
+  // Forced unless some rows do not open: a page whose every row the caller could read would
+  // compare the batch against itself.
   expect(unopenable).toBeGreaterThan(0);
+
+  // `restricted` counts rows that lose a capability to a restriction, and it is 0 by
+  // construction: the builtin checker allows every action, so no world can produce one. It was
+  // a forcing check until the restriction layer stopped blocking, and asserting it now would
+  // fail on data that cannot contain the case. The property it guarded — that a blocking
+  // checker removes a capability from a row — is tested with an injected checker in
+  // `tests/authorization/restrictionSeam.test.js`.
+  expect(restricted).toBe(0);
 }, 600_000);

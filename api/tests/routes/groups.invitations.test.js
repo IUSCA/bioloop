@@ -175,11 +175,12 @@ describe('validation', () => {
     expect(await prisma.group_invitation.count({ where: { group_id: group.id } })).toBe(0);
   });
 
-  test('an archived group takes no invitation, and the restriction is what says so', async () => {
-    // The caller is an admin here, so the policy passes and ARCHIVED refuses. That matters
-    // beyond the status code: a blocked capability is also absent from the capability map,
-    // so the UI never offers the button. The service's own 409 is the second line, reached
-    // only if a group is archived between the check and the write.
+  test('an archived group takes no invitation, and its state is what says so', async () => {
+    // The caller is an admin here, so authorization passes: they hold `invite` on the group
+    // whatever state it is in. The group's state refuses the step, under its row lock, and
+    // that is a 409 rather than a 403. The UI keeps the button out of reach by reading
+    // `available_actions`, not by losing the capability.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
     const archived = await createTestGroup(admin.subject_id, '_invite_arch');
     groupsToDelete.push(archived.id);
     await prisma.group_user.create({
@@ -188,7 +189,7 @@ describe('validation', () => {
     await groupsService.archiveGroup(archived.id, admin.subject_id);
 
     currentUser = admin;
-    expect((await post({ email: 'dana@university.edu' }, archived.id)).status).toBe(403);
+    expect((await post({ email: 'dana@university.edu' }, archived.id)).status).toBe(409);
     expect(await prisma.group_invitation.count({ where: { group_id: archived.id } })).toBe(0);
   });
 

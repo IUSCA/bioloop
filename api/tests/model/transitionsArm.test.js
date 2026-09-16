@@ -1,18 +1,20 @@
 /**
  * transitionsArm.test.js
  *
- * The Transitions arm: the capability map offers an action on an access request only in the
- * states its transition row lists.
+ * The Transitions arm: the two answers a request carries are separate, and each is correct.
  *
- * The gate does not read state. A service refuses a wrong-state action with a 409, which is
- * the refusal shape for a state guard. So the capability is what must consult the table: a
- * page that offered `review` on an approved request would lead the reviewer into a 409.
+ * `_meta.capabilities` says what the caller could do, and it does not read the request's
+ * status: a reviewer holds `review` on a request whatever state it is in. `available_actions`
+ * says what the request's current status admits, and it does not read the caller: a draft
+ * admits `submit` whoever is asking. The offer a page makes is the intersection, and a service
+ * refuses a wrong-status step with 409.
  *
  * For every request status and three callers (the requester, the owning group's admin, and a
- * platform admin), each capability must equal "the gate allows it, and the request is in one
- * of the action's from-states". Actions with no transition row must equal the gate.
+ * platform admin), this asserts each half against its own source, and that the gate itself
+ * stays blind to status.
  *
- * @see docs/design/groups/access-model.md — The transition table
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ * @see docs/design/groups/implementation/restrictions-plan.md — The two answers in the response
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */
@@ -26,6 +28,7 @@ const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 
 const prisma = require('@/db');
 const groupsService = require('@/services/groups');
+const state = require('@/state');
 const { authorizeAction, policyRegistry } = require('@/authorization');
 const {
   createTestUser, createTestGroup, createTestDataset, deleteUser, deleteGroup, deleteDataset,
@@ -80,8 +83,14 @@ afterAll(async () => {
 
 const callers = () => [['requester', requester], ['group admin', admin], ['platform admin', platformAdmin]];
 
+/** The request as its state rules read it: its own status, and the resource it concerns. */
+const stateRow = (status) => ({
+  status,
+  target: { kind: 'dataset', archived: false, deleted: false },
+});
+
 describe.each(Object.values(ACCESS_REQUEST_STATUS))('a request in %s', (status) => {
-  test.each(['requester', 'group admin', 'platform admin'])('offers %s only what the table allows', async (label) => {
+  test.each(['requester', 'group admin', 'platform admin'])('offers %s the gate, blind to status', async (label) => {
     const [, caller] = callers().find(([l]) => l === label);
     const request = requests.get(status);
     const identifiers = { user: caller.subject_id, resource: request.id };
@@ -94,12 +103,35 @@ describe.each(Object.values(ACCESS_REQUEST_STATUS))('a request in %s', (status) 
       const gate = await authorizeAction('access_request', action, {
         identifiers, policyExecutionContext: freshContext(),
       });
-      const transition = container.getTransition(action);
-      const expected = gate.granted === true && (!transition || transition.from.includes(status));
-      if (capabilities[action] !== expected) {
-        wrong.push(`${action}: offered ${capabilities[action]}, table says ${expected}`);
+      // The capability equals the gate, with no state term in it. A requester holds `submit`
+      // on their approved request; the request is what refuses it.
+      if (capabilities[action] !== (gate.granted === true)) {
+        wrong.push(`${action}: offered ${capabilities[action]}, gate says ${gate.granted}`);
       }
     }
     expect(wrong).toEqual([]);
   });
+
+  test('admits the steps its status admits, whoever is asking', () => {
+    const admitted = state.availableActions('access_request', stateRow(status));
+
+    // Reading is possible in every status, and the steps depend on the status alone.
+    expect(admitted).toContain('read');
+    expect(admitted.includes('submit')).toBe(status === 'DRAFT');
+    expect(admitted.includes('update')).toBe(status === 'DRAFT');
+    expect(admitted.includes('withdraw')).toBe(['DRAFT', 'UNDER_REVIEW'].includes(status));
+    expect(admitted.includes('review')).toBe(status === 'UNDER_REVIEW');
+  });
+});
+
+test('the two answers disagree, which is why a page needs both', () => {
+  // Forced unless the halves are independent: if the capability map still read status, the
+  // requester would not be offered `submit` on an approved request and this would pass
+  // trivially.
+  const draft = state.availableActions('access_request', stateRow('DRAFT'));
+  const approved = state.availableActions('access_request', stateRow('APPROVED'));
+
+  expect(draft).toContain('submit');
+  expect(approved).not.toContain('submit');
+  expect(container.getActionNames()).toContain('submit');
 });

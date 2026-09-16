@@ -72,8 +72,10 @@ test('every disagreement is classified', () => {
 });
 
 test('a create decided from the owning group agrees with the reference', async () => {
-  // An archived owning group, or an archived ancestor of it, blocks a create. Before Phase 0 a
-  // create had no restriction target and nothing blocked it.
+  // A create is decided from the owning group named in the pre-fetched resource, with no
+  // resource id. Whether that group is archived is not asked here: that is the create's own
+  // state rule, which the service asserts and which answers 409.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   const { decisions, disagreements } = await runCreatesArm(arm);
   expect(decisions).toBeGreaterThan(50);
   expect(disagreements.map((d) => `${d.resourceType}.create cell ${d.cell}: engine ${JSON.stringify(d.engine)}, `

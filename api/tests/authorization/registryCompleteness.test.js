@@ -24,8 +24,9 @@ require('module-alias/register');
 const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 
 const { policyRegistry, hydratorRegistry } = require('@/authorization');
+const state = require('@/state');
 const {
-  buildActionTable, buildTermTable, buildTransitionTable,
+  buildActionTable, buildTermTable,
 } = require('@/authorization/builtin/tables');
 const { findUnhydratableRequirements } = require('@/authorization/core/requiresCheck');
 
@@ -59,24 +60,36 @@ test('every container is frozen', () => {
   });
 });
 
-test('every access-request transition names real states', () => {
-  const states = new Set(Object.values(ACCESS_REQUEST_STATUS));
-  buildTransitionTable(policyRegistry)
-    .filter((row) => row.resource_type === 'access_request')
-    .forEach((row) => {
-      [...row.from, ...row.to].forEach((state) => {
-        const label = `${row.action}:${state}`;
-        expect([label, states.has(state)]).toEqual([label, true]);
-      });
+// Which statuses admit which action is the resource's own business logic, so these read the
+// state container rather than a table beside the policies.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+
+test('the access-request rules speak about real statuses, and only real ones', () => {
+  // A rule that named a status the enum does not hold would refuse forever without saying so.
+  // Every real status is answered, and each answer is a decision rather than a throw.
+  const target = { kind: 'dataset', archived: false, deleted: false };
+  Object.values(ACCESS_REQUEST_STATUS).forEach((status) => {
+    state.stateRegistry.get('access_request').getActionNames().forEach((action) => {
+      const label = `${action}:${status}`;
+      expect([label, typeof state.check('access_request', action, { status, target })])
+        .toEqual([label, 'object']);
     });
+  });
 });
 
-test('every action on an access request other than create and read has a transition', () => {
-  const stateless = actions
-    .filter((row) => row.resource_type === 'access_request' && !row.transition)
-    .map((row) => row.action)
+test('every action on an access request other than create and read reads its status', () => {
+  const stateless = state.stateRegistry.get('access_request').getActionNames()
+    .filter((action) => !state.requiredFields('access_request', [action]).includes('status'))
     .sort();
   expect(stateless).toEqual(['create', 'read']);
+});
+
+test('a status the request is not in refuses the step, and the one it is in admits it', () => {
+  // Forced unless the rules discriminate: a container that admitted everything would pass the
+  // two checks above.
+  const target = { kind: 'dataset', archived: false, deleted: false };
+  expect(state.check('access_request', 'submit', { status: 'DRAFT', target })).toBeNull();
+  expect(state.check('access_request', 'submit', { status: 'APPROVED', target })).not.toBeNull();
 });
 
 test('every declared requirement is hydratable', () => {

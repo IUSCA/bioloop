@@ -54,6 +54,28 @@ function availableActions(registry, resourceType, resource) {
 }
 
 /**
+ * What a named state forbids, with the reason for each action.
+ *
+ * A dialog asks this before entering the state: archiving a group tells its admin what stops.
+ * The answer is the rules run against the row the resource declares for that state, so the
+ * dialog and the refusal a service returns come from one statement.
+ *
+ * @param {StateRegistry} registry
+ * @param {string} resourceType
+ * @param {string} stateName - a state the container names, such as `archived`
+ * @returns {Array<{action: string, message: string}>} in the container's order
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+function forbiddenActions(registry, resourceType, stateName) {
+  const container = registry.get(resourceType);
+  const example = container.getExample(stateName);
+  return container.getActionNames()
+    .map((action) => ({ action, refusal: check(registry, resourceType, action, example) }))
+    .filter(({ refusal }) => refusal !== null)
+    .map(({ action, refusal }) => ({ action, message: refusal.message }));
+}
+
+/**
  * Every field a resource type's rules read, for a caller building its query.
  *
  * @param {StateRegistry} registry
@@ -107,5 +129,5 @@ function findStateGaps(policyRegistry, stateRegistry) {
 }
 
 module.exports = {
-  readPath, check, availableActions, requiredFields, findStateGaps,
+  readPath, check, availableActions, forbiddenActions, requiredFields, findStateGaps,
 };

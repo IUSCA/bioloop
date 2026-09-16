@@ -2,7 +2,7 @@ const { GRANT_ACCESS_TYPES } = require('@/constants');
 const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { mutating, reading } = require('../../core/policies/PolicyContainer');
-const { platformAdminOnly, archivedState } = require('./utils/index');
+const { platformAdminOnly } = require('./utils/index');
 const { PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES } = require('./group');
 
 const VALID_GRANT_NAMES = new Set(GRANT_ACCESS_TYPES.map((g) => g.name));
@@ -140,16 +140,12 @@ collectionPolicies
     add_dataset: mutating(isCollectionAdmin),
     remove_dataset: mutating(isCollectionAdmin),
     transfer_ownership: mutating(isCollectionAdmin),
-    // A collection with history is archived, not deleted.
+    // A collection with history is archived, not deleted. The rule that says so lives in
+    // `src/state/builtin/collection.js`.
     // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
-    delete: mutating(isCollectionAdmin, {
-      requires: ['has_history'],
-      stateOf: (collection) => (collection.has_history ? 'HAS_HISTORY' : 'EMPTY'),
-      from: ['EMPTY'],
-      to: ['DELETED'],
-    }),
-    archive: mutating(isCollectionAdmin, archivedState(['ACTIVE'], ['ARCHIVED'])),
-    unarchive: mutating(platformAdminOnly, archivedState(['ARCHIVED'], ['ACTIVE'])),
+    delete: mutating(isCollectionAdmin),
+    archive: mutating(isCollectionAdmin),
+    unarchive: mutating(platformAdminOnly),
 
     list_grants: reading(Policy.or([isCollectionAdmin, hasCollectionOversight])),
     manage_grants: mutating(isCollectionAdmin),

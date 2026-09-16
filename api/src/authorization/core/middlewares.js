@@ -28,7 +28,14 @@ function initializePolicyContext(req, res, next) {
   next();
 }
 
-/** The message a refusal carries. A 404 says nothing a missing resource would not. */
+/**
+ * The message a refusal carries. A 404 says nothing a missing resource would not.
+ *
+ * `blockedBy` is set by whatever restriction checker the application injects. No builtin
+ * checker sets it, so the message is `Forbidden` until a restriction type is specified. A
+ * resource whose state refuses the action is answered by the service with 409, not here.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
 function refusalMessage({ status, blockedBy }) {
   if (status === 404) return 'Not Found';
   return blockedBy ? `Blocked by a ${blockedBy} restriction` : 'Forbidden';

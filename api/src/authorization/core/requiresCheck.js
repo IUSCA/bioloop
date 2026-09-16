@@ -47,8 +47,6 @@ function collectRequirements(policyRegistry) {
     container.getActionNames().forEach((action) => {
       const where = `${resourceType}.${action}`;
       addPolicy(where, resourceType, container.getPolicy(action));
-      const transition = container.getTransition(action);
-      if (transition) add(`${where} transition`, 'resource', resourceType, transition.requires);
     });
     Object.entries(container.export().attributeRules).forEach(([action, rules]) => {
       rules.forEach((rule, index) => {
