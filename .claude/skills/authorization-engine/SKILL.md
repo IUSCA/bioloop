@@ -203,6 +203,12 @@ Assert reachability by running the decision, not by reading the rule list.
 `projectObject` copies plain objects and arrays and leaves `Date`, `BigInt`, and `Decimal` values as
 they are. A projection never shares a nested object with the source row.
 
+`projectObject` once turned a `null` relation into `{}` wherever a filter named a key inside it,
+so a UI check such as `v-if="grant.source_preset"` rendered an empty badge. A generator whose
+trees match every path cannot find this. The tests in `src/utils/expression/index.test.js` under
+"shapes the path does not expect" generate trees with `null`, primitives, arrays, and `Date`s, and
+paths over the same few keys plus prototype names. Extend those when projection changes.
+
 Write any shell heredoc that carries backticks with a quoted delimiter (`<<'EOF'`). An unquoted
 one runs each backticked word as a command and silently drops it from the text.
 

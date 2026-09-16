@@ -39,44 +39,75 @@ function parsePath(path) {
 }
 
 /**
+ * True for a plain object: one a path may descend into with a dot. Arrays, Dates, and other
+ * class instances are not, so a path never reads their own properties such as `length`.
+ *
+ * @param {any} value
+ * @returns {boolean}
+ */
+function isPlainObject(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
  * Recursively walks `source` following `segments`, writing values into `target`.
  *
- * @param {any}    source   - Current source node
- * @param {any}    target   - Current target node (object or array slot)
+ * A path that reaches `null` writes `null` there. A path that meets any other value of a shape
+ * it does not expect writes nothing, so the result never holds a container the source lacks.
+ * Only own keys match, so a path never reads a prototype property such as `toString`.
+ *
+ * @param {any}    source   - Current source node, a plain object
+ * @param {any}    target   - Current target node, a plain object
  * @param {Array}  segments - Remaining path segments
  */
 function applyPath(source, target, segments) {
-  if (!segments.length || source == null) return;
+  if (!segments.length || !isPlainObject(source)) return;
 
   const [head, ...tail] = segments;
   const { key, array } = head;
 
-  if (!(key in source)) return; // key missing from source — skip silently
+  if (!Object.hasOwn(source, key)) return; // key missing from source — skip silently
+  const value = source[key];
 
-  if (array) {
-    // The value must be an array; reconstruct it element-by-element
-    const sourceArr = source[key];
-    if (!Array.isArray(sourceArr)) return;
-
-    if (!target[key]) target[key] = [];
-
-    sourceArr.forEach((item, idx) => {
-      if (!target[key][idx]) target[key][idx] = {};
-      if (tail.length === 0) {
-        // No further path — include the entire element
-        target[key][idx] = item;
-      } else {
-        applyPath(item, target[key][idx], tail);
-      }
-    });
-  } else if (tail.length === 0) {
+  if (tail.length === 0 && !array) {
     // Leaf — copy the value directly
-    target[key] = source[key];
-  } else {
-    // Intermediate object node
-    if (target[key] == null) target[key] = {};
-    applyPath(source[key], target[key], tail);
+    target[key] = value;
+    return;
   }
+
+  if (value === null) {
+    if (target[key] === undefined) target[key] = null;
+    return;
+  }
+
+  if (!array) {
+    // Intermediate object node
+    if (!isPlainObject(value)) return;
+    if (!isPlainObject(target[key])) target[key] = {};
+    applyPath(value, target[key], tail);
+    return;
+  }
+
+  // The value must be an array; reconstruct it element-by-element
+  if (!Array.isArray(value)) return;
+  if (!Array.isArray(target[key])) target[key] = [];
+  const targetArr = target[key];
+  if (targetArr.length < value.length) targetArr.length = value.length;
+
+  value.forEach((item, idx) => {
+    if (tail.length === 0) {
+      // No further path — include the entire element
+      targetArr[idx] = item;
+    } else if (item === null) {
+      if (targetArr[idx] === undefined) targetArr[idx] = null;
+    } else if (isPlainObject(item)) {
+      if (!isPlainObject(targetArr[idx])) targetArr[idx] = {};
+      applyPath(item, targetArr[idx], tail);
+    }
+    // Any other element does not have the shape the path expects, so its slot stays empty.
+  });
 }
 
 /**
@@ -87,12 +118,12 @@ function applyPath(source, target, segments) {
  * @param {Array} segments - Remaining path segments
  */
 function removePath(target, segments) {
-  if (!segments.length || target == null) return;
+  if (!segments.length || !isPlainObject(target)) return;
 
   const [head, ...tail] = segments;
   const { key, array } = head;
 
-  if (!(key in target)) return;
+  if (!Object.hasOwn(target, key)) return;
 
   if (tail.length === 0) {
     delete target[key];
@@ -102,9 +133,7 @@ function removePath(target, segments) {
   if (array) {
     const arr = target[key];
     if (!Array.isArray(arr)) return;
-    arr.forEach((item) => {
-      if (item != null && typeof item === 'object') removePath(item, tail);
-    });
+    arr.forEach((item) => removePath(item, tail));
   } else {
     removePath(target[key], tail);
   }

@@ -181,6 +181,11 @@ An attribute filter is a list of path patterns applied by `projectObject`.
 | Wildcard | `*` | every top-level key of the source; other positive paths in the list add nothing |
 | Negation | `!assignor` | removed after every positive path, wherever it sits |
 
+A path copies only what the source holds. A path that reaches `null` writes `null` there, so a
+grant with no preset projects `source_preset` as `null`, not `{}`. A path that meets a value of
+another shape writes nothing: a dot never walks into an array, a `Date`, or a primitive, and `[*]`
+applies only to an array. Only own keys match, so `toString` is never a path.
+
 A caller who holds several paths sees the union of what each path confers. The union is over
 projected key sets, not over pattern lists, because concatenating a list with a negation onto a
 permissive list removes keys the permissive rule granted.
