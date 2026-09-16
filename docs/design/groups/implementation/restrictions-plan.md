@@ -728,6 +728,94 @@ about that rather than on any code.
 `ARCHIVED`, `DELETED`, `effective_restriction`, `isRestricted`, `blockedActions`, and
 `restrictionTargetFor` finds only history.
 
+**As built, 2026-09-16.**
+
+**`expectConflict` sits beside `expectForbidden`**, in `e2e/src/assertions/parity.js`, and takes
+the same two-part shape: refuse to accept a 400, because validation rejecting the payload means
+the state check never ran, then assert 409 exactly. Its docstring carries the distinction it
+exists to enforce — 403 is authorization answering, 409 is the resource answering — and says to
+pair it with `expectAllowed` on something whose state does admit the action, because a route that
+answered 409 to everything would satisfy it alone.
+
+**A3 now expects 409 from both callers.** Its `expectForbidden` loops became `expectConflict`
+loops, and the comment that made the platform-admin assertion meaningful was rewritten: Priya is
+not being outranked by a restriction, she is being told the group is not taking changes. The
+unarchive assertions are untouched, because unarchive really is authorization — a group admin
+does not hold the capability, which a live check of `_meta.capabilities` confirmed.
+
+**A4 inverted.** It asserted that archiving "reaches descendants and their resources", which D2
+reversed. It now creates a parent, a sub-group, and a dataset owned by each, archives the parent,
+and asserts the sub-group reads `is_archived: false` *and* admits `add_member` in its
+`available_actions` *and* accepts mutations of its own, while the parent refuses the same
+mutations with 409.
+
+The two datasets are the sensitivity pair. A grant on the parent's dataset is refused with a
+message naming the owning group, and a grant on the sub-group's dataset succeeds. That contrast
+is what makes the refusal about the parent's state rather than about grants being broken.
+
+Two hazards are recorded in the spec. The second one cost a full-suite failure.
+
+The `PATCH` in the shared `mutationsOn` helper carries `version: 1`, so asserting it allowed
+consumes that version and it can only be exercised once per group; a second pass would earn a
+version conflict and read as a state refusal.
+
+More seriously, **inverting a refusal into a success turned a read-only helper into a write.**
+`mutationsOn` adds Quinn, and every other use of it asserts a refusal, so nothing was ever
+written. Asserting it allowed put Quinn in a group for real, membership rises through the
+hierarchy, and he reached the run's dataset through the owning group's seeded grant — which
+deleted the premise of `harness.spec.js`, whose whole job is that Quinn reaches none of the run's
+resources. It failed in the full run and passed on its own, the signature of cross-file
+interference. A4 now asserts the sub-group's mutability with a description `PATCH` and an
+invitation, neither of which outlives the test, and the lesson is in the `e2e-tests` skill.
+
+**The exit sweep is clean.** `effective_restriction`, `isRestricted`, `blockedActions`,
+`restrictionTargetFor`, and `RESTRICTION_TYPES` have no live references outside
+`api/prisma/migrations/` and the superseded findings in `authz_notes.md`. Two survivors are
+deliberate. `blockedActions` was a local variable name in both archive dialogs holding what the
+route now calls forbidden actions, so it and `loadBlockedActions` were renamed, along with the
+`prohibitedLabels` parameter. And `api/src/constants.js` still defines `ARCHIVED` — inside
+`DATASET_STATES`, which is the SDA tape-archive workflow state and has nothing to do with the
+retired restriction types. A future sweep should leave it alone.
+
+**The documents.** `code-map.md` and the superseding header in
+`docs/reference/api/security/authz_notes.md` were already correct, and the `authorization-engine`
+skill's state sections needed nothing. Three documents did:
+
+- `docs/guides/production-seeding.md` told an operator that migrations create three sets of rows
+  including the restriction types, and that the seed checks all three. It is two sets now, and the
+  paragraph says where the answer comes from instead.
+- `docs/contributing/request-lifecycle.md` explained the restriction step returning early
+  *because* `view_metadata` is a reading action and "no type blocks reading", which reads as
+  though a type exists. No type is specified at all, so the checker returns `null` for every
+  action whatever its class. Step 4 now also names `_meta.available_actions` as the second answer.
+- `docs/contributing/v2-page-patterns.md` was the worst of the three, because it taught the shape
+  the scan now rejects: `can("edit_metadata") && !collection.value?.is_archived`. It now teaches
+  `useCapabilities`, the hide-versus-disable rule with its opposite failure directions, the
+  `request_access` exception, the single `availableActions` prop, and the dialog taking an action
+  rather than `:is-archived`. Its access-model checklist gained the state rule a new action needs,
+  since `src/state/index.js` refuses to start without one.
+
+The `e2e-tests` skill's "A restriction binds a platform admin" section asserted downward
+propagation as a verified fact. It is now "Archiving refuses with 409, and a platform admin is
+refused the same way", and it says plainly that an earlier version of the page said the opposite.
+
+**Measured.** `archive.spec.js` passes, all five tests, against the running development stack.
+That covers `expectConflict` answering a real 409, A4's reversal holding against the API rather
+than only against the containers, and A5's refusal staying a 403 because unarchive is
+authorization.
+
+The full suite answers **50 passed, 2 failed** in 1.9 minutes, and the two failures are the
+va-select spike tests this phase's exit criterion excludes. They are filed at
+`.todo/local/misc-carryover.md` — the spike hard-codes a demo-world admin — and neither touches
+the state layer.
+
+That run is also the evidence for the Quinn diagnosis above, rather than only a clean bill. The
+run before the fix was 49 passed and 3 failed, the extra failure being
+`harness.spec.js:51 — the zero-access user reaches none of this run's resources`. It passed 5/5
+when its file ran alone, which pointed at cross-file interference rather than a regression, and
+the one test whose state changed between the two runs is exactly the one whose premise A4 was
+deleting. A fix that merely hid a flake would not have moved that single count.
+
 ## Out of scope
 
 - **Specifying restrictions.** How a restriction is written, stored, satisfied, and lifted, and

@@ -175,15 +175,46 @@ already closed. A1's authority half is an expected failure today: `POST /groups/
 appends a non-platform-admin creator to the child's `admins`, so a centre admin governs every
 group she creates, while flow A1 says creating a child confers oversight and not authority.
 
-## A restriction binds a platform admin
+## Archiving refuses with 409, and a platform admin is refused the same way
 
-Archiving is the restriction the system ships, and it is the one place a platform admin is not
-the most powerful caller. Verified: on an archived group, Priya is refused the same mutations
-Alice is, every read still works for both, existing grants keep working, and unarchive is
-Priya's alone. It propagates downward too — a child of an archived group reports
-`is_archived: false` in its own right and still refuses every mutation, which is worth
-asserting exactly that way round, because "the child is archived" and "the child is frozen"
-are different claims and only the second is true.
+Archiving is the group's own state, not a permission and not a restriction composed with the
+policies. The state layer runs after authorization, inside the transaction that would perform the
+write, so a refusal is **409** and `expectForbidden` fails against it. Use `expectConflict` from
+`src/assertions/parity.js`, and pair it with `expectAllowed` on something whose state does admit
+the action, or a route that answers 409 to everything would satisfy it.
+
+Verified: on an archived group, Alice is refused every mutation with 409 while keeping every
+capability she had, Priya is refused identically, every read still works for both, existing grants
+keep working, and unarchive is Priya's alone — that last one is authorization, so it stays a 403
+for a group admin.
+
+**Archiving does not propagate downward.** It covers the group and what it owns, one step. A
+sub-group keeps its own state: it reports `is_archived: false` *and* accepts mutations, and a
+dataset the sub-group owns still takes a grant. What freezes alongside the group is what the group
+itself owns — a dataset owned by the archived group refuses a grant with 409, and the message names
+the owning group, because the dataset has no archived state of its own. An earlier version of this
+page said the opposite, and flow A4 is the test that settles it.
+
+@see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+
+## Inverting a refusal into a success turns a read-only helper into a write
+
+A helper shared by refusal specs is safe precisely because nothing it builds is ever written: the
+call is refused, so the body never lands. Assert the same call *allowed* and the helper becomes a
+mutation, and it mutates the world every other spec file in that worker shares.
+
+Measured here. `mutationsOn` in `restrictions/archive.spec.js` adds Quinn to a group, and every
+use of it asserted a refusal. Flow A4 was rewritten to assert a sub-group still accepts its
+mutations, which put Quinn in a group for real; membership rises through the hierarchy, so he
+became a transitive member of every ancestor and reached the run's dataset through the owning
+group's seeded grant. `harness.spec.js` asserts Quinn reaches none of this run's resources, and it
+failed in the full run while passing on its own — the signature of exactly this.
+
+**Two rules follow.** Never add the zero-access sentinel — Quinn — to anything; his whole value is
+that nothing connects him. And when flipping a refusal assertion to a success, read what the body
+would actually write, rather than reusing the fixture that was safe while it was being refused.
+Prefer writes that expire with the test: an invitation confers nothing until accepted, and a
+description `PATCH` touches only the group under test.
 
 ## Membership specs build their own group
 

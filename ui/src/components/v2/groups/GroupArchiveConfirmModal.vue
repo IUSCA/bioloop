@@ -256,12 +256,12 @@ const ARCHIVE_SCOPE = [
   "grant",
   "access_request",
 ];
-const blockedActions = ref([]);
+const forbiddenActions = ref([]);
 const prohibited = computed(() =>
-  prohibitedLabels(blockedActions.value, ARCHIVE_SCOPE),
+  prohibitedLabels(forbiddenActions.value, ARCHIVE_SCOPE),
 );
 
-async function loadBlockedActions() {
+async function loadForbiddenActions() {
   try {
     // One call per resource type, because what archiving forbids is the resource's answer.
     const answers = await Promise.all(
@@ -269,19 +269,19 @@ async function loadBlockedActions() {
         StateService.forbiddenActions(type, "archived"),
       ),
     );
-    blockedActions.value = answers.flatMap((res, i) =>
+    forbiddenActions.value = answers.flatMap((res, i) =>
       res.data.forbidden_actions.map((f) => `${ARCHIVE_SCOPE[i]}.${f.action}`),
     );
   } catch {
     // Nothing is listed rather than a list that may be wrong.
-    blockedActions.value = [];
+    forbiddenActions.value = [];
   }
 }
 
 function show() {
   confirmationText.value = "";
   visible.value = true;
-  if (!unarchiving.value) loadBlockedActions();
+  if (!unarchiving.value) loadForbiddenActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();

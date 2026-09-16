@@ -6,7 +6,9 @@
  * the answers, so its list follows the state rules rather than restating them. Several actions
  * share words, and a dialog shows each phrase once, in the order of this table.
  * `api/tests/model/stateLabels.test.js` fails when a forbidden action has no entry here, or an
- * entry names an action the archived state admits.
+ * entry names an action the archived state admits. The answers come from
+ * `GET /v2/states/:type/archived/forbidden-actions`, one call per resource type in the dialog's
+ * scope.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  */
@@ -57,16 +59,16 @@ export const ACTION_LABELS = {
 
 /**
  * The phrases for the forbidden actions on the given resource types, each once, in table order.
- * @param {string[]} blockedActions - qualified actions, as the API sent them
+ * @param {string[]} forbiddenActions - qualified actions, as the API sent them
  * @param {string[]} resourceTypes - the types this dialog lists
  * @returns {string[]}
  */
-export function prohibitedLabels(blockedActions, resourceTypes) {
-  const blocked = new Set(blockedActions);
+export function prohibitedLabels(forbiddenActions, resourceTypes) {
+  const forbidden = new Set(forbiddenActions);
   const labels = [];
   Object.entries(ACTION_LABELS).forEach(([action, label]) => {
     const inScope = resourceTypes.includes(action.split(".")[0]);
-    if (inScope && blocked.has(action) && !labels.includes(label)) {
+    if (inScope && forbidden.has(action) && !labels.includes(label)) {
       labels.push(label);
     }
   });

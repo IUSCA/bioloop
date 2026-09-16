@@ -206,9 +206,14 @@ The middleware collects two identifiers: Alice's `subject_id` and the dataset id
 `api/src/authorization/core/pipeline.js`, which runs four steps.
 
 **Step 1, the restriction check.** `checkRestriction` in
-`api/src/authorization/builtin/restrictions.js` asks whether any restriction type blocks
-`dataset.view_metadata`. It is a `reading` action, and no type blocks reading, so the check
-returns at once without a query.
+`api/src/authorization/builtin/restrictions.js` asks whether a restriction blocks
+`dataset.view_metadata`. No restriction type is specified, so it returns `null` for every
+action, whatever the action's class, without a query. The seam stays live for an application
+that injects a checker of its own.
+
+Nothing about an archived group or a deleted dataset is decided here. That is the resource's
+state, and it is asked later, by the service, inside the transaction that would perform the
+write.
 
 **Step 2, the platform-admin check.** The pipeline evaluates `isPlatformAdmin`. The user
 hydrator loads `current_roles` from `user_role`. Alice is not a platform admin, so the pipeline
@@ -236,8 +241,12 @@ builds keeps every field.
 
 **Step 4, capabilities and standing.** The route asked for both. `evaluateCapabilitySet`
 evaluates every action in the dataset container for Alice, reusing the cached `access_paths`.
-`filterRestrictedCapabilities` turns off any action a restriction blocks. `deriveStanding`
-returns her paths, `[{ kind: 'admin', … }]`.
+`filterRestrictedCapabilities` turns off any action a restriction blocks, which is none of them
+today. `deriveStanding` returns her paths, `[{ kind: 'admin', … }]`.
+
+The capability map is the caller's authority alone. What the dataset's state admits is the second
+answer, and the route composes it beside this one as `_meta.available_actions` by asking
+`src/state` with the row it already fetched.
 
 The middleware stores the result as `req.permission` and calls `next()`.
 

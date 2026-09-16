@@ -27,37 +27,61 @@ the caller reads the resource:
       { kind: "oversight", group_id: "…" },
       { kind: "grant", grant_id: "…", access_type: "DATASET:DOWNLOAD", collection_id: null },
     ],
-    capabilities: ["view_metadata", "edit_metadata", "archive", "list_grants", …]
+    capabilities: ["view_metadata", "edit_metadata", "archive", "list_grants", …],
+    available_actions: ["view_metadata", "list_grants", "unarchive", …]
   }
 }
 ```
 
+`capabilities` and `available_actions` are two different answers and a control usually needs
+both. `capabilities` is what the caller could do; `available_actions` is what the resource's own
+state admits right now. They are independent on purpose: an archived group's admin keeps
+`edit_metadata` in the capability map, because archiving is not a loss of authority, and the
+group's state leaves the action out.
+
 A path's `kind` is `platform_admin`, `admin`, `oversight`, `member`, `grant`, or
 `resource_rule`. A `member` path also says whether the membership is `direct`.
 
-Every detail page turns capabilities into a `can()` predicate and drives tab and action
-visibility from it. The badge is a display function of standing and gates nothing:
+Every detail page reads both answers through one composable, and the badge is a display
+function of standing that gates nothing:
 
 ```javascript
+import { useCapabilities } from "@/composables/useCapabilities";
 import { badgeFor } from "@/services/v2/standing";
 
-const capabilities = computed(
-  () => new Set(collection.value?._meta?.capabilities ?? []),
-);
+const { can, available, enabled, availableActions } = useCapabilities(collection);
+
 const callerRole = computed(() =>
   badgeFor(collection.value?._meta?.standing, "collection"),
 );
-function can(action) {
-  return capabilities.value.has(action);
-}
 
 // The Access tab shows for every viewer; the grant table only for a grant manager.
 const showGrantTable = computed(() => can("list_grants"));
-const canEdit = computed(() => can("edit_metadata") && !collection.value?.is_archived);
+
+// Editing survives archiving as an authority and not as an action, so the control stays and
+// disables. Never re-derive that from `is_archived`; `api/tests/model/uiScan.test.js` fails on it.
+const canEdit = computed(() => enabled("edit_metadata"));
 ```
 
+**Which function to use is the display rule, and the two fail in opposite directions.**
+
+- **Disable** a control whose state could readmit it, with `enabled`. A missing
+  `available_actions` means the route did not answer, and `enabled` falls back to the capability
+  rather than disabling every control on a list that does not serve it yet.
+- **Hide** a control whose state can never readmit it, with `available` — or `admits(row, action)`
+  for a list row. A decided access request is never reviewed again; a deleted dataset has no
+  unarchive. These fail closed, which is safe because the service refuses the action anyway.
+
+An action the resource's state container does not declare never appears in `available_actions`,
+and gating on it would disable the control forever. `request_access` is the live example: the API
+derives it outside the action tables and folds its own state check in, so it stays on `can`
+alone. Check `api/src/state/builtin/` before gating a control on a name.
+
 Pass the resolved booleans down as props — `:can-edit`, `:can-archive` — rather than
-handing a tab component the whole resource and letting it re-derive them.
+handing a tab component the whole resource and letting it re-derive them. Pass the state answer
+as one `:available-actions` list rather than a boolean per action, and let the tab disable from
+it; splitting the list into many props invites the halves to disagree. A dialog takes the action
+it confirms, as `action="archive"|"unarchive"`, not a raw `:is-archived` boolean.
 
 Capabilities come from the policy container for that resource type in
 `api/src/authorization/builtin/policies/`. Which tab each capability controls is
@@ -149,7 +173,14 @@ The template wraps the three states in one transition:
     not decide and that names no test deciding it.
   - `api/tests/authorization/registryCompleteness.test.js` fails on an action with no restriction
     class and on a term with no path kind.
-  - `api/tests/model/uiScan.test.js` fails on a page that computes a decision the API should send.
+  - `api/tests/model/uiScan.test.js` fails on a page that computes a decision the API should send,
+    including any read of `is_archived`, `is_deleted`, `is_active`, a request or invitation status,
+    or an `:is-archived` binding.
+- [ ] A new action also needs a state rule in `api/src/state/builtin/<resource>.js`, even when no
+  state limits it — `always` says so explicitly. `src/state/index.js` refuses to start when a
+  policy action has no rule or a rule names no action, and `api/tests/state/sync.test.js` pins it.
+  If the archived state forbids the action, it needs words in `ui/src/services/v2/stateLabels.js`
+  or `api/tests/model/stateLabels.test.js` fails.
 
 ## Optimistic concurrency on update
 
