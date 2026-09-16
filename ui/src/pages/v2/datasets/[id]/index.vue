@@ -158,13 +158,14 @@
           v-if="activeTab === 'overview'"
           :dataset="dataset"
           :counts="counts"
-          :can-edit="can('edit_metadata')"
-          :can-delete="can('delete')"
-          :can-issue-grants="can('manage_grants')"
+          :can-edit="shows('edit_metadata')"
+          :can-delete="shows('delete')"
+          :can-issue-grants="shows('manage_grants')"
           :can-request-access="can('request_access')"
-          :can-download="can('download')"
-          :can-request-stage="can('request_stage')"
+          :can-download="shows('download')"
+          :can-request-stage="shows('request_stage')"
           :can-view-workflows="can('view_workflows')"
+          :available-actions="availableActionList"
           :can-view-source-datasets="can('view_source_datasets')"
           :can-view-derived-datasets="can('view_derived_datasets')"
           @update="fetchDatasetData"
@@ -176,7 +177,7 @@
         <DatasetFilesTab
           v-else-if="activeTab === 'files'"
           :dataset="dataset"
-          :can-download="can('download')"
+          :can-download="enabled('download')"
         />
 
         <DatasetAssociatedDatasetsTab
@@ -202,7 +203,7 @@
           ref="grantsTabRef"
           v-else-if="activeTab === 'grants' && can('manage_grants')"
           :dataset="dataset"
-          :can-manage-grants="can('manage_grants')"
+          :can-manage-grants="enabled('manage_grants')"
           @count-changed="fetchGrantsCount"
         />
 
@@ -218,14 +219,14 @@
           ref="requestTabRef"
           v-else-if="activeTab === 'requests'"
           :dataset="dataset"
-          :can-review="can('review_access_requests')"
+          :can-review="enabled('review_access_requests')"
           @count-changed="fetchRequestCount"
         />
 
         <DatasetWorkflowsTab
           v-else-if="activeTab === 'workflows'"
           :dataset="dataset"
-          :can-act="can('request_stage') || can('compute')"
+          :can-act="enabled('request_stage') || enabled('compute')"
           @count-changed="(n) => (counts.workflows = n)"
         />
 
@@ -254,6 +255,7 @@
 
 <script setup>
 import DatasetType from "@/components/dataset/DatasetType.vue";
+import { useCapabilities } from "@/composables/useCapabilities";
 import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
@@ -287,9 +289,10 @@ const counts = ref({
 const grantsTabRef = ref(null);
 const requestTabRef = ref(null);
 
-const capabilities = computed(
-  () => new Set(dataset.value?._meta?.capabilities ?? []),
-);
+// `can` is the caller's authority and `enabled` adds what the dataset's state admits.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const { can, enabled, availableActions } = useCapabilities(dataset);
+
 const callerRole = computed(() =>
   badgeFor(dataset.value?._meta?.standing, "dataset"),
 );
@@ -299,9 +302,35 @@ const isUpload = computed(
     dataset.value?.create_method === constants.DATASET_CREATE_METHODS.UPLOAD,
 );
 
-function can(action) {
-  return capabilities.value.has(action);
+/**
+ * Whether a control the state withholds is hidden rather than disabled.
+ *
+ * Two states reach a dataset and they want different treatment. An archived owning group is
+ * reversible, so its controls stay visible and disabled: the caller still holds the authority
+ * and will hold it again. Deletion is final — a dataset has no unarchive — so a control that
+ * can never work again is not worth showing, and a disabled Download that will stay disabled
+ * forever reads as a fault in the page.
+ *
+ * `is_deleted` chooses the presentation only. Whether an action is permitted is
+ * `available_actions`, and this never re-derives it: a deleted dataset still shows every
+ * control whose action the state admits, such as viewing metadata or the audit log.
+ *
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+const stateIsFinal = computed(() => dataset.value?.is_deleted === true);
+
+/**
+ * A control's authority, under the display rule: hidden once deletion has settled the
+ * question, and otherwise left to `enabled` to disable.
+ */
+function shows(action) {
+  return stateIsFinal.value ? enabled(action) : can(action);
 }
+
+/** The state's answer as the Overview tab takes it: a list, or null when unanswered. */
+const availableActionList = computed(() =>
+  availableActions.value ? [...availableActions.value] : null,
+);
 
 function setNavBreadcrumbs() {
   const items = [{ label: "Datasets", to: "/v2/datasets" }];

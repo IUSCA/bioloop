@@ -11,10 +11,10 @@
         <VaButton
           :loading="loading"
           :disabled="!confirmationValid"
-          :color="props.isArchived ? 'success' : 'danger'"
+          :color="unarchiving ? 'success' : 'danger'"
           @click="confirm"
         >
-          {{ props.isArchived ? "Unarchive Group" : "Archive Group" }}
+          {{ unarchiving ? "Unarchive Group" : "Archive Group" }}
         </VaButton>
       </div>
     </template>
@@ -22,7 +22,7 @@
     <VaInnerLoading :loading="loading">
       <div class="space-y-6">
         <!-- Unarchive variant -->
-        <template v-if="props.isArchived">
+        <template v-if="unarchiving">
           <div
             class="rounded-lg border border-solid border-green-200 bg-green-50/70 p-4 shadow-sm dark:border-green-800 dark:bg-green-950/40"
           >
@@ -204,7 +204,7 @@ import toast from "@/services/toast";
 import { maybePluralize } from "@/services/utils";
 import GroupService from "@/services/v2/groups";
 import StateService from "@/services/v2/states";
-import { prohibitedLabels } from "@/services/v2/restrictionLabels";
+import { prohibitedLabels } from "@/services/v2/stateLabels";
 
 const props = defineProps({
   /** ID of the group being archived/unarchived. */
@@ -213,8 +213,20 @@ const props = defineProps({
   groupName: { type: String, default: "" },
   /** Slug of the group, used for confirmation input. */
   groupSlug: { type: String, default: "" },
-  /** If true, shows unarchive wording. */
-  isArchived: { type: Boolean, default: false },
+  /**
+   * Which action this dialog confirms: `archive` or `unarchive`.
+   *
+   * The action the toggle offered, rather than the group's archived column. The two agree
+   * today, and taking the action keeps the dialog from confirming one thing while the page
+   * offered another: what the page offers comes from `_meta.available_actions`.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  action: {
+    type: String,
+    default: "archive",
+    validator: (value) => ["archive", "unarchive"].includes(value),
+  },
   /** Number of affected members (optional, shown in summary). */
   affectedMembers: { type: Number, default: null },
   /** Number of affected datasets (optional, shown in summary). */
@@ -227,6 +239,9 @@ const props = defineProps({
 
 const emit = defineEmits(["update"]);
 
+/** Whether this dialog is confirming the way back out. */
+const unarchiving = computed(() => props.action === "unarchive");
+
 const visible = ref(false);
 const confirmationText = ref("");
 const confirmationInput = ref(null);
@@ -234,15 +249,25 @@ const loading = ref(false);
 
 // What archiving stops, from each resource type's own state rules. A group's archive dialog
 // lists the group itself and what it owns.
-const ARCHIVE_SCOPE = ["group", "collection", "dataset", "grant", "access_request"];
+const ARCHIVE_SCOPE = [
+  "group",
+  "collection",
+  "dataset",
+  "grant",
+  "access_request",
+];
 const blockedActions = ref([]);
-const prohibited = computed(() => prohibitedLabels(blockedActions.value, ARCHIVE_SCOPE));
+const prohibited = computed(() =>
+  prohibitedLabels(blockedActions.value, ARCHIVE_SCOPE),
+);
 
 async function loadBlockedActions() {
   try {
     // One call per resource type, because what archiving forbids is the resource's answer.
     const answers = await Promise.all(
-      ARCHIVE_SCOPE.map((type) => StateService.forbiddenActions(type, "archived")),
+      ARCHIVE_SCOPE.map((type) =>
+        StateService.forbiddenActions(type, "archived"),
+      ),
     );
     blockedActions.value = answers.flatMap((res, i) =>
       res.data.forbidden_actions.map((f) => `${ARCHIVE_SCOPE[i]}.${f.action}`),
@@ -256,7 +281,7 @@ async function loadBlockedActions() {
 function show() {
   confirmationText.value = "";
   visible.value = true;
-  if (!props.isArchived) loadBlockedActions();
+  if (!unarchiving.value) loadBlockedActions();
 
   nextTick(() => {
     confirmationInput.value?.focus?.();
@@ -272,14 +297,14 @@ async function confirm() {
   loading.value = true;
 
   try {
-    if (props.isArchived) {
+    if (unarchiving.value) {
       await GroupService.unarchive(props.groupId);
     } else {
       await GroupService.archive(props.groupId);
     }
 
     hide();
-    toast.success(props.isArchived ? "Group unarchived." : "Group archived.");
+    toast.success(unarchiving.value ? "Group unarchived." : "Group archived.");
     emit("update");
   } catch (err) {
     toast.error(
@@ -296,13 +321,13 @@ defineExpose({ show, hide });
 const intl = new Intl.NumberFormat();
 
 const modalTitle = computed(() =>
-  props.isArchived
+  unarchiving.value
     ? `UNARCHIVE GROUP: ${props.groupName}`
     : `ARCHIVE GROUP: ${props.groupName}`,
 );
 
 const confirmationValid = computed(() => {
-  if (props.isArchived) return true;
+  if (unarchiving.value) return true;
   if (!props.groupSlug) return true;
   return confirmationText.value === props.groupSlug;
 });

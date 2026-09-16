@@ -10,7 +10,13 @@
       <!-- Icon in the slot, not the `icon` prop. The prop expects the Material icon font,
            which this app does not load, and renders a stray glyph instead. Every other
            button in these tabs uses the slot form. -->
-      <VaButton v-if="props.canInvite" size="small" @click="emit('invite')">
+      <VaButton
+        v-if="props.canInvite"
+        size="small"
+        :disabled="!stateAdmits('invite')"
+        :title="stateAdmits('invite') ? null : DISABLED_REASON"
+        @click="emit('invite')"
+      >
         <div class="flex items-center justify-between gap-2 mx-1">
           <i-mdi-email-plus-outline class="text-sm" />
           Invite by email
@@ -73,9 +79,13 @@
         </span>
       </template>
 
+      <!-- Whether an invitation can still be withdrawn is the invitation's own state: it is
+           answered once, and an archived group's invitations stop changing. The status is what
+           the badge shows, not what the control reads.
+           @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization -->
       <template #cell(actions)="{ rowData }">
         <VaButton
-          v-if="props.canInvite && rowData.status === 'PENDING'"
+          v-if="props.canInvite && admits(rowData, 'cancel')"
           size="small"
           preset="plain"
           color="danger"
@@ -90,6 +100,7 @@
 </template>
 
 <script setup>
+import { admits } from "@/composables/useCapabilities";
 import { displayDateTime } from "@/services/datetime";
 import toast from "@/services/toast";
 import GroupService from "@/services/v2/groups";
@@ -99,7 +110,31 @@ const props = defineProps({
   // Whether the viewer may issue and withdraw. Reading the list is its own capability, and
   // survives archiving; issuing does not.
   canInvite: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions` of the group: what its own state admits right now, or null when
+   * the response did not say. Issuing an invitation stops while the group is archived; reading
+   * the list does not.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and the control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This group is archived.";
 
 const emit = defineEmits(["count-changed", "invite"]);
 
@@ -170,7 +205,14 @@ async function cancel(row) {
     await fetchInvitations();
   } catch (err) {
     console.error(err);
-    toast.error("Could not withdraw the invitation");
+    // A 409 is the invitation's own state refusing — it has been answered already, or the
+    // group is archived — and its message says which.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+    toast.error(
+      err?.response?.status === 409
+        ? (err.response.data?.message ?? "Could not withdraw the invitation")
+        : "Could not withdraw the invitation",
+    );
   } finally {
     cancelling.value = null;
   }

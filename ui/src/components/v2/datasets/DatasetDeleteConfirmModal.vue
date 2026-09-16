@@ -71,7 +71,13 @@ async function onConfirm() {
     visible.value = false;
     emit("update");
   } catch (err) {
-    toast.error("Failed to delete dataset.");
+    // A 409 is the resource's state refusing, and its message names which state and why.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+    toast.error(
+      err?.response?.status === 409
+        ? (err.response.data?.message ?? "Failed to delete dataset.")
+        : "Failed to delete dataset.",
+    );
     console.error(err);
   } finally {
     loading.value = false;

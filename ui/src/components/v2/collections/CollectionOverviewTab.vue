@@ -108,9 +108,35 @@ const props = defineProps({
   // `request_access`: filing a request on this collection would be accepted.
   canRequestAccess: { type: Boolean, default: false },
   canAddDataset: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the collection's own state admits right now, or null when
+   * the response did not say. One prop rather than a boolean per action, because the state
+   * answer is one list and splitting it up invites the two halves to disagree.
+   */
+  availableActions: { type: Array, default: null },
 });
 
 const emit = defineEmits(["update", "toggle-archive", "action-requested"]);
+
+/**
+ * Whether the collection's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ *
+ * Only actions the state container declares can appear in the list. `request_access` is not
+ * one of them — the API derives that capability and folds the state check into it — so the
+ * Request access control is gated on the capability alone and never passes through here.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const ARCHIVED_REASON = "This collection is archived.";
 
 /**
  * Whether the wide panel would otherwise be blank. The tagline and the links render in the
@@ -152,6 +178,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: getIcon("dataset", { outlined: true }),
       label: "Add a dataset",
+      disabled: !stateAdmits("add_dataset"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () => emitAction("add-dataset", "datasets", "add-dataset"),
     });
   }
@@ -159,6 +187,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-key",
       label: "Grant access",
+      disabled: !stateAdmits("manage_grants"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () => emitAction("grant-access", "grants", "issue-grants"),
     });
   } else if (props.canRequestAccess) {
@@ -172,22 +202,33 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-card-account-details-outline",
       label: "Edit profile",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openProfileModal,
     });
     actions.push({
       icon: "mdi-pencil",
       label: "Edit name",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openEditModal,
     });
   }
-  if (props.canArchive || props.canUnarchive) {
+  // Which way the toggle points is the state's answer, not the column's. The two are the
+  // same fact today, and reading the answer keeps them from drifting apart: an archived
+  // collection whose state withholds `unarchive` offers nothing here rather than a control
+  // that fails.
+  if (props.canUnarchive) {
     actions.push({
-      icon: props.collection.is_archived
-        ? "mdi-archive-arrow-up-outline"
-        : "mdi-archive-outline",
-      label: props.collection.is_archived
-        ? "Unarchive this collection"
-        : "Archive this collection",
+      icon: "mdi-archive-arrow-up-outline",
+      label: "Unarchive this collection",
+      danger: true,
+      onClick: () => emit("toggle-archive"),
+    });
+  } else if (props.canArchive) {
+    actions.push({
+      icon: "mdi-archive-outline",
+      label: "Archive this collection",
       danger: true,
       onClick: () => emit("toggle-archive"),
     });

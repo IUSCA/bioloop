@@ -1414,7 +1414,11 @@ API suite passes, 102 suites, and `public.cache.test.js` passes on its own.
   member to its child. Line 2 refuses the change with a 409.
 - The four archive messages are one, `RESTRICTED_MESSAGE`.
 - The group and collection archive dialogs list the actions `GET /v2/restrictions/:type/blocked-actions`
-  returns. `restrictionLabels.test.js` fails when a blocked action has no label.
+  returns. `restrictionLabels.test.js` fails when a blocked action has no label. (Both names
+  changed afterwards: the restrictions plan replaced the route with
+  `GET /v2/states/:type/archived/forbidden-actions`, served from each resource type's own state
+  rules, and renamed the test to `stateLabels.test.js` and the UI table to `stateLabels.js`.
+  The check itself is unchanged.)
 - A collection that has held a dataset, or has any access request, refuses deletion. The
   capability map leaves `delete` out, and `deleteCollection` answers 409 under a row lock.
 - A search of `GET /v2/users` by a caller who is not a platform admin needs three characters.

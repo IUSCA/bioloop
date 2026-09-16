@@ -123,6 +123,7 @@ import RequestOutcomeCard from "@/components/v2/access-requests/RequestOutcomeCa
 import RequestedAccessCard from "@/components/v2/access-requests/RequestedAccessCard.vue";
 import ReviewRequestModal from "@/components/v2/access-requests/ReviewRequestModal.vue";
 import SubjectCoverageCard from "@/components/v2/access-requests/SubjectCoverageCard.vue";
+import { useCapabilities } from "@/composables/useCapabilities";
 import AccessRequestService from "@/services/v2/access-requests";
 import * as datetime from "@/services/datetime";
 import toast from "@/services/toast";
@@ -172,14 +173,15 @@ const resourceName = computed(() => {
   );
 });
 
-const capabilities = computed(
-  () => new Set(request.value?._meta?.capabilities ?? []),
-);
+const { can, available } = useCapabilities(request);
 
-// The transition table decides both: `review` only while under review, `withdraw` only for the
-// requester and only before a decision.
-const canReview = computed(() => capabilities.value.has("review"));
-const canWithdraw = computed(() => capabilities.value.has("withdraw"));
+// Both controls are hidden rather than disabled, because neither action can return: a decided
+// request is not reviewed again, and a withdrawn one is not withdrawn twice. `available` is
+// the request's own state, which carries the status and the state of the dataset or collection
+// it names — an archived target stops the request moving either way, and no capability says so.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const canReview = computed(() => can("review") && available("review"));
+const canWithdraw = computed(() => can("withdraw") && available("withdraw"));
 
 const summary = computed(() => request.value?.access_summary ?? null);
 

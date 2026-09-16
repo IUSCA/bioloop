@@ -25,6 +25,8 @@
               size="small"
               color="success"
               preset="primary"
+              :disabled="!stateAdmits('create_child')"
+              :title="stateAdmits('create_child') ? null : DISABLED_REASON"
               @click="handleCreateSubgroup"
               v-if="props.canCreate"
             >
@@ -81,7 +83,13 @@
                   </template>
                 </template>
                 <template v-if="props.canCreate" #actions>
-                  <VaButton @click="handleCreateSubgroup">
+                  <VaButton
+                    :disabled="!stateAdmits('create_child')"
+                    :title="
+                      stateAdmits('create_child') ? null : DISABLED_REASON
+                    "
+                    @click="handleCreateSubgroup"
+                  >
                     <div class="flex items-center gap-3 px-2">
                       <i-mdi-plus class="text-lg" />
                       <span class="font-medium">Create Subgroup</span>
@@ -136,7 +144,31 @@ import GroupService from "@/services/v2/groups";
 const props = defineProps({
   group: { type: Object, required: true },
   canCreate: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the group's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This group is archived.";
 
 const emit = defineEmits(["count-changed"]);
 

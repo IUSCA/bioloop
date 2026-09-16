@@ -68,6 +68,8 @@
             v-if="props.canManageGrants"
             color="success"
             icon="add"
+            :disabled="!stateAdmits('manage_grants')"
+            :title="stateAdmits('manage_grants') ? null : DISABLED_REASON"
             @click="openIssueGrantModal"
           >
             Grant Access
@@ -177,7 +179,31 @@ function viewRequest(requestId) {
 const props = defineProps({
   collection: { type: Object, required: true },
   canManageGrants: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the collection's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the collection's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This collection is archived.";
 
 const emit = defineEmits(["count-changed"]);
 

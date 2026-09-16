@@ -38,6 +38,8 @@
 
             <VaButton
               size="small"
+              :disabled="!stateAdmits('add_dataset')"
+              :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
               @click="openAddDatasetModal"
               v-if="props.canCreate"
             >
@@ -160,6 +162,10 @@
                     <div class="flex flex-col items-start gap-2">
                       <VaButton
                         v-if="props.canRemove"
+                        :disabled="!stateAdmits('remove_dataset')"
+                        :title="
+                          stateAdmits('remove_dataset') ? null : DISABLED_REASON
+                        "
                         @click="openRemoveDatasetModal(rowData)"
                         size="small"
                         preset="secondary"
@@ -216,7 +222,12 @@
                 </template>
                 <template #actions>
                   <!-- Call to action -->
-                  <VaButton v-if="props.canCreate" @click="openAddDatasetModal">
+                  <VaButton
+                    v-if="props.canCreate"
+                    :disabled="!stateAdmits('add_dataset')"
+                    :title="stateAdmits('add_dataset') ? null : DISABLED_REASON"
+                    @click="openAddDatasetModal"
+                  >
                     <div class="flex items-center gap-3 px-2">
                       <i-mdi-plus class="text-lg" />
                       <span class="font-medium">Add Dataset</span>
@@ -244,6 +255,7 @@
 </template>
 
 <script setup>
+import { holds } from "@/composables/useCapabilities";
 import * as datetime from "@/services/datetime";
 import { formatBytes } from "@/services/utils";
 import CollectionService from "@/services/v2/collections";
@@ -254,7 +266,31 @@ const props = defineProps({
   collection: { type: Object, required: true },
   canCreate: { type: Boolean, required: true },
   canRemove: { type: Boolean, required: true },
+  /**
+   * `_meta.available_actions`: what the collection's own state admits right now, or null when the
+   * response did not say. A control the state withholds stays visible and disabled, because
+   * the caller keeps the authority and will hold it again.
+   *
+   * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+   */
+  availableActions: { type: Array, default: null },
 });
+
+/**
+ * Whether the collection's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const DISABLED_REASON = "This collection is archived.";
 
 const emit = defineEmits(["count-changed", "request-access"]);
 
@@ -275,11 +311,11 @@ const ITEMS_PER_PAGE_OPTIONS = [20, 50, 100];
 // Staging is authorized per dataset, so offer it only when some row on this page accepts it.
 // The stage route still checks every dataset it is asked to stage.
 const canStage = computed(() =>
-  datasets.value.some((d) => d._meta?.capabilities?.includes("request_stage")),
+  datasets.value.some((d) => holds(d, "request_stage")),
 );
 
 const hasRowsThatWillNotOpen = computed(() =>
-  datasets.value.some((d) => !d._meta?.capabilities?.includes("view_metadata")),
+  datasets.value.some((d) => !holds(d, "view_metadata")),
 );
 
 const areFiltersActive = computed(() => {

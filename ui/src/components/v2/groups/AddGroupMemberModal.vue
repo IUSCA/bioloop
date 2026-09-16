@@ -201,8 +201,11 @@ async function sendInvite() {
     emit("invited");
   } catch (err) {
     const status = err?.response?.status;
+    // 400 rejects the address; 409 is the group's state refusing, because an archived group
+    // takes no invitations. Both say why, so both show the message.
+    // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
     toast.error(
-      status === 400
+      status === 400 || status === 409
         ? err?.response?.data?.message || "That address cannot be invited"
         : "Could not send the invitation",
     );

@@ -24,7 +24,7 @@ const state = require('@/state');
 const DIALOG_TYPES = ['group', 'collection', 'dataset', 'grant', 'access_request'];
 
 const LABELS = fs.readFileSync(
-  path.join(__dirname, '..', '..', '..', 'ui', 'src', 'services', 'v2', 'restrictionLabels.js'),
+  path.join(__dirname, '..', '..', '..', 'ui', 'src', 'services', 'v2', 'stateLabels.js'),
   'utf8',
 );
 const keys = [...LABELS.matchAll(/^\s*"([a-z_]+\.[a-z_]+)":/gm)].map((m) => m[1]);

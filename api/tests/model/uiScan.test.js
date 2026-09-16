@@ -27,13 +27,23 @@ const ROOTS = ['pages/v2', 'components/v2'];
 /** Capabilities the API derives outside the action tables. @see src/authorization/index.js — mayRequestAccess */
 const DERIVED_CAPABILITIES = ['request_access'];
 
-const RAW_FIELDS = /\b(is_archived|is_deleted|revoked_at|valid_until|requester_id|subject_id)\b/;
+const RAW_FIELDS = /\b(is_archived|is_deleted|is_active|revoked_at|valid_until|requester_id|subject_id)\b/;
 const REQUEST_STATUSES = /["'](DRAFT|UNDER_REVIEW|APPROVED|PARTIALLY_APPROVED|REJECTED|WITHDRAWN)["']/;
+/** An invitation's status is its state, answered by `available_actions` like any other. */
+const INVITATION_STATUSES = /["'](PENDING|ACCEPTED|CANCELLED)["']/;
+/**
+ * A page handing a resource's archived column to a child. The child then decides which way an
+ * archive control points from the column rather than from what the state admits, which is the
+ * drift this scan exists to catch. A dialog takes the action instead.
+ */
+const ARCHIVED_PROP = /:is-archived=/;
 const GATE_ATTRIBUTE = /(v-if|v-else-if|v-show|:disabled)="([^"]*)"?/;
 const TESTS_A_VALUE = /===|!==|&&|\|\||!\w|!!/;
 
 const RAW = 'raw-field';
 const STATUS = 'request-status';
+const INVITATION = 'invitation-status';
+const ARCHIVED_BINDING = 'archived-prop';
 
 /**
  * Display-only hits as `[rule, file, match, reason]`. `file` is relative to ui/src; `match` is a
@@ -51,7 +61,21 @@ const ALLOWED = [
   [RAW, 'components/v2/groups/GroupCard.vue', 'v-if="group.is_archived"', 'Archived badge'],
   [RAW, 'components/v2/audit/templates/grants/GrantCreated.vue', 'valid_until', 'audit record text'],
   [RAW, 'components/v2/audit/utils/UserToken.vue', 'subject_id', 'the word "you" in an audit row'],
+  // `is_active` on a grant row, used for how the row reads rather than for what it offers.
+  // Revoke itself asks the grant's state, in `available_actions`.
+  [RAW, 'components/v2/grants/GrantRow.vue', 'alsoConfers.length && props.grant.is_active', 'what the grant confers'],
+  [RAW, 'components/v2/grants/GrantRow.vue', 'Badge v-if="!props.grant.is_active"', 'Removed or Inactive badge'],
+  [RAW, 'components/v2/grants/GrantsBySubjectPanel.vue', 'const revoked =', 'sorts revoked rows last'],
+  // An invitation's status, shown as a badge or chosen as a filter. Withdraw asks the
+  // invitation's state instead.
+  [INVITATION, 'components/v2/groups/GroupInvitationsTab.vue', "activeStatus === 'PENDING'", 'empty-state wording'],
+  [INVITATION, 'components/v2/groups/GroupInvitationsTab.vue', 'if (row.status === "PENDING")', 'status badge'],
+  [INVITATION, 'components/v2/groups/GroupInvitationsTab.vue', 'if (row.status === "ACCEPTED")', 'status badge'],
+  [INVITATION, 'components/v2/groups/GroupInvitationsTab.vue', 'if (activeStatus.value === "PENDING")', 'which total the badge counts'],
   [RAW, 'components/v2/grants/SubjectPanelHeader.vue', 'is_archived === true', 'archived group label'],
+  // Deletion is final, so a control the state withholds is hidden rather than disabled. This
+  // chooses between those two presentations; what is permitted is still `available_actions`.
+  [RAW, 'pages/v2/datasets/[id]/index.vue', 'const stateIsFinal', 'hide-or-disable, not a permission'],
   [RAW, 'components/v2/access-requests/RequestContextHeader.vue', '!!props.request?.requester_id', 'self label'],
   [RAW, 'components/v2/access-requests/RequestDetailsCard.vue', '!!props.request?.requester_id', 'self label'],
   [RAW, 'components/v2/groups/GroupCreateModal.vue', 'auth.user?.subject_id ?', 'the new group\'s admin list'],
@@ -114,6 +138,8 @@ function scan() {
       if ((comparesStatus || /\.includes\([\w.?]*\.status\)/.test(text))
         && (file.includes('access-requests') || /request/i.test(joined))) add(STATUS);
       if (/\.implies\b/.test(text)) add('implies');
+      if (INVITATION_STATUSES.test(text) && /(===|!==|\.includes\()/.test(text)) add(INVITATION);
+      if (ARCHIVED_PROP.test(text)) add(ARCHIVED_BINDING);
     });
   });
   return hits;

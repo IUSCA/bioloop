@@ -208,9 +208,31 @@ const props = defineProps({
   canAddMember: { type: Boolean, default: false },
   canCreateSubgroup: { type: Boolean, default: false },
   canCreateCollection: { type: Boolean, default: false },
+  /**
+   * `_meta.available_actions`: what the group's own state admits right now, or null when the
+   * response did not say. One prop rather than a boolean per action, because the state answer
+   * is one list and splitting it up invites the two halves to disagree.
+   */
+  availableActions: { type: Array, default: null },
 });
 
 const emit = defineEmits(["toggle-archive", "update", "action-requested"]);
+
+/**
+ * Whether the group's state admits the action.
+ *
+ * A null list means the response did not answer, and every control stays usable: the service
+ * checks the state again under its own lock, so a wrongly enabled control costs a 409 rather
+ * than a wrong write.
+ */
+function stateAdmits(action) {
+  return props.availableActions === null
+    ? true
+    : props.availableActions.includes(action);
+}
+
+/** The words a disabled control shows for why the state withholds it. */
+const ARCHIVED_REASON = "This group is archived.";
 
 /**
  * Whether the band shows the member-uploads cell.
@@ -282,6 +304,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-account-plus",
       label: "Add a member",
+      disabled: !stateAdmits("add_member"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () => emitAction("add-member", "members", "add-member"),
     });
   }
@@ -289,6 +313,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-sitemap-outline",
       label: "Create a subgroup",
+      disabled: !stateAdmits("create_child"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () =>
         emitAction("create-subgroup", "subgroups", "create-subgroup"),
     });
@@ -297,6 +323,8 @@ const quickActions = computed(() => {
     actions.push({
       icon: getIcon("collection", { outlined: true }),
       label: "Create a collection",
+      disabled: !stateAdmits("add_collection"),
+      disabledReason: ARCHIVED_REASON,
       onClick: () =>
         emitAction("create-collection", "collections", "create-collection"),
     });
@@ -305,22 +333,33 @@ const quickActions = computed(() => {
     actions.push({
       icon: "mdi-card-account-details-outline",
       label: "Edit profile",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openProfileModal,
     });
     actions.push({
       icon: "mdi-pencil",
       label: "Edit name",
+      disabled: !stateAdmits("edit_metadata"),
+      disabledReason: ARCHIVED_REASON,
       onClick: openEditModal,
     });
   }
-  if (props.canArchive || props.canUnarchive) {
+  // Which way the toggle points is the state's answer, not the column's. The two are the
+  // same fact today, and reading the answer keeps them from drifting apart: an archived
+  // group whose state withholds `unarchive` offers nothing here rather than a control that
+  // fails.
+  if (props.canUnarchive) {
     actions.push({
-      icon: props.group.is_archived
-        ? "mdi-archive-arrow-up-outline"
-        : "mdi-archive-outline",
-      label: props.group.is_archived
-        ? "Unarchive this group"
-        : "Archive this group",
+      icon: "mdi-archive-arrow-up-outline",
+      label: "Unarchive this group",
+      danger: true,
+      onClick: () => emit("toggle-archive"),
+    });
+  } else if (props.canArchive) {
+    actions.push({
+      icon: "mdi-archive-outline",
+      label: "Archive this group",
       danger: true,
       onClick: () => emit("toggle-archive"),
     });

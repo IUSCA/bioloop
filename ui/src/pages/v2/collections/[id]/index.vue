@@ -113,6 +113,7 @@
           :can-issue-grants="can('manage_grants')"
           :can-request-access="can('request_access')"
           :can-add-dataset="can('add_dataset')"
+          :available-actions="availableActionList"
           @update="fetchCollectionData"
           @toggle-archive="openArchiveModal"
           @action-requested="handleActionRequested"
@@ -124,6 +125,7 @@
           :collection="collection"
           :can-create="can('add_dataset')"
           :can-remove="can('remove_dataset')"
+          :available-actions="availableActionList"
           @count-changed="fetchDatasetCount"
           @request-access="
             handleActionRequested({
@@ -138,6 +140,7 @@
           v-else-if="activeTab === 'grants' && can('list_grants')"
           :collection="collection"
           :can-manage-grants="can('manage_grants')"
+          :available-actions="availableActionList"
           @count-changed="fetchGrantsCount"
         />
 
@@ -169,7 +172,7 @@
         :collection-id="props.id"
         :collection-name="collection.name"
         :collection-slug="collection.slug"
-        :is-archived="collection.is_archived"
+        :action="canUnarchive ? 'unarchive' : 'archive'"
         :affected-datasets="counts.datasets"
         @update="fetchCollectionData"
       />
@@ -178,6 +181,7 @@
 </template>
 
 <script setup>
+import { useCapabilities } from "@/composables/useCapabilities";
 import constants from "@/constants";
 import AccessRequestService from "@/services/v2/access-requests";
 import CollectionService from "@/services/v2/collections";
@@ -200,20 +204,24 @@ const grantsTabRef = ref(null);
 const datasetsTabRef = ref(null);
 const requestsTabRef = ref(null);
 
-const capabilities = computed(
-  () => new Set(collection.value?._meta?.capabilities ?? []),
-);
+// `can` is the caller's authority and `enabled` adds what the collection's state admits.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const { can, enabled, availableActions } = useCapabilities(collection);
+
 const callerRole = computed(() =>
   badgeFor(collection.value?._meta?.standing, "collection"),
 );
 
-function can(action) {
-  return capabilities.value.has(action);
-}
+// Both are capabilities a collection admin holds whatever the state, so the state is what
+// decides which way the toggle points.
+const canArchive = computed(() => enabled("archive"));
 
-const canArchive = computed(() => can("archive"));
+const canUnarchive = computed(() => enabled("unarchive"));
 
-const canUnarchive = computed(() => can("unarchive"));
+/** The state's answer as the Overview tab takes it: a list, or null when unanswered. */
+const availableActionList = computed(() =>
+  availableActions.value ? [...availableActions.value] : null,
+);
 
 function setNavBreadcrumbs(c) {
   const items = [{ label: "Collections", to: "/v2/collections" }];

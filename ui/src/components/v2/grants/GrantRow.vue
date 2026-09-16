@@ -77,9 +77,12 @@
       @navigate-to-request="emit('navigate-to-request', $event)"
     />
 
-    <!-- Revoke Button -->
+    <!-- Revoke Button. Whether this grant can still be revoked is its own state, not a fact
+         about the caller: a grant already revoked has nothing left to revoke, and one whose
+         dataset or collection is archived or deleted has stopped changing.
+         @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization -->
     <button
-      v-if="props.canRevoke && props.grant.is_active"
+      v-if="props.canRevoke && admits(props.grant, 'revoke')"
       type="button"
       class="mt-1 self-start text-sm px-3 py-1.5 rounded-md border border-solid text-red-700 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
       @click.stop="emit('revoke', props.grant)"
@@ -90,6 +93,7 @@
 </template>
 
 <script setup>
+import { admits } from "@/composables/useCapabilities";
 import * as datetime from "@/services/datetime";
 import { daysUntilExpiry } from "./grantExpiry.js";
 

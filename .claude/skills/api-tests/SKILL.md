@@ -520,6 +520,19 @@ Each hit is either a property that moved, and should say where, or one that is g
   `tests/routes/public.cache.test.js`, and the owner-change refusal is
   `tests/authorization/route_policy_bindings.test.js`.
 
+## Parallel tool calls leave the shell's cwd wherever the last one landed
+
+Every `cd` in a Bash call changes the session's working directory for the calls that follow, and
+several calls issued in one turn finish in an unpredictable order. A later call that uses a
+relative path then resolves it against whichever directory won, and the failure does not look
+like a path problem: `jest` prints nothing at all and looks like a pass, `grep` reports "No such
+file or directory" for a file that plainly exists, and a shell glob reports "no matches found".
+
+**Use an absolute path in every Bash call, for the binary and for every file argument.** Do not
+rely on a `cd` from an earlier call in the same turn, and do not rely on one from a parallel
+call in the same turn either. This cost three separate failures in one session, each of which
+first read as a broken test or a missing file.
+
 ## Keeping this current
 
 When a session hits a failure this page does not explain — a new stale pattern, a suite that

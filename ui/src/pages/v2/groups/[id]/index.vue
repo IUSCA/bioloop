@@ -123,11 +123,12 @@
           :ancestors="ancestors"
           :counts="counts"
           :can-edit="can('edit_metadata')"
-          :can-archive="can('archive')"
-          :can-unarchive="can('unarchive')"
+          :can-archive="enabled('archive')"
+          :can-unarchive="enabled('unarchive')"
           :can-add-member="can('add_member')"
           :can-create-subgroup="can('create_child')"
           :can-create-collection="can('add_collection')"
+          :available-actions="availableActionList"
           @toggle-archive="openArchiveModal"
           @update="fetchGroupData"
           @action-requested="handleActionRequested"
@@ -141,6 +142,7 @@
           :can-remove="can('remove_member')"
           :can-edit-role="can('edit_member_role')"
           :can-invite="can('invite')"
+          :available-actions="availableActionList"
           @count-changed="handleMembersUpdate"
           @invite="openAddMemberModal"
         />
@@ -150,6 +152,7 @@
           v-else-if="activeTab === 'subgroups'"
           :group="group"
           :can-create="can('create_child')"
+          :available-actions="availableActionList"
           @count-changed="handleSubgroupsUpdate"
         />
 
@@ -158,6 +161,7 @@
           :group-id="props.id"
           :group="group"
           :can-create="can('add_dataset')"
+          :available-actions="availableActionList"
           @count-changed="handleDatasetsUpdate"
         />
 
@@ -166,6 +170,7 @@
           v-else-if="activeTab === 'collections'"
           :group="group"
           :can-create="can('add_collection')"
+          :available-actions="availableActionList"
           @count-changed="handleCollectionsUpdate"
         />
 
@@ -174,6 +179,7 @@
           v-else-if="activeTab === 'invitations'"
           :group-id="props.id"
           :can-invite="can('invite')"
+          :available-actions="availableActionList"
           @count-changed="handleInvitationsUpdate"
           @invite="openAddMemberModal"
         />
@@ -204,7 +210,7 @@
         :group-id="props.id"
         :group-name="group.name"
         :group-slug="group.slug"
-        :is-archived="group.is_archived"
+        :action="enabled('unarchive') ? 'unarchive' : 'archive'"
         :affected-members="counts.members"
         :affected-datasets="counts.datasets"
         :affected-collections="counts.collections"
@@ -216,6 +222,7 @@
 
 <script setup>
 import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
+import { useCapabilities } from "@/composables/useCapabilities";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
@@ -279,12 +286,14 @@ const avatarUrl = computed(() =>
 const callerRole = computed(() =>
   badgeFor(group.value?._meta?.standing, "group"),
 );
-const capabilities = computed(
-  () => new Set(group.value?._meta?.capabilities ?? []),
+// `can` is the caller's authority and `enabled` adds what the group's state admits.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const { can, enabled, availableActions } = useCapabilities(group);
+
+/** The state's answer as the Overview tab takes it: a list, or null when unanswered. */
+const availableActionList = computed(() =>
+  availableActions.value ? [...availableActions.value] : null,
 );
-function can(action) {
-  return capabilities.value.has(action);
-}
 
 const showMembers = computed(() => can("view_members"));
 const showDescendants = computed(() => can("view_descendants"));

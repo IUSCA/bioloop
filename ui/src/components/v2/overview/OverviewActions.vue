@@ -13,12 +13,23 @@
 
           <button
             type="button"
-            class="flex items-center gap-3 -mx-2 px-2 py-2 rounded-md text-xs-plus font-medium text-left bg-transparent border-0 cursor-pointer"
-            :class="
+            class="flex items-center gap-3 -mx-2 px-2 py-2 rounded-md text-xs-plus font-medium text-left bg-transparent border-0"
+            :class="[
+              action.disabled
+                ? 'opacity-50 cursor-not-allowed'
+                : 'cursor-pointer',
               action.danger
-                ? 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                : 'text-gray-900 dark:text-gray-100 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300'
-            "
+                ? 'text-red-700 dark:text-red-400'
+                : 'text-gray-900 dark:text-gray-100',
+              action.disabled || action.danger
+                ? ''
+                : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300',
+              action.disabled || !action.danger
+                ? ''
+                : 'hover:bg-red-50 dark:hover:bg-red-900/20',
+            ]"
+            :disabled="action.disabled"
+            :title="action.disabled ? action.disabledReason : null"
             @click="action.onClick"
           >
             <span
@@ -54,12 +65,19 @@
  * An action marked `danger` is drawn in red below a rule. Archiving lives there: it has to
  * be findable and hard to hit by accident, and the modal behind it is the real guard.
  *
+ * A `disabled` action stays visible and stops working, with `disabledReason` as its tooltip.
+ * That is the display rule for resource state: an archived collection's admin still holds
+ * `edit_metadata`, so hiding the control would say they lack the authority, which is false.
+ * An action the state can never readmit is left out of the list instead of disabled.
+ *
  * @see docs/design/groups/ui-information-architecture.md — The Overview tab
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  */
 const props = defineProps({
   /**
-   * [{ icon, label, onClick, danger? }] — Iconify names, already filtered by permission.
-   * Destructive entries go last; the component draws the rule above the first of them.
+   * [{ icon, label, onClick, danger?, disabled?, disabledReason? }] — Iconify names, already
+   * filtered by permission. Destructive entries go last; the component draws the rule above
+   * the first of them.
    */
   actions: { type: Array, default: () => [] },
 });

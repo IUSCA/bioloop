@@ -471,12 +471,23 @@ router.get(
     // #swagger.summary = 'List invitations issued by this group'
 
     const { status, limit, offset } = req.query;
-    res.json(await invitationService.listInvitations({
+    const listed = await invitationService.listInvitations({
       group_id: req.params.id,
       status: status === 'all' ? null : status,
       limit,
       offset,
-    }));
+    });
+
+    // What each invitation's own state admits, so the tab offers Withdraw from the answer
+    // rather than from the status. The group's column is what the rules read, and it stays
+    // out of the row the caller sees.
+    res.json({
+      ...listed,
+      data: listed.data.map(({ group, ...row }) => ({
+        ...row,
+        _meta: { available_actions: state.availableActions('invitation', { ...row, group }) },
+      })),
+    });
   }),
 );
 

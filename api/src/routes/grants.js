@@ -9,6 +9,7 @@ const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin, projectRows } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
+const state = require('@/state');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
 const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
@@ -449,9 +450,17 @@ router.get(
       subject_id,
     });
 
+    // Each group names a different resource, and a grant's state reads what it concerns as
+    // well as its own `revoked_at`. The batch reader fetches the archived and deleted columns
+    // the rules need; the hydrated resource above does not carry the owning group.
+    const targets = await state.readTargetStates(prisma, grouped.map(({ resource }) => resource.id));
+
     const filteredData = grouped.map(({ resource, grants }) => ({
       resource: projectObject(resource, baseAttributes.resource),
-      grants: grants.map((g) => req.permission.filter(g)),
+      grants: grants.map((g) => ({
+        ...req.permission.filter(g),
+        _meta: { available_actions: state.availableActions('grant', { ...g, target: targets.get(resource.id) }) },
+      })),
     }));
 
     res.json(filteredData);
@@ -493,9 +502,17 @@ router.get(
       ...options,
     });
 
+    // Every grant here concerns the one resource in the path, so its state is a single read
+    // and only `revoked_at` separates the rows.
+    const target = await state.readTargetState(prisma, resource_id);
+    if (!target) throw createError.NotFound('Resource not found');
+
     const filteredData = grouped.map(({ subject, grants }) => ({
       subject: projectObject(subject, baseAttributes.subject),
-      grants: grants.map((g) => req.permission.filter(g)),
+      grants: grants.map((g) => ({
+        ...req.permission.filter(g),
+        _meta: { available_actions: state.availableActions('grant', { ...g, target }) },
+      })),
     }));
 
     res.json(filteredData);
@@ -594,7 +611,15 @@ router.get(
       active: is_active,
     });
 
-    const filteredGrants = grants.map((g) => req.permission.filter(g));
+    // Unlike the grouped lists, this one can be asked for inactive grants, so `revoked_at`
+    // separates the rows. The resource is the one in the path, so its state is a single read.
+    const target = await state.readTargetState(prisma, resource_id);
+    if (!target) throw createError.NotFound('Resource not found');
+
+    const filteredGrants = grants.map((g) => ({
+      ...req.permission.filter(g),
+      _meta: { available_actions: state.availableActions('grant', { ...g, target }) },
+    }));
     res.json(filteredGrants);
   }),
 );

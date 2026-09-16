@@ -312,6 +312,9 @@
     "useChangeTracker": true,
     "FONT_SIZES": true,
     "applyFontSize": true,
-    "useFontSize": true
+    "useFontSize": true,
+    "useCapabilities": true,
+    "admits": true,
+    "holds": true
   }
 }

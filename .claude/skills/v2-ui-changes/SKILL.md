@@ -250,6 +250,18 @@ Format only the files you changed. `src/pages/launch-notebook.vue` and
 `src/styles/base.css` are unformatted at HEAD, and reformatting them adds unrelated diff
 noise.
 
+## zsh does not split an unquoted variable, so a file list in one becomes one filename
+
+This shell is zsh, where `$F` expands to a single word even when it holds spaces. Collecting
+several paths in a variable and passing it as `eslint $F` therefore hands the tool one enormous
+filename, and the error names the whole list as a missing file:
+
+    No files matching the pattern "src/a.vue src/b.vue src/c.vue" were found.
+
+Write the paths out in the command, or use an array and `"${F[@]}"`. Do not reach for
+`$(echo $F)` or `${=F}`; spelling the list out is clearer than relying on either. Bash splits
+here and zsh does not, which is why a command copied from bash notes fails this way.
+
 ## Shell traps in this environment
 
 - `cp` and `rm` are aliased to prompt. Use `/bin/cp -f`, `/bin/rm -f`, or `git rm`.
@@ -536,17 +548,50 @@ is an auto-import directory, so adding a file there regenerates `ui/auto-imports
 The console shows 401s from `/api/notifications/stream` on every page, before and after
 login. They are unrelated to any style change.
 
-## A page gates on capabilities, standing, and display-only facts
+## A page gates on two answers, standing, and display-only facts
 
-A v2 page may gate on `_meta.capabilities`, on `_meta.standing`, and on a fact that only changes
-text. It may not re-derive restriction, identity, request state, grant activity, implication, or
-"may request" from raw fields. The API sends each of those: the capability map omits a restricted
-or wrong-state action, grant rows carry `is_active`, `withdraw` and `review` come from the
-transition table, `request_access` is a derived capability, and `GET /grants/:id/revoke-preview`
-answers what revoking leaves.
+A v2 response carries **two** separate answers about a resource, and a control usually needs
+both. `_meta.capabilities` says what the caller could do. `_meta.available_actions` says what the
+resource's own state admits. They are deliberately independent: an archived group's admin keeps
+`edit_metadata` in the capability map, because archiving is not a loss of authority, and the
+group's state leaves the action out.
 
-`api/tests/model/uiScan.test.js` enforces this. A new badge or label that reads a raw field needs an
-`ALLOWED` row with its reason. A gate needs a capability from the API instead.
+**Do not expect the capability map to account for state.** It did once, through the restriction
+layer, and an older version of this page said so. Since the state layer landed, a capability is
+the caller's authority alone.
+
+`ui/src/composables/useCapabilities.js` is the one helper. It exposes `can` (authority),
+`available` (state), and `enabled` (both), plus `holds` and `admits` for list rows, where a
+composable per row would be noise.
+
+**Which function to use is the display rule, and the two fail in opposite directions on purpose.**
+
+- **Disable** a control whose state could readmit it, and use `enabled`. An archived group is
+  reversible, so the control stays visible and stops working, with the state as its tooltip.
+  `enabled` treats a *missing* `available_actions` as "this route does not say" and falls back to
+  the capability, because reading a missing key as "nothing is admitted" would disable every
+  control on the lists that do not serve it yet.
+- **Hide** a control whose state can never readmit it, and use `available` or `admits`. A decided
+  access request is never reviewed again; a deleted dataset has no unarchive. These fail closed: a
+  row with no `available_actions` admits nothing, which is the safe direction, because the service
+  refuses the action anyway.
+
+**An action the state container does not declare never appears in `available_actions`, and
+gating on it disables the control forever.** `request_access` is the live example: the API derives
+that capability outside the action tables and folds its own state check into it, so it has no
+state rule and cannot appear in the list. Check the container under `api/src/state/builtin/`
+before gating a control on a name. The boot-time `verifyInSync` guarantees every *policy* action
+has a rule, so those are safe; derived capabilities are the exception.
+
+`api/tests/model/uiScan.test.js` enforces this. It flags `is_archived`, `is_deleted`, `is_active`,
+`revoked_at`, the request and invitation statuses, and any `:is-archived` binding. A new badge or
+label that reads a raw field needs an `ALLOWED` row with its reason. A gate needs an answer from
+the API instead.
+
+**A dialog takes the action, not the column.** `GroupArchiveConfirmModal` and
+`CollectionArchiveConfirmModal` take `action="archive"|"unarchive"`, which the page picks with
+`enabled("unarchive") ? "unarchive" : "archive"`. They used to take `:is-archived`, which let the
+dialog confirm one thing while the page offered another.
 
 `stores/v2/me.js` holds the three facts from `GET /v2/users/me`: `isPlatformAdmin`,
 `adminGroupCount`, and `oversightGroupCount`. Call `ensureLoaded()` before reading them. No v2 file
@@ -559,13 +604,19 @@ Every demo cast member holds only the `user` role, and `dev-login` refuses `priy
 remove it after: `prisma.user_role.create({ data: { user_id: frank.id, role_id: adminRole.id } })`,
 then `deleteMany` the same row.
 
-## The archive dialogs list what the restriction layer blocks
+## The archive dialogs list what each resource type's archived state forbids
 
 `GroupArchiveConfirmModal.vue` and `CollectionArchiveConfirmModal.vue` fetch
-`GET /v2/restrictions/ARCHIVED/blocked-actions` when shown and render `prohibitedLabels` from
-`services/v2/restrictionLabels.js`. A new mutating action needs an entry in `ACTION_LABELS`;
-`api/tests/model/restrictionLabels.test.js` fails until it has one. If the fetch fails, the list
-is empty rather than guessed.
+`GET /v2/states/:type/archived/forbidden-actions` once per type in their scope when shown, and
+render `prohibitedLabels` from `services/v2/stateLabels.js`. The group dialog's scope is the
+group, collection, dataset, grant, and access request; the collection's is the collection, grant,
+and access request. A new mutating action needs an entry in `ACTION_LABELS`;
+`api/tests/model/stateLabels.test.js` fails until it has one, and fails too when an entry names an
+action the archived state admits. If a fetch fails, the list is empty rather than guessed.
+
+The route answers from the state container's own `examples.archived` row, so a resource type whose
+container names no `archived` example answers 404 rather than an empty list — an empty list would
+read as "archiving forbids nothing here".
 
 The subject pickers search `GET /v2/users` only from three characters and ask for at most ten
 rows, because a caller who is not a platform admin is refused anything else.

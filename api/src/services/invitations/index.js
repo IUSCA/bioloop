@@ -175,6 +175,10 @@ async function listInvitations({
         expires_at: true,
         cancellation_reason: true,
         inviter: { select: { name: true, username: true } },
+        // An invitation's state rules read the group's archived column as well as the status,
+        // so the list selects it and the route answers without a second query.
+        // @see src/state/builtin/invitation.js
+        group: { select: { is_archived: true } },
       },
     }),
   ]);

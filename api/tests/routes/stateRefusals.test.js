@@ -28,9 +28,12 @@ const groupRoutes = require('@/routes/groups');
 const collectionRoutes = require('@/routes/collections');
 const datasetRoutes = require('@/routes/datasets_v2');
 const stateRoutes = require('@/routes/states');
+const grantRoutes = require('@/routes/grants');
 const groupsService = require('@/services/groups');
+const invitationService = require('@/services/invitations');
 const {
   createTestUser, createTestGroup, createTestDataset, createTestCollection,
+  createTestGrant, getAccessTypeId, deleteGrants,
   deleteCollection, deleteDataset, deleteGroup, deleteUser,
 } = require('../services/helpers');
 
@@ -45,12 +48,14 @@ app.use('/groups', groupRoutes);
 app.use('/collections', collectionRoutes);
 app.use('/v2/datasets', datasetRoutes);
 app.use('/v2/states', stateRoutes);
+app.use('/grants', grantRoutes);
 app.use(errorHandler);
 
 let admin;
 let group;
 let dataset;
 let collection;
+let grant;
 
 beforeAll(async () => {
   admin = await createTestUser('_sr_admin');
@@ -60,10 +65,26 @@ beforeAll(async () => {
   });
   dataset = await createTestDataset(group.id, '_sr_ds');
   collection = await createTestCollection(group.id, admin.subject_id, '_sr_coll');
+  // A grant and an invitation to read the state answer off. Both are made while the group is
+  // active, because an archived group takes no new invitation.
+  grant = await createTestGrant({
+    subject_id: admin.subject_id,
+    resource_id: collection.id,
+    access_type_id: await getAccessTypeId('COLLECTION:VIEW_METADATA'),
+    granted_by: admin.subject_id,
+  });
+  await invitationService.createInvitation({
+    group_id: group.id,
+    email: '_sr_invitee@example.org',
+    role: 'MEMBER',
+    invited_by: admin.subject_id,
+  });
   currentUser = admin;
 }, 60_000);
 
 afterAll(async () => {
+  await prisma.group_invitation.deleteMany({ where: { group_id: group.id } }).catch(() => {});
+  await deleteGrants([grant.id]).catch(() => {});
   await deleteCollection(collection.id).catch(() => {});
   await deleteDataset(dataset.id).catch(() => {});
   await deleteGroup(group.id).catch(() => {});
@@ -80,6 +101,21 @@ describe('an active group', () => {
     expect(res.body._meta.available_actions).toContain('archive');
     // The way out is not open while it is not archived.
     expect(res.body._meta.available_actions).not.toContain('unarchive');
+  });
+
+  test('a grant on what it owns admits revocation, and an invitation admits withdrawal', async () => {
+    const grants = await request(app).get(`/grants/resource/COLLECTION/${collection.id}`);
+    expect(grants.status).toBe(200);
+    const rows = grants.body.flatMap((g) => g.grants);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r._meta.available_actions.includes('revoke'))).toBe(true);
+
+    const invitations = await request(app).get(`/groups/${group.id}/invitations`);
+    expect(invitations.status).toBe(200);
+    expect(invitations.body.data.length).toBeGreaterThan(0);
+    expect(invitations.body.data[0]._meta.available_actions).toContain('cancel');
+    // The group's archived column is what the rule reads, and it stays out of the row.
+    expect(invitations.body.data[0].group).toBeUndefined();
   });
 });
 
@@ -142,6 +178,36 @@ describe('an archived group', () => {
     expect(res.status).toBe(200);
     expect(res.body._meta.available_actions).not.toContain('edit_metadata');
     expect(res.body._meta.available_actions).toContain('view_metadata');
+  });
+
+  test('the grants on what it owns withhold revocation, and the caller keeps the capability', async () => {
+    // Grouped by subject, and read from `valid_grants`: archiving revokes nothing, so the row
+    // is still here and only its state answer has changed.
+    const grouped = await request(app).get(`/grants/resource/COLLECTION/${collection.id}`);
+    expect(grouped.status).toBe(200);
+    const rows = grouped.body.flatMap((g) => g.grants);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => !r._meta.available_actions.includes('revoke'))).toBe(true);
+
+    // The same grant through the subject-on-resource list, which is the one the expanded
+    // panel reads.
+    const direct = await request(app).get(`/grants/USER/${admin.subject_id}/COLLECTION/${collection.id}`);
+    expect(direct.status).toBe(200);
+    expect(direct.body.length).toBeGreaterThan(0);
+    expect(direct.body.every((r) => !r._meta.available_actions.includes('revoke'))).toBe(true);
+
+    // Authority is untouched: the admin may still manage grants, and the refusal is the
+    // resource's state rather than a missing capability.
+    const onCollection = await request(app).get(`/collections/${collection.id}`);
+    expect(onCollection.body._meta.capabilities).toContain('manage_grants');
+  });
+
+  test('its invitations withhold withdrawal', async () => {
+    const res = await request(app).get(`/groups/${group.id}/invitations`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data.every((r) => !r._meta.available_actions.includes('cancel'))).toBe(true);
   });
 });
 

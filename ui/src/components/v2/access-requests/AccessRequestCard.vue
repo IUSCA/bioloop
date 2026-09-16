@@ -71,12 +71,14 @@
  *
  * It carries the requester, the subject, the resource, the status, and the item count, and
  * nothing else: the decision detail belongs on the request detail page. The Review button reads
- * the row's `_meta.capabilities`, which every access-request list sends.
+ * the row's `_meta.capabilities` and `_meta.available_actions`, which every access-request list
+ * sends.
  *
  * @see docs/design/groups/implementation/access-requests-plan.md — B2
  */
 import Badge from "@/components/v2/Badge.vue";
 import ResourceChip from "@/components/v2/ResourceChip.vue";
+import { admits, holds } from "@/composables/useCapabilities";
 import * as datetime from "@/services/datetime";
 
 const props = defineProps({
@@ -130,9 +132,12 @@ const timeLabel = computed(() => {
   return datetime.fromNowShort(at);
 });
 
-// `review` arrives only while the request is under review and the viewer may decide it.
-const canReviewThis = computed(() =>
-  (props.request._meta?.capabilities ?? []).includes("review"),
+// `review` arrives only while the request is under review and the viewer may decide it, and
+// the request's own state says whether a review can still happen at all. Hidden rather than
+// disabled: a decided request is never reviewed again.
+// @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+const canReviewThis = computed(
+  () => holds(props.request, "review") && admits(props.request, "review"),
 );
 
 const DECIDED = ["APPROVED", "PARTIALLY_APPROVED"];

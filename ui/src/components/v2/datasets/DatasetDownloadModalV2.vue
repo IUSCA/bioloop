@@ -170,7 +170,15 @@ const initiate_dataset_download = () => {
     })
     .catch((err) => {
       console.error(err);
-      toast.error("Unable to initiate dataset download");
+      // A 409 is the dataset's state refusing — a deleted dataset has no files to bundle —
+      // and its message says so.
+      // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+      toast.error(
+        err?.response?.status === 409
+          ? (err.response.data?.message ??
+              "Unable to initiate dataset download")
+          : "Unable to initiate dataset download",
+      );
     })
     .finally(() => {
       archiveLoading.value = false;

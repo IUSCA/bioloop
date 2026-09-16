@@ -597,6 +597,85 @@ cross-suite interference.
   - a reviewer sees no Review on a decided request, and a grant manager sees no Revoke on a
     revoked grant.
 
+**As built, 2026-09-15.** The phase divided into an API half the plan did not anticipate and
+the UI half it describes.
+
+**The API had to serve the answer first.** The plan assumed `_meta.available_actions` reached
+every control it names. It did not. Three grants handlers and the invitations list sent no
+`_meta` at all, so Revoke, Remove all access, and Withdraw had nothing to read. All four now
+serve it:
+
+- `GET /grants/resource/:type/:id` and `GET /grants/:subject_type/:subject_id/:resource_type/:resource_id`
+  read the one resource in the path with `readTargetState`, so a page costs one extra query.
+- `GET /grants/subject/:type/:id` groups by resource and uses the batch reader
+  `readTargetStates`. The hydrated resource on that route includes `dataset` and `collection`
+  but not `dataset.owner_group`, so `targetOf` would have thrown on it.
+- `listInvitations` selects the group's `is_archived`, which is what the invitation rules read,
+  and the route answers from it without a second query and keeps the column out of the row.
+
+The two grouped grant lists select from `valid_grants`, which filters to unrevoked, started, and
+unexpired rows, so `revoked_at` is always null there and the computed `is_active` is always true.
+Gating Revoke on the state answer therefore changes nothing about expiry on those lists; what it
+adds is withholding `revoke` when the grant's dataset or collection is archived or deleted, which
+`is_active` never knew. The subject-on-resource list takes an `is_active` query parameter and can
+carry revoked rows, so there the per-row answer genuinely varies.
+
+`tests/routes/stateRefusals.test.js` covers both directions: with the group active a grant admits
+`revoke` and an invitation admits `cancel`; archived, both disappear while the admin keeps
+`manage_grants` as a capability.
+
+**One composable, and two functions that fail in opposite directions.**
+`ui/src/composables/useCapabilities.js` exposes `can`, `available`, and `enabled`, plus `holds`
+and `admits` for list rows. The split is the display rule:
+
+- `enabled` backs a control that disables, and treats a missing `available_actions` as "this
+  route does not say", falling back to the capability. Reading a missing key as "nothing is
+  admitted" would disable every control on the lists that still do not serve it.
+- `available` and `admits` back a control that hides, and fail closed: a row with no
+  `available_actions` admits nothing. Hiding is the safe direction, because the service refuses
+  the action anyway.
+
+**`request_access` is deliberately not gated on the state answer.** It is a derived capability,
+computed outside the action tables, so it has no state rule and can never appear in
+`available_actions` — gating on it would have disabled Request access on every resource forever.
+The API folds a state check into the capability instead. `verifyInSync` guarantees every policy
+action has a rule, so every other control is safe to gate; derived capabilities are the exception
+and the containers under `src/state/builtin/` are the thing to check before adding one.
+
+**The Overview tabs and the six list tabs take one `availableActions` prop, not a boolean per
+action.** Ten components declare a `stateAdmits` helper and the three detail pages pass the list
+at exactly ten sites. A capability still decides whether a control exists, and the state decides
+whether it works, with the archived state as its tooltip.
+
+**The archive dialogs take the action, not the column.** `GroupArchiveConfirmModal` and
+`CollectionArchiveConfirmModal` replaced `:is-archived` with `action="archive"|"unarchive"`, which
+the page picks with `enabled("unarchive")`. The old shape let the dialog decide its direction from
+`is_archived` while the page offered the action from the state, which is exactly the drift this
+plan exists to remove. The two `pages/public` profiles still pass `:is-archived`, to
+`ProfileHeader`, which is a different component and has no archive control.
+
+**The deleted dataset hides rather than disables, and `is_deleted` chooses only that.** Deletion
+is final, so a control that can never work again is not worth showing; an archived owning group is
+reversible, so its controls stay visible and disabled. What is permitted is still
+`available_actions`, and `uiScan` carries an allowlist row saying that this one read picks the
+presentation rather than the permission.
+
+**The toasts.** Seven controls across six files, not the six the plan lists:
+`AddGroupMemberModal`'s member path already surfaced the API message, so only its invite path
+needed the 409. `GroupInvitationsTab`'s withdraw was missing from the plan's list and discarded
+the message too. `UploadDatasetModal` was the one real mislabel — it called every 409 a name
+collision, and a state refusal now arrives with the same status, so it prefers the server's
+message.
+
+**`uiScan` gained three rules**: `is_active`, the invitation statuses, and any `:is-archived`
+binding. Nine sites came back. Seven were display-only and are allowlisted with reasons — the
+"Also confers" line, the Removed badge, the sort that puts revoked rows last, and four invitation
+status reads that feed a badge or a filter. The two `:is-archived` bindings were fixed rather than
+excused, which is what produced the `action` prop above.
+
+Verified: the full API suite passes, 111 suites and 1190 tests, and `uiScan` and `stateLabels`
+pass. The browser checks the exit criteria name are still outstanding at this commit.
+
 ### Phase 6: end to end, and the as-built documents
 
 - **The archive e2e flows.**
