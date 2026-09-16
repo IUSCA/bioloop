@@ -5,7 +5,7 @@ const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
 const { generate_slug } = require('@/utils/slug');
-const audit = require('@/authorization/builtin/audit');
+const audit = require('@/services/audit');
 
 const {
   AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder,

@@ -13,10 +13,11 @@ const datasetService = require('@/services/datasets_v2');
 const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
 const auditService = require('@/services/audit');
+const accessRequestsService = require('@/services/access_requests');
 const state = require('@/state');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-  callerIsPlatformAdmin, decideRows, mayRequestAccess, projectRows,
+  callerIsPlatformAdmin, decideRows, projectRows,
 } = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
@@ -95,7 +96,8 @@ router.get(
       _meta: {
         standing: req.permission.standing,
         capabilities: toCapabilitiesArray(req.permission.capabilities)
-          .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
+          .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+            ? ['request_access'] : []),
         // `delete` reads whether the collection ever held a dataset, which is a count rather
         // than a column, so the state fields are read rather than taken off the row above.
         available_actions: state.availableActions(

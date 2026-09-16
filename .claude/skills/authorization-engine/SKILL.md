@@ -275,14 +275,15 @@ the persona in `GET /v2/users/me`, which Phase 5 retires, and `listEligibleOwner
 takes roles from the user object its caller passes. Both are filed in
 `.todo/local/L1-authorization-enforcement.md`.
 
-## Capabilities consult the transition table; the gate does not
+## Capabilities are authority only; state is the other answer
 
-`applyTransitions` in `core/capabilities.js` withdraws a capability when the resource's state is
-not one of the action's from-states. `evaluateCapabilitySet` and the platform-admin branch of
-`authorizeAction` both call it. The gate itself never reads state, because a wrong-state action
-is refused by the service with a 409, and a gate refusal would be a 403 instead.
+Neither the gate nor the capability map reads a resource's state. `_meta.capabilities` says what
+the caller could do, and `_meta.available_actions` says what the resource's state admits, from
+`state.availableActions` over the rules in `src/state/builtin/`. A wrong-state action is refused
+by the service with a 409, and a gate refusal would be a 403 instead. A reviewer therefore holds
+`review` on a decided request, and the request is what withholds it.
 `tests/model/transitionsArm.test.js` checks every request status for the requester, the group
-admin, and a platform admin.
+admin, and a platform admin: the capability is blind to status, and `available_actions` is not.
 
 ## The comparison arms
 
@@ -405,22 +406,27 @@ UI file as text.
 
 ## Derived capabilities and state the capability map carries
 
-- `request_access` is not an action. `mayRequestAccess` appends it on the dataset and collection
-  detail routes when a signed-in caller could file a request that no restriction blocks.
-- Group and collection `archive` and `unarchive` carry `archivedState` transition rows, so
-  neither is offered in the state that refuses it. Dataset `archive` means the tape archive and
-  has no such row.
-- The middleware's platform-admin branch applies transitions too. Before Phase 5 it returned
-  every action as true, so a platform admin was offered Unarchive on an active group.
+- `request_access` is not an action. `mayFileRequest` in `services/access_requests` decides it,
+  and the dataset and collection detail routes append it when a signed-in caller could file a
+  request: no restriction blocks it, and the request's `create` state rule admits the resource.
+  It lives in the service, not in `authorization/`, because the deciding part is a state rule.
+- `authorization/` holds the decision engine only. Code that writes records or encodes one
+  resource's business rule belongs in `services/`: the audit writer, `AuditBuilder`, lives in
+  `services/audit/` beside the audit reader, and `authorization/index.js` does not import
+  `src/state`.
+- Group and collection `archive` and `unarchive` are withheld by their state rules, not by the
+  capability map: `archive` is not in `available_actions` on an archived group, and `unarchive`
+  is not there on an active one. A platform admin holds both capabilities in every state.
 
 ## One pipeline decides for the middleware and for `authorizeAction`
 
 `core/pipeline.js` `createDecisionPipeline` is the only decision path. The middleware in
 `core/middlewares.js` builds one and `authorization/index.js` builds another from the same
 arguments; `authorizeAction` is that second one. The order is restriction checker, platform-admin
-policy, then the action's policy. Capabilities pass through `applyTransitions` or
-`evaluateCapabilitySet` and then `filterRestrictedCapabilities` on both branches, so a caller of
-`authorizeAction` no longer needs to filter them again.
+policy, then the action's policy. Capabilities are every action for a platform admin and
+`evaluateCapabilitySet` for anyone else, and both branches then pass through
+`filterRestrictedCapabilities`, so a caller of `authorizeAction` no longer needs to filter them
+again. Neither branch reads the resource's state.
 
 A refusal carries `status`. `concealRefusalsWithoutStanding` lists the resource types whose
 refusals are concealed, and the application passes `RESOURCE_TYPES`: dataset, collection, and

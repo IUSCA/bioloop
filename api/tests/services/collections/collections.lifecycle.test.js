@@ -16,7 +16,7 @@ require('module-alias/register');
 
 const prisma = require('@/db');
 const collectionsService = require('@/services/collections');
-const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/authorization/builtin/audit');
+const { AUTH_EVENT_TYPE, TARGET_TYPE } = require('@/services/audit');
 
 const {
   createTestUser,

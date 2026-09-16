@@ -7,10 +7,10 @@ const prisma = require('@/db');
 const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 
 const { generate_slug } = require('@/utils/slug');
-const audit = require('@/authorization/builtin/audit');
+const audit = require('@/services/audit');
 
 const { AuditBuilder } = audit;
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const state = require('@/state');

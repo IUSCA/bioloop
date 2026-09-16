@@ -8,7 +8,7 @@
 
 const path = require('path');
 const { GROUP_MEMBER_ROLE } = require('@prisma/client');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 
 global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');

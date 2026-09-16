@@ -3,8 +3,8 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const state = require('@/state');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const { AUTH_EVENT_TYPE } = require('@/services/audit');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 
 /**

@@ -4,10 +4,10 @@ const {
 const createError = require('http-errors');
 const _ = require('lodash/fp');
 
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const Expiry = require('@/utils/expiry');
-const audit = require('@/authorization/builtin/audit');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const audit = require('@/services/audit');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const prisma = require('@/db');
 const state = require('@/state');
 const accessTypeClosure = require('./accessTypeClosure');

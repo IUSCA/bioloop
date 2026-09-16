@@ -8,7 +8,7 @@ const {
 } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder } = require('@/authorization/builtin/audit');
+const { AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder } = require('@/services/audit');
 const state = require('@/state');
 const fetchService = require('./fetch');
 const issueService = require('./issue');

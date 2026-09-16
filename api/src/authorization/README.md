@@ -213,7 +213,6 @@ if (result.granted) {
 - **[builtin/policies/utils/](builtin/policies/utils/)**: Shared policies (e.g., `isPlatformAdmin`)
 - **[builtin/hydrators/user.js](builtin/hydrators/user.js)**: User hydrator with virtual attributes
 - **[builtin/hydrators/context.js](builtin/hydrators/context.js)**: Context hydrator for request-level data
-- **[builtin/audit/events.js](builtin/audit/events.js)**: Audit event type enum
 
 ## Driving Forces
 

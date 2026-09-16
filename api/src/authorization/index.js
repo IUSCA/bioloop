@@ -11,7 +11,6 @@
  */
 
 const prisma = require('@/db');
-const state = require('@/state');
 const { projectObject } = require('@/utils/expression');
 
 // ============================================================================
@@ -286,41 +285,6 @@ async function projectRows(resourceType, rows, {
   });
 }
 
-/**
- * Whether the caller may file an access request on a resource whose metadata they can view.
- *
- * `POST /access-requests` admits a signed-in caller who can view the resource. Two things can
- * still refuse it: a restriction the application injects, and the request's own state rule for
- * `create`, which reads the state of the resource the request would name. A detail route has
- * already decided the view, so this asks the rest, and the page offers Request Access only
- * where filing would succeed.
- *
- * @param {import('express').Request} req
- * @param {string} resourceId - a dataset's resource id or a collection's id
- * @returns {Promise<boolean>}
- * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
- */
-async function mayRequestAccess(req, resourceId) {
-  if (!req.user?.subject_id || req.user.is_anonymous) return false;
-  const blockedBy = await restrictions.checkRestriction({
-    resourceType: 'access_request',
-    action: 'create',
-    resourceId: null,
-    preFetchedResource: { resource_id: resourceId },
-  });
-  if (blockedBy) return false;
-
-  // Filing a request on an archived or deleted resource is refused by the request's own state
-  // rule, so the page must not offer it. The rule reads the resource the request would name.
-  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
-  const target = await state.readTargetState(prisma, resourceId);
-  // The request is the caller's own until they choose a group on the form, and a user has no
-  // archived state. A group chosen later is checked when the request is filed.
-  return target === null
-    || state.check('access_request', 'create', { target, subject: { kind: 'user', archived: false } }) === null;
-}
-
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a
 // hydrator can supply. An unmet requirement is a 500 on the first ordinary request that
 // evaluates it, so it fails here, at startup, instead.
@@ -370,7 +334,6 @@ module.exports = {
   callerIsPlatformAdmin,
   decideRows,
   projectRows,
-  mayRequestAccess,
 
   // Restriction layer
   restrictions,

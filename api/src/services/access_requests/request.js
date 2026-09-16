@@ -5,10 +5,46 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const state = require('@/state');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const restrictions = require('@/authorization/builtin/restrictions');
+const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 const { _getRequestById } = require('./fetch');
 const { notifyReviewersOfSubmission } = require('./notify');
+
+/**
+ * Whether filing an access request on this resource would succeed for this caller, so a page
+ * offers Request Access only where it would.
+ *
+ * `POST /access-requests` admits a signed-in caller who can view the resource, and the detail
+ * route asking this has already decided the view. Two things can still refuse the filing: a
+ * restriction the application injects, and the request's own `create` state rule, which reads
+ * the resource the request would name. This asks both, the same way `_createAccessRequest` does
+ * when the request is filed.
+ *
+ * The request is the caller's own until they choose a group on the form, and a user has no
+ * archived state, so the subject is read as a user here. A group chosen later is checked when
+ * the request is filed.
+ *
+ * @param {Object} params
+ * @param {Object} params.user - the signed-in caller, `req.user`
+ * @param {string} params.resource_id - a dataset's resource id or a collection's id
+ * @returns {Promise<boolean>}
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ */
+async function mayFileRequest({ user, resource_id }) {
+  if (!user?.subject_id || user.is_anonymous) return false;
+  const blockedBy = await restrictions.checkRestriction({
+    resourceType: 'access_request',
+    action: 'create',
+    resourceId: null,
+    preFetchedResource: { resource_id },
+  });
+  if (blockedBy) return false;
+
+  const target = await state.readTargetState(prisma, resource_id);
+  return target === null
+    || state.check('access_request', 'create', { target, subject: { kind: 'user', archived: false } }) === null;
+}
 
 /**
  * Validates that the requester can create an access request for the specified subject.
@@ -385,6 +421,7 @@ function assertMayRequestFor(requester_id, subject_id) {
 
 module.exports = {
   assertMayRequestFor,
+  mayFileRequest,
   createAccessRequest,
   createAndSubmitAccessRequest,
   updateAccessRequest,

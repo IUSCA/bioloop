@@ -16,7 +16,7 @@ const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const grantsService = require('@/services/grants');
 const { addGroupMembers } = require('@/services/groups');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,

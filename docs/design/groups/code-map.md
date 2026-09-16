@@ -32,7 +32,7 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Grants | `grant`, `grant_access_type`, view `valid_grants` | `routes/grants.js` | `services/grants/` | `components/v2/grants/` |
 | Grant presets | `grant_preset`, `grant_preset_item` | `/grants/presets` | seeded from `src/constants.js` | `useGrantPresets.js` |
 | Access requests | `access_request`, `access_request_item` | `routes/access_requests.js` | `services/access_requests/` | `pages/v2/access-requests/` |
-| Audit | `authorization_audit` (monthly partitions) | `routes/audit.js` | `services/audit.js`, `authorization/builtin/audit/` | `pages/v2/audit-logs.vue` |
+| Audit | `authorization_audit` (monthly partitions) | `routes/audit.js` | `services/audit/` | `pages/v2/audit-logs.vue` |
 | ABAC engine | — | `authorize()` middleware | `authorization/core/`, `authorization/builtin/policies/` | capability flags on responses |
 | System principals (`Public`, `Authenticated Users`) | seeded rows + DB rules, in the 2026-03-02 and `20260908020000_public_principal` migrations | both selectable as grant subjects | `services/grants/helpers.js` — `subjectSetSql()` decides which principals a caller holds | `SubjectSelector.vue`, `GroupIcon.vue` |
 | Access type implication | `grant_access_type_implication`, seeded from `constants.js` | closure built once at startup, read at both grant-check sites | `services/grants/accessTypeClosure.js`, `services/grants/helpers.js` | — |

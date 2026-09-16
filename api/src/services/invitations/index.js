@@ -7,9 +7,9 @@ const prisma = require('@/db');
 const state = require('@/state');
 const logger = require('@/services/logger');
 const { normalizeEmail } = require('@/utils/email');
-const audit = require('@/authorization/builtin/audit');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const audit = require('@/services/audit');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const { sendInvitationEmail } = require('./notify');
 
 /**

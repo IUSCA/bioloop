@@ -13,13 +13,14 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const {
   createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
-  callerIsPlatformAdmin, mayRequestAccess, projectRows,
+  callerIsPlatformAdmin, projectRows,
 } = require('@/authorization');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
+const accessRequestsService = require('@/services/access_requests');
 const state = require('@/state');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { UPLOAD_STATUS_FILTERS } = require('@/constants');
@@ -426,7 +427,8 @@ router.get(
       _meta: {
         standing: req.permission.standing,
         capabilities: toCapabilitiesArray(req.permission.capabilities)
-          .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
+          .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+            ? ['request_access'] : []),
         // The other answer: what this dataset's state admits, whoever is asking. The row is
         // fetched with its owning group above, which is what the rules read.
         available_actions: state.availableActions('dataset', dataset),

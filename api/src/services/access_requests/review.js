@@ -5,10 +5,10 @@ const createError = require('http-errors');
 
 const prisma = require('@/db');
 const state = require('@/state');
-const { resolveEntityName } = require('@/authorization/builtin/audit/helpers');
+const { resolveEntityName } = require('@/services/audit/helpers');
 const { setsEqual } = require('@/utils');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit/events');
-const AuditBuilder = require('@/authorization/builtin/audit/AuditBuilder');
+const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
+const AuditBuilder = require('@/services/audit/AuditBuilder');
 
 const { _getRequestById } = require('./fetch');
 const { notifyRequesterOfDecision } = require('./notify');

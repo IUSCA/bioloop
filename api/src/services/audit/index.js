@@ -1,5 +1,8 @@
 /* eslint-disable global-require */
 const prisma = require('@/db');
+const { AUTH_EVENT_TYPE } = require('./events');
+const { TARGET_TYPE, SUBJECT_TYPE } = require('./types');
+const AuditBuilder = require('./AuditBuilder');
 
 /**
  * Get audit records with comprehensive filtering, sorting, and pagination
@@ -175,6 +178,13 @@ async function getResourceAuditRecords({
 }
 
 module.exports = {
+  // Reading the audit trail
   getAuditRecords,
   getResourceAuditRecords,
+
+  // Writing it: services record each access change inside the transaction that makes it
+  AUTH_EVENT_TYPE,
+  TARGET_TYPE,
+  SUBJECT_TYPE,
+  AuditBuilder,
 };

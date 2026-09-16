@@ -273,7 +273,8 @@ res.json({
   _meta: {
     standing: req.permission.standing,
     capabilities: toCapabilitiesArray(req.permission.capabilities)
-      .concat(await mayRequestAccess(req, req.params.id) ? ['request_access'] : []),
+      .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+        ? ['request_access'] : []),
     available_actions: state.availableActions('dataset', dataset),
   },
 });

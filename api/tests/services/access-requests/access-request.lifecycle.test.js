@@ -25,7 +25,7 @@ const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
 const grantsService = require('@/services/grants');
 const Expiry = require('@/utils/expiry');
-const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { TARGET_TYPE, AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,

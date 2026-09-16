@@ -4,7 +4,7 @@ const config = require('config');
 
 const prisma = require('@/db');
 const state = require('@/state');
-const audit = require('@/authorization/builtin/audit');
+const audit = require('@/services/audit');
 const validate = require('./validate');
 const avatarService = require('./avatar');
 

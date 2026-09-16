@@ -22,7 +22,7 @@ const prisma = require('@/db');
 // exits. @see docs/design/groups/implementation/access-requests-plan.md — D1
 const { sseManager } = require('@/notification/inApp/sseManager');
 const arService = require('@/services/access_requests');
-const { AUTH_EVENT_TYPE } = require('@/authorization/builtin/audit');
+const { AUTH_EVENT_TYPE } = require('@/services/audit');
 const {
   createTestUser,
   createTestGroup,
