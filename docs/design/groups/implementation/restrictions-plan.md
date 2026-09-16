@@ -674,7 +674,42 @@ status reads that feed a badge or a filter. The two `:is-archived` bindings were
 excused, which is what produced the `action` prop above.
 
 Verified: the full API suite passes, 111 suites and 1190 tests, and `uiScan` and `stateLabels`
-pass. The browser checks the exit criteria name are still outstanding at this commit.
+pass.
+
+**The browser checks found two defects, and one of them was a check that could not fail.**
+
+Three of the five ran against the development environment. Each one compares `_meta.capabilities`
+with `_meta.available_actions` on a real response, because a missing control proves nothing on
+its own: a viewer who never held the action would show the same empty page before the change as
+after.
+
+- *The owner of a deleted dataset.* Run first as a grant holder, which proved nothing — that
+  viewer's capabilities are `read_data`, `view_metadata`, and `list_files`, so Download, Edit, and
+  Delete were already absent and the state layer contributed nothing. Re-run as an ADMIN of the
+  owning group, who holds twenty capabilities on the same dataset while its state admits only the
+  eight view actions, leaving twelve held but withheld, including `download`, `edit_metadata`,
+  `delete`, and `request_stage`. The page shows no Files tab, no Danger Zone, and no quick
+  actions.
+- *A reviewer on a decided request.* One viewer, four requests: the open one they filed admits
+  `withdraw` and `review`; their partially approved and withdrawn ones hold `withdraw` and admit
+  only `read`; the rejected one on a resource they administer holds `review` and withholds it. The
+  capability is present every time, so only the request's state explains the difference.
+- *A grant manager on a revoked grant.* Two grants of the same access type to the same subject on
+  the same collection. The live one admits `revoke`; the revoked one does not, and its row renders
+  in full with the REMOVED badge and no Revoke control. The row stays and the control goes.
+
+The first run of the deleted-dataset check exposed two defects, both fixed here. The Files tab was
+gated on the `list_files` capability rather than on the state, so a deleted dataset offered a tab
+whose files are gone; it now follows the same hide rule, and so does its count. And hiding every
+quick action left the QUICK ACTIONS heading standing over an empty grid, which reads as a page
+that failed to load; the heading now goes with its controls.
+
+**Three checks are not done.** An admin of an archived group, a platform admin unarchiving, and
+an admin of a sub-group of an archived group all need an archived group that has an admin. The
+only archived group in the development database is the seeded `Unassigned Datasets`, which has
+neither admins nor subgroups, so the check needs a real group archived and then unarchived.
+Archiving one is a change to shared state and was refused, so these three wait on a decision
+about that rather than on any code.
 
 ### Phase 6: end to end, and the as-built documents
 

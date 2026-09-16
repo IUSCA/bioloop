@@ -206,8 +206,10 @@
         </div>
       </div>
 
-      <!-- Quick Actions -->
-      <div>
+      <!-- Quick Actions. The heading goes with the grid: a deleted dataset hides every
+           mutating and data control, and a lone heading over an empty grid reads as a page
+           that failed to load rather than as a dataset with nothing left to do. -->
+      <div v-if="showsQuickActions">
         <h2 class="text-sm font-semibold mb-3 va-text-secondary">
           QUICK ACTIONS
         </h2>
@@ -365,6 +367,21 @@ function stateAdmits(action) {
 
 /** The words a disabled control shows for why the state withholds it. */
 const ARCHIVED_REASON = "This dataset's owning group is archived.";
+
+/**
+ * Whether any quick action will render at all.
+ *
+ * Each control below is gated on its own prop, and the page withholds those it hides on a
+ * deleted dataset, so all five can be false at once.
+ */
+const showsQuickActions = computed(
+  () =>
+    props.canIssueGrants ||
+    props.canRequestAccess ||
+    props.canDownload ||
+    props.canEdit ||
+    props.canRequestStage,
+);
 
 const editModalRef = ref(null);
 

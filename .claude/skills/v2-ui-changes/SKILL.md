@@ -50,6 +50,32 @@ Once attached, `https://localhost/dev-login?username=<user>&next=<path>` gets pa
 certificate interstitial and the login in one navigation, so the interstitial is not the
 obstacle this page once described it as.
 
+**Check as another user in an isolated context, not in the user's own session.** The attached
+Chrome holds the user's live login, and `dev-login` replaces the token in whatever context it
+runs in. Open the check in its own storage instead:
+
+```
+new_page({ url: "https://localhost/dev-login?username=user-081&next=/v2/groups/<id>",
+           isolatedContext: "statecheck" })
+```
+
+Pages in that context share cookies and localStorage with each other and with nothing else, so
+several viewers can be exercised one after another — navigate the same page to `dev-login` again
+with a different `username` — while the user's own tab stays signed in as whoever they were.
+
+**Confirm a capability claim from `_meta`, not from the rendered controls.** A missing button
+proves nothing on its own: the viewer may simply not hold the capability, in which case the
+control was already absent before the change under test. Fetch the resource and compare the two
+lists, and say which actions are held but withheld:
+
+```js
+const caps = b._meta.capabilities, avail = b._meta.available_actions;
+caps.filter((c) => !avail.includes(c))   // the state's contribution, isolated
+```
+
+An empty result means the check could not have failed, so pick a viewer who holds the action —
+usually an ADMIN of the owning group rather than a grant holder.
+
 **Sign in as a group admin, not `test_user`.** The engine allows a platform admin before any
 policy runs, so a pass driven as `test_user` exercises none of the policy paths. `user-054`
 is a group admin in the seed. A 500 on `POST /grants/:id/revoke` survived an entire phase

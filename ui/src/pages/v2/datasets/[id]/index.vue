@@ -74,7 +74,7 @@
       >
         <template #tabs>
           <VaTab name="overview">Overview</VaTab>
-          <VaTab name="files" v-if="can('list_files')">
+          <VaTab name="files" v-if="shows('list_files')">
             <span class="flex items-center gap-1.5">
               Files
               <span v-if="counts.files !== null" class="tab-count-badge">
@@ -347,7 +347,7 @@ async function fetchDatasetData() {
     setNavBreadcrumbs(data);
     // A caller who may list files receives num_files. A dataset never counted has none, and
     // reads as 0. Everyone else gets no count, so no badge and no card.
-    counts.value.files = can("list_files") ? (data.num_files ?? 0) : null;
+    counts.value.files = shows("list_files") ? (data.num_files ?? 0) : null;
     await fetchCounts();
   } catch (err) {
     error.value = err;
