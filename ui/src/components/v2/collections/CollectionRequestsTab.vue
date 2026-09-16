@@ -28,7 +28,7 @@
         </div>
 
         <!-- content -->
-        <div>
+        <div class="mt-5">
           <!-- loading state -->
           <div v-if="loading"></div>
 
