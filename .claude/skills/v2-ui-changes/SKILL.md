@@ -533,6 +533,14 @@ When `list_pages` reports the profile is locked, a throwaway `.cjs` script in `e
 `/dev-login?username=…&next=…`. The detail pages switch tabs through a ref, not the URL, so
 click `getByRole('tab', { name: /^Datasets/ })`. Delete the script afterwards.
 
+`rm` is aliased to `rm -i` here, like `cp`, so a plain `rm e2e/_check.cjs` prompts, gets no
+answer, and leaves the script in place. Delete with `command rm -f`.
+
+To call the API directly as a seeded user, sign in through `/dev-login` and read
+`localStorage.getItem('token')`. The value is not JSON, and `JSON.parse` on it throws. Strip
+any surrounding quotes and send it as `Authorization: Bearer <token>` to
+`http://localhost:3030`.
+
 Run such scripts one after another, not in parallel. Three at once, all signing in as the
 same user, left two of them on pages with no links.
 

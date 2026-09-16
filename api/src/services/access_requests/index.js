@@ -1,5 +1,5 @@
 const {
-  createAccessRequest, createAndSubmitAccessRequest, updateAccessRequest, submitRequest,
+  assertMayRequestFor, createAccessRequest, createAndSubmitAccessRequest, updateAccessRequest, submitRequest,
 } = require('./request');
 const {
   getRequestById,
@@ -40,6 +40,7 @@ const config = {
 };
 
 module.exports = {
+  assertMayRequestFor,
   createAccessRequest,
   createAndSubmitAccessRequest,
   updateAccessRequest,

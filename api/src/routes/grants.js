@@ -207,53 +207,9 @@ router.post(
       return res.status(validationError.status).json({ message: validationError.message });
     }
 
-    const data = pickNonNil([
-      'subject_id',
-      'resource_id',
-      'resource_type',
-    ])(req.body);
-    data.granted_by = req.user.subject_id;
-
-    // [{type: 'new' | 'existing' | 'supersede', access_type_id: int, expiry: Expiry, existing_grant: Object?}]
-    // expiry is the latest approved expiry for the access type, either from preset or directly from the item, that would result from the request
-    const effectiveGrants = await prisma.$transaction(
-      (tx) => grantService.buildEffectiveGrants(tx, data, req.body.items),
-    );
-
-    // What the subject already holds through some other path — a group it belongs to, an
-    // ancestor of that group, a system principal, or a collection holding the dataset.
-    // `buildEffectiveGrants` matches on the exact subject, because that is what the write path
-    // may supersede, so on its own it would report a brand new grant for access the subject
-    // already has. The reviewer needs to see that before deciding.
-    // @see docs/design/groups/implementation/access-requests-plan.md — C2
-    const coverage = await grantService.labelCoverage(
-      await grantService.getEffectiveCoverage({
-        subject_id: data.subject_id,
-        resource_id: data.resource_id,
-        resource_type: data.resource_type,
-        access_type_ids: effectiveGrants.map((g) => g.access_type_id),
-      }),
-    );
-    // Attach each coverage row to the access types it answers for, not to its own. The
-    // coverage query widens through the order, so a lab's DATASET:DOWNLOAD grant is what
-    // covers a request for DATASET:LIST_FILES, and keying by the row's own type would file
-    // it under a type the reviewer never asked about.
-    // @see docs/design/groups/decisions.md — 7. Access types imply one another
-    const impliedIds = await grantService.impliedIdsByAccessTypeId();
-    const indirectByAccessType = new Map();
-    for (const row of coverage.filter((c) => c.via !== 'DIRECT')) {
-      const answersFor = [row.access_type_id, ...(impliedIds.get(row.access_type_id) ?? [])];
-      for (const accessTypeId of answersFor) {
-        const held = indirectByAccessType.get(accessTypeId) ?? [];
-        held.push(row);
-        indirectByAccessType.set(accessTypeId, held);
-      }
-    }
-
-    return res.json(effectiveGrants.map((g) => ({
-      ...g,
-      indirect_coverage: indirectByAccessType.get(g.access_type_id) ?? [],
-    })));
+    const { subject_id, resource_id, resource_type } = req.body;
+    const rows = await grantService.previewIssue({ subject_id, resource_id, resource_type }, req.body.items);
+    return res.json(rows);
   }),
 );
 

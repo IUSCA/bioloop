@@ -368,7 +368,17 @@ async function createAndSubmitAccessRequest(data, requester_id) {
   return request;
 }
 
+/**
+ * Refuses a requester who may not ask for access on behalf of this subject. Throws a 404 or 403.
+ * @param {string} requester_id
+ * @param {string} subject_id
+ */
+function assertMayRequestFor(requester_id, subject_id) {
+  return _validateAccessRequestSubject(prisma, requester_id, subject_id);
+}
+
 module.exports = {
+  assertMayRequestFor,
   createAccessRequest,
   createAndSubmitAccessRequest,
   updateAccessRequest,

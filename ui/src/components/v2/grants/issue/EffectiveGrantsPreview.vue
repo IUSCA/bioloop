@@ -3,7 +3,7 @@
     <div class="mb-2">
       <div class="flex items-center justify-between">
         <p class="text-sm font-medium uppercase tracking-wide">
-          Effective grants preview
+          {{ copy.heading }}
         </p>
         <i-mdi-loading
           v-if="props.loading"
@@ -80,7 +80,7 @@
               :key="row.access_type_id"
               class="border-b border-solid border-gray-100 last:border-b-0 dark:border-gray-800"
             >
-              <GrantPreviewRow :row="row" />
+              <GrantPreviewRow :row="row" :perspective="props.perspective" />
             </div>
           </div>
         </template>
@@ -112,15 +112,45 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  /**
+   * Who is reading. A reviewer is told what approving writes; a requester is told what the
+   * request would add to access they already have.
+   */
+  perspective: {
+    type: String,
+    default: "reviewer",
+    validator: (v) => ["reviewer", "requester"].includes(v),
+  },
 });
 
 const ORDER = ["new", "supersede", "existing"];
 
-const SECTION_LABELS = {
-  new: "New permissions",
-  supersede: "Extending expiry",
-  existing: "Skipped — existing permission is broader",
+const COPY = {
+  reviewer: {
+    heading: "Access preview",
+    sections: {
+      new: "New permissions",
+      supersede: "Extending expiry",
+      existing: "Skipped — existing permission is broader",
+    },
+    newCount: (n) => `${n} new permission${n > 1 ? "s" : ""}`,
+    extendingCount: (n) => `${n} extending`,
+    existingCount: (n) => `${n} unchanged`,
+  },
+  requester: {
+    heading: "What this request adds",
+    sections: {
+      new: "Would be added",
+      supersede: "Would extend current access",
+      existing: "Already held",
+    },
+    newCount: (n) => `${n} new`,
+    extendingCount: (n) => `${n} extending`,
+    existingCount: (n) => `${n} already held`,
+  },
 };
+
+const copy = computed(() => COPY[props.perspective]);
 
 const grouped = computed(() => {
   const map = {};
@@ -130,7 +160,7 @@ const grouped = computed(() => {
   });
   return ORDER.filter((t) => map[t].length > 0).map((t) => ({
     type: t,
-    label: SECTION_LABELS[t],
+    label: copy.value.sections[t],
     rows: map[t],
   }));
 });
@@ -143,17 +173,17 @@ const legend = computed(() => {
   const parts = [];
   if (counts.new)
     parts.push({
-      text: `${counts.new} new grant${counts.new > 1 ? "s" : ""}`,
+      text: copy.value.newCount(counts.new),
       color: "text-green-700 dark:text-green-400",
     });
   if (counts.supersede)
     parts.push({
-      text: `${counts.supersede} extending`,
+      text: copy.value.extendingCount(counts.supersede),
       color: "text-amber-700 dark:text-amber-400",
     });
   if (counts.existing)
     parts.push({
-      text: `${counts.existing} unchanged`,
+      text: copy.value.existingCount(counts.existing),
       color: "text-gray-500 dark:text-gray-400",
     });
   return parts;

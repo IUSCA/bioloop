@@ -3,7 +3,7 @@ title: Access and requests plan
 order: 3
 status: active
 implemented: shipped
-last_verified: 2026-09-15
+last_verified: 2026-09-16
 ---
 
 # Access and requests plan
@@ -32,7 +32,7 @@ so are the three list queries `/requested-by-me`, `/my-pending-reviews`, and `/r
 
 Grant presets are complete. They are modeled in `grant_preset` and `grant_preset_item`, scoped
 by resource type, persisted as request items, and expanded at approval with supersession.
-`POST /grants/compute-effective-grants` gives a reviewer a dry run of an approval.
+`POST /grants/compute-effective-grants` gives a reviewer a dry run of an approval. [C6](#c6-the-requester-sees-what-the-request-adds) adds the requester's version.
 
 The Access tab works on both resources, with `IssueGrantModal` behind it.
 
@@ -454,6 +454,42 @@ That preset has since been removed. Presets are now scoped to collections, for t
 [The seeded presets](../design.md#the-seeded-presets), so the same check today runs on a
 collection request.
 
+### C6 — The requester sees what the request adds
+
+The request form listed only what the subject already holds. After choosing a preset or
+access types, nothing said which of them the request would add. The reviewer had that answer
+in the effective-grants preview, and the requester did not.
+
+`POST /access-requests/compute-effective-grants` gives the requester the same answer. It takes
+the body filing takes, less `type` and `purpose`, and treats each `requested_expiry` as the
+expiry an approval as asked would issue. It writes nothing.
+
+Both previews read one service function. `previewIssue` in `services/grants/coverage.js` runs
+`buildEffectiveGrants` and attaches each row's `indirect_coverage`, as C2 describes. The
+reviewer's route and the requester's route differ in three ways:
+
+- **Who may call it.** The reviewer's route requires `grant:create`. The requester's route runs
+  the checks filing runs, through `assertRequestable` and `assertMayRequestFor`. A user who
+  cannot see the resource gets a 404, and asking for another user gets a 403.
+- **What it returns.** `existingGrant` is cut to its `expiry` and `access_type`, because the
+  whole row names who issued it and why. Coverage rows go through `baseAttributes.coverage`.
+- **What it says.** `EffectiveGrantsPreview` and `GrantPreviewRow` take a `perspective` prop.
+  The requester reads "What this request adds", "Would be added", and "Already held".
+
+This is not the pre-submit validation endpoint listed under [Out, and why](#out-and-why). That
+endpoint would block a doomed request. This one previews a request that may be perfectly
+valid.
+
+*Files:* `routes/access_requests.js`, `routes/grants.js`, `services/grants/coverage.js`,
+`services/access_requests/request.js`, `RequestAccessForm.vue`, `useRequestPreview.js`,
+`EffectiveGrantsPreview.vue`, `GrantPreviewRow.vue`.
+
+Checked against the running app. Frank chose "Standard Research Use" on `BRCA Cohort Release 1`.
+The preview read "2 new": "Local copy", and "Browse datasets in collection" with "Everyone
+signed in already has this with no end date". The preset's other three access types are
+implied by those two, so issuance does not write them. The reviewer's route still answered
+200 for `alice` and 403 for `frank`.
+
 ## Phase D — Close the notification loop
 
 ### D1 — Submission and decision are notified, in app
@@ -562,7 +598,7 @@ seeded data by design.
 
 ## Status
 
-Every phase is built: A1, B1 to B6, C1 to C5, D1, and D2. The loop was driven end to end in
+Every phase is built: A1, B1 to B6, C1 to C6, D1, and D2. The loop was driven end to end in
 the browser on both resource types — a researcher files a request, an admin reviews it and
 sees what the approval confers, the decision reaches the requester in app, and both sides can
 tell afterwards what access exists.

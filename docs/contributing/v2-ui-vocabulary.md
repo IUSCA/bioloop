@@ -28,6 +28,7 @@ Bioloop serves research labs. To that audience, "grant" means a research grant. 
 | a heading or filter about access in general | Access | the **Access** tab, "Access expiring soon" |
 | the `GRANT_HOLDER` standing | Has Access | the role badge |
 | a grant whose resource is a collection | Applies to | "Applies to: Collection: BRCA Cohort" |
+| an access type the request would not add, because the user or group has it | already held | the "Already held" section and badge in the request preview |
 | a grant's expiry | this access | "This access will automatically expire at…" |
 | a grant's creation, in the audit log | Permission … created | "Permission Download created on dataset X for user Y" |
 | ending a grant | revoke | the **Revoke Access** button, "Access revoked successfully." |

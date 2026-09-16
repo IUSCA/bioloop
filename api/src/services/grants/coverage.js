@@ -5,6 +5,7 @@ const prisma = require('@/db');
 
 const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 const accessTypeClosure = require('./accessTypeClosure');
+const { buildEffectiveGrants } = require('./issue');
 
 const PATH_RESOURCE_TYPE = {
   [RESOURCE_TYPE.DATASET]: 'dataset',
@@ -165,6 +166,60 @@ async function previewRevoke(grant_id) {
   }));
 }
 
+/**
+ * What issuing these items to a subject would do, without writing anything.
+ *
+ * Each access type the items expand to is `new`, `supersede`, or `existing`, as
+ * `buildEffectiveGrants` decides. That decision matches on the exact subject, because that is
+ * what a write may supersede, so on its own it reports a brand new grant for access the subject
+ * already holds through a group or a system principal. Each row therefore also carries
+ * `indirect_coverage`: the grants reaching the subject by another path that confer its type.
+ *
+ * The reviewer's preview and the requester's preview both read this.
+ *
+ * @see docs/design/groups/implementation/access-requests-plan.md — C2
+ * @param {object} params
+ * @param {string} params.subject_id
+ * @param {string} params.resource_id
+ * @param {string} params.resource_type - RESOURCE_TYPE.DATASET or RESOURCE_TYPE.COLLECTION
+ * @param {Array<{access_type_id?: number, preset_id?: number, approved_expiry: Expiry}>} items
+ * @returns {Promise<Array>} `{type, access_type_id, expiry, existingGrant?, covered_by_wider?,
+ *   indirect_coverage}` per access type
+ */
+async function previewIssue({ subject_id, resource_id, resource_type }, items) {
+  const effectiveGrants = await prisma.$transaction(
+    (tx) => buildEffectiveGrants(tx, { subject_id, resource_id }, items),
+  );
+
+  const coverage = await labelCoverage(await getEffectiveCoverage({
+    subject_id,
+    resource_id,
+    resource_type,
+    access_type_ids: effectiveGrants.map((g) => g.access_type_id),
+  }));
+
+  // Attach each coverage row to the access types it answers for, not to its own. The
+  // coverage query widens through the order, so a lab's DATASET:DOWNLOAD grant is what
+  // covers a request for DATASET:LIST_FILES, and keying by the row's own type would file
+  // it under a type nobody asked about.
+  // @see docs/design/groups/decisions.md — 7. Access types imply one another
+  const impliedIds = await accessTypeClosure.impliedIdsByAccessTypeId();
+  const indirectByAccessType = new Map();
+  for (const row of coverage.filter((c) => c.via !== COVERAGE_VIA.DIRECT)) {
+    const answersFor = [row.access_type_id, ...(impliedIds.get(row.access_type_id) ?? [])];
+    for (const accessTypeId of answersFor) {
+      const held = indirectByAccessType.get(accessTypeId) ?? [];
+      held.push(row);
+      indirectByAccessType.set(accessTypeId, held);
+    }
+  }
+
+  return effectiveGrants.map((g) => ({
+    ...g,
+    indirect_coverage: indirectByAccessType.get(g.access_type_id) ?? [],
+  }));
+}
+
 module.exports = {
-  getEffectiveCoverage, labelCoverage, previewRevoke, COVERAGE_VIA,
+  getEffectiveCoverage, labelCoverage, previewIssue, previewRevoke, COVERAGE_VIA,
 };

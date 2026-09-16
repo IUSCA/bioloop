@@ -40,6 +40,12 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  /** "reviewer" or "requester"; see EffectiveGrantsPreview. */
+  perspective: {
+    type: String,
+    default: "reviewer",
+    validator: (v) => ["reviewer", "requester"].includes(v),
+  },
 });
 
 const BADGE = {
@@ -59,12 +65,20 @@ const BADGE = {
   },
 };
 
-const badge = computed(() => BADGE[props.row.type] ?? BADGE.existing);
+const badge = computed(() => {
+  const b = BADGE[props.row.type] ?? BADGE.existing;
+  // A requester holds access; nothing about their form is "existing".
+  if (props.perspective === "requester" && b === BADGE.existing) {
+    return { ...b, label: "Already held" };
+  }
+  return b;
+});
 
 const fmt = (d) => (d?.type === "never" ? "never" : datetime.date(d?.value));
 
 const note = computed(() => {
   const { type, expiry, existingGrant } = props.row;
+  if (props.perspective === "requester") return requesterNote(props.row);
 
   if (type === "new") return `Will be given · expires ${fmt(expiry)}`;
   if (type === "existing") {
@@ -89,6 +103,24 @@ const note = computed(() => {
   }
   return "";
 });
+
+/**
+ * The same three cases, told to the person asking: what approval would add, not what it writes.
+ */
+function requesterNote({ type, expiry, existingGrant, covered_by_wider }) {
+  if (type === "new") return `Expires ${fmt(expiry)}`;
+  if (type === "supersede") {
+    return `Expiry ${fmt(existingGrant?.expiry)} → ${fmt(expiry)}`;
+  }
+  if (covered_by_wider) {
+    const wider =
+      existingGrant?.access_type?.description ??
+      existingGrant?.access_type?.name ??
+      "wider access";
+    return `Included in “${wider}”, expiring ${fmt(existingGrant?.expiry)}`;
+  }
+  return `Expiring ${fmt(existingGrant?.expiry)}`;
+}
 
 /**
  * One line naming a grant that already reaches the subject by some other path.
