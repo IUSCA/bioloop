@@ -10,7 +10,7 @@ const { prefixFor } = require('./build');
  * would put a hole in the model. Teardown is not a thing under test, so it goes around it.
  *
  * Order follows the foreign keys that RESTRICT. Everything else cascades: `group_user`,
- * `group_closure`, `restriction`, and every `dataset_*` child go with their parent.
+ * `group_closure`, and every `dataset_*` child go with their parent.
  *
  * Nothing seeded is touched. Every statement is bounded by the run's own group ids, so a
  * seeded membership is never removed and a borrowed account is left exactly as it was found.
@@ -71,8 +71,8 @@ async function teardownWorld(runId) {
       await client.query('DELETE FROM dataset WHERE owner_group_id = ANY($1::text[])', [groupIds]);
       await client.query('DELETE FROM resource WHERE id = ANY($1::text[])', [resourceIds]);
 
-      // The group cascades its memberships, its closure rows, and any restriction on it. Its
-      // subject row holds a RESTRICT reference the other way, so it follows.
+      // The group cascades its memberships and its closure rows. Its subject row holds a
+      // RESTRICT reference the other way, so it follows.
       await client.query('DELETE FROM "group" WHERE id = ANY($1::text[])', [groupIds]);
       await client.query('DELETE FROM subject WHERE id = ANY($1::text[])', [groupIds]);
 

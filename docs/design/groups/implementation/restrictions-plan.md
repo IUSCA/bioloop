@@ -494,6 +494,11 @@ file rather than in the phase. It is the third suite this work has seen fail onl
 with `tests/routes/health.test.js` and `tests/services/grants/coverage.test.js`, and the three
 are listed together in the api-tests skill.
 
+A second full run, taken straight after the first, settles it: 1186 of 1187 again, with the
+single failure a **different** suite, `tests/services/grants/coverage.test.js`. Two consecutive
+runs failing one test each, on two different suites that both pass alone, is order dependence
+between suites rather than anything this phase changed.
+
 ### Phase 4: storage
 
 - A migration drops `effective_restriction`, `active_restriction`, `restriction`, and
@@ -507,6 +512,43 @@ are listed together in the api-tests skill.
 
 **Exit:** a database reset and seed succeed, and the full API suite passes. Prisma refuses
 `migrate reset` when an agent runs it, so a person runs the reset.
+
+**As built, 2026-09-15.** `20260916010000_drop_restriction_layer` drops the objects in
+dependency order: the two views first, then `restriction`, then the `restriction_type` its
+foreign key pointed at. The `DELETED` arm of `effective_restriction` read `dataset.is_deleted`
+directly and needed no unwinding.
+
+**No reset was needed, and none was run.** The exit criterion above assumed one, but this
+migration only drops four objects nothing reads, so `prisma migrate deploy` applies it and
+leaves every other row in place. It ran against the development database directly and against
+`app_test` through `npm run test:db:setup`, which is the sanctioned path and uses
+`migrate deploy` plus `db seed` itself. Both databases now report 51 migrations and
+`Database schema is up to date!`, and neither holds any of the four objects. The standing
+consent for a reset was therefore not used; a person can still run one, and nothing here
+depends on it.
+
+Nothing was preserved, because there was nothing to preserve. The development database held one
+`restriction` row — the `ARCHIVED` backfill for `Unassigned Datasets` — and two
+`restriction_type` rows, `ARCHIVED` and `DELETED`. The row duplicated the group's own
+`is_archived` column, written in the same transaction, and `applied_by`, `lifted_by`, and
+`reason` were never written by any service or exposed by any route. Who archived what and when
+survives in `authorization_audit` and in `archived_at`. The archived group still reads correctly
+from its column after the drop, which the migration check confirms.
+
+Two prose sites the plan did not list needed the same sweep. The comment on `group.is_archived`
+called the restriction table the authority and cited decision 6; it now says the column is the
+authority, names the row lock, and cites decision 17. A comment on `dataset_funding` justified
+its partial unique indexes by saying "The restriction table does the same", a comparison to a
+table that no longer exists. `seed_baseline.js` lost both the `restriction_type` emptiness check
+and the preflight docstring that said migrations insert the restriction types.
+
+`api/tests/model/dbWorld.js` needed nothing: Phase 3 already moved it onto the archived columns.
+`e2e/src/world/teardown.js` never deleted restriction rows, so its change is two comments that
+listed `restriction` among the cascades.
+
+The full API suite passes against the migrated `app_test`: 111 suites, 1187 tests, no failures.
+This run was clean throughout, unlike the two Phase 3 runs that each lost one suite to
+cross-suite interference.
 
 ### Phase 5: the UI
 

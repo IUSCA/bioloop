@@ -496,7 +496,6 @@ model resource {
   collection      collection?
   grants          grant[]
   access_requests access_request[]
-  restrictions    restriction[]
 }
 
 model subject {
@@ -507,8 +506,6 @@ model subject {
   group                group?
   grants               grant[]
   access_requests      access_request[]
-  applied_restrictions restriction[]    @relation("restriction_applier")
-  lifted_restrictions  restriction[]    @relation("restriction_lifter")
 
   recorded_use_conditions dataset_use_condition[] @relation("use_condition_recorder")
 }
@@ -529,10 +526,11 @@ model group {
   created_at  DateTime  @default(now()) @db.Timestamp(6)
   updated_at  DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   archived_at DateTime? @db.Timestamp(6)
-  // Denormalisation of "has an open ARCHIVED restriction", kept for listings, the archived
-  // filter, and the UI badge. The restriction table is what evaluation reads; these two are
-  // written in the same transaction and a test asserts they agree.
-  // @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
+  // Whether this group is archived. This column is the authority: the group's state rules
+  // read it, and every service asks them inside the transaction that makes a change, after
+  // taking the row FOR UPDATE. Archiving covers this group and the datasets and collections
+  // it owns; a sub-group keeps its own state until somebody archives it.
+  // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
   is_archived Boolean   @default(false)
   version     Int       @default(1) // For optimistic concurrency control
 
@@ -550,7 +548,6 @@ model group {
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
   // Relations
-  restrictions      restriction[]
   membership_history group_user[]
   members            active_group_user[]
   ancestor_edges    group_closure[]             @relation("group_descendants")
@@ -899,23 +896,6 @@ model grant_access_type {
 /// Seeded, and effectively immutable after initial config. The graph must stay acyclic;
 /// a test asserts that.
 /// @see docs/design/groups/decisions.md — 7. Access types imply one another
-/// A reason some action is blocked, independent of any grant.
-///
-/// Evaluation is `allowed = no restriction blocks this AND some grant permits it`. A
-/// restriction never cancels a grant and never references one, so adding a restriction can
-/// only narrow access and the order two are applied in does not matter.
-///
-/// `liftable` is a property of the type rather than of a row. ARCHIVED can be lifted by a
-/// platform admin. A future agreement-based restriction should not be liftable at all,
-/// only satisfiable.
-/// @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-model restriction_type {
-  name        String  @id
-  description String
-  liftable    Boolean
-
-  restrictions restriction[]
-}
 
 /// A condition the donors consented to, recorded on a dataset at registration.
 ///
@@ -981,7 +961,7 @@ model dataset_funding {
 
   /// One row per award per dataset, enforced by two partial unique indexes that exist only
   /// in the migration: Prisma does not model a partial unique index, and declaring a plain
-  /// three-column one here would produce permanent drift. The restriction table does the same.
+  /// three-column one here would produce permanent drift.
   @@index([funder])
 }
 
@@ -1015,38 +995,6 @@ model dataset_affiliation {
   @@index([group_id])
 }
 
-/// One restriction in force, attached to either a group or a resource.
-///
-/// A restriction on a group applies to the group, its descendants, and the resources those
-/// groups govern. A restriction on a resource applies to that resource alone.
-///
-/// Rows are closed rather than deleted, the same way memberships are, so the history of
-/// what was restricted and by whom survives lifting.
-/// @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
-model restriction {
-  id        String @id @default(dbgenerated("(gen_random_uuid())::text"))
-  type_name String
-
-  /// Exactly one of these is set; a CHECK constraint enforces that.
-  group_id    String?
-  resource_id String?
-
-  applied_at DateTime  @default(now()) @db.Timestamp(6)
-  applied_by String?
-  lifted_at  DateTime? @db.Timestamp(6)
-  lifted_by  String?
-  reason     String?
-
-  type     restriction_type @relation(fields: [type_name], references: [name], onDelete: Restrict)
-  group    group?           @relation(fields: [group_id], references: [id], onDelete: Cascade)
-  resource resource?        @relation(fields: [resource_id], references: [id], onDelete: Cascade)
-  applier  subject?         @relation("restriction_applier", fields: [applied_by], references: [id], onDelete: SetNull)
-  lifter   subject?         @relation("restriction_lifter", fields: [lifted_by], references: [id], onDelete: SetNull)
-
-  @@index([group_id, lifted_at])
-  @@index([resource_id, lifted_at])
-  @@index([type_name])
-}
 
 model grant_access_type_implication {
   implying_id Int

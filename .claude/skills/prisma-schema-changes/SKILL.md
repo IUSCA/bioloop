@@ -418,6 +418,41 @@ referencing rows first and `refuse` with the stale names.
 A retired preset still counts. Presets are retired with `is_active: false`, never deleted, so
 their items keep naming the old type, and only a database reset clears them.
 
+## Dropping a layer of tables and views needs no reset
+
+A migration that only drops objects applies with `prisma migrate deploy` like any other, so
+the "Resetting the dev database" section above does not apply to it. That section says Prisma
+refuses `migrate reset` when an agent runs it, which can read as "a destructive change waits
+for a person". It does not. A reset is needed to *rewrite* a migration that already ran, not
+to add one that drops things. `20260916010000_drop_restriction_layer` dropped two views and
+two tables on the development database with `migrate deploy` and left every other row alone.
+
+The test database takes the same migration through `npm run test:db:setup`, which runs
+`migrate deploy` and `db seed` itself. Run it for `app_test` rather than pointing
+`DATABASE_URL` at the test database by hand.
+
+**Drop in dependency order, because Postgres will not work it out.** Views first, then the
+child table, then the table its foreign key pointed at. Use `IF EXISTS` on each one so the
+migration is idempotent if it half-applied.
+
+**Verify against the system catalog, not the migration output.** `migrate deploy` reports
+success for a file whose statements all hit `IF EXISTS` and did nothing. Query
+`information_schema.tables` for every name the migration claims to have dropped, on both
+databases, and expect an empty result.
+
+**Say in the migration header what the rows held and where the surviving record is.** A drop
+is unreviewable otherwise, because the reader cannot tell whether anything was lost. The
+`restriction` rows duplicated the `is_archived` columns written in the same transaction, and
+their `applied_by` and `reason` columns were never written by any service, so who archived
+what survives in `authorization_audit` and `archived_at`. Read the table's actual contents
+before writing that claim: this one held exactly one row, the `Unassigned Datasets` backfill.
+
+**Grep the repository for the table name and each view name before calling the drop done.**
+The schema comments are the residue that lasts longest. Two comments elsewhere in
+`schema.prisma` still called the dropped table the authority on archived state, and
+`seed_baseline.js` still checked the dropped lookup table for emptiness and described it in a
+preflight docstring.
+
 ## Keeping this current
 
 When a session in this area hits something this page does not mention — a constraint Prisma
