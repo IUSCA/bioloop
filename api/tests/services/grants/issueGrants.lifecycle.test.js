@@ -119,6 +119,7 @@ describe('issueGrants - lifecycle', () => {
 
     const audit = await prisma.authorization_audit.findFirst({ where: { target_type: TARGET_TYPE.GRANT, target_id: grant.id, event_type: 'GRANT_CREATED' } });
     expect(audit).toBeDefined();
+    expect(audit.target_name).toBe('DATASET:DOWNLOAD on DATASET for User');
   });
 
   // A preset lists DATASET:VIEW_METADATA, DATASET:LIST_FILES, and DATASET:DOWNLOAD. Download

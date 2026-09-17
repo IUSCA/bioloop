@@ -375,6 +375,8 @@ group have none, so they get the lazy default PrismaHydrator (confirm in index.j
 - DEFECT: `resolveEntityName(tx,'grant',id)` selects `access_type` and `resource.type` but reads
   `grant.grant_access_type.name` and `grant.resource.resource_type`, so every grant target name
   is "Unknown on Unknown for User|Group". File in .todo (L2) after checking callers pass names.
+  *Fixed 2026-09-17: the reads now match the select. Rows written before the fix keep the
+  old name.*
 - Relevance to the plan: audit rows are the operation log; the plan's operation-effects table
   can assert one audit row per effect, but the audit module has no model role.
 
@@ -677,6 +679,7 @@ TO FILE in .todo (after tests are read, in case a test already covers or contrad
   an owning-group admin of D sees ['*'] of sources/derived owned by other groups.
 - F3 (L2): `resolveEntityName(tx,'grant')` reads fields it did not select; grant audit target
   names are "Unknown on Unknown for ...".
+  *Fixed 2026-09-17.*
 - F4 (L2): restrictions.test.js hard-codes six container types; `audit.read_records` is
   unclassified and a derived app's container would be too.
 

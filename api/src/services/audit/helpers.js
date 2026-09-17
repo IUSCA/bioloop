@@ -110,8 +110,8 @@ async function resolveEntityName(tx, type, id) {
 
         if (!grant) return null;
 
-        const accessTypeName = grant?.grant_access_type?.name ?? 'Unknown';
-        const resourceType = grant?.resource?.resource_type ?? 'Unknown';
+        const accessTypeName = grant?.access_type?.name ?? 'Unknown';
+        const resourceType = grant?.resource?.type ?? 'Unknown';
         const subjectType = grant?.subject?.type === 'USER' ? 'User' : 'Group';
 
         return `${accessTypeName} on ${resourceType} for ${subjectType}`;
