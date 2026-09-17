@@ -132,6 +132,18 @@ class RegisterV2:
         try:
             # failure point but has built in retry ability
             result = api.bulk_create_datasets_v2(data)
+            # a refusal never clears on its own, so it is logged every scan rather than
+            # once; the same directory is offered again on the next pass
+            for dataset in result.get('refused', []):
+                logger.warning(
+                    f'Refused {dataset["name"]} ({dataset["type"]}): '
+                    f'{dataset["status"]} {dataset["message"]}'
+                )
+            for dataset in result.get('errored', []):
+                logger.error(
+                    f'Failed to register {dataset["name"]} ({dataset["type"]}); '
+                    f'the API log has the reason'
+                )
             # only start workflows for datasets actually created; a conflict is the
             # same directory seen on an earlier scan
             for dataset in result['created']:

@@ -49,9 +49,15 @@ subdirectories, drops names matching the reject patterns, and batches the rest i
 of a hundred.
 
 For each batch it calls `POST /datasets/bulk` with a name, a type, the resolved absolute
-path as `origin_path`, and `create_method: 'SCAN'`. The endpoint returns three lists:
-`created`, `conflicted`, and `errored`. Conflicts are expected and ignored, because the
-same directory is seen on every scan.
+path as `origin_path`, and `create_method: 'SCAN'`. The endpoint returns four lists:
+`created`, `conflicted`, `refused`, and `errored`. Conflicts are expected and ignored,
+because the same directory is seen on every scan.
+
+The three failure lists are separate because a caller retries them differently. A refusal
+is a 4xx the state layer raised, such as an archived owning group, and it carries the
+status and the message, because no retry will ever place that dataset. An error is
+anything else, and a later scan may well succeed. The script logs both, so a directory
+that never becomes a dataset says so on the worker rather than only in the API log.
 
 For each dataset that was actually created, the script starts the `integrated` workflow
 through Celery and registers the workflow id against the dataset. No human is involved at
@@ -370,6 +376,12 @@ uploading the same name never collide, and no scoping work is needed.
 caller's own inputs echoed back, so the response tells the caller nothing they did not send.
 It does confirm that the name is taken somewhere, which is the same oracle as above, and it
 is acceptable here because the only caller is the service account.
+
+The `refused` list adds the status and the message the state layer raised, such as the
+owning group being archived. That is a fact about a group the caller itself named, and the
+only caller is the service account, so it discloses nothing new. The `errored` list carries
+no message for the same reason in reverse: an internal failure is described for the log,
+not for the caller.
 
 ## How the v2 routes record an owning group
 

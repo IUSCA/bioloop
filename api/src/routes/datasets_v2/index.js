@@ -507,9 +507,11 @@ router.post(
  * distinct group rather than once per dataset.
  * @see docs/design/groups/dataset-creation.md — The watch script
  *
- * Responds with { created, conflicted, errored }. A name and type already held by a live
- * dataset is a conflict rather than an error, because a scan sees the same directory on
- * every pass.
+ * Responds with { created, conflicted, refused, errored }. A name and type already held by
+ * a live dataset is a conflict rather than an error, because a scan sees the same directory
+ * on every pass. A dataset the state layer refuses, such as one owned by an archived group,
+ * is `refused` with the status and message it was refused with, because no retry will ever
+ * place it.
  */
 router.post(
   '/bulk',

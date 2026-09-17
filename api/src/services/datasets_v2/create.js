@@ -153,7 +153,15 @@ async function createDataset({ tx = null, data, actor_id = null }) {
 }
 
 /**
- * Bulk-creates datasets. Returns { created, conflicted, errored }.
+ * Bulk-creates datasets. Returns { created, conflicted, refused, errored }.
+ *
+ * A dataset that fails lands in one of three lists, because a caller retries them
+ * differently. `conflicted` means the name and type are already held, which a rescan sees
+ * every pass. `refused` is a 4xx from the state layer, such as an archived owning group,
+ * and no retry will ever succeed. `errored` is everything else, which a retry may clear.
+ * A refused or errored entry carries the reason, so a caller that only reads the response
+ * can say why a dataset is missing.
+ * @see docs/design/groups/dataset-creation.md — The watch script
  *
  * @param {object[]} datasets - request bodies, each needing an owner_group_id
  * @param {number} [user_id] - user.id recorded on the create audit log
@@ -168,24 +176,37 @@ async function bulkCreateDatasets(datasets, user_id, actor_id = null) {
 
   const created = [];
   const conflicted = [];
+  const refused = [];
   const errored = [];
 
   results.forEach((result, index) => {
+    const identity = _.pick(['name', 'type'])(queries[index]);
     if (result.status === 'fulfilled') {
       if (result.value) created.push(result.value);
-      else conflicted.push(_.pick(['name', 'type'])(queries[index]));
-    } else if (
-      result.reason instanceof Prisma.PrismaClientKnownRequestError
-      && result.reason?.code === 'P2002'
-    ) {
-      conflicted.push(_.pick(['name', 'type'])(queries[index]));
+      else conflicted.push(identity);
+      return;
+    }
+
+    const { reason } = result;
+    if (reason instanceof Prisma.PrismaClientKnownRequestError && reason?.code === 'P2002') {
+      conflicted.push(identity);
+      return;
+    }
+
+    logger.warn(`Error in bulkCreateDatasets: ${JSON.stringify({ dataset: queries[index], error: reason })}`);
+    // A 4xx carries a message written for whoever asked; anything else is an internal
+    // failure whose message is for the log, so the caller is told only that it failed.
+    const status = reason?.status ?? reason?.statusCode;
+    if (Number.isInteger(status) && status >= 400 && status < 500) {
+      refused.push({ ...identity, status, message: reason.message });
     } else {
-      logger.warn(`Error in bulkCreateDatasets: ${JSON.stringify({ dataset: queries[index], error: result.reason })}`);
-      errored.push(_.pick(['name', 'type'])(queries[index]));
+      errored.push(identity);
     }
   });
 
-  return { created, conflicted, errored };
+  return {
+    created, conflicted, refused, errored,
+  };
 }
 
 /** Bulk-inserts dataset hierarchy (parent→child) associations. */

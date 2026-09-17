@@ -262,8 +262,10 @@ def bulk_create_datasets_v2(datasets: list[dict]) -> dict:
     A dataset here has the same shape the single-create route takes, so nothing is
     reshaped to send it in bulk. At most a hundred per request.
 
-    Returns {'created': [...], 'conflicted': [...], 'errored': [...]}, where a name
-    and type already held by a live dataset counts as conflicted rather than errored.
+    Returns {'created': [...], 'conflicted': [...], 'refused': [...], 'errored': [...]}.
+    A name and type already held by a live dataset counts as conflicted rather than
+    errored. A dataset the API refuses outright, such as one owned by an archived group,
+    is refused and carries the status and message; retrying it never succeeds.
 
     @see docs/design/groups/dataset-creation.md — The watch script
     """
