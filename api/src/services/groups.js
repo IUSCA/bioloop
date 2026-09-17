@@ -522,7 +522,7 @@ async function listGroupMembers(group_id, {
   }
 
   const groupIdFilterClause = Prisma.sql`gc.ancestor_id = ${group_id}`;
-  const enabledUsersClause = only_enabled_users ? Prisma.sql`u.is_disabled = false` : Prisma.empty;
+  const enabledUsersClause = only_enabled_users ? Prisma.sql`u.is_deleted = false` : Prisma.empty;
   let membershipTypeClause = Prisma.empty;
   if (membership_type === 'direct') {
     membershipTypeClause = Prisma.sql`gc.depth = 0`;

@@ -240,7 +240,7 @@ so confirm rather than assume.
 is allowed every action before any policy runs, so a page checked as `test_user` exercises no
 policy path at all. A 500 raised inside a policy's own attribute loading is invisible to them
 and hits every group admin. Check governance actions — issuing a grant, revoking one,
-reviewing a request — as a group admin such as `user-054`.
+reviewing a request — as a group admin such as `alice`.
 
 **Chrome DevTools MCP cannot attach while another Chrome holds its profile.** It reports
 "The browser is already running for `~/.cache/chrome-devtools-mcp/chrome-profile`" and cannot
@@ -322,13 +322,3 @@ A coding agent's shell commands run in a process group that is torn down when th
 finishes, which kills anything started with `nohup ... &`. The script launches each server
 through `python3` with `start_new_session=True`, placing it in its own session so that no
 such cleanup reaches it. `setsid` would do the same on Linux, but macOS does not ship it.
-
-**A platform admin short-circuits the policy engine, not just the data filters.** `test_user`
-is allowed every action before any policy runs, so a page checked as `test_user` exercises no
-policy path at all. A 500 raised inside a policy's hydration is invisible to them and hits
-every group admin. Check governance actions — issuing a grant, revoking one, reviewing a
-request — as a group admin such as `user-054`.
-
-**Chrome DevTools MCP cannot attach while another Chrome holds its profile.** It reports
-"The browser is already running for `~/.cache/chrome-devtools-mcp/chrome-profile`" and cannot
-launch its own. Quit that Chrome window and the next call starts a fresh browser.
