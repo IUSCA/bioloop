@@ -6,7 +6,7 @@ import { debounce } from "lodash-es";
  *
  * Empty until a subject and at least one item are chosen. A response that arrives after a newer
  * one was asked for is dropped, so a slow reply never overwrites the current selection.
- * @see docs/design/groups/implementation/access-requests-plan.md — C6
+ * @see docs/design/groups/ui-information-architecture.md — Access types in forms
  */
 export function useRequestPreview(formState, resourceRef, accessTypesRef) {
   const rows = ref([]);

@@ -10,7 +10,7 @@ import api from "@/services/api";
  * served by the public router and authorized from the `jwt` cookie a signed-in browser
  * already carries.
  *
- * @see docs/design/groups/implementation/profiles.md — API
+ * @see docs/design/groups/profiles.md — The UI
  */
 export default {
   /** Update a group profile. `version` is the optimistic lock the API checks. */

@@ -3,7 +3,7 @@ title: Trust and Communication
 order: 9
 status: active
 implemented: partial
-last_verified: 2026-09-10
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -48,12 +48,17 @@ detail endpoint should return an effective-access summary derived from the activ
 grants, so no client has to infer it. Revocation emails should name the request that
 granted the access, closing the loop between the two messages.
 
-### 2. Case 2 supersession — an approved item with no new grant
+### 2. Case 2 supersession — an approved item with no new grant — partly built
 
 When the grant that would be created is shorter than one that already exists, the item
 is marked `APPROVED` and no grant is written. To the requester this looks like a
 failure: approval arrived, nothing changed. The design records the skip in the audit
 log, which a non-admin user never reads.
+
+**Built.** The grant preview names the covering grant and its expiry, for the reviewer and
+for the requester, including access that arrives through a group, a collection, or a system
+principal. The request detail page lists what already reaches the subject beside the
+decision. Nothing notifies the subject at approval time.
 
 **Mitigations.** Notify the subject at approval time and say why: the access type is
 already covered by an existing grant, naming that grant and its expiry. In the request
@@ -109,8 +114,8 @@ types, such as downloading and viewing sensitive metadata. A reviewer who wants 
 two must still reject the preset item and add that type individually. The review UI should
 state the constraint inline rather than let a reviewer discover it by failing.
 
-@see [decision 7](./decisions.md#_7-access-types-imply-one-another) and the
-[Access type order plan](./implementation/access-type-order-plan.md).
+@see [decision 7](./decisions.md#_7-access-types-imply-one-another) and
+[Design — What a preset expands to](./design.md#what-a-preset-expands-to).
 
 ### 7. Membership on an archived group is frozen with no way through
 

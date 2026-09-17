@@ -4,7 +4,7 @@ const StateContainer = require('./StateContainer');
  * The state containers, by resource type. Framework code, so completeness checks iterate
  * `listTypes()` rather than a literal list and a derived app's container is covered too.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 class StateRegistry {
   constructor() {

@@ -79,7 +79,7 @@ function createListHelpers({
    * @param {(row: Object) => string} options.idOf - the id a check binds: `resource_id` for a dataset
    * @param {string} [options.action] - the action the detail route authorizes
    * @returns {Promise<Array<{capabilities: string[], standing: Object[]}>>} in row order
-   * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
+   * @see docs/design/groups/access-model.md — Paths and standing
    */
   async function decideRows(resourceType, rows, { req, idOf, action = 'view_metadata' }) {
     if (!rows.length) return [];

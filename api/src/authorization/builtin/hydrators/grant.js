@@ -31,10 +31,10 @@ grantHydrator.registerVirtualAttribute('resource_type', async ({ id, hydrator })
  * Whether the grant's subject is a user or a group.
  *
  * `isSubject`, `isAdminOfSubjectGroup`, and `hasOversightOfSubjectGroup` read it, and it is not
- * a column on `grant`: the type lives on the `subject` row. Every route that reached these
- * policies pre-fetched `subject_type` from its URL, so the gap stayed invisible until the boot
- * check compared every declared requirement against what the hydrators can supply.
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The static checks that already exist
+ * a column on `grant`: the type lives on the `subject` row. A route that pre-fetches
+ * `subject_type` from its URL never calls this loader. The boot check still requires it, because
+ * every declared requirement must be one a hydrator can supply.
+ * @see docs/contributing/techniques/authorization-engine.md — Requirements no hydrator can supply
  */
 grantHydrator.registerVirtualAttribute('subject_type', async ({ id, hydrator }) => {
   const grant = await hydrator.prisma.grant.findUniqueOrThrow({
@@ -51,7 +51,7 @@ grantHydrator.registerVirtualAttribute('subject_type', async ({ id, hydrator }) 
  * it. Routes that authorize before a grant exists pre-fetch `resource_id`, and the grant
  * routes keyed by a resource do the same, so the loader reads `resource_id` from the record
  * and fetches the grant row only when nothing supplied it.
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+ * @see docs/contributing/techniques/authorization-engine.md — Terms read `access_paths`
  */
 grantHydrator.registerVirtualAttribute('resource_owner_group_id', async ({ id, recordCache, hydrator }) => {
   const resourceId = recordCache.resource_id ?? (await hydrator.prisma.grant.findUniqueOrThrow({

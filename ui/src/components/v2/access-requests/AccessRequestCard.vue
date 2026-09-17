@@ -36,7 +36,7 @@
         <!--
           A decided request is not the same as access the subject still has. Say which,
           rather than letting APPROVED stand for both.
-          @see docs/design/groups/implementation/access-requests-plan.md — C4
+          @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
         -->
         <p v-if="accessNote" class="text-sm" :class="accessNoteClass">
           {{ accessNote }}
@@ -74,7 +74,7 @@
  * the row's `_meta.capabilities` and `_meta.available_actions`, which every access-request list
  * sends.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — B2
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import Badge from "@/components/v2/Badge.vue";
 import ResourceChip from "@/components/v2/ResourceChip.vue";

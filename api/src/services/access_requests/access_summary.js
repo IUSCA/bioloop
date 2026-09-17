@@ -11,11 +11,10 @@ const { getEffectiveCoverage, labelCoverage } = require('@/services/grants/cover
  * design, so no client is asked to infer it: the summary is derived here and travels with the
  * request.
  *
- * The summary is derived, never stored. Grants issued before this work carry no
- * `source_access_request_id`, so it is empty for seeded rows and correct for everything
- * issued from now on.
+ * The summary is derived, never stored. It counts grants by `source_access_request_id`, so a
+ * grant written without one, such as a seeded row, counts toward no request.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 
 /**

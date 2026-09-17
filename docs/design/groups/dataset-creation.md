@@ -3,7 +3,7 @@ title: Dataset Creation
 order: 7
 status: active
 implemented: partial
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 # The three ways a dataset gets created
@@ -14,8 +14,7 @@ A user uploads files from their browser. The three routes differ only in how the
 arrive and who asks. They converge on the same two functions, so ownership, audit, and
 state are decided in one place.
 
-This page explains each route in plain terms and says what each one still needs before
-every dataset carries an owning group. The detailed request-by-request account of the
+This page explains each route in plain terms and says how each one records an owning group. The detailed request-by-request account of the
 upload transfer lives in [Dataset Upload](../../reference/features/dataset-upload.md),
 and import source configuration lives in
 [Dataset Import](../../reference/features/import_sources.md).
@@ -106,13 +105,22 @@ minute, spawns a Celery task to verify the BLAKE3 checksums, and on success star
 `integrated` workflow. The log walks `VERIFYING`, `VERIFIED`, `PROCESSING`, and
 `COMPLETE`, with a failure branch that retries three times before giving up.
 
-## Route 4: the v2 endpoint
+## Route 4: the v2 endpoints
 
-`POST /v2/datasets` is the first creation route on the v2 pair. It requires
-`owner_group_id`, authorizes with the `dataset.create` policy, accepts consent codes in the
-body, and seeds the owning group's grant. It covers the single-dataset case only. Upload,
-import, and bulk registration have no v2 route yet, so the workers and both steppers still
-call the legacy endpoints.
+Every route above has a v2 counterpart on the v2 pair, and each one requires
+`owner_group_id`.
+
+- **`POST /v2/datasets`** creates one dataset. It authorizes with `dataset.create`, accepts
+  consent codes as `use_conditions`, and seeds the owning group's grant.
+- **`POST /v2/datasets/bulk`** takes up to a hundred datasets in the same shape. `watch_v2.py`
+  calls it.
+- **`POST /v2/datasets/imports`** registers a directory under one of the caller's import
+  sources. It authorizes with `dataset.contribute`.
+- **`POST /v2/datasets/uploads`** registers a dataset and its upload log before the transfer.
+  It authorizes with `dataset.contribute`.
+
+The legacy routes still exist and still run for the legacy steppers and `watch.py`. Removing
+them is cut-over work.
 
 ## Everything after creation is shared
 
@@ -130,8 +138,8 @@ Import browsing is shared for a different reason. `GET /fs` and `GET /datasets/i
 enforce the `import_source` allowlist, which is a fact about the filesystem rather than
 about groups.
 
-**This is why moving upload and import onto v2 is a small change.** The only thing that has
-to be rewritten is the call that decides ownership. The transfer, the verification, and the
+**This is why the v2 upload and import routes are small.** The only thing they rewrite is
+the call that decides ownership. The transfer, the verification, and the
 workflows carry over untouched.
 
 ## What groups break that was safe when everything was global
@@ -220,10 +228,25 @@ the shape of the fix follows from it.
 
 A member of one group can discover another group's dataset names.
 `GET /datasets/:type/:name/exists` answers yes or no for any name, and every `user` role may
-call it. The v2 create route's 409 says a dataset with that name already exists, which
-confirms the same fact.
+call it. Under a global key, a create route's 409 for a taken name confirms the same fact.
 
 A group can also deny a name to every other group forever, by taking it first.
+
+#### Asking whether a name is free, without an oracle
+
+`GET /v2/datasets/name-available` answers for one name, one type, and one group. The caller
+must pass `dataset.contribute` against that group, or the route answers 403. The answer
+therefore says nothing about names any other group holds. The import and upload dialogs call
+it when the name, type, or group changes. A failed check never blocks the form, because the
+create route is the real gate.
+
+The legacy `GET /datasets/:type/:name/exists` stays as it is. It answers for any name in the
+system, and only the legacy steppers call it.
+
+The v2 creation routes answer a taken name with 409. The import and upload routes say a
+dataset with that name already exists in this group, and `POST /v2/datasets` says one with
+that name and type already exists. Each 409 comes after the authorization check, so it
+confirms only a name inside a group the caller may already create in.
 
 The constraint is not arbitrary. Archives on the tape system are named after the dataset so
 that an administrator can find data by name when the database is gone. That readability is
@@ -343,33 +366,24 @@ caller's own inputs echoed back, so the response tells the caller nothing they d
 It does confirm that the name is taken somewhere, which is the same oracle as above, and it
 is acceptable here because the only caller is the service account.
 
-## What still has to change
+## How the v2 routes record an owning group
 
-None of the three routes records an owning group. They all succeed anyway, because
-`dataset.owner_group_id` is nullable. Migration `20260908010000_dataset_owner_group_required`
-made the column `NOT NULL`, and `20260909010000_dataset_owner_group_nullable` put it back,
-because a constraint only v2 needs cannot sit on a column the legacy routes write. The
-requirement moved up a layer instead. `buildDatasetCreateQuery` in
-`api/src/services/datasets_v2/create.js` throws without an owning group, and
-`POST /v2/datasets` validates it.
+`dataset.owner_group_id` is `NOT NULL`, with a database default pointing at the seeded
+`Unassigned Datasets` group. A legacy route that names no group lands there. The v2 routes never
+rely on the default. `buildDatasetCreateQuery` in `api/src/services/datasets_v2/create.js`
+throws without an owning group, and every v2 creation route validates `owner_group_id`.
 @see docs/design/v2-cutover.md — What v2 requires that the schema does not
 
-So the gap is not a missing field on the legacy routes. It is that all three creation paths
-still run through the legacy service, which has no concept of an owning group. Verified on
-2026-09-08: the watch script registered a dataset through `POST /datasets/bulk` and the whole
-`integrated` workflow ran to completion, with `owner_group_id` left null.
+### The import and upload routes
 
-### Two new creation routes
+Upload and import each have one v2 route and one v2 service, and neither touches the legacy
+upload or import code. `POST /v2/datasets/uploads` creates the dataset through the v2 pair,
+computes the same deterministic `origin_path`, and creates the `dataset_upload_log` row in one
+transaction. `POST /v2/datasets/imports` re-checks `origin_path` against the caller's import
+sources, then creates through the v2 pair and starts the `integrated` workflow.
 
-Upload and import each need one new route and one new service, and neither touches the
-existing upload or import code. `POST /v2/datasets/uploads` creates the dataset through the
-v2 pair, computes the same deterministic `origin_path`, and creates the `dataset_upload_log`
-row in one transaction. `POST /v2/datasets/imports` re-checks `origin_path` against the
-registered import sources, then creates through the v2 pair and starts the `integrated`
-workflow.
-
-Upload needs one more read route. The v1 upload-log reads are gated by the RBAC
-`accessControl('datasets')` middleware, and a contributor is not an administrator, so
+Upload has one more read route. The v1 upload-log reads are gated by the RBAC
+`accessControl('datasets')` middleware, and a contributor is not an administrator. So
 `GET /v2/datasets/:id/upload-log` authorizes the same data through the policy engine.
 
 Two small pieces are copied rather than shared. The `origin_path` format and the
@@ -377,22 +391,21 @@ import-source prefix check both sit inline in legacy route bodies rather than in
 The format is fixed by data already on disk, so the copies cannot drift in a way that
 matters. Cut-over deletes the legacy copy.
 
-**The workers need no new code.** Import starts a workflow through a v2 route that already
-exists, and upload post-processing is driven by the upload log rather than by the creation
+**The workers need no new code for these routes.** Import starts a workflow through a v2
+route, and upload post-processing is driven by the upload log rather than by the creation
 path.
 
-### Contribution needs a policy, not a comment
+### Contribution is a policy, not a comment
 
 The design says an ordinary member of a group with `allow_user_contributions` may upload into
-that group. The `dataset.create` policy is `isDatasetOwningGroupAdmin`, so a member cannot.
-The policy file records the intent that contribution is enforced at the service layer, and no
-service enforces it.
+that group. The `dataset.create` policy is `isDatasetOwningGroupAdmin`, so a member cannot
+pass it.
 
-A new `contribute` action resolves this. It reads
-`Policy.or([isDatasetOwningGroupAdmin, isMemberOfContributingGroup])`, and the two v2
-creation routes authorize against it. The rule then lives in the policy engine, where every
-other access decision already lives. `dataset.create` keeps its current meaning, so
-`POST /v2/datasets` and `POST /v2/datasets/bulk` are unaffected.
+The `contribute` action carries the rule instead. It reads
+`Policy.or([isDatasetOwningGroupAdmin, isDatasetOwningGroupContributor])`, and the import and
+upload routes authorize against it. The rule lives in the policy engine, where every other
+access decision lives. `dataset.create` keeps its meaning, so `POST /v2/datasets` and
+`POST /v2/datasets/bulk` still admit only the owning group's admins.
 
 ### Choosing the group
 
@@ -404,8 +417,20 @@ rules themselves are set out in
 [Design — Dataset Creation and Initial Ownership Assignment](./design.md).
 
 One eligible group auto-assigns and the dialog says which. Several require an explicit
-choice. None blocks submission with a plain message. The endpoint is the single
-implementation of the three rules, so the interface and the policy cannot disagree.
+choice. None blocks submission with a plain message. The endpoint decides each candidate with
+`dataset.contribute`, the action the import and upload routes authorize. The interface and
+the policy therefore cannot disagree.
+
+**`Public` and `Authenticated Users` are never eligible.** Both are rows in the group table so
+a grant can name them as a subject. Neither has members or a place in the hierarchy, so
+neither can own data. `searchAllGroups` in `api/src/services/groups.js` leaves them out of
+the group list for the same reason.
+
+Leaving them off the list is not enough. A platform admin passes `dataset.contribute` against
+any group, so the engine cannot refuse them. `getOwnerGroupForAuthorization` in
+`api/src/services/datasets_v2/ownership.js` returns nothing for either one, and the route
+answers 404. The import route, the upload route, and `GET /v2/datasets/name-available` all
+resolve the owning group through that one call.
 
 ### Where a user starts
 
@@ -448,7 +473,7 @@ three things in order: registers the dataset, hashes the files in the browser, a
 them. Progress belongs on the dataset's own page afterwards rather than in the dialog,
 because verification and the workflow take minutes and nobody should hold a modal open.
 
-The v2 dataset page shows nothing about upload state today, so it gains a surface for it.
+The v2 dataset page carries an Upload tab for that surface, described below.
 
 ### The transfer does not live in the dialog
 
@@ -497,28 +522,10 @@ It names the status and says in a sentence what that status means, because the r
 `/datasets/uploads/:id` page shows the same information at a second address, which splits a
 dataset across two places for no gain.
 
-**Across datasets**, the datasets list carries an upload state filter. Neither the filter nor the
-upload status badge below is built. Both wait for an authorization model for uploads, which
-decides that the owning group's admins and the person who started an upload may see its status.
-A list row today carries only public attributes, so neither can be shown to that audience yet. The legacy
-`/datasets/uploads/` page is a parallel list of the same rows, and one filterable list is
-better than two lists that can disagree.
-
-The filter takes one of three group names rather than a raw status. `UPLOAD_STATUS_GROUPS`
-collapses the ten statuses into `IN_PROGRESS`, `FAILED`, and `COMPLETE`, which are the three
-answers a person wants from a listing. `ANY` returns every uploaded dataset whatever became
-of it. A single status is accepted too, for a caller that wants one.
-
-One case needs care. An upload that fails terminally is tombstoned: the dataset is renamed
-and marked deleted so its name is freed. Those rows fall out of a normal dataset listing, and
-the person who uploaded still needs to find out what happened. The filter therefore has to
-reach them, which is the one place the single-list approach costs something. `GET /v2/datasets`
-hides deleted datasets unless asked, and it drops that default when `upload_status` is given.
-
-The listing then shows the upload's own state in the status column, in place of the usual
-active-or-archived badge, because a tombstoned failed upload otherwise reads only as
-"Archived" and hides the failure the filter was used to find. `include_upload_log` puts the
-log on each row.
+**Across datasets**, the v2 datasets list has no upload-state filter and no upload status
+badge. Both need an authorization model for uploads first. That model has to let the person who
+started an upload see its status, as well as the owning group's admins. A list row carries only
+the dataset's own attributes, so it cannot show upload state to that audience.
 
 ### What carries over from the existing screens
 
@@ -566,7 +573,12 @@ release that sends it have to be coordinated. The workers' service token is part
 every `/v2` route reads `subject_id` from the caller's JWT, and a token minted before the
 groups work does not carry the claim.
 
-### A smaller gap
+### What remains open
 
-The Owner column on `/v2/datasets` is empty for every row. `GET /v2/datasets` never sets the
-`includes.owner_group` flag its service already supports, although the by-ID route does.
+Two pieces of this design are not in place.
+
+- **The readable-source check has no schedule.** `verifyImportSourcePaths` in
+  `api/src/services/import_sources.js` suspends a source whose path is unreadable, and
+  `api/src/scripts/verify_import_sources.js` runs it. Nothing runs that script on a schedule.
+- **Upload state across datasets waits on an authorization model for uploads.** The filter and
+  the badge return only after that model decides who may see an upload's status.

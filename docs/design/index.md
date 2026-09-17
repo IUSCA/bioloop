@@ -43,14 +43,11 @@ The groups records answer four different questions, and each has one page.
 
 Supporting records:
 
-- [Access type order plan](./groups/implementation/access-type-order-plan.md) — `active`, built
-- [Dashboard plan](./groups/implementation/dashboard-plan.md) — `active`, not started
-- [Profiles](./groups/implementation/profiles.md) — `active`, built (the signed-in "N of M datasets" strip outstanding)
-- [Group invitations](./groups/implementation/invitations.md) — `active`, built (signup mismatch dialog outstanding)
+- [Profiles](./groups/profiles.md) — `active`, built (the signed-in "N of M datasets" strip outstanding)
+- [Group invitations](./groups/invitations.md) — `active`, built (signup mismatch dialog outstanding)
 - [UI information architecture](./groups/ui-information-architecture.md) — `active`, partially shipped
 - [Trust and communication](./groups/trust-and-communication.md) — `active`, not started
-- [End-to-end test flows](./groups/e2e-test-flows.md) — `active`, not started
-- [End-to-end test plan](./groups/implementation/e2e-test-plan.md) — `active`, not started
+- [End-to-end test flows](./groups/e2e-test-flows.md) — `active`, partially shipped
 - [Domain glossary](./groups/glossary.md)
 
 ## Ideas

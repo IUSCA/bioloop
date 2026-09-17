@@ -27,13 +27,15 @@ to file. When two pages disagree, Decisions is the record of intent.
 - [UI information architecture](./ui-information-architecture.md) — how the pages are organised
 - [Trust and communication](./trust-and-communication.md) — where the model is right and the surface misleads
 - [End-to-end test flows](./e2e-test-flows.md) — what a browser-driven suite must prove, written from the design alone
+- [Invitations](./invitations.md) — how a group admin invites somebody by email, including somebody with no account
+- [Profiles](./profiles.md) — the readable front page of a group or a collection, and who may see it
 - [Domain glossary](./glossary.md) — the vocabulary
-
-[Implementation plans](./implementation/) holds the ordered work for each part of the system,
-including profiles and group invitations.
 
 ## History
 
 Two records were folded into the four above once the work they tracked was done: an MVP
 implementation plan whose eleven phases all shipped, and a design review of 2026-09-03 whose
 findings were each answered in [Decisions](./decisions.md). Both remain in git history.
+
+Nine implementation plans were folded into these records once the work they tracked shipped,
+and they also remain in git history.

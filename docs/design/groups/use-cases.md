@@ -3,7 +3,7 @@ title: Group Use Cases
 order: 3
 status: active
 implemented: partial
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -82,8 +82,8 @@ today or it is not, and the difference matters more than the list.
 | A dataset has one owning group but may be reachable by many. | Yes for governance. See Q3 for attribution. |
 | Access can be granted on a single dataset or on a collection. | Yes, though a collection may only hold datasets its own group owns. See Q5. |
 | Access is revocable. | Yes. |
-| Access is time-bound. | Grants carry an expiry, but no scheduled job enforces it. See item 33. |
-| Access history is auditable. | Partly. Grant history survives; membership and collection history is deleted. See item 34. |
+| Access is time-bound. | Yes. A grant past its `valid_until` confers nothing, because authorization reads the `valid_grants` view. See item 33. |
+| Access history is auditable. | Partly. Grant, membership, and collection history survive, and nothing reconstructs past access from them. See item 34. |
 | Membership itself can be time-bound. | **No.** A member is added or removed, with no end date. See item 43. |
 | Group admin authority is scoped, and differs from platform admin. | Yes. |
 
@@ -239,9 +239,9 @@ These users are the operational backbone, and they push the system hardest.
 32. **View all active access grants** — `MVP`
     * Outcome: an admin lists every live grant on their group's data.
 
-33. **Expire access automatically** — `Next`
+33. **Expire access automatically** — `Next` · **built**
     * Outcome: a grant with an end date stops working on that date with no human action.
-    * Note: the expiry logic exists and is tested, but nothing schedules it. This is a cron entry, not a design question.
+    * Note: no job is needed. Every access path joins the `valid_grants` view, which drops a grant once `valid_until` passes. A request left `UNDER_REVIEW` is expired by a scheduled job in `notification/cron.js`.
 
 ### 2.5 Auditing & compliance
 
@@ -492,7 +492,7 @@ Sequencing lives in the local backlog rather than here.
 
 - **Invitations — built 2026-09-09, one part outstanding.** The flow works end to end; only the
   signup-time email mismatch dialog is missing, and the server refuses that case anyway. See
-  [the design record](./implementation/invitations.md).
+  [the design record](./invitations.md#not-built).
 - **Ownership transfer / dual consent.** `authority_transfer` is in the schema and referenced by **zero lines of code**. Settled by [decision 15](./decisions.md): not in the MVP, the table stays, and nothing is wired to it. `route_policy_bindings.test.js` asserts no route binds `transfer_ownership` or exposes a transfer path.
 - **Reparenting.** Deliberately deferred — [routes/groups.js:536](https://github.com/IUSCA/bioloop/blob/main/api/src/routes/groups.js#L536) says not until there is a use case. The closure-table rewrite it needs does not exist.
 - **Visibility presets.** The `EVERYONE` / `OWNING_GROUP` / `INSTITUTION` / `PARENT_GROUP` subject-resolution presets and the composite `OWNING_GROUP:DOWNLOADABLE` form are not modeled. Only access presets exist; subjects are always picked explicitly.
@@ -511,7 +511,6 @@ Sequencing lives in the local backlog rather than here.
 Anything seeded, modeled, or exported and never called reads as shipped. Each of these is
 either wiring to finish or code to delete.
 
-- **`expireStaleRequests`** is implemented and tested and called by no cron, route, or worker. Requests will sit `UNDER_REVIEW` forever in a running deployment.
 - **`group.add_dataset`** and **`group.add_collection`** are defined and never passed to `authorize()`.
 - **`allow_user_contributions`** can be set and read, and nothing enforces it. The contributor upload path is not implemented, and `user_dataset_contribution` is written by no code.
 
@@ -519,12 +518,6 @@ either wiring to finish or code to delete.
 
 Two remain, and both are live.
 
-- **Access-request creation is ungated on the resource.** `authorize('access_request', 'create')` is `Policy.always` and the service validates only the *subject*, so a user holding any resource UUID can file against a resource they cannot see. `assertGrantItemsApplicableToResourceType` runs on grant creation but not here, so a request can also name access types that do not apply to the resource type.
-- ~~**`unarchive` binds the wrong policy.**~~ **Fixed.** `routes/groups.js` now authorizes the
-  unarchive endpoint with `'group', 'unarchive'`, which `groupPolicies` defines as
-  platform-admin-only. Verified end to end 2026-09-11: an archived group's own admin is
-  refused, the group stays archived, and a platform admin can reactivate it
-  (`e2e/src/specs/restrictions/archive.spec.js`, flow A5).
 - **The platform-wide audit query has no scoped form.** `GET /audit/records` spans every resource and stays platform admin only. Owning-group admins and oversight read their own resources through the per-resource endpoints in item 57; a feed across everything a caller governs would need the query filtered by their authority and does not exist.
 - **Legacy `/datasets` routes bypass the group model.** They still use the old RBAC `accessControl()` middleware, so "consistency across interfaces" (11, 56) does not hold on them. These retire as the surfaces above them are rebuilt on `/v2`, rather than as a migration of their own.
 

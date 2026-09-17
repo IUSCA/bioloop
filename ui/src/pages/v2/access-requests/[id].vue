@@ -119,7 +119,7 @@
  * what access is in force right now, and the status badge alone answers that wrongly
  * whenever a grant has since been revoked.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — B3, C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  * @see docs/public/mockups/access-request-screens.html
  */
 import Badge from "@/components/v2/Badge.vue";

@@ -15,7 +15,7 @@ const { hydrateEntities } = require('./hydrationUtils');
  * @param {Object} caches - `{ user, resource, context }` cache Maps from the policy context
  * @param {Object} [contextId] - the context identifiers the action policy hydrated under
  * @returns {Promise<string[][]>} one filter list per matching rule; empty when none matches
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
+ * @see docs/design/groups/access-model.md — Projection
  */
 async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, contextId = null) {
   // `PolicyContainer.attributes()` checked every rule's shape when it was registered.
@@ -71,7 +71,7 @@ function mergeProjections(a, b) {
  *
  * @param {string[][]} filterLists - one list per matching rule, from `evaluateAttributeFilters`
  * @returns {Function} `(obj) => projected obj`; returns `{}` when no rule matched (deny all)
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
+ * @see docs/design/groups/access-model.md — Projection
  */
 function createFilterFunction(filterLists) {
   if (filterLists.length === 0) {

@@ -11,7 +11,7 @@
  * before migrating and seeding. `tests/request.js`, the client for the running API on port
  * 3030, calls `useDevelopmentDatabase`, because the API reads the development database.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The isolated test database
+ * @see docs/contributing/techniques/api-tests.md — The test database
  */
 
 const path = require('path');

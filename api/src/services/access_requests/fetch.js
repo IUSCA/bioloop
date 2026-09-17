@@ -54,7 +54,7 @@ async function _getRequestById(tx, request_id) {
  *
  * `_getRequestById` stays free of the summary, because the transactional callers use it to
  * return the row they have just written and a derived count is not part of that.
- * @see docs/design/groups/implementation/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 async function getRequestById(request_id) {
   const request = await _getRequestById(prisma, request_id);
@@ -127,7 +127,7 @@ async function getRequestsPendingReviewForUser({
   const resourceFilter = resource_id ? Prisma.sql`ar.resource_id = ${resource_id}` : Prisma.empty;
   // Reviewable is the admin path on the resource, read from the path statement the review
   // action's own rule compiles to, not written here a second time.
-  // @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+  // @see docs/design/groups/access-model.md — The rule is a query
   const reviewable = Prisma.sql`ar.resource_id IN (
     SELECT p.resource_id FROM (${accessPathsQuery({ userId: reviewer_id, resourceType: 'dataset' })}) p
     WHERE p.path_kind = 'admin'

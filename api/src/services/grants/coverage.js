@@ -36,8 +36,8 @@ const COVERAGE_VIA = Object.freeze({
  * grant cannot be superseded when approving one of its members, so the exact-subject match in
  * `fetchExistingGrants` stays as it is.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C1
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/design.md — Supersession
+ * @see docs/design/groups/access-model.md — The rule is a query
  * @param {object} params
  * @param {string} params.subject_id - the user or group the coverage is being computed for
  * @param {string} params.resource_id - the dataset or collection resource id
@@ -141,7 +141,7 @@ async function labelCoverage(coverage) {
  * @param {string} grant_id
  * @returns {Promise<Array<{access_type_id: number, still_conferred_by: Object[]}>|null>}
  *   the grant's own type first, then its implied types; null when no grant has the id
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  */
 async function previewRevoke(grant_id) {
   const grant = await prisma.grant.findUnique({
@@ -177,7 +177,7 @@ async function previewRevoke(grant_id) {
  *
  * The reviewer's preview and the requester's preview both read this.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C2
+ * @see docs/design/groups/design.md — Supersession
  * @param {object} params
  * @param {string} params.subject_id
  * @param {string} params.resource_id

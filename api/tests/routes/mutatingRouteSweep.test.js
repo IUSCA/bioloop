@@ -13,7 +13,7 @@
  * refuses it. `stateRefusals.test.js` sends the requests for a representative set.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 3
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const path = require('path');

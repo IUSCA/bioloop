@@ -9,7 +9,7 @@
  *   row, beside its policy.
  * - The registry lists its types, so a completeness check iterates it instead of a literal list.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — What compilation needs from core
+ * @see docs/design/groups/access-model.md — Extension
  */
 
 const Policy = require('../../../../src/authorization/core/policies/Policy');

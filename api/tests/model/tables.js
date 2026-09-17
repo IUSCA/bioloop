@@ -10,7 +10,7 @@
  * only these rows, so what it decides comes from the model's rule applied to declared facts,
  * not from the engine's closures.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Reference model
+ * @see docs/design/groups/access-model.md — How the model is checked
  */
 
 const path = require('path');

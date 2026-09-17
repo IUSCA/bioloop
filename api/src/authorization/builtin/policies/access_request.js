@@ -128,7 +128,7 @@ accessRequestPolicies
     // rule for `create` reads the resource it names, and the service refuses with 409. The
     // subject rules — self, or a group the requester administers — stay in
     // `_validateAccessRequestSubject`.
-    // @see docs/design/groups/implementation/access-requests-plan.md — A1
+    // @see docs/design/groups/design.md — Filing a request
     create: mutating(Policy.always),
   })
   .attributes({

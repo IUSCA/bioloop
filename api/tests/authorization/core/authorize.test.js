@@ -285,7 +285,7 @@ describe('authorizeWithFilters()', () => {
       const { registry } = makeRegistry({ 1: { id: 1 } });
       const policy = makePolicy({ evaluate: async () => true });
       // Both rules match, so the response keeps every key either rule shows.
-      // @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
+      // @see docs/design/groups/access-model.md — Projection
       const rule1 = { policy: Policy.always, attribute_filters: ['id'] };
       const rule2 = { policy: Policy.always, attribute_filters: ['name'] };
       const result = await authorizeWithFilters({

@@ -74,7 +74,7 @@ const isGroupContributor = new GroupPolicy({
  * Requires no user attribute at all, which is what lets an unauthenticated caller satisfy
  * it. Every other term on `view_profile` reads a membership the anonymous principal does
  * not have.
- * @see docs/design/groups/implementation/profiles.md — 1. Visibility is a column, not a grant
+ * @see docs/design/groups/profiles.md — Two asymmetries
  */
 const isProfilePublic = new GroupPolicy({
   name: 'isProfilePublic',
@@ -126,7 +126,7 @@ const PUBLIC_ATTRIBUTES = [
  * because a group publishes a shared inbox as a link when it wants to be reachable and an
  * address list is worth harvesting. No `ancestors[*]`, because the hierarchy is internal
  * structure.
- * @see docs/design/groups/implementation/profiles.md — What each audience sees
+ * @see docs/design/groups/profiles.md — What each audience sees
  */
 const PUBLIC_PROFILE_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'tagline', 'about_md', 'avatar_key',
@@ -185,7 +185,7 @@ groupPolicies
     // Issuing and withdrawing an invitation. An invitation is an add_member that has not
     // happened yet and carries the same authority, so this is not a narrower rule than
     // add_member; it is a separate action because it is separately restrictable.
-    // @see docs/design/groups/implementation/invitations.md — Authorization
+    // @see docs/design/groups/invitations.md — Authorization
     invite: mutating(isGroupAdmin),
     // Reading the list is split from issuing because the two differ under ARCHIVED: a frozen
     // group takes no new invitations, and the outstanding ones are exactly what an admin

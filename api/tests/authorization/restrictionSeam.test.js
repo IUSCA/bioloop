@@ -11,7 +11,7 @@
  * This is deliberately not the state layer. A restriction is a rule somebody applies to a
  * resource; what a resource's state admits is separate and answers 409 from the services.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — D3. Every action passes the restriction check
+ * @see docs/design/groups/design.md — Every action passes the check
  * @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
  */
 

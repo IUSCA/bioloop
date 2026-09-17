@@ -2,7 +2,7 @@
 title: Decisions
 order: 2
 status: active
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: tip A decision record
@@ -89,6 +89,9 @@ middleware, rate limiting, and a decision about what metadata is safe to expose.
 The reason for doing the foundation half now is that retrofitting a second principal into
 every zero-default query later is the expensive move. Adding the row is not.
 
+[Decision 19](#_19-the-anonymous-caller-is-a-principal-not-a-second-code-path) takes up the
+unauthenticated path.
+
 ## 4. Roles stay an enum
 
 **Decision.** `GROUP_MEMBER_ROLE` remains a database enum. Membership and governance
@@ -145,7 +148,9 @@ Requirements and as Authorization Domains, and neither built negative permission
 
 **Scope.** The evaluation hook. Every action passes the restriction check, at every level that
 decides access: a single decision, a capability map, and a list. No restriction type ships. How a
-restriction is specified is deferred, and until then the check allows every action.
+restriction is specified is deferred, and until then the check allows every action. No restriction
+table exists either, because a table nothing writes reads as shipped. The specification brings the
+storage it needs.
 
 Resource state is not a restriction. [Decision 17](#_17-resource-state-is-checked-after-authorization)
 places it after authorization.
@@ -367,11 +372,14 @@ insert instead of silently doubling rows.
 approval can create nothing, when a broader grant already covers the access type, which is
 risk 2 in [Trust and communication](./trust-and-communication.md); the reviewer's preview now
 names the covering grant instead of showing an unexplained skip. And two reviewers approving
-the same subject, resource, and access type at the same moment collide on the constraint,
-which is recorded as an edge case in
-[the access and requests plan](./implementation/access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
-Neither is worth a model change. If the race is ever observed, the fix is to retry the losing
-transaction.
+the same subject, resource, and access type at the same moment collide on the constraint.
+Neither is worth a model change.
+
+**The race is accepted.** One approval commits, and its expiry is the one that survives. The
+other is rejected, and the losing reviewer sees a 409. Nothing retries. Reviewing again succeeds,
+because the winning grant is now visible: the second approval either writes nothing or supersedes
+the first, as [Design](./design.md#supersession) describes. `issueGrants.concurrency.test.js`
+asserts this shape. If the race is ever observed, the fix is to retry the losing transaction.
 
 **Why supersession, and not refusal or chaining.** A subject who holds one preset and
 requests another that shares an access type is not making a mistake. Refusing the second
@@ -416,11 +424,9 @@ implementation.
 
 ## 16. The access model's open questions have answers
 
-**Decision.** The nineteen questions the
-[access model verification plan](./implementation/access-model-verification-plan.md#decisions-the-model-forces)
-raised are answered below. Each answer is stated in [Access model](./access-model.md) or in the
-operations table of [Design — Lifecycle Management](./design.md#lifecycle-management), and each
-answer that differs from what the code did is implemented by a phase of that plan.
+**Decision.** The nineteen open questions that stating the access model formally raised are
+answered below. Each answer is stated in [Access model](./access-model.md) or in the operations
+table of [Design — Lifecycle Management](./design.md#lifecycle-management).
 
 The answers were taken during implementation, without a separate review, so each carries its
 reason. A later reader who disagrees is reopening one row, not the model.
@@ -471,8 +477,8 @@ service. And every container needs a mapping to the thing whose state is checked
 `_meta.available_actions` holds what the resource's state admits. A page shows a control when the
 caller could act, and enables it when the state admits the action. A control whose state cannot
 return, such as Review on a decided request, is hidden instead. Sending both keeps an admin's
-authority visible on an archived group, where a merged list would hide it. See the
-[Restrictions and resource state plan](./implementation/restrictions-plan.md#the-two-answers-in-the-response).
+authority visible on an archived group, where a merged list would hide it. See
+[Access model — The UI consumption contract](./access-model.md#the-ui-consumption-contract).
 
 ## 18. Presets are stored, and expanded when a grant is issued
 
@@ -513,6 +519,22 @@ explains a partial state rather than preventing it.
 
 @see [Design](./design.md#grant-presets) for how presets expand and which ones ship.
 
+## 19. The anonymous caller is a principal, not a second code path
+
+**Decision.** An unauthenticated request runs through the same authorization engine as every
+other request. It carries `ANONYMOUS_PRINCIPAL`, a frozen principal whose `subject_id` is Public
+and whose roles and memberships are empty. `optionalAuthenticate` sets it on the public router.
+
+**Rejected: a public read path outside the engine.** A service function could check the
+visibility column and return a hand-written projection. That creates two places that decide what
+a viewer may see. The two drift, and the one that drifts is the one nobody exercises. One engine
+keeps the attribute rules the single authority on which fields leave the building.
+
+**Consequence to accept.** A principal object exists that is not a person. It is frozen, it
+reaches only the GET routes of `api/src/routes/public.js`, and `public_router.test.js` asserts
+that shape. It holds only what was granted to Public, as
+[Access model — Base relations](./access-model.md#base-relations) states.
+
 ## Raised and deferred
 
 Two findings of the 2026-09-03 review were deliberately not acted on. Both dispositions were
@@ -535,14 +557,20 @@ enum-bearing row rather than a grant, so each of these stays its own piece of wo
 collapsing into the access-request machinery. **Ownership transfer** was in that list and is
 now settled as decision 15: deferred, with its table kept and nothing wired to it.
 
+**Bounded model checkers such as Alloy or TLA+** are deferred. They earn their cost when the
+hierarchy changes during its lifetime, so reparenting or delegated authority is the trigger.
+
 **Invitations were in that list and are now built.** They confirm the decision rather than
 strain it: an invitation is a standing offer of a `group_user` row with a role, so it needed
 its own table and lifecycle and borrowed nothing from grants or access requests. See
-[Invitations](./implementation/invitations.md).
+[Invitations](./invitations.md).
 
-**Serving unauthenticated requests** is deferred by decision 3. The principal exists; the
-route path does not.
+**Serving unauthenticated requests** was deferred by decision 3 and is settled as decision 19 for
+profile reads.
 
 **Restriction types** are deferred by decision 6. None ships, and the check allows every action.
+
+**Archiving a group's sub-groups in one action** is not built. A sub-group keeps its own state, as
+decision 17 states, and each one is archived on its own.
 
 **Attribution and funding** were deferred by decision 8 and taken up by decision 13.

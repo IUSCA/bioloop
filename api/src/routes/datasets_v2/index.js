@@ -37,7 +37,7 @@ const router = express.Router();
  * `admitted_by`, so the creation dialog can say why a group is offered rather than showing
  * an unexplained list. The creation routes still authorize — this is a convenience.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A2
+ * @see docs/design/groups/dataset-creation.md — Choosing the group
  */
 router.get(
   '/eligible-owner-groups',
@@ -80,7 +80,7 @@ router.get(
  * `GET /datasets/:type/:name/exists` answers for any name in the system and is open to
  * every `user` role; that is a global existence oracle and this deliberately is not one.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A3
+ * @see docs/design/groups/dataset-creation.md — Asking whether a name is free, without an oracle
  */
 router.get(
   '/name-available',
@@ -127,7 +127,7 @@ router.get(
  * Authorized with `contribute`, so a member of a group that accepts contributions may
  * import into it, not only its admins.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B3
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  */
 router.post(
   '/imports',
@@ -183,14 +183,14 @@ router.post(
 /**
  * Register a dataset that is about to be uploaded from a browser.
  *
- * Returns the upload log. The transfer itself goes to the TUS server, which is unchanged
- * and keys everything on dataset_id, so nothing downstream cares which route created the
- * dataset.
+ * Returns the upload log. The transfer itself goes to the TUS server, which keys everything on
+ * dataset_id, so nothing downstream cares which route created the dataset. The TUS server
+ * authorizes each upload itself in `onUploadCreate` (`services/upload/UploadService.js`).
  *
  * Authorized with `contribute`, so a member of a group that accepts contributions may upload
  * into it and not only its admins.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — C1
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  */
 router.post(
   '/uploads',
@@ -420,8 +420,9 @@ router.get(
 /**
  * Creates a dataset under an owning group.
  *
- * `owner_group_id` is required here even though the column is nullable, because the legacy
- * creation routes still write rows without one until cut-over.
+ * `owner_group_id` is required here even though the column has a default. The default is the
+ * `Unassigned Datasets` group, which exists so the legacy creation routes, which send no owning
+ * group, keep working until cut-over.
  * @see docs/design/v2-cutover.md — What v2 requires that the schema does not
  */
 router.post(
@@ -571,9 +572,8 @@ router.patch(
       return next(createError(404, 'Dataset not found'));
     }
 
-    // Only the fields this route validates. The body used to be passed through whole, so an
-    // admin of the owning group could rewrite owner_group_id, is_deleted, or archive_path.
-    // @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
+    // Only the fields this route validates. Passing the body through whole would let an admin
+    // of the owning group rewrite owner_group_id, is_deleted, or archive_path.
     const updated = await datasetService.patchDataset(
       dataset.id,
       _.pick(['name', 'description'])(req.body),

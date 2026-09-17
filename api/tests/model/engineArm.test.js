@@ -5,16 +5,11 @@
  * decided by `authorizeAction` from identifiers alone, against the reference model.
  *
  * Every disagreement must match a classification below. A classification names what the
- * disagreement is, where it is decided, and the phase that removes it. A new disagreement
- * fails as unclassified, and a classification that no longer matches anything fails as stale,
- * so the list cannot outlive the fix it waits for.
+ * disagreement is and where it is decided. A new disagreement fails as unclassified, and a
+ * classification that no longer matches anything fails as stale, so the list cannot outlive
+ * the fix it waits for.
  *
- * Two bugs this arm found are fixed and have no entry. `group.add_dataset` admitted any caller
- * to a group accepting contributions, and a grant to a system principal made its owning group
- * visible. Cell 3 (an anonymous caller) and cell 47 (a grant to Authenticated Users) failed
- * before the fixes.
- *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Comparison arms
+ * @see docs/design/groups/access-model.md — How the model is checked
  */
 
 const path = require('path');

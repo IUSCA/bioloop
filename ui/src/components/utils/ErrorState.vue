@@ -3,7 +3,7 @@
     `data-testid` is the end-to-end suite's hook for "this surface refused". It is on the
     shared component rather than on each page because every v2 surface renders its refusal
     through this one, and a per-page hook would drift.
-    @see docs/design/groups/implementation/e2e-test-plan.md — Selectors
+    @see docs/contributing/techniques/e2e-tests.md — Selectors
   -->
   <div
     data-testid="error-state"
@@ -52,7 +52,7 @@ import { computed } from "vue";
  * caller's `title` and `message` are the fallback for everything that is not a refusal.
  * `error.message` is never shown.
  *
- * @see docs/design/groups/implementation/profiles.md — API
+ * @see docs/design/groups/access-model.md — Refusal shapes
  */
 const props = defineProps({
   /** The raw error, if there is one. Its status picks the refusal wording. */

@@ -5,9 +5,10 @@ const { prefixFor } = require('./build');
  * Removes everything a run built, in one transaction.
  *
  * Through SQL rather than through the API, because the API deliberately offers no way:
- * there is no `DELETE /groups/:id`, and the dataset one is commented out. Archiving is not
- * deletion and history is preserved, so adding a destructive endpoint to serve a test suite
- * would put a hole in the model. Teardown is not a thing under test, so it goes around it.
+ * there is no `DELETE /groups/:id`, and `DELETE /v2/datasets/:id` keeps the dataset's record.
+ * Archiving is not deletion and history is preserved, so adding a destructive endpoint to serve
+ * a test suite would put a hole in the model. Teardown is not a thing under test, so it goes
+ * around it.
  *
  * Order follows the foreign keys that RESTRICT. Everything else cascades: `group_user`,
  * `group_closure`, and every `dataset_*` child go with their parent.
@@ -19,7 +20,7 @@ const { prefixFor } = require('./build');
  * `group.id`, `resource.id`, `subject.id`, and every id referencing them are `text` in
  * Postgres. A `uuid[]` cast fails with `operator does not exist: text = uuid`.
  *
- * @see docs/design/groups/implementation/e2e-test-plan.md — How it is torn down
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 async function teardownWorld(runId) {
   const prefix = prefixFor(runId);

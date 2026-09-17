@@ -3,7 +3,7 @@ title: Hierarchical Groups
 order: 1
 status: active
 implemented: partial
-last_verified: 2026-09-08
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -642,7 +642,7 @@ grants nobody access to a dataset, and hiding one takes no access away. That is 
 is a column rather than a grant to `Public`: a grant is an authorization fact, and this is
 not one.
 
-@see [Profiles](./implementation/profiles.md) — Decision 1
+@see [Profiles — Two asymmetries](./profiles.md#two-asymmetries)
 
 **Invariant**:
 
@@ -692,6 +692,11 @@ Each issued grant records the preset that supplied it, so the Access tab names
 "Standard Research Use" rather than listing access types with no shape. An access type the
 request named directly, or that two presets both supply, records no preset.
 
+Reduction decides what a revoke removes. The preset above writes one grant of `DOWNLOAD`
+rather than three rows. Revoking that one grant removes everything the preset conferred. Grants written before issuance reduced presets are not rewritten. Their extra rows
+are redundant rather than harmful, and revoking a row cannot be undone, so a backfill would be
+the riskier change.
+
 #### A request names presets and access types
 
 Each request item names one unit of intent: a preset or a single access type.
@@ -730,7 +735,7 @@ refused.
 A preset names access types only. It never resolves a subject. Choosing who receives access —
 a user, a group, or a system principal — is a separate, explicit step in every flow.
 
-@see [Access type order plan](./implementation/access-type-order-plan.md) for how issuance reduces a preset,
+@see [What a preset expands to](#what-a-preset-expands-to) for how issuance reduces a preset,
 and [decision 7](./decisions.md#_7-access-types-imply-one-another) for the order itself.
 
 
@@ -809,6 +814,36 @@ guarded on the status it leaves, which is `DRAFT` or `UNDER_REVIEW`. No request 
 revoked. Revoking access is always an operation on grants, so a request whose grants were
 all revoked still reads `APPROVED`. The approval happened, and the revocations are recorded
 on the grants.
+
+### Filing a request
+
+A request can be filed only against a resource the requester can already see.
+`POST /access-requests` decides `view_metadata` on the dataset or collection the request
+names. The body carries `resource_id` and no resource type, so the `authorize()` middleware
+cannot choose the policy container. The handler reads the `resource` row and then decides
+`view_metadata` itself. The `create` action on `access_request` stays `Policy.always`, and its
+`preFetchedResourceFn` names the resource to the restriction check. The request's own `create`
+state rule refuses a resource whose state no longer admits access changes, with a 409. Items
+pass `assertGrantItemsApplicableToResourceType`, as they do on grant creation.
+
+Filing a request also submits it. With `submit: true`, `createAndSubmitAccessRequest` creates
+the `DRAFT` and moves it to `UNDER_REVIEW` in one transaction. Both states and both audit events
+are kept. Two client calls would be worse, because no surface lists a `DRAFT`. A failure
+between the calls would strand a request its requester can neither see nor resume.
+
+### Notifications and expiry
+
+Submitting a request notifies its reviewers in app. The reviewers are the admins of the
+resource's owning group. Deciding a request notifies the requester, not the subject, because
+a group has no inbox. Both notifications run after the transaction commits. A failure is
+logged and swallowed, because an undelivered notification must not undo a decision.
+`services/access_requests/notify.js` writes the in-app rows directly. The notification bus
+always queues an email job, and it has no in-app-only path.
+
+`review_timeout` is a scheduled job. `notify.cron.access_request_expiry` in the API config sets
+its schedule and its cutoff, which default to 02:00 daily and 30 days. Neither value is derived,
+and either may be changed. Every job in `notification/cron.js` runs in `notify.cron.timezone`,
+and a test asserts that.
 
 ---
 

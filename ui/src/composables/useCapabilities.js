@@ -21,7 +21,7 @@ import { computed, unref } from "vue";
  * matter do serve it.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 5: the UI
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  *
  * @param {object|import('vue').Ref} source - the resource, or a ref to it, as the API sent it
  * @returns {{

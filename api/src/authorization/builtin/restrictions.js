@@ -20,7 +20,7 @@
  *
  * @see docs/design/groups/decisions.md — 6. Restrictions compose by AND; grants stay additive
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the engine stops reading state
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 /**

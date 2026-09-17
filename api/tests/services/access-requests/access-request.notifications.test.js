@@ -5,7 +5,7 @@
  * person who asked. People do not poll a portal, and an un-notified approval reads as a
  * rejection.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — D1
+ * @see docs/design/groups/design.md — Notifications and expiry
  */
 
 const path = require('path');

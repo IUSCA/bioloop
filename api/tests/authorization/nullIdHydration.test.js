@@ -6,7 +6,7 @@
  * eligible-owner-groups list do. Each must be decided on its own owning group: a cached record
  * keyed by the missing id would answer the second with the first one's attributes.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 6: restrictions, operations, and creates
+ * @see docs/contributing/techniques/authorization-engine.md — The cache
  */
 
 const path = require('path');

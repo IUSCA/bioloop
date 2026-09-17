@@ -1,12 +1,12 @@
 /**
  * userHasGrant.refusal.test.js
  *
- * An access check with no access types is an under-specified question. It used to answer
- * "any grant": `satisfiedBy([])` returns [] and the query builders read an empty list as no
- * filter. Two lifecycle assertions passed `access_type_id`, a key the function never read, and
- * so could not fail.
+ * An access check with no access types is an under-specified question, so it throws. Answering
+ * would mean "any grant", because `satisfiedBy([])` returns [] and the query builders read an
+ * empty list as no filter. A caller that passes `access_type_id`, a key the function never
+ * reads, reaches the same refusal rather than a check that cannot fail.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Refusal of an under-specified question
+ * @see docs/design/groups/access-model.md — Refusal shapes
  */
 
 const path = require('path');

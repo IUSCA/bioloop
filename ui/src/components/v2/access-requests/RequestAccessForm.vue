@@ -193,7 +193,7 @@ const {
 );
 
 // What the request would add, beside what the subject already has.
-// @see docs/design/groups/implementation/access-requests-plan.md — C6
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
 const {
   rows: previewRows,
   loading: previewLoading,

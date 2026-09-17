@@ -5,7 +5,8 @@
  * and a path is resolved against those same sources — scoping the list without scoping the
  * resolve would leave the contents readable to anyone who guessed a path.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B1, B2
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
+ * @see docs/design/groups/dataset-creation.md — An import source has a lifecycle, so it has a status
  */
 
 const path = require('path');

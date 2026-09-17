@@ -10,7 +10,7 @@
  * rather than 403. A 403 would tell the admin they lack authority, which is false.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the two answers in the response
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  */
 
 const path = require('path');

@@ -6,7 +6,7 @@
  * cannot leave its state rule behind or an action unchecked. This suite asserts the shipped
  * registries agree, and that each kind of disagreement is actually reported.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const path = require('path');

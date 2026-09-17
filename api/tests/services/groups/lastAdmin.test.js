@@ -1,13 +1,11 @@
 /**
  * lastAdmin.test.js
  *
- * A group keeps at least one admin. The check used to run in the route, outside the
- * transaction, once per user against the state before any removal. So removing both of two
- * admins in one call passed both checks, and two concurrent removals raced the same way.
+ * A group keeps at least one admin. The check runs inside the removal and demotion
+ * transactions, after the group row is locked. A check in the route, outside the transaction,
+ * would pass each removal of two admins in one call, and two concurrent removals would race.
  *
- * It now runs inside the removal and demotion transactions, after the group row is locked.
- *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
+ * @see docs/design/groups/access-model.md — Invariant ownership
  */
 
 const path = require('path');

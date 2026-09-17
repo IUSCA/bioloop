@@ -8,7 +8,7 @@
  * @param {{valid_from: Date|string, valid_until: Date|string|null, revoked_at: Date|string|null}} grant
  * @param {Date} [now]
  * @returns {boolean}
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  */
 function isGrantActive(grant, now = new Date()) {
   return new Date(grant.valid_from) <= now

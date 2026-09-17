@@ -2,16 +2,16 @@
 title: End-to-end test flows
 order: 11
 status: active
-implemented: none
-last_verified: 2026-09-09
+implemented: partial
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
 What a browser-driven test suite for the v2 groups system must prove. This page is written
 from [Design](./design.md), [Decisions](./decisions.md), and [Use Cases](./use-cases.md)
 alone. It names no file, no route, and no selector, because a flow that quotes the code
-cannot contradict it. The grounded companion is
-[End-to-end test plan](./implementation/e2e-test-plan.md).
+cannot contradict it. The suite that proves these flows lives in `e2e/`, and `e2e/README.md`
+says how to run it.
 :::
 
 <!-- cspell:ignore Priya -->
@@ -109,9 +109,34 @@ sample datasets. Flow H1 is therefore walked against this world's resources rath
 against an absolutely empty portal.
 
 The end-to-end suite does **not** use these rows. It builds its own world per run, named for
-the run, and borrows unaffiliated `user-0NN` accounts — see
-[End-to-end test plan](./implementation/e2e-test-plan.md). Seeded and generated worlds coexist without
-colliding.
+the run, and borrows unaffiliated `user-0NN` accounts. Seeded and generated worlds coexist
+without colliding.
+
+### How the suite builds its world
+
+**The v2 suite is separate from the v1 suite in `tests/`.** Every v1 project selects one of
+three RBAC roles. v2 has no roles below platform admin, and these flows need at least eight
+actors, sometimes two in one test. The v1 suite also needs `NODE_ENV=ci` on the API, so it
+cannot run against an ordinary dev stack.
+
+**The suite builds its structure and borrows its people.** It creates groups, memberships,
+datasets, collections, and grants at the start of a run. It does not assert against seeded
+groups or seeded grants. Seeded memberships move when the seed changes, and the sample world
+grants to both system principals, so nothing there is truly invisible.
+
+**It builds through the HTTP API as a platform admin, not through direct inserts.** A world
+built by inserts can be one the API would refuse, such as a dataset with no resource row. A
+world built through the API makes the fixture itself a check that the creation paths work.
+
+**It never creates a user account.** Creating an account runs the `USER_CREATED` handlers, and
+one of them applies that address's pending invitations. A world builder that created accounts
+would exercise the invitation path before any invitation flow had started. Flow C1 is where an
+account first appears, and it appears because a person accepted an invitation.
+
+**It tears the world down through SQL, because the API offers no way.** Groups and collections
+have no delete, and a dataset delete keeps its record. Archiving is not deletion, and history is
+preserved. A destructive endpoint added only so a test suite can tidy up would put a hole in the
+model. Teardown deletes the run's own rows by run identifier, and touches nothing seeded.
 
 ### The resources
 
@@ -255,6 +280,9 @@ being one.
 **And never** is the historical row absent, and never does Frank retain a stale page that
 still serves the data.
 
+The current member list shows current members only. The membership history lives in the
+group's audit log, as `GROUP_MEMBER_ADDED` and `GROUP_MEMBER_REMOVED`.
+
 ### B3 — Membership can end on a date · `Next` · `journey`
 
 Covers use case 43.
@@ -289,7 +317,7 @@ is no tiered visibility based on membership path.
 
 ### C1 — Inviting somebody who has no account · `MVP` · `journey`
 
-Covers [Invitations](./implementation/invitations.md).
+Covers [Invitations](./invitations.md).
 
 **Actor** Alice, then Vic.
 **Given** Vic has no account and no pending invitation.
@@ -326,6 +354,9 @@ Wong Lab.
 **When** Alice invites Bob's address as an admin, and Bob accepts.
 **Then** Bob remains a member. The invitation closes, and his role does not change.
 **And never** is an invitation a route to privilege escalation.
+
+The system closes the door earlier than the flow imagines. Inviting an existing member is
+refused with a 400 saying the person is already a member, so no invitation is ever issued.
 
 ### C5 — An archived group takes no invitations · `Next` · `boundary`
 
@@ -595,8 +626,8 @@ Covers use case 28.
 
 ### G3 — A request against an invisible resource is refused · `MVP` · `boundary`
 
-Covers use case 5 and the enforcement hole in
-[Access and requests plan](./implementation/access-requests-plan.md#one-enforcement-hole-blocks-everything-else).
+Covers use case 5 and the check in
+[Design — Filing a request](./design.md#filing-a-request).
 
 **Actor** Frank.
 **Given** Frank cannot see `IMG-0007`, which belongs to Imaging Core.
@@ -624,7 +655,7 @@ from it is in force, with the date of the last revocation.
 
 ### G6 — A requester can see their own requests · `MVP` · `journey`
 
-Covers use case 8, and the gap named in [Dashboard plan](./implementation/dashboard-plan.md#the-gap-only-the-dashboard-closes).
+Covers use case 8, and a gap the [Dashboard](./ui-information-architecture.md#dashboard) closes.
 
 **Actor** Frank.
 **Then** one page lists every request Frank has filed, across every resource, with its status
@@ -652,8 +683,8 @@ Covers use case 33 as applied to requests.
 
 ### G10 — Two reviewers colliding fails loudly · `Later` · `boundary`
 
-Covers the documented edge case in
-[Access and requests plan](./implementation/access-requests-plan.md#the-concurrency-race-is-a-documented-edge-case).
+Covers the accepted race in
+[Decision 14](./decisions.md#_14-the-no-overlap-constraint-and-supersession-stay).
 
 **Then** one approval is refused with a conflict the reviewer can see and retry, and the
 second attempt succeeds.
@@ -689,7 +720,7 @@ visible to you, and nothing exists here.
 
 ### H3 — Metadata and data are gated separately · `MVP` · `boundary`
 
-Covers postures B.5 and B.6 in [Use Cases](./use-cases.md#5-dataset-visibility).
+Covers postures B.5 and B.6 in [Use Cases](./use-cases.md#_5-dataset-visibility).
 
 **Actor** Frank.
 **Given** `PCM230203` is discoverable and locked.
@@ -813,7 +844,7 @@ the access arrives through that principal.
 
 ### M3 — A signed-out reader gets only what is published · `Later` · `boundary`
 
-Covers [Profiles](./implementation/profiles.md).
+Covers [Profiles](./profiles.md).
 
 **Given** a group's profile is public and a collection's is not.
 **Then** a signed-out reader sees the group's name, tagline, about body, links, and
@@ -859,7 +890,7 @@ property, and both are asserted.
 
 ### O1 — Each persona lands somewhere true · `Next` · `journey`
 
-Covers [Dashboard plan](./implementation/dashboard-plan.md).
+Covers the [Dashboard](./ui-information-architecture.md#dashboard).
 
 **Actor** Quinn, Bob, Alice, and Priya in turn.
 **Then** each sees a page that renders without error, with sections composed from what is
@@ -934,6 +965,12 @@ must not assert a duration.
 is absent. Absence is easy to assert accidentally — a selector that matches nothing passes
 for the wrong reason — so each such flow must also assert that something expected *is*
 present on the same page.
+
+**It must not mutate seeded rows.** Every write lands on a resource the run created. This is
+what makes the suite safe to run against a developer's own database.
+
+**It must not edit the v1 suite in `tests/`.** The v1 suite keeps working unchanged until the
+cut-over, as [v2 cut-over](../v2-cutover.md) requires of every legacy surface.
 
 ## Keep this page current
 

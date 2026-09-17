@@ -3,10 +3,9 @@
 The rule that decides every access question in v2, stated over the data it reads. Every
 consumer, from the policy engine to a button on a page, gives the answer this page gives.
 
-The verification work that produced this page is in
-[Access model verification plan](./implementation/access-model-verification-plan.md). Decisions are recorded in
-[Decisions](./decisions.md), and the lifecycle effects are in
-[Design — Lifecycle Management](./design.md#lifecycle-management).
+[How the model is checked](#how-the-model-is-checked) describes the tests that compare the code
+with this page. Decisions are recorded in [Decisions](./decisions.md), and the lifecycle effects
+are in [Design — Lifecycle Management](./design.md#lifecycle-management).
 
 ## Terms
 
@@ -16,6 +15,16 @@ The verification work that produced this page is in
 - A **consumer** is any code that answers some version of that question. The engine, a list query, a capability map, a badge, and a `v-if` that offers a button are all consumers.
 - A **path** is one reason a decision is true.
 - A caller's **standing** on a resource is the set of paths for that resource's read action.
+
+## What correct means
+
+The system is correct when five properties hold.
+
+1. **Specification.** One rule gives the decision for every state, user, action, and resource. No combination lacks an answer.
+2. **Agreement.** Every consumer gives the answer the rule gives. A list contains a resource exactly when its page opens.
+3. **Invariants.** Every operation leaves the state satisfying the invariants in [Invariant ownership](#invariant-ownership).
+4. **Coverage.** The test data contains every enum value, every registered action, and every operation, so an unhandled new value fails a test.
+5. **Extension.** Every rule, table, and check is stated over the registries, as [Extension](#extension) describes.
 
 ## A decision is a tuple
 
@@ -70,11 +79,19 @@ set of facts over time.
 | `status(x)` | the lifecycle state of an access request, an invitation, or a grant | `access_request.status`, `group_invitation.status`, `grant.revoked_at` |
 | `import_source(g, path, status)` | group `g` may register datasets under `path` | `import_source` |
 
+Containment between the two system principals runs one way. A signed-in caller holds both Public
+and Authenticated Users, because Public is the wider audience. An anonymous caller holds only
+Public, so a grant to Authenticated Users never reaches them. `subjectSetSql` in
+`api/src/services/grants/helpers.js` is the one place that builds a caller's subject set.
+
 Ten access types exist. Their order is a forest.
 
 - `DATASET:DOWNLOAD`, `DATASET:COMPUTE`, and `DATASET:REMOTE_ACCESS` each imply `DATASET:LIST_FILES`.
 - `DATASET:LIST_FILES`, `DATASET:VIEW_SENSITIVE_METADATA`, `DATASET:LIST_SOURCE_DATASETS`, and `DATASET:LIST_DERIVED_DATASETS` each imply `DATASET:VIEW_METADATA`.
 - `COLLECTION:LIST_CONTENTS` implies `COLLECTION:VIEW_METADATA`.
+
+`DATASET:REMOTE_ACCESS` is checked by its own action, `dataset.remote_access`, so a grant of it
+names more than file listing. No route binds that action yet.
 
 ## Derived relations
 
@@ -96,6 +113,21 @@ Each derived relation has one definition, and every consumer reads that definiti
   - Four actions have their own rule. `archive` needs `r` not archived, and a collection's owning group not archived. `unarchive` needs `r` archived. A create reads only the owning group it names.
   - For an access request, an invitation, or a grant, it is `precondition(a, r)`, together with `open` on the resource or group the row names, and for a request or an issue `not for_archived_group(r)`, as the transition table lists.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
+
+## The rule is a query
+
+The rule is evaluated in SQL, because a list has to filter before `LIMIT`, `OFFSET`, and `COUNT`.
+A filter applied after the database chose a page gets both the page and the total wrong. Policies
+stay JavaScript, because a derived app extends them.
+
+`accessPathsQuery` in `api/src/authorization/builtin/paths/index.js` returns one row per path,
+naming the resource, the path kind, and what the path runs through. Lists, single checks,
+standing, and capabilities all read it.
+
+Three inputs stay outside the statement. The platform-admin check runs once before it. Attribute
+filters project the row afterwards. Terms that name no resource, such as `isRequester`, stay
+hydrated policies. A list adds the restriction check as `restrictionPredicate` in
+`accessibleIdsQuery`.
 
 ## The decision rule
 
@@ -146,9 +178,11 @@ request under review, because it runs on time rather than on a person's action.
 
 The rules live in `api/src/state/builtin/`, one container per resource type. Invitations have a
 container of their own, although they have no policy container. A service calls
-`state.assertPossible` with the row it locked. A response reports the same rules as
-`_meta.available_actions`, through `state.availableActions`. The server refuses to start when a
-policy action has no state rule.
+`state.assertPossible` with the row it locked. A rule is a pure function of that row, and it
+declares the fields it reads. The caller fetches them, so the layer runs no query. A rule whose
+field the caller did not fetch throws an error naming the field. A response reports the same
+rules as `_meta.available_actions`, through `state.availableActions`. The server refuses to start
+when a policy action has no state rule.
 
 @see [decision 17](./decisions.md#_17-resource-state-is-checked-after-authorization)
 
@@ -173,7 +207,8 @@ standing shows all of them.
 
 A badge is a display of standing. It gates nothing, and tabs and buttons gate on capabilities
 only. When a caller holds several paths, the badge shows the first row that matches, and the
-standing panel lists every path.
+standing panel lists every path. A list row's badge, from `rowBadgeFor`, leaves out
+`platform_admin`, because it would repeat on every row. The detail badge keeps it.
 
 | Precedence | Path | Badge on a group | Badge on a dataset or a collection |
 |---|---|---|---|
@@ -243,6 +278,9 @@ the resource did not exist. A caller who can read a resource already knows it ex
 on a mutation reveals nothing.
 
 The 409 body of an in-flight request conflict is a contract the UI reads, and it keeps its shape.
+
+A check called without the information it needs throws rather than widening. `userHasGrant` with
+no access types is one such check.
 
 ## Non-edges
 
@@ -350,7 +388,7 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 | Response shape | Producer | Read by | Pinned by |
 |---|---|---|---|
 | `_meta.capabilities` on a detail route | the engine: what the caller could do, less what a restriction blocks | every `[id]` page through `can()` | `tests/model/engineArm.test.js` for the decision each capability reports, and `tests/model/transitionsArm.test.js` for access requests; no test compares a route's list with the reference model |
-| `_meta.available_actions` on a detail route and a list row | `state.availableActions`, from each resource type's state rules | every page, to enable a control it shows | `tests/state/rules.test.js`, `tests/model/stateArm.test.js`, `tests/routes/stateRefusals.test.js` |
+| `_meta.available_actions` on a detail route, and on a row of the access-request, grant, and invitation lists | `state.availableActions`, from each resource type's state rules | the pages that enable a control they show; a search list row does not carry it | `tests/state/rules.test.js`, `tests/model/stateArm.test.js`, `tests/routes/stateRefusals.test.js` |
 | `request_access` in a detail route's capabilities | `mayFileRequest` in `services/access_requests`: signed in, no restriction blocks `access_request.create`, and the resource's state admits a request | the dataset and collection Overview tabs | `tests/services/access-requests/mayFileRequest.test.js` |
 | `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | `tests/model/standingArm.test.js`, `tests/model/badgeCoverage.test.js` |
 | `_meta.capabilities` and `_meta.standing` on a list row | `decideRows`, the detail route's composition for each row | list pages, cards, and the request cards | `tests/model/listRowsArm.test.js` |
@@ -363,7 +401,7 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 | refusal status and the 409 body | `createDecisionPipeline`: 404 without standing, 403 with it | `ErrorState` and the request form | `tests/routes/groups.invitations.test.js`, `tests/routes/access_requests.create.test.js` |
 | the actions archiving forbids | each resource type's own state rules, through `GET /v2/states/:type/archived/forbidden-actions` | the archive dialogs, through `stateLabels.js` | `tests/model/stateLabels.test.js` |
 | a user directory search | `searchDirectory`: three characters, ten people, four fields | `UserSearchSelect` | `tests/routes/users_v2.directory.test.js` |
-| eligible owner groups | `dataset.contribute` decided on each candidate the path statement names | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
+| eligible owner groups | `dataset.contribute` decided on each candidate the path statement names; `listOwnerGroupCandidates` leaves out archived groups, as a state fact | the dataset create dialog | `tests/services/datasets/dataset.eligible-owner-groups.test.js` |
 | a field present only for some paths | the attribute rules | `GroupOverviewTab` for `allow_user_contributions` | no test |
 
 ## Decision surfaces outside the engine
@@ -371,6 +409,39 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 - **Import** decides from `import_source`, membership, and `contributions_allowed` in `resolveImportSourceForUser`. It has no action name.
 - **Downloads** decide once in the engine, then trust the minted token.
 - **Uploads** carry the session bearer to the TUS server, which checks the dataset's `contribute` decision when the upload is registered.
+
+## How the model is checked
+
+The harness lives in `api/tests/model/`. It compares consumers with a reference model over
+generated worlds, and it drives random operation sequences.
+
+**The reference model.** `reference.js` states the decision rule in plain JavaScript over
+in-memory arrays. It never imports the engine, the services, or Prisma. It reads the same three
+tables the engine reads. The reference was written from the design, and the design was read from
+the code, so both can share a mistake. The decision records and the cases manual testing found
+are the check on that. `modelCoverage.test.js` fails on a registered type that is neither modelled
+nor named in `NOT_MODELLED`.
+
+**Worlds.** A world is a set of groups, users, resources, and grants. `worlds.js` generates it,
+and `dbWorld.js` writes it to the database. A cell is one user and one dataset, over twelve
+dimensions: caller, relation to the owning group, grant subject, grant route, access type, grant
+validity, archived, deleted, owner, seeded grant, profile visibility, and contributions. The
+database arms run on a covering set in which every pair of values appears at least once. They add
+sensitivity pairs: for each dimension, two cells that differ only there and that the reference
+decides differently. The generator fails a dimension with no such pair. The reference also writes
+[the decision table](./generated/access-decisions.md), and `npm run model:table -- --check` fails
+when that file is stale.
+
+**Comparison arms.** Each arm compares one consumer with the reference for every user, action,
+and resource in a world. `engineArm` covers `authorizeAction` with the creates, and `pathsArm`
+covers `accessPathsQuery`. `listsArm`, `listRowsArm`, and `standingArm` cover the lists, each
+row's `_meta`, and `_meta.standing`. `transitionsArm` covers access-request capabilities in every
+status, and `stateArm` covers `state.checkOf`. No arm compares a route's capabilities, projected
+fields, refusal status, or session handling with the reference. `refusalStatus.test.js` and
+`attributeRuleOrdering.test.js` cover part of that by example.
+
+**Operation sequences.** `operationSequences.test.js` drives `fast-check` command sequences
+against the real services and the reference, and compares the two after every command.
 
 ## Extension
 
@@ -380,3 +451,9 @@ actions, their restriction classes, and its attribute rules. The state container
 `api/src/state/custom/` carries a state rule for every one of those actions. The completeness
 checks iterate the registries rather than a literal list, and the server refuses to start while the
 two disagree.
+
+`api/src/authorization/builtin/tables/index.js` builds the term, action, and attribute tables from
+the registered containers. They live in code and change as reviewed diffs. Only relations the SQL
+joins are database tables, and `prisma/seed_baseline.js` writes their constants from
+`api/src/constants.js`. The harness cannot catch a wrong table row, because the reference reads
+the same tables. Review and the generated decision table check the rows.

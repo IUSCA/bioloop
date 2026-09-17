@@ -10,7 +10,7 @@
  * reason, and an entry that no longer matches any line fails the scan too, so the list cannot
  * outlive the code it excuses.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  */
 
 const fs = require('fs');

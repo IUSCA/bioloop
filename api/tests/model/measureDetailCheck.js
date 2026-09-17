@@ -8,7 +8,7 @@
  * Queries are counted by wrapping the Prisma client's raw-query methods and every model method
  * the engine can call, because the server does not load pg_stat_statements.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+ * @see docs/design/groups/access-model.md — The rule is a query
  */
 
 /* eslint-disable no-console, no-await-in-loop, no-restricted-syntax, no-param-reassign */

@@ -9,7 +9,7 @@
  * virtual attribute is actually exercised — a virtual attribute is dead code on the route
  * path, because the middleware pre-fetches `req.user`.
  *
- * @see docs/design/groups/implementation/profiles.md — Authorization
+ * @see docs/design/groups/profiles.md — What each audience sees
  */
 
 const path = require('path');

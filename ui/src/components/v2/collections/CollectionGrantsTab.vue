@@ -169,9 +169,8 @@ import GrantService from "@/services/v2/grants";
 
 const router = useRouter();
 
-// A grant that came from a request links to the request that produced it. The page
-// exists now; before B3 this went to a path that did not.
-// @see docs/design/groups/implementation/access-requests-plan.md — C5
+// A grant that came from a request links to the request that produced it.
+// @see docs/design/groups/e2e-test-flows.md — F9 — Every grant row says where it came from
 function viewRequest(requestId) {
   router.push(`/v2/access-requests/${requestId}`).catch(() => {});
 }

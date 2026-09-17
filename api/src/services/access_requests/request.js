@@ -380,7 +380,7 @@ async function _submitRequest(tx, request_id, actor_id) {
 async function submitRequest(request_id, actor_id) {
   const request = await prisma.$transaction((tx) => _submitRequest(tx, request_id, actor_id));
   // After the commit, and never able to fail it: a notification that cannot be delivered
-  // must not undo a submission. @see docs/design/groups/implementation/access-requests-plan.md — D1
+  // must not undo a submission. @see docs/design/groups/design.md — Notifications and expiry
   await notifyReviewersOfSubmission(request);
   return request;
 }
@@ -393,7 +393,7 @@ async function submitRequest(request_id, actor_id) {
  * requester could neither see nor resume. Both states and both audit events are kept — only
  * the round trip disappears.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — B1
+ * @see docs/design/groups/design.md — Filing a request
  * @param {Object} data - as for createAccessRequest
  * @param {string} requester_id - UUID of the user creating the request
  * @returns {Promise<Object>} the request, UNDER_REVIEW

@@ -17,9 +17,9 @@ const accessTypeClosure = require('./accessTypeClosure');
  *
  * A grant issued from an approved preset item inside a request has both, so the Access tab
  * can say "issued as part of Standard Research Use" rather than listing five access types
- * with no shape. Both are null on grants that predate the provenance work.
+ * with no shape. Both are null on a grant written without that provenance, such as a seeded row.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C5
+ * @see docs/design/groups/design.md — What a preset expands to
  */
 const PRESET_JSON = Prisma.sql`
   CASE WHEN gp.id IS NULL THEN NULL

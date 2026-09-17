@@ -36,7 +36,6 @@ the new module takes the plain name.
 | `api/src/services/collections.js` | Collections |
 | `api/src/services/grants/` | Grants, presets, access-type ordering |
 | `api/src/services/access_requests/` | Access requests and review |
-| `api/src/services/restrictions.js` | The restriction layer |
 | `api/src/services/resources.js` | Resource identity and scopes |
 
 When a file's half is unclear, `git log --diff-filter=A -- <path>` settles it. The legacy
@@ -60,30 +59,27 @@ breaks.
 A constraint only v2 needs cannot sit on a column v1 writes, because both halves write the
 same tables. The requirement belongs in the v2 service and route instead.
 
-`dataset.owner_group_id` is the worked example. Migration
-`20260908010000_dataset_owner_group_required` made it `NOT NULL`, which broke all three
-legacy creation paths at once — they send no owning group, so they began failing at the
-database level rather than returning a useful error. Migration
-`20260909010000_dataset_owner_group_nullable` dropped the constraint again.
+`dataset.owner_group_id` is the worked example. v2 requires a caller to name the owning group.
+The legacy creation paths send none. A bare `NOT NULL` would make them fail at the database
+rather than return a useful error.
 
-The requirement now lives one layer up. `buildDatasetCreateQuery` in
-`api/src/services/datasets_v2/create.js` throws when there is no `owner_group_id`, and
-`POST /v2/datasets` validates it. A dataset created through v2 always has an owning group;
-one created through a legacy route may not.
-
-The `Unassigned Datasets` group and its backfill stay as they are. Rows already moved there
-keep their owner. The group is still where a dataset with no owner belongs once somebody
-assigns one.
+So the column is `NOT NULL` with a database default, the seeded `Unassigned Datasets` group. A
+legacy insert that names no group lands there. The stricter requirement lives one layer up.
+`buildDatasetCreateQuery` in `api/src/services/datasets_v2/create.js` throws when there is no
+`owner_group_id`, and `POST /v2/datasets` validates it. A dataset created through v2 always
+names its owning group. One created through a legacy route is owned by `Unassigned Datasets`
+until somebody assigns it.
 
 ## Shared tables need a v1 story
 
 Every v2 table that a legacy route writes to needs an answer for the rows v1 produces:
 
-- **`dataset.owner_group_id`** — null for legacy rows. They fall outside the ownership path,
-  so `searchDatasetsForUser` does not return them to anyone but a platform admin.
+- **`dataset.owner_group_id`** — the `Unassigned Datasets` group for legacy rows. A legacy
+  insert seeds no grant, so `searchDatasetsForUser` returns them only to a platform admin and
+  to whoever administers or oversees that group.
 - **`resource`** — `dataset.resource_id` is `NOT NULL` with no database default, and nothing
-  populates it on insert. `datasets_v2/create.js` creates the resource row as a nested
-  create. The legacy paths do not, which is a second reason legacy creation currently fails.
+  populates it on insert. Both `datasets_v2/create.js` and the legacy `services/dataset.js`
+  create the resource row as a nested create.
 - **`grant`** — a dataset created through v2 gets a seeded grant seating its owning group.
   A legacy dataset gets none, which is consistent: it has no owning group to seat.
 
@@ -108,12 +104,12 @@ a v1 default closes that hole for v2 without touching v1's path.
 **Step 1 — stop the legacy routes.** Remove them from `api/src/routes/index.js`. They become
 unreachable in one commit, and that commit is trivially revertible. Nothing is deleted.
 
-**Step 2 — assign the orphans.** Every dataset with a null `owner_group_id` needs one. They
-are visible to platform admins in the `Unassigned Datasets` group and through a direct query.
-Seed each an owning-group grant as it is assigned.
+**Step 2 — assign the orphans.** Every dataset owned by `Unassigned Datasets` needs a real
+owning group. Platform admins see them in that group. Seed each an owning-group grant as it is
+assigned.
 
-**Step 3 — restore the constraint.** Re-apply `SET NOT NULL` on `dataset.owner_group_id`
-once no route can write a row without it, and drop the throw from
+**Step 3 — drop the default.** Remove the database default on `dataset.owner_group_id` once no
+route can write a row without naming a group. Then drop the throw from
 `buildDatasetCreateQuery` in favour of the database check.
 
 **Step 4 — delete the legacy code**, gradually, once nothing imports it.
@@ -171,7 +167,7 @@ no invitations in the table the handler does nothing, so legacy behaviour is unc
 
 This is the shape a granted carve-out should take: an extension point in the old code, and the
 feature itself somewhere else. It is not a precedent for editing v1 generally.
-[Invitations](./groups/implementation/invitations.md) is the record.
+[Invitations](./groups/invitations.md#why-it-is-shaped-this-way) is the record.
 
 ### Done ahead of the cut-over: a text-size setting on the profile page
 

@@ -23,7 +23,7 @@
       <!--
         An APPROVED request whose grants were all revoked reads as access the requester does
         not have. Saying so is the highest-value line on this page.
-        @see docs/design/groups/implementation/access-requests-plan.md — C4
+        @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
       -->
       <Alert
         v-if="props.summary.issued === 0"
@@ -60,7 +60,7 @@
  * question a decided request gets asked, and the status badge alone answers it wrongly
  * whenever a grant has since been revoked.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import Alert from "@/components/utils/ModernAlert.vue";
 import * as datetime from "@/services/datetime";

@@ -1,11 +1,11 @@
 /**
  * access-request.expiry-cron.test.js
  *
- * `expireStaleRequests` was implemented, tested, and called by nothing, so a request sat
- * UNDER_REVIEW forever and the pending queue only ever grew. This asserts the cron module
- * registers the job and that the handler it registers actually expires a stale request.
+ * `expireStaleRequests` does nothing unless a scheduled job calls it, and without it a request
+ * sits UNDER_REVIEW forever. This asserts the cron module registers the job and that the
+ * handler it registers actually expires a stale request.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — D2
+ * @see docs/design/groups/design.md — Notifications and expiry
  */
 
 const path = require('path');

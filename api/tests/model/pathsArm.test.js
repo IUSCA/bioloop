@@ -13,7 +13,7 @@
  * - As a list: the ids `accessibleIdsQuery` returns for the user contain the resource exactly
  *   when the per-resource form found a path.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/access-model.md — The rule is a query
  */
 
 /* eslint-disable no-await-in-loop, no-restricted-syntax */

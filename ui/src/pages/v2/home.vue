@@ -458,7 +458,7 @@
  * This page owns every call. A section component is presentational and takes its rows as
  * props, so two panels never ask the same question twice.
  *
- * @see docs/design/groups/implementation/dashboard-plan.md
+ * @see docs/design/groups/ui-information-architecture.md — Dashboard
  */
 import AccessRequestCard from "@/components/v2/access-requests/AccessRequestCard.vue";
 import GroupIcon from "@/components/v2/groups/GroupIcon.vue";
@@ -627,7 +627,7 @@ async function load() {
         ].slice(0, PANEL_ROWS);
       }),
       // Unpaginated and grouped by subject and resource, so the count is the array
-      // length and the panel in phase 3 reads the same rows.
+      // length and the expiring-access panel reads the same rows.
       attempt("Access expiring soon", async () => {
         const { data } = await GrantsService.expiringGrants({
           within_days: EXPIRY_WINDOW_DAYS,

@@ -38,7 +38,7 @@
  * So do not delete this page because nothing links to it. Deleting it puts the application
  * sidebar back on every public profile.
  *
- * @see docs/design/groups/implementation/profiles.md — The UI
+ * @see docs/contributing/techniques/v2-ui-changes.md — A directory of pages with a non-default layout needs an `index.vue`
  */
 </script>
 

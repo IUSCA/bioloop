@@ -6,7 +6,7 @@
  * into SQL. `findAsyncTerms` lists every such term in the registry, and the authorization
  * module refuses to load while the list is not empty.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+ * @see docs/contributing/techniques/authorization-engine.md — Terms read `access_paths`
  */
 
 const path = require('path');

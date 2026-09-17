@@ -7,10 +7,10 @@
  *
  * The point of the function is the paths the exact-subject queries miss. A user inheriting
  * from their group, a group inheriting from its ancestor, and a dataset reached through a
- * collection are each asserted here, because each one was invisible on both the requester's
- * and the reviewer's preview before it existed.
+ * collection are each asserted here, because the requester's and the reviewer's previews
+ * read this function and would otherwise miss each one.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C1
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 
 const path = require('path');
@@ -195,7 +195,7 @@ describe('coverage that arrives through a collection', () => {
 
   test('a collection access type covers no dataset in the collection', async () => {
     // The engine never honours a collection type on a dataset, so coverage must not report it.
-    // @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+    // @see docs/contributing/techniques/authorization-engine.md — A list query widens through the access-type order
     await grant(member.subject_id, collection.id, listContentsId);
 
     expect(await coverageOf(member.subject_id, dataset.resource_id)).toEqual([]);

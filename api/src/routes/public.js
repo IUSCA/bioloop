@@ -24,7 +24,7 @@ const avatarService = require('@/services/profiles/avatar');
  *  - A refusal is a 404, never a 403. A 403 on a private group confirms the group exists,
  *    so an unpublished profile and an id that was never issued answer identically.
  *
- * @see docs/design/groups/implementation/profiles.md — API
+ * @see docs/design/groups/profiles.md — The public router
  */
 
 const router = express.Router();

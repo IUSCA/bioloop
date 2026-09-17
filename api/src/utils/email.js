@@ -18,7 +18,7 @@ const validator = require('validator');
  * mailbox and normalise to one string. The browser cannot reproduce this — it trims and
  * lowercases only — which is a known and bounded imprecision.
  *
- * @see docs/design/groups/implementation/invitations.md — Email Normalization
+ * @see docs/design/groups/invitations.md — Email normalization
  * @param {string} email
  * @returns {string|null}
  */

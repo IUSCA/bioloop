@@ -111,7 +111,7 @@ grantPolicies
     // deciding whether an approval would change anything. Neither `list_for_resource` nor
     // `list_for_subject` covers both, and widening either would let one side's authority
     // reach rows the other side owns.
-    // @see docs/design/groups/implementation/access-requests-plan.md — C1
+    // @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
     view_coverage: reading(Policy.or([
       isSubject,
       isAdminOfSubjectGroup,

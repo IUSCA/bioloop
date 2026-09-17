@@ -357,7 +357,7 @@ import ProfileService from "@/services/v2/profiles";
  * The API is the authority on every rule this form applies. The limits repeated here exist
  * to say "no" before a round trip, not instead of the server's check.
  *
- * @see docs/design/groups/implementation/profiles.md — API
+ * @see docs/design/groups/profiles.md — The columns
  */
 
 const props = defineProps({

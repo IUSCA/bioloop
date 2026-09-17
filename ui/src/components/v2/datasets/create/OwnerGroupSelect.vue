@@ -11,7 +11,7 @@
   Backed by GET /v2/datasets/eligible-owner-groups, whose rules mirror the dataset.contribute
   policy exactly. A group offered here is one the create will accept.
 
-  @see docs/design/groups/implementation/dataset-creation-plan.md — A5
+  @see docs/design/groups/dataset-creation.md — Choosing the group
 -->
 <template>
   <div class="space-y-3">

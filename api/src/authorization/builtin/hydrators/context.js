@@ -111,7 +111,7 @@ const contextHydrator = new ContextHydrator({ appConfig: null });
  *
  * Cached under the `user:resourceType:resource` key, so one query serves every action of a
  * capability set and the attribute rules after it.
- * @see docs/design/groups/implementation/access-model-verification-plan.md — The rule is a query
+ * @see docs/design/groups/access-model.md — The rule is a query
  */
 contextHydrator.registerVirtualAttribute('access_paths', async ({ id }) => loadAccessPaths(id));
 

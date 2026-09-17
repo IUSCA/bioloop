@@ -5,11 +5,11 @@
  * though no authorization check ran. These calls go straight to the services, which is the case a
  * group archived between the middleware's decision and the write reaches.
  *
- * It also pins the half of decision D2 that is easy to lose: archiving reaches the group itself
- * and what it owns, and a sub-group keeps its own state.
+ * It also pins the half of the state check that is easy to lose: archiving reaches the group
+ * itself and what it owns, and a sub-group keeps its own state.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 2: every service checks state
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const path = require('path');

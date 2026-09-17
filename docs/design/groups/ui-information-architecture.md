@@ -3,7 +3,7 @@ title: UI Information Architecture
 order: 8
 status: active
 implemented: partial
-last_verified: 2026-09-03
+last_verified: 2026-09-17
 ---
 
 ::: warning Design record — active
@@ -35,7 +35,7 @@ fold follows from what each one came to do. They are snapshots of intent, not of
 
 Seven areas make up the portal.
 
-- **Dashboard** — what needs the caller, and what they can reach. See [Dashboard plan](./implementation/dashboard-plan.md).
+- **Dashboard** — what needs the caller, and what they can reach. See [Dashboard](#dashboard).
 - **Groups** — hierarchy, membership, archival.
 - **Datasets** — ownership, grants, collection membership, lifecycle.
 - **Collections** — dataset containers and grant targets.
@@ -46,7 +46,7 @@ Seven areas make up the portal.
 ## Page map
 
 ```
-├── / (dashboard: sections gated by persona — see the dashboard plan)
+├── / (dashboard: sections gated by persona — see Dashboard below)
 ├── /groups
 │   ├── /groups  (browse & search, create group action)
 │   └── /groups/:id
@@ -88,6 +88,52 @@ Seven areas make up the portal.
 │
 └── /audit-log  (global event stream, platform admin only)
 ```
+
+## Dashboard
+
+The dashboard at `/v2/home` answers one question: what needs me, and what can I reach. Every
+list page already browses and filters its own resource, so the dashboard never repeats a
+listing. It shows the few rows a person acts on today and links to the page holding the rest.
+
+**It closes two gaps no other page closes.** It is the page a person lands on, so it lists
+their own access requests without a detour to the Access Requests area. It also explains an
+empty portal. Zero-default access means a caller with no grants and no groups sees empty
+pages everywhere. The dashboard tells that caller that access is given rather than assumed,
+and offers a way to browse what they can see. See
+[Trust and communication](./trust-and-communication.md) — risk 8.
+
+**One page, composed from sections.** The personas are not disjoint people. A group admin
+files requests and holds grants like anyone else, and a platform admin belongs to groups. So
+one page renders every section that is true of the caller, and each panel has one
+implementation. Three rules decide what renders, read from `GET /v2/users/me`.
+
+- **Platform** sections render for a platform admin: platform totals, groups with no active
+  admin, and recent activity. They sit on top.
+- **Governance** sections render for anyone who administers or oversees a group, and for a
+  platform admin: needs your review, access expiring soon, groups I administer, and datasets
+  I govern. They sit above the personal sections, because the review queue is what needs an
+  admin today.
+- **Personal** sections render for everyone: my access requests, my groups, and datasets I
+  can reach.
+
+The hero line names the caller's widest standing: platform admin, group admin, oversight, or
+member. An overseer's hero and group rows say read-only.
+
+**No stat without a query.** A number with no query behind it is left out, not filled with a
+placeholder. The mockup draws several such panels, and each is cut for that reason. The API
+work each one waits on is in `.todo/local/L4-dashboards.md`.
+
+- Every delta, such as "2 added this month", because nothing records a time series.
+- Active-grant and membership totals across a caller's groups, because only per-resource
+  counts exist.
+- Datasets to discover and request, because dataset search returns only reachable rows.
+- A platform-wide pending queue, because `my-pending-reviews` is scoped to one reviewer.
+- A stale-request alert, because nothing computes how long a request has waited.
+- A group admin's activity feed, because `GET /audit/records` is platform admin only.
+- A quick-actions grid, because every create modal needs a group already in context.
+- A compact group tree. My groups links to the Groups area instead.
+- The grant behind each reachable dataset, because it costs one coverage call per row. The
+  dataset's Access tab answers it.
 
 ## The Overview tab
 
@@ -157,6 +203,11 @@ Forbidden actions are hidden, not greyed out, and the filtering happens at the q
 layer. Oversight-only views carry a visible "read-only oversight" banner so that an
 overseer is never led to believe they can act.
 
+The add-member dialog shows its invite-by-email section to every caller holding `invite`,
+whatever the user search returns. The search finds only people who have signed in, so an
+empty result is normal for a new colleague. A section that appears only on an empty result
+reads as an error.
+
 ## UX principles
 
 Four principles apply across every page.
@@ -200,6 +251,18 @@ through a preset. The grant dialog offers every type.
 holds, by any path. The selector shows each held type, and every type it implies, ticked
 and disabled. A short reason sits beside it, such as "You have this through Wong Lab".
 
+**What a request adds.** The request form previews what approval as asked would do.
+`POST /access-requests/compute-effective-grants` takes the body filing takes, less `type` and
+`purpose`, and writes nothing. It shares `previewIssue` with the reviewer's
+`POST /grants/compute-effective-grants`, and differs from it in three ways.
+
+- **Who may call it.** The reviewer's route needs `grant:create`. The requester's route runs
+  the checks filing runs, `assertRequestable` and `assertMayRequestFor`.
+- **What it returns.** `existingGrant` is cut to its `expiry` and `access_type`, because the
+  whole row names who issued it and why.
+- **What it says.** `EffectiveGrantsPreview` takes `perspective="requester"`, and reads "What
+  this request adds", "Would be added", and "Already held".
+
 **Wording.** People who ask and admins who grant read the same forms, so both forms use one
 vocabulary. They say "Who needs access", "For how long", and "Everyone signed in". They do
 not say "subject", "expiry", or "system principal". Only the framing differs between the
@@ -217,7 +280,7 @@ capability is present. The same reasoning applies to datasets against `datasetPo
 | Overview | Full | Full, read-only | Public attributes only | Hidden |
 | Datasets | Full | Full | With `COLLECTION:LIST_CONTENTS` | Hidden |
 | Access (grants) | Full, can manage | Read-only | Own access only | Hidden |
-| Requests | Incoming queue + own | Incoming queue, read-only, + own | Own requests only | Own requests only |
+| Requests | Incoming queue + own | Own requests only | Own requests only | Own requests only |
 | Audit Log | Full | Read-only | Hidden | Hidden |
 
 The consequences follow.
@@ -234,7 +297,7 @@ grant holder.
 The profile work added the last three. A grant holder reads the profile body on the ordinary
 Overview tab, without `view_profile` being involved, because they already hold a grant on the
 collection. `view_profile` exists for the caller who holds no grant at all, including one who
-is not signed in. @see [Profiles](./implementation/profiles.md) — What each audience sees.
+is not signed in. @see [Profiles — What each audience sees](./profiles.md#what-each-audience-sees).
 
 **The Datasets tab is gated on the grant, and opening a row is gated again.** The tab needs
 `COLLECTION:LIST_CONTENTS`. It lists every dataset in the collection, with each dataset's
@@ -248,22 +311,46 @@ action the stage route checks.
 **A browsable collection offers the next step.** When any row will not open, the tab offers a
 request for access on the collection. That request may name dataset access types, because
 they are valid on a collection. The `Discoverable` preset never reaches this state. It issues
-`DATASET:VIEW_METADATA` on the collection together with `COLLECTION:LIST_CONTENTS`.
+`COLLECTION:VIEW_METADATA` and `DATASET:VIEW_METADATA` on the collection, and no
+`COLLECTION:LIST_CONTENTS`. Its holder has no Datasets tab, and can open each dataset the
+collection holds.
 
 **A list row always opens.** The dataset list and the collection list count a grant only
 when its type satisfies the page's `view_metadata` check, after the access-type order is
 applied. `api/tests/services/grants/listVisibility.test.js` asserts the lists and the pages
 agree for each grant shape. @see [Decisions](./decisions.md) — 7. Access types imply one another.
 
-**The Requests tab never disappears.** `create` on `access_request` is `Policy.always`,
-so any authenticated user can file a request, and `isRequester` always lets them see
-their own. The tab holds two distinct views with two distinct audiences: the incoming
-review queue, gated on `review_requests`, and the caller's own requests, which are
-always available. Do not collapse them into one list.
+**The Requests tab never disappears.** A caller who can open the page already holds
+`view_metadata` on the resource, which is what filing a request needs. `isRequester` always
+lets them see their own requests. The tab holds two distinct views with two distinct
+audiences: the incoming review queue, gated on `review_access_requests`, and the caller's own
+requests, which are always available. Do not collapse them into one list. Oversight has no
+review queue, because the queue selects only the admin path to a resource.
 
 **Access and Requests are different tabs on purpose.** "Access" is the grant table —
 standing access, admin-managed. "Requests" is the user-initiated workflow for asking
 for access. The labels should keep that distinction visible.
+
+**A request card opens the request.** `AccessRequestCard` is one row on the queue page and on
+both resource tabs. The whole row opens the request detail page. The Review button shows only
+when the row's `_meta` says the viewer holds `review` and the request's state admits it, which
+means the request is `UNDER_REVIEW`.
+
+**A decided request says what is still in force.** Every request listing runs
+`withGrantCounts`, one grouped query for the page. Each row then carries `access_summary`.
+It counts the grants naming the request as their source, split into live, revoked, and
+expired. The three states are exclusive, so they sum to the number issued. The card says
+"No live access from this request" when a decided request issued grants and none survives.
+It stays silent while a request is under review, and when the request issued nothing.
+
+**The request detail page explains the rest.** `GET /access-requests/:id` returns the
+viewer's capabilities, because being able to read a request is not being able to review it.
+A requester and an overseer can both read a request neither may decide. The page also runs
+the coverage query, which a listing skips because it costs one query per request. An approved
+item writes no grant when broader access already covers it, so the page lists what reaches
+the subject by another path. `coverageAccessTypeIds` picks what to ask about. A decided
+request asks about its approved items. An undecided one, in `DRAFT` or `UNDER_REVIEW`, asks
+about every item.
 
 **A grant holder's Access tab explains their own access.** It lists each grant that reaches
 the caller on this resource, and the path it arrives by. A path is a direct grant, a group
@@ -272,11 +359,10 @@ dataset. It never lists another subject's grants. The tab reads
 `GET /grants/USER/:subject_id/:resource_type/:resource_id/coverage`, which `view_coverage`
 allows for the subject themselves. The same rule applies on a dataset page.
 
+A coverage query widens through the access-type order, so a lab's `DATASET:DOWNLOAD` grant
+covers a question about `DATASET:LIST_FILES`. The grant preview attaches each coverage row to
+every access type it answers for, not only to its own.
+
 Coverage explains grants only. An admin or an overseer holds access through group structure,
 which no grant row records. Those callers see the full grant table instead.
 
-::: tip Related open item
-`create` on `access_request` being `Policy.always` means a caller can file a request
-against a resource they cannot see. That is tracked as a live enforcement hole, not a
-design intent.
-:::

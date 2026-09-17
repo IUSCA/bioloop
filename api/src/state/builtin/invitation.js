@@ -13,7 +13,7 @@ const { rule, refuse } = require('../core/rules');
  * layer decides an invitation through `group.invite` and a token. The startup check therefore does
  * not expect these action names among the policy actions.
  *
- * @see docs/design/groups/implementation/invitations.md
+ * @see docs/design/groups/invitations.md
  */
 
 const pendingAndOpen = (what) => rule({

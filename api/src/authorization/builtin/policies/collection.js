@@ -52,7 +52,7 @@ const hasCollectionOversight = new CollectionPolicy({
 /**
  * The profile is published to the world. Requires no user attribute, which is what lets an
  * unauthenticated caller satisfy it.
- * @see docs/design/groups/implementation/profiles.md — 1. Visibility is a column, not a grant
+ * @see docs/design/groups/profiles.md — Two asymmetries
  */
 const isProfilePublic = new CollectionPolicy({
   name: 'isProfilePublic',
@@ -96,7 +96,7 @@ const PUBLIC_ATTRIBUTES = [
  * somebody the system cannot name.
  *
  * The owning group is named because a citation is not usable without it.
- * @see docs/design/groups/implementation/profiles.md — What each audience sees
+ * @see docs/design/groups/profiles.md — What each audience sees
  */
 const PUBLIC_PROFILE_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'tagline', 'about_md',

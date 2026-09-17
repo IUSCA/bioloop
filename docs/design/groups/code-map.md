@@ -2,7 +2,7 @@
 title: Code Map
 order: 4
 status: reference
-last_verified: 2026-09-10
+last_verified: 2026-09-17
 ---
 
 ::: warning Where the code is, not what it does
@@ -42,7 +42,10 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Owning-group grant | seeded `grant` row per resource, `SYSTEM_BOOTSTRAP` | written with the resource, backfilled for older rows | `services/grants/issue.js`, `services/collections.js`, `services/datasets_v2/create.js` | listed in the Access tab like any grant |
 | Attribution | `dataset_funding`, `dataset_affiliation` | none yet | `services/datasets_v2/attribution.js` | none yet |
 | Consent codes | `dataset_use_condition` | accepted by `POST /v2/datasets` as `use_conditions` | `services/datasets_v2/useConditions.js` | none |
-| Dataset creation | `dataset.owner_group_id`, `dataset.create_method` | `POST /v2/datasets`, `POST /v2/datasets/bulk` | `services/datasets_v2/create.js` | none yet |
+| Dataset creation | `dataset.owner_group_id` (`NOT NULL`, default `Unassigned Datasets`), `dataset.create_method`, `@@unique([owner_group_id, name, type, is_deleted])` | `POST /v2/datasets`, `POST /v2/datasets/bulk` | `services/datasets_v2/create.js` | `components/v2/datasets/create/AddDatasetModal.vue`, opened from `pages/v2/datasets/index.vue` and `GroupDatasetsTab.vue` |
+| Choosing the owning group | `dataset.contribute` action in `policies/dataset.js` | `GET /v2/datasets/eligible-owner-groups`, `GET /v2/datasets/name-available` | `services/datasets_v2/ownership.js` | `components/v2/datasets/create/OwnerGroupSelect.vue` |
+| Import | `import_source.owner_group_id`, `import_source.status` (`IMPORT_SOURCE_STATUS`) | `POST /v2/datasets/imports`, `GET /v2/import-sources` (`routes/import_sources.js`), `GET /v2/fs` (`routes/fs_v2.js`) | `services/datasets_v2/imports.js`, `services/import_sources.js`, `services/fs_v2.js`, `scripts/verify_import_sources.js` | `ImportDatasetModal.vue`, `services/v2/import-sources.js` |
+| Upload | `dataset_upload_log` | `POST /v2/datasets/uploads`, `GET /v2/datasets/:id/upload-log`, the TUS server at `/api/uploads/files` | `services/datasets_v2/uploads.js`, `services/upload/UploadService.js` | `UploadDatasetModal.vue`, `UploadTray.vue`, `DatasetUploadTab.vue`, `stores/v2/upload.js`, `services/v2/upload.js` |
 | Scanned ingestion | `registration.ingestion` config, `create_method: 'SCAN'` | `POST /v2/datasets/bulk`, one authorization check per distinct group | `workers/workers/services/registration_v2.py`, `workers/workers/scripts/watch_v2.py` | — |
 | Ownership transfer | `authority_transfer` **(table only, [decision 15](./decisions.md))** | none, and `route_policy_bindings.test.js` holds it that way | none | none |
 | Invitations | `group_invitation`, `INVITATION_STATUS`, partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` | `/groups/:id/invitations`, `POST /auth/invite/check` and `/apply` | `services/invitations/` | `pages/invite.vue`, `GroupInvitationsTab.vue`, `AddGroupMemberModal.vue` |

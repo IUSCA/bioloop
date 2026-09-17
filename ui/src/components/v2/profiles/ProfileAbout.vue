@@ -13,7 +13,7 @@ import ProfileAboutBody from "@/components/v2/profiles/ProfileAboutBody.vue";
 /**
  * The About card on a profile. Renders nothing when there is nothing to say.
  *
- * @see docs/design/groups/implementation/profiles.md — The UI
+ * @see docs/design/groups/profiles.md — The UI
  */
 const props = defineProps({
   aboutMd: { type: String, default: "" },

@@ -18,7 +18,6 @@ const { REFUSALS } = require('./parity');
  * against a build where the server stopped checking.
  *
  * @see docs/design/groups/e2e-test-flows.md — N1
- * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 2
  */
 
 /** Only the application's own API is replayed. Assets and HMR traffic are not access checks. */

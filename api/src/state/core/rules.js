@@ -6,7 +6,7 @@
  * the fields the rule reads, so a caller that fetched too little is told which field is missing
  * instead of being answered from an undefined value.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 /** Why a state refuses an action. Services turn one into a 409. */

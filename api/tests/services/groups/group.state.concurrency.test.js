@@ -18,7 +18,7 @@
  * pairing rather than the ratio.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 2: every service checks state
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const path = require('path');

@@ -204,7 +204,7 @@ const SYSTEM_PRINCIPAL_GROUP_IDS = [AUTHENTICATED_USERS_GROUP_ID, PUBLIC_GROUP_I
 //
 // Every user attribute the group and collection policies declare is present, so the engine
 // hydrates none of them and reads no user row.
-// @see docs/design/groups/implementation/profiles.md — The anonymous principal
+// @see docs/design/groups/decisions.md — 19. The anonymous caller is a principal, not a second code path
 const ANONYMOUS_PRINCIPAL = Object.freeze({
   subject_id: PUBLIC_GROUP_ID,
   is_anonymous: true,

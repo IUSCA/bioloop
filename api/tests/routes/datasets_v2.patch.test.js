@@ -1,11 +1,9 @@
 /**
  * datasets_v2.patch.test.js
  *
- * `PATCH /v2/datasets/:id` accepts `name` and `description` and nothing else. It used to pass
- * the body to the update whole, so an admin of the owning group could move the dataset to any
- * group, flip `is_deleted`, or rewrite `archive_path`, with no audit row.
- *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 0: close the live holes
+ * `PATCH /v2/datasets/:id` accepts `name` and `description` and nothing else. A route that
+ * passed the body to the update whole would let an admin of the owning group move the dataset
+ * to any group, flip `is_deleted`, or rewrite `archive_path`, with no audit row.
  */
 
 const path = require('path');

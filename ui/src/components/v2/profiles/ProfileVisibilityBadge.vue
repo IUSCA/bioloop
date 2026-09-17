@@ -6,7 +6,7 @@
 /**
  * What `profile_visibility` means, said in words rather than in an enum value.
  *
- * @see docs/design/groups/implementation/profiles.md — Decisions
+ * @see docs/design/groups/profiles.md — Two asymmetries
  */
 const props = defineProps({
   visibility: { type: String, default: "PRIVATE" },

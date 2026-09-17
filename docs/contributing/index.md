@@ -18,3 +18,4 @@ keeping them accurate keeps generated code consistent too.
 - [API tooling](./api-tooling.md) — linting and formatting
 - [Spell checking](./spellcheck.md)
 - [Stack conventions](./conventions/) — JavaScript, Express, PostgreSQL/Prisma, Vue 3
+- [Techniques](./techniques/) — operational know-how behind each agent skill: commands, traps, and the reasoning for them

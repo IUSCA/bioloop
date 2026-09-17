@@ -8,7 +8,7 @@
  * dataset.origin_path, never on which service wrote the row, which is why the TUS server and
  * the completion routes are reused unchanged.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — C1
+ * @see docs/design/groups/dataset-creation.md — The import and upload routes
  */
 
 const path = require('path');

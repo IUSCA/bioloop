@@ -8,7 +8,7 @@ const { RESOURCE_TYPE } = require('@prisma/client');
  * containers fetch those relations with the fragments here and shape them with the functions here.
  * Nothing in this file reads the database.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 /** What a `resource` relation fetches for `targetOf`. */

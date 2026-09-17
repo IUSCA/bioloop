@@ -6,7 +6,7 @@
  * whether a membership is direct, and which grant a `grant` path is, with its type and the
  * collection it arrived through. Every other term contributes one path from its meta.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — A decision returns its paths
+ * @see docs/design/groups/access-model.md — Paths and standing
  * @see docs/design/groups/access-model.md — The badge vocabulary
  */
 

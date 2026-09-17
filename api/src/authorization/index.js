@@ -155,7 +155,7 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
  *
  * Returns the permission: `granted`, `filter`, and, when asked, `capabilities` and `standing`.
  * A refusal carries `status`, 404 or 403, and `blockedBy` when a restriction refused it.
- * @see docs/design/groups/implementation/access-model-verification-plan.md — One pipeline
+ * @see docs/contributing/techniques/authorization-engine.md — One pipeline decides for the middleware and for `authorizeAction`
  */
 const authorizeAction = createDecisionPipeline(PIPELINE_OPTIONS);
 

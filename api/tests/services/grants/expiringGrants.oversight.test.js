@@ -4,10 +4,10 @@
  * The expiring-grants list shows a caller every grant they may list: those on resources whose
  * owning group they administer or oversee, as `grant.list_for_resource` decides.
  *
- * The list used to read admin memberships alone, so an admin of a parent group, who may open
- * the child group's grants, never saw them expire.
+ * An admin of a parent group may open the child group's grants, so a list that read admin
+ * memberships alone would hide their expiry from that admin.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 3, known disagreements
+ * @see docs/design/groups/design.md — What Oversight Allows (Read-Only)
  */
 
 const path = require('path');

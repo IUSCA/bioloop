@@ -10,7 +10,7 @@
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Worlds
+ * @see docs/design/groups/access-model.md — How the model is checked
  */
 
 const { createReference } = require('./reference');

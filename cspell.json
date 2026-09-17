@@ -307,7 +307,18 @@
     "parameterised",
     "singup",
     "falsey",
-    "TOCTOU"
+    "TOCTOU",
+    "destructures",
+    "ENOENT",
+    "etime",
+    "mousedown",
+    "mouseup",
+    "pathspec",
+    "pointerdown",
+    "pointerup",
+    "scandir",
+    "shutil",
+    "worktree"
   ],
   "ignorePaths": [
     "**/__pycache__/**",

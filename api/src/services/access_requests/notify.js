@@ -23,7 +23,7 @@ const { TYPES } = require('@/notification/types');
  * an approval, so failures are logged and swallowed, and the callers run these after their
  * transaction has committed.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — D1
+ * @see docs/design/groups/design.md — Notifications and expiry
  */
 
 /**

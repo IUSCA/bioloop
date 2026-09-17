@@ -13,7 +13,7 @@
 >   async.
 > - List handlers call `callerIsPlatformAdmin(req)`, which reads `user_role`.
 > - `group.members`, `collection.datasets`, and `dataset.collections` read the active views.
-> @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 4: the rule becomes a query
+> @see docs/design/groups/access-model.md — The rule is a query
 >
 > **Superseded further by Phase 3 of the restrictions plan, 2026-09-15.** Every finding below
 > about the restriction layer records a layer that no longer decides anything. `checkRestriction`
@@ -28,7 +28,7 @@
 > reversed: archiving now covers a group and what it owns, one step, and a sub-group keeps its
 > own state. The transition table is not gone: `access-model.md` still specifies it, and the
 > per-resource state rules under `src/state/builtin/` are where it is now enforced.
-> @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the engine stops reading state
+> @see docs/design/groups/access-model.md — The state check
 
 Purpose: understand the engine and its tests fully before revising the access-model plan.
 Update after each file. Re-read before the next. Organised by theme (my choice), with file refs.
@@ -2252,8 +2252,9 @@ API were fixed naïvely. The plan needs to say what a non-admin subject search r
 
 ## §33 Plan updated (2026-09-15)
 
-`docs/design/groups/implementation/access-model-verification-plan.md` now carries the 20 review items and the
-§32 UI findings. What changed, by section: base relations gain `quarantine`, `seeded_grant`,
+The access model verification plan now carries the 20 review items and the §32 UI findings.
+The plan has since been folded into `docs/design/groups/access-model.md`, and remains in git
+history. What changed, by section: base relations gain `quarantine`, `seeded_grant`,
 `profile_visibility`, `contributions_allowed`, `status`; derived relations gain `precondition`
 and `resource_rule`; the decision rule gains both and states the platform-admin session
 snapshot; "Three tables" is now "Four tables" (transition table added, `Policy.always` list

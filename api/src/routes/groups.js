@@ -219,7 +219,7 @@ router.get(
       ...req.permission.filter(group),
       // ...group,
       // Derived from the name, the year, and the public URL, so it carries nothing the
-      // caller could not already see. @see docs/design/groups/implementation/profiles.md — Schema
+      // caller could not already see. @see docs/design/groups/profiles.md — The columns
       citation: profileService.resolveCitation(group, 'groups'),
       _meta: buildMeta('group', group, req.permission),
     });
@@ -291,7 +291,7 @@ router.patch(
 
 // Update the group profile. Same authority as any other metadata edit — a profile is
 // informational, so publishing one is not a governance action.
-// @see docs/design/groups/implementation/profiles.md — API
+// @see docs/design/groups/profiles.md — The public router
 router.patch(
   '/:id/profile',
   validate([
@@ -413,7 +413,7 @@ router.post(
 //
 // An invitation reaches an email address rather than a user, so these routes never take a
 // user id and never say whether the address has an account.
-// @see docs/design/groups/implementation/invitations.md — API Reference
+// @see docs/design/groups/invitations.md — Why it is shaped this way
 
 // Invite an email address to the group
 router.post(

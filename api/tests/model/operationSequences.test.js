@@ -23,7 +23,7 @@
  * The defaults are a measured run time, not a derived figure. Sequential commands find no races;
  * the concurrency suites own those.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Operation sequences
+ * @see docs/design/groups/access-model.md — How the model is checked
  * @see docs/design/groups/design.md — Operation Effects
  */
 

@@ -76,10 +76,10 @@ async function runDailyDigest() {
  * Close access requests nobody has reviewed.
  *
  * `expireStaleRequests` moves an `UNDER_REVIEW` request older than the cutoff to `EXPIRED`
- * and writes one audit record per request. It was implemented and tested and called by
- * nothing, so a request sat `UNDER_REVIEW` forever and the pending queue only ever grew.
+ * and writes one audit record per request. Without this job a request would sit
+ * `UNDER_REVIEW` forever.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — D2
+ * @see docs/design/groups/design.md — Notifications and expiry
  */
 async function runAccessRequestExpiry() {
   const { max_age_days } = config.get('notify.cron.access_request_expiry');

@@ -57,7 +57,7 @@ tagline, a markdown body, external links, a citation, and related
 publications. A profile is informational and never authorization-bearing.
 Publishing one grants nobody access to data, and hiding one takes no access
 away. Only groups and collections have profiles; a user does not, and neither
-does a dataset. @see [Profiles](./implementation/profiles.md).
+does a dataset. @see [Profiles](./profiles.md).
 
 **Profile visibility** — The one field that decides who may read a profile,
 stored as a column rather than as a grant because it is not an authorization

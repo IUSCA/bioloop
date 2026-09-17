@@ -26,7 +26,7 @@ const { auditState } = require('./builtin/audit');
  * containers disagree. A derived app registers its containers in section 2 below.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 // ============================================================================

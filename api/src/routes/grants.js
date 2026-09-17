@@ -304,7 +304,7 @@ router.get(
 
 // What revoking a grant leaves its subject, for the confirmation modal. The coverage it reads
 // counts every path, so the modal never tells an admin a subject loses access they keep.
-// @see docs/design/groups/implementation/access-model-verification-plan.md — The UI layer
+// @see docs/design/groups/access-model.md — The UI consumption contract
 router.get(
   '/:id/revoke-preview',
   validate([
@@ -512,7 +512,7 @@ router.get(
 
 // Everything that already reaches a subject on a resource, and how each grant arrives.
 // Distinct from the route below, which answers only what the subject holds directly.
-// @see docs/design/groups/implementation/access-requests-plan.md — C1
+// @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
 router.get(
   '/:subject_type/:subject_id/:resource_type/:resource_id/coverage',
   validate([

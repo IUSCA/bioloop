@@ -5,14 +5,13 @@
  *
  * `Public` is the wider audience, so a signed-in caller holds grants made to `Public` and
  * to `Authenticated Users`. An unauthenticated caller holds only what was granted to
- * `Public`. Before this was fixed, the subject-set CTE combined both principals into
- * every grant query unconditionally, so an anonymous caller would have resolved every
- * grant an admin meant for signed-in users.
+ * `Public`. A subject set that added both principals unconditionally would give an anonymous
+ * caller every grant an admin meant for signed-in users.
  *
  * The tests are written against `getGrantAccessTypesForUser`, which reads the grant rows of
  * `accessPathsQuery`, the statement the context hydrator's `access_paths` reads.
  *
- * @see docs/design/groups/implementation/profiles.md — A defect this work must fix first
+ * @see docs/design/groups/access-model.md — Base relations
  */
 
 const path = require('path');

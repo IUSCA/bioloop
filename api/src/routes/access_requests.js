@@ -56,7 +56,7 @@ const requestItemsValidation = [
  * The checks a request must pass before it is filed or previewed: its items are well-formed and
  * requestable, and the caller can see the resource. Throws a 400, 403, or 404.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — A1
+ * @see docs/design/groups/design.md — Filing a request
  * @returns {Promise<{id: string, type: string}>} the resource the request is for
  */
 async function assertRequestable(req, { resource_id, items }) {
@@ -195,7 +195,7 @@ router.post(
     // `submit: true` creates the request and puts it under review in one transaction. A
     // DRAFT is invisible — no surface lists one — so two client calls would strand a row
     // the requester could neither see nor resume if the second failed.
-    // @see docs/design/groups/implementation/access-requests-plan.md — B1
+    // @see docs/design/groups/design.md — Filing a request
     const record = req.body.submit
       ? await accessRequestsService.createAndSubmitAccessRequest(data, req.user.subject_id)
       : await accessRequestsService.createAccessRequest(data, req.user.subject_id);
@@ -206,7 +206,7 @@ router.post(
 // What filing this request and having it approved as asked would do, without writing anything.
 // The requester's form shows it, so nobody asks for access they already hold. It runs the checks
 // filing runs, and answers with the reviewer's computation narrowed to what a requester may see.
-// @see docs/design/groups/implementation/access-requests-plan.md — C6
+// @see docs/design/groups/ui-information-architecture.md — Access types in forms
 router.post(
   '/compute-effective-grants',
   validate(requestItemsValidation),

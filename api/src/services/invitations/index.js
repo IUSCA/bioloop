@@ -23,7 +23,7 @@ const { sendInvitationEmail } = require('./notify');
  * someone with no account. That makes the address the join key, and every address that
  * enters or leaves this module passes through `normalizeEmail`.
  *
- * @see docs/design/groups/implementation/invitations.md
+ * @see docs/design/groups/invitations.md
  */
 
 /**

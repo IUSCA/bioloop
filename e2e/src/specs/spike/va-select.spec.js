@@ -10,7 +10,7 @@ const { test, expect } = require('../../fixtures');
  *
  * Playwright does not dispatch events. It drives real input over the Chrome DevTools Protocol,
  * which a component cannot distinguish from a person. So the finding may not transfer, and the
- * answer decides how much component work phases 3 and 4 need.
+ * answer decides how much component work the browser-driven specs need.
  *
  * The target is the role select in AddGroupMemberModal: static options, no async load, three
  * navigations from a signed-in start. There are no test hooks in the v2 tree yet, so this
@@ -20,7 +20,7 @@ const { test, expect } = require('../../fixtures');
  * seeded group is decided by a hash and moves whenever the seed changes, so the spike borrows
  * the fixture world rather than naming a seeded group and its admin.
  *
- * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 0
+ * @see docs/contributing/techniques/e2e-tests.md — `va-select` takes real input
  */
 
 // Alice is deliberately not a platform admin: the engine allows a platform admin before any

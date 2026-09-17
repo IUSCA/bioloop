@@ -5,7 +5,7 @@
  * caller would have fetched and asks what the state admits. That is the point of the split — the
  * business logic of each resource is testable without a transaction.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const path = require('path');

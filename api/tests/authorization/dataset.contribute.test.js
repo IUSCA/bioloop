@@ -5,7 +5,7 @@
  * group's admins, and additionally an ordinary member of a group that has
  * allow_user_contributions set. `create` keeps its narrower meaning.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A1
+ * @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
  */
 
 const path = require('path');

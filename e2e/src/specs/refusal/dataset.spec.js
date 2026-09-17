@@ -5,13 +5,12 @@ const {
 const { recordApiCalls, expectAllRefused } = require('../../assertions/replay');
 
 /**
- * Phase 2 — the refusal spine, on one dataset.
+ * The refusal spine, on one dataset.
  *
  * Flows N1 and H1. The question these answer is not "does the page look empty" but "does
  * every way in refuse", because the page and the route behind it are separate code.
  *
  * @see docs/design/groups/e2e-test-flows.md — N1, H1
- * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 2
  */
 
 test('N1 — every call the dataset page makes is refused for a stranger', async ({ world, as }) => {

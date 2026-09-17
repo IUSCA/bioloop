@@ -26,7 +26,7 @@ const { normalize_name } = require('./create');
  * hierarchy, so neither can own data. A platform admin passes `dataset.contribute` against any
  * group, so the exclusion has to sit ahead of the engine.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A2
+ * @see docs/design/groups/dataset-creation.md — Choosing the group
  * @param {Object} params
  * @param {string} params.user_id - the caller's subject id
  * @param {boolean} params.everyGroup - true for a platform admin
@@ -96,7 +96,7 @@ async function getOwnerGroupForAuthorization(owner_group_id) {
  * The name is normalised the same way creation normalises it, so the answer is about the
  * name that would actually be stored.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A3
+ * @see docs/design/groups/dataset-creation.md — Asking whether a name is free, without an oracle
  */
 async function isDatasetNameAvailable({ name, type, owner_group_id }) {
   const normalized_name = normalize_name(name);

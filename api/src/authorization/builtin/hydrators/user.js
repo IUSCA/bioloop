@@ -62,6 +62,6 @@ userHydrator.registerVirtualAttribute('is_anonymous', async () => false);
 // A real user is never anonymous, so this loader answers for every signed-in caller. The
 // anonymous principal carries `is_anonymous: true` in the pre-fetched user, which the
 // hydrator prefers over running this, so the loader never sees an unauthenticated request.
-// @see docs/design/groups/implementation/profiles.md — The anonymous principal
+// @see docs/design/groups/decisions.md — 19. The anonymous caller is a principal, not a second code path
 
 module.exports = { userHydrator };

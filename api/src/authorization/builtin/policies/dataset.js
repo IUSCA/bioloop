@@ -56,7 +56,7 @@ const hasDatasetOwningGroupOversight = new DatasetPolicy({
  * same way `isGroupMember` treats it. This is the only policy that lets somebody who is not
  * an admin put a dataset into a group.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — A1
+ * @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
  */
 const isDatasetOwningGroupContributor = new DatasetPolicy({
   name: 'isDatasetOwningGroupContributor',
@@ -118,10 +118,8 @@ datasetPolicies
     //
     // `contribute` is the ingestion action, and it is what the import and
     // upload routes check. It additionally admits an ordinary member of a
-    // group that has allow_user_contributions set. The rule used to be
-    // described as service-layer, and nothing enforced it anywhere; it lives
-    // in the engine now, with every other access decision.
-    // @see docs/design/groups/implementation/dataset-creation-plan.md — A1
+    // group that has allow_user_contributions set.
+    // @see docs/design/groups/dataset-creation.md — Contribution is a policy, not a comment
     // ------------------------------------------------------------------
     create: mutating(isDatasetOwningGroupAdmin),
 

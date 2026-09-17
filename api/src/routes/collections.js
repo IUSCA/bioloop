@@ -87,7 +87,7 @@ router.get(
       ...req.permission.filter(collection),
       // Derived from the owning group's name, the year, and the public URL, so it carries
       // nothing the caller could not already see.
-      // @see docs/design/groups/implementation/profiles.md — Schema
+      // @see docs/design/groups/profiles.md — The columns
       citation: profileService.resolveCitation(collection, 'collections'),
       _meta: buildMeta('collection', collection, req.permission, {
         extraCapabilities: await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
@@ -177,7 +177,7 @@ router.patch(
 );
 
 // Update the collection profile.
-// @see docs/design/groups/implementation/profiles.md — API
+// @see docs/design/groups/profiles.md — The public router
 router.patch(
   '/:id/profile',
   validate([

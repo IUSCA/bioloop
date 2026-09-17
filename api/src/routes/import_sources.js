@@ -15,7 +15,7 @@ const router = express.Router();
  * SUSPENDED sources are listed with their reason, so an unreadable path says so instead of
  * appearing as an empty directory.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B1
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
  */
 router.get(
   '/',

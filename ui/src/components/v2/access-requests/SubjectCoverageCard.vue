@@ -35,7 +35,7 @@
  * change anything? After one it prevents the opposite mistake: a revoked grant does not mean
  * the subject lost the access, because another path may still supply it.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C4
+ * @see docs/design/groups/ui-information-architecture.md — Tab visibility on a collection detail page
  */
 import { computed } from "vue";
 

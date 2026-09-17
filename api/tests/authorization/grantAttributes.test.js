@@ -5,7 +5,7 @@
  * column was added to the table or a relation to an include: a grantor's `cas_id` and `notes`
  * are dropped, and so is a column no list names. Every field a v2 grant component reads is kept.
  *
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Phase 5
+ * @see docs/design/groups/access-model.md — Projection
  */
 
 const path = require('path');

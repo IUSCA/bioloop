@@ -16,7 +16,7 @@ const {
  * so a crashed run leaves rows that are obviously orphaned and a later run cannot collide
  * with them.
  *
- * @see docs/design/groups/implementation/e2e-test-plan.md — Build the world, borrow the people
+ * @see docs/design/groups/e2e-test-flows.md — How the suite builds its world
  */
 
 /** Six accounts to borrow, and the number is the size of the assigned cast. */

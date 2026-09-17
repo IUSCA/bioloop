@@ -9,7 +9,7 @@ import axios from "axios";
  * written for signed-out readers. Nothing here needs a token, and a failure here is rendered
  * by the page rather than announced in a toast.
  *
- * @see docs/design/groups/implementation/profiles.md — The UI
+ * @see docs/design/groups/profiles.md — The UI
  */
 const publicApi = axios.create({ baseURL: config.apiBasePath });
 

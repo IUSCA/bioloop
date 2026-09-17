@@ -6,7 +6,7 @@
   A reload still ends the transfer, and the dialog says so rather than leaving the user to
   discover it.
 
-  @see docs/design/groups/implementation/dataset-creation-plan.md — C4
+  @see docs/design/groups/dataset-creation.md — The transfer does not live in the dialog
 -->
 <template>
   <VaModal

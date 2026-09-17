@@ -5,7 +5,7 @@
  * as an argument rather than by import, as the authorization engine takes its restriction checker,
  * so this file stays framework code.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 
 const _ = require('lodash/fp');

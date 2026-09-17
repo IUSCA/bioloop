@@ -17,7 +17,7 @@ const router = express.Router();
  * Any signed-in caller may read it. It describes the rules, not any resource.
  *
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 3: the state route
+ * @see docs/design/groups/access-model.md — The UI consumption contract
  */
 router.get(
   '/:resource_type/:state_name/forbidden-actions',

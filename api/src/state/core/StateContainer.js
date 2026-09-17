@@ -5,7 +5,7 @@
  * `state/builtin/` and this class only holds it. The shape mirrors `PolicyContainer`, so a reader
  * of one recognises the other.
  *
- * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
+ * @see docs/design/groups/access-model.md — The state check
  */
 class StateContainer {
   /**

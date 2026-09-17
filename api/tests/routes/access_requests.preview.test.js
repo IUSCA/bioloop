@@ -5,7 +5,7 @@
  * confer if approved as asked. It must refuse whoever filing would refuse, write nothing, and
  * answer with less than the reviewer's preview carries.
  *
- * @see docs/design/groups/implementation/access-requests-plan.md — C6
+ * @see docs/design/groups/ui-information-architecture.md — Access types in forms
  */
 
 const path = require('path');

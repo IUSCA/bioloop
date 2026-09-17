@@ -64,7 +64,7 @@ async function isReadableDirectory(target) {
  *
  * A platform admin sees every non-retired source.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B1
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
  * @param {object} user - the authenticated user; needs subject_id and roles
  */
 async function listImportSourcesForUser(user) {
@@ -100,7 +100,7 @@ async function listImportSourcesForUser(user) {
  * Returns null when the path falls inside no source the caller may reach, which the caller
  * reports as a refusal without saying whether such a source exists at all.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B2
+ * @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
  */
 async function resolveImportSourceForUser(user, resolvedPath) {
   const sources = await listImportSourcesForUser(user);
@@ -134,7 +134,7 @@ async function resolveImportSourceForUser(user, resolvedPath) {
  *
  * Reads through mounted_path, which is where the API process actually sees the directory.
  *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — B1a
+ * @see docs/design/groups/dataset-creation.md — An unreadable source must say so
  * @returns {Promise<{checked, suspended, restored}>}
  */
 async function verifyImportSourcePaths() {
