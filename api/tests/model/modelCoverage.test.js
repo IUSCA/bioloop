@@ -30,6 +30,7 @@ const Prisma = require('@prisma/client');
 
 const { policyRegistry } = require('@/authorization');
 const state = require('@/state');
+const { datasetResource, userSubject } = require('../state/rows');
 
 const { modelTablesFrom } = require('./tables');
 const { MODELLED_RESOURCE_TYPES } = require('./reference');
@@ -57,11 +58,9 @@ const REACHED = {
     .stateRegistry.get('access_request').getActionNames()
     // Only the steps whose rule reads the status. Reading a request is possible in every
     // status, so including it would report every status as one a step can be taken in.
-    .filter((action) => state.requiredFields('access_request', [action]).includes('status'))
-    .some((action) => state.check('access_request', action, {
-      status,
-      target: { kind: 'dataset', archived: false, deleted: false },
-      subject: { kind: 'user', archived: false },
+    .filter((action) => state.requiredFieldsOf('access_request', [action]).includes('status'))
+    .some((action) => state.checkOf('access_request', action, {
+      status, resource: datasetResource(), subject: userSubject(),
     }) === null)),
 };
 

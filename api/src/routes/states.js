@@ -2,7 +2,7 @@ const express = require('express');
 const createError = require('http-errors');
 
 const asyncHandler = require('@/middleware/asyncHandler');
-const state = require('@/state');
+const { stateRegistry, forbiddenActionsOf } = require('@/state');
 
 const router = express.Router();
 
@@ -26,19 +26,19 @@ router.get(
     // #swagger.summary = 'The actions a named state forbids for a resource type'
     const { resource_type, state_name } = req.params;
 
-    if (!state.stateRegistry.has(resource_type)) {
+    if (!stateRegistry.has(resource_type)) {
       return next(createError.NotFound(`No state rules for ${resource_type}`));
     }
     // A resource type with no such state is a gap to report rather than an empty list, because
     // an empty list reads as "this state forbids nothing".
-    if (!state.stateRegistry.get(resource_type).getExampleNames().includes(state_name)) {
+    if (!stateRegistry.get(resource_type).getExampleNames().includes(state_name)) {
       return next(createError.NotFound(`No ${state_name} state for ${resource_type}`));
     }
 
     return res.json({
       resource_type,
       state: state_name,
-      forbidden_actions: state.forbiddenActions(resource_type, state_name),
+      forbidden_actions: forbiddenActionsOf(resource_type, state_name),
     });
   }),
 );

@@ -2,6 +2,7 @@ const { ACCESS_REQUEST_STATUS } = require('@prisma/client');
 
 const StateContainer = require('../core/StateContainer');
 const { rule, always, refuse } = require('../core/rules');
+const { TARGET_SELECT, SUBJECT_SELECT, shapeTargetAndSubject } = require('./targets');
 
 /**
  * What an access request's state admits.
@@ -26,10 +27,7 @@ const statusRefusal = (statuses, what) => (request) => (statuses.includes(reques
     { state: request.status },
   ));
 
-/**
- * Whether archiving has frozen the request. `target` comes from `readTargetState`, and `subject`
- * from `readSubjectState` or `subjectOf`.
- */
+/** Whether archiving has frozen the request. `target` and `subject` are shaped by `targets.js`. */
 function frozenRefusal(request) {
   const { target, subject } = request;
   if (target.deleted) {
@@ -55,6 +53,14 @@ const step = (statuses, what) => rule({
 const accessRequestState = new StateContainer({
   resourceType: 'access_request',
   description: "What a request's status, its resource's state, and its group's state admit",
+  // A request that does not exist yet, as filing checks it, is a row of just `resource` and
+  // `subject`, fetched with the two relations' selects.
+  select: {
+    status: true,
+    resource: { select: TARGET_SELECT },
+    subject: { select: SUBJECT_SELECT },
+  },
+  shape: (row) => shapeTargetAndSubject(row, ['status']),
   examples: {
     // A draft on an archived resource. The status is the one that admits the most steps, so
     // every action this lists is refused by the archived resource rather than by the status.

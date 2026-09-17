@@ -102,21 +102,24 @@ const ADMITTED_WHILE_ARCHIVED = {
   // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 2
 };
 
+/** The actions a type's archived example refuses. */
+const forbiddenWhileArchived = (resourceType) => new Set(state
+  .forbiddenActionsOf(resourceType, 'archived').map(({ action }) => action));
+
 test('an archived resource refuses every mutating route bound to it', () => {
-  const archivedExample = (resourceType) => state.stateRegistry.get(resourceType).getExample('archived');
   const withArchivedState = mutating
     .filter(({ resourceType }) => state.stateRegistry.get(resourceType).getExampleNames().includes('archived'));
 
   const admitted = withArchivedState
     .filter(({ resourceType, action }) => !ADMITTED_WHILE_ARCHIVED[`${resourceType}.${action}`]
-      && state.check(resourceType, action, archivedExample(resourceType)) === null)
+      && !forbiddenWhileArchived(resourceType).has(action))
     .map(({ route, resourceType, action }) => `${route} → ${resourceType}.${action}`);
 
   expect(admitted).toEqual([]);
   // Forced unless the sweep reached routes that are refused: an exemption list covering
   // everything would pass the check above while testing nothing.
   const refused = withArchivedState
-    .filter(({ resourceType, action }) => state.check(resourceType, action, archivedExample(resourceType)) !== null);
+    .filter(({ resourceType, action }) => forbiddenWhileArchived(resourceType).has(action));
   expect(refused.length).toBeGreaterThan(8);
 });
 
@@ -124,9 +127,7 @@ test('every exemption still names a mutation an archived resource admits', () =>
   // A stale exemption hides a refusal somebody added deliberately.
   Object.keys(ADMITTED_WHILE_ARCHIVED).forEach((qualified) => {
     const [resourceType, action] = qualified.split('.');
-    const container = state.stateRegistry.get(resourceType);
     const label = `${qualified} listed as admitted`;
-    expect([label, state.check(resourceType, action, container.getExample('archived'))])
-      .toEqual([label, null]);
+    expect([label, forbiddenWhileArchived(resourceType).has(action)]).toEqual([label, false]);
   });
 });

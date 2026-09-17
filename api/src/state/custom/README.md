@@ -44,4 +44,10 @@ calls `availableActions` per row.
 select with columns as `true` and relations as objects. A caller merges it into the query it already
 runs with `withStateFields`, from `require('@/state').import(resourceType)`.
 
+**Declare a `shape` when the rules read something computed from related rows.** A grant's rules read
+`target.archived`, which comes from a dataset's owning group or a collection's own column. `shape`
+is a pure function from the fetched row to the fields the rules read. The engine applies it to every
+row a caller passes, so callers always pass what they fetched. A named example is written in the
+rules' form already and is not shaped. `state/builtin/grant.js` is the builtin example.
+
 @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization

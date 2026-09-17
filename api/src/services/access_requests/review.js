@@ -4,7 +4,7 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const state = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('access_request');
 const { resolveEntityName } = require('@/services/audit/helpers');
 const { setsEqual } = require('@/utils');
 const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
@@ -175,11 +175,10 @@ class Review {
     return prisma.$transaction(async (tx) => {
       // Approving issues grants, so an archived or deleted resource refuses the review. The
       // WHERE guard below still makes the write atomic against a second reviewer.
-      state.assertPossible('access_request', 'review', {
-        status: this.request.status,
-        target: await state.readTargetState(tx, this.request.resource_id),
-        subject: await state.readSubjectState(tx, this.request.subject_id),
-      });
+      assertPossible('review', await tx.access_request.findUniqueOrThrow(withStateFields({
+        where: { id: this.requestId },
+        select: { id: true },
+      })));
 
       // Update request with review outcome first to ensure request is locked for concurrent modifications (e.g.
       // another reviewer trying to review or requester trying to withdraw)

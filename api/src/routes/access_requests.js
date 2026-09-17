@@ -14,19 +14,16 @@ const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = author
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
-const state = require('@/state');
+const requestState = require('@/state').import('access_request');
 const { projectObject } = require('@/utils/expression');
 const baseAttributes = require('@/authorization/builtin/policies/base_attributes');
 
 /**
- * What one request's state admits, for a list row. The rows are fetched with their resource,
- * so this reads no database.
+ * What one request's state admits, for a list row. The rows are fetched with their resource, its
+ * owning group, and the subject's group, so this reads no database.
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  */
-const availableActionsFor = (request) => state.availableActions(
-  'access_request',
-  state.requestStateFields(request),
-);
+const availableActionsFor = (request) => requestState.availableActions(request);
 
 // Viewing the resource a request names, by the resource's type. Bound at load, so an unknown
 // type or action fails at startup.
@@ -336,7 +333,7 @@ router.get(
         // The request's status and the state of the resource it names, from the row already
         // fetched with its resource. A reviewer holds `review` on a decided request; the
         // request is what refuses it.
-        available_actions: state.availableActions('access_request', state.requestStateFields(request)),
+        available_actions: requestState.availableActions(request),
       },
     });
   }),

@@ -1,5 +1,6 @@
 const StateContainer = require('../core/StateContainer');
 const { rule, always, refuse } = require('../core/rules');
+const { TARGET_SELECT, SUBJECT_SELECT, shapeTargetAndSubject } = require('./targets');
 
 /**
  * What a grant's state admits.
@@ -32,6 +33,14 @@ function targetRefusal(grant) {
 const grantState = new StateContainer({
   resourceType: 'grant',
   description: "What a grant's revoked state and its resource's state admit",
+  // A grant that does not exist yet, as issuing checks it, is a row of just `resource` and
+  // `subject`, fetched with the two relations' selects.
+  select: {
+    revoked_at: true,
+    resource: { select: TARGET_SELECT },
+    subject: { select: SUBJECT_SELECT },
+  },
+  shape: (row) => shapeTargetAndSubject(row, ['revoked_at']),
   examples: {
     // An open grant on an archived resource. The dialog asking what archiving stops does not
     // know which kind of resource, so the example names it generically.

@@ -14,8 +14,13 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const {
-  check, availableActions, requiredFields, subjectOf, selectFor, withStateFields,
+  checkOf: check, availableActionsOf: availableActions, requiredFieldsOf: requiredFields, selectOf,
+  withStateFieldsOf: withStateFields, forbiddenActionsOf: forbiddenActions,
 } = require('@/state');
+const { subjectOf } = require('@/state/builtin/targets');
+const {
+  datasetResource, collectionResource, userSubject, groupSubject,
+} = require('./rows');
 
 const admits = (resourceType, action, resource) => check(resourceType, action, resource) === null;
 const refusalFor = (resourceType, action, resource) => check(resourceType, action, resource)?.message;
@@ -54,7 +59,7 @@ describe('a group', () => {
 
   test('the actions an archived group admits are the reads and unarchive', () => {
     expect(availableActions('group', archived)).toEqual([
-      'create', 'unarchive', 'view_metadata', 'view_profile', 'view_hierarchy', 'list_invalid',
+      'create', 'unarchive', 'list', 'view_metadata', 'view_profile', 'view_hierarchy', 'list_invalid',
       'view_audit_logs', 'view_members', 'view_ancestors', 'view_descendants', 'view_invitations',
     ]);
   });
@@ -145,11 +150,13 @@ describe('a dataset', () => {
 });
 
 describe('an access request', () => {
-  const target = { kind: 'dataset', archived: false, deleted: false };
-  const subject = { kind: 'user', archived: false };
-  const underReview = { status: 'UNDER_REVIEW', target, subject };
-  const approved = { status: 'APPROVED', target, subject };
-  const draft = { status: 'DRAFT', target, subject };
+  // Each row is what a caller fetches: the request's status, its resource, and its subject.
+  const resource = datasetResource();
+  const archivedResource = datasetResource({ archived: true });
+  const subject = userSubject();
+  const underReview = { status: 'UNDER_REVIEW', resource, subject };
+  const approved = { status: 'APPROVED', resource, subject };
+  const draft = { status: 'DRAFT', resource, subject };
 
   test('only a request under review can be reviewed', () => {
     expect(admits('access_request', 'review', underReview)).toBe(true);
@@ -158,18 +165,20 @@ describe('an access request', () => {
   });
 
   test('a review reads the resource the request names', () => {
-    expect(refusalFor('access_request', 'review', { ...underReview, target: { ...target, archived: true } }))
+    expect(refusalFor('access_request', 'review', { ...underReview, resource: archivedResource }))
       .toBe('The dataset this request concerns is archived.');
-    expect(refusalFor('access_request', 'review', { ...underReview, target: { ...target, deleted: true } }))
+    expect(refusalFor('access_request', 'review', { ...underReview, resource: datasetResource({ deleted: true }) }))
       .toBe('The dataset this request concerns is deleted.');
-    expect(refusalFor('access_request', 'create', {
-      target: { kind: 'collection', archived: true, deleted: false }, subject,
-    })).toBe('The collection this request concerns is archived.');
+    expect(refusalFor('access_request', 'create', { resource: collectionResource({ archived: true }), subject }))
+      .toBe('The collection this request concerns is archived.');
+    // A collection is archived through its owning group too.
+    expect(refusalFor('access_request', 'create', { resource: collectionResource({ ownerArchived: true }), subject }))
+      .toBe('The collection this request concerns is archived.');
   });
 
   test('submitting reads the resource too, because review would issue grants', () => {
     expect(admits('access_request', 'submit', draft)).toBe(true);
-    expect(refusalFor('access_request', 'submit', { ...draft, target: { ...target, archived: true } }))
+    expect(refusalFor('access_request', 'submit', { ...draft, resource: archivedResource }))
       .toBe('The dataset this request concerns is archived.');
   });
 
@@ -186,25 +195,24 @@ describe('an access request', () => {
   // Archiving freezes a request: no step moves, and withdrawing is a step.
   // @see docs/design/groups/design.md — Lifecycle Management
   test('an archived resource freezes every step, and reading goes on', () => {
-    const archivedTarget = { ...target, archived: true };
     [
-      ['create', { target: archivedTarget, subject }],
-      ['update', { ...draft, target: archivedTarget }],
-      ['submit', { ...draft, target: archivedTarget }],
-      ['withdraw', { ...draft, target: archivedTarget }],
-      ['withdraw', { ...underReview, target: archivedTarget }],
-      ['review', { ...underReview, target: archivedTarget }],
+      ['create', { resource: archivedResource, subject }],
+      ['update', { ...draft, resource: archivedResource }],
+      ['submit', { ...draft, resource: archivedResource }],
+      ['withdraw', { ...draft, resource: archivedResource }],
+      ['withdraw', { ...underReview, resource: archivedResource }],
+      ['review', { ...underReview, resource: archivedResource }],
     ].forEach(([action, row]) => {
       expect([action, row.status, refusalFor('access_request', action, row)])
         .toEqual([action, row.status, 'The dataset this request concerns is archived.']);
     });
-    expect(admits('access_request', 'read', { ...underReview, target: archivedTarget })).toBe(true);
+    expect(admits('access_request', 'read', { ...underReview, resource: archivedResource })).toBe(true);
   });
 
   test('a request for an archived group is frozen the same way', () => {
-    const archivedGroup = { kind: 'group', archived: true };
+    const archivedGroup = groupSubject({ archived: true });
     [
-      ['create', { target, subject: archivedGroup }],
+      ['create', { resource, subject: archivedGroup }],
       ['update', { ...draft, subject: archivedGroup }],
       ['submit', { ...draft, subject: archivedGroup }],
       ['withdraw', { ...underReview, subject: archivedGroup }],
@@ -214,45 +222,51 @@ describe('an access request', () => {
         .toEqual([action, 'The group this request is for is archived.']);
     });
     // The sensitivity pair: the same rows for an open group admit every step.
-    const openGroup = { kind: 'group', archived: false };
-    expect(admits('access_request', 'create', { target, subject: openGroup })).toBe(true);
+    const openGroup = groupSubject();
+    expect(admits('access_request', 'create', { resource, subject: openGroup })).toBe(true);
     expect(admits('access_request', 'withdraw', { ...underReview, subject: openGroup })).toBe(true);
     expect(admits('access_request', 'review', { ...underReview, subject: openGroup })).toBe(true);
   });
 });
 
 describe('a grant', () => {
-  const target = { kind: 'dataset', archived: false, deleted: false };
-  const subject = { kind: 'user', archived: false };
-  const active = { revoked_at: null, target, subject };
+  const resource = datasetResource();
+  const subject = userSubject();
+  const active = { revoked_at: null, resource, subject };
 
   test('a revoked grant is revoked once', () => {
     expect(admits('grant', 'revoke', active)).toBe(true);
-    expect(refusalFor('grant', 'revoke', { revoked_at: new Date(), target }))
+    expect(refusalFor('grant', 'revoke', { revoked_at: new Date(), resource }))
       .toBe('This permission is already revoked.');
   });
 
   test("the resource's state stops access changing", () => {
-    expect(refusalFor('grant', 'revoke', { revoked_at: null, target: { ...target, archived: true } }))
+    expect(refusalFor('grant', 'revoke', { revoked_at: null, resource: datasetResource({ archived: true }) }))
       .toBe('The dataset this permission applies to is archived, so its access cannot change.');
-    expect(refusalFor('grant', 'create', { target: { ...target, deleted: true }, subject }))
+    expect(refusalFor('grant', 'create', { resource: datasetResource({ deleted: true }), subject }))
       .toBe('The dataset this permission applies to is deleted.');
   });
 
   test('an archived group takes no new access, and access it holds can still be revoked', () => {
-    const archivedGroup = { kind: 'group', archived: true };
-    expect(refusalFor('grant', 'create', { target, subject: archivedGroup }))
+    const archivedGroup = groupSubject({ archived: true });
+    expect(refusalFor('grant', 'create', { resource, subject: archivedGroup }))
       .toBe('This access is for an archived group, which cannot be given new access.');
-    expect(admits('grant', 'create', { target, subject: { kind: 'group', archived: false } })).toBe(true);
+    expect(admits('grant', 'create', { resource, subject: groupSubject() })).toBe(true);
     // The resource belongs to a group that is not frozen, so its admins keep the power to revoke.
-    expect(admits('grant', 'revoke', { revoked_at: null, target, subject: archivedGroup })).toBe(true);
+    expect(admits('grant', 'revoke', { revoked_at: null, resource, subject: archivedGroup })).toBe(true);
     expect(requiredFields('grant', ['revoke'])).not.toContain('subject.archived');
   });
 
   test('reading a grant is always possible', () => {
     ['read', 'list_for_resource', 'list_for_subject', 'view_coverage'].forEach((action) => {
-      expect([action, admits('grant', action, { revoked_at: new Date(), target })]).toEqual([action, true]);
+      expect([action, admits('grant', action, { revoked_at: new Date(), resource })]).toEqual([action, true]);
     });
+  });
+
+  test('what archiving stops is stated about the resource generically', () => {
+    expect(availableActions('grant', active)).toContain('revoke');
+    expect(forbiddenActions('grant', 'archived').map(({ action }) => action))
+      .toEqual(['create', 'revoke']);
   });
 });
 
@@ -276,6 +290,8 @@ describe('the fields a caller must fetch', () => {
     expect(() => check('collection', 'edit_metadata', { is_archived: false }))
       .toThrow(/reads owner_group\.is_archived/);
     expect(() => check('grant', 'revoke', { revoked_at: null })).toThrow(/target\.archived/);
+    // A resource fetched without the fragment is refused rather than read as open.
+    expect(() => check('grant', 'revoke', { revoked_at: null, resource: { id: 'r' } })).toThrow(/TARGET_SELECT/);
   });
 
   test('the fragment merges into a select whole, and into an include as relations only', () => {
@@ -299,8 +315,8 @@ describe('the fields a caller must fetch', () => {
   });
 
   test('a type with no fragment refuses rather than selecting nothing', () => {
-    expect(selectFor('collection')).toHaveProperty('is_archived', true);
-    expect(() => selectFor('audit')).toThrow(/declares no select fragment/);
+    expect(selectOf('collection')).toHaveProperty('is_archived', true);
+    expect(() => selectOf('audit')).toThrow(/declares no select fragment/);
   });
 
   test('a caller can ask which fields to select', () => {
@@ -312,12 +328,11 @@ describe('the fields a caller must fetch', () => {
   test('a subject fetched without its group is refused rather than read as a user', () => {
     expect(subjectOf({ group: null })).toEqual({ kind: 'user', archived: false });
     expect(subjectOf({ group: { is_archived: true } })).toEqual({ kind: 'group', archived: true });
-    expect(() => subjectOf({ id: 'a-subject' })).toThrow(/fetched with its group/);
-    expect(() => subjectOf(undefined)).toThrow(/fetched with its group/);
+    expect(() => subjectOf({ id: 'a-subject' })).toThrow(/fetched with SUBJECT_SELECT/);
+    expect(() => subjectOf(undefined)).toThrow(/fetched with SUBJECT_SELECT/);
   });
 
   test('a null field is fetched, and an absent one is not', () => {
-    const target = { kind: 'dataset', archived: false, deleted: false };
-    expect(admits('grant', 'revoke', { revoked_at: null, target })).toBe(true);
+    expect(admits('grant', 'revoke', { revoked_at: null, resource: datasetResource() })).toBe(true);
   });
 });

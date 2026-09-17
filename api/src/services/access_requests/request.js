@@ -4,7 +4,7 @@ const {
 const createError = require('http-errors');
 
 const prisma = require('@/db');
-const state = require('@/state');
+const requestState = require('@/state').import('access_request');
 const restrictions = require('@/authorization/builtin/restrictions');
 const { AUTH_EVENT_TYPE } = require('@/services/audit/events');
 const AuditBuilder = require('@/services/audit/AuditBuilder');
@@ -41,9 +41,9 @@ async function mayFileRequest({ user, resource_id }) {
   });
   if (blockedBy) return false;
 
-  const target = await state.readTargetState(prisma, resource_id);
-  return target === null
-    || state.check('access_request', 'create', { target, subject: { kind: 'user', archived: false } }) === null;
+  const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...requestState.select().resource });
+  // A user subject has no group, so no archived state.
+  return resource === null || requestState.check('create', { resource, subject: { group: null } }) === null;
 }
 
 /**
@@ -107,9 +107,11 @@ async function _createAccessRequest(tx, data, requester_id) {
   await _validateAccessRequestSubject(tx, requester_id, data.subject_id);
 
   // A request is worth filing only on a resource whose state still admits access changes.
-  state.assertPossible('access_request', 'create', {
-    target: await state.readTargetState(tx, data.resource_id),
-    subject: await state.readSubjectState(tx, data.subject_id),
+  // The request does not exist yet, so its row is the resource and the subject it would name.
+  const { resource: resourceSelect, subject: subjectSelect } = requestState.select();
+  requestState.assertPossible('create', {
+    resource: await tx.resource.findUniqueOrThrow({ where: { id: data.resource_id }, ...resourceSelect }),
+    subject: await tx.subject.findUniqueOrThrow({ where: { id: data.subject_id }, ...subjectSelect }),
   });
 
   // Create the access request
@@ -188,11 +190,9 @@ async function updateAccessRequest(request_id, actor_id, data) {
       throw createError.NotFound();
     }
     // The WHERE guards below keep the write atomic; this names the state first.
-    state.assertPossible('access_request', 'update', {
-      status: rows[0].status,
-      target: await state.readTargetState(tx, rows[0].resource_id),
-      subject: await state.readSubjectState(tx, rows[0].subject_id),
-    });
+    requestState.assertPossible('update', await tx.access_request.findUniqueOrThrow(
+      requestState.withStateFields({ where: { id: request_id }, select: { id: true } }),
+    ));
 
     if (data.purpose) {
       await tx.access_request.update({
@@ -330,11 +330,8 @@ async function _submitRequest(tx, request_id, actor_id) {
   // Fetch the request with items for pre-flight validation
   const request = await _getRequestById(tx, request_id);
   if (!request) throw createError.NotFound('Request not found');
-  state.assertPossible('access_request', 'submit', {
-    status: request.status,
-    target: await state.readTargetState(tx, request.resource_id),
-    subject: await state.readSubjectState(tx, request.subject_id),
-  });
+  // `_getRequestById` includes the resource with its owning group and the subject with its group.
+  requestState.assertPossible('submit', request);
 
   // assert request has at least one item
   if (!request.access_request_items || request.access_request_items.length === 0) {

@@ -282,7 +282,7 @@ takes roles from the user object its caller passes. Both are filed in
 
 Neither the gate nor the capability map reads a resource's state. `_meta.capabilities` says what
 the caller could do, and `_meta.available_actions` says what the resource's state admits, from
-`state.availableActions` over the rules in `src/state/builtin/`. A wrong-state action is refused
+`availableActionsOf` over the rules in `src/state/builtin/`. A wrong-state action is refused
 by the service with a 409, and a gate refusal would be a 403 instead. A reviewer therefore holds
 `review` on a decided request, and the request is what withholds it.
 `tests/model/transitionsArm.test.js` checks every request status for the requester, the group
@@ -541,14 +541,20 @@ Three things follow for a caller.
   `const { assertPossible, withStateFields } = require('@/state').import('collection')` gives
   the same functions with the type supplied. The unbound exports carry an `Of` suffix and take the
   type first, such as `assertPossibleOf(type, action, row)`; the bound ones drop both. `import`
-  throws at require time for a type with no state container. Collections, groups, and datasets use it so far,
-  and the other consumers still call the old unsuffixed names, which no longer exist.
-- **Only `collection`, `group`, and `dataset` declare a fragment so far.** `selectOf` on any other
-  type throws.
+  throws at require time for a type with no state container. Every service and route uses it.
+- **Every type but `user` and `audit` declares a fragment.** `selectOf` on those two throws.
   A fragment of columns alone, as the group's is, merges nothing into an `include`, because
   `include` returns every column already; `withStateFields` is still worth calling there, so a
   relation added to the fragment later reaches the query.
-  Grants and access requests still use the readers in `state/builtin/targets.js`.
+- **A grant and an access request are given the raw row, and their container shapes it.** Their
+  fragments fetch `resource` with `TARGET_SELECT` and `subject` with `SUBJECT_SELECT`. The container
+  declares `shape`, which `check` and `availableActions` apply, turning those relations into the
+  `target` and `subject` the rules read. A new grant or request is checked as a row of just
+  `resource` and `subject`, each fetched with `select().resource` and `select().subject`. A list
+  whose hydrated rows lack `owner_group`, as `GET /grants/subject/...` does, fetches the resources
+  once more with the fragment and passes those. Named examples are already in the rules' form and
+  are not shaped, so a test of a grant rule passes a raw row (`tests/state/rows.js` builds them)
+  and a test of what an archived example forbids uses `forbiddenActionsOf`, never `check`.
 - **A detail route builds `_meta` with `buildMeta(type, row, permission)`** from `src/services/meta.js`.
   It sits outside `src/authorization`, because authorization does not import
   the state layer.

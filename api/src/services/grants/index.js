@@ -9,7 +9,7 @@ const {
 
 const prisma = require('@/db');
 const { AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder } = require('@/services/audit');
-const state = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('grant');
 const fetchService = require('./fetch');
 const issueService = require('./issue');
 const coverageService = require('./coverage');
@@ -27,16 +27,13 @@ const { notifySubjectOfRevocation } = require('./notify');
 async function revokeGrant(grant_id, { actor_id, reason }) {
   return prisma.$transaction(async (tx) => {
     // Fetch the grant to get resource_id for authority capture
-    const grantToRevoke = await tx.grant.findUniqueOrThrow({
+    const grantToRevoke = await tx.grant.findUniqueOrThrow(withStateFields({
       where: { id: grant_id },
-      select: { resource_id: true, revoked_at: true },
-    });
+      select: { resource_id: true },
+    }));
     // An already revoked grant, and a resource whose access has stopped changing, are states
     // rather than missing rows, so each answers 409.
-    state.assertPossible('grant', 'revoke', {
-      ...grantToRevoke,
-      target: await state.readTargetState(tx, grantToRevoke.resource_id),
-    });
+    assertPossible('revoke', grantToRevoke);
 
     // Capture the revoking authority (owner group of the resource at revocation time)
     const revoking_authority_id = await helpers.getResourceOwnerGroupId(tx, grantToRevoke.resource_id);
@@ -86,10 +83,10 @@ async function revokeGrant(grant_id, { actor_id, reason }) {
  */
 async function revokeAllGrants(subject_id, resource_id, { actor_id, reason }) {
   return prisma.$transaction(async (tx) => {
-    const activeGrants = await tx.grant.findMany({
+    const activeGrants = await tx.grant.findMany(withStateFields({
       where: { subject_id, resource_id, revoked_at: null },
-      select: { id: true, revoked_at: true },
-    });
+      select: { id: true },
+    }));
 
     if (activeGrants.length === 0) {
       return [];
@@ -97,10 +94,7 @@ async function revokeAllGrants(subject_id, resource_id, { actor_id, reason }) {
 
     // The check reads a row that was fetched, not a literal restating the filter above. Every
     // row here is open, so the first one answers for the batch.
-    state.assertPossible('grant', 'revoke', {
-      ...activeGrants[0],
-      target: await state.readTargetState(tx, resource_id),
-    });
+    assertPossible('revoke', activeGrants[0]);
 
     // Capture revoking authority once — same resource for all grants
     const revoking_authority_id = await helpers.getResourceOwnerGroupId(tx, resource_id);

@@ -9,13 +9,17 @@ const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
-const state = require('@/state');
+const grantState = require('@/state').import('grant');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
 const { RESOURCE_TYPE, SUBJECT_TYPE } = require('@prisma/client');
 
 const { projectObject } = require('@/utils/expression');
 const baseAttributes = require('@/authorization/builtin/policies/base_attributes');
+
+// A grant's state reads the resource it is on and the user or group it is for. These are the
+// arguments that fetch each relation with what the state rules read.
+const { resource: RESOURCE_STATE_ARGS, subject: SUBJECT_STATE_ARGS } = grantState.select();
 
 const router = express.Router();
 
@@ -399,19 +403,23 @@ router.get(
     });
 
     // Each group names a different resource, and a grant's state reads what it concerns as
-    // well as its own `revoked_at`. The batch reader fetches the archived and deleted columns
-    // the rules need; the hydrated resource above does not carry the owning group.
-    const targets = await state.readTargetStates(prisma, grouped.map(({ resource }) => resource.id));
+    // well as its own `revoked_at`. One query fetches every resource with what the rules read;
+    // the hydrated resource above does not carry the owning group.
+    const stateResources = await prisma.resource.findMany({
+      where: { id: { in: grouped.map(({ resource }) => resource.id) } },
+      select: { id: true, ...RESOURCE_STATE_ARGS.select },
+    });
+    const stateResourceById = new Map(stateResources.map((r) => [r.id, r]));
     // Every grant here is for the one user or group in the path.
-    const subjectState = await state.readSubjectState(prisma, subject_id);
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { id: subject_id }, ...SUBJECT_STATE_ARGS });
 
     const filteredData = grouped.map(({ resource, grants }) => ({
       resource: projectObject(resource, baseAttributes.resource),
       grants: grants.map((g) => ({
         ...req.permission.filter(g),
         _meta: {
-          available_actions: state.availableActions('grant', {
-            ...g, target: targets.get(resource.id), subject: subjectState,
+          available_actions: grantState.availableActions({
+            ...g, resource: stateResourceById.get(resource.id), subject,
           }),
         },
       })),
@@ -458,20 +466,17 @@ router.get(
 
     // Every grant here concerns the one resource in the path, so its state is a single read
     // and only `revoked_at` separates the rows.
-    const target = await state.readTargetState(prisma, resource_id);
-    if (!target) throw createError.NotFound('Resource not found');
+    const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...RESOURCE_STATE_ARGS });
+    if (!resource) throw createError.NotFound('Resource not found');
     // Each group of rows is for one user or group, fetched with its group relation, so issuing
     // reads its state from the row already here.
-    const filteredData = grouped.map(({ subject, grants }) => {
-      const subjectState = state.subjectOf(subject);
-      return {
-        subject: projectObject(subject, baseAttributes.subject),
-        grants: grants.map((g) => ({
-          ...req.permission.filter(g),
-          _meta: { available_actions: state.availableActions('grant', { ...g, target, subject: subjectState }) },
-        })),
-      };
-    });
+    const filteredData = grouped.map(({ subject, grants }) => ({
+      subject: projectObject(subject, baseAttributes.subject),
+      grants: grants.map((g) => ({
+        ...req.permission.filter(g),
+        _meta: { available_actions: grantState.availableActions({ ...g, resource, subject }) },
+      })),
+    }));
 
     res.json(filteredData);
   }),
@@ -571,13 +576,15 @@ router.get(
 
     // Unlike the grouped lists, this one can be asked for inactive grants, so `revoked_at`
     // separates the rows. The resource is the one in the path, so its state is a single read.
-    const target = await state.readTargetState(prisma, resource_id);
-    if (!target) throw createError.NotFound('Resource not found');
-    const subjectState = await state.readSubjectState(prisma, subject_id);
+    const resource = await prisma.resource.findUnique({ where: { id: resource_id }, ...RESOURCE_STATE_ARGS });
+    if (!resource) throw createError.NotFound('Resource not found');
+    const subject = await prisma.subject.findUniqueOrThrow({ where: { id: subject_id }, ...SUBJECT_STATE_ARGS });
 
+    // Each grant was fetched with its resource and subject, but not with what the state rules
+    // read, so the rows fetched above take their place.
     const filteredGrants = grants.map((g) => ({
       ...req.permission.filter(g),
-      _meta: { available_actions: state.availableActions('grant', { ...g, target, subject: subjectState }) },
+      _meta: { available_actions: grantState.availableActions({ ...g, resource, subject }) },
     }));
     res.json(filteredGrants);
   }),

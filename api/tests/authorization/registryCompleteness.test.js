@@ -29,6 +29,7 @@ const {
   buildActionTable, buildTermTable,
 } = require('@/authorization/builtin/tables');
 const { findUnhydratableRequirements } = require('@/authorization/core/requiresCheck');
+const { datasetResource, userSubject } = require('../state/rows');
 
 const PATH_KINDS = ['platform_admin', 'admin', 'oversight', 'member', 'grant', 'resource_rule', 'self'];
 
@@ -67,12 +68,12 @@ test('every container is frozen', () => {
 test('the access-request rules speak about real statuses, and only real ones', () => {
   // A rule that named a status the enum does not hold would refuse forever without saying so.
   // Every real status is answered, and each answer is a decision rather than a throw.
-  const target = { kind: 'dataset', archived: false, deleted: false };
-  const subject = { kind: 'user', archived: false };
+  const resource = datasetResource();
+  const subject = userSubject();
   Object.values(ACCESS_REQUEST_STATUS).forEach((status) => {
     state.stateRegistry.get('access_request').getActionNames().forEach((action) => {
       const label = `${action}:${status}`;
-      expect([label, typeof state.check('access_request', action, { status, target, subject })])
+      expect([label, typeof state.checkOf('access_request', action, { status, resource, subject })])
         .toEqual([label, 'object']);
     });
   });
@@ -80,7 +81,7 @@ test('the access-request rules speak about real statuses, and only real ones', (
 
 test('every action on an access request other than create and read reads its status', () => {
   const stateless = state.stateRegistry.get('access_request').getActionNames()
-    .filter((action) => !state.requiredFields('access_request', [action]).includes('status'))
+    .filter((action) => !state.requiredFieldsOf('access_request', [action]).includes('status'))
     .sort();
   expect(stateless).toEqual(['create', 'read']);
 });
@@ -88,10 +89,10 @@ test('every action on an access request other than create and read reads its sta
 test('a status the request is not in refuses the step, and the one it is in admits it', () => {
   // Forced unless the rules discriminate: a container that admitted everything would pass the
   // two checks above.
-  const target = { kind: 'dataset', archived: false, deleted: false };
-  const subject = { kind: 'user', archived: false };
-  expect(state.check('access_request', 'submit', { status: 'DRAFT', target, subject })).toBeNull();
-  expect(state.check('access_request', 'submit', { status: 'APPROVED', target, subject })).not.toBeNull();
+  const resource = datasetResource();
+  const subject = userSubject();
+  expect(state.checkOf('access_request', 'submit', { status: 'DRAFT', resource, subject })).toBeNull();
+  expect(state.checkOf('access_request', 'submit', { status: 'APPROVED', resource, subject })).not.toBeNull();
 });
 
 test('every declared requirement is hydratable', () => {

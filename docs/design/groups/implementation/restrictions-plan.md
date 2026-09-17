@@ -224,6 +224,12 @@ restriction types have today, so Phase 1 changes no decision.
   grant or a request names is archived or deleted. A caller uses it to build the fields those rules
   read, so the query is written once rather than in each service.
 
+  > **Note (2026-09-17).** `targets.js` no longer reads the database. It exports `TARGET_SELECT`
+  > and `SUBJECT_SELECT`, which the grant and access-request containers put in their `select`
+  > fragments, and the containers declare a pure `shape` that turns the fetched `resource` and
+  > `subject` into `target` and `subject`. Callers fetch with `withStateFields` or `select()` and
+  > pass the raw row.
+
 **`api/src/state/index.js`** builds the registry, runs `findStateGaps` against the policy registry,
 and throws when a list is not empty. The API refuses to start on a mismatch.
 
@@ -631,6 +637,9 @@ serve it:
 - `GET /grants/subject/:type/:id` groups by resource and uses the batch reader
   `readTargetStates`. The hydrated resource on that route includes `dataset` and `collection`
   but not `dataset.owner_group`, so `targetOf` would have thrown on it.
+- **Note (2026-09-17).** The three grants handlers now fetch the resource and the subject with the
+  grant container's `select()` fragments instead of `readTargetState` and `readTargetStates`,
+  which were removed. The subject list fetches every resource on the page in one `findMany`.
 - `listInvitations` selects the group's `is_archived`, which is what the invitation rules read,
   and the route answers from it without a second query and keeps the column out of the row.
 

@@ -169,11 +169,11 @@ describe('a resource state still refuses a platform admin', () => {
   test('the same state refuses the same action for the owning group\'s admin', () => {
     // Forced unless the state answer ignores the caller: if it read standing at all, the two
     // callers above and here would not get the same refusal from one row.
-    const refusal = state.check('dataset', 'edit_metadata', {
+    const refusal = state.checkOf('dataset', 'edit_metadata', {
       is_deleted: false, owner_group: { is_archived: true },
     });
     expect(refusal).not.toBeNull();
-    expect(state.check('dataset', 'view_metadata', {
+    expect(state.checkOf('dataset', 'view_metadata', {
       is_deleted: false, owner_group: { is_archived: true },
     })).toBeNull();
   });

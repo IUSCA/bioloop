@@ -275,7 +275,7 @@ res.json({
     capabilities: toCapabilitiesArray(req.permission.capabilities)
       .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
         ? ['request_access'] : []),
-    available_actions: state.availableActions('dataset', dataset),
+    available_actions: datasetState.availableActions(dataset),
   },
 });
 ```
@@ -284,7 +284,8 @@ res.json({
 
 The `includes` is what makes the second answer free. A dataset has no archived column of its own,
 so its rules read `owner_group.is_archived`, and the group arrives with the row the handler
-already fetched. `state.availableActions` is a pure call on that row and issues no query.
+already fetched. `datasetState` is `require('@/state').import('dataset')`, bound once when the
+module loads. Its `availableActions` is a pure call on that row and issues no query.
 
 `request_access` is the one capability computed outside the action tables, so it has no state
 rule and never appears in `available_actions`.

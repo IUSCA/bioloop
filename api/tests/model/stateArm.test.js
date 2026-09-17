@@ -61,7 +61,7 @@ beforeAll(() => {
       const row = rowFor(resourceType, f);
       Object.keys(tables.actions[resourceType]).forEach((action) => {
         decisions += 1;
-        const admits = state.check(resourceType, action, row) === null;
+        const admits = state.checkOf(resourceType, action, row) === null;
         const reference = ref.stateAdmits(resourceType, action, ids[resourceType]);
         if (admits !== reference) {
           disagreements.push(`${resourceType}.${action} cell ${f.index}: state admits ${admits}, `
@@ -87,7 +87,7 @@ test('the arm is not decided by one answer', () => {
   const admitted = [];
   fragments.forEach((f) => {
     const row = rowFor('dataset', f);
-    const answer = state.check('dataset', 'edit_metadata', row);
+    const answer = state.checkOf('dataset', 'edit_metadata', row);
     (answer === null ? admitted : refused).push(f.index);
   });
   expect(refused.length).toBeGreaterThan(0);

@@ -30,7 +30,7 @@ const LABELS = fs.readFileSync(
 const keys = [...LABELS.matchAll(/^\s*"([a-z_]+\.[a-z_]+)":/gm)].map((m) => m[1]);
 
 const forbidden = DIALOG_TYPES.flatMap((resourceType) => state
-  .forbiddenActions(resourceType, 'archived')
+  .forbiddenActionsOf(resourceType, 'archived')
   .map(({ action }) => `${resourceType}.${action}`));
 
 test('every action the archived state forbids has words in the archive dialogs', () => {
@@ -45,7 +45,7 @@ test('the dialogs name no action the archived state admits', () => {
 
 test('every dialog resource type answers what archiving forbids', () => {
   DIALOG_TYPES.forEach((resourceType) => {
-    const actions = state.forbiddenActions(resourceType, 'archived');
+    const actions = state.forbiddenActionsOf(resourceType, 'archived');
     expect([resourceType, actions.length > 0]).toEqual([resourceType, true]);
     // Each answer carries the message the service would return, so the dialog and the 409
     // cannot drift apart.

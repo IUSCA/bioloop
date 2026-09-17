@@ -4,6 +4,9 @@ const config = require('config');
 
 const prisma = require('@/db');
 const state = require('@/state');
+
+// A profile belongs to a group or a collection. Each type's state is bound here, at load.
+const STATE_BY_MODEL = { group: state.import('group'), collection: state.import('collection') };
 const audit = require('@/services/audit');
 const validate = require('./validate');
 const avatarService = require('./avatar');
@@ -105,12 +108,19 @@ function buildProfileUpdate(body, currentMetadata) {
 }
 
 /**
- * What a collection's state rules read beyond its own columns: its owning group's archived state.
- * A group's rules read only its own column, so it needs no include.
+ * The profile row, fetched with everything its type's state rules read, and refused with 409 when
+ * that state does not admit an edit.
+ * @param {Object} tx
+ * @param {'group'|'collection'} model
+ * @param {string} id
+ * @returns {Promise<Object>} the row
  */
-const stateInclude = (model) => (model === 'collection'
-  ? { include: { owner_group: { select: { is_archived: true } } } }
-  : {});
+async function lockedForEdit(tx, model, id) {
+  const { withStateFields, assertPossible } = STATE_BY_MODEL[model];
+  const current = await tx[model].findUniqueOrThrow(withStateFields({ where: { id } }));
+  assertPossible('edit_metadata', current);
+  return current;
+}
 
 /**
  * Replaces a profile picture, and removes the file the new one displaced.
@@ -127,8 +137,7 @@ const stateInclude = (model) => (model === 'collection'
  */
 async function replaceAvatar({ model, id, avatar_key }) {
   const { previous, updated } = await prisma.$transaction(async (tx) => {
-    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
-    state.assertPossible(model, 'edit_metadata', current);
+    const current = await lockedForEdit(tx, model, id);
 
     const row = await tx[model].update({
       where: { id },
@@ -152,8 +161,7 @@ async function replaceAvatar({ model, id, avatar_key }) {
  */
 async function removeProfileAvatar({ model, id }) {
   const previous = await prisma.$transaction(async (tx) => {
-    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
-    state.assertPossible(model, 'edit_metadata', current);
+    const current = await lockedForEdit(tx, model, id);
 
     await tx[model].update({ where: { id }, data: { avatar_key: null } });
     return current.avatar_key;
@@ -167,8 +175,7 @@ async function updateProfile({
   model, id, body, expected_version, actor_id, auditTarget, auditEvent,
 }) {
   return prisma.$transaction(async (tx) => {
-    const current = await tx[model].findUniqueOrThrow({ where: { id }, ...stateInclude(model) });
-    state.assertPossible(model, 'edit_metadata', current);
+    const current = await lockedForEdit(tx, model, id);
 
     const update = buildProfileUpdate(body, current.metadata);
     if (!update) throw createError.BadRequest('No profile fields were supplied.');

@@ -13,7 +13,6 @@ const { grantState } = require('./builtin/grant');
 const { invitationState } = require('./builtin/invitation');
 const { userState } = require('./builtin/user');
 const { auditState } = require('./builtin/audit');
-const targets = require('./builtin/targets');
 
 /**
  * The state layer: whether a resource's current state admits an action.
@@ -179,7 +178,6 @@ module.exports = {
   forbiddenActionsOf,
   requiredFieldsOf,
   verifyInSync,
-  ...targets,
 
   // The framework, for a test or a derived app
   StateContainer,

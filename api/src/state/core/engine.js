@@ -21,6 +21,17 @@ function readPath(resource, path) {
   return { found: true, value };
 }
 
+/** Runs one rule on fields already in the rules' form: a shaped row, or an example. */
+function checkFields(container, action, fields) {
+  const declared = container.getRule(action);
+  const missing = declared.requires.filter((path) => !readPath(fields ?? {}, path).found);
+  if (missing.length) {
+    throw new Error(`The state rule for ${container.meta.resourceType}.${action} reads ${missing.join(', ')}, `
+      + 'which the caller did not fetch');
+  }
+  return declared.check(fields) || null;
+}
+
 /**
  * Whether the resource's state admits the action.
  *
@@ -33,13 +44,7 @@ function readPath(resource, path) {
  */
 function check(registry, resourceType, action, resource) {
   const container = registry.get(resourceType);
-  const declared = container.getRule(action);
-  const missing = declared.requires.filter((path) => !readPath(resource ?? {}, path).found);
-  if (missing.length) {
-    throw new Error(`The state rule for ${resourceType}.${action} reads ${missing.join(', ')}, `
-      + 'which the caller did not fetch');
-  }
-  return declared.check(resource) || null;
+  return checkFields(container, action, container.toStateFields(resource));
 }
 
 /**
@@ -72,8 +77,9 @@ function withStateFields(registry, resourceType, args) {
  * @returns {string[]} action names, in the container's order
  */
 function availableActions(registry, resourceType, resource) {
-  return registry.get(resourceType).getActionNames()
-    .filter((action) => check(registry, resourceType, action, resource) === null);
+  const container = registry.get(resourceType);
+  const fields = container.toStateFields(resource);
+  return container.getActionNames().filter((action) => checkFields(container, action, fields) === null);
 }
 
 /**
@@ -93,7 +99,7 @@ function forbiddenActions(registry, resourceType, stateName) {
   const container = registry.get(resourceType);
   const example = container.getExample(stateName);
   return container.getActionNames()
-    .map((action) => ({ action, refusal: check(registry, resourceType, action, example) }))
+    .map((action) => ({ action, refusal: checkFields(container, action, example) }))
     .filter(({ refusal }) => refusal !== null)
     .map(({ action, refusal }) => ({ action, message: refusal.message }));
 }

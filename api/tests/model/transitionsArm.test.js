@@ -30,6 +30,7 @@ const prisma = require('@/db');
 const groupsService = require('@/services/groups');
 const state = require('@/state');
 const { authorizeAction, policyRegistry } = require('@/authorization');
+const { datasetResource, userSubject } = require('../state/rows');
 const {
   createTestUser, createTestGroup, createTestDataset, deleteUser, deleteGroup, deleteDataset,
 } = require('../services/helpers');
@@ -83,12 +84,8 @@ afterAll(async () => {
 
 const callers = () => [['requester', requester], ['group admin', admin], ['platform admin', platformAdmin]];
 
-/** The request as its state rules read it: its own status, and the resource it concerns. */
-const stateRow = (status) => ({
-  status,
-  target: { kind: 'dataset', archived: false, deleted: false },
-  subject: { kind: 'user', archived: false },
-});
+/** The request as a caller fetches it for its state rules: its status, resource, and subject. */
+const stateRow = (status) => ({ status, resource: datasetResource(), subject: userSubject() });
 
 describe.each(Object.values(ACCESS_REQUEST_STATUS))('a request in %s', (status) => {
   test.each(['requester', 'group admin', 'platform admin'])('offers %s the gate, blind to status', async (label) => {
@@ -114,7 +111,7 @@ describe.each(Object.values(ACCESS_REQUEST_STATUS))('a request in %s', (status) 
   });
 
   test('admits the steps its status admits, whoever is asking', () => {
-    const admitted = state.availableActions('access_request', stateRow(status));
+    const admitted = state.availableActionsOf('access_request', stateRow(status));
 
     // Reading is possible in every status, and the steps depend on the status alone.
     expect(admitted).toContain('read');
@@ -129,8 +126,8 @@ test('the two answers disagree, which is why a page needs both', () => {
   // Forced unless the halves are independent: if the capability map still read status, the
   // requester would not be offered `submit` on an approved request and this would pass
   // trivially.
-  const draft = state.availableActions('access_request', stateRow('DRAFT'));
-  const approved = state.availableActions('access_request', stateRow('APPROVED'));
+  const draft = state.availableActionsOf('access_request', stateRow('DRAFT'));
+  const approved = state.availableActionsOf('access_request', stateRow('APPROVED'));
 
   expect(draft).toContain('submit');
   expect(approved).not.toContain('submit');

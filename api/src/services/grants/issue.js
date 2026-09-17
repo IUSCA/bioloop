@@ -9,7 +9,7 @@ const Expiry = require('@/utils/expiry');
 const audit = require('@/services/audit');
 const AuditBuilder = require('@/services/audit/AuditBuilder');
 const prisma = require('@/db');
-const state = require('@/state');
+const grantState = require('@/state').import('grant');
 const accessTypeClosure = require('./accessTypeClosure');
 const { getPrismaGrantValidityFilter } = require('./fetch');
 const {
@@ -532,9 +532,11 @@ class GrantIssueService {
    */
   async issue(tx, items) {
     // Issuing changes who reaches the resource, so the resource's state decides whether it may.
-    state.assertPossible('grant', 'create', {
-      target: await state.readTargetState(tx, this.resource_id),
-      subject: await state.readSubjectState(tx, this.subject_id),
+    // The grant does not exist yet, so its row is the resource and the subject it would join.
+    const { resource: resourceSelect, subject: subjectSelect } = grantState.select();
+    grantState.assertPossible('create', {
+      resource: await tx.resource.findUniqueOrThrow({ where: { id: this.resource_id }, ...resourceSelect }),
+      subject: await tx.subject.findUniqueOrThrow({ where: { id: this.subject_id }, ...subjectSelect }),
     });
 
     const effectiveGrants = await this.buildEffectiveGrants(tx, items);
