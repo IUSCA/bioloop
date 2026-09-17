@@ -127,8 +127,12 @@ group.
 insert that names no group lands there, so every row has an owner without any caller being
 required to supply one.
 
-The unique key is `[owner_group_id, name, type, is_deleted]`. Two groups may hold a dataset
-of the same name, and neither can discover that the other does. Rows that landed in
+Names are unique among live datasets in an owning group. The key is a partial unique index on
+`(owner_group_id, name, type)` over rows where `is_deleted` is false. Two groups may hold a
+dataset of the same name, and neither can discover that the other does.
+
+Deleted rows are outside the key and keep their names. A group may delete a dataset, register
+the name again, and delete that one too. No delete path has to rename a row to make room. Rows that landed in
 `Unassigned Datasets` share one group, so they stay mutually unique on name and type exactly
 as they were under the old key.
 

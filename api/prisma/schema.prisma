@@ -51,27 +51,29 @@ model dataset {
   bundle           bundle?
   src_instrument   instrument?         @relation(fields: [src_instrument_id], references: [id])
 
-  owner_group    group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
+  owner_group        group                       @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
   collection_history collection_dataset[]
   collections        active_collection_dataset[]
-  contributions  user_dataset_contribution[]
-  resource_id    String                      @unique
+  contributions      user_dataset_contribution[]
+  resource_id        String                      @unique
   // Restrict: prevents deleting a resource row directly while this dataset still references it.
   // Reverse cascade (dataset deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "dataset" FOR EACH ROW: IF resource_id IS NOT NULL THEN DELETE FROM resource WHERE id = OLD.resource_id
-  resource       resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
+  resource           resource                    @relation(fields: [resource_id], references: [id], onDelete: Restrict)
   // @@index([resource_id])
-  create_method  DATASET_CREATE_METHOD?
-  upload_logs    dataset_upload_log[]
-  import_logs    dataset_import_log[]
-  use_conditions dataset_use_condition[]
-  funding        dataset_funding[]
-  affiliations   dataset_affiliation[]
+  create_method      DATASET_CREATE_METHOD?
+  upload_logs        dataset_upload_log[]
+  import_logs        dataset_import_log[]
+  use_conditions     dataset_use_condition[]
+  funding            dataset_funding[]
+  affiliations       dataset_affiliation[]
 
   // Names are unique within an owning group, not globally, so two groups may hold a dataset
   // of the same name without either being able to discover the other.
+  // Only live rows are constrained: partial unique index `dataset_live_name_key` on
+  // (owner_group_id, name, type) WHERE is_deleted = false, defined in migration
+  // 20260917030000_dataset_live_name_unique. Prisma cannot express a partial index.
   // @see docs/design/groups/dataset-storage.md — What group scoping changed
-  @@unique([owner_group_id, name, type, is_deleted])
   @@index([owner_group_id])
   @@index([resource_id])
 }
@@ -502,10 +504,10 @@ model subject {
   id   String       @id @default(uuid())
   type SUBJECT_TYPE
 
-  user                 user?
-  group                group?
-  grants               grant[]
-  access_requests      access_request[]
+  user            user?
+  group           group?
+  grants          grant[]
+  access_requests access_request[]
 
   recorded_use_conditions dataset_use_condition[] @relation("use_condition_recorder")
 }
@@ -553,17 +555,17 @@ model group {
   // Relations
   membership_history group_user[]
   members            active_group_user[]
-  ancestor_edges    group_closure[]             @relation("group_descendants")
-  descendant_edges  group_closure[]             @relation("group_ancestors")
-  owned_datasets    dataset[]
-  owned_collections collection[]
-  contributions     user_dataset_contribution[]
+  ancestor_edges     group_closure[]             @relation("group_descendants")
+  descendant_edges   group_closure[]             @relation("group_ancestors")
+  owned_datasets     dataset[]
+  owned_collections  collection[]
+  contributions      user_dataset_contribution[]
   // Restrict: prevents deleting a subject row directly while this group still references it.
   // Reverse cascade (group deleted → subject deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "group" FOR EACH ROW: DELETE FROM subject WHERE id = OLD.id
-  subject           subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
-  issued_grants     grant[]                     @relation("grant_issuing_authority")
-  revoked_grants    grant[]                     @relation("grant_revoking_authority")
+  subject            subject                     @relation(fields: [id], references: [id], onDelete: Restrict)
+  issued_grants      grant[]                     @relation("grant_issuing_authority")
+  revoked_grants     grant[]                     @relation("grant_revoking_authority")
 
   affiliated_datasets dataset_affiliation[] @relation("dataset_affiliation_group")
   import_sources      import_source[]
@@ -731,7 +733,7 @@ model collection {
   // Restrict: prevents deleting a resource row directly while this collection still references it.
   // Reverse cascade (collection deleted → resource deleted) is enforced via a DB trigger:
   //   AFTER DELETE ON "collection" FOR EACH ROW: DELETE FROM resource WHERE id = OLD.id
-  resource resource             @relation(fields: [id], references: [id], onDelete: Restrict)
+  resource        resource                    @relation(fields: [id], references: [id], onDelete: Restrict)
 
   @@index([owner_group_id])
   @@index([is_archived])
@@ -1002,7 +1004,6 @@ model dataset_affiliation {
   @@index([dataset_id])
   @@index([group_id])
 }
-
 
 model grant_access_type_implication {
   implying_id Int

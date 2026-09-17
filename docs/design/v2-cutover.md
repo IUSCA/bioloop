@@ -184,6 +184,17 @@ A replacement profile page must mount `FontSizeSelector`. A replacement app shel
 `applyFontSize()` call. [V2 design system](../contributing/v2-design-system.md#typography) is
 the record.
 
+### Done ahead of the cut-over: names unique among live datasets only
+
+The per-group key also carried `is_deleted`, so a group could hold one deleted row per name and
+type. Deleting a second dataset of a reused name failed, unless the delete path renamed the row
+first. The key is now a partial unique index over rows where `is_deleted` is false, and deleted
+rows keep their names.
+
+No legacy code was edited. The constraint is shared, so legacy inserts follow the new rule, and
+for them nothing changes: two live rows of one name, type, and group are still refused.
+[Dataset storage](./groups/dataset-storage.md#what-group-scoping-changed) is the record.
+
 ### What only the cut-over may do
 
 Some fixes the v2 work identifies cannot be applied while v1 is live, because v1 writes the
@@ -208,6 +219,11 @@ same tables. They wait for step 1, and they are listed here so they are not atte
   foreign key, because creating a resource through v2 seeds an owning-group grant and
   `grant.resource` is `ON DELETE RESTRICT`. The fix is to delete grants first. It is a legacy
   developer script, so it waits rather than being repaired inside a v2 change.
+- **Removing the renames that freed a deleted dataset's name.** `tombstoneDataset` in
+  `services/upload/uploadLogService.js` renames a failed upload to `<name>--<id>`, and the
+  workers' `delete` task renames to `<name>-<id>`. Neither is needed since the key covers live
+  rows only, and the comment on `tombstoneDataset` still describes the old key. Both belong to
+  code v1 depends on.
 - **Whitelisting the legacy `PATCH /datasets/:id` body.** It passes `req.body` to the update
   whole, so a caller permitted by the old RBAC middleware can rewrite `owner_group_id`,
   `is_deleted`, or `archive_path`. The v2 route now accepts only `name` and `description`. The

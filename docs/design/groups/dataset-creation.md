@@ -267,6 +267,11 @@ explicit group, so v2 never falls into the default by accident.
 hold a dataset of the same name, and neither can see that the other does. Exactly one line in
 the codebase reads the old compound key, the legacy `exists` route, so the swap is cheap.
 
+The key later lost `is_deleted`. It is now a partial unique index over live rows only, because
+a key that included the flag allowed one deleted row per name, and a second delete of a reused
+name failed. [Dataset storage](./dataset-storage.md#what-group-scoping-changed) has the
+current rule.
+
 **The archive path gains a group directory**: `<archive dir>/<group key>/<name>.tar`, and the
 staged bundle and QC directory follow the same shape. The name stays readable, the path stays
 unique, and an administrator reading the tape system sees which group owned what. That is

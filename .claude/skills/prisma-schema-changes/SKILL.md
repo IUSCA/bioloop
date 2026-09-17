@@ -52,6 +52,7 @@ saying `-- This is an empty migration.` means no drift; delete it.
   `Argument 'owner_group' is missing`. Use `owner_group: { connect: { id } }`.
 - **Changing a compound unique key renames its lookup** (`name_type_is_deleted` ->
   `owner_group_id_name_type_is_deleted`). Grep for the old key name, including `prisma/seed.js`.
+  Replacing one with a partial index removes the lookup entirely; the same grep applies.
 - **Dropping a composite key breaks `upsert`s in `seed.js`**, only at the end of a reset. Use
   `createMany({ data, skipDuplicates: true })`.
 
