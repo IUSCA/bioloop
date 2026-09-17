@@ -13,7 +13,7 @@ const { AuditBuilder } = audit;
 const { resolveEntityName } = require('@/services/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
-const state = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('group');
 const assert = require('assert');
 
 const PRISMA_GROUP_INCLUDES = {};
@@ -48,7 +48,7 @@ async function createMembershipAuditRecords(tx, {
 
 async function _getGroup(by, value) {
   assert(by === 'id' || by === 'slug', 'Invalid "by" parameter');
-  const group = await prisma.group.findUniqueOrThrow({
+  const group = await prisma.group.findUniqueOrThrow(withStateFields({
     where: { [by]: value },
     include: {
       ancestor_edges: {
@@ -82,7 +82,7 @@ async function _getGroup(by, value) {
         },
       },
     },
-  });
+  }));
   const {
     ancestor_edges, members, ...groupData
   } = group;
@@ -182,24 +182,23 @@ function make_slug_unique_fn(tx) {
  * @returns {Promise<Object>} Created group with closure entries
  */
 /**
- * Locks a group row and returns the fields its state rules read.
+ * Locks a group row, then reads it with the fields its state rules read.
  *
  * The lock comes before the state check, so an archive committed by another transaction either
  * lands before this read or waits for this transaction to finish. The state a write sees is
- * therefore the state the check read.
+ * therefore the state the check read. A raw lock cannot take the state layer's select fragment,
+ * so the row is read after it rather than by it.
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * @param {import('@prisma/client').Prisma.TransactionClient} tx
  * @param {string} group_id
- * @returns {Promise<{id: string, is_archived: boolean}>}
+ * @returns {Promise<Object>} every column of the group, and the state fields
  * @throws {HttpError} 404 when no group has that id
  */
-async function lockGroupForState(tx, group_id) {
-  const rows = await tx.$queryRaw`
-    SELECT id, is_archived FROM "group" WHERE id = ${group_id} FOR UPDATE
-  `;
+async function lockGroup(tx, group_id) {
+  const rows = await tx.$queryRaw`SELECT id FROM "group" WHERE id = ${group_id} FOR UPDATE`;
   if (rows.length === 0) throw createError.NotFound('Group not found');
-  return rows[0];
+  return tx.group.findUniqueOrThrow(withStateFields({ where: { id: group_id } }));
 }
 
 async function createGroup({
@@ -209,7 +208,7 @@ async function createGroup({
     // Archiving reaches the group itself and what it owns, so an archived parent takes no new
     // sub-group. A deeper descendant of an archived group keeps its own state.
     if (parent_id != null) {
-      state.assertPossible('group', 'create_child', await lockGroupForState(tx, parent_id));
+      assertPossible('create_child', await lockGroup(tx, parent_id));
     }
 
     // create slug - URL-friendly identifier based on name, e.g. "My Group" -> "my-group"
@@ -368,11 +367,8 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
   return prisma.$transaction(async (tx) => {
     // check if name changed and if so, generate new slug
     let slug;
-    state.assertPossible('group', 'edit_metadata', await lockGroupForState(tx, group_id));
-
-    const currentGroup = await tx.group.findUniqueOrThrow({
-      where: { id: group_id },
-    });
+    const currentGroup = await lockGroup(tx, group_id);
+    assertPossible('edit_metadata', currentGroup);
 
     if (data.name && data.name !== currentGroup.name) {
       slug = await generate_slug({
@@ -448,7 +444,7 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
  */
 async function archiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('group', 'archive', await lockGroupForState(tx, group_id));
+    assertPossible('archive', await lockGroup(tx, group_id));
 
     const updatedGroup = await tx.group.update({
       where: { id: group_id },
@@ -476,7 +472,7 @@ async function archiveGroup(group_id, actor_id) {
  */
 async function unarchiveGroup(group_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('group', 'unarchive', await lockGroupForState(tx, group_id));
+    assertPossible('unarchive', await lockGroup(tx, group_id));
 
     const updatedGroup = await tx.group.update({
       where: { id: group_id },
@@ -689,7 +685,7 @@ async function removeGroupMembers(group_id, {
   return prisma.$transaction(async (tx) => {
     // lock the group row to prevent concurrent modifications (e.g. adding members) while we're modifying memberships
     // The group must exist, and its state must admit a membership change.
-    state.assertPossible('group', 'remove_member', await lockGroupForState(tx, group_id));
+    assertPossible('remove_member', await lockGroup(tx, group_id));
 
     await assertAdminsRemain(tx, group_id, user_ids);
 
@@ -731,7 +727,7 @@ async function removeGroupMembers(group_id, {
  */
 async function addGroupMembers(group_id, { user_ids, actor_id }) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('group', 'add_member', await lockGroupForState(tx, group_id));
+    assertPossible('add_member', await lockGroup(tx, group_id));
 
     const createdRecords = await tx.$queryRaw`
       INSERT INTO group_user (group_id, user_id, role)
@@ -769,7 +765,7 @@ async function promoteGroupMemberToAdmin(group_id, {
   user_id, actor_id,
 }) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('group', 'edit_member_role', await lockGroupForState(tx, group_id));
+    assertPossible('edit_member_role', await lockGroup(tx, group_id));
 
     const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 
@@ -816,7 +812,7 @@ async function demoteAdminToMember(group_id, {
   return prisma.$transaction(async (tx) => {
     // Lock the group row first, as removal does, so a demotion and a removal of the other
     // admin cannot both pass the last-admin check.
-    state.assertPossible('group', 'edit_member_role', await lockGroupForState(tx, group_id));
+    assertPossible('edit_member_role', await lockGroup(tx, group_id));
 
     const membership = await tx.active_group_user.findFirst({ where: { group_id, user_id } });
 

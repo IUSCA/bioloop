@@ -513,14 +513,17 @@ Three things follow for a caller.
   because Prisma rejects a column named in `include` and returns every column anyway. The
   caller's key wins a clash, so `owner_group: true` is not narrowed. A raw `FOR UPDATE` cannot
   take a fragment: lock with `SELECT id ... FOR UPDATE`, then read with the fragment, as
-  `lockCollection` in `services/collections.js` does.
+  `lockCollection` in `services/collections.js` and `lockGroup` in `services/groups.js` do.
 - **A module that works with one type imports the layer bound to it.**
   `const { assertPossible, withStateFields } = require('@/state').import('collection')` gives
   the same functions with the type supplied. The unbound exports carry an `Of` suffix and take the
   type first, such as `assertPossibleOf(type, action, row)`; the bound ones drop both. `import`
-  throws at require time for a type with no state container. Only collections use it so far, and
-  the other consumers still call the old unsuffixed names, which no longer exist.
-- **Only `collection` declares a fragment so far.** `selectOf` on any other type throws.
+  throws at require time for a type with no state container. Collections and groups use it so far,
+  and the other consumers still call the old unsuffixed names, which no longer exist.
+- **Only `collection` and `group` declare a fragment so far.** `selectOf` on any other type throws.
+  A fragment of columns alone, as the group's is, merges nothing into an `include`, because
+  `include` returns every column already; `withStateFields` is still worth calling there, so a
+  relation added to the fragment later reaches the query.
   Grants, access requests, and datasets still use the readers in `state/builtin/targets.js` and
   `datasets_v2/stateFields.js`.
 - **A detail route builds `_meta` with `buildMeta(type, row, permission)`** from `src/services/meta.js`.

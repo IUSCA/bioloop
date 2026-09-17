@@ -14,9 +14,10 @@ const auditService = require('@/services/audit');
 const profileService = require('@/services/profiles');
 const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
-const state = require('@/state');
+const { buildMeta } = require('@/services/meta');
+const invitationState = require('@/state').import('invitation');
 const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, refusalMessage,
+  createAuthorizationMiddleware: authorize, authorizeAction, refusalMessage,
   callerIsPlatformAdmin, projectRows,
 } = require('@/authorization');
 const {
@@ -221,14 +222,7 @@ router.get(
       // Derived from the name, the year, and the public URL, so it carries nothing the
       // caller could not already see. @see docs/design/groups/implementation/profiles.md — Schema
       citation: profileService.resolveCitation(group, 'groups'),
-      _meta: {
-        standing: req.permission.standing,
-        capabilities: toCapabilitiesArray(req.permission.capabilities),
-        // What the caller holds, and what the group's state admits, are separate answers. The
-        // UI offers the intersection, so an archived group shows its buttons out of reach
-        // rather than missing.
-        available_actions: state.availableActions('group', group),
-      },
+      _meta: buildMeta('group', group, req.permission),
     });
   }),
 );
@@ -257,11 +251,7 @@ router.get(
 
     res.json({
       ...permission.filter(group),
-      _meta: {
-        standing: permission.standing,
-        capabilities: toCapabilitiesArray(permission.capabilities),
-        available_actions: state.availableActions('group', group),
-      },
+      _meta: buildMeta('group', group, permission),
     });
   }),
 );
@@ -485,7 +475,7 @@ router.get(
       ...listed,
       data: listed.data.map(({ group, ...row }) => ({
         ...row,
-        _meta: { available_actions: state.availableActions('invitation', { ...row, group }) },
+        _meta: { available_actions: invitationState.availableActions({ ...row, group }) },
       })),
     });
   }),
