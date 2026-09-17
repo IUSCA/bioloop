@@ -19,6 +19,25 @@ const assert = require('assert');
 
 const PRISMA_GROUP_INCLUDES = {};
 
+/**
+ * Whether a write failed because another group already holds the name.
+ *
+ * `group.name` is unique across every group, archived ones and ones the caller cannot see
+ * included, so the refusal names no other group.
+ */
+function isGroupNameTaken(e) {
+  return e instanceof Prisma.PrismaClientKnownRequestError
+    && e.code === 'P2002'
+    && Array.isArray(e.meta?.target) && e.meta.target.includes('name');
+}
+
+/** The 409 for a taken group name. `field` tells a form which input to mark. */
+function groupNameTakenError() {
+  return createError(409, 'This name is already taken. Group names must be unique across the whole system.', {
+    field: 'name',
+  });
+}
+
 // eslint-disable-next-line max-len
 const CONFLICT_ERROR_MESSAGE = 'Failed to update group metadata due to concurrent modification. Please refresh and try again.';
 
@@ -239,6 +258,8 @@ async function createGroup({
         metadata: data.metadata ?? Prisma.skip,
       },
       include: PRISMA_GROUP_INCLUDES,
+    }).catch((e) => {
+      throw isGroupNameTaken(e) ? groupNameTakenError() : e;
     });
 
     // create closure entry for group being its own ancestor
@@ -407,6 +428,7 @@ async function updateGroupMetadata(group_id, { data, expected_version, actor_id 
         && (e.code === 'P2025' || e.code === 'P2015')) {
         throw createError.Conflict(CONFLICT_ERROR_MESSAGE);
       }
+      if (isGroupNameTaken(e)) throw groupNameTakenError();
       throw e;
     }
 
@@ -852,7 +874,7 @@ async function demoteAdminToMember(group_id, {
 /**
  * Search all groups with optional filters and pagination
  * @param {string} [group_id] - Optional group ID to filter by
- * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter groups by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
@@ -877,6 +899,7 @@ async function searchGroupsForUser({
     searchClause = Prisma.sql`(
       g.name ILIKE ${`%${search_term}%`} OR
       g.description ILIKE ${`%${search_term}%`} OR
+      g.tagline ILIKE ${`%${search_term}%`} OR
       g.slug ILIKE ${`%${search_term}%`}
     )`;
   }
@@ -975,7 +998,7 @@ async function searchGroupsForUser({
  * Search groups that a user is a member of with optional filters and pagination
  * @param {string} user_id - ID of the user to search groups for
  * @param {string} [group_id] - Optional group ID to filter by
- * @param {string} [search_term] - Optional search term to filter groups by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter groups by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
@@ -1000,6 +1023,7 @@ async function searchAllGroups({
     searchClause = Prisma.sql`(
       g.name ILIKE ${`%${search_term}%`} OR
       g.description ILIKE ${`%${search_term}%`} OR
+      g.tagline ILIKE ${`%${search_term}%`} OR
       g.slug ILIKE ${`%${search_term}%`}
     )`;
   }
@@ -1118,7 +1142,7 @@ async function getGroupAncestors(group_id) {
  * @param {Object} options - Optional filters
  * @param {boolean|null} options.archived - Optional filter to include only archived (true), only non-archived (false), or all (null) descendant groups
  * @param {number} options.max_depth - Maximum depth of descendant groups to include (e.g. max_depth=1 to include only direct children)
- * @param {string} search_term - Optional search term to filter descendant groups by name, description, or slug
+ * @param {string} search_term - Optional search term to filter descendant groups by name, tagline, description, or slug
  * @returns {Promise<Array<{id: string, name: string, slug: string, depth: number}>>} List of descendant groups with depth
  */
 async function getGroupDescendants(group_id, opts = {}) {
@@ -1144,6 +1168,7 @@ async function getGroupDescendants(group_id, opts = {}) {
       OR: [
         { name: { contains: opts.search_term, mode: 'insensitive' } },
         { description: { contains: opts.search_term, mode: 'insensitive' } },
+        { tagline: { contains: opts.search_term, mode: 'insensitive' } },
         { slug: { contains: opts.search_term, mode: 'insensitive' } },
       ],
     };
@@ -1168,7 +1193,7 @@ async function getGroupDescendants(group_id, opts = {}) {
  *
  * @param {Object} options
  * @param {boolean|null} options.is_archived - Filter by archived status. Null returns all.
- * @param {string|null} options.search_term - Optional search term to filter groups by name/slug/description.
+ * @param {string|null} options.search_term - Optional search term to filter groups by name/slug/tagline/description.
  * @param {number} options.root_limit - Max number of root groups to return.
  * @param {number} options.root_offset - Offset for root group pagination.
  * @returns {Promise<Array<Object>>} Array of group objects with an `_children` array.
@@ -1188,6 +1213,7 @@ async function getGroupHierarchy({
       { name: { contains: search_term, mode: 'insensitive' } },
       { slug: { contains: search_term, mode: 'insensitive' } },
       { description: { contains: search_term, mode: 'insensitive' } },
+      { tagline: { contains: search_term, mode: 'insensitive' } },
     ];
   }
 

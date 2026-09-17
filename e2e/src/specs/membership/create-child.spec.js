@@ -110,3 +110,33 @@ test('losing the last other admin puts the creator back in', async ({ world, as 
   await expect(checkbox).toBeChecked();
   await expect(checkbox).toBeDisabled();
 });
+
+test('a taken name is refused on the name field, and the form keeps what was typed', async ({ world, as }) => {
+  const alice = await as('alice');
+  const modal = await openCreateSubgroupForm(alice.page, world.groups.requestLab.id);
+
+  // Group names are unique across the whole system, so the run's own centre holds this one.
+  const taken = world.groups.center.name;
+  const nameInput = modal.getByPlaceholder(/Computational Genomics Lab/i);
+  const submit = modal.getByRole('button', { name: /^Create Subgroup$/i });
+
+  await nameInput.fill(taken);
+  const refused = alice.page.waitForResponse(
+    (res) => res.url().endsWith(`/groups/${world.groups.requestLab.id}/children`)
+      && res.request().method() === 'POST',
+  );
+  await submit.click();
+  const response = await refused;
+  expect(response.status()).toBe(409);
+  expect((await response.json()).field).toBe('name');
+
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText(/already taken/i)).toBeVisible();
+  await expect(nameInput).toHaveValue(taken);
+  await expect(submit).toBeDisabled();
+
+  // Editing the name withdraws the refusal, and the form can be sent again.
+  await nameInput.fill(`${world.prefix}-ui-renamed-${Math.random().toString(36).slice(2, 8)}`);
+  await expect(modal.getByText(/already taken/i)).toBeHidden();
+  await expect(submit).toBeEnabled();
+});

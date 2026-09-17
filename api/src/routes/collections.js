@@ -32,7 +32,7 @@ const router = express.Router();
 // find collections that a dataset belongs to ?dataset_id=xxx
 
 // find all collections that I have access to
-// search collections by name/description
+// search collections by name, tagline, or description
 router.post(
   '/search',
   validate([
@@ -49,7 +49,7 @@ router.post(
   authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
-    // #swagger.summary = 'Search collections by name or description'
+    // #swagger.summary = 'Search collections by name, tagline, or description'
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order', 'is_archived', 'owner_group_id', 'dataset_id',

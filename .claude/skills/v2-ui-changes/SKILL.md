@@ -101,6 +101,9 @@ curl -s -X POST http://localhost:3030/auth/test_login -H 'Content-Type: applicat
 
 - **A static path that 400s about a param you did not send** (`id`) sits below a parameterised
   route such as `/grants/:id`. Express matches in registration order.
+- **A refusal about one input carries `field`.** `409 { message, field: 'name' }` from group
+  create and rename. Put `message` on that input with `:error`/`:error-messages`, clear it when
+  the value changes, and branch on `field`, never on the status or the text.
 - **`POST /groups/search` rejects `limit: 0`.** A count-only call passes `limit: 1` and reads
   `metadata.total`. `POST /collections/search` accepts `0`. Check the validator.
 - **`GET /grants/expiring-soon` is an unpaginated array of `{ subject, resource, grants }`.**

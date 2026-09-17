@@ -29,6 +29,8 @@
             label="Group Name"
             required-mark
             :rules="nameRules"
+            :error="!!nameError"
+            :error-messages="nameError ? [nameError] : []"
           />
         </div>
 
@@ -71,6 +73,15 @@ const formData = ref({
 });
 const { hasChanges, init, getUpdates } = useChangeTracker(formData);
 
+// The server's refusal of a taken name, shown on the field until the name changes.
+const nameError = ref(null);
+watch(
+  () => formData.value.name,
+  () => {
+    nameError.value = null;
+  },
+);
+
 const nameRules = [
   (value) => !!value || "Group name is required",
   (value) =>
@@ -87,6 +98,7 @@ async function show() {
     allow_user_contributions: props.allowUserContributions,
   };
   init(); // set baseline snapshot for change tracking
+  nameError.value = null;
   visible.value = true;
 
   // Clear any previous validation errors when reopening the modal
@@ -100,7 +112,9 @@ function hide() {
 /**
  * Determine if form is ready for submission
  */
-const isValidForSubmit = computed(() => hasChanges.value && isValid.value);
+const isValidForSubmit = computed(
+  () => hasChanges.value && isValid.value && !nameError.value,
+);
 
 async function confirm() {
   if (!hasChanges.value || !validate()) {
@@ -116,6 +130,10 @@ async function confirm() {
     toast.success("Group metadata updated.");
     emit("update");
   } catch (err) {
+    if (err?.response?.data?.field === "name") {
+      nameError.value = err.response.data.message;
+      return;
+    }
     toast.error(
       err?.response?.data?.message ??
         "Failed to update group metadata. Please try again.",

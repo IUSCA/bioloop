@@ -182,6 +182,9 @@ list with the admin role. Dana's own oversight list gains Wong Lab.
 checked and disabled, because a group needs an admin and on an empty form Dana is the only
 candidate. Naming Alice makes it a real choice, and Dana clears it. Dana never appears in the
 admin search: the checkbox is how she would put herself in.
+**And** a name another group already holds is refused on the name field, and the form stays
+open with what Dana typed. The message names no other group, because group names are unique
+across the whole system and the holder may be one Dana cannot see.
 **And never** does Dana gain the ability to issue or revoke a grant on anything Wong Lab
 owns. Creating a child confers oversight, not authority.
 

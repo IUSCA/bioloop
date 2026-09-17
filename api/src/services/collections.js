@@ -404,7 +404,7 @@ function buildAccessibleCollectionIdsCte(user_id, scope, grant_access_types) {
 /**
  * Search collections accessible to a user with optional filters and pagination
  * @param {string} user_id - UUID of the user performing the search
- * @param {string} [search_term] - Optional search term to filter collections by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter collections by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
@@ -438,6 +438,7 @@ async function searchCollectionsForUser({
       (
         c.name ILIKE ${likePattern} OR
         c.description ILIKE ${likePattern} OR
+        c.tagline ILIKE ${likePattern} OR
         c.slug ILIKE ${likePattern}
       )
       `;
@@ -516,7 +517,7 @@ async function searchCollectionsForUser({
 
 /**
  * Search all collections with optional filters and pagination (admin only)
- * @param {string} [search_term] - Optional search term to filter collections by name, description, or slug
+ * @param {string} [search_term] - Optional search term to filter collections by name, tagline, description, or slug
  * @param {string} sort_by - Field to sort by (e.g. 'name', 'created_at')
  * @param {string} sort_order - Sort order ('asc' or 'desc')
  * @param {number} limit - Number of results to return
@@ -539,6 +540,7 @@ async function searchAllCollections({
     where.OR = [
       { name: { contains: search_term, mode: 'insensitive' } },
       { description: { contains: search_term, mode: 'insensitive' } },
+      { tagline: { contains: search_term, mode: 'insensitive' } },
       { slug: { contains: search_term, mode: 'insensitive' } },
     ];
   }

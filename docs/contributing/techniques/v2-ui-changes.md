@@ -480,6 +480,27 @@ are unformatted at HEAD, and reformatting them adds unrelated diff.
   `find ... -print0 | xargs -0`.
 - macOS has no `timeout` command.
 
+## Showing a refusal on the input it is about
+
+A 409 can mean several things on one route. Renaming a group returns 409 for a taken name and
+also for a stale `version`. A form therefore cannot mark the name input from the status alone,
+and matching on the message text breaks when the wording changes.
+
+The API names the input instead. Group create and rename answer a taken name with
+`409 { message, field: 'name' }`. An `http-errors` object serialises any extra property it was
+created with, so `createError(409, message, { field: 'name' })` puts `field` in the body.
+
+`GroupCreateModal.vue` and `GroupEditMetadataModal.vue` read it the same way:
+
+- On a response whose `field` is `name`, set a `nameError` ref to the message and keep the modal
+  open. Any other error still goes to the toast.
+- Bind `:error="!!nameError"` and `:error-messages="nameError ? [nameError] : []"` on the input.
+- Clear `nameError` in a watcher on the name, and again in `show()`, because reopening can leave
+  the name unchanged.
+- Disable submit while `nameError` is set.
+
+`e2e/src/specs/membership/create-child.spec.js` checks this in the browser.
+
 ## Exercising a page's API calls without a browser
 
 A page that composes several endpoints can be checked with no browser. Mint a token per persona

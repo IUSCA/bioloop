@@ -69,6 +69,8 @@
                 label="Group Name"
                 required-mark
                 :rules="nameRules"
+                :error="!!nameError"
+                :error-messages="nameError ? [nameError] : []"
                 @blur="validate"
               />
             </div>
@@ -292,6 +294,15 @@ watch(
   },
 );
 
+// The server's refusal of a taken name, shown on the field until the name changes.
+const nameError = ref(null);
+watch(
+  () => formData.value.name,
+  () => {
+    nameError.value = null;
+  },
+);
+
 const nameRules = [
   (v) => !!v || "Group name is required",
   (v) => v.length >= 2 || "Group name must be at least 2 characters",
@@ -333,7 +344,7 @@ const adminIds = computed(() => {
 });
 
 const confirmationValid = computed(() => {
-  if (!isValid.value) return false;
+  if (!isValid.value || nameError.value) return false;
   if (isChildTarget.value) {
     const selectedParent = props.isSubgroup
       ? props.parentGroup
@@ -347,6 +358,7 @@ const confirmationValid = computed(() => {
 function show() {
   visible.value = true;
   resetValidation();
+  nameError.value = null;
   // Reset form when opening
   formData.value = {
     name: "",
@@ -399,6 +411,10 @@ async function confirm() {
     emit("update", newGroupRes.data);
   } catch (error) {
     console.error("Failed to create group:", error);
+    if (error?.response?.data?.field === "name") {
+      nameError.value = error.response.data.message;
+      return;
+    }
     toast.error(
       error?.response?.data?.message ??
         "Failed to create group. Please try again.",

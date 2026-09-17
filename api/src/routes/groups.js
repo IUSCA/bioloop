@@ -29,7 +29,7 @@ const { pickNonNil } = require('@/utils');
 
 const router = express.Router();
 
-// Search groups by name or description
+// Search groups by name, tagline, or description
 router.post(
   '/search',
   validate([
@@ -44,14 +44,14 @@ router.post(
   authorize('group', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Search groups by name or description'
+    // #swagger.summary = 'Search groups by name, tagline, or description'
 
     const params = _.pick([
       'search_term', 'limit', 'offset', 'sort_by', 'sort_order',
       'is_archived', 'scope',
     ])(req.body);
 
-    // check if search term is a valid UUID, if so, search by id instead of name/description
+    // check if search term is a valid UUID, if so, search by id instead of by text
     if (params.search_term && isUUID(params.search_term)) {
       params.group_id = params.search_term;
       delete params.search_term;
