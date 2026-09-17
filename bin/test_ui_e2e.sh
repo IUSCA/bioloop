@@ -4,12 +4,18 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose-e2e.yml"
+E2E_TLS_CERT_DIR=""
 
 cleanup() {
   local exit_code=$?
 
   echo "Stopping the isolated E2E stack and deleting its temporary data..."
   docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+
+  if [[ -n "${E2E_TLS_CERT_DIR:-}" && -d "$E2E_TLS_CERT_DIR" ]]; then
+    rm -f -- "$E2E_TLS_CERT_DIR/cert.pem" "$E2E_TLS_CERT_DIR/key.pem"
+    rmdir "$E2E_TLS_CERT_DIR"
+  fi
 
   return "$exit_code"
 }
@@ -65,6 +71,18 @@ wait_for_test_data() {
 trap cleanup EXIT
 
 cd "$PROJECT_ROOT"
+
+E2E_TLS_CERT_DIR="$(mktemp -d "$PROJECT_ROOT/.e2e-tls.XXXXXX")"
+export E2E_TLS_CERT_DIR
+
+echo "Generating a temporary TLS certificate for the production UI..."
+openssl req -x509 -newkey rsa:2048 \
+  -keyout "$E2E_TLS_CERT_DIR/key.pem" \
+  -out "$E2E_TLS_CERT_DIR/cert.pem" \
+  -days 1 \
+  -nodes \
+  -subj "/CN=localhost" \
+  > /dev/null 2>&1
 
 # A prior interrupted run must not leak database state into this run.
 docker compose -f "$COMPOSE_FILE" down -v --remove-orphans

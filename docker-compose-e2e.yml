@@ -4,31 +4,27 @@
 name: bioloop-e2e
 services:
   ui:
-    image: node:21
+    image: bioloop-ui:e2e
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
     ports:
       - 127.0.0.1:13443:443
-    env_file:
-      - ui/.env.default
     environment:
       # Keep the UI and Playwright expectations on the same instance profile.
-      - VITE_UPLOAD_ENABLED_ROLES=${UPLOAD_ENABLED_ROLES:-admin}
-      # E2E uses a dedicated host port so it can run beside the dev stack.
-      - VITE_CAS_RETURN=https://localhost:13443/auth/iucas
-      - VITE_GOOGLE_RETURN=https://localhost:13443/auth/google
-      - VITE_CILOGON_RETURN=https://localhost:13443/auth/cil
-      - VITE_MICROSOFT_RETURN=https://localhost:13443/auth/microsoft
+      - UPLOAD_ENABLED_ROLES=${UPLOAD_ENABLED_ROLES:-admin}
     volumes:
-      - ./ui/:/opt/sca/app
-      - ui_node_modules:/opt/sca/app/node_modules
-    working_dir: /opt/sca/app
-    entrypoint: ["bin/entrypoint.sh"]
-    command: ["npm", "run", "dev"]
+      # The E2E runner creates these short-lived self-signed certificates.
+      - ${E2E_TLS_CERT_DIR:?E2E_TLS_CERT_DIR must be set}:/etc/nginx/certs:ro
+    depends_on:
+      api:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-k", "-f", "https://localhost:443"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --no-check-certificate -qO- https://localhost/ > /dev/null || exit 1"]
+      interval: 5s
       timeout: 10s
-      retries: 18
-      start_period: 120s
+      retries: 20
+      start_period: 10s
 
   api:
     image: node:21
@@ -402,8 +398,6 @@ volumes:
   rhythm_keys:
     external: false
   api_node_modules:
-    external: false
-  ui_node_modules:
     external: false
   secure_download_node_modules:
     external: false
