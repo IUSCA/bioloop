@@ -102,9 +102,13 @@ npx prisma migrate deploy
 echo "prisma migrate deploy done."
 
 # Seed the database with initial data (roles, lookup tables, default users, etc.).
-# The .db_seeded marker lives in the bind-mounted api/ directory and is removed by
-# bin/reset_docker.sh alongside the database data, keeping seed state and DB in sync.
-if [ -f ".db_seeded" ]; then
+# E2E uses a fresh temporary database volume for every run, so it must not trust
+# the persistent .db_seeded marker from the bind-mounted api/ directory.
+if [ "${NODE_ENV}" = "ci" ]; then
+  echo "Running prisma db seed for the temporary E2E database..."
+  npx prisma db seed
+  echo "prisma db seed done."
+elif [ -f ".db_seeded" ]; then
   echo "DB already seeded (.db_seeded marker present). Skipping seed."
 else
   echo "Running prisma db seed..."

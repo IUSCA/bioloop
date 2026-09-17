@@ -10,17 +10,35 @@ From the project root, run:
 npm run test:e2e
 ```
 
-This command starts the app in CI mode, prepares the test data, runs the
-complete configured Playwright suite, and restores any local services that
-were running beforehand. Do not set `NODE_ENV=ci` in `api/.env`; Docker
-Compose selects the correct mode for both E2E and normal local development.
+This command starts the isolated `bioloop-e2e` stack on
+`https://localhost:13443`, prepares fresh temporary database volumes, runs the
+complete configured Playwright suite, and deletes the E2E containers and
+volumes afterward. The normal development stack and its database directories
+are not changed. Do not set `NODE_ENV=ci` in `api/.env`; Docker Compose selects
+the correct mode for E2E.
 
 ### Run all dataset upload tests
 
 From the project root, run:
 
 ```bash
-npm run test:e2e -- --project=upload --project=upload_role_visibility --project=upload--project_association--user_role--association
+npm run test:e2e -- \
+  --project=upload \
+  --project=upload_access_admin \
+  --project=upload_access_operator \
+  --project=upload_access_user
+```
+
+The required CI profile defaults to `UPLOAD_ENABLED_ROLES=admin`. To exercise
+an instance where User Upload is enabled, override the profile and include the
+User-specific functional project:
+
+```bash
+UPLOAD_ENABLED_ROLES=admin,user npm run test:e2e -- \
+  --project=upload_access_admin \
+  --project=upload_access_operator \
+  --project=upload_access_user \
+  --project=upload--project_association--user_role--association
 ```
 
 To run one upload spec, provide its path and Playwright project:

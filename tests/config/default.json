@@ -18,11 +18,6 @@
     "notifications": {
       "enabledForRoles": []
     },
-    "uploads": {
-      "enabledForRoles": [
-        "admin"
-      ]
-    },
     "import": {
       "enabledForRoles": ["admin", "operator"]
     }

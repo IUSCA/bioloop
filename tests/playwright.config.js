@@ -5,10 +5,23 @@ require('dotenv').config({
 
 const { defineConfig, devices } = require('@playwright/test');
 const testRuntimeConfig = require('config');
+const { getUploadEnabledRoles } = require('./src/config/featureRoles');
 
 const USER_STORAGE_STATE = path.join(__dirname, '/.auth/user_storage_state.json');
 const OPERATOR_STORAGE_STATE = path.join(__dirname, '/.auth/operator_storage_state.json');
 const ADMIN_STORAGE_STATE = path.join(__dirname, '/.auth/admin_storage_state.json');
+const uploadEnabledForRoles = getUploadEnabledRoles();
+
+const uploadRoleProjects = [
+  ['admin', ADMIN_STORAGE_STATE],
+  ['operator', OPERATOR_STORAGE_STATE],
+  ['user', USER_STORAGE_STATE],
+].map(([role, storageState]) => ({
+  name: `upload_access_${role}`,
+  use: { ...devices['Desktop Chrome'], storageState },
+  dependencies: [`${role}_login`],
+  testMatch: '/view/authenticated/upload/access_control.spec.js',
+}));
 
 /**
  * Read environment variables from file.
@@ -50,7 +63,8 @@ module.exports = {
       video: 'on-first-retry',
     },
 
-    // Notifications are still a work in progress and are not part of required CI.
+    // Notifications are still a work in progress and are not part of
+    // required CI.
     testIgnore: ['**/view/authenticated/notifications/*.spec.js'],
 
     /* Configure Projects (groups of tests) */
@@ -173,21 +187,17 @@ module.exports = {
         dependencies: ['admin_login'],
         testMatch: '/view/authenticated/upload/**/*.spec.js',
         testIgnore: [
+          '/view/authenticated/upload/access_control.spec.js',
           '/view/authenticated/upload/project_association/user_role/association.spec.js',
-          '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
         ],
       },
-      {
-        name: 'upload_role_visibility',
-        use: { ...devices['Desktop Chrome'] },
-        testMatch: '/view/authenticated/upload/uploads_index_admin_visibility.spec.js',
-      },
-      {
+      ...uploadRoleProjects,
+      ...(uploadEnabledForRoles.includes('user') ? [{
         name: 'upload--project_association--user_role--association',
         use: { ...devices['Desktop Chrome'], storageState: USER_STORAGE_STATE },
         dependencies: ['user_login'],
         testMatch: '/view/authenticated/upload/project_association/user_role/association.spec.js',
-      },
+      }] : []),
       /**
        * Role-Gated Feature Tests
        *
@@ -197,17 +207,25 @@ module.exports = {
        *  - Roles WITH access   → testMatch the full feature glob
        *                          testIgnore access_control.spec.js
        *                          (these roles reach the real UI, so the
-       *                          "feature disabled" check must not run for them)
+       *                          "feature disabled" check must not run for
+       *                          them)
        *
        *  - Roles WITHOUT access → testMatch ONLY access_control.spec.js,
        *                           which asserts the "feature disabled" alert
        *                           is shown instead of the feature UI
        *
-       * IMPORTANT — three configs must stay in sync whenever the role list changes:
-       *   1. ui/src/config.js          enabledFeatures.<feature>.enabledForRoles
-       *   2. tests/config/default.json enabledFeatures.<feature>.enabledForRoles
+       * IMPORTANT — statically configured features must keep three files in
+       * sync whenever their role list changes:
+       *   1. ui/src/config.js
+       *      enabledFeatures.<feature>.enabledForRoles
+       *   2. tests/config/default.json
+       *      enabledFeatures.<feature>.enabledForRoles
        *      (see the _sync_note key in that file)
-       *   3. This file                 testMatch / testIgnore per project below
+       *   3. This file
+       *      testMatch / testIgnore per project below
+       *
+       * Upload is the runtime-configured exception. Its projects read
+       * UPLOAD_ENABLED_ROLES through src/config/featureRoles.js.
        *
        * To give a role access to the feature:
        *   - Add the role to both config files (steps 1 & 2).

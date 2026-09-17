@@ -1,5 +1,9 @@
 <template>
-  <va-alert color="warning" v-if="!auth.isFeatureEnabled('uploads')">
+  <va-alert
+    color="warning"
+    v-if="!auth.isFeatureEnabled('uploads')"
+    data-testid="upload-feature-disabled-alert"
+  >
     <template #icon>
       <Icon icon="mdi:alert" class="text-xl" />
     </template>

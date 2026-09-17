@@ -2,16 +2,21 @@ name: bioloop
 services:
   ui:
     restart: unless-stopped
-    image: node:19
+    image: ${UI_IMAGE:-bioloop-ui:local}
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    environment:
+      - UPLOAD_ENABLED_ROLES=${UPLOAD_ENABLED_ROLES:-admin}
+    ports:
+      - "${UI_HTTP_PORT:-80}:80"
+      - "${UI_HTTPS_PORT:-443}:443"
     volumes:
-      - ./ui/:/opt/sca/app
-      - ui_modules:/opt/sca/app/node_modules
-    working_dir: /opt/sca/app
-    entrypoint:
-      - sh
-      - -c
-      - |
-        npm install && exec npm run builddev
+      - ${UI_TLS_CERT_DIR:-./ui/.cert}:/etc/nginx/certs:ro
+    depends_on:
+      - api
+    networks:
+      - network
   
 
   api:
@@ -179,9 +184,6 @@ services:
         ipv4_address: 172.19.0.5
 
 volumes:
-  ui_modules:
-    external: false
-
   api_modules:
     external: false
 

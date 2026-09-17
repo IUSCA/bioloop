@@ -4,35 +4,12 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose-e2e.yml"
-LOCAL_COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
-RUNNING_LOCAL_SERVICES=()
-
-# Remember the services that were running before E2E changed the shared
-# bioloop stack to CI mode. GitHub Actions starts from an empty stack.
-if [[ "${CI:-false}" != "true" ]]; then
-  while IFS= read -r service; do
-    [[ -n "$service" ]] && RUNNING_LOCAL_SERVICES+=("$service")
-  done < <(
-    docker compose -f "$LOCAL_COMPOSE_FILE" ps \
-      --services --status running
-  )
-fi
 
 cleanup() {
   local exit_code=$?
 
-  echo "Stopping the E2E stack..."
-  if [[ "${CI:-false}" == "true" ]]; then
-    docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
-  else
-    docker compose -f "$COMPOSE_FILE" down --remove-orphans
-  fi
-
-  if (( ${#RUNNING_LOCAL_SERVICES[@]} > 0 )); then
-    echo "Restoring the local stack in normal mode..."
-    docker compose -f "$LOCAL_COMPOSE_FILE" up -d \
-      "${RUNNING_LOCAL_SERVICES[@]}"
-  fi
+  echo "Stopping the isolated E2E stack and deleting its temporary data..."
+  docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
 
   return "$exit_code"
 }
@@ -89,6 +66,9 @@ trap cleanup EXIT
 
 cd "$PROJECT_ROOT"
 
+# A prior interrupted run must not leak database state into this run.
+docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+
 echo "Starting the E2E stack and preparing test data..."
 docker compose -f "$COMPOSE_FILE" up -d --build ui init_test_data
 wait_for_test_data
@@ -96,7 +76,7 @@ wait_for_test_data
 echo "Waiting for the UI..."
 curl --insecure --fail --silent --show-error \
   --retry 60 --retry-delay 5 --retry-all-errors \
-  https://localhost/ > /dev/null
+  https://localhost:13443/ > /dev/null
 
 echo "Running the selected Playwright tests..."
 if ! (

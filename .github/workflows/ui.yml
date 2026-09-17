@@ -11,6 +11,7 @@ on:
       - "workers/**"
       - "rhythm/**"
       - "signet/**"
+      - "nginx/**"
       - "bin/test_ui_e2e.sh"
       - "docker-compose*.yml"
       - "package.json"
@@ -25,6 +26,7 @@ on:
       - "workers/**"
       - "rhythm/**"
       - "signet/**"
+      - "nginx/**"
       - "bin/test_ui_e2e.sh"
       - "docker-compose*.yml"
       - "package.json"
@@ -72,7 +74,7 @@ jobs:
 
   e2e:
     name: Full End-to-End Tests
-    needs: check
+    needs: [check, docker-build]
     # Playwright 1.43 installs Ubuntu 22.04 (Jammy) system dependencies.
     runs-on: ubuntu-22.04
     timeout-minutes: 90
@@ -109,3 +111,14 @@ jobs:
             tests/test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  docker-build:
+    name: Production UI Docker Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build production UI image
+        run: docker build --file ui/Dockerfile --tag bioloop-ui:ci .

@@ -10,6 +10,9 @@ import {
 import { ensureRoleUser } from '../../../../api/user';
 import { expect, test } from '../../../../fixtures';
 import { getTokenByRole } from '../../../../fixtures/auth';
+import { getUploadEnabledRoles } from '../../../../config/featureRoles';
+
+const uploadEnabledForRoles = getUploadEnabledRoles();
 
 const attachments = Array.from(
   { length: 3 },
@@ -48,7 +51,6 @@ test.describe.serial('Dataset Upload Project and Dataset access', () => {
 
   test.beforeAll(async () => {
     const adminToken = await getTokenByRole({ role: 'admin' });
-    const user = await ensureRoleUser({ token: adminToken, role: 'user' });
 
     const createdProjects = await Promise.all(
       Array.from(
@@ -79,11 +81,14 @@ test.describe.serial('Dataset Upload Project and Dataset access', () => {
         ),
       },
     });
-    await editProjectUsers({
-      token: adminToken,
-      id: projectAssociatedWithUserRole.id,
-      data: { user_ids: [user.id] },
-    });
+    if (uploadEnabledForRoles.includes('user')) {
+      const user = await ensureRoleUser({ token: adminToken, role: 'user' });
+      await editProjectUsers({
+        token: adminToken,
+        id: projectAssociatedWithUserRole.id,
+        data: { user_ids: [user.id] },
+      });
+    }
 
     datasetsNotAssociatedWithUserProject.push(await createDataset({
       token: adminToken,
@@ -91,87 +96,91 @@ test.describe.serial('Dataset Upload Project and Dataset access', () => {
     }));
   });
 
-  test.describe('user role access', () => {
-    let page;
-
-    test.beforeAll(async ({ browser, attachmentManager }) => {
-      page = await openGeneralInfoForRole({
-        browser,
-        attachmentManager,
-        role: 'user',
-      });
-    });
-
-    test('only lists source datasets from an associated Project', async () => {
-      const sourceRawDataOptions = await getAutoCompleteResults({
-        page,
-        testId: 'upload-metadata-dataset-autocomplete',
-      });
-
-      datasetsAssociatedWithUserProject.forEach((dataset) => {
-        expect(sourceRawDataOptions).toContain(dataset.name);
-      });
-      datasetsNotAssociatedWithUserProject.forEach((dataset) => {
-        expect(sourceRawDataOptions).not.toContain(dataset.name);
-      });
-    });
-
-    test('only lists Projects associated with the user', async () => {
-      const projectOptions = await getAutoCompleteResults({
-        page,
-        testId: 'upload-metadata-project-autocomplete',
-      });
-
-      expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
-    });
-
-    test.afterAll(async () => {
-      await page.close();
-    });
-  });
-
-  ['operator', 'admin'].forEach((role) => {
-    test.describe(`${role} role access`, () => {
+  if (uploadEnabledForRoles.includes('user')) {
+    test.describe('user role access', () => {
       let page;
 
       test.beforeAll(async ({ browser, attachmentManager }) => {
         page = await openGeneralInfoForRole({
           browser,
           attachmentManager,
-          role,
+          role: 'user',
         });
       });
 
-      test('lists source datasets regardless of Project association', async () => {
+      test('only lists source datasets from an associated Project', async () => {
         const sourceRawDataOptions = await getAutoCompleteResults({
           page,
           testId: 'upload-metadata-dataset-autocomplete',
         });
 
-        expect(sourceRawDataOptions.length).toBeGreaterThanOrEqual(
-          datasetsAssociatedWithUserProject.length,
-        );
         datasetsAssociatedWithUserProject.forEach((dataset) => {
           expect(sourceRawDataOptions).toContain(dataset.name);
         });
         datasetsNotAssociatedWithUserProject.forEach((dataset) => {
-          expect(sourceRawDataOptions).toContain(dataset.name);
+          expect(sourceRawDataOptions).not.toContain(dataset.name);
         });
       });
 
-      test('lists all Projects', async () => {
+      test('only lists Projects associated with the user', async () => {
         const projectOptions = await getAutoCompleteResults({
           page,
           testId: 'upload-metadata-project-autocomplete',
         });
 
-        expect(projectOptions.length).toBeGreaterThanOrEqual(projects.length);
         expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
       });
 
       test.afterAll(async () => {
-        await page.close();
+        await page?.close();
       });
     });
-  });
+  }
+
+  ['operator', 'admin']
+    .filter((role) => uploadEnabledForRoles.includes(role))
+    .forEach((role) => {
+      test.describe(`${role} role access`, () => {
+        let page;
+
+        test.beforeAll(async ({ browser, attachmentManager }) => {
+          page = await openGeneralInfoForRole({
+            browser,
+            attachmentManager,
+            role,
+          });
+        });
+
+        test('lists source datasets regardless of Project association', async () => {
+          const sourceRawDataOptions = await getAutoCompleteResults({
+            page,
+            testId: 'upload-metadata-dataset-autocomplete',
+          });
+
+          expect(sourceRawDataOptions.length).toBeGreaterThanOrEqual(
+            datasetsAssociatedWithUserProject.length,
+          );
+          datasetsAssociatedWithUserProject.forEach((dataset) => {
+            expect(sourceRawDataOptions).toContain(dataset.name);
+          });
+          datasetsNotAssociatedWithUserProject.forEach((dataset) => {
+            expect(sourceRawDataOptions).toContain(dataset.name);
+          });
+        });
+
+        test('lists all Projects', async () => {
+          const projectOptions = await getAutoCompleteResults({
+            page,
+            testId: 'upload-metadata-project-autocomplete',
+          });
+
+          expect(projectOptions.length).toBeGreaterThanOrEqual(projects.length);
+          expect(projectOptions).toContain(projectAssociatedWithUserRole.name);
+        });
+
+        test.afterAll(async () => {
+          await page?.close();
+        });
+      });
+    });
 });
