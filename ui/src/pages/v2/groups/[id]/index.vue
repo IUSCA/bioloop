@@ -22,12 +22,7 @@
       <!-- Page header -->
       <div class="flex items-center justify-between flex-wrap gap-3 mt-3">
         <div class="flex items-center gap-3">
-          <ProfileAvatar
-            kind="group"
-            :name="group.name"
-            :avatar-url="group.avatar_key ? avatarUrl : null"
-            :size="40"
-          />
+          <ProfileAvatar kind="group" :name="group.name" :size="40" />
           <div>
             <h1 class="text-xl font-semibold">
               {{ group.name }}
@@ -226,7 +221,6 @@ import { useCapabilities } from "@/composables/useCapabilities";
 import CollectionService from "@/services/v2/collections";
 import DatasetService from "@/services/v2/datasets";
 import GroupService from "@/services/v2/groups";
-import ProfileService from "@/services/v2/profiles";
 import { badgeFor } from "@/services/v2/standing";
 import { useNavStore } from "@/stores/nav";
 
@@ -278,10 +272,6 @@ const collectionsTabRef = ref(null);
 
 // ── Derived ───────────────────────────────────────────────────────────────
 const ancestors = computed(() => group.value?.ancestors ?? []);
-
-const avatarUrl = computed(() =>
-  ProfileService.groupAvatarUrl(props.id, group.value?.avatar_key),
-);
 
 const callerRole = computed(() =>
   badgeFor(group.value?._meta?.standing, "group"),

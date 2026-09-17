@@ -392,9 +392,7 @@ the pattern: a bare `axios.create({ baseURL: config.apiBasePath })` with no inte
 page renders its own error state.
 
 A public page also needs `requiresAuth: false` and `layouts/public.vue`. `layouts/default.vue`
-mounts the sidebar and the alert poller, and both assume a session. An `<img>` cannot carry an
-Authorization header. The public router therefore serves the group avatar, so one URL works for
-an anonymous reader and, through the `jwt` cookie, for a signed-in admin.
+mounts the sidebar and the alert poller, and both assume a session.
 
 ## Gating on state
 
@@ -544,13 +542,19 @@ user sees.
 
 When the MCP profile is locked, a throwaway `.cjs` script in `e2e/` run with `node` needs no help
 from the user. It needs `require('@playwright/test')`, `chromium.launch({ channel: 'chrome' })`,
-and `ignoreHTTPSErrors: true`. Sign in with `/dev-login?username=…&next=…`. The detail pages
+and `ignoreHTTPSErrors: true`. The channel is required: no Playwright browser is downloaded on
+this machine, so a bare `chromium.launch()` dies on a missing `chrome-headless-shell`. The
+script must sit in `e2e/`, because `@playwright/test` resolves from `e2e/node_modules`. Sign in with `/dev-login?username=…&next=…`. The detail pages
 switch tabs through a ref, not the URL, so click `getByRole('tab', { name: /^Datasets/ })`.
 Delete the script afterwards with `command rm -f`.
 
 To call the API as a seeded user from such a script, sign in and read
 `localStorage.getItem('token')`. The value is not JSON, and `JSON.parse` throws. Strip any
 quotes and send it as a bearer token to `http://localhost:3030`.
+
+`VaInput` renders its label as a sibling element rather than a `<label for=…>`, so
+`getByLabel('Tagline')` matches nothing and times out. Address the input by its container, as
+`page.locator('.va-modal input[type=text]').first()`.
 
 Run these scripts one at a time. Three in parallel, all signing in as the same user, left two on
 pages with no links.

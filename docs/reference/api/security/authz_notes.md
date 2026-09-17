@@ -270,7 +270,8 @@ group.js specifics (273 lines):
   SQL-computed `user_role` is part of the list response contract.
 - Projection syntax in use: `[*]` array paths and `!field` exclusions.
 - Local PUBLIC_ATTRIBUTES includes tagline, avatar_key; base_attributes.group does not -> the
-  same drift pattern as collection.
+  same drift pattern as collection. (2026-09-17: `avatar_key` is gone with the profile
+  picture; the drift on `tagline` stands.)
 
 grant.js (151 lines), access_request.js (129), user.js (47), audit.js (34):
 - These four govern records ABOUT other resources (grant, access_request) or the whole system
@@ -710,7 +711,7 @@ with capabilities + caller role; mutations bound one action each). Group-specifi
 - `PATCH /:id`: group admin can flip `allow_user_contributions`, which changes
   `dataset.contribute` for every effective member: an operation with an access effect.
 - `PUT/DELETE /:id/avatar`: `edit_metadata`; writes prisma directly from the route; no audit
-  row, no version check.
+  row, no version check. (2026-09-17: both routes removed with the profile picture.)
 - `/:id/members` `view_members`; bulk remove uses Promise.all over `ensureNotRemovingLastAdmin`,
   which reads `group_user` with `removed_at: null` only (T13 known; also ignores valid_until,
   item 28).

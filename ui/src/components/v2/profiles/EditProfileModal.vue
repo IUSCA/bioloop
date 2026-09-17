@@ -68,55 +68,8 @@
           pointer. The tallest panel is Profile with the About editor at its minimum rows.
         -->
         <div class="min-h-[380px]">
-          <!-- Profile: the picture, the one line under the name, and the body. -->
+          <!-- Profile: the one line under the name, and the body. -->
           <div v-if="activeTab === 'profile'" class="flex flex-col gap-5">
-            <!-- Profile picture — groups only; a collection is identified by its owner. -->
-            <div v-if="props.kind === 'group'" class="flex flex-col gap-2">
-              <label class="text-xs font-semibold uppercase tracking-wide">
-                Profile picture
-              </label>
-              <div class="flex items-center gap-4">
-                <ProfileAvatar
-                  :kind="props.kind"
-                  :name="props.name"
-                  :avatar-url="previewAvatarUrl"
-                  :size="56"
-                />
-                <div class="flex flex-col gap-1.5">
-                  <div class="flex items-center gap-2">
-                    <VaButton preset="secondary" size="small" @click="pickFile">
-                      {{
-                        props.avatarKey || pendingAvatarFile
-                          ? "Replace"
-                          : "Upload"
-                      }}
-                    </VaButton>
-                    <VaButton
-                      v-if="props.avatarKey || pendingAvatarFile"
-                      preset="secondary"
-                      color="danger"
-                      size="small"
-                      @click="removeAvatar"
-                    >
-                      Remove
-                    </VaButton>
-                  </div>
-                  <p class="text-xs" style="color: var(--va-secondary)">
-                    PNG, JPG, WebP, or SVG, up to 2 MB. Falls back to the group
-                    icon.
-                  </p>
-                </div>
-                <input
-                  ref="fileInputRef"
-                  type="file"
-                  class="hidden"
-                  aria-label="Profile picture file"
-                  accept=".png,.jpg,.jpeg,.webp,.svg"
-                  @change="onFileChosen"
-                />
-              </div>
-            </div>
-
             <!-- Tagline -->
             <div class="flex flex-col gap-1.5">
               <VaInput
@@ -338,7 +291,6 @@
 
 <script setup>
 import ProfileAboutBody from "@/components/v2/profiles/ProfileAboutBody.vue";
-import ProfileAvatar from "@/components/v2/profiles/ProfileAvatar.vue";
 import toast from "@/services/toast";
 import ProfileService from "@/services/v2/profiles";
 
@@ -350,9 +302,7 @@ import ProfileService from "@/services/v2/profiles";
  * who everything below it is written for.
  *
  * Every panel writes into one `form` object and one save button submits all of them, so a
- * hidden panel is still part of the payload. The picture is a separate endpoint from the
- * rest, so a save here is up to three requests: the profile PATCH, and an avatar upload or
- * delete.
+ * hidden panel is still part of the payload. One PATCH saves the lot.
  *
  * The API is the authority on every rule this form applies. The limits repeated here exist
  * to say "no" before a round trip, not instead of the server's check.
@@ -361,7 +311,7 @@ import ProfileService from "@/services/v2/profiles";
  */
 
 const props = defineProps({
-  /** "group" or "collection" — decides the endpoint and whether a picture is offered. */
+  /** "group" or "collection" — decides which endpoint the save goes to. */
   kind: { type: String, required: true },
   id: { type: String, required: true },
   name: { type: String, default: "" },
@@ -371,7 +321,6 @@ const props = defineProps({
   profileVisibility: { type: String, default: "PRIVATE" },
   /** The `metadata` object as the API returned it. */
   metadata: { type: Object, default: () => ({}) },
-  avatarKey: { type: String, default: null },
 });
 
 const emit = defineEmits(["update"]);
@@ -407,10 +356,6 @@ const saving = ref(false);
 /** Which panel of the form is showing. Reset on every open, so a reopen starts at Profile. */
 const activeTab = ref("profile");
 const aboutTab = ref("write");
-const fileInputRef = ref(null);
-const pendingAvatarFile = ref(null);
-const pendingAvatarUrl = ref(null);
-const avatarCleared = ref(false);
 
 const form = ref(blankForm());
 const baseline = ref("");
@@ -438,18 +383,8 @@ function blankForm() {
   };
 }
 
-/** What the picture looks like right now, including a file chosen but not yet uploaded. */
-const previewAvatarUrl = computed(() => {
-  if (avatarCleared.value) return null;
-  if (pendingAvatarUrl.value) return pendingAvatarUrl.value;
-  return ProfileService.groupAvatarUrl(props.id, props.avatarKey);
-});
-
 const hasChanges = computed(
-  () =>
-    JSON.stringify(form.value) !== baseline.value ||
-    !!pendingAvatarFile.value ||
-    avatarCleared.value,
+  () => JSON.stringify(form.value) !== baseline.value,
 );
 
 function show() {
@@ -473,39 +408,11 @@ function show() {
   baseline.value = JSON.stringify(form.value);
   activeTab.value = "profile";
   aboutTab.value = "write";
-  discardPendingAvatar();
   visible.value = true;
 }
 
 function hide() {
-  discardPendingAvatar();
   visible.value = false;
-}
-
-function discardPendingAvatar() {
-  if (pendingAvatarUrl.value) URL.revokeObjectURL(pendingAvatarUrl.value);
-  pendingAvatarUrl.value = null;
-  pendingAvatarFile.value = null;
-  avatarCleared.value = false;
-}
-
-function pickFile() {
-  fileInputRef.value?.click();
-}
-
-function onFileChosen(event) {
-  const file = event.target.files?.[0];
-  event.target.value = "";
-  if (!file) return;
-  if (pendingAvatarUrl.value) URL.revokeObjectURL(pendingAvatarUrl.value);
-  pendingAvatarFile.value = file;
-  pendingAvatarUrl.value = URL.createObjectURL(file);
-  avatarCleared.value = false;
-}
-
-function removeAvatar() {
-  discardPendingAvatar();
-  avatarCleared.value = true;
 }
 
 function addLink() {
@@ -583,17 +490,6 @@ async function save() {
       }
     }
 
-    if (props.kind === "group") {
-      if (pendingAvatarFile.value) {
-        await ProfileService.uploadGroupAvatar(
-          props.id,
-          pendingAvatarFile.value,
-        );
-      } else if (avatarCleared.value && props.avatarKey) {
-        await ProfileService.deleteGroupAvatar(props.id);
-      }
-    }
-
     hide();
     toast.success("Profile updated.");
     emit("update");
@@ -606,8 +502,6 @@ async function save() {
     saving.value = false;
   }
 }
-
-onUnmounted(discardPendingAvatar);
 </script>
 
 <style>

@@ -177,7 +177,6 @@
     :about-md="props.group.about_md"
     :profile-visibility="props.group.profile_visibility"
     :metadata="props.group.metadata"
-    :avatar-key="props.group.avatar_key"
     @update="emit('update')"
   />
 </template>

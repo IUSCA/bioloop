@@ -24,6 +24,10 @@ A class string is intent, not what renders. Carry a claim with `evaluate_script`
   `~/.cache/chrome-devtools-mcp/chrome-profile`". Retrying never clears it. Ask the user to quit
   that Chrome. **Do not kill it yourself** — it is their browser. Fallback: a throwaway
   Playwright `.cjs` script run by `node` (docs page, "Measuring with a Playwright script").
+  Write it inside `e2e/`, and launch with `chromium.launch({ channel: 'chrome' })`; no
+  Playwright browser is installed, so a bare launch fails on `chrome-headless-shell`.
+- **`getByLabel` finds no Vuestic input.** `VaInput` draws its label as a sibling, so
+  `getByLabel('Tagline')` times out. Use `.va-modal input[type=text]`.
 - **Sign in:** `https://localhost/dev-login?username=<user>&next=<path>` passes the cert warning
   and login in one navigation.
 - **Check as another user in an isolated context**, or you replace the user's own login:

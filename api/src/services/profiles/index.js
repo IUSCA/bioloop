@@ -9,7 +9,6 @@ const state = require('@/state');
 const STATE_BY_MODEL = { group: state.import('group'), collection: state.import('collection') };
 const audit = require('@/services/audit');
 const validate = require('./validate');
-const avatarService = require('./avatar');
 
 /**
  * Reading and writing the profile of a group or a collection.
@@ -122,55 +121,6 @@ async function lockedForEdit(tx, model, id) {
   return current;
 }
 
-/**
- * Replaces a profile picture, and removes the file the new one displaced.
- *
- * The write lives here rather than in the route, so the state check runs on the same path as
- * every other profile edit. The old file is removed only after the new key is committed, so a
- * failure leaves the previous picture serving.
- *
- * @param {Object} params
- * @param {'group'|'collection'} params.model
- * @param {string} params.id
- * @param {string} params.avatar_key - the stored file name
- * @returns {Promise<{id: string, avatar_key: string}>}
- */
-async function replaceAvatar({ model, id, avatar_key }) {
-  const { previous, updated } = await prisma.$transaction(async (tx) => {
-    const current = await lockedForEdit(tx, model, id);
-
-    const row = await tx[model].update({
-      where: { id },
-      data: { avatar_key },
-      select: { id: true, avatar_key: true },
-    });
-    return { previous: current.avatar_key, updated: row };
-  });
-
-  await avatarService.removeAvatar(previous);
-  return updated;
-}
-
-/**
- * Removes a profile picture. The profile falls back to the resource's kind icon.
- *
- * @param {Object} params
- * @param {'group'|'collection'} params.model
- * @param {string} params.id
- * @returns {Promise<{id: string, avatar_key: null}>}
- */
-async function removeProfileAvatar({ model, id }) {
-  const previous = await prisma.$transaction(async (tx) => {
-    const current = await lockedForEdit(tx, model, id);
-
-    await tx[model].update({ where: { id }, data: { avatar_key: null } });
-    return current.avatar_key;
-  });
-
-  await avatarService.removeAvatar(previous);
-  return { id, avatar_key: null };
-}
-
 async function updateProfile({
   model, id, body, expected_version, actor_id, auditTarget, auditEvent,
 }) {
@@ -270,8 +220,6 @@ module.exports = {
   profileUrl,
   updateGroupProfile,
   updateCollectionProfile,
-  replaceAvatar,
-  removeProfileAvatar,
   getGroupForProfile,
   getCollectionForProfile,
   ...validate,

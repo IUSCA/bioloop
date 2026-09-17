@@ -13,8 +13,8 @@ column. For where each piece lives, see [Code Map](./code-map.md).
 
 # Group and Collection Profiles
 
-A profile is the front page of a group or a collection. It carries a picture, a tagline, a
-markdown body, external links, a citation, and related publications. Screens are drawn at
+A profile is the front page of a group or a collection. It carries a tagline, a markdown
+body, external links, a citation, and related publications. Screens are drawn at
 [`/mockups/profile-screens.html`](/mockups/profile-screens.html).
 
 **A profile is informational and never authorization-bearing.** Publishing a profile grants
@@ -37,16 +37,15 @@ and a grant to `Public`. The UI names them differently and says which one moves 
 
 ## The columns
 
-`tagline`, `about_md`, and `profile_visibility` are typed columns on both models, and `group`
-also has `avatar_key`. Links, citation, and publications are keys under `metadata`. The API
-validates them on write in `api/src/services/profiles/validate.js`.
+`tagline`, `about_md`, and `profile_visibility` are typed columns on both models. Links,
+citation, and publications are keys under `metadata`. The API validates them on write in
+`api/src/services/profiles/validate.js`.
 
-- **`avatar_key` is a filename, not a URL.** `services/profiles/avatar.js` generates it and
-  stores the bytes in one directory, `profiles.avatar_dir`.
-- **A collection has no picture.** It is shown inside its owning group's identity, and a second
-  logo competes with it.
-- **A missing picture falls back to the kind's icon**, never to initials. `UserAvatar` draws
-  monograms for people, so a lettered square beside a group name reads as a user.
+- **A profile carries no picture.** Text is what a profile is for, and an uploaded image costs
+  a byte store, a public byte route, and a size limit that fails at the worst moment. A group
+  or a collection is marked by the icon for its kind, drawn by `ProfileAvatar.vue`.
+- **The mark is an icon, never initials.** `UserAvatar` draws monograms for people, so a
+  lettered square beside a group name reads as a user.
 - **The citation is generated when `metadata.citation` is null.** `resolveCitation` follows
   DataCite's order: creator, year, title, publisher, identifier. It is a display field, so an
   approximation is the right answer.
@@ -118,17 +117,13 @@ redirects to logout on a 401, which would eject the readers these pages are for.
 because this text reaches the widest audience the system has. The same component renders the
 edit preview, so the preview cannot disagree with the page.
 
-**The avatar is served by the public router for everyone.** An `<img>` cannot carry a bearer
-token. An anonymous reader is admitted by visibility. A signed-in admin viewing a private
-profile is authenticated from the `jwt` cookie.
-
 ## What this does not do
 
 - **No public listing or search.** A public profile is reachable by its URL only.
 - **No public dataset pages.** Datasets carry file paths and consent codes, and need their own
   analysis.
 - **No user profiles.** Only groups and collections have them.
-- **No custom theming.** A profile gets a picture and text, not colours or a footer.
+- **No custom theming.** A profile gets text, not pictures, colours, or a footer.
 
 ## Not built
 

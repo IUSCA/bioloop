@@ -49,12 +49,11 @@ describe('a profile is private until somebody publishes it', () => {
   test('a new group is PRIVATE', async () => {
     const row = await prisma.group.findUnique({
       where: { id: group.id },
-      select: { profile_visibility: true, tagline: true, about_md: true, avatar_key: true },
+      select: { profile_visibility: true, tagline: true, about_md: true },
     });
     expect(row.profile_visibility).toBe('PRIVATE');
     expect(row.tagline).toBeNull();
     expect(row.about_md).toBeNull();
-    expect(row.avatar_key).toBeNull();
   });
 
   test('a new collection is PRIVATE', async () => {

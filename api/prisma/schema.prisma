@@ -548,8 +548,6 @@ model group {
   // @see docs/design/groups/profiles.md — The columns
   tagline            String?            @db.VarChar(120)
   about_md           String?
-  // Object-store key for the profile picture, not a URL. Null renders the group icon.
-  avatar_key         String?
   profile_visibility PROFILE_VISIBILITY @default(PRIVATE)
 
   // Relations

@@ -28,7 +28,7 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 | Membership transitivity | view `effective_user_groups` over `active_group_user` | — | `authorization/builtin/paths/` → `member` paths | — |
 | Oversight visibility | view `effective_user_oversight_groups` | — | `hydrators/user.js` → `oversight_group_ids` | — |
 | Collections | `collection`, `collection_dataset` (validity columns), view `active_collection_dataset` | `routes/collections.js` | `services/collections.js` | `pages/v2/collections/` |
-| Profiles | `tagline`, `about_md`, `profile_visibility` on `group` and `collection`, `avatar_key` on `group`, `PROFILE_VISIBILITY` enum, `links`/`citation`/`publications` under `metadata` | `PATCH /groups/:id/profile`, `PUT` and `DELETE /groups/:id/avatar`, `PATCH /collections/:id/profile`, and the GET-only `routes/public.js` | `services/profiles/` | `components/v2/profiles/`, `pages/public/`, `layouts/public.vue` |
+| Profiles | `tagline`, `about_md`, `profile_visibility` on `group` and `collection`, `PROFILE_VISIBILITY` enum, `links`/`citation`/`publications` under `metadata` | `PATCH /groups/:id/profile`, `PATCH /collections/:id/profile`, and the GET-only `routes/public.js` | `services/profiles/` | `components/v2/profiles/`, `pages/public/`, `layouts/public.vue` |
 | Grants | `grant`, `grant_access_type`, view `valid_grants` | `routes/grants.js` | `services/grants/` | `components/v2/grants/` |
 | Grant presets | `grant_preset`, `grant_preset_item` | `/grants/presets` | seeded from `src/constants.js` | `useGrantPresets.js` |
 | Access requests | `access_request`, `access_request_item` | `routes/access_requests.js` | `services/access_requests/` | `pages/v2/access-requests/` |

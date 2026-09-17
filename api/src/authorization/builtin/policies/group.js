@@ -112,9 +112,8 @@ const groupPolicies = new PolicyContainer({
 const PUBLIC_ATTRIBUTES = [
   'id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', '_count.members',
   // A tagline sits at the same sensitivity as the description already here: one line an
-  // admin wrote about the group. avatar_key is an object-store key; the route that serves
-  // the bytes authorizes on its own.
-  'tagline', 'avatar_key',
+  // admin wrote about the group.
+  'tagline',
 ];
 
 /**
@@ -129,14 +128,14 @@ const PUBLIC_ATTRIBUTES = [
  * @see docs/design/groups/profiles.md — What each audience sees
  */
 const PUBLIC_PROFILE_ATTRIBUTES = [
-  'id', 'name', 'slug', 'description', 'tagline', 'about_md', 'avatar_key',
+  'id', 'name', 'slug', 'description', 'tagline', 'about_md',
   'metadata.type', 'metadata.links', 'metadata.citation', 'metadata.publications',
   'is_archived', 'profile_visibility',
 ];
 
 /** The profile columns a member sees on top of everything they already saw. */
 const PROFILE_ATTRIBUTES = [
-  'tagline', 'about_md', 'avatar_key', 'profile_visibility',
+  'tagline', 'about_md', 'profile_visibility',
   'metadata.links', 'metadata.citation', 'metadata.publications',
 ];
 

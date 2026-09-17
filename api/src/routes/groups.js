@@ -1,6 +1,4 @@
 const express = require('express');
-const multer = require('multer');
-const fsPromises = require('fs/promises');
 const { param, query, body } = require('express-validator');
 const createError = require('http-errors');
 const _ = require('lodash/fp');
@@ -12,7 +10,6 @@ const { validate } = require('@/middleware/validators');
 const groupService = require('@/services/groups');
 const auditService = require('@/services/audit');
 const profileService = require('@/services/profiles');
-const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
 const { buildMeta } = require('@/services/meta');
 const invitationState = require('@/state').import('invitation');
@@ -314,60 +311,6 @@ router.patch(
       expected_version: req.body.version,
     });
     res.json(req.permission.filter(updated));
-  }),
-);
-
-const avatarUpload = multer({
-  storage: multer.diskStorage({
-    async destination(req, file, cb) {
-      try {
-        await fsPromises.mkdir(avatarService.avatarDir(), { recursive: true });
-        cb(null, avatarService.avatarDir());
-      } catch (e) {
-        cb(e);
-      }
-    },
-    filename(req, file, cb) {
-      try {
-        cb(null, avatarService.newAvatarKey(file.originalname));
-      } catch (e) {
-        cb(e);
-      }
-    },
-  }),
-  limits: { fileSize: avatarService.AVATAR_MAX_BYTES, files: 1 },
-});
-
-// Replace the group's profile picture.
-router.put(
-  '/:id/avatar',
-  validate([param('id').isUUID()]),
-  authorize('group', 'edit_metadata'),
-  avatarUpload.single('avatar'),
-  asyncHandler(async (req, res, next) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Replace the group profile picture'
-    if (!req.file) return next(createError.BadRequest('No image was uploaded.'));
-
-    // The write lives in the service, where the state check runs for every profile edit.
-    const updated = await profileService.replaceAvatar({
-      model: 'group',
-      id: req.params.id,
-      avatar_key: req.file.filename,
-    });
-    return res.json(updated);
-  }),
-);
-
-// Remove the group's profile picture. The profile falls back to the group icon.
-router.delete(
-  '/:id/avatar',
-  validate([param('id').isUUID()]),
-  authorize('group', 'edit_metadata'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Groups']
-    // #swagger.summary = 'Remove the group profile picture'
-    res.json(await profileService.removeProfileAvatar({ model: 'group', id: req.params.id }));
   }),
 );
 
