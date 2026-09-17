@@ -28,6 +28,9 @@ const datasetListFilter = datasetAuth.listFilter();
 
 const router = express.Router();
 
+// Routes below name the dataset :dataset_resource_id, so authorize() is told where to find it.
+const byDatasetResourceId = { resourceIdFn: (req) => req.params.dataset_resource_id };
+
 // ── Creation support ─────────────────────────────────────────────────────────
 
 /**
@@ -248,13 +251,13 @@ router.post(
  * middleware, and a contributor who is not an administrator would be refused there.
  */
 router.get(
-  '/:id/upload-log',
-  validate([param('id').isUUID()]),
-  authorize('dataset', 'view_workflows'),
+  '/:dataset_resource_id/upload-log',
+  validate([param('dataset_resource_id').isUUID()]),
+  authorize('dataset', 'view_workflows', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Upload log for a dataset'
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) return next(createError.NotFound('Dataset not found'));
 
     const upload_log = await uploadService.getUploadLog(dataset.id);
@@ -275,9 +278,9 @@ router.get(
  * @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
  */
 router.get(
-  '/:id/audit',
+  '/:dataset_resource_id/audit',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('event_type').optional().isString().trim(),
     query('start_date').optional().isISO8601(),
     query('end_date').optional().isISO8601(),
@@ -285,7 +288,7 @@ router.get(
     query('limit').default(50).isInt({ min: 1, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_audit_logs'),
+  authorize('dataset', 'view_audit_logs', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Audit records for a dataset'
@@ -295,7 +298,7 @@ router.get(
     } = req.query;
 
     const result = await auditService.getResourceAuditRecords({
-      resource_id: req.params.id,
+      resource_id: req.params.dataset_resource_id,
       event_type,
       start_date,
       end_date,
@@ -389,15 +392,19 @@ router.get(
 // ── Get by ID ────────────────────────────────────────────────────────────────
 
 router.get(
-  '/:id',
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
-  authorize('dataset', 'view_metadata', { shouldDeriveCapabilities: true, shouldDeriveStanding: true }),
+  authorize('dataset', 'view_metadata', {
+    ...byDatasetResourceId,
+    shouldDeriveCapabilities: true,
+    shouldDeriveStanding: true,
+  }),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get a dataset by ID'
-    const dataset = await datasetService.getDatasetById(req.params.id, {
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, {
       includes: {
         owner_group: true,
       },
@@ -408,7 +415,10 @@ router.get(
     res.json({
       ...req.permission.filter(dataset),
       _meta: buildMeta('dataset', dataset, req.permission, {
-        extraCapabilities: await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+        extraCapabilities: await accessRequestsService.mayFileRequest({
+          user: req.user,
+          resource_id: req.params.dataset_resource_id,
+        })
           ? ['request_access'] : [],
       }),
     });
@@ -438,7 +448,7 @@ router.post(
     body('size').optional().notEmpty().customSanitizer(BigInt),
     body('bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('src_instrument_id').optional().isInt().toInt(),
-    body('src_dataset_id').optional().isInt().toInt(),
+    body('src_dataset_row_id').optional().isInt().toInt(),
     body('workflow_id').optional().isString(),
     body('state').optional().isString(),
     body('create_method').optional().isString(),
@@ -461,7 +471,7 @@ router.post(
     const createQuery = datasetService.buildDatasetCreateQuery({
       ..._.pick([
         'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
-        'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+        'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_row_id',
         'workflow_id', 'state', 'create_method', 'use_conditions',
       ])(req.body),
       user_id: req.user.id,
@@ -510,7 +520,7 @@ router.post(
     body('datasets.*.size').optional().notEmpty().customSanitizer(BigInt),
     body('datasets.*.bundle_size').optional().notEmpty().customSanitizer(BigInt),
     body('datasets.*.src_instrument_id').optional().isInt().toInt(),
-    body('datasets.*.src_dataset_id').optional().isInt().toInt(),
+    body('datasets.*.src_dataset_row_id').optional().isInt().toInt(),
     body('datasets.*.workflow_id').optional().isString(),
     body('datasets.*.state').optional().isString(),
     body('datasets.*.create_method').optional().isString(),
@@ -539,7 +549,7 @@ router.post(
 
     const datasets = req.body.datasets.map(_.pick([
       'name', 'type', 'owner_group_id', 'origin_path', 'description', 'metadata',
-      'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_id',
+      'du_size', 'size', 'bundle_size', 'src_instrument_id', 'src_dataset_row_id',
       'workflow_id', 'state', 'create_method',
     ]));
 
@@ -555,19 +565,19 @@ router.post(
 // ── Patch (metadata) ─────────────────────────────────────────────────────────
 
 router.patch(
-  '/:id',
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     body('name').optional().isString().notEmpty(),
     body('description').optional().isString(),
   ]),
-  authorize('dataset', 'edit_metadata'),
+  authorize('dataset', 'edit_metadata', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Update dataset metadata (name, description)'
 
     // Fetch dataset to get integer id and verify it exists
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -593,16 +603,16 @@ router.patch(
  * @see docs/design/groups/design.md — Operation Effects
  */
 router.delete(
-  '/:id',
+  '/:dataset_resource_id',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
-  authorize('dataset', 'delete'),
+  authorize('dataset', 'delete', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Delete a dataset, keeping its record'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -615,18 +625,18 @@ router.delete(
 // ── Source Datasets ──────────────────────────────────────────────────────────
 
 router.get(
-  '/:id/source-datasets',
+  '/:dataset_resource_id/source-datasets',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_source_datasets'),
+  authorize('dataset', 'view_source_datasets', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get source datasets that this dataset was derived from'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -642,18 +652,18 @@ router.get(
 // ── Derived Datasets ─────────────────────────────────────────────────────────
 
 router.get(
-  '/:id/derived-datasets',
+  '/:dataset_resource_id/derived-datasets',
   validate([
-    param('id').isUUID(),
+    param('dataset_resource_id').isUUID(),
     query('limit').default(50).isInt({ min: 0, max: 500 }).toInt(),
     query('offset').default(0).isInt({ min: 0 }).toInt(),
   ]),
-  authorize('dataset', 'view_derived_datasets'),
+  authorize('dataset', 'view_derived_datasets', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'Get datasets derived from this dataset'
 
-    const dataset = await datasetService.getDatasetById(req.params.id, { includes: {} });
+    const dataset = await datasetService.getDatasetById(req.params.dataset_resource_id, { includes: {} });
     if (!dataset) {
       return next(createError(404, 'Dataset not found'));
     }
@@ -711,15 +721,15 @@ router.get(
 // // ── Sub-routers ──────────────────────────────────────────────────────────────
 
 router.use(
-  '/:dataset_id/files',
+  '/:dataset_resource_id/files',
   // validate([
-  //   param('dataset_id').isUUID(),
+  //   param('dataset_resource_id').isUUID(),
   // ]),
   require('./files'),
 );
 
 router.use(
-  '/:dataset_id/workflows',
+  '/:dataset_resource_id/workflows',
   require('./workflows'),
 );
 

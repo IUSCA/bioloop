@@ -1,5 +1,5 @@
 // Sub-router for workflow-related routes on a dataset.
-// req.params.dataset_id is validated in the parent router (index.js).
+// req.params.dataset_resource_id is validated in the parent router (index.js).
 
 const express = require('express');
 const { param, query } = require('express-validator');
@@ -18,20 +18,22 @@ const wfService = require('@/services/workflow');
 const workflowService = require('@/services/datasets_v2/workflows');
 const datasetService = require('@/services/datasets_v2');
 
-// mergeParams, so :dataset_id from the parent router reaches these handlers. Without it
+// mergeParams, so :dataset_resource_id from the parent router reaches these handlers. Without it
 // every route here authorizes and queries against undefined.
 const router = express.Router({ mergeParams: true });
 
 const { createAuthorizationMiddleware: authorize } = authorization;
 
-// All routes authorize against the parent dataset identified by dataset_id.
-const byDatasetId = { resourceIdFn: (req) => req.params.dataset_id };
+// All routes authorize against the parent dataset identified by dataset_resource_id.
+const byDatasetResourceId = { resourceIdFn: (req) => req.params.dataset_resource_id };
 
 // Which policy action gates a run is config, not a branch here. Every configured action is bound
 // at load, so an action the dataset container does not declare fails at startup. A workflow
 // that names no action is refused rather than defaulted to something permissive.
 const WORKFLOW_ACTIONS = config.get('workflow_policy_actions');
-const authorizeRunByWorkflow = _.mapValues((action) => authorize('dataset', action, byDatasetId))(WORKFLOW_ACTIONS);
+const authorizeRunByWorkflow = _.mapValues(
+  (action) => authorize('dataset', action, byDatasetResourceId),
+)(WORKFLOW_ACTIONS);
 const decideRunByWorkflow = _.mapValues((action) => authorization.import('dataset').action(action))(WORKFLOW_ACTIONS);
 
 const authorizeWorkflowRun = (req, res, next) => {
@@ -54,12 +56,12 @@ router.get(
     query('prev_task_runs').optional().toBoolean(),
     query('only_active').optional().toBoolean(),
   ]),
-  authorize('dataset', 'view_workflows', byDatasetId),
+  authorize('dataset', 'view_workflows', byDatasetResourceId),
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = List the workflow runs associated with a dataset
     const workflows = await workflowService.listDatasetWorkflows(
-      req.params.dataset_id,
+      req.params.dataset_resource_id,
       _.pick(['last_task_run', 'prev_task_runs', 'only_active'])(req.query),
     );
 
@@ -78,11 +80,11 @@ router.post(
   asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Create and launch an integrated or stage workflow for a dataset
-    const { dataset_id, workflow_type } = req.params;
+    const { dataset_resource_id, workflow_type } = req.params;
 
     // createWorkflow refuses a second run of the same name while one is pending, so it needs
     // the runs enriched with name and status. Postgres holds only their ids.
-    const dataset = await datasetService.getDatasetById(dataset_id, {
+    const dataset = await datasetService.getDatasetById(dataset_resource_id, {
       includes: { workflows: true },
     });
 
@@ -101,7 +103,7 @@ router.post(
       }
     }
 
-    logger.info(`Starting workflow ${workflow_type} on dataset ${dataset_id}`);
+    logger.info(`Starting workflow ${workflow_type} on dataset ${dataset_resource_id}`);
     const wf = await workflowService.createWorkflow({
       dataset,
       wf_name: workflow_type,
@@ -121,9 +123,9 @@ router.post(
  * @see .todo/issues/06-dataset-actions-workflows.md — Who sees the tab, and who can act
  */
 const runControl = (verb) => asyncHandler(async (req, res, next) => {
-  const { dataset_id, workflow_id } = req.params;
+  const { dataset_resource_id, workflow_id } = req.params;
 
-  const run = await workflowService.findDatasetRun(dataset_id, workflow_id);
+  const run = await workflowService.findDatasetRun(dataset_resource_id, workflow_id);
   if (!run) return next(createError(404, 'Workflow not found for this dataset'));
 
   if (!workflowService.policyActionFor(run.name)) {
@@ -131,7 +133,7 @@ const runControl = (verb) => asyncHandler(async (req, res, next) => {
   }
 
   const decision = await decideRunByWorkflow[run.name]({
-    identifiers: { user: req.user?.subject_id, resource: dataset_id },
+    identifiers: { user: req.user?.subject_id, resource: dataset_resource_id },
     policyExecutionContext: req.policyContext,
     preFetched: { user: req.user, context: { req } },
   });
@@ -141,7 +143,7 @@ const runControl = (verb) => asyncHandler(async (req, res, next) => {
       : createError.Forbidden(`Not permitted to ${verb} runs on this dataset`));
   }
 
-  logger.info(`${verb} workflow ${workflow_id} on dataset ${dataset_id}`);
+  logger.info(`${verb} workflow ${workflow_id} on dataset ${dataset_resource_id}`);
   const result = await wfService[verb === 'stop' ? 'pause' : 'resume'](workflow_id);
   return res.json(result.data);
 });
@@ -153,16 +155,16 @@ router.post('/:workflow_id/resume', runControl('resume'));
 // Associate an existing workflow ID with a dataset
 router.put(
   '/:workflow_id',
-  authorize('dataset', 'edit', byDatasetId),
+  authorize('dataset', 'edit', byDatasetResourceId),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate a workflow to a dataset
-    const { dataset_id, workflow_id } = req.params;
+    const { dataset_resource_id, workflow_id } = req.params;
 
     await prisma.workflow.createMany({
       data: {
         id: workflow_id,
-        dataset_id,
+        dataset_id: dataset_resource_id,
         initiator_id: req.user.id,
       },
       skipDuplicates: true,

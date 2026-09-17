@@ -397,7 +397,7 @@ class AddToCollection extends Command {
 
   async apply(model, real) {
     const status = await statusOf(collectionsService.addDatasets(real.ids.get(this.collection), {
-      dataset_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
+      dataset_resource_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
     }));
     if (resourceStateRefuses(model.world, this.collection)) {
       // The collection's state answers first, so an archived collection or an archived owning
@@ -426,7 +426,7 @@ class RemoveFromCollection extends Command {
 
   async apply(model, real) {
     const status = await statusOf(collectionsService.removeDatasets(real.ids.get(this.collection), {
-      dataset_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
+      dataset_resource_ids: [real.ids.get(this.dataset)], actor_id: real.users.alice.subject_id,
     }));
     if (resourceStateRefuses(model.world, this.collection)) {
       expect([this.toString(), status]).toEqual([this.toString(), 409]);

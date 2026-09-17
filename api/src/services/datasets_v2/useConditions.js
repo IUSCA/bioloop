@@ -12,11 +12,11 @@ const prisma = require('@/db');
 
 /**
  * The conditions recorded on a dataset.
- * @param {number} dataset_id
+ * @param {number} dataset_row_id
  */
-async function listUseConditions(dataset_id) {
+async function listUseConditions(dataset_row_id) {
   return prisma.dataset_use_condition.findMany({
-    where: { dataset_id },
+    where: { dataset_id: dataset_row_id },
     orderBy: [{ system: 'asc' }, { code: 'asc' }],
   });
 }
@@ -26,19 +26,19 @@ async function listUseConditions(dataset_id) {
  * registration. Recording the same code twice is a mistake rather than a second fact, so a
  * repeat is skipped rather than duplicated.
  *
- * @param {number} dataset_id
+ * @param {number} dataset_row_id
  * @param {Array<{system: string, code: string, label?: string, note?: string}>} conditions
  * @param {string} [recorded_by] - subject_id
  * @returns {Promise<number>} how many rows were added
  */
-async function recordUseConditions(dataset_id, conditions, recorded_by = null) {
+async function recordUseConditions(dataset_row_id, conditions, recorded_by = null) {
   if (!conditions?.length) return 0;
 
   const { count } = await prisma.dataset_use_condition.createMany({
     data: conditions.map(({
       system, code, label, note,
     }) => ({
-      dataset_id,
+      dataset_id: dataset_row_id,
       system,
       code,
       label: label ?? null,

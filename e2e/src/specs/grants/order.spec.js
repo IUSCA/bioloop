@@ -293,7 +293,7 @@ test('F1 — a preset grant names the preset, and re-issuing changes nothing', a
     name: `${world.prefix}-f1-preset-${Math.random().toString(36).slice(2, 8)}`,
     description: 'Phase 4 fixture for f1-preset.',
     owner_group_id: world.groups.requestLab.id,
-    dataset_ids: [dataset.resource_id],
+    dataset_resource_ids: [dataset.resource_id],
   });
 
   const datasetPresets = await alice.api.get('/grants/presets?resource_type=DATASET');

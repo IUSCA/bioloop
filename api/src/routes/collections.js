@@ -107,8 +107,8 @@ router.post(
     body('description').optional().isString(),
     body('owner_group_id').isUUID(),
     body('metadata').optional().isObject(),
-    body('dataset_ids').optional().isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').optional().isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'create', {
     resourceIdFn: () => null,
@@ -118,26 +118,26 @@ router.post(
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Create a new collection'
 
-    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata', 'dataset_ids'])(req.body);
+    const data = pickNonNil(['name', 'description', 'owner_group_id', 'metadata', 'dataset_resource_ids'])(req.body);
 
-    // validate that if dataset_ids are provided, they all belong to the same owner group as the collection and are not archived
-    if (data.dataset_ids) {
+    // validate that if dataset_resource_ids are provided, they all belong to the same owner group as the collection and are not archived
+    if (data.dataset_resource_ids) {
       const validDatasets = await prisma.dataset.findMany({
         where: {
-          resource_id: { in: data.dataset_ids },
+          resource_id: { in: data.dataset_resource_ids },
           owner_group_id: data.owner_group_id,
           is_deleted: false,
         },
         select: { resource_id: true },
       });
-      if (!setsEqual(new Set(validDatasets.map((d) => d.resource_id)), new Set(data.dataset_ids))) {
+      if (!setsEqual(new Set(validDatasets.map((d) => d.resource_id)), new Set(data.dataset_resource_ids))) {
         return next(createError(
           400,
           'All datasets must exist, not be archived, and belong to the specified owner group',
         ));
       }
       // deduplicate dataset IDs
-      data.dataset_ids = [...new Set(data.dataset_ids)];
+      data.dataset_resource_ids = [...new Set(data.dataset_resource_ids)];
     }
 
     const newCollection = await collectionService.createCollection(data, { actor_id: req.user.subject_id });
@@ -316,19 +316,19 @@ router.post(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'add_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Add one or more datasets to a collection'
 
-    const { dataset_ids } = req.body;
+    const { dataset_resource_ids } = req.body;
     await collectionService.addDatasets(
       req.params.id,
       {
-        dataset_ids,
+        dataset_resource_ids,
         actor_id: req.user.subject_id,
       },
     );
@@ -338,18 +338,21 @@ router.post(
 
 // remove dataset from collection
 router.delete(
-  '/:id/datasets/:datasetId',
+  '/:id/datasets/:dataset_resource_id',
   validate([
     param('id').isUUID(),
-    param('datasetId').isUUID(),
+    param('dataset_resource_id').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Remove a dataset from a collection'
 
-    const { id, datasetId } = req.params;
-    await collectionService.removeDatasets(id, { dataset_ids: [datasetId], actor_id: req.user.subject_id });
+    const { id, dataset_resource_id } = req.params;
+    await collectionService.removeDatasets(id, {
+      dataset_resource_ids: [dataset_resource_id],
+      actor_id: req.user.subject_id,
+    });
     res.status(204).send();
   }),
 );
@@ -359,16 +362,16 @@ router.delete(
   '/:id/datasets',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').isArray({ min: 1 }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').isArray({ min: 1 }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'remove_dataset'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Bulk remove datasets from a collection'
 
-    const { dataset_ids } = req.body;
-    await collectionService.removeDatasets(req.params.id, { dataset_ids, actor_id: req.user.subject_id });
+    const { dataset_resource_ids } = req.body;
+    await collectionService.removeDatasets(req.params.id, { dataset_resource_ids, actor_id: req.user.subject_id });
     res.status(204).send();
   }),
 );
@@ -387,8 +390,8 @@ router.post(
   '/:id/stage',
   validate([
     param('id').isUUID(),
-    body('dataset_ids').optional().isArray({ min: 1, max: workflowService.MAX_BULK_STAGE }),
-    body('dataset_ids.*').isUUID(),
+    body('dataset_resource_ids').optional().isArray({ min: 1, max: workflowService.MAX_BULK_STAGE }),
+    body('dataset_resource_ids.*').isUUID(),
   ]),
   authorize('collection', 'view_metadata'),
   asyncHandler(async (req, res, next) => {
@@ -404,7 +407,7 @@ router.post(
       includes: { owner_group: true },
     });
 
-    const requested = req.body.dataset_ids;
+    const requested = req.body.dataset_resource_ids;
     const datasets = requested
       ? members.filter((d) => requested.includes(d.resource_id))
       : members;

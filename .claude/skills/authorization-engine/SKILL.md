@@ -91,9 +91,10 @@ such as `ANONYMOUS_PRINCIPAL`, fails every request with
 groups or collections, which are `is_archived` columns and the `archived` state names in
 `src/state/builtin/`. `DATASET_STATES.DELETED` is the same kind of false positive for `DELETED`.
 
-**A dataset has two ids.** Services take numeric `dataset.id`; routes, authorization, and
-`collection_dataset` take `resource_id`. `lockDataset` takes the numeric id; `findDatasetRow` takes
-`resource_id`. The wrong one fails as a validation error, not a type error.
+**A dataset has two ids, and the name says which.** `dataset_row_id` is the integer `dataset.id`;
+`dataset_resource_id` is the UUID. A bare `dataset_id` is only a column key, and the columns
+disagree: `dataset_file.dataset_id` is an integer, `collection_dataset.dataset_id` a UUID. The wrong
+one fails as a validation error, not a type error.
 
 **Many services return `undefined`.** `addGroupMembers` and similar return their `$transaction`
 callback's value. Assert on a re-read row.

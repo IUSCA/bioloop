@@ -213,7 +213,7 @@ async function confirm() {
       owner_group_id: formData.value.selectedOwnerGroup.id,
     };
     if (formData.value.selectedDatasets.length) {
-      payload.dataset_ids = formData.value.selectedDatasets.map(
+      payload.dataset_resource_ids = formData.value.selectedDatasets.map(
         (d) => d.resource_id,
       );
     }

@@ -170,10 +170,9 @@ async function buildWorld(runId) {
       name: `${prefix}-${spec.suffix}`,
       description: `Fixture collection for end-to-end run ${runId}.`,
       owner_group_id: groups[spec.group].id,
-      // `dataset_ids` are dataset *resource* UUIDs despite the name — the route validates
-      // `isUUID` and the handler matches on `resource_id`. `dataset.id` is an integer and is
-      // rejected here.
-      dataset_ids: spec.datasets.map((k) => datasets[k].resource_id),
+      // The route validates `isUUID` and matches on `resource_id`. `dataset.id` is an integer
+      // and is rejected here.
+      dataset_resource_ids: spec.datasets.map((k) => datasets[k].resource_id),
     });
   }
 

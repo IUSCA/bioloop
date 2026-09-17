@@ -207,10 +207,10 @@ describe('a collection owned by an archived group', () => {
       data: { description: 'refused' }, expected_version: version,
     })).rejects.toEqual(conflict);
     await expect(collectionsService.addDatasets(collection.id, {
-      dataset_ids: [dataset.resource_id], actor_id: actor.subject_id,
+      dataset_resource_ids: [dataset.resource_id], actor_id: actor.subject_id,
     })).rejects.toEqual(conflict);
     await expect(collectionsService.removeDatasets(collection.id, {
-      dataset_ids: [dataset.resource_id], actor_id: actor.subject_id,
+      dataset_resource_ids: [dataset.resource_id], actor_id: actor.subject_id,
     })).rejects.toEqual(conflict);
   });
 });

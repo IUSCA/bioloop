@@ -379,10 +379,13 @@ absent from the dataset container, so the archive pairing test cannot start appl
 - **The state check runs before the service's own validation.** A validation query keeps only what
   it alone decides, such as unknown, deleted, or foreign datasets in `addDatasets`. A predicate the
   state rule already covers is a duplicate to delete.
-- **A dataset is addressed two ways.** Services take the numeric `dataset.id`. Routes, the
-  authorization layer, and `collection_dataset` take `resource_id`. `lockDataset` takes the numeric
-  id. `findDatasetRow` takes `resource_id` and returns the numeric id with the state fields. A wrong
-  id fails as a validation error, not a type error.
+- **A dataset is addressed two ways, and the name says which.** `dataset_row_id` is the integer
+  `dataset.id`. `dataset_resource_id` is the UUID `dataset.resource_id`, and route parameters use
+  it too. A bare `dataset_id` appears only as a column key, because the columns disagree:
+  `dataset_file.dataset_id` is an integer and `collection_dataset.dataset_id` is a UUID. The
+  generic authorization engine keeps `resource`, `resourceIds`, and `resource_id`. `lockDataset`
+  takes `dataset_row_id`. `findDatasetRow` takes `resource_id` and returns the row with the state
+  fields. A wrong id fails as a validation error, not a type error.
 - **Most of these services return nothing.** `addGroupMembers` and similar functions return what
   their `$transaction` callback returns, often `undefined`. Assert on the row instead.
 

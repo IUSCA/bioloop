@@ -59,7 +59,7 @@ function make_slug_unique_fn(tx) {
  * @param {string} data.owner_group_id - Owning group
  * @param {string} [data.description]
  * @param {Object} [data.metadata]
- * @param {string[]} [data.dataset_ids] - Optional array of dataset IDs to add to the collection upon creation. All datasets must exist, not be archived, and have the same owner group as the collection.
+ * @param {string[]} [data.dataset_resource_ids] - Optional array of dataset resource UUIDs to add to the collection upon creation. All datasets must exist, not be archived, and have the same owner group as the collection.
  * @param {string} actor_id - UUID of the user creating the collection (must have appropriate permissions)
  * @returns {Promise<Object>} Created collection
  */
@@ -92,11 +92,11 @@ async function createCollection(data, { actor_id }) {
       metadata: data.metadata ?? Prisma.skip,
       owner_group_id: data.owner_group_id,
     };
-    if (data.dataset_ids && data.dataset_ids.length > 0) {
+    if (data.dataset_resource_ids && data.dataset_resource_ids.length > 0) {
       // `datasets` reads the active_collection_dataset view; rows are written to the history table.
       createData.dataset_history = {
-        create: data.dataset_ids?.map((dataset_id) => ({
-          dataset_id,
+        create: data.dataset_resource_ids?.map((dataset_resource_id) => ({
+          dataset_id: dataset_resource_id,
           added_by: actor_id,
         })) ?? [],
       };
@@ -246,12 +246,12 @@ async function unarchiveCollection(collection_id, actor_id) {
 /**
  * Add datasets to collection
  * @param {string} collection_id - UUID of the collection
- * @param {string[]} dataset_ids - UUIDs of datasets to add to the collection
+ * @param {string[]} dataset_resource_ids - UUIDs of datasets to add to the collection
  * @param {string} actor_id - UUID of the user performing the action
  * @returns {Promise<Object[]>} Created records
  */
-async function addDatasets(collection_id, { dataset_ids, actor_id }) {
-  if (!dataset_ids.length) return [];
+async function addDatasets(collection_id, { dataset_resource_ids, actor_id }) {
+  if (!dataset_resource_ids.length) return [];
 
   return prisma.$transaction(async (tx) => {
     // Acquire a row-level lock on the collection row.
@@ -275,13 +275,13 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
       SELECT d.resource_id
       FROM dataset d
       JOIN collection_owner co ON d.owner_group_id = co.owner_group_id
-      WHERE d.resource_id = ANY(${dataset_ids}::text[]) and d.is_deleted = false
+      WHERE d.resource_id = ANY(${dataset_resource_ids}::text[]) and d.is_deleted = false
     `;
-    const validDatasetIds = datasetRows.map((row) => row.resource_id);
-    const invalidDatasetIds = dataset_ids.filter((id) => !validDatasetIds.includes(id));
-    if (invalidDatasetIds.length) {
+    const valid_dataset_resource_ids = datasetRows.map((row) => row.resource_id);
+    const invalid_dataset_resource_ids = dataset_resource_ids.filter((id) => !valid_dataset_resource_ids.includes(id));
+    if (invalid_dataset_resource_ids.length) {
       throw createError.BadRequest(
-        `The following dataset IDs are invalid for adding to the collection: ${invalidDatasetIds.join(', ')}`
+        `The following dataset IDs are invalid for adding to the collection: ${invalid_dataset_resource_ids.join(', ')}`
         + ' Datasets must exist, not be deleted, and have the same owner group as the collection.',
       );
     }
@@ -289,7 +289,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     const createdRecords = await tx.$queryRaw`
       INSERT INTO collection_dataset (collection_id, dataset_id, added_by)
       SELECT ${collection_id}, dataset_id, ${actor_id}
-      FROM UNNEST(${dataset_ids}::text[]) AS dataset_id
+      FROM UNNEST(${dataset_resource_ids}::text[]) AS dataset_id
       ON CONFLICT (collection_id, dataset_id) WHERE removed_at IS NULL DO NOTHING
       RETURNING collection_id, dataset_id;
      `;
@@ -316,12 +316,12 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
 /**
  * Remove datasets from collection
  * @param {string} collection_id - UUID of the collection
- * @param {string[]} dataset_ids - UUIDs of datasets to remove from the collection
+ * @param {string[]} dataset_resource_ids - UUIDs of datasets to remove from the collection
  * @param {string} actor_id - UUID of the user performing the action
  * @returns {Promise<Object[]>} Removed records
  */
-async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
-  if (!dataset_ids.length) return [];
+async function removeDatasets(collection_id, { dataset_resource_ids, actor_id }) {
+  if (!dataset_resource_ids.length) return [];
   return prisma.$transaction(async (tx) => {
     // Acquire a row-level lock on the collection row.
     // Any concurrent transaction trying to FOR UPDATE the same row will block.
@@ -336,7 +336,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
       UPDATE collection_dataset
       SET removed_at = CURRENT_TIMESTAMP, removed_by = ${actor_id}
       WHERE collection_id = ${collection_id}
-      AND dataset_id = ANY(${dataset_ids}::text[])
+      AND dataset_id = ANY(${dataset_resource_ids}::text[])
       AND removed_at IS NULL
       RETURNING collection_id, dataset_id;
      `;

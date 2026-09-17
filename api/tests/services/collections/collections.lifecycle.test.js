@@ -119,7 +119,7 @@ describe('collections - lifecycle', () => {
         {
           name: `With Datasets ${Date.now()}`,
           owner_group_id: ownerGroup.id,
-          dataset_ids: [dsA.resource_id, dsB.resource_id],
+          dataset_resource_ids: [dsA.resource_id, dsB.resource_id],
         },
         { actor_id: actor.subject_id },
       );
@@ -195,7 +195,7 @@ describe('collections - lifecycle', () => {
     it('adds datasets and they appear in listDatasetsInCollection', async () => {
       const c = await newCollection('_add_ds');
       await collectionsService.addDatasets(c.id, {
-        dataset_ids: [dsA.resource_id, dsB.resource_id],
+        dataset_resource_ids: [dsA.resource_id, dsB.resource_id],
         actor_id: actor.subject_id,
       });
 
@@ -210,7 +210,7 @@ describe('collections - lifecycle', () => {
     it('rejects datasets from a different owner group (cross-group violation)', async () => {
       const c = await newCollection('_cross_group');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [foreignDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_resource_ids: [foreignDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
 
       // No row must have been inserted
@@ -223,14 +223,14 @@ describe('collections - lifecycle', () => {
     it('rejects soft-deleted datasets (is_deleted=true)', async () => {
       const c = await newCollection('_deleted_ds');
       await expect(
-        collectionsService.addDatasets(c.id, { dataset_ids: [deletedDs.resource_id], actor_id: actor.subject_id }),
+        collectionsService.addDatasets(c.id, { dataset_resource_ids: [deletedDs.resource_id], actor_id: actor.subject_id }),
       ).rejects.toMatchObject({ status: 400 });
     });
 
     it('is idempotent — adding the same dataset twice leaves exactly 1 row', async () => {
       const c = await newCollection('_idem_add');
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
-      await collectionsService.addDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id });
 
       const count = await prisma.collection_dataset.count({
         where: { collection_id: c.id, dataset_id: dsA.resource_id },
@@ -243,10 +243,10 @@ describe('collections - lifecycle', () => {
     it('removes a dataset from the collection', async () => {
       const c = await newCollection('_rm_ds');
       await collectionsService.addDatasets(c.id, {
-        dataset_ids: [dsA.resource_id, dsB.resource_id],
+        dataset_resource_ids: [dsA.resource_id, dsB.resource_id],
         actor_id: actor.subject_id,
       });
-      await collectionsService.removeDatasets(c.id, { dataset_ids: [dsA.resource_id], actor_id: actor.subject_id });
+      await collectionsService.removeDatasets(c.id, { dataset_resource_ids: [dsA.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.listDatasetsInCollection({
         collection_id: c.id, limit: 10, offset: 0, sort_by: 'id', sort_order: 'desc',
@@ -261,8 +261,8 @@ describe('collections - lifecycle', () => {
     it('returns all collections containing the dataset', async () => {
       const c1 = await newCollection('_fbd_1');
       const c2 = await newCollection('_fbd_2');
-      await collectionsService.addDatasets(c1.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
-      await collectionsService.addDatasets(c2.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c1.id, { dataset_resource_ids: [dsC.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c2.id, { dataset_resource_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.findCollectionsByDataset(
         dsC.resource_id,
@@ -277,7 +277,7 @@ describe('collections - lifecycle', () => {
 
     it('returns pagination metadata with correct total', async () => {
       const c3 = await newCollection('_fbd_3');
-      await collectionsService.addDatasets(c3.id, { dataset_ids: [dsC.resource_id], actor_id: actor.subject_id });
+      await collectionsService.addDatasets(c3.id, { dataset_resource_ids: [dsC.resource_id], actor_id: actor.subject_id });
 
       const result = await collectionsService.findCollectionsByDataset(
         dsC.resource_id,
@@ -318,7 +318,7 @@ describe('collections - lifecycle', () => {
     it('respects limit and returns correct total', async () => {
       const c = await newCollection('_list_ds_pag');
       await collectionsService.addDatasets(c.id, {
-        dataset_ids: [dsA.resource_id, dsB.resource_id, dsC.resource_id],
+        dataset_resource_ids: [dsA.resource_id, dsB.resource_id, dsC.resource_id],
         actor_id: actor.subject_id,
       });
 

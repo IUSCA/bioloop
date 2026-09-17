@@ -95,9 +95,9 @@ async function registerUpload({ user, data }) {
  *
  * @see docs/design/groups/dataset-creation.md — Watching an upload afterwards
  */
-async function getUploadLog(dataset_id) {
+async function getUploadLog(dataset_row_id) {
   return prisma.dataset_upload_log.findUnique({
-    where: { dataset_id },
+    where: { dataset_id: dataset_row_id },
     include: CONSTANTS.INCLUDE_DATASET_UPLOAD_LOG_RELATIONS,
   });
 }

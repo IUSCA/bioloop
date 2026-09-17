@@ -420,7 +420,7 @@ async function stageSelected() {
     const { data } = await CollectionService.stageDatasets(
       props.collection.id,
       {
-        dataset_ids: selected.value.length
+        dataset_resource_ids: selected.value.length
           ? selected.value.map((d) => d.resource_id)
           : undefined,
       },

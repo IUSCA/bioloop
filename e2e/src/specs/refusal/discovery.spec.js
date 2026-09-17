@@ -69,7 +69,7 @@ test('E2 — a collection holds only its own group\'s datasets', async ({ world,
   // this asserts the outcome — the dataset is not in the collection — rather than a status,
   // which is the claim the flow actually makes.
   const status = await alice.api.status('POST', `/collections/${collectionId}/datasets`, {
-    dataset_ids: [world.datasets.siblingOwned.resource_id],
+    dataset_resource_ids: [world.datasets.siblingOwned.resource_id],
   });
   expect(status, 'a cross-group dataset was accepted into the collection').toBeGreaterThanOrEqual(400);
 

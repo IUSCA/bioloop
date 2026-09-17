@@ -134,7 +134,7 @@ The full table is in the docs page. The ones that most often make a spec wrong:
   (`src/world/grants.js`). It takes no `limit` and groups by subject.
 - `POST /access-requests` needs `submit: true`, or the row stays an unlisted `DRAFT`.
 - Promotion is `PUT /groups/:id/admins/:userId`. `POST` answers 404, which `expectRefused` accepts.
-- `GET /v2/datasets/:id` and `dataset_ids` take the resource UUID. The integer id is a 400.
+- `GET /v2/datasets/:dataset_resource_id` and `dataset_resource_ids` take the resource UUID. The integer id is a 400.
 - `GET /groups/:id/invitations` defaults to `PENDING`. Pass `status=all`.
 - `POST /groups/:id/children` needs at least one named admin from a non-platform-admin caller,
   or 400. The creator is not appended.

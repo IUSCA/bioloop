@@ -25,7 +25,7 @@ function normalize_name(name) {
  */
 const buildDatasetCreateQuery = (data) => {
   const {
-    workflow_id, user_id, src_instrument_id, src_dataset_id, state, create_method,
+    workflow_id, user_id, src_instrument_id, src_dataset_row_id, state, create_method,
     use_conditions, recorded_by,
   } = data;
 
@@ -55,8 +55,8 @@ const buildDatasetCreateQuery = (data) => {
     create_query.src_instrument = { connect: { id: src_instrument_id } };
   }
 
-  if (src_dataset_id) {
-    create_query.source_datasets = { create: [{ source_id: src_dataset_id }] };
+  if (src_dataset_row_id) {
+    create_query.source_datasets = { create: [{ source_id: src_dataset_row_id }] };
   }
 
   // Every dataset needs a resource row to be grantable, and dataset.resource_id is NOT NULL

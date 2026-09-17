@@ -212,7 +212,7 @@ Each of these cost a debugging cycle. Verified against the routes in `api/src/ro
 | `GET /groups/:id/members` | Current members only. A removed member's history is in `GET /groups/:id/audit` as `GROUP_MEMBER_ADDED` and `GROUP_MEMBER_REMOVED`. |
 | `GET /v2/users/me` | Returns `{user, is_platform_admin, admin_group_count, oversight_group_count}`. The profile is nested. |
 | `GET /v2/datasets/:id` | Wants the resource UUID. The integer `dataset.id` is a 400, and the page renders the same "Failed to load dataset" it shows for a refusal. |
-| `POST /collections/:id/datasets` | `dataset_ids` are resource UUIDs. A cross-group dataset is refused with 400, not 403. |
+| `POST /collections/:id/datasets` | `dataset_resource_ids` are resource UUIDs. A cross-group dataset is refused with 400, not 403. |
 
 ## Driving the browser
 
