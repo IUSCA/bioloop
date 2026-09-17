@@ -11,7 +11,6 @@
  */
 
 const prisma = require('@/db');
-const { projectObject } = require('@/utils/expression');
 
 // ============================================================================
 // SECTION 1: IMPORT CORE FRAMEWORK (never edit this section)
@@ -67,7 +66,7 @@ const { isPlatformAdmin } = require('./builtin/policies/utils/index');
 const { findUnhydratableRequirements, findAsyncTerms } = require('./core/requiresCheck');
 
 const PLATFORM_ADMIN = { policy: isPlatformAdmin };
-const { expandPath } = require('./builtin/standing');
+const { expandPath, standingFromPathRows } = require('./builtin/standing');
 const { accessPathsByResource, RESOURCE_TYPES } = require('./builtin/accessPaths');
 const { filterRestrictedCapabilities } = require('./core/pipeline');
 
@@ -175,10 +174,24 @@ async function authorizeAction(resourceType, action, options) {
 }
 
 /**
- * `decideRows`, keeping each row's decision so a caller can project the row by it.
- * @returns {Promise<Array<{decision: Object, meta: {capabilities: string[], standing: Object[]}}>>}
+ * Each list row's `_meta`: the capabilities and standing the detail route reports for it.
+ *
+ * Every row is decided with the detail route's composition: the detail action with
+ * capabilities and standing, less the capabilities a restriction in force blocks. A row the
+ * caller cannot open lacks the detail action, which is how a collection's datasets tab tells
+ * the two apart. For a dataset, a collection, or a group, the page's paths are read once and
+ * seed every row.
+ *
+ * @param {string} resourceType
+ * @param {Object[]} rows - the list's rows, unprojected, used to seed each check
+ * @param {Object} options
+ * @param {import('express').Request} options.req
+ * @param {(row: Object) => string} options.idOf - the id a check binds: `resource_id` for a dataset
+ * @param {string} [options.action] - the action the detail route authorizes
+ * @returns {Promise<Array<{capabilities: string[], standing: Object[]}>>} in row order
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
  */
-async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_metadata' }) {
+async function decideRows(resourceType, rows, { req, idOf, action = 'view_metadata' }) {
   if (!rows.length) return [];
   const user = req.user?.subject_id;
   const ids = rows.map(idOf);
@@ -211,78 +224,9 @@ async function decideEachRow(resourceType, rows, { req, idOf, action = 'view_met
       preFetchedResource: row,
       restrictionChecker: restrictions.checkRestriction,
     });
-    metas.push({
-      decision,
-      meta: { capabilities: toCapabilitiesArray(capabilities), standing: decision.standing ?? [] },
-    });
+    metas.push({ capabilities: toCapabilitiesArray(capabilities), standing: decision.standing ?? [] });
   }
   return metas;
-}
-
-/**
- * Each list row's `_meta`: the capabilities and standing the detail route reports for it.
- *
- * Every row is decided with the detail route's composition: the detail action with
- * capabilities and standing, less the capabilities a restriction in force blocks. A row the
- * caller cannot open lacks the detail action, which is how a collection's datasets tab tells
- * the two apart. For a dataset, a collection, or a group, the page's paths are read once and
- * seed every row.
- *
- * What each row's state admits is the other answer, and a list route adds it as
- * `available_actions` from the fields its own query fetched.
- * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- *
- * @param {string} resourceType
- * @param {Object[]} rows - the list's rows, unprojected, used to seed each check
- * @param {Object} options
- * @param {import('express').Request} options.req
- * @param {(row: Object) => string} options.idOf - the id a check binds: `resource_id` for a dataset
- * @param {string} [options.action] - the action the detail route authorizes
- * @returns {Promise<Array<{capabilities: string[], standing: Object[]}>>} in row order
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Paths replace the first-match role
- */
-async function decideRows(resourceType, rows, options) {
-  return (await decideEachRow(resourceType, rows, options)).map(({ meta }) => meta);
-}
-
-/**
- * Rows of a list, each projected by its own read decision.
- *
- * A list binds to the read action it filters on, so no decision covers the whole page. A
- * lineage row or an ancestor group has its own owning group and its own paths, and a list
- * query's scope says nothing about which fields each row shows. A row the caller may read is
- * projected by that row's rules for `action`. Any other row shows `publicAttributes`. Each row
- * carries `_meta` from `decideRows`.
- *
- * @param {string} resourceType
- * @param {Object[]} rows
- * @param {Object} options
- * @param {import('express').Request} options.req
- * @param {(row: Object) => string} options.idOf
- * @param {string[]} options.publicAttributes - what a row shows a caller who cannot read it
- * @param {string[]} [options.relationAttributes] - fields that describe the row's place in the
- *   list rather than the row, such as `depth`, kept whatever the row's decision
- * @param {string} [options.action] - the read action, `view_metadata` unless named
- * @param {(row: Object) => string[]} [options.availableActionsOf] - what the row's state admits,
- *   read from the fields the list's own query fetched. Omitted when a list does not fetch them,
- *   because a state rule refuses to decide from a field the caller did not fetch.
- *   @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
- * @returns {Promise<Object[]>}
- * @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
- * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection applied to rows it was not decided for
- */
-async function projectRows(resourceType, rows, {
-  req, idOf, publicAttributes, relationAttributes = [], action = 'view_metadata',
-  availableActionsOf = null,
-}) {
-  const decided = await decideEachRow(resourceType, rows, { req, idOf, action });
-  return rows.map((row, index) => {
-    const { decision, meta } = decided[index];
-    const projected = decision.granted ? decision.filter(row) : projectObject(row, publicAttributes);
-    relationAttributes.forEach((name) => { if (name in row) projected[name] = row[name]; });
-    const full = availableActionsOf ? { ...meta, available_actions: availableActionsOf(row) } : meta;
-    return { ...projected, _meta: full };
-  });
 }
 
 // Every attribute a policy, an attribute rule, or a transition row declares must be one a
@@ -327,13 +271,55 @@ async function callerIsPlatformAdmin(req) {
   return isPlatformAdmin.evaluate(user);
 }
 
+/**
+ * The field filter of the caller's `list` decision on a resource type.
+ *
+ * A route that returns rows related to the resource it names, such as a group's ancestors, uses
+ * this. Its own decision is about the named resource and says nothing about the related rows.
+ *
+ * @param {import('express').Request} req
+ * @param {string} resourceType
+ * @returns {Promise<(row: Object) => Object>}
+ * @see docs/design/groups/access-model.md — Projection
+ */
+async function listFilter(req, resourceType) {
+  const permission = await authorizeAction(resourceType, 'list', {
+    identifiers: { user: req.user?.subject_id },
+    policyExecutionContext: req.policyContext,
+    preFetched: { user: req.user },
+  });
+  return permission.filter;
+}
+
+/**
+ * The caller's standing on each row of a list, from one path statement for the whole page.
+ *
+ * The standing is the path rows alone: admin, oversight, member, and grant. It omits the
+ * platform-admin path, which a list badge leaves out anyway, and the resource-rule paths. A
+ * caller's own search is scoped to path rows, so only a platform admin's unscoped search has rows
+ * a resource rule alone reaches, and those rows carry no badge.
+ *
+ * @param {import('express').Request} req
+ * @param {string} resourceType - a dataset, a collection, or a group
+ * @param {string[]} ids - the rows' resource ids, in row order
+ * @returns {Promise<Object[][]>} one standing per id, in the same order; empty for an anonymous caller
+ * @see docs/design/groups/access-model.md — The badge vocabulary
+ */
+async function standingOfRows(req, resourceType, ids) {
+  const user = req.user?.subject_id;
+  if (!ids.length || !user || req.user.is_anonymous) return ids.map(() => []);
+  const pathsById = await accessPathsByResource({ userId: user, resourceType, resourceIds: ids });
+  return ids.map((id) => standingFromPathRows(pathsById.get(id).rows));
+}
+
 module.exports = {
   // Core authorization functions
   authorizeWithFilters,
   authorizeAction,
   callerIsPlatformAdmin,
   decideRows,
-  projectRows,
+  listFilter,
+  standingOfRows,
 
   // Restriction layer
   restrictions,

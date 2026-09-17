@@ -16,12 +16,11 @@ const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
 const {
   createAuthorizationMiddleware: authorize, authorizeAction,
-  callerIsPlatformAdmin, decideRows, projectRows,
+  callerIsPlatformAdmin, decideRows,
 } = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
-const { PUBLIC_ATTRIBUTES: COLLECTION_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/collection');
 const { buildMeta } = require('@/services/meta');
 
 const router = express.Router();
@@ -44,6 +43,7 @@ router.post(
     body('dataset_id').optional().isUUID(),
     body('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)), // owned = collections owned by groups I belong to, accessible = collections I have any access to
   ]),
+  authorize('collection', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Collections']
     // #swagger.summary = 'Search collections by name or description'
@@ -66,14 +66,8 @@ router.post(
     }
 
     const { metadata, data } = await promise;
-    // The query scopes the rows; each row's own decision projects it.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
-    res.json({
-      metadata,
-      data: await projectRows('collection', data, {
-        req, idOf: (c) => c.id, publicAttributes: COLLECTION_PUBLIC_ATTRIBUTES, relationAttributes: ['_count'],
-      }),
-    });
+    // The query scopes the rows, and the list decision's filter picks every row's fields.
+    res.json({ metadata, data: data.map((collection) => req.permission.filter(collection)) });
   }),
 );
 

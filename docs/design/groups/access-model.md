@@ -212,8 +212,13 @@ permissive list removes keys the permissive rule granted.
 fields(u, a, r) = ⋃ { keys(project(r, filters(a, k))) : k ∈ path_kinds(u, r) }
 ```
 
-A filter is valid only for the resource whose decision produced it. A route that returns related
-rows, such as lineage or ancestors, decides each row on its own resource.
+A filter is valid only for the resource whose decision produced it. A list is therefore projected
+by the caller's `list` decision on the type, not by a decision on any row. Its query decides which
+rows appear. The `list` action's attribute rule gives the public attributes, and a platform admin
+sees every field. A row shows more only on its detail route. A search route binds
+`authorize(type, 'list')` and uses `req.permission.filter`. Lineage, ancestors, and descendants
+are decided on the resource in the URL, so they use `listFilter(req, type)` instead. A grant list
+shows the grant attributes, because its query returns only grants the caller holds or governs.
 
 `*` is never used where a row embeds another user's record. A grant row names the fields it may
 carry of its subject, grantor, and revoker.
@@ -349,7 +354,8 @@ decided request or Revoke on a revoked grant, is hidden instead of disabled.
 | `request_access` in a detail route's capabilities | `mayFileRequest` in `services/access_requests`: signed in, no restriction blocks `access_request.create`, and the resource's state admits a request | the dataset and collection Overview tabs | `tests/services/access-requests/mayFileRequest.test.js` |
 | `_meta.standing` on a detail route | the path rows | the badge and `MyAccessTab` | `tests/model/standingArm.test.js`, `tests/model/badgeCoverage.test.js` |
 | `_meta.capabilities` and `_meta.standing` on a list row | `decideRows`, the detail route's composition for each row | list pages, cards, and the request cards | `tests/model/listRowsArm.test.js` |
-| the fields of a list row or a related row | `projectRows`, each row's own read decision | list pages, lineage, and the group tree | `tests/model/relatedRowsArm.test.js`, `tests/services/grants/relatedLineage.test.js` |
+| the fields of a list row or a related row | the `list` decision's filter: the public attributes, or every field for a platform admin | list pages, lineage, and the group tree | `tests/authorization/listFilter.test.js` |
+| `_meta.standing` on a group search row | `standingOfRows`, the path rows from one statement for the page | the group cards and the dashboard badges | `tests/authorization/listFilter.test.js` |
 | `is_active` on a grant row | `isGrantActive`, the predicate of `valid_grants` | the grant panels | `tests/services/grants/isActive.test.js` |
 | the revoke preview | `previewRevoke`, from coverage over every path | `RevokeGrantModal` | `tests/services/grants/revokePreview.test.js` |
 | list `scope` | `RESOURCE_SCOPES` and the group scopes | the scope filters | `tests/model/listsArm.test.js`, for the `all` scope |

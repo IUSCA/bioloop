@@ -960,10 +960,10 @@ async function searchGroupsForUser({
       offset,
     },
     data: results
-      .map((group) => ({
+      .map(({ size, depth, ...group }) => ({
         ...group,
-        _count: { members: Number(group.size) },
-        depth: Number(group.depth),
+        _count: { members: Number(size) },
+        depth: Number(depth),
       })),
   };
 }
@@ -1083,10 +1083,10 @@ async function searchAllGroups({
       offset,
     },
     data: results
-      .map((group) => ({
+      .map(({ size, depth, ...group }) => ({
         ...group,
-        _count: { members: Number(group.size) },
-        depth: Number(group.depth),
+        _count: { members: Number(size) },
+        depth: Number(depth),
       })),
   };
 }

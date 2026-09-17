@@ -18,11 +18,8 @@ const { buildMeta } = require('@/services/meta');
 const invitationState = require('@/state').import('invitation');
 const {
   createAuthorizationMiddleware: authorize, authorizeAction, refusalMessage,
-  callerIsPlatformAdmin, projectRows,
+  callerIsPlatformAdmin, listFilter, standingOfRows,
 } = require('@/authorization');
-const {
-  PUBLIC_ATTRIBUTES: GROUP_PUBLIC_ATTRIBUTES,
-} = require('@/authorization/builtin/policies/group');
 const { pickNonNil } = require('@/utils');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
@@ -41,6 +38,7 @@ router.post(
     body('is_archived').optional().isBoolean(),
     body('scope').default('all').isIn(['all', 'direct', 'oversight', 'admin']),
   ]),
+  authorize('group', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Groups']
     // #swagger.summary = 'Search groups by name or description'
@@ -68,14 +66,12 @@ router.post(
       });
     }
     const { metadata, data } = await promise;
-    // The query scopes the rows; each row's own decision projects it. `depth` and `_count` come
-    // from the search, not the group.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
+    // The query scopes the rows, and the list decision's filter picks every row's fields. The
+    // standing drives each card's badge.
+    const standings = await standingOfRows(req, 'group', data.map((g) => g.id));
     res.json({
       metadata,
-      data: await projectRows('group', data, {
-        req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth', '_count'],
-      }),
+      data: data.map((group, i) => ({ ...req.permission.filter(group), _meta: { standing: standings[i] } })),
     });
   }),
 );
@@ -718,10 +714,8 @@ router.get(
 
     const { id } = req.params;
     const ancestors = await groupService.getGroupAncestors(id);
-    // An ancestor's own decision projects it; the caller's standing here says nothing about it.
-    res.json(await projectRows('group', ancestors, {
-      req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth'],
-    }));
+    // Each ancestor shows the fields a list shows; this route's decision is about the group named.
+    res.json(ancestors.map(await listFilter(req, 'group')));
   }),
 );
 
@@ -745,9 +739,8 @@ router.get(
       max_depth,
       search_term: search_term?.trim(),
     });
-    res.json(await projectRows('group', descendants, {
-      req, idOf: (g) => g.id, publicAttributes: GROUP_PUBLIC_ATTRIBUTES, relationAttributes: ['depth'],
-    }));
+    // Each descendant shows the fields a list shows; this route's decision is about the group named.
+    res.json(descendants.map(await listFilter(req, 'group')));
   }),
 );
 

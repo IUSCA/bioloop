@@ -55,6 +55,7 @@ const groupState = new StateContainer({
   add_dataset: notWhileArchived,
   add_collection: notWhileArchived,
 
+  list: always,
   view_metadata: always,
   view_profile: always,
   view_hierarchy: always,

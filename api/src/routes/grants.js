@@ -6,7 +6,7 @@ const { isInt } = require('validator');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin, projectRows } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = require('@/authorization');
 const { pickNonNil } = require('@/utils');
 const grantService = require('@/services/grants');
 const state = require('@/state');
@@ -222,6 +222,7 @@ router.get(
   validate([
     query('within_days').default(30).isInt({ min: 1 }).toInt(),
   ]),
+  authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List grants that are expiring soon (grouped by resource and source)'
@@ -245,21 +246,13 @@ router.get(
     // The service groups by subject and resource. Destructuring `source` here dropped the
     // subject from every row and added an undefined key, so a caller could not say who
     // held the access that is about to lapse.
-    // Each grant is projected by the caller's `grant.read` decision on it.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
-    const projected = await projectRows('grant', grantsGrouped.flatMap((group) => group.grants), {
-      req, idOf: (g) => g.id, publicAttributes: [], action: 'read',
-    });
-    let taken = 0;
-    res.json(grantsGrouped.map(({ subject, resource, grants }) => {
-      const own = projected.slice(taken, taken + grants.length);
-      taken += grants.length;
-      return {
-        subject: projectObject(subject, baseAttributes.subject),
-        resource: projectObject(resource, baseAttributes.resource),
-        grants: own,
-      };
-    }));
+    // The service scopes the grants to the caller's authority, and the list decision's filter
+    // picks each grant's fields.
+    res.json(grantsGrouped.map(({ subject, resource, grants }) => ({
+      subject: projectObject(subject, baseAttributes.subject),
+      resource: projectObject(resource, baseAttributes.resource),
+      grants: grants.map((g) => req.permission.filter(g)),
+    })));
   }),
 );
 
@@ -271,6 +264,7 @@ router.get(
     query('resource_id').optional().isUUID(),
     query('expiring_within_days').optional().isInt({ min: 1 }).toInt(),
   ]),
+  authorize('grant', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['Grants']
     // #swagger.summary = 'List my grants'
@@ -283,10 +277,8 @@ router.get(
       expiring_within_days,
     });
 
-    // Each grant is projected by the caller's `grant.read` decision on it.
-    res.json(await projectRows('grant', rows, {
-      req, idOf: (g) => g.id, publicAttributes: [], action: 'read',
-    }));
+    // The service returns only the caller's own grants, and the list decision's filter picks their fields.
+    res.json(rows.map((g) => req.permission.filter(g)));
   }),
 );
 

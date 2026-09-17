@@ -130,38 +130,6 @@ const UPLOAD_STATUSES = {
   PERMANENTLY_FAILED: 'PERMANENTLY_FAILED',
 };
 
-// The ten upload statuses collapsed into the three answers a person actually wants from a
-// listing: is it still moving, did it stop, or is it done. `GET /v2/datasets` takes a group
-// name in `upload_status`; a single status is accepted there as well.
-//
-// A test asserts these three cover every value of UPLOAD_STATUSES exactly once, so a status
-// added to the enum has to be classified before it can ship.
-// @see docs/design/groups/implementation/dataset-creation-plan.md — C5
-const UPLOAD_STATUS_GROUPS = {
-  IN_PROGRESS: [
-    UPLOAD_STATUSES.UPLOADING,
-    UPLOAD_STATUSES.UPLOADED,
-    UPLOAD_STATUSES.VERIFYING,
-    UPLOAD_STATUSES.VERIFIED,
-    UPLOAD_STATUSES.PROCESSING,
-  ],
-  FAILED: [
-    UPLOAD_STATUSES.UPLOAD_FAILED,
-    UPLOAD_STATUSES.VERIFICATION_FAILED,
-    UPLOAD_STATUSES.PROCESSING_FAILED,
-    UPLOAD_STATUSES.PERMANENTLY_FAILED,
-  ],
-  COMPLETE: [UPLOAD_STATUSES.COMPLETE],
-};
-
-// Accepted values of the `upload_status` query parameter: the three group names, ANY for
-// "was uploaded at all, whatever came of it", and any single status.
-const UPLOAD_STATUS_FILTERS = [
-  'ANY',
-  ...Object.keys(UPLOAD_STATUS_GROUPS),
-  ...Object.values(UPLOAD_STATUSES),
-];
-
 const WORKFLOWS = {
   INTEGRATED: 'integrated',
   STAGE: 'stage',
@@ -435,8 +403,6 @@ module.exports = {
   DONE_STATUSES,
   DATASET_CREATE_METHODS,
   UPLOAD_STATUSES,
-  UPLOAD_STATUS_GROUPS,
-  UPLOAD_STATUS_FILTERS,
   WORKFLOWS,
   ALERT_TYPES,
   ALERT_STATUSES,

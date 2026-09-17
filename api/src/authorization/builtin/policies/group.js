@@ -164,6 +164,10 @@ groupPolicies
       isProfileVisibleToSignedInUser,
     ])),
     edit_metadata: mutating(isGroupAdmin),
+    // A list query scopes its rows to the caller, so the action itself admits anyone. Its
+    // attribute rule decides the fields of every row, because no single row is decided.
+    // @see docs/design/groups/access-model.md — Projection
+    list: reading(Policy.always),
     view_hierarchy: reading(platformAdminOnly),
     list_invalid: reading(platformAdminOnly),
     view_audit_logs: reading(Policy.or([isGroupAdmin, hasGroupOversight])),
@@ -247,6 +251,13 @@ groupPolicies
       {
         policy: Policy.always,
         attribute_filters: PUBLIC_PROFILE_ATTRIBUTES.concat(['admins[*].id', 'admins[*].name']),
+      },
+    ],
+    list: [
+      {
+        policy: Policy.always,
+        // `depth` is the row's place in a search or a lineage, not a field of the group.
+        attribute_filters: PUBLIC_ATTRIBUTES.concat(['depth']),
       },
     ],
   })

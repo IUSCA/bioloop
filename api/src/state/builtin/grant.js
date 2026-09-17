@@ -58,6 +58,7 @@ const grantState = new StateContainer({
   }),
 
   read: always,
+  list: always,
   list_for_resource: always,
   list_for_subject: always,
   view_coverage: always,

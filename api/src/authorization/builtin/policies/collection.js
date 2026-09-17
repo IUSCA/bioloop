@@ -131,6 +131,10 @@ collectionPolicies
       isProfileVisibleToSignedInUser,
     ])),
 
+    // A list query scopes its rows to the caller, so the action itself admits anyone. Its
+    // attribute rule decides the fields of every row, because no single row is decided.
+    // @see docs/design/groups/access-model.md — Projection
+    list: reading(Policy.always),
     list_datasets: reading(Policy.or([
       isCollectionAdmin,
       hasCollectionOversight,
@@ -179,6 +183,12 @@ collectionPolicies
       {
         policy: Policy.always,
         attribute_filters: PUBLIC_PROFILE_ATTRIBUTES,
+      },
+    ],
+    list: [
+      {
+        policy: Policy.always,
+        attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],
   })

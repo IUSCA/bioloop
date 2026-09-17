@@ -5,24 +5,8 @@ const prisma = require('@/db');
 const { withStateFields } = require('@/state').import('dataset');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
-const { UPLOAD_STATUS_GROUPS } = require('@/constants');
 const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const { RESOURCE_SCOPES } = require('../resources');
-
-/**
- * The upload statuses one value of the `upload_status` filter stands for.
- *
- * `ANY` returns every dataset that has an upload log, whatever became of it. A group name
- * returns that group's statuses, and a single status returns just itself.
- *
- * @see docs/design/groups/implementation/dataset-creation-plan.md — C5
- * @param {string} upload_status
- * @returns {string[]|null} the statuses to match, or null for "any status"
- */
-function uploadStatusesFor(upload_status) {
-  if (upload_status === 'ANY') return null;
-  return UPLOAD_STATUS_GROUPS[upload_status] ?? [upload_status];
-}
 
 /**
  * Create an includes object for Prisma queries based on requested includes.
@@ -34,7 +18,6 @@ function uploadStatusesFor(upload_status) {
  * @param {Boolean} includes.source_datasets - Whether to include source datasets
  * @param {Boolean} includes.derived_datasets - Whether to include derived datasets
  * @param {Boolean} includes.workflows - Whether to include associated workflows
- * @param {Boolean} includes.upload_log - Whether to include the upload log, if the dataset was uploaded
  * @returns {object} An includes object for Prisma queries. It always carries the fields the
  *   dataset's state rules read, so every row a caller fetches can answer `available_actions`.
  */
@@ -76,14 +59,6 @@ function createPrismaInclude(includes) {
   if (includes.owner_group) {
     result.owner_group = true;
   }
-  if (includes.upload_log) {
-    // At most one row: dataset_upload_log is unique on dataset_id.
-    result.upload_logs = {
-      select: {
-        status: true, retry_count: true, updated_at: true, metadata: true,
-      },
-    };
-  }
   return withStateFields({ include: result }).include;
 }
 
@@ -115,11 +90,10 @@ function createPrismaOrderBy({ sort_by, sort_order }) {
  * @param {boolean} [filters.has_source_data] - true to filter for datasets with source data, false for datasets without source data, omit for all
  * @param {string} [filters.type] - Filter by dataset type
  * @param {string} [filters.name] - Filter by dataset name (partial match)
- * @param {string} [filters.upload_status] - ANY, an UPLOAD_STATUS_GROUPS name, or one upload status
  * @returns {object} A filters object for Prisma queries
  */
 function createPrismaWhere({
-  is_deleted, is_archived, is_staged, upload_status,
+  is_deleted, is_archived, is_staged,
   has_workflows, has_derived_data, has_source_data,
   type, name,
   id, resource_id, owner_group_id, collection_id,
@@ -134,10 +108,6 @@ function createPrismaWhere({
   }
   if (is_staged != null) {
     filters.is_staged = is_staged;
-  }
-  if (upload_status != null) {
-    const statuses = uploadStatusesFor(upload_status);
-    filters.upload_logs = { some: statuses ? { status: { in: statuses } } : {} };
   }
   if (has_workflows != null) {
     filters.workflows = { [has_workflows ? 'some' : 'none']: {} };
@@ -196,7 +166,7 @@ function createPrismaWhere({
 }
 
 function createSqlWhere({
-  is_deleted, is_archived, is_staged, upload_status,
+  is_deleted, is_archived, is_staged,
   has_workflows, has_derived_data, has_source_data,
   type, name,
   id, resource_id, owner_group_id, collection_id,
@@ -213,15 +183,6 @@ function createSqlWhere({
   }
   if (is_staged != null) {
     clauses.push(Prisma.sql`d.is_staged = ${is_staged}`);
-  }
-  if (upload_status != null) {
-    const statuses = uploadStatusesFor(upload_status);
-    clauses.push(statuses
-      ? Prisma.sql`EXISTS (
-          SELECT 1 FROM dataset_upload_log ul
-          WHERE ul.dataset_id = d.id AND ul.status::text IN (${Prisma.join(statuses)})
-        )`
-      : Prisma.sql`EXISTS (SELECT 1 FROM dataset_upload_log ul WHERE ul.dataset_id = d.id)`);
   }
   if (has_workflows != null) {
     clauses.push(has_workflows

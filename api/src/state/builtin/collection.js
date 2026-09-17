@@ -71,6 +71,7 @@ const collectionState = new StateContainer({
     check: (collection) => (collection.is_archived ? null : refuse('This collection is not archived.')),
   }),
 
+  list: always,
   view_metadata: always,
   view_profile: always,
   list_datasets: always,

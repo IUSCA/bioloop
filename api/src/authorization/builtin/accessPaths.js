@@ -53,6 +53,28 @@ const typeFilter = (accessTypes) => (accessTypes
  */
 const kindFilter = (prefix) => Prisma.sql`AND gat.name LIKE ${`${prefix}:%`}`;
 
+/**
+ * The path rows from a user to datasets. Five SELECTs joined by UNION ALL, one row per path:
+ *
+ * 1. `admin`: the user has an active ADMIN membership in the dataset's owning group.
+ * 2. `oversight`: the owning group is one the user oversees, from
+ *    `effective_user_oversight_groups`. `group_id` is the owning group.
+ * 3. `grant` on the dataset: a valid grant on the dataset itself, held by any subject in
+ *    `subjects` (the user, their groups, or a system principal), with a `DATASET:` type.
+ * 4. `grant` through a collection: the same, but the grant is on a collection that currently
+ *    contains the dataset. `collection_id` names that collection.
+ * 5. `member`: the user effectively belongs to the owning group, and that group allows user
+ *    contributions. `direct` is true when the membership is in the owning group itself, not
+ *    a descendant.
+ *
+ * Reads the `subjects` CTE that `accessPathsQuery` defines.
+ *
+ * @param {string} userId
+ * @param {Object} options
+ * @param {string[]|null} options.resourceIds - limits every SELECT to these dataset resource ids
+ * @param {string[]|null} options.accessTypes - limits the grant rows to these type names
+ * @returns {Prisma.Sql}
+ */
 function datasetPaths(userId, { resourceIds, accessTypes }) {
   return Prisma.sql`
     SELECT d.resource_id, 'admin' AS path_kind, gu.group_id, NULL::text AS grant_id,
@@ -89,6 +111,24 @@ function datasetPaths(userId, { resourceIds, accessTypes }) {
   `;
 }
 
+/**
+ * The path rows from a user to collections. Three SELECTs joined by UNION ALL, one row per path:
+ *
+ * 1. `admin`: the user has an active ADMIN membership in the collection's owning group.
+ * 2. `oversight`: the owning group is one the user oversees, from
+ *    `effective_user_oversight_groups`. `group_id` is the owning group.
+ * 3. `grant`: a valid grant on the collection, held by any subject in `subjects`, with a
+ *    `COLLECTION:` type.
+ *
+ * There is no `member` row: belonging to the owning group confers nothing on its collections.
+ * Reads the `subjects` CTE that `accessPathsQuery` defines.
+ *
+ * @param {string} userId
+ * @param {Object} options
+ * @param {string[]|null} options.resourceIds - limits every SELECT to these collection ids
+ * @param {string[]|null} options.accessTypes - limits the grant rows to these type names
+ * @returns {Prisma.Sql}
+ */
 function collectionPaths(userId, { resourceIds, accessTypes }) {
   return Prisma.sql`
     SELECT c.id AS resource_id, 'admin' AS path_kind, gu.group_id, NULL::text AS grant_id,
@@ -111,6 +151,27 @@ function collectionPaths(userId, { resourceIds, accessTypes }) {
   `;
 }
 
+/**
+ * The path rows from a user to groups. Four SELECTs joined by UNION ALL, one row per path:
+ *
+ * 1. `admin`: the user has an active ADMIN membership in the group itself. Being admin of a
+ *    parent gives no `admin` row here.
+ * 2. `oversight`: the group is one the user oversees, from `effective_user_oversight_groups`.
+ * 3. `member`: the user effectively belongs to the group. `direct` is true when the membership
+ *    is in the group itself, not a descendant.
+ * 4. `grant`: a valid grant, held by any subject in `subjects`, on a dataset or collection the
+ *    group owns. The row's `resource_id` and `group_id` are the owning group. Grants held by a
+ *    system principal, such as Public, are left out. The type's kind is not checked, because
+ *    the grant is on the owned resource, not on the group.
+ *
+ * Reads the `subjects` CTE that `accessPathsQuery` defines.
+ *
+ * @param {string} userId
+ * @param {Object} options
+ * @param {string[]|null} options.resourceIds - limits every SELECT to these group ids
+ * @param {string[]|null} options.accessTypes - limits the grant rows to these type names
+ * @returns {Prisma.Sql}
+ */
 function groupPaths(userId, { resourceIds, accessTypes }) {
   return Prisma.sql`
     SELECT gu.group_id AS resource_id, 'admin' AS path_kind, gu.group_id, NULL::text AS grant_id,
@@ -144,6 +205,16 @@ function groupPaths(userId, { resourceIds, accessTypes }) {
 const BUILDERS = { dataset: datasetPaths, collection: collectionPaths, group: groupPaths };
 
 /**
+ * Builds the SQL that returns every path from one user to resources of one type, one row per
+ * path, with the columns described at the top of this file.
+ *
+ * The statement first defines the `subjects` CTE from `subjectSetSql`: the user, every group they
+ * effectively belong to, and the system principals, or only `Public` for an anonymous caller. The
+ * grant arms match grants held by any of these. It then
+ * appends the type's builder (`datasetPaths`, `collectionPaths`, or `groupPaths`).
+ *
+ * Nothing runs here. The caller executes the SQL, or embeds it in a larger query.
+ *
  * @param {Object} args
  * @param {string} args.userId - a user's subject id, or PUBLIC_GROUP_ID for an anonymous caller
  * @param {'dataset'|'collection'|'group'} args.resourceType
@@ -167,10 +238,18 @@ function accessPathsQuery({
 }
 
 /**
- * The ids a user reaches by any of `pathKinds`, as a subquery selecting `resource_id`.
- * @param {Object} args - as `accessPathsQuery`, plus `pathKinds`
- * @param {string[]} [args.pathKinds] - defaults to every kind
- * @returns {Prisma.Sql}
+ * Builds the SQL that returns the ids of the resources a user can reach, one row per resource.
+ *
+ * It runs `accessPathsQuery`, keeps the paths whose kind is in `pathKinds`, and returns each
+ * remaining `resource_id` once, however many paths reach it. A list search embeds it to limit
+ * its rows to what the caller reaches. For example, `pathKinds: ['admin', 'oversight']` returns
+ * only the resources the user governs, and ignores their memberships and grants.
+ *
+ * @param {Object} args - as `accessPathsQuery`, plus the two below
+ * @param {string[]} [args.pathKinds] - the path kinds that count; defaults to every kind
+ * @param {Prisma.Sql} [args.restrictionPredicate] - an extra condition on each path row `p`;
+ *   defaults to `TRUE`
+ * @returns {Prisma.Sql} a statement selecting one `resource_id` column
  */
 function accessibleIdsQuery({
   pathKinds = PATH_KINDS, restrictionPredicate = Prisma.sql`TRUE`, ...args

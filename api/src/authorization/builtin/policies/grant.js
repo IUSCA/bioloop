@@ -100,6 +100,8 @@ grantPolicies
     // action anybody takes.
     // @see docs/design/groups/access-model.md — The transition table
     revoke: mutating(isAdminOfResourceGroup),
+    // A list query scopes its grants to the caller, so the action itself admits anyone.
+    list: reading(Policy.always),
     list_for_resource: reading(Policy.or([isAdminOfResourceGroup, hasOversightOfResourceGroup])),
     list_for_subject: reading(Policy.or([isSubject, isAdminOfSubjectGroup, hasOversightOfSubjectGroup])),
 

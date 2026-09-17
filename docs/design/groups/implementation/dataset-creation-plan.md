@@ -386,6 +386,11 @@ hides the failure the filter was used to find.
 
 *Reuse:* the status vocabulary in `UploadStatusBadge.vue` and `UploadStatusIcon.vue`.
 
+Later, on 2026-09-16, the upload status filter and badge were removed from the API and the
+Datasets page. Only an owning-group admin and a platform admin received `upload_logs`, so the
+member who uploaded could not see their own upload's state. They come back after an
+authorization model for uploads decides who sees an upload's status.
+
 **Upload is usable end to end when this lands.**
 
 ## Testing

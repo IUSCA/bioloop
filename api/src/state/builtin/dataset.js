@@ -85,6 +85,7 @@ const datasetState = new StateContainer({
   compute: notWhileDeleted,
   remote_access: notWhileDeleted,
 
+  list: always,
   view_metadata: always,
   view_sensitive_metadata: always,
   view_audit_logs: always,

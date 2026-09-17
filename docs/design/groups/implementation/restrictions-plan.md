@@ -457,6 +457,9 @@ it into every dataset read. The dataset search no longer gates `available_action
 `include_owner_group`: every row carries the fields, at the cost of one owning-group relation per
 row.
 
+Later still, on 2026-09-16, `projectRows` was removed and no search list sends
+`available_actions`. No list screen read it.
+
 Each state container declares its named states as `examples`, and the engine gained
 `forbiddenActions(resourceType, stateName)`, which runs the resource's own rules against its own
 example. `GET /v2/states/:resource_type/:state_name/forbidden-actions` serves it, so the archive

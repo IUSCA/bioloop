@@ -158,6 +158,11 @@ datasetPolicies
       userHasGrant('DATASET:VIEW_SENSITIVE_METADATA'),
     ])),
 
+    // A list query scopes its rows to the caller, so the action itself admits anyone. Its
+    // attribute rule decides the fields of every row, because no single row is decided.
+    // @see docs/design/groups/access-model.md — Projection
+    list: reading(Policy.always),
+
     // ------------------------------------------------------------------
     // FILE LISTINGS
     // Structural access (admin, oversight) can see file listings.
@@ -354,6 +359,12 @@ datasetPolicies
       // Infrastructure paths and sensitive metadata are excluded.
       {
         policy: userHasGrant('DATASET:VIEW_METADATA'),
+        attribute_filters: PUBLIC_ATTRIBUTES,
+      },
+    ],
+    list: [
+      {
+        policy: Policy.always,
         attribute_filters: PUBLIC_ATTRIBUTES,
       },
     ],

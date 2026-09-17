@@ -69,15 +69,15 @@ describe('the paths stay behind view_sensitive_metadata', () => {
   });
 });
 
-describe('a list binds to the read action it filters on', () => {
-  test('the dataset container has no list action of its own', () => {
-    // Each list row is projected by its own view_metadata decision, and a row the caller
-    // cannot open shows the public set.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
-    expect(datasetPolicies.hasAction('list')).toBe(false);
+describe('a list shows the public set', () => {
+  test('the list action filters every row to the public attributes', () => {
+    // No single row is decided on a list, so its one rule applies to every row.
+    // @see docs/design/groups/access-model.md — Projection
+    expect(datasetPolicies.getAttributeRules('list').map((rule) => rule.attribute_filters))
+      .toEqual([PUBLIC_ATTRIBUTES]);
   });
 
-  test('the public set a row falls back to still says whether staging finished', () => {
+  test('the public set still says whether staging finished', () => {
     expect(PUBLIC_ATTRIBUTES).toContain('is_staged');
   });
 });

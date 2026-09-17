@@ -41,4 +41,18 @@ function expandPath(term, { context }) {
   return rows.filter((row) => row.path_kind === pathKind).map((row) => pathFromRow(row, term));
 }
 
-module.exports = { expandPath };
+/**
+ * The standing a set of `access_paths` rows gives, without evaluating a policy.
+ *
+ * A list reads one path statement for its page and turns each row's paths into standing here. A
+ * member path carries no `rule`, because a rule belongs to a mutating action's term, and standing
+ * reads the non-mutating ones.
+ *
+ * @param {Object[]} rows - `access_paths` rows for one resource
+ * @returns {Object[]}
+ */
+function standingFromPathRows(rows) {
+  return rows.map((row) => pathFromRow(row, { meta: {} }));
+}
+
+module.exports = { expandPath, standingFromPathRows };

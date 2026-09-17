@@ -141,6 +141,18 @@ remedy already existed in `findDatasetRun`, which returns a child only under its
 Phase 5 decides and projects each related row on its own resource. `relatedRowsArm.test.js` and
 `relatedLineage.test.js` pin it.
 
+Later, on 2026-09-16, per-row projection was removed from every list. A UI audit found no list
+screen reading per-row capabilities, available actions, or a field beyond the public set, apart
+from the group badges. Every list row now shows the public attributes, or every field for a
+platform admin, so no row is projected by another resource's filter either. Both tests were
+deleted, and `tests/authorization/projectListRows.test.js` pins the new rule.
+
+Later the same day, the `list` actions came back on collection, group, dataset, and grant, which
+reverses the retirement in decision 16. Each is `Policy.always` with one attribute rule. Search
+routes bind `authorize(type, 'list')` and filter with `req.permission.filter`; related-row routes
+use `listFilter(req, type)`. The fields each list shows did not change. `projectListRows` was
+deleted, and its test became `tests/authorization/listFilter.test.js`.
+
 ### The static checks that already exist
 
 The engine fails at import when a policy is malformed. `new Policy` validates `requires`,
@@ -293,7 +305,7 @@ world. Non-admin callers carry the weight, because a platform admin passes every
 | Paths | `pathsArm.test.js` | `accessPathsQuery` rows with the reference paths |
 | Lists | `listsArm.test.js` | the list queries with the reference decision |
 | List rows | `listRowsArm.test.js` | each list row's `_meta` with the detail route's own composition |
-| Related rows | `relatedRowsArm.test.js` | lineage, ancestor, and descendant rows with each row's own decision |
+| Related rows | `relatedRowsArm.test.js` (deleted 2026-09-16, with per-row projection) | lineage, ancestor, and descendant rows with each row's own decision |
 | Standing | `standingArm.test.js` | `_meta.standing` with the reference paths |
 | Transitions | `transitionsArm.test.js` | access-request capabilities in every status, for the requester, an admin, and a platform admin |
 | State | `stateArm.test.js` | `state.check` on group, collection, and dataset rows with `stateAdmits` |

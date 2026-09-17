@@ -497,7 +497,10 @@ It names the status and says in a sentence what that status means, because the r
 `/datasets/uploads/:id` page shows the same information at a second address, which splits a
 dataset across two places for no gain.
 
-**Across datasets**, the datasets list carries an upload state filter. The legacy
+**Across datasets**, the datasets list carries an upload state filter. Neither the filter nor the
+upload status badge below is built. Both wait for an authorization model for uploads, which
+decides that the owning group's admins and the person who started an upload may see its status.
+A list row today carries only public attributes, so neither can be shown to that audience yet. The legacy
 `/datasets/uploads/` page is a parallel list of the same rows, and one filterable list is
 better than two lists that can disagree.
 

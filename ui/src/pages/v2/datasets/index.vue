@@ -53,21 +53,6 @@
               color="primary"
               size="sm"
             />
-
-            <!--
-              An upload that fails for good is tombstoned, so it drops out of the ordinary
-              listing. Choosing anything but "All" here reaches those rows.
-              @see docs/design/groups/implementation/dataset-creation-plan.md — C5
-            -->
-            <ModernButtonToggle
-              v-model="activeUpload"
-              label="Upload"
-              :options="uploadFilters"
-              text-by="label"
-              value-by="value"
-              color="primary"
-              size="sm"
-            />
           </div>
         </div>
       </VaCardContent>
@@ -139,23 +124,7 @@
               </template>
 
               <template #cell(status)="{ rowData }">
-                <!--
-                  While the upload filter is on, the upload's own state is the answer the
-                  reader came for. A tombstoned failed upload is a deleted dataset, and
-                  labelling it only "Archived" would hide the failure it is there to show.
-                -->
-                <Badge
-                  v-if="uploadStatusOf(rowData)"
-                  :color="uploadBadgeColor(uploadStatusOf(rowData))"
-                >
-                  {{
-                    uploadStatusOf(rowData).replaceAll("_", " ").toLowerCase()
-                  }}
-                </Badge>
-                <Badge
-                  v-else
-                  :color="rowData.is_deleted ? 'neutral' : 'success'"
-                >
+                <Badge :color="rowData.is_deleted ? 'neutral' : 'success'">
                   {{ rowData.is_deleted ? "Archived" : "Active" }}
                 </Badge>
               </template>
@@ -222,7 +191,6 @@ const searchTerm = ref("");
 const activeScope = ref("all");
 const activeStatus = ref("all");
 const activeType = ref("all");
-const activeUpload = ref("all");
 
 const total = ref(0);
 const currentPage = ref(1);
@@ -255,32 +223,6 @@ const typeFilters = [
   { label: "Data Product", value: "DATA_PRODUCT" },
 ];
 
-// The three group names the API accepts in `upload_status`, plus the off position.
-const uploadFilters = [
-  { label: "All", value: "all" },
-  { label: "In progress", value: "IN_PROGRESS" },
-  { label: "Failed", value: "FAILED" },
-  { label: "Complete", value: "COMPLETE" },
-];
-
-const FAILED_UPLOAD_STATUSES = [
-  "UPLOAD_FAILED",
-  "VERIFICATION_FAILED",
-  "PROCESSING_FAILED",
-  "PERMANENTLY_FAILED",
-];
-
-// The list carries at most one upload log per row, and only when the filter asked for it.
-function uploadStatusOf(row) {
-  return row.upload_logs?.[0]?.status ?? null;
-}
-
-function uploadBadgeColor(status) {
-  if (FAILED_UPLOAD_STATUSES.includes(status)) return "danger";
-  if (status === "COMPLETE") return "success";
-  return "warning";
-}
-
 const columns = [
   { key: "name", label: "Name", sortable: true },
   { key: "type", label: "Type", sortable: true },
@@ -295,8 +237,7 @@ const areFiltersActive = computed(() => {
     searchTerm.value !== "" ||
     activeStatus.value !== "all" ||
     activeScope.value !== "all" ||
-    activeType.value !== "all" ||
-    activeUpload.value !== "all"
+    activeType.value !== "all"
   );
 });
 
@@ -305,7 +246,6 @@ watch(
     activeScope,
     activeStatus,
     activeType,
-    activeUpload,
     itemsPerPage,
     searchTerm,
     sortBy,
@@ -334,9 +274,6 @@ async function fetchDatasets() {
             : undefined,
       scope: activeScope.value !== "all" ? activeScope.value : undefined,
       type: activeType.value !== "all" ? activeType.value : undefined,
-      upload_status:
-        activeUpload.value !== "all" ? activeUpload.value : undefined,
-      include_upload_log: activeUpload.value !== "all" ? true : undefined,
       // The Owner column is always shown, so the join is always wanted.
       include_owner_group: true,
       limit: itemsPerPage.value,
@@ -362,7 +299,6 @@ function resetFilters() {
   activeScope.value = "all";
   activeStatus.value = "all";
   activeType.value = "all";
-  activeUpload.value = "all";
 }
 
 onMounted(() => {

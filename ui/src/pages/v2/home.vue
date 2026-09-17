@@ -684,8 +684,8 @@ function viewRequest(request) {
 function groupSubtitle(group) {
   const parts = [];
   if (group.metadata?.type) parts.push(group.metadata.type);
-  if (group.size != null) {
-    parts.push(maybePluralize(Number(group.size), "member"));
+  if (group._count?.members != null) {
+    parts.push(maybePluralize(group._count.members, "member"));
   }
   if (group.is_archived) parts.push("archived");
   return parts.join(" · ");

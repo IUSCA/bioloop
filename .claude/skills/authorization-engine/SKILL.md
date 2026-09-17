@@ -365,13 +365,27 @@ lists the registered actions.
 `AuthorizationError: [policy:isPlatformAdmin] User identifier is required`. `GET /groups/slug/:slug`
 does exactly that, which is how it was found.
 
-## A list decides each row; no decision covers a page
+## A list shows public attributes; a row shows more only on its detail route
 
-The four `Policy.always` list actions are gone (decision 16). A list route binds no `authorize()`.
-Its query scopes the rows, and `projectRows` in `src/authorization/index.js` projects each row by
-that row's own read decision. A row the caller cannot read shows the public attribute list the
-route passes. `relationAttributes` keeps fields that describe the row's place in the list, such
-as `depth` or `_count`, whatever the decision.
+Collection, group, dataset, and grant each have a `list` action: `Policy.always`, with one
+attribute rule (decision 16). A search route binds `authorize(type, 'list')`, its query scopes
+the rows, and `req.permission.filter` projects every row. The rule gives the public attributes;
+the platform-admin short-circuit gives `'*'`. No per-row decision runs. The group rule adds
+`depth`, the row's place in a search or a lineage. Grant lists use the container's `'*'` rule,
+the grant attributes, because their queries return only grants the caller holds or governs.
+
+A `list` action needs a `list: always` state rule too, or the startup sync check throws.
+
+A route whose own decision is about the resource in the URL, such as ancestors, descendants, or
+source and derived datasets, gets the list filter with `listFilter(req, type)` from
+`src/authorization/index.js`.
+
+`tests/authorization/listFilter.test.js` pins that an owning-group admin still sees only
+public fields on a list row.
+
+A group search row carries `_meta.standing` for its badge. `standingOfRows` reads it from one
+`accessPathsByResource` statement for the page and maps each row's paths with
+`standingFromPathRows`, so it matches the detail route's path rows without evaluating a policy.
 
 Never project another resource's row with `req.permission.filter`. That filter was decided for
 the resource in the URL. The lineage and ancestor routes did this, so an owning-group admin's
@@ -382,13 +396,9 @@ composition. For a dataset, a collection, or a group it reads the page's paths o
 `accessPathsByResource`, then seeds each row's check. Every row passes through
 `filterRestrictedCapabilities`, which costs nothing while the builtin checker blocks nothing.
 
-A list row's second answer is `_meta.available_actions`, which `projectRows` adds when the
-caller passes `availableActionsOf`. A list that did not fetch the fields a state rule reads must
-pass nothing rather than guess, because a rule throws rather than decide from a field the caller
-did not fetch. The dataset search always answers, because `createPrismaInclude` in
-`datasets_v2/fetch.js` merges the dataset fragment into every dataset read. `tests/model/listRowsArm.test.js` compares the batch
-against the single-row composition, and `tests/model/relatedRowsArm.test.js` counts rows where
-the parent's projection would have differed.
+No search list sends `_meta.available_actions`. The access-request and grant panels that do build
+it by hand from fields their own queries fetch. `tests/model/listRowsArm.test.js` compares
+`decideRows` against the single-row composition.
 
 ## Standing replaces the first-match role
 
@@ -530,7 +540,7 @@ Three things follow for a caller.
   Grants and access requests still use the readers in `state/builtin/targets.js`.
 - **A detail route builds `_meta` with `buildMeta(type, row, permission)`** from `src/services/meta.js`.
   It sits outside `src/authorization`, because authorization does not import
-  the state layer; `projectRows` takes an `availableActionsOf` callback for the same reason.
+  the state layer.
 - **A missing field is an error, not a false.** `check` throws naming the path, so a caller that
   selected too little fails loudly instead of deciding from `undefined`.
 - **The two layers are kept in step at startup.** `findStateGaps` reports a policy container with

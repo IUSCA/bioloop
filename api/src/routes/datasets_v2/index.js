@@ -13,18 +13,15 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const {
   createAuthorizationMiddleware: authorize, authorizeAction,
-  callerIsPlatformAdmin, projectRows,
+  callerIsPlatformAdmin, listFilter,
 } = require('@/authorization');
-const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
-const { availableActions } = require('@/state').import('dataset');
 const { buildMeta } = require('@/services/meta');
 const { RESOURCE_SCOPES } = require('@/services/resources');
-const { UPLOAD_STATUS_FILTERS } = require('@/constants');
 
 const router = express.Router();
 
@@ -317,7 +314,6 @@ router.get(
     query('is_deleted').optional().toBoolean(),
     query('is_archived').optional().toBoolean(),
     query('is_staged').optional().toBoolean(),
-    query('upload_status').optional().isIn(UPLOAD_STATUS_FILTERS),
     query('has_workflows').optional().toBoolean(),
     query('has_derived_data').optional().toBoolean(),
     query('has_source_data').optional().toBoolean(),
@@ -337,29 +333,25 @@ router.get(
     query('match_name_exact').default(false).toBoolean(),
     query('include_states').optional().toBoolean(),
     query('include_bundle').optional().toBoolean(),
-    query('include_upload_log').optional().toBoolean(),
     query('include_owner_group').optional().toBoolean(),
     query('id').optional().isInt().toInt(),
     query('resource_id').optional().isUUID(),
     query('scope').default(RESOURCE_SCOPES.ALL).isIn(Object.values(RESOURCE_SCOPES)),
   ]),
+  authorize('dataset', 'list'),
   asyncHandler(async (req, res) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = 'List and search datasets'
 
     const filters = _.pick(
-      ['is_deleted', 'is_archived', 'is_staged', 'upload_status',
+      ['is_deleted', 'is_archived', 'is_staged',
         'has_workflows', 'has_derived_data', 'has_source_data',
         'type', 'name', 'id', 'resource_id', 'owner_group_id', 'collection_id', 'scope',
         'created_at_start', 'created_at_end', 'updated_at_start', 'updated_at_end', 'days_since_last_staged'],
     )(req.query);
 
-    // Deleted datasets are hidden unless the caller asks for them. The exception is a
-    // search by upload state: an upload that fails for good is tombstoned, so the dataset
-    // is renamed and marked deleted, and the default would hide exactly the rows the
-    // person who uploaded needs to see.
-    // @see docs/design/groups/implementation/dataset-creation-plan.md — C5
-    if (filters.is_deleted == null && filters.upload_status == null) {
+    // Deleted datasets are hidden unless the caller asks for them.
+    if (filters.is_deleted == null) {
       filters.is_deleted = false;
     }
 
@@ -370,7 +362,6 @@ router.get(
     const includes = {
       states: req.query.include_states,
       bundle: req.query.include_bundle,
-      upload_log: req.query.include_upload_log,
       owner_group: req.query.include_owner_group,
     };
 
@@ -387,18 +378,8 @@ router.get(
     }
 
     const { metadata, data } = await promise;
-    // The query scopes the rows; each row's own decision projects it.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 16
-    res.json({
-      metadata,
-      data: await projectRows('dataset', data, {
-        req,
-        idOf: (d) => d.resource_id,
-        publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
-        // Every dataset read carries the fields the state rules read, so each row answers.
-        availableActionsOf: availableActions,
-      }),
-    });
+    // The query scopes the rows, and every row shows the public attributes.
+    res.json({ metadata, data: data.map((dataset) => req.permission.filter(dataset)) });
   }),
 );
 
@@ -650,11 +631,8 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getSourceDatasets(dataset.id, { limit, offset });
 
-    // Each source dataset has its own owning group, so each is projected by its own decision.
-    const projected = await projectRows('dataset', data, {
-      req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
-    });
-    res.json({ metadata, data: projected });
+    // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
+    res.json({ metadata, data: data.map(await listFilter(req, 'dataset')) });
   }),
 );
 
@@ -680,11 +658,8 @@ router.get(
     const { limit, offset } = _.pick(['limit', 'offset'])(req.query);
     const { data, metadata } = await datasetService.getDerivedDatasets(dataset.id, { limit, offset });
 
-    // Each derived dataset has its own owning group, so each is projected by its own decision.
-    const projected = await projectRows('dataset', data, {
-      req, idOf: (d) => d.resource_id, publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
-    });
-    res.json({ metadata, data: projected });
+    // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
+    res.json({ metadata, data: data.map(await listFilter(req, 'dataset')) });
   }),
 );
 
