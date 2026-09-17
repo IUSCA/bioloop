@@ -16,7 +16,7 @@
 
 /** Actions that read the bytes of a dataset. Refused on a deleted dataset. @see decision 16, row 4 */
 const DATA_PLANE_ACTIONS = new Set([
-  'list_files', 'read_data', 'download', 'compute', 'remote_access', 'request_stage',
+  'read_data', 'download', 'compute', 'remote_access', 'request_stage',
 ]);
 
 /** The resource types this model decides. `modelCoverage.test.js` fails on a registered type in neither this list nor its own. */
@@ -190,7 +190,7 @@ function createReference(tables, world) {
    * It is written from the action's restriction class rather than from the state rules, so the
    * two are independent statements of the same thing. Archiving closes governance and leaves
    * reading open, the bytes included. Deleting a dataset keeps its record and takes its files,
-   * so it refuses the data plane too.
+   * so it refuses the data plane too, except `list_files`, which stays open.
    *
    * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
    */
@@ -210,6 +210,7 @@ function createReference(tables, world) {
 
     const mutating = row.restriction === 'mutating';
     if (resourceType === 'dataset' && datasets.get(resourceId)?.deleted) {
+      if (action === 'list_files') return true;
       return !(mutating || row.restriction === 'data');
     }
     return !(mutating && stateArchived(resourceType, resourceId));

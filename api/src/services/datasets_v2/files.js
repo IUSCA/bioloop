@@ -33,16 +33,20 @@ async function findDatasetRow(resource_id) {
  * @description This function is idempotent, so it can be called multiple times with overlapping file paths without creating duplicate entries in the database.
  * It will maintain the file hierarchy by inferring directories from the file paths and creating metadata for them as well.
  * @param {Object} params - The parameters object.
- * @param {number} params.dataset_row_id - The dataset's integer primary key.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @param {Array} params.data - An array of file objects to add.
  * @param {string} params.data[].path - The path of the file.
  * @param {number} params.data[].size - The size of the file in bytes.
  * @param {string} params.data[].md5 - The MD5 hash of the file.
  * @param {string} params.data[].filetype - The type of the file (e.g., 'file' or 'directory').
  * @returns {Promise<void>} A promise that resolves when the files have been added.
- * @throws {Error} Throws an error if there is an issue adding the files to the dataset.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
  */
-async function addFilesToDataset({ dataset_row_id, data }) {
+async function addFilesToDataset({ dataset_resource_id, data }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('edit', dataset_row);
+  const dataset_row_id = dataset_row.id;
+
   // 1. create file graph data structure from the list of file paths
   // 2. infer directories from the data structure and create metadata for them as well,
   //    so we can maintain the file hierarchy in the database
@@ -139,8 +143,6 @@ function normalizeBasePath(base) {
  * @throws {createError.NotFound} when no dataset carries that resource id.
  */
 async function listFiles({ dataset_resource_id, base = '' }) {
-  // A deleted dataset's files are gone, so the listing is a conflict rather than an empty
-  // result: an empty listing means "no files yet", which this is not.
   const dataset_row = await findDatasetRow(dataset_resource_id);
   assertPossible('list_files', dataset_row);
   const dataset_row_id = dataset_row.id;
@@ -231,7 +233,7 @@ async function getFileTree({ dataset_resource_id }) {
  * @async
  * @function searchFiles
  * @param {Object} params - The parameters object.
- * @param {number} params.dataset_row_id - The dataset's integer primary key.
+ * @param {string} params.dataset_resource_id - The dataset's resource UUID.
  * @param {string} [params.name=''] - The name to search for.
  * @param {string} [params.base=''] - The base path to search from.
  * @param {number} params.skip - The number of items to skip.
@@ -241,13 +243,17 @@ async function getFileTree({ dataset_resource_id }) {
  * @param {number} [params.min_file_size] - The minimum file size to filter by.
  * @param {number} [params.max_file_size] - The maximum file size to filter by.
  * @returns {Promise<Array>} An array of matching file objects.
+ * @throws {createError.NotFound} when no dataset carries that resource id.
  */
 async function searchFiles({
-  dataset_row_id, name = '', base = '',
+  dataset_resource_id, name = '', base = '',
   skip, take,
   extension = null, filetype = null, min_file_size = null, max_file_size = null,
   sort_order = null, sort_by = null,
 }) {
+  const dataset_row = await findDatasetRow(dataset_resource_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
   const base_path = normalizeBasePath(base);
 
   let size_query = {};

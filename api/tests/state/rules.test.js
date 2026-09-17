@@ -110,12 +110,12 @@ describe('a dataset', () => {
   const deleted = { ...open, is_deleted: true };
   const ownerArchived = { ...open, owner_group: { is_archived: true } };
 
-  test('deleted, it refuses every change and every read of its files', () => {
+  test('deleted, it refuses every change and every read of its file contents', () => {
     ['contribute', 'request_stage', 'edit_metadata', 'edit', 'transfer_ownership',
       'manage_grants', 'review_access_requests'].forEach((action) => {
       expect([action, admits('dataset', action, deleted)]).toEqual([action, false]);
     });
-    ['list_files', 'read_data', 'download', 'compute', 'remote_access'].forEach((action) => {
+    ['read_data', 'download', 'compute', 'remote_access'].forEach((action) => {
       expect([action, admits('dataset', action, deleted)]).toEqual([action, false]);
     });
     expect(refusalFor('dataset', 'download', deleted)).toBe('This dataset is deleted, so its files are gone.');
@@ -123,7 +123,7 @@ describe('a dataset', () => {
 
   test('deleted, its record is still readable', () => {
     ['view_metadata', 'view_sensitive_metadata', 'view_audit_logs', 'view_workflows',
-      'view_collections', 'view_source_datasets', 'view_derived_datasets'].forEach((action) => {
+      'view_collections', 'view_source_datasets', 'view_derived_datasets', 'list_files'].forEach((action) => {
       expect([action, admits('dataset', action, deleted)]).toEqual([action, true]);
     });
   });

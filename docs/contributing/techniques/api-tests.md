@@ -44,6 +44,14 @@ one line of shell error. A run that never happened looks like a run that finishe
 absolute path for the Jest binary, for the output file, and for every file argument. Read the
 first line of the output before reading the summary.
 
+### A file argument that does not exist is skipped without a word
+
+Jest treats each file argument as a pattern. A path that matches nothing is not an error when
+another argument matches, so the run passes without the file. On 2026-09-17 a run named
+`tests/routes/route_policy_bindings.test.js`, which lives under `tests/authorization/`. The
+summary said 29 suites passed, and two failing tests in that file went unreported. Check that
+the summary's suite count matches the files you meant, or run `ls` on the arguments first.
+
 ### Jest does not exit after a finished run
 
 After the last suite, Jest prints `Test Suites: ...` and then `Jest did not exit one second

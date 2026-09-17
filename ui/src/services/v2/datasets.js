@@ -109,31 +109,34 @@ export default {
 
   /**
    * Search files in a dataset.
-   * @param {{ id: string, name?: string, basepath?: string, filetype?: string, min_file_size?: number, max_file_size?: number, sort_by?: string, sort_order?: string }}
+   *
+   * Takes the arguments `FileBrowser` passes to its `searchFiles` prop, the same ones the legacy
+   * `search_files` takes, and maps them onto the route's query names.
+   * @param {{ id: string, name?: string, location?: string, filetype?: string, extension?: string, minSize?: number, maxSize?: number, sortBy?: string, sortOrder?: string, skip?: number, take?: number }}
    */
   searchFiles({
     id,
-    name = "",
-    basepath = "",
+    name,
+    location,
     filetype,
     extension,
-    min_file_size,
-    max_file_size,
-    sort_by = "name",
-    sort_order = "asc",
-    skip = 0,
-    take = 1000,
+    minSize,
+    maxSize,
+    sortBy,
+    sortOrder,
+    skip,
+    take,
   } = {}) {
     return api.get(`/v2/datasets/${id}/files/search`, {
       params: {
         name,
-        basepath,
+        basepath: location,
         filetype,
         extension,
-        min_file_size,
-        max_file_size,
-        sort_by,
-        sort_order,
+        min_file_size: minSize,
+        max_file_size: maxSize,
+        sort_by: sortBy,
+        sort_order: sortOrder,
         skip,
         take,
       },

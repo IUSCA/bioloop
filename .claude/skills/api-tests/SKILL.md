@@ -22,6 +22,8 @@ The reasoning and worked examples behind every rule here are in
   `Tests: 0 failed`. Started from `ui/`, it prints `No tests found`. In the background it exits
   127 with one line of shell error, which looks like a finished run.
 - **Read the first line of the output before the summary.** A shell error means no results.
+- **A file argument that matches nothing is skipped silently** when another argument matches.
+  Run `ls` on the arguments, or check the suite count in the summary against what you meant.
 - **Never pipe Jest through `grep`.** The pipe buffers until exit, and the exit code is grep's.
 - **Jest does not exit after a run.** Redis and SSE clients stay open, so a finished run idles
   at 0% CPU and looks hung. Pass `--forceExit`. Look for `Test Suites:` in the output file.

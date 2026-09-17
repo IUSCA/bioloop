@@ -728,14 +728,17 @@ router.get(
 
 router.use(
   '/:dataset_resource_id/files',
-  // validate([
-  //   param('dataset_resource_id').isUUID(),
-  // ]),
+  validate([
+    param('dataset_resource_id').isUUID(),
+  ]),
   require('./files'),
 );
 
 router.use(
   '/:dataset_resource_id/workflows',
+  validate([
+    param('dataset_resource_id').isUUID(),
+  ]),
   require('./workflows'),
 );
 

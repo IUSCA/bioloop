@@ -67,7 +67,7 @@ export default {
    * Adding a dataset is a high-impact authorization operation — caller must hold admin authority
    * over the dataset's owning group.
    * @param {number|string} id - collection ID
-   * @param {number[]} datasetIds
+   * @param {string[]} datasetIds - dataset resource UUIDs
    */
   addDatasets(id, datasetIds) {
     return api.post(`/collections/${id}/datasets`, {

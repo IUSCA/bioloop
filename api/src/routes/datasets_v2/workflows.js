@@ -156,15 +156,22 @@ router.post('/:workflow_id/resume', runControl('resume'));
 router.put(
   '/:workflow_id',
   authorize('dataset', 'edit', byDatasetResourceId),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req, res, next) => {
     // #swagger.tags = ['datasets']
     // #swagger.summary = Associate a workflow to a dataset
     const { dataset_resource_id, workflow_id } = req.params;
 
+    // workflow.dataset_id is the integer key, so the route's resource UUID is resolved first.
+    const dataset = await prisma.dataset.findUnique({
+      where: { resource_id: dataset_resource_id },
+      select: { id: true },
+    });
+    if (!dataset) return next(createError(404, 'Dataset not found'));
+
     await prisma.workflow.createMany({
       data: {
         id: workflow_id,
-        dataset_id: dataset_resource_id,
+        dataset_id: dataset.id,
         initiator_id: req.user.id,
       },
       skipDuplicates: true,

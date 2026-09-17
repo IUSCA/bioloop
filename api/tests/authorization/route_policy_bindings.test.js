@@ -61,7 +61,7 @@ describe('archiving and unarchiving are separate authorities', () => {
     expect(datasetPolicies.hasAction('archive')).toBe(false);
     expect(datasetPolicies.hasAction('unarchive')).toBe(false);
     expect(datasetPolicies.hasAction('delete')).toBe(true);
-    expect(policiesFor(datasetRoutes, 'delete', '/:id')).toEqual(['dataset.delete']);
+    expect(policiesFor(datasetRoutes, 'delete', '/:dataset_resource_id')).toEqual(['dataset.delete']);
   });
 });
 
@@ -93,11 +93,11 @@ describe('a resource audit tab reads its own resource, not the platform log', ()
   //
   // @see docs/design/groups/use-cases.md — 57. The audit log is readable only by people with a reason
   test.each([
-    ['group', groupRoutes],
-    ['collection', collectionRoutes],
-    ['dataset', datasetRoutes],
-  ])('%s audit records are bound to view_audit_logs', (resourceType, router) => {
-    expect(policiesFor(router, 'get', '/:id/audit')).toEqual([`${resourceType}.view_audit_logs`]);
+    ['group', groupRoutes, '/:id/audit'],
+    ['collection', collectionRoutes, '/:id/audit'],
+    ['dataset', datasetRoutes, '/:dataset_resource_id/audit'],
+  ])('%s audit records are bound to view_audit_logs', (resourceType, router, auditPath) => {
+    expect(policiesFor(router, 'get', auditPath)).toEqual([`${resourceType}.view_audit_logs`]);
   });
 
   test('the platform-wide log stays platform admin only', () => {

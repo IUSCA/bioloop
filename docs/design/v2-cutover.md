@@ -94,6 +94,11 @@ while `DatasetFilesTab` passes the v2 functions. **Extend that pattern rather th
 component or repointing it.** A new prop with a v1 default leaves every legacy caller
 byte-identical in behaviour.
 
+A function passed as such a prop takes the arguments the component passes, and those follow
+the v1 service. The v2 `searchFiles` receives `location`, `minSize`, `maxSize`, `sortBy`, and
+`sortOrder`, and maps them onto the v2 route's query names. A v2 function that names its
+arguments after its own route drops every filter the component sends.
+
 `FileTable`, one level below, does not follow the pattern: it imports the v1 dataset service
 directly and calls `get_file_download_data`. That is why file downloads run through the legacy
 route even on a v2 page, and so are not grant-checked. Giving it a `downloadFileInfo` prop with

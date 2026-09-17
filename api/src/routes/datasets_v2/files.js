@@ -9,7 +9,6 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 const datasetFileService = require('@/services/datasets_v2/files');
-const prisma = require('@/db');
 
 const router = express.Router({ mergeParams: true });
 
@@ -41,7 +40,7 @@ router.post(
     }));
 
     await datasetFileService.addFilesToDataset({
-      dataset_row_id: req.params.dataset_resource_id,
+      dataset_resource_id: req.params.dataset_resource_id,
       data,
     });
 
@@ -104,13 +103,8 @@ router.get(
     // #swagger.tags = ['datasets']
     // #swagger.summary = Search files in a dataset
 
-    const dataset = await prisma.dataset.findUnique({
-      where: { resource_id: req.params.dataset_resource_id },
-      select: { id: true, resource_id: true },
-    });
-
     const files = await datasetFileService.searchFiles({
-      dataset_row_id: dataset.id,
+      dataset_resource_id: req.params.dataset_resource_id,
       base: req.query.basepath,
       ..._.omitBy(_.isUndefined)(req.query),
     });

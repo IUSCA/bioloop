@@ -79,7 +79,7 @@ const datasetState = new StateContainer({
     },
   }),
 
-  list_files: notWhileDeleted,
+  list_files: always,
   read_data: notWhileDeleted,
   download: notWhileDeleted,
   compute: notWhileDeleted,
