@@ -172,9 +172,9 @@ Shared pieces:
   - group: id, name, slug, description, metadata.type, is_archived, _count.members.
     Uses `description`, not tagline/about_md (the UI stopped showing description; possible drift).
   - collection: id, name, slug, description, metadata, created/updated_at, is_archived,
-    owner_group_id, _count.datasets, plus owner_group.<group fields>.
+    owner_group_id, _count.datasets, plus `owner_group.<group fields>`.
   - dataset: id, name, type, description, size, bundle_size, is_deleted, is_staged, created/
-    updated_at, owner_group_id, resource_id, plus owner_group.<group fields>. Comment explains
+    updated_at, owner_group_id, resource_id, plus `owner_group.<group fields>`. Comment explains
     what is withheld (metadata, num_directories, du_size, num_files, src_instrument_id, paths).
   - user: id, name, email, username, is_deleted, subject_id.
   - grant: '*' plus nested prefixed lists for resource.collection/dataset, subject.user/group,
@@ -809,7 +809,7 @@ Open question resolved: `container.export()` DOES expose combinator part names (
 platformAdmin test relies on it). My earlier "renaming erases them" was wrong.
 
 ## 18b. Core tests: Policy.test.js, core/authorize.test.js
-- Policy.test: full constructor validation; evaluate throws "Missing required <bucket>
+- Policy.test: full constructor validation; evaluate throws "Missing required `<bucket>`
   attributes"; or/and short-circuit + error propagation; `not` EXISTS and is tested (inverts,
   preserves resourceType) — correction: `not` is untested-in-builtin, not absent from core.
   or/and NAMES contain each child name (export exposes them). Combinator still stores NO child
@@ -1028,7 +1028,7 @@ helper. Also absent for a child of an archived group, where the view says restri
 - grants.lifecycle.test.js (521): create for a USER and for a GROUP; valid_from defaults to now,
   valid_until null means forever; GRANT_CREATED and GRANT_REVOKED audit rows carry subject,
   subject_type, resource, resource_type, resource_name and the access type name; revokeAllGrants
-  names the resource on every row AND notifies the subject ("Your access to <dataset> was
+  names the resource on every row AND notifies the subject ("Your access to `<dataset>` was
   revoked", body = the reason); userHasGrant true directly, true through a group, false for an
   outsider, false after revocation; a future valid_until is active and a past one is not;
   listGrantsForSubject paginates; listGrantsForResource active=true excludes revoked and
@@ -1915,7 +1915,7 @@ My "uploads.test.js does not exist" note was right about the path and wrong abou
   `<a href="https://evil.example">Click here</a>` and an inviter name of `<script>alert(1)</script>`
   and asserts neither survives.
 - The `href` assertion is deliberately written in ESCAPED form
-  (`token&#x3D;abc`) with the reason given: "so switching to `{{{acceptUrl}}}` fails here
+  (`token&#x3D;abc`) with the reason given: "so switching to <span v-pre>`{{{acceptUrl}}}`</span> fails here
   rather than silently". A test written to fail on a specific future edit.
 - A SECOND source-reading test: `preloadTemplates` "carries a hardcoded list. A template
   missing from it still renders, just cold, and nothing else would notice" — asserted by
