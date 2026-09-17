@@ -8,6 +8,8 @@
  * @see docs/design/groups/implementation/restrictions-plan.md — Phase 1: the state layer
  */
 
+const _ = require('lodash/fp');
+
 /** Reads a dotted field path, and says whether it was there at all. */
 function readPath(resource, path) {
   const parts = path.split('.');
@@ -38,6 +40,27 @@ function check(registry, resourceType, action, resource) {
       + 'which the caller did not fetch');
   }
   return declared.check(resource) || null;
+}
+
+/**
+ * Prisma query arguments with the type's select fragment merged in, the caller's own choices
+ * winning where the two name the same key.
+ *
+ * Under `select` the whole fragment merges. Under `include`, or neither, only the fragment's
+ * relations merge, because `include` returns every column and rejects a column named in it.
+ *
+ * @param {StateRegistry} registry
+ * @param {string} resourceType
+ * @param {Object} args - the arguments the caller passes to `findUnique`, `findMany`, and so on
+ * @returns {Object} new arguments; `args` is not changed
+ */
+function withStateFields(registry, resourceType, args) {
+  const fragment = registry.get(resourceType).getSelect();
+  if (args.select) {
+    return { ...args, select: _.merge(fragment, args.select) };
+  }
+  const relations = _.pickBy(_.isPlainObject, fragment);
+  return { ...args, include: _.merge(relations, args.include ?? {}) };
 }
 
 /**
@@ -129,5 +152,5 @@ function findStateGaps(policyRegistry, stateRegistry) {
 }
 
 module.exports = {
-  readPath, check, availableActions, forbiddenActions, requiredFields, findStateGaps,
+  readPath, check, withStateFields, availableActions, forbiddenActions, requiredFields, findStateGaps,
 };

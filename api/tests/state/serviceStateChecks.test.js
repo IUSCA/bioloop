@@ -212,8 +212,6 @@ describe('a collection owned by an archived group', () => {
     await expect(collectionsService.removeDatasets(collection.id, {
       dataset_ids: [dataset.resource_id], actor_id: actor.subject_id,
     })).rejects.toEqual(conflict);
-    await expect(collectionsService.deleteCollection(collection.id, actor.subject_id))
-      .rejects.toEqual(conflict);
   });
 });
 

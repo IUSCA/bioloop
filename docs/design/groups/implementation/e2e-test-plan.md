@@ -383,7 +383,7 @@ dataset names are unique within `[owner_group_id, name, type, is_deleted]` per
 **Through SQL, not through the API, because the API deliberately offers no way.** There is no
 `DELETE /groups/:id`, and `DELETE /v2/datasets/:id` is commented out in
 `routes/datasets_v2/index.js`. Groups expose deletes only for members, admins, and
-invitations; collections do have `DELETE /collections/:id`.
+invitations. Collections have no delete either, because a collection is archived instead.
 
 That absence is the design working, not a gap. Archiving is not deletion, and history is
 preserved rather than removed — [decision 1](../decisions.md#_1-membership-and-collection-history-are-preserved)

@@ -1056,7 +1056,8 @@ helper. Also absent for a child of an archived group, where the view says restri
 
 - collections.lifecycle.test.js (340): create (owner_group_id, is_archived false, version 1,
   slug, COLLECTION_CREATED audit); update (description, slug regenerated on rename, 409 on an
-  archived collection); archive/unarchive; delete removes the row; addDatasets rejects
+  archived collection); archive/unarchive; delete removes the row (a case since removed with
+  collection delete); addDatasets rejects
   cross-group (400) and soft-deleted (400) datasets and is idempotent; removeDatasets;
   findCollectionsByDataset and findCollectionsByOwnerGroup scope correctly;
   listDatasetsInCollection paginates with a correct total.

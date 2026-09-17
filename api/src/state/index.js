@@ -54,7 +54,24 @@ stateRegistry.register(auditState);
  * @param {Object} resource - the row the caller fetched, carrying the fields the rule reads
  * @returns {import('./core/rules').StateRefusal|null}
  */
-const check = (resourceType, action, resource) => engine.check(stateRegistry, resourceType, action, resource);
+const checkOf = (resourceType, action, resource) => engine.check(stateRegistry, resourceType, action, resource);
+
+/**
+ * The Prisma select fragment a caller merges into its own query, so the row it fetches carries
+ * what this type's rules read.
+ * @param {string} resourceType
+ * @returns {Object}
+ * @throws {Error} when the type declares no fragment
+ */
+const selectOf = (resourceType) => stateRegistry.get(resourceType).getSelect();
+
+/**
+ * Prisma query arguments with the type's select fragment merged in.
+ * @param {string} resourceType
+ * @param {Object} args - `{ where, select }` or `{ where, include }`
+ * @returns {Object}
+ */
+const withStateFieldsOf = (resourceType, args) => engine.withStateFields(stateRegistry, resourceType, args);
 
 /**
  * Refuses, with 409, an action the resource's state does not admit.
@@ -69,8 +86,8 @@ const check = (resourceType, action, resource) => engine.check(stateRegistry, re
  * @throws {HttpError} 409 when the state refuses the action
  * @throws {Error} when the row lacks a field the rule reads
  */
-function assertPossible(resourceType, action, resource) {
-  const refusal = check(resourceType, action, resource);
+function assertPossibleOf(resourceType, action, resource) {
+  const refusal = checkOf(resourceType, action, resource);
   if (refusal) throw createError.Conflict(refusal.message);
 }
 
@@ -80,7 +97,7 @@ function assertPossible(resourceType, action, resource) {
  * @param {Object} resource
  * @returns {string[]}
  */
-const availableActions = (resourceType, resource) => engine.availableActions(stateRegistry, resourceType, resource);
+const availableActionsOf = (resourceType, resource) => engine.availableActions(stateRegistry, resourceType, resource);
 
 /**
  * What a named state forbids, for the dialog that confirms entering it.
@@ -89,7 +106,7 @@ const availableActions = (resourceType, resource) => engine.availableActions(sta
  * @returns {Array<{action: string, message: string}>}
  * @throws {Error} when the container names no such state
  */
-const forbiddenActions = (resourceType, stateName) => engine
+const forbiddenActionsOf = (resourceType, stateName) => engine
   .forbiddenActions(stateRegistry, resourceType, stateName);
 
 /**
@@ -98,7 +115,34 @@ const forbiddenActions = (resourceType, stateName) => engine
  * @param {string[]} [actions]
  * @returns {string[]}
  */
-const requiredFields = (resourceType, actions = null) => engine.requiredFields(stateRegistry, resourceType, actions);
+const requiredFieldsOf = (resourceType, actions = null) => engine
+  .requiredFields(stateRegistry, resourceType, actions);
+
+/**
+ * The functions above with the resource type already supplied, for a module that works with one
+ * type. Each drops the `Of` suffix along with the type argument.
+ *
+ * @example
+ * const { assertPossible, withStateFields } = require('@/state').import('collection');
+ * assertPossible('edit_metadata', row);
+ *
+ * @param {string} resourceType
+ * @returns {{check: Function, assertPossible: Function, availableActions: Function,
+ *   forbiddenActions: Function, requiredFields: Function, select: Function, withStateFields: Function}}
+ * @throws {Error} when no state container is registered for the type, so a typo fails at require time
+ */
+function importFor(resourceType) {
+  stateRegistry.get(resourceType);
+  return Object.freeze({
+    check: (action, resource) => checkOf(resourceType, action, resource),
+    assertPossible: (action, resource) => assertPossibleOf(resourceType, action, resource),
+    availableActions: (resource) => availableActionsOf(resourceType, resource),
+    forbiddenActions: (stateName) => forbiddenActionsOf(resourceType, stateName),
+    requiredFields: (actions = null) => requiredFieldsOf(resourceType, actions),
+    select: () => selectOf(resourceType),
+    withStateFields: (args) => withStateFieldsOf(resourceType, args),
+  });
+}
 
 /**
  * Throws unless every action a policy container declares has a state rule, and every rule names
@@ -126,11 +170,14 @@ function verifyInSync() {
 module.exports = {
   // The application's layer
   stateRegistry,
-  check,
-  assertPossible,
-  availableActions,
-  forbiddenActions,
-  requiredFields,
+  import: importFor,
+  checkOf,
+  selectOf,
+  withStateFieldsOf,
+  assertPossibleOf,
+  availableActionsOf,
+  forbiddenActionsOf,
+  requiredFieldsOf,
   verifyInSync,
   ...targets,
 

@@ -435,6 +435,14 @@ The collection hydrator's `has_history` virtual attribute is now unread by any p
 in place because `readCollectionStateFields` computes the same two counts for the state layer and
 Phase 5 may want the hydrated form; if it does not, it is dead weight to remove there.
 
+Later, collection delete was removed entirely: a collection is archived, never deleted. The
+`delete` policy action and state rule, `deleteCollection`, `DELETE /collections/:id`, the
+`has_history` virtual attribute, and `readCollectionStateFields` all went.
+`tests/services/collections/archiveOnly.test.js` replaces `deleteRefusal.test.js` and asserts
+that no layer declares a delete. The collection state container declares a `select` fragment
+that callers merge into their own query, so the detail route reads the state off the row
+`getCollectionById` fetches.
+
 `_meta.available_actions` reaches the five detail routes and two list routes, not every
 `decideRows` and `projectRows` caller. `projectRows` takes an `availableActionsOf` option, so
 the remaining nine call sites are one line each — but a state rule throws rather than decide

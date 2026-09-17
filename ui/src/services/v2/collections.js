@@ -36,11 +36,6 @@ export default {
     return api.patch(`/collections/${id}`, { ...data, version });
   },
 
-  /** Permanently delete a collection. */
-  delete(id) {
-    return api.delete(`/collections/${id}`);
-  },
-
   /** Archive a collection. */
   archive(id) {
     return api.post(`/collections/${id}/archive`);

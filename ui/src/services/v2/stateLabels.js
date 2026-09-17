@@ -54,7 +54,6 @@ export const ACTION_LABELS = {
   "dataset.delete": "Delete datasets",
   "group.archive": "Archive subgroups",
   "collection.archive": "Archive collections",
-  "collection.delete": "Delete collections",
   "collection.transfer_ownership": OWNERSHIP,
   "dataset.transfer_ownership": OWNERSHIP,
 };

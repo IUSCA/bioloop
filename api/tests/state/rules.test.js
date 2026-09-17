@@ -14,7 +14,7 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const {
-  check, availableActions, requiredFields, subjectOf,
+  check, availableActions, requiredFields, subjectOf, selectFor, withStateFields,
 } = require('@/state');
 
 const admits = (resourceType, action, resource) => check(resourceType, action, resource) === null;
@@ -61,7 +61,7 @@ describe('a group', () => {
 });
 
 describe('a collection', () => {
-  const open = { is_archived: false, owner_group: { is_archived: false }, has_history: false };
+  const open = { is_archived: false, owner_group: { is_archived: false } };
   const archived = { ...open, is_archived: true };
   const ownerArchived = { ...open, owner_group: { is_archived: true } };
 
@@ -79,13 +79,10 @@ describe('a collection', () => {
     });
   });
 
-  test('a collection with history is archived rather than deleted', () => {
-    expect(admits('collection', 'delete', open)).toBe(true);
-    expect(refusalFor('collection', 'delete', { ...open, has_history: true }))
-      .toBe('This collection has history, so it can be archived but not deleted.');
-    // The archived state answers first, because it refuses every change.
-    expect(refusalFor('collection', 'delete', { ...archived, has_history: true }))
-      .toBe('This collection is archived, so it cannot be changed.');
+  test('a collection has no delete, so no state admits one', () => {
+    expect(() => check('collection', 'delete', open)).toThrow(/No state rule for collection\.delete/);
+    expect(availableActions('collection', open)).not.toContain('delete');
+    expect(availableActions('collection', open)).toContain('archive');
   });
 
   test('a create reads the owning group only', () => {
@@ -276,14 +273,39 @@ describe('an invitation', () => {
 describe('the fields a caller must fetch', () => {
   test('a row missing a field a rule reads is an error naming the field', () => {
     expect(() => check('group', 'add_member', {})).toThrow(/reads is_archived, which the caller did not fetch/);
-    expect(() => check('collection', 'delete', { is_archived: false, owner_group: { is_archived: false } }))
-      .toThrow(/reads has_history/);
+    expect(() => check('collection', 'edit_metadata', { is_archived: false }))
+      .toThrow(/reads owner_group\.is_archived/);
     expect(() => check('grant', 'revoke', { revoked_at: null })).toThrow(/target\.archived/);
+  });
+
+  test('the fragment merges into a select whole, and into an include as relations only', () => {
+    const selected = withStateFields('collection', {
+      where: { id: 'c' },
+      select: { name: true, owner_group: { select: { name: true } } },
+    });
+    expect(selected.where).toEqual({ id: 'c' });
+    expect(selected.select).toEqual({
+      name: true,
+      is_archived: true,
+      owner_group: { select: { name: true, is_archived: true } },
+    });
+
+    // An include returns every column and rejects one named in it, and the caller's wider
+    // `owner_group: true` wins over the fragment's narrower select.
+    const included = withStateFields('collection', { where: { id: 'c' }, include: { owner_group: true } });
+    expect(included.include).toEqual({ owner_group: true });
+    expect(withStateFields('collection', { where: { id: 'c' } }).include)
+      .toEqual({ owner_group: { select: { is_archived: true } } });
+  });
+
+  test('a type with no fragment refuses rather than selecting nothing', () => {
+    expect(selectFor('collection')).toHaveProperty('is_archived', true);
+    expect(() => selectFor('audit')).toThrow(/declares no select fragment/);
   });
 
   test('a caller can ask which fields to select', () => {
     expect(requiredFields('collection').sort())
-      .toEqual(['has_history', 'is_archived', 'owner_group.is_archived']);
+      .toEqual(['is_archived', 'owner_group.is_archived']);
     expect(requiredFields('dataset', ['download'])).toEqual(['is_deleted']);
   });
 

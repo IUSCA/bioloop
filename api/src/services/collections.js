@@ -11,33 +11,27 @@ const {
   AUTH_EVENT_TYPE, TARGET_TYPE, AuditBuilder,
 } = audit;
 const grantService = require('@/services/grants');
-const state = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('collection');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
 const { RESOURCE_SCOPES } = require('./resources');
 
 /**
- * Locks a collection row and returns the fields its state rules read, its owning group included.
+ * Locks a collection row, then reads it with the fields its state rules read.
  *
- * A collection is archived by its own column or by its owning group's, one step up, so both are
- * read. The lock comes first, so the state the write sees is the state the check read.
+ * The lock comes first, so the state the write sees is the state the check read. A raw lock
+ * cannot take the state layer's select fragment, so the row is read after it rather than by it.
  * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
  *
  * @param {import('@prisma/client').Prisma.TransactionClient} tx
  * @param {string} collection_id
- * @returns {Promise<{id: string, is_archived: boolean, owner_group: {is_archived: boolean}}>}
+ * @returns {Promise<Object>} every column of the collection, and the state fields
  * @throws {HttpError} 404 when no collection has that id
  */
-async function lockCollectionForState(tx, collection_id) {
-  const rows = await tx.$queryRaw`
-    SELECT id, is_archived, owner_group_id FROM collection WHERE id = ${collection_id} FOR UPDATE
-  `;
+async function lockCollection(tx, collection_id) {
+  const rows = await tx.$queryRaw`SELECT id FROM collection WHERE id = ${collection_id} FOR UPDATE`;
   if (rows.length === 0) throw createError.NotFound('Collection not found');
-  const owner_group = await tx.group.findUniqueOrThrow({
-    where: { id: rows[0].owner_group_id },
-    select: { is_archived: true },
-  });
-  return { ...rows[0], owner_group };
+  return tx.collection.findUniqueOrThrow(withStateFields({ where: { id: collection_id } }));
 }
 
 const PRISMA_COLLECTION_INCLUDES = {
@@ -82,7 +76,7 @@ async function createCollection(data, { actor_id }) {
       where: { id: data.owner_group_id },
       select: { is_archived: true },
     });
-    state.assertPossible('collection', 'create', { owner_group });
+    assertPossible('create', { owner_group });
 
     const id = randomUUID();
 
@@ -147,11 +141,8 @@ async function createCollection(data, { actor_id }) {
 async function updateCollectionMetadata(collection_id, { data, expected_version }) {
   return prisma.$transaction(async (tx) => {
     let slug;
-    state.assertPossible('collection', 'edit_metadata', await lockCollectionForState(tx, collection_id));
-
-    const currentCollection = await tx.collection.findUniqueOrThrow({
-      where: { id: collection_id },
-    });
+    const currentCollection = await lockCollection(tx, collection_id);
+    assertPossible('edit_metadata', currentCollection);
 
     // if name is being updated, generate a new slug, otherwise keep existing slug
     if (data.name && data.name !== currentCollection.name) {
@@ -195,7 +186,7 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
 }
 
 /**
- * Archive a collection (soft delete)
+ * Archive a collection
  *
  * @param {string} collection_id - UUID of the collection to archive
  * @param {string} actor_id - UUID of the user performing the archival action (must have appropriate permissions)
@@ -203,7 +194,7 @@ async function updateCollectionMetadata(collection_id, { data, expected_version 
  */
 async function archiveCollection(collection_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('collection', 'archive', await lockCollectionForState(tx, collection_id));
+    assertPossible('archive', await lockCollection(tx, collection_id));
 
     const archivedCollection = await tx.collection.update({
       where: { id: collection_id },
@@ -232,7 +223,7 @@ async function archiveCollection(collection_id, actor_id) {
  */
 async function unarchiveCollection(collection_id, actor_id) {
   return prisma.$transaction(async (tx) => {
-    state.assertPossible('collection', 'unarchive', await lockCollectionForState(tx, collection_id));
+    assertPossible('unarchive', await lockCollection(tx, collection_id));
 
     const unarchivedCollection = await tx.collection.update({
       where: { id: collection_id },
@@ -249,55 +240,6 @@ async function unarchiveCollection(collection_id, actor_id) {
       .create(tx, AUTH_EVENT_TYPE.COLLECTION_UNARCHIVED);
 
     return unarchivedCollection;
-  });
-}
-
-/**
- * Permanently delete a collection
- *
- * @param {string} collection_id - UUID of the collection to delete
- * @param {string} actor_id - UUID of the user performing the deletion action (must have appropriate permissions)
- * @returns {Promise<Object>} The deleted collection object
- */
-async function deleteCollection(collection_id, actor_id) {
-  return prisma.$transaction(async (tx) => {
-    // Locked first, so a dataset added concurrently either lands before the history check or
-    // waits for the delete. `addDatasets` takes the same lock.
-    const locked = await lockCollectionForState(tx, collection_id);
-
-    // A collection that has ever held a dataset, or that anybody has asked access to, carries
-    // history that decision 1 preserves. It is archived instead.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
-    const [datasetRows, requestRows] = await Promise.all([
-      tx.collection_dataset.count({ where: { collection_id } }),
-      tx.access_request.count({ where: { resource_id: collection_id } }),
-    ]);
-    state.assertPossible('collection', 'delete', {
-      ...locked,
-      has_history: datasetRows > 0 || requestRows > 0,
-    });
-
-    // grant.resource is onDelete: Restrict, so a collection carrying any grant cannot be
-    // deleted while those rows stand. Every collection now carries at least the owning
-    // group's seeded grant, so this is not an edge case.
-    //
-    // The rows go rather than being revoked. A revoked grant on a collection that no longer
-    // exists is not a fact anybody can use, and who held access survives in
-    // authorization_audit, which records ids rather than holding foreign keys.
-    // @see docs/design/groups/decisions.md — 12. Owning-group members get a seeded grant, not structural read
-    await tx.grant.deleteMany({ where: { resource_id: collection_id } });
-
-    const deletedCollection = await tx.collection.delete({
-      where: { id: collection_id },
-    });
-
-    // Create audit record for collection deletion
-    const builder = new AuditBuilder(tx, { actor_id });
-    await builder
-      .setTarget(TARGET_TYPE.COLLECTION, collection_id, deletedCollection.name)
-      .create(tx, AUTH_EVENT_TYPE.COLLECTION_DELETED);
-
-    return deletedCollection;
   });
 }
 
@@ -321,7 +263,7 @@ async function addDatasets(collection_id, { dataset_ids, actor_id }) {
     // that admits no change and answers 409. An unknown, deleted, or foreign dataset is a bad
     // request from the caller and answers 400.
     // @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
-    state.assertPossible('collection', 'add_dataset', await lockCollectionForState(tx, collection_id));
+    assertPossible('add_dataset', await lockCollection(tx, collection_id));
 
     // Every dataset must exist, not be deleted, and be owned by the collection's owning group.
     // The join ties the dataset's owning group to the collection's, so that group's archived
@@ -384,7 +326,7 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
     // Acquire a row-level lock on the collection row.
     // Any concurrent transaction trying to FOR UPDATE the same row will block.
     // So all addDatasets and removeDatasets calls for the same collection_id are serialized.
-    state.assertPossible('collection', 'remove_dataset', await lockCollectionForState(tx, collection_id));
+    assertPossible('remove_dataset', await lockCollection(tx, collection_id));
 
     // Close the row rather than deleting it. A collection grant conferred access to whatever
     // the collection held at the time, so deleting the row would destroy one of the three
@@ -420,13 +362,13 @@ async function removeDatasets(collection_id, { dataset_ids, actor_id }) {
 
 /** * Get collection by ID
  * @param {string} collection_id - UUID of the collection
- * @returns {Promise<Object>}
+ * @returns {Promise<Object>} the collection, with the fields its state rules read
  */
 async function getCollectionById(collection_id) {
-  return prisma.collection.findUniqueOrThrow({
+  return prisma.collection.findUniqueOrThrow(withStateFields({
     where: { id: collection_id },
     include: PRISMA_COLLECTION_INCLUDES,
-  });
+  }));
 }
 
 /** The path kinds each list scope reads. @see docs/design/groups/access-model.md — Paths and standing */
@@ -719,7 +661,6 @@ module.exports = {
   updateCollectionMetadata,
   archiveCollection,
   unarchiveCollection,
-  deleteCollection,
   addDatasets,
   removeDatasets,
   findCollectionsByDataset,

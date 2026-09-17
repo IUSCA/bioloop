@@ -14,15 +14,15 @@ const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
-const state = require('@/state');
 const {
-  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+  createAuthorizationMiddleware: authorize, authorizeAction,
   callerIsPlatformAdmin, decideRows, projectRows,
 } = require('@/authorization');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 const { PUBLIC_ATTRIBUTES: COLLECTION_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/collection');
+const { buildMeta } = require('@/services/meta');
 
 const router = express.Router();
 
@@ -93,18 +93,10 @@ router.get(
       // nothing the caller could not already see.
       // @see docs/design/groups/implementation/profiles.md — Schema
       citation: profileService.resolveCitation(collection, 'collections'),
-      _meta: {
-        standing: req.permission.standing,
-        capabilities: toCapabilitiesArray(req.permission.capabilities)
-          .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
-            ? ['request_access'] : []),
-        // `delete` reads whether the collection ever held a dataset, which is a count rather
-        // than a column, so the state fields are read rather than taken off the row above.
-        available_actions: state.availableActions(
-          'collection',
-          await state.readCollectionStateFields(prisma, req.params.id),
-        ),
-      },
+      _meta: buildMeta('collection', collection, req.permission, {
+        extraCapabilities: await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+          ? ['request_access'] : [],
+      }),
     });
   }),
 );
@@ -212,22 +204,6 @@ router.patch(
       expected_version: req.body.version,
     });
     res.json(req.permission.filter(updated));
-  }),
-);
-
-// delete collection
-router.delete(
-  '/:id',
-  validate([
-    param('id').isUUID(),
-  ]),
-  authorize('collection', 'delete'),
-  asyncHandler(async (req, res) => {
-    // #swagger.tags = ['Collections']
-    // #swagger.summary = 'Delete a collection'
-
-    await collectionService.deleteCollection(req.params.id, req.user.subject_id);
-    res.status(204).send();
   }),
 );
 

@@ -40,9 +40,6 @@ const rowFor = (resourceType, f) => ({
   collection: () => ({
     is_archived: f.collection.archived === true,
     owner_group: { is_archived: groupOf(f.collection.owner).archived === true },
-    // No world tracks a collection's history, so `delete` is decided on the archived state
-    // alone here. `tests/state/serviceStateChecks.test.js` covers the history refusal.
-    has_history: false,
   }),
   dataset: () => ({
     is_deleted: f.dataset.deleted === true,

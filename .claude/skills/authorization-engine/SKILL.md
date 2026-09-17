@@ -100,10 +100,9 @@ Registering a container takes two lines in `authorization/index.js`: the `requir
 `grant.resource` is `onDelete: Restrict`. Every dataset and every collection now carries at
 least the owning group's seeded grant, so this is the normal case rather than an edge one.
 
-`deleteCollection` removes the collection's grants in the same transaction before deleting it.
-A revoked grant on a collection that no longer exists is not a fact anybody can use, and who
-held access survives in `authorization_audit`, which stores ids rather than holding foreign
-keys. A test that deletes a collection through Prisma directly has to do the same.
+A collection has no delete: it is archived instead, so no service removes one. A test that
+deletes a collection through Prisma directly for teardown has to remove its grants first, as
+`deleteCollection` in `tests/services/helpers.js` does.
 
 Datasets are soft-deleted, so their grants stay and this does not arise.
 
@@ -507,6 +506,26 @@ Three things follow for a caller.
   as `owner_group.is_archived`. A service reads the row inside its transaction after its row lock
   and calls `assertPossible`, which throws 409. A list fetches the fields once for the page and
   calls `availableActions` per row. `requiredFields(type)` gives the union to select.
+- **A container declares a `select` fragment, and the caller merges it into its own query.**
+  `withStateFieldsOf(type, { where, include })` returns the arguments with the fragment
+  merged, so the row the caller already fetches carries the state fields and no second read is
+  needed. Under `select` the whole fragment merges; under `include` only its relations do,
+  because Prisma rejects a column named in `include` and returns every column anyway. The
+  caller's key wins a clash, so `owner_group: true` is not narrowed. A raw `FOR UPDATE` cannot
+  take a fragment: lock with `SELECT id ... FOR UPDATE`, then read with the fragment, as
+  `lockCollection` in `services/collections.js` does.
+- **A module that works with one type imports the layer bound to it.**
+  `const { assertPossible, withStateFields } = require('@/state').import('collection')` gives
+  the same functions with the type supplied. The unbound exports carry an `Of` suffix and take the
+  type first, such as `assertPossibleOf(type, action, row)`; the bound ones drop both. `import`
+  throws at require time for a type with no state container. Only collections use it so far, and
+  the other consumers still call the old unsuffixed names, which no longer exist.
+- **Only `collection` declares a fragment so far.** `selectOf` on any other type throws.
+  Grants, access requests, and datasets still use the readers in `state/builtin/targets.js` and
+  `datasets_v2/stateFields.js`.
+- **A detail route builds `_meta` with `buildMeta(type, row, permission)`** from `src/services/meta.js`.
+  It sits outside `src/authorization`, because authorization does not import
+  the state layer; `projectRows` takes an `availableActionsOf` callback for the same reason.
 - **A missing field is an error, not a false.** `check` throws naming the path, so a caller that
   selected too little fails loudly instead of deciding from `undefined`.
 - **The two layers are kept in step at startup.** `findStateGaps` reports a policy container with

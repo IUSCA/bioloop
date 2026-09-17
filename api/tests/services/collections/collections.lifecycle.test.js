@@ -191,21 +191,6 @@ describe('collections - lifecycle', () => {
     });
   });
 
-  describe('deleteCollection', () => {
-    it('deletes the collection row from the database', async () => {
-      const c = await collectionsService.createCollection(
-        {
-          name: `Delete Me ${Date.now()}`,
-          owner_group_id: ownerGroup.id,
-        },
-        { actor_id: actor.subject_id },
-      );
-      await collectionsService.deleteCollection(c.id, actor.subject_id);
-      const row = await prisma.collection.findUnique({ where: { id: c.id } });
-      expect(row).toBeNull();
-    });
-  });
-
   describe('addDatasets', () => {
     it('adds datasets and they appear in listDatasetsInCollection', async () => {
       const c = await newCollection('_add_ds');

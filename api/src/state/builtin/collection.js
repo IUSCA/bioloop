@@ -33,12 +33,16 @@ const notWhileArchived = rule({
 
 const collectionState = new StateContainer({
   resourceType: 'collection',
-  description: "What a collection's archived state and its history admit",
+  description: "What a collection's archived state admits",
+  select: {
+    is_archived: true,
+    owner_group: { select: { is_archived: true } },
+  },
   examples: {
     // The archived state in force, however it arrived: the collection's own column and its
     // owning group's. A dialog asking what archiving forbids wants the whole answer, and the
     // two sources refuse the same actions, so naming both states it once.
-    archived: { is_archived: true, owner_group: { is_archived: true }, has_history: false },
+    archived: { is_archived: true, owner_group: { is_archived: true } },
   },
 }).rules({
   // A create has no row yet. The state it is placed into is the owning group's.
@@ -55,16 +59,6 @@ const collectionState = new StateContainer({
   transfer_ownership: notWhileArchived,
   manage_grants: notWhileArchived,
   review_access_requests: notWhileArchived,
-
-  // A collection that ever held a dataset, or that an access request names, is archived rather
-  // than deleted, so the history stays answerable.
-  delete: rule({
-    requires: ['is_archived', 'owner_group.is_archived', 'has_history'],
-    check: (collection) => archivedRefusal(collection)
-      || (collection.has_history
-        ? refuse('This collection has history, so it can be archived but not deleted.', { state: 'has_history' })
-        : null),
-  }),
 
   archive: rule({
     requires: ['is_archived', 'owner_group.is_archived'],

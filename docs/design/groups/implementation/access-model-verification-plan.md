@@ -627,6 +627,7 @@ API suite passes, 102 suites, and `public.cache.test.js` passes on its own.
   The check itself is unchanged.)
 - A collection that has held a dataset, or has any access request, refuses deletion. The
   capability map leaves `delete` out, and `deleteCollection` answers 409 under a row lock.
+  (Later removed: a collection has no delete at all.)
 - A search of `GET /v2/users` by a caller who is not a platform admin needs three characters.
   It returns at most ten people and four fields.
 - `/my-pending-reviews` reads the admin rows of `accessPathsQuery`. `/eligible-owner-groups`
@@ -668,7 +669,8 @@ Nine departures from the plan as written:
   rows, and the route asks the engine. The service no longer restates the contribute rule.
 - **Collection deletion is a transition on a hydrator virtual attribute, `has_history`.** The
   service guard repeats the count under a row lock, because the capability map is read before
-  the transaction.
+  the transaction. (Collection delete was later removed. A collection is archived instead, and
+  the `has_history` attribute went with it. See decision 16, row 6.)
 - **Two commands and two cells are checked narrower than the table.** Soft-deleting a user
   writes the flag with Prisma, because no v2 service deletes an account. Invitations and
   requests are checked as the invitation token's status and the `review` restriction, not as

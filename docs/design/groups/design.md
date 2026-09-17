@@ -342,7 +342,7 @@ When `group.is_archived = true`, the following actions are disallowed:
 * Reparent the group
 * Modify parent-child relationships
 * Dataset creation with an archived group as owner must be rejected. Reason: Archive signals governance boundary closure. Allowing new assets under it defeats the lifecycle signal.
-* Create new collections owned by the group / delete existing collections owned by the group
+* Create new collections owned by the group / archive existing collections owned by the group
 * Modify collection membership (add/remove datasets from collections owned by the group)
 
 
@@ -1302,7 +1302,6 @@ whether the effect cascades, refuses the operation, or leaves the record with a 
 | Demote an admin | leave | leave | leave | refuse when it would leave a group with an admin without one |
 | Delete a dataset | leave; mutating and data-plane actions are refused | none | leave; mutating actions on them are refused | `collection_dataset` rows stay as history; the archived files are removed, and deletion cannot be undone |
 | Soft-delete a user | leave | leave | leave | memberships stay; the account no longer counts as an admin |
-| Delete a collection | deleted with it, when deletion is allowed | none | refuse deletion when any exists | refuse deletion when it has ever contained a dataset |
 | Change a dataset's owner | refused: no route changes it | none | none | ownership transfer is deferred by decision 15 |
 | Toggle `allow_user_contributions` | leave | none | none | every effective member's `contribute` follows the new value at once |
 | Change `profile_visibility` | leave | none | none | the public profile cache may serve the old page for up to 300 seconds |

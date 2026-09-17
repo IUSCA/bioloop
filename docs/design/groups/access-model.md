@@ -93,7 +93,7 @@ Each derived relation has one definition, and every consumer reads that definiti
 - **`precondition(a, x)`** holds when the status of an access request, an invitation, or a grant admits `a`, according to the transition table below.
 - **`state_admits(a, r)`** holds when the state of `r` admits `a`.
   - For a group, a collection, or a dataset, it follows the action's restriction class. A `mutating` action needs neither `r` nor its owning group archived. A deleted dataset also refuses every `data` action. A `reading` action is always admitted.
-  - Four actions have their own rule. `archive` needs `r` not archived, and a collection's owning group not archived. `unarchive` needs `r` archived. A create reads only the owning group it names. A collection that has held a dataset or has any access request refuses `delete`.
+  - Four actions have their own rule. `archive` needs `r` not archived, and a collection's owning group not archived. `unarchive` needs `r` archived. A create reads only the owning group it names.
   - For an access request, an invitation, or a grant, it is `precondition(a, r)`, together with `open` on the resource or group the row names, and for a request or an issue `not for_archived_group(r)`, as the transition table lists.
 - **`resource_rule(a, r)`** holds when a term that reads only columns of `r` admits `a`. Today that is `view_profile` when the profile is `PUBLIC`, or `AUTHENTICATED` for a signed-in caller.
 
@@ -276,7 +276,7 @@ renders no user-chosen field through `v-html` except the sanitised about text.
 | A grant blocks a hard delete | `ON DELETE RESTRICT` |
 | One update per version | optimistic `expected_version`, 409 on a stale write |
 | An action the resource's state does not admit is refused | the state check, inside the transaction that holds the row lock |
-| A collection with history is never deleted | the collection `delete` state rule, asserted by `deleteCollection` under the collection row lock |
+| A collection is never deleted | no route, service, policy action, or state rule deletes one; `tests/services/collections/archiveOnly.test.js` asserts the absence |
 | A group that has an admin keeps one | `assertAdminsRemain`, inside the removal or demotion transaction, under the group row lock |
 | A collection's datasets share its owning group | `addDatasets`, and the absence of any route that changes a dataset's owner |
 | Access-request status moves only along the transition table | the access-request state rules, and a `WHERE status = ...` guard on each write for the request that loses a race |

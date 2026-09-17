@@ -14,8 +14,8 @@
  * 2. **Agreement.** The engine and the reference model, run on the model's world, decide the same
  *    for every user and resource on reading, editing, contributing, and downloading.
  *
- * A command the table refuses — removing a last admin, deleting a collection with history,
- * changing a restricted group or collection — is run too, and must be refused with nothing
+ * A command the table refuses — removing a last admin, changing a restricted group or
+ * collection — is run too, and must be refused with nothing
  * changed.
  *
  * The budget is `MODEL_SEQUENCE_RUNS` sequences of up to `MODEL_SEQUENCE_COMMANDS` commands, and
@@ -232,8 +232,6 @@ const wouldLoseLastAdmin = (world, user, group) => {
     && !isDeletedUser(world, m.user));
   return admins.some((m) => m.user === user) && admins.length === 1;
 };
-/** Decision 6: a collection that ever held a dataset has history. Tracked, since removal keeps it. */
-const hasHistory = (model, id) => model.history.has(id);
 
 // ---- commands -------------------------------------------------------------------------------
 
@@ -413,7 +411,6 @@ class AddToCollection extends Command {
     } else {
       expect([this.toString(), status]).toEqual([this.toString(), 200]);
       model.world.contains.push({ collection: this.collection, dataset: this.dataset });
-      model.history.add(this.collection);
     }
   }
 
@@ -443,29 +440,6 @@ class RemoveFromCollection extends Command {
   }
 
   toString() { return `remove ${this.dataset} from ${this.collection}`; }
-}
-
-class DeleteCollection extends Command {
-  constructor(collection) { super(); this.collection = collection; }
-
-  check(model) {
-    return Boolean(collectionRow(model.world, this.collection)) && !resourceStateRefuses(model.world, this.collection);
-  }
-
-  async apply(model, real) {
-    const status = await statusOf(collectionsService.deleteCollection(real.ids.get(this.collection), real.users.alice.subject_id));
-    if (hasHistory(model, this.collection)) {
-      expect([this.toString(), status]).toEqual([this.toString(), 409]);
-      model.refused += 1;
-    } else {
-      expect([this.toString(), status]).toEqual([this.toString(), 200]);
-      // Its grants go with it. @see decision 16, row 6
-      model.world.collections = model.world.collections.filter((c) => c.id !== this.collection);
-      model.world.grants = model.world.grants.filter((g) => g.resource !== this.collection);
-    }
-  }
-
-  toString() { return `delete ${this.collection}`; }
 }
 
 class IssueGrant extends Command {
@@ -670,7 +644,6 @@ const COMMANDS = [
   collection.map((c) => new UnarchiveCollection(c)),
   fc.tuple(collection, dataset).map(([c, d]) => new AddToCollection(c, d)),
   fc.tuple(collection, dataset).map(([c, d]) => new RemoveFromCollection(c, d)),
-  collection.map((c) => new DeleteCollection(c)),
   fc.tuple(fc.constantFrom(...USERS, 'lab'), fc.constantFrom(...DATASETS, ...COLLECTIONS), fc.nat(5))
     .map(([s, r, pick]) => new IssueGrant(s, r, pick)),
   fc.nat(20).map((pick) => new RevokeGrant(pick)),
@@ -700,7 +673,7 @@ test('every operation sequence keeps the decided effects, the invariants, and ag
       try {
         const { world } = await snapshot(real);
         const model = {
-          world, history: new Set(), checked: 0, kinds: new Set(), refused: 0,
+          world, checked: 0, kinds: new Set(), refused: 0,
         };
         await verify(model, real, INITIAL_WORLD);
         await fc.asyncModelRun(_.constant({ model, real }), commands);

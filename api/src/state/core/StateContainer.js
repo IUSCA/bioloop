@@ -18,17 +18,34 @@ class StateContainer {
    *   as `archived`. A dialog asks what a state forbids before entering it, and only the resource
    *   knows what being in that state looks like: an archived collection reads its own column, an
    *   archived dataset reads its owning group's.
+   * @param {Object} [params.select] - the Prisma select fragment a caller merges into its own
+   *   query, so the row it already fetches carries what the rules read. Columns are `true` and
+   *   relations are objects.
    */
   constructor({
-    resourceType, standalone = false, description = '', examples = {},
+    resourceType, standalone = false, description = '', examples = {}, select = null,
   }) {
     if (!resourceType || typeof resourceType !== 'string') {
       throw new Error('A state container needs a resourceType');
     }
     this.meta = Object.freeze({ resourceType, standalone, description });
     this._examples = Object.freeze({ ...examples });
+    this._select = select;
     this._rules = {};
     this._frozen = false;
+  }
+
+  /**
+   * The Prisma select fragment for this type's rules.
+   * @returns {Object}
+   * @throws {Error} when the container declares none
+   */
+  getSelect() {
+    if (!this._select) {
+      throw new Error(`The state container for ${this.meta.resourceType} declares no select fragment. `
+        + `Declare one in src/state/builtin/${this.meta.resourceType}.js`);
+    }
+    return this._select;
   }
 
   /** @returns {string[]} the states this container names a row for */

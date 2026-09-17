@@ -140,10 +140,6 @@ collectionPolicies
     add_dataset: mutating(isCollectionAdmin),
     remove_dataset: mutating(isCollectionAdmin),
     transfer_ownership: mutating(isCollectionAdmin),
-    // A collection with history is archived, not deleted. The rule that says so lives in
-    // `src/state/builtin/collection.js`.
-    // @see docs/design/groups/decisions.md — 16. The access model's open questions have answers, row 6
-    delete: mutating(isCollectionAdmin),
     archive: mutating(isCollectionAdmin),
     unarchive: mutating(platformAdminOnly),
 

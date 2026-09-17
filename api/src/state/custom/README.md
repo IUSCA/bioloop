@@ -38,6 +38,10 @@ than an answer computed from `undefined`.
 
 **The caller fetches inside its own transaction.** A service reads the row after taking its row
 lock and calls `assertPossible`, which throws a 409. A list fetches the fields once for its page and
-calls `availableActions` per row. `requiredFields(resourceType)` gives a caller the union to select.
+calls `availableActions` per row.
+
+**Declare a `select` fragment so callers fetch in one query.** A container passes `select`, a Prisma
+select with columns as `true` and relations as objects. A caller merges it into the query it already
+runs with `withStateFields`, from `require('@/state').import(resourceType)`.
 
 @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
