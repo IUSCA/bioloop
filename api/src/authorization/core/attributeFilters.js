@@ -18,25 +18,10 @@ const { hydrateEntities } = require('./hydrationUtils');
  * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
  */
 async function evaluateAttributeFilters(rules, identifiers, hydrators, caches, contextId = null) {
-  if (!rules || !Array.isArray(rules)) {
-    throw new Error('Rules must be an array');
-  }
-
+  // `PolicyContainer.attributes()` checked every rule's shape when it was registered.
   const matched = [];
   // eslint-disable-next-line no-restricted-syntax
   for (const rule of rules) {
-    if (!rule || typeof rule !== 'object') {
-      throw new Error('Each rule must be an object');
-    }
-
-    if (!rule.policy) {
-      throw new Error('Each rule must have a policy');
-    }
-
-    if (!Array.isArray(rule.attribute_filters)) {
-      throw new Error('Each rule must have attribute_filters as an array');
-    }
-
     // eslint-disable-next-line no-await-in-loop
     const [user, resource, context] = await hydrateEntities({
       policy: rule.policy,
@@ -89,10 +74,6 @@ function mergeProjections(a, b) {
  * @see docs/design/groups/implementation/access-model-verification-plan.md — Projection: a path list, not a field set
  */
 function createFilterFunction(filterLists) {
-  if (!Array.isArray(filterLists) || !filterLists.every(Array.isArray)) {
-    throw new Error('Attribute filters must be an array of filter lists');
-  }
-
   if (filterLists.length === 0) {
     return () => ({});
   }

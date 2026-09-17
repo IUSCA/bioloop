@@ -4,12 +4,13 @@
 const express = require('express');
 const { param, query } = require('express-validator');
 const createError = require('http-errors');
+const config = require('config');
 
 const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const { createAuthorizationMiddleware: authorize, authorizeAction } = require('@/authorization');
+const authorization = require('@/authorization');
 const prisma = require('@/db');
 const logger = require('@/services/logger');
 const CONSTANTS = require('@/constants');
@@ -21,17 +22,23 @@ const datasetService = require('@/services/datasets_v2');
 // every route here authorizes and queries against undefined.
 const router = express.Router({ mergeParams: true });
 
+const { createAuthorizationMiddleware: authorize } = authorization;
+
 // All routes authorize against the parent dataset identified by dataset_id.
 const byDatasetId = { resourceIdFn: (req) => req.params.dataset_id };
 
-// Which policy action gates a run is config, not a branch here. A workflow that names no
-// action is refused rather than defaulted to something permissive.
+// Which policy action gates a run is config, not a branch here. Every configured action is bound
+// at load, so an action the dataset container does not declare fails at startup. A workflow
+// that names no action is refused rather than defaulted to something permissive.
+const WORKFLOW_ACTIONS = config.get('workflow_policy_actions');
+const authorizeRunByWorkflow = _.mapValues((action) => authorize('dataset', action, byDatasetId))(WORKFLOW_ACTIONS);
+const decideRunByWorkflow = _.mapValues((action) => authorization.import('dataset').action(action))(WORKFLOW_ACTIONS);
+
 const authorizeWorkflowRun = (req, res, next) => {
-  const action = workflowService.policyActionFor(req.params.workflow_type);
-  if (!action) {
+  if (!workflowService.policyActionFor(req.params.workflow_type)) {
     return next(createError(400, `No policy action is defined for workflow ${req.params.workflow_type}`));
   }
-  return authorize('dataset', action, byDatasetId)(req, res, next);
+  return authorizeRunByWorkflow[req.params.workflow_type](req, res, next);
 };
 
 // Every run associated with this dataset.
@@ -119,12 +126,11 @@ const runControl = (verb) => asyncHandler(async (req, res, next) => {
   const run = await workflowService.findDatasetRun(dataset_id, workflow_id);
   if (!run) return next(createError(404, 'Workflow not found for this dataset'));
 
-  const action = workflowService.policyActionFor(run.name);
-  if (!action) {
+  if (!workflowService.policyActionFor(run.name)) {
     return next(createError(400, `No policy action is defined for workflow ${run.name}`));
   }
 
-  const decision = await authorizeAction('dataset', action, {
+  const decision = await decideRunByWorkflow[run.name]({
     identifiers: { user: req.user?.subject_id, resource: dataset_id },
     policyExecutionContext: req.policyContext,
     preFetched: { user: req.user, context: { req } },

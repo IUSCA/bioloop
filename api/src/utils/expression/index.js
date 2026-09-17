@@ -15,27 +15,66 @@
  */
 
 /**
- * Parses a path string into typed segments.
+ * One segment of a path: a key, optionally followed by `[*]`.
+ */
+const SEGMENT = /^([A-Za-z_][A-Za-z0-9_]*)(\[\*\])?$/;
+
+/**
+ * Parses a path string into typed segments, and throws on a path the projector cannot apply.
  * e.g. 'ancestors[*].id' → [{ key:'ancestors', array:true }, { key:'id', array:false }]
+ *
+ * A malformed path such as `owner..name` or `items[0].id` would otherwise copy nothing and
+ * report nothing.
  *
  * @param {string} path
  * @returns {{ key: string, array: boolean }[]}
  */
 function parsePath(path) {
-  const segments = [];
-  // Split on '.' but keep '[*]' attached to the preceding key
-  const parts = path.split('.');
-
-  for (const part of parts) {
-    const arrayMatch = part.match(/^([^[]+)\[\*\]$/);
-    if (arrayMatch) {
-      segments.push({ key: arrayMatch[1], array: true });
-    } else {
-      segments.push({ key: part, array: false });
-    }
+  if (typeof path !== 'string' || path.length === 0) {
+    throw new Error(`Invalid attribute path ${JSON.stringify(path)}: must be a non-empty string`);
   }
+  return path.split('.').map((part) => {
+    const match = part.match(SEGMENT);
+    if (!match) {
+      throw new Error(`Invalid attribute path "${path}": segment "${part}" is not a key or key[*]`);
+    }
+    return { key: match[1], array: Boolean(match[2]) };
+  });
+}
 
-  return segments;
+/** Compiled projections, by the identity of the path list they were compiled from. */
+const compiled = new WeakMap();
+
+/**
+ * Parses a list of attribute paths once, and throws on any malformed path.
+ *
+ * A list is compiled the first time it is seen and reused after, so a list declared once, such
+ * as an attribute rule's filters, is parsed once. `PolicyContainer.attributes()` compiles every
+ * rule's list when it is registered, so a malformed path fails at startup.
+ *
+ * @param {string[]} paths - dot/bracket paths, `*`, and `!`-prefixed negations
+ * @returns {{ wildcard: boolean, positives: Object[][], negations: Object[][] }}
+ */
+function compileProjection(paths) {
+  if (!Array.isArray(paths)) throw new Error('Attribute paths must be an array of strings');
+  const cached = compiled.get(paths);
+  if (cached) return cached;
+
+  const positives = [];
+  const negations = [];
+  let wildcard = false;
+  paths.forEach((path) => {
+    if (path === '*') {
+      wildcard = true;
+    } else if (typeof path === 'string' && path.startsWith('!')) {
+      negations.push(parsePath(path.slice(1)));
+    } else {
+      positives.push(parsePath(path));
+    }
+  });
+  const projection = Object.freeze({ wildcard, positives, negations });
+  compiled.set(paths, projection);
+  return projection;
 }
 
 /**
@@ -171,34 +210,31 @@ function copyTree(value) {
  * @returns {object}              - New object containing only allowed attributes.
  */
 function projectObject(source, allowedPaths) {
+  const { wildcard, positives, negations } = compileProjection(allowedPaths);
   if (!source || typeof source !== 'object') return source;
 
-  const positivePaths = allowedPaths.filter((p) => !p.startsWith('!'));
-  const negationPaths = allowedPaths
-    .filter((p) => p.startsWith('!'))
-    .map((p) => p.slice(1));
-
   let result;
-  if (positivePaths.includes('*')) {
+  if (wildcard) {
     result = { ...source };
   } else {
     result = {};
-    for (const path of positivePaths) {
-      applyPath(source, result, parsePath(path));
+    for (const segments of positives) {
+      applyPath(source, result, segments);
     }
   }
 
   // Leaf values and whole-subtree inclusions still point into the source here. Copying the
   // containers keeps negation removals, and any later change to the response, off the source.
   result = copyTree(result);
-  for (const path of negationPaths) {
-    removePath(result, parsePath(path));
+  for (const segments of negations) {
+    removePath(result, segments);
   }
 
   return result;
 }
 
 module.exports = {
+  compileProjection,
   copyTree,
   projectObject,
 };

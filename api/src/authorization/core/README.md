@@ -43,8 +43,8 @@ Container for organizing resource-level policies.
 **Key Features:**
 - Fluent API for policy registration
 - Action-to-policy mapping, with a restriction class per action: `mutating`, `reading`, or `readingData`
-- Attribute filtering rules
-- Immutability via `freeze()`
+- Attribute filtering rules, whose paths are parsed and checked when registered
+- Immutability via `freeze()`, which refuses rules for undeclared actions and an action with no rule and no `'*'` rule
 - Automatic policy naming
 
 **Example:**
@@ -135,6 +135,8 @@ Core authorization functions.
 
 ##### `authorizeWithFilters({ policy, attributeRules, identifiers, registry, policyExecutionContext, preFetched })`
 Two-phase authorization: action check + attribute filtering. Returns `{ granted, filter }`.
+It checks only `identifiers.user` per call. The policy, rules, and registry are checked when they
+are registered and when the pipeline is built.
 
 **Example:**
 ```javascript
@@ -158,7 +160,9 @@ two cannot answer the same question differently.
 **Key Functions:**
 
 ##### `createDecisionPipeline({ policyRegistry, hydratorRegistry, restrictionChecker, platformAdmin, expandPath, concealRefusalsWithoutStanding })`
-Returns `decide(resourceType, action, options)`. It runs, in order, the injected restriction
+Returns `decide(resourceType, action, options)`. When built, it checks both registries, the injected
+functions, and the concealed types, and resolves every hydrator a decision can ask for, so a
+missing one fails at startup. A decision runs, in order, the injected restriction
 checker, the injected platform-admin policy, and the action's policy and attribute rules. A refusal
 carries `status`: 404 for a caller with no standing on a type in `concealRefusalsWithoutStanding`,
 and 403 otherwise.
@@ -194,6 +198,7 @@ Evaluates every attribute rule and collects the filter lists of those that match
 
 ##### `createFilterFunction(filterLists)`
 Creates a filter function that projects an object through each filter list and returns the union.
+Each list is parsed once by `compileProjection` in `src/utils/expression`, when its rule registers.
 An empty list of filter lists denies every field.
 
 Supports:
@@ -353,6 +358,13 @@ Policy.xor = xor;
 ```
 
 ## Troubleshooting
+
+### "attribute rules name undeclared actions" or "actions with no attribute rules" at startup
+- `freeze()` found a rule key that is not an action, or an action nothing projects
+- Fix the key, or add a rule for the action or a `'*'` rule
+
+### "Invalid attribute path" at startup
+- An attribute filter is not `key`, `key[*]`, dotted combinations of those, `*`, or a `!` negation
 
 ### "No policies registered for resource type: X"
 - Register the policy container in `src/authorization/index.js`

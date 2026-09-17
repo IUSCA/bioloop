@@ -16,10 +16,13 @@ const avatarService = require('@/services/profiles/avatar');
 const invitationService = require('@/services/invitations');
 const { buildMeta } = require('@/services/meta');
 const invitationState = require('@/state').import('invitation');
-const {
-  createAuthorizationMiddleware: authorize, authorizeAction, refusalMessage,
-  callerIsPlatformAdmin, listFilter, standingOfRows,
-} = require('@/authorization');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, refusalMessage, callerIsPlatformAdmin } = authorization;
+const groupAuth = authorization.import('group');
+const decideViewGroup = groupAuth.action('view_metadata');
+const groupListFilter = groupAuth.listFilter();
+const groupStandingOfRows = groupAuth.standingOfRows();
 const { pickNonNil } = require('@/utils');
 // const collectionService = require('@/services/collections');
 // const datasetService = require('@/services/datasets_v2');
@@ -68,7 +71,7 @@ router.post(
     const { metadata, data } = await promise;
     // The query scopes the rows, and the list decision's filter picks every row's fields. The
     // standing drives each card's badge.
-    const standings = await standingOfRows(req, 'group', data.map((g) => g.id));
+    const standings = await groupStandingOfRows(req, data.map((g) => g.id));
     res.json({
       metadata,
       data: data.map((group, i) => ({ ...req.permission.filter(group), _meta: { standing: standings[i] } })),
@@ -233,7 +236,7 @@ router.get(
     const { slug } = req.params;
     const group = await groupService.getGroupBySlug(slug);
 
-    const permission = await authorizeAction('group', 'view_metadata', {
+    const permission = await decideViewGroup({
       identifiers: { user: req.user?.subject_id, resource: group.id },
       policyExecutionContext: req.policyContext,
       preFetched: { user: req.user, resource: group },
@@ -715,7 +718,7 @@ router.get(
     const { id } = req.params;
     const ancestors = await groupService.getGroupAncestors(id);
     // Each ancestor shows the fields a list shows; this route's decision is about the group named.
-    res.json(ancestors.map(await listFilter(req, 'group')));
+    res.json(ancestors.map(await groupListFilter(req)));
   }),
 );
 
@@ -740,7 +743,7 @@ router.get(
       search_term: search_term?.trim(),
     });
     // Each descendant shows the fields a list shows; this route's decision is about the group named.
-    res.json(descendants.map(await listFilter(req, 'group')));
+    res.json(descendants.map(await groupListFilter(req)));
   }),
 );
 

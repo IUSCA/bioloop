@@ -1,3 +1,4 @@
+const Policy = require('../../core/policies/Policy');
 const PolicyContainer = require('../../core/policies/PolicyContainer');
 const { reading } = require('../../core/policies/PolicyContainer');
 const { platformAdminOnly } = require('./utils/index');
@@ -28,6 +29,9 @@ const auditPolicies = new PolicyContainer({
 // platformAdminOnly says that nobody else qualifies.
 auditPolicies.actions({
   read_records: reading(platformAdminOnly),
+}).attributes({
+  // Only a platform admin reaches this action, and the engine gives them every field anyway.
+  read_records: [{ policy: Policy.always, attribute_filters: ['*'] }],
 }).freeze();
 
 module.exports = {

@@ -1,5 +1,7 @@
 const { authorizeWithFilters } = require('./authorize');
 const Policy = require('./policies/Policy');
+const PolicyRegistry = require('./policies/PolicyRegistry');
+const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const { evaluateCapabilitySet, deriveStanding } = require('./capabilities');
 
 /**
@@ -32,6 +34,47 @@ async function filterRestrictedCapabilities({
     }
   }
   return filtered;
+}
+
+/**
+ * Checks what the pipeline is built from, once, so a decision never re-checks it.
+ *
+ * Every hydrator a decision can ask for is resolved here: the user and context hydrators, and the
+ * resource hydrator of every registered action policy. A type with no registered hydrator gets
+ * its default here, so a model the default cannot serve fails at startup.
+ */
+function assertPipelineDependencies({
+  policyRegistry, hydratorRegistry, restrictionChecker, platformAdmin, expandPath, concealRefusalsWithoutStanding,
+}) {
+  if (!(policyRegistry instanceof PolicyRegistry)) {
+    throw new Error('pipeline: policyRegistry must be a PolicyRegistry');
+  }
+  if (!(hydratorRegistry instanceof HydratorRegistry)) {
+    throw new Error('pipeline: hydratorRegistry must be a HydratorRegistry');
+  }
+  if (restrictionChecker != null && typeof restrictionChecker !== 'function') {
+    throw new Error('pipeline: restrictionChecker must be a function');
+  }
+  if (expandPath != null && typeof expandPath !== 'function') {
+    throw new Error('pipeline: expandPath must be a function');
+  }
+  if (platformAdmin != null && !(platformAdmin.policy instanceof Policy)) {
+    throw new Error('pipeline: platformAdmin.policy must be a Policy');
+  }
+  const unknownTypes = concealRefusalsWithoutStanding.filter((type) => !policyRegistry.listTypes().includes(type));
+  if (unknownTypes.length) {
+    throw new Error(`pipeline: concealRefusalsWithoutStanding names unregistered types: ${unknownTypes.join(', ')}`);
+  }
+
+  hydratorRegistry.get('user');
+  hydratorRegistry.get('context');
+  policyRegistry.listTypes().forEach((type) => {
+    const container = policyRegistry.get(type);
+    container.getActionNames().forEach((action) => {
+      const { resourceType } = container.getPolicy(action);
+      if (resourceType != null) hydratorRegistry.get(resourceType);
+    });
+  });
 }
 
 /**
@@ -83,6 +126,10 @@ function createDecisionPipeline({
   expandPath = null,
   concealRefusalsWithoutStanding = [],
 }) {
+  assertPipelineDependencies({
+    policyRegistry, hydratorRegistry, restrictionChecker, platformAdmin, expandPath, concealRefusalsWithoutStanding,
+  });
+
   const evaluateAdmin = ({ identifiers, policyExecutionContext, preFetched }) => authorizeWithFilters({
     policy: platformAdmin.policy,
     attributeRules: ALL_ATTRIBUTES,

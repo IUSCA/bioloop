@@ -217,7 +217,7 @@ by the caller's `list` decision on the type, not by a decision on any row. Its q
 rows appear. The `list` action's attribute rule gives the public attributes, and a platform admin
 sees every field. A row shows more only on its detail route. A search route binds
 `authorize(type, 'list')` and uses `req.permission.filter`. Lineage, ancestors, and descendants
-are decided on the resource in the URL, so they use `listFilter(req, type)` instead. A grant list
+are decided on the resource in the URL, so they use `import(type).listFilter()` instead. A grant list
 shows the grant attributes, because its query returns only grants the caller holds or governs.
 
 `*` is never used where a row embeds another user's record. A grant row names the fields it may

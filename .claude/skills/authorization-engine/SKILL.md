@@ -40,7 +40,9 @@ an empty `Policy.or([])` would leave a reader guessing about.
 
 `createFilterFunction([])` returns `() => ({})`. So calling `authorizeWithFilters` with
 `attributeRules: []` grants the action and then hands back an object with no fields, which
-looks like a hydration failure rather than a filter decision.
+looks like a hydration failure rather than a filter decision. A registered container cannot
+reach this: `PolicyContainer.freeze()` refuses an action with no rule of its own and no `'*'`
+rule.
 
 When a code path should return everything, pass an explicit rule:
 
@@ -386,8 +388,8 @@ the grant attributes, because their queries return only grants the caller holds 
 A `list` action needs a `list: always` state rule too, or the startup sync check throws.
 
 A route whose own decision is about the resource in the URL, such as ancestors, descendants, or
-source and derived datasets, gets the list filter with `listFilter(req, type)` from
-`src/authorization/builtin/lists.js`, exported from `src/authorization/index.js`.
+source and derived datasets, gets the list filter from `require('@/authorization').import(type).listFilter()`, bound when the
+route module loads.
 
 `tests/authorization/listFilter.test.js` pins that an owning-group admin still sees only
 public fields on a list row.
@@ -592,6 +594,35 @@ unarchiving. A dataset's lifecycle ends at `dataset.delete`: the record stays, t
 go, and there is no undo. The route is `DELETE /v2/datasets/:id`, there is no `dataset.unarchive`,
 and `route_policy_bindings.test.js` asserts both action names are absent from the dataset policy
 container so the pairing test cannot silently start applying to it.
+
+## Configuration is checked when the module loads, not per request
+
+A mistake in a policy, an attribute rule, a hydrator, a paths file, or a route's action name
+fails startup. Each check lives where the thing is declared, and the engine does not re-check
+per call what startup already proved. `tests/authorization/bootValidation.test.js` pins each one.
+
+- `PolicyContainer.attributes()` parses every attribute path with `compileProjection`, and
+  refuses a malformed one such as `owner..name` or `items[0].id`. `projectObject` reuses the
+  parse for a list it has seen, by the list's identity. `base_attributes.js` compiles its lists
+  at load, because routes project with them outside any rule.
+- `PolicyContainer.freeze()` refuses rules keyed by an undeclared action, and an action with no
+  rule of its own and no `'*'` rule. `audit.read_records` gained an explicit rule for this.
+- `PathRegistry.register` checks `resourceType`, `sql`, and `prospectiveKinds`, and
+  `pathRegistry.assertValid(policyRegistry)` refuses paths for a type with no container and
+  prospective kinds with no group paths.
+- `createDecisionPipeline` checks both registries, the injected functions, and the concealed
+  types, and resolves the `user`, `context`, and every action's resource hydrator. A type whose
+  default Prisma hydrator has no model fails here.
+- A route binds its decisions with `require('@/authorization').import(type)`: `.action(name)`,
+  `.rows(name)`, `.listFilter()`, and `.standingOfRows()`. Each checks the type, the action, or
+  the paths when called at module load. The workflow routes bind every action in
+  `workflow_policy_actions`. The string forms `authorizeAction(type, action)` and friends remain
+  for tests.
+
+Per call, the engine checks only the request's own values: `identifiers.user`, an id needed to
+fetch, the attributes a hydrated entity actually carries, and unknown attribute names a service
+passes a hydrator directly. The middleware unit tests use real registries, because the pipeline
+refuses mocks when it is built.
 
 ## Keeping this current
 

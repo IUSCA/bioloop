@@ -22,6 +22,7 @@ authorization/
 │   ├── paths/         # The access rule as SQL, one file per path-based type, and standing
 │   ├── tables/        # The access model's tables, read by the reference model in tests
 │   ├── lists.js       # Helpers a list route calls
+│   ├── importFor.js   # import(type): decision helpers bound to one type at module load
 │   └── restrictions.js
 │
 ├── custom/            # DERIVED APPLICATION LAYER - Only exists in derived apps
@@ -70,6 +71,7 @@ When merging base repo updates into a derived app:
 - **Centralized loaders**: Hydrators manage all data fetching
 - **Request-scoped caching**: Avoid redundant database queries within a request
 - **One pipeline**: The middleware and `authorizeAction` call the same decision pipeline, so they cannot disagree
+- **Configuration fails at startup**: Policies, attribute rules, hydrators, paths, and bound action names are checked when they load; a decision checks only the request's own values
 - **Separation of concerns**: Policy definition, data loading, and enforcement are separate
 
 ## Quick Start
@@ -92,11 +94,14 @@ router.get(
 );
 ```
 
-A handler that must decide in its body calls `authorizeAction`, and answers with
-`decision.status` when `decision.granted` is false:
+A handler that must decide in its body binds the decision when its module loads, and answers
+with `decision.status` when `decision.granted` is false. Binding checks the type and action at
+startup:
 
 ```javascript
-const decision = await authorizeAction('group', 'view_metadata', {
+const decideViewGroup = require('@/authorization').import('group').action('view_metadata');
+
+const decision = await decideViewGroup({
   identifiers: { user: req.user.subject_id, resource: group.id },
   policyExecutionContext: req.policyContext,
   preFetched: { user: req.user, resource: group },
@@ -107,8 +112,8 @@ const decision = await authorizeAction('group', 'view_metadata', {
 
 A list route binds the type's `list` action. Its query scopes the rows, and
 `req.permission.filter` gives every row the list's fields. A route whose own decision is about the
-resource in the URL, such as a group's ancestors, uses `listFilter(req, type)` instead.
-`standingOfRows` and `decideRows` add per-row badges and controls.
+resource in the URL, such as a group's ancestors, uses `import(type).listFilter()` instead.
+`import(type).standingOfRows()` and `import(type).rows(action)` add per-row badges and controls.
 
 @see docs/design/groups/access-model.md — Projection
 
@@ -204,6 +209,7 @@ See [core/README.md](core/README.md).
 - **[builtin/hydrators/](builtin/hydrators/)**: Hydrators with virtual attributes, including `context.access_paths`
 - **[builtin/paths/](builtin/paths/)**: The path registry, the path queries, one SQL file per type, and standing
 - **[builtin/lists.js](builtin/lists.js)**: `callerIsPlatformAdmin`, `listFilter`, `decideRows`, and `standingOfRows`
+- **[builtin/importFor.js](builtin/importFor.js)**: `import(type)`, the same helpers bound to one type at module load
 - **[builtin/restrictions.js](builtin/restrictions.js)**: The restriction checker injected into the pipeline
 - **[builtin/tables/](builtin/tables/)**: The term, action, and attribute tables the reference model reads
 

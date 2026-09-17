@@ -402,9 +402,10 @@ A Prisma "record not found" error is turned into 404 by `prismaNotFoundHandler` 
 
 Some routes cannot name the resource type before reading a row. `POST /access-requests` is one:
 its body names a resource id, and only the row says whether that is a dataset or a collection.
-Such a handler calls `authorizeAction(resourceType, action, options)` from
-`api/src/authorization/index.js`. It runs the same `decide` pipeline as the middleware. The
-handler then answers a refusal with `decision.status`.
+Such a route binds a decision per resource type when its module loads, with
+`require('@/authorization').import(type).action(name)`, and the handler picks one by the row's
+type. Binding at load checks the type and the action at startup. The bound decision runs the same
+`decide` pipeline as the middleware. The handler then answers a refusal with `decision.status`.
 
 A list route decides every row it returns. `decideRows` runs the pipeline once per row, and each
 row carries its own `_meta`. For datasets, collections, and groups, one batched `access_paths`

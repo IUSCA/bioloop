@@ -81,6 +81,7 @@ const restrictions = require('./builtin/restrictions');
 const { isPlatformAdmin } = require('./builtin/policies/utils/index');
 
 const { createListHelpers } = require('./builtin/lists');
+const { createImportFor } = require('./builtin/importFor');
 
 // ============================================================================
 // SECTION 3: IMPORT CUSTOM POLICIES, HYDRATORS & PATHS (derived app code)
@@ -119,6 +120,7 @@ pathRegistry.register(groupPaths);
 // Register custom paths here
 
 assertRegistriesValid(policyRegistry, hydratorRegistry);
+pathRegistry.assertValid(policyRegistry);
 
 // ============================================================================
 // SECTION 5: WIRING (never edit this section)
@@ -157,13 +159,22 @@ const createAuthorizationMiddleware = createAuthorizationMiddlewareFunction(
  */
 const authorizeAction = createDecisionPipeline(PIPELINE_OPTIONS);
 
-const {
-  callerIsPlatformAdmin, listFilter, decideRows, standingOfRows,
-} = createListHelpers({
+const listHelpers = createListHelpers({
   decide: authorizeAction,
   restrictionChecker: restrictions.checkRestriction,
   userHydrator,
   isPlatformAdmin,
+});
+const {
+  callerIsPlatformAdmin, listFilter, decideRows, standingOfRows,
+} = listHelpers;
+
+/**
+ * Decision helpers bound to one resource type, checked when the calling module loads.
+ * @see src/authorization/builtin/importFor.js
+ */
+const importFor = createImportFor({
+  policyRegistry, pathRegistry, decide: authorizeAction, listHelpers,
 });
 
 /** `authorizeWithFilters` from core, bound to this app's hydrator registry. */
@@ -176,9 +187,10 @@ function authorizeWithFilters(options) {
 // ============================================================================
 
 module.exports = {
-  // Core authorization functions
+  // Core authorization functions. Routes prefer `import(type)`, which checks names at load.
   authorizeWithFilters,
   authorizeAction,
+  import: importFor,
 
   // List helpers
   callerIsPlatformAdmin,

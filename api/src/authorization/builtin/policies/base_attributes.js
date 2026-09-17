@@ -1,3 +1,5 @@
+const { compileProjection } = require('@/utils/expression');
+
 const group_attributes = ['id', 'name', 'slug', 'description', 'metadata.type', 'is_archived', '_count.members'];
 
 const collection_attributes = [
@@ -70,7 +72,7 @@ const coverage_attributes = [
   'via', 'via_group_id', 'via_group_name', 'via_collection_id', 'via_collection_name',
 ];
 
-module.exports = Object.freeze({
+const BASE_ATTRIBUTES = Object.freeze({
   dataset: dataset_attributes,
   group: group_attributes,
   collection: collection_attributes,
@@ -80,3 +82,9 @@ module.exports = Object.freeze({
   resource: resource_attributes,
   coverage: coverage_attributes,
 });
+
+// Routes project with some of these lists directly, outside any attribute rule, so each is
+// parsed here, at load, and a malformed path fails at startup.
+Object.values(BASE_ATTRIBUTES).forEach(compileProjection);
+
+module.exports = BASE_ATTRIBUTES;

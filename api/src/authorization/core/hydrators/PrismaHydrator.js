@@ -129,22 +129,8 @@ class PrismaHydrator extends Hydrator {
   async hydrate({
     id, attributes, cache = new Map(), preFetched = {},
   }) {
-    // console.debug(`Hydrating [${this.model}] with id [${id}] for attributes [${attributes.join(', ')}]`);
-    if (!Array.isArray(attributes)) {
-      throw new HydrationError(`[${this.model}] Cannot hydrate: attributes must be an array`);
-    }
-    // each attribute must be a string
-    attributes.forEach((attr) => {
-      if (typeof attr !== 'string') {
-        throw new HydrationError(`[${this.model}] Cannot hydrate: attribute names must be strings, got ${typeof attr}`);
-      }
-    });
-    if (!(cache instanceof Map)) {
-      throw new HydrationError(`[${this.model}] Cannot hydrate: cache must be a Map instance`);
-    }
-    if (preFetched && typeof preFetched !== 'object') {
-      throw new HydrationError(`[${this.model}] Cannot hydrate: preFetched must be an object`);
-    }
+    // `attributes` come from a policy's `requires`, which the Policy constructor checked. Unknown
+    // names are still refused below, because a service may call a hydrator directly.
 
     // A record with no id, such as the resource of a create, has nothing to key a cache entry
     // on. Two creates in one request name different owning groups, and a shared entry would

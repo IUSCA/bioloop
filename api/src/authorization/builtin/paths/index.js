@@ -44,8 +44,20 @@ class PathRegistry {
 
   /** @param {{ resourceType: string, sql: Function, prospectiveKinds?: string[] }} paths */
   register(paths) {
-    if (typeof paths?.sql !== 'function') {
-      throw new Error(`PathRegistry: the paths for ${paths?.resourceType} have no sql builder`);
+    if (!paths?.resourceType || typeof paths.resourceType !== 'string') {
+      throw new Error('PathRegistry: paths must name a resourceType');
+    }
+    if (typeof paths.sql !== 'function') {
+      throw new Error(`PathRegistry: the paths for ${paths.resourceType} have no sql builder`);
+    }
+    const { prospectiveKinds } = paths;
+    if (prospectiveKinds !== undefined
+      && (!Array.isArray(prospectiveKinds) || !prospectiveKinds.length
+        || prospectiveKinds.some((kind) => !PATH_KINDS.includes(kind)))) {
+      throw new Error(
+        `PathRegistry: prospectiveKinds for ${paths.resourceType} must be a non-empty subset of `
+        + `${PATH_KINDS.join(', ')}`,
+      );
     }
     if (this.paths.has(paths.resourceType)) {
       throw new Error(`PathRegistry: paths for ${paths.resourceType} are already registered`);
@@ -65,6 +77,26 @@ class PathRegistry {
 
   listTypes() {
     return [...this.paths.keys()];
+  }
+
+  /**
+   * Throws at startup when a registration cannot work: paths for a type no policy container
+   * declares, or prospective kinds with no group paths to read them from.
+   * @param {import('../../core/policies/PolicyRegistry')} policyRegistry
+   */
+  assertValid(policyRegistry) {
+    const registeredPolicyTypes = policyRegistry.listTypes();
+    const orphans = this.listTypes().filter((type) => !registeredPolicyTypes.includes(type));
+    if (orphans.length) {
+      throw new Error(`PathRegistry: paths registered for types with no policy container: ${orphans.join(', ')}`);
+    }
+    const creatable = [...this.paths.values()].filter((paths) => paths.prospectiveKinds).map((p) => p.resourceType);
+    if (creatable.length && !this.has('group')) {
+      throw new Error(
+        `PathRegistry: ${creatable.join(', ')} declare prospectiveKinds, which read group paths, `
+        + 'and no group paths are registered',
+      );
+    }
   }
 }
 

@@ -186,25 +186,6 @@ describe('authorizeWithFilters() - hydration', () => {
 // ---------------------------------------------------------------------------
 describe('authorizeWithFilters()', () => {
   describe('input validation', () => {
-    it('throws when policy is not a Policy instance', async () => {
-      const { registry } = makeRegistry({ 1: { id: 1 } });
-      await expect(
-        authorizeWithFilters({
-          policy: null, attributeRules: [], identifiers: { user: 1 }, registry,
-        }),
-      ).rejects.toThrow('Invalid policy');
-    });
-
-    it('throws when attributeRules is not an array', async () => {
-      const { registry } = makeRegistry({ 1: { id: 1 } });
-      const policy = makePolicy();
-      await expect(
-        authorizeWithFilters({
-          policy, attributeRules: null, identifiers: { user: 1 }, registry,
-        }),
-      ).rejects.toThrow('Invalid attributeRules');
-    });
-
     it('throws when identifiers.user is null', async () => {
       const { registry } = makeRegistry();
       const policy = makePolicy();
@@ -213,20 +194,6 @@ describe('authorizeWithFilters()', () => {
           policy, attributeRules: [], identifiers: { user: null }, registry,
         }),
       ).rejects.toThrow('User identifier is required');
-    });
-
-    it('throws when events.emit is not a function', async () => {
-      const { registry } = makeRegistry({ 1: { id: 1 } });
-      const policy = makePolicy();
-      await expect(
-        authorizeWithFilters({
-          policy,
-          attributeRules: [],
-          identifiers: { user: 1 },
-          registry,
-          events: { emit: 'not-a-function', eventToEmit: 'some-event' },
-        }),
-      ).rejects.toThrow('Invalid events.emit');
     });
   });
 

@@ -27,6 +27,7 @@ Create a new file in `custom/policies/` for each resource type:
 **Example: `custom/policies/project.js`**
 
 Every action declares its restriction class with `mutating`, `reading`, or `readingData`. Every
+action needs an attribute rule of its own or a `'*'` rule, or `freeze()` throws. Every
 term declares the path kind it confers in `meta`. No policy names the platform-admin role: the
 engine allows a platform admin before any action policy runs.
 
@@ -251,7 +252,9 @@ router.get(
 );
 ```
 
-A handler that decides in its body calls `authorizeAction('project', 'view', { identifiers, policyExecutionContext })`
+A handler that decides in its body binds the decision at module load with
+`const decideViewProject = require('@/authorization').import('project').action('view')`, calls
+`decideViewProject({ identifiers, policyExecutionContext })`,
 and answers with `decision.status` when `decision.granted` is false.
 
 ## Questions?

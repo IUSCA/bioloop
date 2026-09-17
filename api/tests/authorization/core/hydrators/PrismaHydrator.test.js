@@ -149,23 +149,9 @@ describe('PrismaHydrator.hydrate() - input validation', () => {
     hydrator = new PrismaHydrator({ prismaClient: makePrismaClient(), modelName: 'User' });
   });
 
-  it('throws HydrationError when attributes is not an array', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: 'name', cache: new Map() })).rejects.toThrow(
-      HydrationError,
-    );
-  });
-
-  it('throws HydrationError when an attribute name is not a string', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: [123], cache: new Map() })).rejects.toThrow(
-      HydrationError,
-    );
-  });
-
-  it('throws HydrationError when cache is not a Map', async () => {
-    await expect(hydrator.hydrate({ id: 1, attributes: ['name'], cache: {} })).rejects.toThrow(
-      HydrationError,
-    );
-  });
+  // The shape of `attributes` and `cache` is not checked per call: a policy's `requires`
+  // was checked when the policy was built. Unknown names are still refused, because a service
+  // may call a hydrator directly.
 
   it('throws HydrationError for unknown attributes', async () => {
     await expect(

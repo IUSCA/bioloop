@@ -8,9 +8,9 @@ const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const accessRequestsService = require('@/services/access_requests');
 const grantService = require('@/services/grants');
-const {
-  createAuthorizationMiddleware: authorize, authorizeAction, toCapabilitiesArray, decideRows,
-} = require('@/authorization');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, toCapabilitiesArray } = authorization;
 const { pickNonNil } = require('@/utils');
 const Expiry = require('@/utils/expiry');
 const prisma = require('@/db');
@@ -28,11 +28,13 @@ const availableActionsFor = (request) => state.availableActions(
   state.requestStateFields(request),
 );
 
-// Which policy container governs a resource of each type.
-const POLICY_RESOURCE_TYPE = {
-  [RESOURCE_TYPE.DATASET]: 'dataset',
-  [RESOURCE_TYPE.COLLECTION]: 'collection',
+// Viewing the resource a request names, by the resource's type. Bound at load, so an unknown
+// type or action fails at startup.
+const decideViewResource = {
+  [RESOURCE_TYPE.DATASET]: authorization.import('dataset').action('view_metadata'),
+  [RESOURCE_TYPE.COLLECTION]: authorization.import('collection').action('view_metadata'),
 };
+const decideReadRequests = authorization.import('access_request').rows('read');
 
 /** Validation for the items a request carries, shared by filing a request and previewing it. */
 const requestItemsValidation = [
@@ -97,7 +99,7 @@ async function assertRequestable(req, { resource_id, items }) {
     throw createError.NotFound('Resource not found');
   }
 
-  const decision = await authorizeAction(POLICY_RESOURCE_TYPE[resource.type], 'view_metadata', {
+  const decision = await decideViewResource[resource.type]({
     identifiers: { user: req.user?.subject_id, resource: resource.id },
     policyExecutionContext: req.policyContext,
     preFetched: { user: req.user, context: { req } },
@@ -150,7 +152,7 @@ router.get(
       resource_type: req.query.resource_type,
     });
     // TODO: attribute filter
-    const metas = await decideRows('access_request', requests.data, { req, idOf: (r) => r.id, action: 'read' });
+    const metas = await decideReadRequests(requests.data, { req, idOf: (r) => r.id });
     res.json({
       ...requests,
       data: requests.data.map((r, i) => ({
@@ -272,7 +274,7 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    const metas = await decideRows('access_request', data, { req, idOf: (r) => r.id, action: 'read' });
+    const metas = await decideReadRequests(data, { req, idOf: (r) => r.id });
     res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );
@@ -307,7 +309,7 @@ router.get(
       resource_type,
     });
     // TODO: attribute filter
-    const metas = await decideRows('access_request', data, { req, idOf: (r) => r.id, action: 'read' });
+    const metas = await decideReadRequests(data, { req, idOf: (r) => r.id });
     res.json({ metadata, data: data.map((r, i) => ({ ...r, _meta: metas[i] })) });
   }),
 );

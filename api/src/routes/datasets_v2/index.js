@@ -11,10 +11,7 @@ const _ = require('lodash/fp');
 
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
-const {
-  createAuthorizationMiddleware: authorize, authorizeAction,
-  callerIsPlatformAdmin, listFilter,
-} = require('@/authorization');
+const authorization = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
@@ -22,6 +19,12 @@ const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
 const { buildMeta } = require('@/services/meta');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = authorization;
+const datasetAuth = authorization.import('dataset');
+const decideContribute = datasetAuth.action('contribute');
+const decideCreate = datasetAuth.action('create');
+const datasetListFilter = datasetAuth.listFilter();
 
 const router = express.Router();
 
@@ -49,7 +52,7 @@ router.get(
     const eligible = [];
     for (const { path_kinds, ...group } of candidates) {
       // eslint-disable-next-line no-await-in-loop
-      const decision = await authorizeAction('dataset', 'contribute', {
+      const decision = await decideContribute({
         identifiers: { user: req.user.subject_id, resource: null },
         policyExecutionContext: req.policyContext,
         preFetched: {
@@ -94,7 +97,7 @@ router.get(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -144,7 +147,7 @@ router.post(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -207,7 +210,7 @@ router.post(
     const group = await datasetService.getOwnerGroupForAuthorization(owner_group_id);
     if (!group) return next(createError.NotFound('Group not found'));
 
-    const decision = await authorizeAction('dataset', 'contribute', {
+    const decision = await decideContribute({
       identifiers: { user: req.user?.subject_id, resource: null },
       policyExecutionContext: req.policyContext,
       preFetched: {
@@ -521,7 +524,7 @@ router.post(
     const ownerGroupIds = [...new Set(req.body.datasets.map((d) => d.owner_group_id))];
     for (const owner_group_id of ownerGroupIds) {
       // eslint-disable-next-line no-await-in-loop
-      const decision = await authorizeAction('dataset', 'create', {
+      const decision = await decideCreate({
         identifiers: { user: req.user?.subject_id, resource: null },
         policyExecutionContext: req.policyContext,
         preFetched: { user: req.user, resource: { owner_group_id }, context: { req } },
@@ -632,7 +635,7 @@ router.get(
     const { data, metadata } = await datasetService.getSourceDatasets(dataset.id, { limit, offset });
 
     // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
-    res.json({ metadata, data: data.map(await listFilter(req, 'dataset')) });
+    res.json({ metadata, data: data.map(await datasetListFilter(req)) });
   }),
 );
 
@@ -659,7 +662,7 @@ router.get(
     const { data, metadata } = await datasetService.getDerivedDatasets(dataset.id, { limit, offset });
 
     // Each related dataset shows the fields a list shows; this route's decision is about the dataset named.
-    res.json({ metadata, data: data.map(await listFilter(req, 'dataset')) });
+    res.json({ metadata, data: data.map(await datasetListFilter(req)) });
   }),
 );
 

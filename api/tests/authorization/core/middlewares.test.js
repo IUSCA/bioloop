@@ -13,6 +13,10 @@ const {
   createAuthorizationMiddlewareFunction,
 } = require('@/authorization/core/middlewares');
 const Policy = require('@/authorization/core/policies/Policy');
+const PolicyContainer = require('@/authorization/core/policies/PolicyContainer');
+const PolicyRegistry = require('@/authorization/core/policies/PolicyRegistry');
+const { HydratorRegistry } = require('@/authorization/core/hydrators/HydratorRegistry');
+const { Hydrator } = require('@/authorization/core/hydrators/BaseHydrator');
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -42,19 +46,27 @@ function makePolicy(overrides = {}) {
 }
 
 /**
- * Builds a fake policyRegistry whose `.get(resourceType)` returns a container
- * that has the given policy and attributeRules.
+ * A real policy registry holding one `post` container with `view` and `create` bound to the
+ * given policy. The pipeline checks its registries when it is built, so a mock will not do.
  */
-function makePolicyRegistry(policy, attributeRules = []) {
-  const policyContainer = {
-    getPolicy: jest.fn(() => policy),
-    getAttributeRules: jest.fn(() => attributeRules),
-  };
-  return { get: jest.fn(() => policyContainer), policyContainer };
+function makePolicyRegistry(policy) {
+  const policyContainer = new PolicyContainer({ resourceType: 'post' })
+    .actions({ view: policy, create: policy })
+    .attributes({ '*': [{ policy: Policy.always, attribute_filters: ['*'] }] })
+    .freeze();
+  const registry = new PolicyRegistry();
+  registry.register(policyContainer);
+  return { registry, policyContainer };
 }
 
-/** A stub hydrationRegistry — not actually used because authorizeWithFilters is mocked. */
-const stubHydrationRegistry = {};
+/** Hydrators are never called, because authorizeWithFilters is mocked. */
+class StubHydrator extends Hydrator {
+  // eslint-disable-next-line class-methods-use-this
+  async hydrate() { return {}; }
+}
+const stubHydrationRegistry = new HydratorRegistry();
+stubHydrationRegistry.register('user', new StubHydrator());
+stubHydrationRegistry.register('context', new StubHydrator());
 
 // ---------------------------------------------------------------------------
 // initializePolicyContext
@@ -98,30 +110,27 @@ describe('initializePolicyContext()', () => {
 describe('createAuthorizationMiddlewareFunction() - setup', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('throws at setup time when policyRegistry.get() throws', () => {
-    const badRegistry = { get: () => { throw new Error('No policies for resourceType'); } };
-    expect(() => createAuthorizationMiddlewareFunction(
-      badRegistry,
-      stubHydrationRegistry,
-    )('post', 'view')).toThrow('No policies for resourceType');
+  it('throws when the pipeline is built from something other than registries', () => {
+    expect(() => createAuthorizationMiddlewareFunction({ get: () => null }, stubHydrationRegistry))
+      .toThrow('pipeline: policyRegistry must be a PolicyRegistry');
   });
 
-  it('throws at setup time when policyContainer.getPolicy() throws', () => {
-    const policyContainer = {
-      getPolicy: () => { throw new Error("Action 'view' not found"); },
-      getAttributeRules: () => [],
-    };
-    const registry = { get: () => policyContainer };
-    expect(() => createAuthorizationMiddlewareFunction(
-      registry,
-      stubHydrationRegistry,
-    )('post', 'view')).toThrow("Action 'view' not found");
+  it('throws at setup time when the resource type is not registered', () => {
+    const { registry } = makePolicyRegistry(makePolicy());
+    expect(() => createAuthorizationMiddlewareFunction(registry, stubHydrationRegistry)('comment', 'view'))
+      .toThrow('No policies registered for resource type: comment');
+  });
+
+  it('throws at setup time when the action is not registered', () => {
+    const { registry } = makePolicyRegistry(makePolicy());
+    expect(() => createAuthorizationMiddlewareFunction(registry, stubHydrationRegistry)('post', 'delete'))
+      .toThrow("Action 'delete' not found");
   });
 
   it('returns a function when setup succeeds', () => {
     const policy = makePolicy();
-    const { get: getRegistry } = makePolicyRegistry(policy);
-    const authorize = createAuthorizationMiddlewareFunction({ get: getRegistry }, stubHydrationRegistry);
+    const { registry } = makePolicyRegistry(policy);
+    const authorize = createAuthorizationMiddlewareFunction(registry, stubHydrationRegistry);
     const middleware = authorize('post', 'view');
     expect(typeof middleware).toBe('function');
   });
@@ -139,9 +148,9 @@ describe('createAuthorizationMiddlewareFunction() - middleware', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     policy = makePolicy();
-    const built = makePolicyRegistry(policy, []);
+    const built = makePolicyRegistry(policy);
     policyContainer = built.policyContainer;
-    policyRegistry = { get: built.get };
+    policyRegistry = built.registry;
     const authorize = createAuthorizationMiddlewareFunction(policyRegistry, stubHydrationRegistry, {});
     middleware = authorize('post', 'view');
   });
@@ -244,8 +253,8 @@ describe('createAuthorizationMiddlewareFunction() - middleware', () => {
     const { req, res, next } = makeReqResNext();
     await middleware(req, res, next);
     const callArgs = authorizeWithFilters.mock.calls[0][0];
-    expect(callArgs.policy).toBe(policyContainer.getPolicy.mock.results[0].value);
-    expect(callArgs.attributeRules).toBe(policyContainer.getAttributeRules.mock.results[0].value);
+    expect(callArgs.policy).toBe(policyContainer.getPolicy('view'));
+    expect(callArgs.attributeRules).toBe(policyContainer.getAttributeRules('view'));
   });
 });
 
@@ -259,8 +268,7 @@ describe('createAuthorizationMiddlewareFunction() - edge cases', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     const policy = makePolicy();
-    const built = makePolicyRegistry(policy, []);
-    policyRegistry = { get: built.get };
+    policyRegistry = makePolicyRegistry(policy).registry;
     const authorize = createAuthorizationMiddlewareFunction(policyRegistry, stubHydrationRegistry, {});
     middleware = authorize('post', 'view');
   });

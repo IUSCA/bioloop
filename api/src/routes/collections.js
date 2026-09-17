@@ -14,10 +14,12 @@ const workflowService = require('@/services/datasets_v2/workflows');
 const prisma = require('@/db');
 const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
-const {
-  createAuthorizationMiddleware: authorize, authorizeAction,
-  callerIsPlatformAdmin, decideRows,
-} = require('@/authorization');
+const authorization = require('@/authorization');
+
+const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = authorization;
+const datasetAuth = authorization.import('dataset');
+const decideRequestStage = datasetAuth.action('request_stage');
+const decideDatasetRows = datasetAuth.rows('view_metadata');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
@@ -211,7 +213,7 @@ router.patch(
  * @returns {Promise<boolean>}
  */
 async function canRequestStage(req, resource_id) {
-  const decision = await authorizeAction('dataset', 'request_stage', {
+  const decision = await decideRequestStage({
     identifiers: { user: req.user?.subject_id, resource: resource_id },
     policyExecutionContext: req.policyContext,
     preFetched: { user: req.user, context: { req } },
@@ -257,7 +259,7 @@ router.get(
       sort_order: req.query.sort_order,
     });
 
-    const metas = await decideRows('dataset', data, { req, idOf: (d) => d.resource_id });
+    const metas = await decideDatasetRows(data, { req, idOf: (d) => d.resource_id });
     res.json({
       metadata,
       data: data.map((d, i) => ({ ..._.pick(DATASET_PUBLIC_ATTRIBUTES)(d), _meta: metas[i] })),

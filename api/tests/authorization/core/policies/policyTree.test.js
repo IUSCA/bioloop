@@ -78,6 +78,7 @@ describe('an action declares its restriction class', () => {
         view: reading(term('v')),
         legacy: term('l'),
       })
+      .attributes({ '*': [{ policy: Policy.always, attribute_filters: ['*'] }] })
       .freeze();
 
     expect(container.getRestrictionClass('edit')).toBe(RESTRICTION_CLASS.MUTATING);

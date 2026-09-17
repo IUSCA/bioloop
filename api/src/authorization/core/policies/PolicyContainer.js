@@ -1,3 +1,4 @@
+const { compileProjection } = require('@/utils/expression');
 const Policy = require('./Policy');
 
 /**
@@ -201,6 +202,12 @@ class PolicyContainer {
             );
           }
         });
+        // Parses every path now, so a malformed one fails at startup and a response reuses the parse.
+        try {
+          compileProjection(rule.attribute_filters);
+        } catch (err) {
+          throw new Error(`Rule at index ${index} for action '${actionName}': ${err.message}`);
+        }
       });
 
       // Store the rules for this action
@@ -262,6 +269,19 @@ class PolicyContainer {
    * Freeze the container to prevent further modifications
    */
   freeze() {
+    // A rule keyed by a name no action declares is never read, and its action silently falls
+    // back to '*'. An action with no rule at all projects every row to `{}`.
+    const { resourceType } = this.meta;
+    const stray = Object.keys(this._attributeRules).filter((key) => key !== '*' && !(key in this._actions));
+    if (stray.length) {
+      throw new Error(`PolicyContainer ${resourceType}: attribute rules name undeclared actions: ${stray.join(', ')}`);
+    }
+    const unprojected = Object.keys(this._actions).filter((action) => this.getAttributeRules(action).length === 0);
+    if (unprojected.length) {
+      throw new Error(
+        `PolicyContainer ${resourceType}: actions with no attribute rules and no '*' rule: ${unprojected.join(', ')}`,
+      );
+    }
     this._frozen = true;
     Object.freeze(this._actions);
     Object.freeze(this._actionMeta);

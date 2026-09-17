@@ -1,4 +1,3 @@
-const { HydratorRegistry } = require('./hydrators/HydratorRegistry');
 const Policy = require('./policies/Policy');
 const PolicyContainer = require('./policies/PolicyContainer');
 const { resolveHydrators, hydrateEntities } = require('./hydrationUtils');
@@ -64,24 +63,9 @@ async function evaluateCapabilitySet({
   preFetched = null,
   actionNames = null,
 }) {
-  // --- Input validation ---
-
-  if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
-    throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new CapabilityEvaluationError('identifiers must be an object');
-  }
+  // The container and the registry were checked when the pipeline was built.
   if (identifiers.user == null) {
     throw new CapabilityEvaluationError('identifiers.user is required');
-  }
-  if (!hydratorRegistry || !(hydratorRegistry instanceof HydratorRegistry)) {
-    throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
-  }
-  // actionNames is optional (defaults to all actions in container),
-  // but if provided must be a non-empty array of strings
-  if (actionNames != null && (!Array.isArray(actionNames) || actionNames.length === 0)) {
-    throw new CapabilityEvaluationError('actionNames must be a non-empty array of strings');
   }
 
   // --- Step 1: Resolve action policies ---
@@ -162,17 +146,8 @@ async function deriveStanding({
   preFetched = null,
   expandPath = null,
 }) {
-  if (!policyContainer || !(policyContainer instanceof PolicyContainer)) {
-    throw new CapabilityEvaluationError('policyContainer must be an instance of PolicyContainer');
-  }
-  if (!identifiers || typeof identifiers !== 'object') {
-    throw new CapabilityEvaluationError('identifiers must be an object');
-  }
   if (identifiers.user == null) {
     throw new CapabilityEvaluationError('identifiers.user is required');
-  }
-  if (!hydratorRegistry || !(hydratorRegistry instanceof HydratorRegistry)) {
-    throw new CapabilityEvaluationError('hydratorRegistry must be an instance of HydratorRegistry');
   }
 
   const terms = [];
