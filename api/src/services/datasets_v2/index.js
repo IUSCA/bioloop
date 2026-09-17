@@ -2,10 +2,10 @@ const assert = require('assert');
 // const path = require('node:path');
 
 const config = require('config');
+const createError = require('http-errors');
 const _ = require('lodash/fp');
 const prisma = require('@/db');
-// Named `resourceState` because a dataset's own `state` column already owns the short name.
-const resourceState = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('dataset');
 const wfService = require('@/services/workflow');
 
 const {
@@ -17,7 +17,6 @@ const createModule = require('./create');
 const useConditionsModule = require('./useConditions');
 const attributionModule = require('./attribution');
 const ownershipModule = require('./ownership');
-const { readDatasetStateFields } = require('./stateFields');
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,13 +97,31 @@ async function getStats(type) {
 }
 
 /**
+ * Locks a dataset row, then reads it with the fields its state rules read.
+ *
+ * The lock comes first, so the state a write sees is the state the check read. A raw lock cannot
+ * take the state layer's select fragment, so the row is read after it rather than by it.
+ * @see docs/design/groups/decisions.md — 17. Resource state is checked after authorization
+ *
+ * @param {import('@prisma/client').Prisma.TransactionClient} tx
+ * @param {number} id - the dataset's numeric id
+ * @param {object} [include] - relations to read along with the row
+ * @returns {Promise<object>} every column of the dataset, and the state fields
+ * @throws {HttpError} 404 when no dataset has that id
+ */
+async function lockDataset(tx, id, include = {}) {
+  const rows = await tx.$queryRaw`SELECT id FROM dataset WHERE id = ${id} FOR UPDATE`;
+  if (rows.length === 0) throw createError.NotFound('Dataset not found');
+  return tx.dataset.findUniqueOrThrow(withStateFields({ where: { id }, include }));
+}
+
+/**
  * Partially updates a dataset. Merges metadata and handles bundle upsert.
  */
 async function patchDataset(id, data) {
   return prisma.$transaction(async (tx) => {
-    resourceState.assertPossible('dataset', 'edit_metadata', await readDatasetStateFields(tx, id, { forUpdate: true }));
-
-    const current = await tx.dataset.findFirstOrThrow({ where: { id } });
+    const current = await lockDataset(tx, id);
+    assertPossible('edit_metadata', current);
     const { metadata, bundle, ...rest } = data;
 
     const updateData = _.omitBy(_.isUndefined)(rest);
@@ -142,14 +159,10 @@ async function addState(dataset_id, state, metadata) {
 async function softDelete(dataset_id, user_id) {
   // Deleting removes the archived files and cannot be undone, so a dataset already deleted is a
   // conflict rather than a second delete.
-  await prisma.$transaction(async (tx) => {
-    const fields = await readDatasetStateFields(tx, dataset_id, { forUpdate: true });
-    resourceState.assertPossible('dataset', 'delete', fields);
-  });
-
-  const dataset = await prisma.dataset.findFirstOrThrow({
-    where: { id: dataset_id },
-    include: INCLUDE_WORKFLOWS,
+  const dataset = await prisma.$transaction(async (tx) => {
+    const locked = await lockDataset(tx, dataset_id, INCLUDE_WORKFLOWS);
+    assertPossible('delete', locked);
+    return locked;
   });
 
   if (dataset.archive_path) {

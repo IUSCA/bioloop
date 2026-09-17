@@ -12,7 +12,7 @@ const _ = require('lodash/fp');
 const asyncHandler = require('@/middleware/asyncHandler');
 const { validate } = require('@/middleware/validators');
 const {
-  createAuthorizationMiddleware: authorize, toCapabilitiesArray, authorizeAction,
+  createAuthorizationMiddleware: authorize, authorizeAction,
   callerIsPlatformAdmin, projectRows,
 } = require('@/authorization');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
@@ -21,7 +21,8 @@ const importService = require('@/services/datasets_v2/imports');
 const uploadService = require('@/services/datasets_v2/uploads');
 const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
-const state = require('@/state');
+const { availableActions } = require('@/state').import('dataset');
+const { buildMeta } = require('@/services/meta');
 const { RESOURCE_SCOPES } = require('@/services/resources');
 const { UPLOAD_STATUS_FILTERS } = require('@/constants');
 
@@ -394,10 +395,8 @@ router.get(
         req,
         idOf: (d) => d.resource_id,
         publicAttributes: DATASET_PUBLIC_ATTRIBUTES,
-        // The dataset's rules read its owning group, which this list fetches only when asked.
-        // Without it the rows carry capabilities alone rather than a state answer guessed from
-        // a field nobody fetched.
-        availableActionsOf: includes.owner_group ? (d) => state.availableActions('dataset', d) : null,
+        // Every dataset read carries the fields the state rules read, so each row answers.
+        availableActionsOf: availableActions,
       }),
     });
   }),
@@ -424,15 +423,10 @@ router.get(
     }
     res.json({
       ...req.permission.filter(dataset),
-      _meta: {
-        standing: req.permission.standing,
-        capabilities: toCapabilitiesArray(req.permission.capabilities)
-          .concat(await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
-            ? ['request_access'] : []),
-        // The other answer: what this dataset's state admits, whoever is asking. The row is
-        // fetched with its owning group above, which is what the rules read.
-        available_actions: state.availableActions('dataset', dataset),
-      },
+      _meta: buildMeta('dataset', dataset, req.permission, {
+        extraCapabilities: await accessRequestsService.mayFileRequest({ user: req.user, resource_id: req.params.id })
+          ? ['request_access'] : [],
+      }),
     });
   }),
 );

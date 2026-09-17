@@ -2,13 +2,11 @@ const assert = require('assert');
 const config = require('config');
 
 const prisma = require('@/db');
-const state = require('@/state');
+const { assertPossible, check, withStateFields } = require('@/state').import('dataset');
 const logger = require('@/services/logger');
 const wfService = require('@/services/workflow');
 const { DONE_STATUSES } = require('@/constants');
 const createError = require('http-errors');
-
-const { readDatasetStateFields } = require('./stateFields');
 
 /**
  * The workflows a caller may launch on a dataset, and the policy action each one needs.
@@ -155,7 +153,12 @@ async function createWorkflow({ dataset, wf_name, initiator_id }) {
   if (!action) {
     throw createError.BadRequest(`No policy action is defined for workflow ${wf_name}`);
   }
-  state.assertPossible('dataset', action, await readDatasetStateFields(prisma, dataset.id));
+  // The callers pass rows fetched in different ways, so the state is read here rather than
+  // taken off the argument.
+  assertPossible(action, await prisma.dataset.findUniqueOrThrow(withStateFields({
+    where: { id: dataset.id },
+    select: { id: true },
+  })));
 
   const active_same_name = dataset.workflows
     .filter((wf) => wf.name === wf_body.name)
@@ -221,8 +224,7 @@ async function startStageRun(dataset, initiator_id) {
  *
  * @param {object[]} datasets - rows with `id`, `resource_id`, `name`, and `is_staged`, plus the
  *   fields the dataset's `request_stage` state rule reads: `is_deleted` and
- *   `owner_group.is_archived`. A list query supplies them for the whole page, and
- *   `requiredFields('dataset', ['request_stage'])` names them.
+ *   `owner_group.is_archived`. Every dataset read in `fetch.js` supplies them for the whole page.
  * @param {object} options
  * @param {function(string): Promise<boolean>} options.permits - whether the caller may stage
  *   the dataset with that resource id
@@ -240,7 +242,7 @@ async function bulkStage(datasets, { permits, startRun = startStageRun, initiato
     // The rule is a pure function of the row, and the caller fetched the page in one query, so
     // the fields are already here. Querying per row, or re-querying the page, would make this
     // function depend on the database for something its argument already carries.
-    const refusal = state.check('dataset', 'request_stage', dataset);
+    const refusal = check('request_stage', dataset);
 
     // eslint-disable-next-line no-await-in-loop
     const allowed = await permits(dataset.resource_id);

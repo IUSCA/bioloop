@@ -4,12 +4,26 @@ const createError = require('http-errors');
 const config = require('config');
 
 const prisma = require('@/db');
-const resourceState = require('@/state');
+const { assertPossible, withStateFields } = require('@/state').import('dataset');
 const FileGraph = require('@/services/fileGraph');
 const authService = require('@/services/auth');
 const logger = require('@/services/logger');
 
-const { readDatasetStateFields } = require('./stateFields');
+/**
+ * A dataset's integer primary key and the fields its state rules read, from its resource UUID.
+ *
+ * @param {string} resource_id
+ * @returns {Promise<{id: number, is_deleted: boolean, owner_group: {is_archived: boolean}}>}
+ * @throws {createError.NotFound} when no dataset carries that resource id
+ */
+async function findDatasetRow(resource_id) {
+  const dataset = await prisma.dataset.findUnique(withStateFields({
+    where: { resource_id },
+    select: { id: true },
+  }));
+  if (!dataset) throw createError.NotFound('Dataset not found');
+  return dataset;
+}
 
 /**
  * Adds files to a dataset.
@@ -127,9 +141,9 @@ function normalizeBasePath(base) {
 async function listFiles({ dataset_id, base = '' }) {
   // A deleted dataset's files are gone, so the listing is a conflict rather than an empty
   // result: an empty listing means "no files yet", which this is not.
-  resourceState.assertPossible('dataset', 'list_files', await readDatasetStateFields(prisma, dataset_id));
-
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+  const dataset_row = await findDatasetRow(dataset_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
   const base_path = normalizeBasePath(base);
 
   const results = await prisma.dataset_file.findFirst({
@@ -198,9 +212,9 @@ function createFileTree(files) {
  * @throws {createError.NotFound} when no dataset carries that resource id.
  */
 async function getFileTree({ dataset_id }) {
-  resourceState.assertPossible('dataset', 'list_files', await readDatasetStateFields(prisma, dataset_id));
-
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+  const dataset_row = await findDatasetRow(dataset_id);
+  assertPossible('list_files', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const files = await prisma.dataset_file.findMany({
     where: {
@@ -307,22 +321,6 @@ async function searchFiles({
 }
 
 /**
- * Turns a dataset's resource UUID into its integer primary key.
- *
- * @param {string} resource_id
- * @returns {Promise<number>} the dataset's `id`
- * @throws {createError.NotFound} when no dataset carries that resource id
- */
-async function resolveDatasetRowId(resource_id) {
-  const dataset = await prisma.dataset.findUnique({
-    where: { resource_id },
-    select: { id: true },
-  });
-  if (!dataset) throw createError.NotFound('Dataset not found');
-  return dataset.id;
-}
-
-/**
  * A download URL and token for one file.
  *
  * `dataset_id` is the dataset's resource UUID, the way every other v2 entry point addresses a
@@ -330,9 +328,9 @@ async function resolveDatasetRowId(resource_id) {
  * rather than by each caller.
  */
 async function getFileDownloadInfo({ dataset_id, file_id, actor_id }) {
-  resourceState.assertPossible('dataset', 'download', await readDatasetStateFields(prisma, dataset_id));
-
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+  const dataset_row = await findDatasetRow(dataset_id);
+  assertPossible('download', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const val = await prisma.$transaction(async (tx) => {
     const file = await tx.dataset_file.findFirstOrThrow({
@@ -405,9 +403,9 @@ function getBundleDownloadPath(dataset) {
  * A download URL and token for the dataset's bundle. Takes the resource UUID, as above.
  */
 async function getBundleDownloadInfo({ dataset_id, actor_id }) {
-  resourceState.assertPossible('dataset', 'download', await readDatasetStateFields(prisma, dataset_id));
-
-  const dataset_row_id = await resolveDatasetRowId(dataset_id);
+  const dataset_row = await findDatasetRow(dataset_id);
+  assertPossible('download', dataset_row);
+  const dataset_row_id = dataset_row.id;
 
   const val = await prisma.$transaction(async (tx) => {
     const dataset = await tx.dataset.findFirstOrThrow({

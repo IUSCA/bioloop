@@ -452,6 +452,11 @@ per-row query to a list to answer a UI convenience is a performance decision rat
 mechanical edit, so the rest wait for Phase 5, which will say which lists the UI actually reads
 it from.
 
+Later, the dataset state container declared a `select` fragment, and `createPrismaInclude` merges
+it into every dataset read. The dataset search no longer gates `available_actions` on
+`include_owner_group`: every row carries the fields, at the cost of one owning-group relation per
+row.
+
 Each state container declares its named states as `examples`, and the engine gained
 `forbiddenActions(resourceType, stateName)`, which runs the resource's own rules against its own
 example. `GET /v2/states/:resource_type/:state_name/forbidden-actions` serves it, so the archive

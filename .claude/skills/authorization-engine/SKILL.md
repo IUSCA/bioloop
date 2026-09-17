@@ -384,8 +384,9 @@ composition. For a dataset, a collection, or a group it reads the page's paths o
 
 A list row's second answer is `_meta.available_actions`, which `projectRows` adds when the
 caller passes `availableActionsOf`. A list that did not fetch the fields a state rule reads must
-pass nothing rather than guess: the dataset search gates it on `include_owner_group`, because a
-rule throws rather than decide from a field the caller did not fetch. `tests/model/listRowsArm.test.js` compares the batch
+pass nothing rather than guess, because a rule throws rather than decide from a field the caller
+did not fetch. The dataset search always answers, because `createPrismaInclude` in
+`datasets_v2/fetch.js` merges the dataset fragment into every dataset read. `tests/model/listRowsArm.test.js` compares the batch
 against the single-row composition, and `tests/model/relatedRowsArm.test.js` counts rows where
 the parent's projection would have differed.
 
@@ -467,8 +468,9 @@ not the row, is the object Prisma wraps. `tests/authorization/hydrateExtendedRow
 
 There is no DELETED restriction and no view deriving one. `state/builtin/dataset.js` reads
 `is_deleted` directly: a deleted dataset refuses every change and every data-plane action, and
-still admits reading its record. `readDatasetStateFields` fetches the row a caller needs, by
-either id form, and takes `FOR UPDATE` when asked.
+still admits reading its record. A service that writes locks the row with `lockDataset` in
+`datasets_v2/index.js`; a read-only caller in `files.js` reads it with `findDatasetRow`. Both merge
+the dataset fragment, so neither restates the fields.
 
 ## A new container fails the suite until it is placed
 
@@ -518,14 +520,14 @@ Three things follow for a caller.
   `const { assertPossible, withStateFields } = require('@/state').import('collection')` gives
   the same functions with the type supplied. The unbound exports carry an `Of` suffix and take the
   type first, such as `assertPossibleOf(type, action, row)`; the bound ones drop both. `import`
-  throws at require time for a type with no state container. Collections and groups use it so far,
+  throws at require time for a type with no state container. Collections, groups, and datasets use it so far,
   and the other consumers still call the old unsuffixed names, which no longer exist.
-- **Only `collection` and `group` declare a fragment so far.** `selectOf` on any other type throws.
+- **Only `collection`, `group`, and `dataset` declare a fragment so far.** `selectOf` on any other
+  type throws.
   A fragment of columns alone, as the group's is, merges nothing into an `include`, because
   `include` returns every column already; `withStateFields` is still worth calling there, so a
   relation added to the fragment later reaches the query.
-  Grants, access requests, and datasets still use the readers in `state/builtin/targets.js` and
-  `datasets_v2/stateFields.js`.
+  Grants and access requests still use the readers in `state/builtin/targets.js`.
 - **A detail route builds `_meta` with `buildMeta(type, row, permission)`** from `src/services/meta.js`.
   It sits outside `src/authorization`, because authorization does not import
   the state layer; `projectRows` takes an `availableActionsOf` callback for the same reason.
@@ -556,9 +558,9 @@ never read it. `tests/state/rules.test.js` drives every rule with no database, a
   the validation query keeps only what it alone decides: unknown, deleted, or foreign datasets.
   A predicate the state rule already covers is a duplicate to delete, not a second opinion.
 - **A dataset is addressed two ways.** Services take the numeric `dataset.id`; routes, the
-  authorization layer, and `collection_dataset` take `resource_id`. `readDatasetStateFields`
-  accepts either, and `services/datasets_v2/files.js` resolves one to the other with
-  `resolveDatasetRowId`. A test passing `dataset.id` where a service wants `resource_id` fails as
+  authorization layer, and `collection_dataset` take `resource_id`. `lockDataset` takes the
+  numeric id, and `findDatasetRow` in `services/datasets_v2/files.js` takes `resource_id` and
+  returns the numeric id along with the state fields. A test passing `dataset.id` where a service wants `resource_id` fails as
   a validation error rather than as a type error, so check which the function reads.
 - **Most of these services return nothing.** `addGroupMembers` and friends return whatever their
   `$transaction` callback returns, which is often `undefined`. Assert on the row, with

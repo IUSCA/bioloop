@@ -24,7 +24,15 @@ require('module-alias/register');
 const prisma = require('@/db');
 const state = require('@/state');
 const groupsService = require('@/services/groups');
-const { readDatasetStateFields } = require('@/services/datasets_v2/stateFields');
+
+const groupState = state.import('group');
+const datasetState = state.import('dataset');
+
+/** A dataset row as a service reads it, with the fields its state rules read. */
+const datasetRow = (id) => prisma.dataset.findUniqueOrThrow(datasetState.withStateFields({
+  where: { id },
+  select: { id: true },
+}));
 const {
   createTestUser, createTestGroup, createTestChildGroup, createTestDataset,
   deleteDataset, deleteGroup, deleteUser,
@@ -62,9 +70,9 @@ afterAll(async () => {
 }, 30_000);
 
 /** The group row its own rules read. */
-const groupRow = (id) => prisma.group.findUniqueOrThrow({
-  where: { id }, select: { is_archived: true },
-});
+const groupRow = (id) => prisma.group.findUniqueOrThrow(groupState.withStateFields({
+  where: { id }, select: { id: true },
+}));
 
 describe('an archived group', () => {
   beforeAll(async () => {
@@ -85,35 +93,35 @@ describe('an archived group', () => {
 
   test('refuses a change to itself and admits every read', async () => {
     const row = await groupRow(parent.id);
-    expect(state.check('group', 'edit_metadata', row)).not.toBeNull();
-    expect(state.check('group', 'add_member', row)).not.toBeNull();
-    expect(state.check('group', 'view_metadata', row)).toBeNull();
-    expect(state.check('group', 'view_members', row)).toBeNull();
+    expect(groupState.check('edit_metadata', row)).not.toBeNull();
+    expect(groupState.check('add_member', row)).not.toBeNull();
+    expect(groupState.check('view_metadata', row)).toBeNull();
+    expect(groupState.check('view_members', row)).toBeNull();
   });
 
   test('refuses changes to the datasets it owns, and leaves their bytes readable', async () => {
-    const row = await readDatasetStateFields(prisma, parentDataset.id);
-    expect(state.check('dataset', 'edit_metadata', row)).not.toBeNull();
-    expect(state.check('dataset', 'transfer_ownership', row)).not.toBeNull();
+    const row = await datasetRow(parentDataset.id);
+    expect(datasetState.check('edit_metadata', row)).not.toBeNull();
+    expect(datasetState.check('transfer_ownership', row)).not.toBeNull();
     // Archiving closes governance, not access. @see decision 16, row 4
-    expect(state.check('dataset', 'download', row)).toBeNull();
-    expect(state.check('dataset', 'view_metadata', row)).toBeNull();
+    expect(datasetState.check('download', row)).toBeNull();
+    expect(datasetState.check('view_metadata', row)).toBeNull();
   });
 
   test('leaves its sub-group mutable, and the datasets that sub-group owns', async () => {
     // The D2 case. An archived group does not archive the groups beneath it: somebody archives
     // each one in its own right, and until they do, the sub-group governs itself.
-    expect(state.check('group', 'add_member', await groupRow(child.id))).toBeNull();
+    expect(groupState.check('add_member', await groupRow(child.id))).toBeNull();
 
-    const row = await readDatasetStateFields(prisma, childDataset.id);
-    expect(state.check('dataset', 'edit_metadata', row)).toBeNull();
+    const row = await datasetRow(childDataset.id);
+    expect(datasetState.check('edit_metadata', row)).toBeNull();
   });
 
   test('admits unarchiving, or the group would be stuck', async () => {
-    expect(state.check('group', 'unarchive', await groupRow(parent.id))).toBeNull();
+    expect(groupState.check('unarchive', await groupRow(parent.id))).toBeNull();
     // Forced unless the two differ: an active group refuses unarchive, so the rule is reading
     // the column rather than always admitting the way out.
-    expect(state.check('group', 'unarchive', { is_archived: false })).not.toBeNull();
+    expect(groupState.check('unarchive', { is_archived: false })).not.toBeNull();
   });
 });
 
@@ -125,19 +133,19 @@ describe('unarchiving', () => {
     datasetsToDelete.push(d.id);
 
     await groupsService.archiveGroup(g.id, actor.subject_id);
-    expect(state.check('group', 'edit_metadata', await groupRow(g.id))).not.toBeNull();
-    expect(state.check('dataset', 'edit_metadata', await readDatasetStateFields(prisma, d.id)))
+    expect(groupState.check('edit_metadata', await groupRow(g.id))).not.toBeNull();
+    expect(datasetState.check('edit_metadata', await datasetRow(d.id)))
       .not.toBeNull();
 
     await groupsService.unarchiveGroup(g.id, actor.subject_id);
-    expect(state.check('group', 'edit_metadata', await groupRow(g.id))).toBeNull();
-    expect(state.check('dataset', 'edit_metadata', await readDatasetStateFields(prisma, d.id)))
+    expect(groupState.check('edit_metadata', await groupRow(g.id))).toBeNull();
+    expect(datasetState.check('edit_metadata', await datasetRow(d.id)))
       .toBeNull();
   }, 30_000);
 
   test('an unrelated group is never reached either way', async () => {
     const unrelated = await createTestGroup(actor.subject_id, '_arch_unrelated');
     groupsToDelete.push(unrelated.id);
-    expect(state.check('group', 'edit_metadata', await groupRow(unrelated.id))).toBeNull();
+    expect(groupState.check('edit_metadata', await groupRow(unrelated.id))).toBeNull();
   });
 });

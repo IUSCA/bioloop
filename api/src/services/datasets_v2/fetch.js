@@ -2,6 +2,7 @@ const _ = require('lodash/fp');
 const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
+const { withStateFields } = require('@/state').import('dataset');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
 const { UPLOAD_STATUS_GROUPS } = require('@/constants');
@@ -34,7 +35,8 @@ function uploadStatusesFor(upload_status) {
  * @param {Boolean} includes.derived_datasets - Whether to include derived datasets
  * @param {Boolean} includes.workflows - Whether to include associated workflows
  * @param {Boolean} includes.upload_log - Whether to include the upload log, if the dataset was uploaded
- * @returns {object} An includes object for Prisma queries
+ * @returns {object} An includes object for Prisma queries. It always carries the fields the
+ *   dataset's state rules read, so every row a caller fetches can answer `available_actions`.
  */
 function createPrismaInclude(includes) {
   const result = {};
@@ -82,7 +84,7 @@ function createPrismaInclude(includes) {
       },
     };
   }
-  return result;
+  return withStateFields({ include: result }).include;
 }
 
 /**
