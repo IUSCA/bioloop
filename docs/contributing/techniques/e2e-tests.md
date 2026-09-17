@@ -38,8 +38,11 @@ order follows the foreign keys that RESTRICT: grants, then access requests, then
 collections and datasets, then resources, then groups, then their subject rows. Ids are cast
 to `text[]`, because Prisma declares these id columns as `String`.
 
-`src/world/db.js` is the only direct database access. It serves teardown and the borrow
-query. A spec that reads the database to check an outcome asserts against rows rather than
+`src/world/db.js` is the only direct database access. It serves teardown, the borrow
+query, and `createImportSource`. No route registers an import source. A platform admin inserts
+the row by hand in the product too, so the insert is the act the product expects. Teardown
+removes a run's import sources before its groups, because `import_source.owner_group` is
+RESTRICT. A spec that reads the database to check an outcome asserts against rows rather than
 against what a person sees.
 
 ### Worlds are built one at a time
@@ -188,6 +191,22 @@ with "This invitation is no longer valid".
 Bodies arrive quoted-printable, with `=3D` for `=` and soft line breaks. The HTML half
 escapes `=` as `&#x3D;`. `decodeBody` undoes both.
 
+## Imports start a live workflow
+
+`POST /v2/datasets/imports` starts the `integrated` workflow, and the development workers
+run it. Left alone, it inspects and archives the directory of a dataset that teardown is about
+to delete. `datasets/import.spec.js` pauses the run through
+`POST /v2/datasets/:id/workflows/:workflow_id/pause` as soon as it has the run id.
+
+The pause wins because of the first step. `await_stability` waits until nothing under the
+directory has changed for `recency_threshold_seconds`, which is 30 in `workers/config/dev.py`.
+The spec touches a file in the directory just before submitting. Measured on 2026-09-17: the
+celery log shows the task terminated within a second of starting its wait, with no inspect or
+archive step.
+
+The flow asserts one `integrated` run, so it needs the workflow server on port 5001. The API
+and the workers read the source directory, so they must run on the machine the suite runs on.
+
 ## API shapes that are not what they look like
 
 Each of these cost a debugging cycle. Verified against the routes in `api/src/routes`.
@@ -212,6 +231,8 @@ Each of these cost a debugging cycle. Verified against the routes in `api/src/ro
 | `GET /groups/:id/members` | Current members only. A removed member's history is in `GET /groups/:id/audit` as `GROUP_MEMBER_ADDED` and `GROUP_MEMBER_REMOVED`. |
 | `GET /v2/users/me` | Returns `{user, is_platform_admin, admin_group_count, oversight_group_count}`. The profile is nested. |
 | `GET /v2/datasets/:id` | Wants the resource UUID. The integer `dataset.id` is a 400, and the page renders the same "Failed to load dataset" it shows for a refusal. |
+| `GET /v2/datasets/eligible-owner-groups` | A bare array of groups, not `{data}`. |
+| `POST /v2/datasets/imports` | Refuses with 403 for two reasons: the caller may not contribute to the group ("Not permitted to create datasets…"), or the path is in no source the caller can browse ("…not inside an import source…"). It answers 409 for a taken name and for a directory already registered ("already registered"). Check the body to know which refusal fired. |
 | `POST /collections/:id/datasets` | `dataset_resource_ids` are resource UUIDs. A cross-group dataset is refused with 400, not 403. |
 
 ## Driving the browser
@@ -229,6 +250,16 @@ element is for rather than how it looks. A list row carries the id of what it ho
 `dataset-row-<id>`. A hook lands in the same change as the spec that reads it.
 
 Vuestic tabs render `role="tab"` on a `div`, so `getByRole('tab', {name: /Files/i})` works.
+
+A `VaInput` label is not tied to its input, so `getByLabel('Directory')` matches nothing and
+waits out the test timeout. Locate the input by placeholder, or by a class on the component
+such as `.import-name-input input`.
+
+A dialog that fetches its select options when it opens races the first click. Clicked before
+the fetch returns, the select opens empty and the option never renders. `datasets/import.spec.js`
+passed alone and failed in one of two full parallel runs for this reason, while
+`GET /v2/import-sources` took 636 ms. Start `page.waitForResponse` for each fetch before the
+click that opens the dialog, and await it afterwards.
 
 ### `va-select` takes real input
 

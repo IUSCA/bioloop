@@ -19,6 +19,7 @@ and parity helpers live in `src/assertions/`. The specs in `src/specs/` are grou
 - `refusal/` — datasets, discovery, and governance refuse a caller with no standing
 - `requests/` — the access request loop
 - `grants/` — grants and the access-type order
+- `datasets/` — importing a directory from an import source
 - `membership/` — members, sub-group creation, and invitations
 - `restrictions/` — archiving, and the oversight boundary around it
 - `spike/` — whether Playwright can drive a Vuestic `va-select`
@@ -33,6 +34,9 @@ docker compose up -d postgres redis mailhog
 bin/devserver.sh up
 cd e2e && npm install --ignore-scripts && npx playwright test
 ```
+
+`datasets/import.spec.js` also needs the workflow server on port 5001, and it creates a
+directory the API reads, so the API must run on this machine.
 
 `--ignore-scripts` skips Playwright's browser download. The config uses `channel: 'chrome'`,
 so it drives the Chrome already installed on the machine. A run on a host without Chrome

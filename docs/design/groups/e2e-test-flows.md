@@ -127,6 +127,8 @@ grants to both system principals, so nothing there is truly invisible.
 **It builds through the HTTP API as a platform admin, not through direct inserts.** A world
 built by inserts can be one the API would refuse, such as a dataset with no resource row. A
 world built through the API makes the fixture itself a check that the creation paths work.
+An import source is the one exception. No route registers one, because a platform admin
+inserts the row by hand after checking the path, so the suite inserts it the same way.
 
 **It never creates a user account.** Creating an account runs the `USER_CREATED` handlers, and
 one of them applies that address's pending invitations. A world builder that created accounts
@@ -437,6 +439,24 @@ naming the archive.
 Covers use case 24.
 
 **Then** no control moves a dataset between groups, on any page, for any actor.
+
+### D7 — A group imports a directory from its own import source · `MVP` · `journey`
+
+Covers the import route in [Dataset creation](./dataset-creation.md#import-sources-are-visible-to-everyone).
+
+**Actor** Alice, then Erin.
+**Given** Alice administers a lab that owns an `ACTIVE` import source, and the source holds a
+directory nobody has imported.
+**When** Alice opens New Dataset, chooses Import, picks the source, and picks the directory.
+**Then** the name fills in from the directory, and a name the lab already holds is marked on
+the field. The import succeeds, the dataset appears in her list owned by the lab, and one
+`integrated` workflow has started on it.
+**When** Erin, who administers Patel Lab, lists her import sources and imports the same path
+into Patel Lab.
+**Then** the source is absent from her list, and the import is refused with 403. Erin may
+create datasets in Patel Lab, so the refusal comes from the source and not from the group.
+**And never** is one directory registered as two datasets. A second import of the path is
+refused with 409, and the refusal names neither the dataset nor its group.
 
 ---
 

@@ -119,6 +119,17 @@ Every spec file a worker runs shares that worker's world.
 - **Each request flow uses its own `lockedFor*` dataset.** `POST /access-requests` answers 409 for
   a duplicate or redundant request.
 
+## Imports start a live workflow
+
+- **Pause the run as soon as you have its id.** The development workers would otherwise
+  archive a directory that teardown deletes. The first step waits 30 seconds after the last
+  change under the directory, so touch a file just before submitting.
+- **An import source is inserted by SQL** through `src/world/importSources.js`; no route
+  creates one. Its directory lives under the realpath of `os.tmpdir()`, because the API compares
+  paths as strings and macOS `/var` is a symlink.
+- **A 403 on `POST /v2/datasets/imports` has two causes**, the group or the source. So does a
+  409, the name or the directory. Assert the body.
+
 ## Invitation tokens come from MailHog
 
 No API returns a token. `src/world/mail.js` reads MailHog, which needs Redis, MailHog, and the
@@ -149,6 +160,11 @@ The full table is in the docs page. The ones that most often make a spec wrong:
   `.locator('input[type="checkbox"]')` and click the wrapper. `uncheck()` on the input times out.
 - **Assert both states of a disabled control**, `toBeDisabled()` then `toBeEnabled()`.
 - Vuestic tabs are `getByRole('tab', {name})`.
+- **A select whose options load when a dialog opens needs its fetch awaited.** Clicked early,
+  it opens empty and the option never appears. Start `page.waitForResponse` before the click
+  that opens the dialog.
+- **A `VaInput` label is not tied to its input.** `getByLabel` waits out the timeout. Use the
+  placeholder or a component class.
 
 **Selectors.** A `data-testid` is kebab-case, prefixed by the surface, and names purpose rather
 than look (`grant-revoke-confirm`). A list row carries its id (`dataset-row-<id>`). Add a hook in

@@ -1,5 +1,6 @@
 const { withClient } = require('./db');
 const { prefixFor } = require('./build');
+const { removeImportSources } = require('./importSources');
 
 /**
  * Removes everything a run built, in one transaction.
@@ -71,6 +72,9 @@ async function teardownWorld(runId) {
       await client.query('DELETE FROM collection WHERE owner_group_id = ANY($1::text[])', [groupIds]);
       await client.query('DELETE FROM dataset WHERE owner_group_id = ANY($1::text[])', [groupIds]);
       await client.query('DELETE FROM resource WHERE id = ANY($1::text[])', [resourceIds]);
+
+      // `import_source.owner_group` is RESTRICT. Its directories go with it.
+      await removeImportSources(client, { prefix, groupIds });
 
       // The group cascades its memberships and its closure rows. Its subject row holds a
       // RESTRICT reference the other way, so it follows.
