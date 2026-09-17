@@ -8,6 +8,6 @@
 # 2. Extend PrismaHydrator or Hydrator base class
 # 3. Register virtual attributes if needed
 # 4. Export the hydrator instance
-# 5. Register it in ../index.js hydratorRegistry
+# 5. Register it in SECTION 4 of ../../index.js
 #
-# See ../custom/README.md for examples and guidelines
+# See ../README.md for examples and guidelines

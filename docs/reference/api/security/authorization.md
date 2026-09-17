@@ -38,8 +38,8 @@ merge conflicts against the base repository:
   registry, and the `authorize()` engine. Never edited in a derived app.
 - **`builtin/`** — Bioloop's own policies and hydrators, for groups, collections,
   users, and request context. Rarely edited in a derived app.
-- **`custom/`** — policies and hydrators belonging to a derived app. This
-  directory does not exist in the base repository.
+- **`custom/`** — policies and hydrators belonging to a derived app. The base
+  repository ships it empty, with only its README.
 
 A policy is a pure function that declares exactly which attributes it needs, so
 the engine can fetch them once per request and cache them:
@@ -48,31 +48,39 @@ the engine can fetch them once per request and cache them:
 const isGroupAdmin = new Policy({
   name: 'isGroupAdmin',
   resourceType: 'group',
-  requires: {
-    user: ['group_memberships'],
-    resource: ['id'],
-  },
-  evaluate: (user, group) => user
-    .group_memberships
-    .some((m) => m.group_id === group.id && m.role === 'ADMIN'),
+  meta: { pathKind: 'admin' },
+  requires: { context: ['access_paths'] },
+  evaluate: (user, group, context) => context.access_paths.kinds.has('admin'),
 });
 ```
 
-Routes never see policy internals; they ask the engine:
+Routes never see policy internals. A route binds one action with the middleware, which answers
+a refusal with 404 or 403 before the handler runs:
 
 ```javascript
-const { authorize, POLICY_REGISTRY, hydratorRegistry } = require('@/authorization');
+const { createAuthorizationMiddleware: authorize } = require('@/authorization');
 
-router.get('/groups/:id', async (req, res) => {
-  const allowed = await authorize(
-    POLICY_REGISTRY.group.getPolicy('view_metadata'),
-    { user: req.user.id, resource: req.params.id, context: req.id },
-    hydratorRegistry,
-    req.policyContext,
-  );
-  if (!allowed) return res.status(403).json({ error: 'Forbidden' });
-  // ...
+router.get(
+  '/groups/:id',
+  authorize('group', 'view_metadata'),
+  asyncHandler(async (req, res) => {
+    const group = await groupService.getGroupById(req.params.id);
+    res.json(req.permission.filter(group));
+  }),
+);
+```
+
+A handler that must decide in its body binds the decision when its module loads:
+
+```javascript
+const decideViewGroup = require('@/authorization').import('group').action('view_metadata');
+
+const decision = await decideViewGroup({
+  identifiers: { user: req.user.subject_id, resource: group.id },
+  policyExecutionContext: req.policyContext,
+  preFetched: { user: req.user, resource: group },
 });
+if (!decision.granted) return next(createError(decision.status, refusalMessage(decision)));
 ```
 
 Policies compose with `Policy.or()`, `Policy.and()`, and `Policy.not()`.

@@ -2,18 +2,6 @@ import api from "@/services/api";
 
 export default {
   /**
-   * List all groups the current user is a member of.
-   * @param {object} [params]
-   * @param {boolean} [params.archived] - filter by archived status; omit for all
-   *
-   * Returns {metadata: {total, offset, limit}, data: [groups]}
-   */
-  // TODO: remove this endpoint - used in groups store
-  mine(params) {
-    return api.get("/groups/mine", { params });
-  },
-
-  /**
    * Search groups by name/description or UUID.
    * Platform admins search all groups; others search only accessible groups.
    * Returns {metadata: {total, offset, limit}, data: [groups]}.
