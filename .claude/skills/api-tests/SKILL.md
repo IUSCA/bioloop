@@ -21,6 +21,11 @@ The reasoning and worked examples behind every rule here are in
   from the repo root, Jest runs the UI and e2e suites too: ~100 suites "fail" with
   `Tests: 0 failed`. Started from `ui/`, it prints `No tests found`. In the background it exits
   127 with one line of shell error, which looks like a finished run.
+- **`cd api` first, even with absolute paths.** `config` reads `<cwd>/config`, so a run started
+  from the repo root loads no configuration. One suite that requires `config` then fails to run
+  with `Test Suites: 1 failed` and `Tests: 0 total`, under a wall of
+  `WARNING: NODE_ENV value of 'test' did not match any deployment config file names`. Nothing
+  says the path was wrong.
 - **Read the first line of the output before the summary.** A shell error means no results.
 - **A file argument that matches nothing is skipped silently** when another argument matches.
   Run `ls` on the arguments, or check the suite count in the summary against what you meant.
@@ -61,8 +66,10 @@ against the cwd. From `api/` with repo-relative paths it fails with
 ## Restoring a file you broke on purpose
 
 `cp` prompts before overwriting, and a prompt in a backgrounded call waits forever with the
-mutated file left in the tree. Restore with `cp -f` or the reverse edit, in its own call, not
-chained after a Jest run. Confirm with `git diff`.
+mutated file left in the tree. **`cp -f` is not enough**: the profile's `cp -i` alias still
+wins, and the call answers itself with `not overwritten`, which reads like success. Restore with
+`/bin/cp -f` or the reverse edit, in its own call, not chained after a Jest run. Confirm with
+`git diff`.
 
 ## Is the failure yours?
 

@@ -150,6 +150,74 @@ describe('issuing one', () => {
     expect(await prisma.group_invitation.count({ where: { group_id: group.id } })).toBe(2);
   });
 
+  describe('an expired invitation does not block a new one', () => {
+    // The partial unique index counts every PENDING row, and an expired row is still PENDING.
+    // The service's own check skips expired rows, so the insert hits the index, and the P2002
+    // branch answers already_invited with the dead row. No mail goes out, because only a
+    // fresh invitation is announced, and the admin reads success.
+
+    /** Issue an invitation to dana and move its expiry into the past. */
+    async function expiredInvitation() {
+      const { invitation } = await invite('dana@university.edu');
+      await prisma.group_invitation.update({
+        where: { id: invitation.id },
+        data: { expires_at: new Date(Date.now() - 1000) },
+      });
+      return invitation;
+    }
+
+    test('inviting again issues a fresh invitation', async () => {
+      const expired = await expiredInvitation();
+
+      const again = await invite('dana@university.edu');
+
+      // 'invited' is also the only status that sends the email.
+      expect(again.status).toBe('invited');
+      expect(again.invitation.id).not.toBe(expired.id);
+      expect(again.invitation.token).not.toBe(expired.token);
+      expect(again.invitation.expires_at.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    test('the fresh invitation is one the person can actually accept', async () => {
+      const dana = await createTestUser('_inv_reinvite');
+      usersToDelete.push(dana.id);
+      const { invitation } = await invite(dana.email);
+      await prisma.group_invitation.update({
+        where: { id: invitation.id },
+        data: { expires_at: new Date(Date.now() - 1000) },
+      });
+
+      await invite(dana.email).catch(() => {});
+      const { applied } = await prisma.$transaction((tx) => invitationService
+        .applyPendingInvitations({ email: dana.email, user_subject_id: dana.subject_id, tx }));
+
+      expect(applied).toHaveLength(1);
+      expect(await activeMembership(group.id, dana.subject_id)).not.toBeNull();
+    });
+
+    test('the lapsed one is closed with a reason, so it is not left looking outstanding', async () => {
+      // 'expired' rather than 'admin_cancelled': nobody withdrew it, it ran out. The
+      // invitations list shows the reason, and the two mean different things to an admin.
+      const expired = await expiredInvitation();
+      await invite('dana@university.edu');
+
+      const after = await prisma.group_invitation.findUnique({ where: { id: expired.id } });
+      expect(after.status).toBe(INVITATION_STATUS.CANCELLED);
+      expect(after.cancellation_reason).toBe('expired');
+      expect(after.cancelled_at).not.toBeNull();
+    });
+
+    test('a later invite while the fresh one is open is still already_invited', async () => {
+      // Guards the fix from over-correcting: re-inviting is allowed once, not every time.
+      await expiredInvitation();
+      const fresh = await invite('dana@university.edu');
+      const third = await invite('dana@university.edu');
+
+      expect(third.status).toBe('already_invited');
+      expect(third.invitation.id).toBe(fresh.invitation.id);
+    });
+  });
+
   test('refuses someone who is already in the group', async () => {
     const member = await createTestUser('_inv_member');
     usersToDelete.push(member.id);
@@ -336,6 +404,46 @@ describe('applying what an address is holding', () => {
 
     const { applied } = await apply(dana.email, dana);
     expect(applied).toEqual([]);
+    expect(await activeMembership(group.id, dana.subject_id)).toBeNull();
+  });
+
+  test('a withdrawal that lands first is not overwritten', async () => {
+    // The race, with the ordering forced: an admin withdraws the invitation after signup has
+    // read it and before the membership is written. Withdrawal has to win, or the button
+    // promises something the system does not do. Raced for real in
+    // invitation.concurrency.test.js.
+    const dana = await createTestUser('_inv_withdrawn');
+    usersToDelete.push(dana.id);
+    const { invitation } = await invite(dana.email);
+    // The row as applyPendingInvitations read it, before the admin acted.
+    await invitationService.cancelInvitation({ group_id: group.id, invitation_id: invitation.id });
+
+    const granted = await prisma.$transaction(
+      (tx) => invitationService.grantMembership(tx, invitation, dana.subject_id),
+    );
+
+    expect(granted).toBe(false);
+    expect(await activeMembership(group.id, dana.subject_id)).toBeNull();
+    const after = await prisma.group_invitation.findUnique({ where: { id: invitation.id } });
+    expect(after.status).toBe(INVITATION_STATUS.CANCELLED);
+    expect(after.accepted_at).toBeNull();
+  });
+
+  test('an invitation that expires between the read and the write is not spent', async () => {
+    // Same guard, the other condition. Expiry is computed, so the row can lapse between
+    // reading it and writing it with nothing having changed the row at all.
+    const dana = await createTestUser('_inv_lapsed_write');
+    usersToDelete.push(dana.id);
+    const { invitation } = await invite(dana.email);
+    await prisma.group_invitation.update({
+      where: { id: invitation.id }, data: { expires_at: new Date(Date.now() - 1000) },
+    });
+
+    const granted = await prisma.$transaction(
+      (tx) => invitationService.grantMembership(tx, invitation, dana.subject_id),
+    );
+
+    expect(granted).toBe(false);
     expect(await activeMembership(group.id, dana.subject_id)).toBeNull();
   });
 

@@ -119,11 +119,52 @@ The browser's `normalizeEmail` in `ui/src/services/email.js` only trims and lowe
   invitation still closes, and an existing role is never upgraded.
 - **`/apply` checks the address before it reads the group**, so a forwarded link reveals
   nothing about its group.
-- **Expiry is computed.** `expires_at` decides, and no `EXPIRED` status exists.
+- **Expiry is computed.** `expires_at` decides, and no `EXPIRED` status exists. A lapsed
+  invitation keeps its `PENDING` row, and the listing marks it expired from `expires_at`.
+- **A lapsed invitation is closed when the same address is invited again.** `createInvitation`
+  sets it to `CANCELLED` with `cancellation_reason: 'expired'`, in the transaction that issues
+  the replacement. See [Re-inviting after an invitation lapses](#re-inviting-after-an-invitation-lapses).
+
+### Re-inviting after an invitation lapses
+
+An admin whose invitation ran out invites the same address again, and it works. An invitation
+lasts `invitations.ttl_days` days, seven by default, so an admin meets this the first time
+somebody leaves a mail unopened for a week.
+
+The index and the service have to agree on what "open" means for that to hold.
+`group_invitation_pending_unique` covers every `PENDING` row. `usableInvitation` skips a row
+past its `expires_at`. A lapsed row is therefore open to the index and closed to the service,
+and an insert the service believes is the first one collides with a row it never looked at.
+
+So the transaction closes the lapsed row before it reads for an open one. The status becomes
+`CANCELLED` with `cancellation_reason: 'expired'` rather than a new `EXPIRED` enum member. The
+reason column already separates a withdrawal from an archiving, the invitations list already
+shows it, and a fourth status would make every state rule, filter, and badge answer one more
+case. Expiry stays computed either way, because nothing scans the table on a timer. A lapsed
+invitation nobody sends again keeps its `PENDING` row and reads as Expired through
+`is_expired`.
+
+The replacement is a new row with a new id, a new token, and a new expiry. The old link stays
+dead.
 
 **Concurrent accepts.** Two tabs on one token serialize on `FOR UPDATE`. The losing tab gets
 404 and says the link is spent, because "your other tab did this" and "somebody else spent
 your link" look the same to the server.
+
+**Two admins inviting at once.** `createInvitation` takes `SELECT … FOR UPDATE` on the group
+row before it reads. The second transaction waits, then reads the first one's invitation and
+answers `already_invited`. Nothing recovers from a unique-index violation inside the
+transaction: Postgres aborts a transaction at its first constraint violation and refuses every
+statement afterwards, including the read that such a recovery needs. A violation that escapes
+anyway becomes a 409 outside the transaction.
+
+**A withdrawal racing a signup.** An admin can withdraw an invitation while the invited person
+is creating an account. `grantMembership` closes the invitation first, with an update guarded
+by the same `usableInvitation` condition, and inserts the membership only when that update
+touched a row. The withdrawal wins and the person stays out of the group, or it loses and the
+admin is refused with 409. `applyPendingInvitations` reports the invitation as skipped with
+the reason `no_longer_open`, and the account is still created with the person's other
+invitations applied.
 
 **Email must stay immutable.** The `/apply` equality check assumes an account's address never
 changes. Any future email-change feature must cancel the old address's `PENDING` invitations
@@ -155,6 +196,8 @@ and the log names the setting.
 | Cancelling another group's invitation | `cancelInvitation` matches on both `id` and `group_id` |
 | Duplicate membership | `ON CONFLICT` against the `group_user_one_open_membership` partial unique index |
 | Duplicate pending invitations | Partial unique index on `(group_id, invited_email) WHERE status = 'PENDING'` |
+| A lapsed invitation blocking its replacement | The lapsed row is cancelled with reason `expired` in the transaction that issues the new one |
+| A withdrawal overwritten by a signup in flight | `grantMembership` closes the invitation with a guarded update, and writes the membership only when it closed |
 | HTML injection in the email | Handlebars auto-escapes the template |
 | Token in browser history | `/invite` calls `router.replace` before any other request |
 | Token in the referrer | `Referrer-Policy: no-referrer` on the `/invite` location in `nginx/conf/app.conf` |
@@ -163,7 +206,8 @@ and the log names the setting.
 
 ## Out of scope
 
-- **Resend.** Cancel and invite again.
+- **Resend.** An invitation that lapsed is re-sent by inviting the address again. A live one
+  is withdrawn first, because two live links into one group cannot be told apart.
 - **Bulk or CSV invitations.** `createInvitation` composes; this is iteration.
 - **Invitation-only signup.** Turning off the `signup` feature flag covers it.
 - **Invitation audit events** beyond the `GROUP_MEMBER_ADDED` event an accept writes.

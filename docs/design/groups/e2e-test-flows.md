@@ -378,6 +378,24 @@ the group has been archived and closes itself.
 **When** Erin attempts to cancel it from Patel Lab's context.
 **Then** the request is refused, and Wong Lab's invitation stays pending.
 
+### C7 — A lapsed invitation is sent again · `MVP` · `journey`
+
+Covers use case 61 and
+[Invitations — Re-inviting after an invitation lapses](./invitations.md#re-inviting-after-an-invitation-lapses).
+
+**Actor** Alice, then Vic.
+**Given** Wong Lab's invitation to Vic has passed its expiry, and the list marks it Expired.
+**When** Alice invites the same address again.
+**Then** a second mail arrives at that address. The lapsed invitation reads withdrawn, with
+the reason that it expired, and the new one reads pending.
+**When** Vic opens the first link.
+**Then** the page says the invitation is no longer valid.
+**And never** does an admin have to withdraw a lapsed invitation before sending another.
+
+No spec covers this flow. The world drives the API and holds no database handle, so it cannot
+age an invitation, and the expiry is seven days away. The API suites cover the service, and the
+missing browser half is `.todo/local/L6-verification-and-e2e-gaps.md` T15.
+
 ---
 
 ## D. Dataset creation and ownership

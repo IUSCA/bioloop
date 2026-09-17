@@ -58,11 +58,15 @@ function usableInvitation(extra = {}) {
  * Issue an invitation, or report that one is already open.
  *
  * Idempotent on `(group, email)`: asking twice sends one email and returns `already_invited`
- * the second time. The check and the partial unique index are both needed — the check gives
- * the caller a clean answer, the index decides which of two simultaneous admins wins.
+ * the second time. Two admins asking at once serialize on the group lock, so the second reads
+ * the first one's invitation rather than colliding with it. An invitation that has lapsed is
+ * closed here and replaced, because the partial unique index counts it as open and this
+ * service does not.
  *
  * The response says nothing about whether the address has an account. A group admin who
  * could tell the difference could enumerate the portal's users one address at a time.
+ *
+ * @see docs/design/groups/invitations.md — Re-inviting after an invitation lapses
  *
  * @param {object} params
  * @param {string} params.group_id
@@ -100,6 +104,24 @@ async function createInvitation({
       throw createError.BadRequest('That person is already a member of this group');
     }
 
+    // A lapsed invitation is closed on the way past, so that the index and this service agree
+    // about what "open" means. The index counts every PENDING row and expiry is a condition
+    // rather than a status, so an expired row would otherwise collide with the insert below
+    // and an admin could never re-invite somebody whose invitation ran out.
+    await tx.group_invitation.updateMany({
+      where: {
+        group_id,
+        invited_email,
+        status: INVITATION_STATUS.PENDING,
+        expires_at: { lte: new Date() },
+      },
+      data: {
+        status: INVITATION_STATUS.CANCELLED,
+        cancelled_at: new Date(),
+        cancellation_reason: 'expired',
+      },
+    });
+
     const open = await tx.group_invitation.findFirst({
       where: usableInvitation({ group_id, invited_email }),
     });
@@ -110,33 +132,34 @@ async function createInvitation({
       tx.user.findUnique({ where: { subject_id: invited_by }, select: { name: true, username: true } }),
     ]);
 
-    try {
-      const invitation = await tx.group_invitation.create({
-        data: {
-          token: generateInviteToken(),
-          group_id,
-          invited_email,
-          role,
-          invited_by,
-          expires_at: expiryFromNow(),
-        },
-      });
-      return {
-        status: 'invited',
-        invitation,
-        groupName: group?.name,
-        inviterName: inviter?.name || inviter?.username,
-      };
-    } catch (err) {
-      // The other admin got there first, between the read above and this write.
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        const existing = await tx.group_invitation.findFirst({
-          where: { group_id, invited_email, status: INVITATION_STATUS.PENDING },
-        });
-        return { status: 'already_invited', invitation: existing };
-      }
-      throw err;
+    // No recovery around this insert. Two admins inviting the same person serialize on the
+    // group lock above, so the second one reads the first one's invitation and has already
+    // returned `already_invited`. Postgres also aborts the whole transaction on a constraint
+    // violation, which means a read after a failed insert cannot run at all.
+    const invitation = await tx.group_invitation.create({
+      data: {
+        token: generateInviteToken(),
+        group_id,
+        invited_email,
+        role,
+        invited_by,
+        expires_at: expiryFromNow(),
+      },
+    });
+    return {
+      status: 'invited',
+      invitation,
+      groupName: group?.name,
+      inviterName: inviter?.name || inviter?.username,
+    };
+  }).catch((err) => {
+    // Unreachable while the group lock holds. Mapped anyway, because the alternative is a
+    // Prisma error reaching the route as a 500 that says nothing about invitations.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      logger.error(`Invitation to ${invited_email} in group ${group_id} hit the pending unique index`);
+      throw createError.Conflict('An invitation to that address is already open in this group');
     }
+    throw err;
   });
 
   // After the transaction, and unable to fail it. Asking twice sends one message, so only a
@@ -247,12 +270,25 @@ async function cancelInvitation({ group_id, invitation_id }) {
  * Runs inside the caller's transaction. Adding the membership and closing the invitation are
  * one fact, and a crash between them would leave an invitation that can be spent again.
  *
+ * @see docs/design/groups/invitations.md — Stale invitations and failures
+ *
  * @param {import('@prisma/client').Prisma.TransactionClient} tx
  * @param {object} invitation
  * @param {string} user_subject_id
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} whether the invitation was still open and was spent here
  */
 async function grantMembership(tx, invitation, user_subject_id) {
+  // Closing the invitation comes first, and the `WHERE` is what makes it happen exactly once.
+  // An admin withdrawing it at the same moment either wins here, and the person stays out of
+  // the group, or loses and sees it accepted. An unguarded write would let a withdrawn
+  // invitation put somebody in the group anyway, which is the one thing withdrawal promises.
+  // `acceptInvitationByToken` holds the row lock, so there the count is always one.
+  const { count } = await tx.group_invitation.updateMany({
+    where: usableInvitation({ id: invitation.id }),
+    data: { status: INVITATION_STATUS.ACCEPTED, accepted_at: new Date() },
+  });
+  if (count === 0) return false;
+
   // ON CONFLICT rather than a read: the partial unique index on an open membership is what
   // actually decides, and a check here would only narrow the race, not close it.
   await tx.$executeRaw`
@@ -261,11 +297,6 @@ async function grantMembership(tx, invitation, user_subject_id) {
             ${invitation.role}::"GROUP_MEMBER_ROLE", ${invitation.invited_by})
     ON CONFLICT (group_id, user_id) WHERE removed_at IS NULL DO NOTHING;
   `;
-
-  await tx.group_invitation.update({
-    where: { id: invitation.id },
-    data: { status: INVITATION_STATUS.ACCEPTED, accepted_at: new Date() },
-  });
 
   const groupName = await resolveEntityName(tx, 'group', invitation.group_id);
   const builder = new AuditBuilder(tx, { actor_id: invitation.invited_by });
@@ -276,6 +307,8 @@ async function grantMembership(tx, invitation, user_subject_id) {
     subject_id: user_subject_id,
     subject_type: audit.SUBJECT_TYPE.USER,
   }]);
+
+  return true;
 }
 
 /**
@@ -321,8 +354,19 @@ async function applyPendingInvitations({ email, user_subject_id, tx }) {
       logger.info(`Invitation ${invitation.id} not applied: group ${invitation.group_id} is archived`);
     } else {
       // eslint-disable-next-line no-await-in-loop
-      await grantMembership(tx, invitation, user_subject_id);
-      applied.push({ invitation_id: invitation.id, group_id: invitation.group_id, group_name: invitation.group.name });
+      const granted = await grantMembership(tx, invitation, user_subject_id);
+      if (granted) {
+        applied.push({
+          invitation_id: invitation.id,
+          group_id: invitation.group_id,
+          group_name: invitation.group.name,
+        });
+      } else {
+        // An admin withdrew it between the read above and the write. Their decision stands,
+        // and the account is still created with its other invitations applied.
+        skipped.push({ invitation_id: invitation.id, reason: 'no_longer_open' });
+        logger.info(`Invitation ${invitation.id} not applied: it was closed while the account was being created`);
+      }
     }
   }
 
@@ -419,7 +463,10 @@ async function acceptInvitationByToken({ token, user }) {
 
     // Idempotent for someone who is already a member: the membership insert does nothing and
     // the invitation still closes.
-    await grantMembership(tx, invitation, user.subject_id);
+    const granted = await grantMembership(tx, invitation, user.subject_id);
+    // The row lock above makes this unreachable. The same answer as a spent token, because
+    // the two are indistinguishable to the person holding the link.
+    if (!granted) throw createError.NotFound('This invitation is no longer valid');
 
     return {
       group_id: invitation.group.id,

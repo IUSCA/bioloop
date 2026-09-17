@@ -38,7 +38,7 @@ first and "yes" to the second.
 ## How to read this page
 
 **Numbers are permanent identifiers, not an order.** Item 43 stays item 43 forever, even
-when it changes tier. Numbers are never reused, and new items start at 61. Other records
+when it changes tier. Numbers are never reused, and new items start at 63. Other records
 cite these numbers, so renumbering breaks them. Items in section 5 carry a letter as part
 of the identifier, so `C.9` is a different item from `9`.
 
@@ -440,6 +440,16 @@ Users will not report these, because users cannot see them.
     * Outcome: one authorization model decides every request.
     * Today: `/datasets` and `/projects` use the older role-based middleware, and `project`, `project_user`, and `project_dataset` remain in the schema with no migration path written down.
     * Why in the first release: items 11, 12, and 56 are false while this stands, and a release where the portal and the API disagree teaches the first cohort that the system cannot be trusted.
+
+61. **An invitation that has lapsed can be sent again** — `MVP` · **built**
+    * Outcome: an admin whose invitation ran out invites the same address again, and the person gets a new mail. No withdrawal first, and no waiting.
+    * An invitation lasts seven days, so an admin meets this the first time somebody leaves the mail unopened for a week. Until 2026-09-17 the second invitation failed, because the lapsed row still counted against the one-open-invitation index while the service treated it as closed.
+    * The lapsed row is now cancelled with the reason `expired` in the transaction that issues the replacement. See [Invitations — Re-inviting after an invitation lapses](./invitations.md#re-inviting-after-an-invitation-lapses).
+
+62. **A withdrawn invitation never produces a membership** — `MVP` · **built**
+    * Outcome: once an admin withdraws an invitation, nothing puts that person in the group, including a signup that is already under way.
+    * The case that makes it matter is a mistyped address. A stranger holds a working link, the admin withdraws it and invites the right person, and the stranger must not get in by signing up in the meantime.
+    * Accepting closes the invitation with a guarded update before it writes the membership, so a withdrawal and an accept cannot both succeed.
 
 ---
 

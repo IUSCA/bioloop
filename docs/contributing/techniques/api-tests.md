@@ -44,6 +44,15 @@ one line of shell error. A run that never happened looks like a run that finishe
 absolute path for the Jest binary, for the output file, and for every file argument. Read the
 first line of the output before reading the summary.
 
+A suite named by an absolute path still runs in the wrong directory, and `config` is what
+notices. The package reads `<cwd>/config`, so a run started from the repository root finds no
+configuration files at all. Any suite that requires `config` — the invitation service suite,
+for one — fails to *run*. The output opens with several
+`WARNING: NODE_ENV value of 'test' did not match any deployment config file names` blocks and
+ends with `Test Suites: 1 failed, 1 total` above `Tests: 0 total`. Measured on 2026-09-17: the
+same command, the same absolute file argument, passed from `api/` and failed from the root.
+`cd api` before the binary, every time.
+
 ### A file argument that does not exist is skipped without a word
 
 Jest treats each file argument as a pattern. A path that matches nothing is not an error when
@@ -123,9 +132,14 @@ running the test, and putting the fix back. The putting-back is the step that go
 `overwrite src/...? (y/n [n])`. A prompt inside a backgrounded tool call waits forever. The
 mutated file then stays in the tree.
 
-Restore with the same edit script run in reverse, or with `cp -f`. Put the restore in its own
-call, not chained after a Jest run that may outlive the foreground timeout. Confirm with
-`git diff` that only the intended change is left.
+`cp -f` does not settle it. The profile aliases `cp` to `cp -i`, so the flags reach the binary
+as `cp -i -f` and the prompt still appears. The call then answers itself and prints
+`overwrite src/...? (y/n [n]) not overwritten`, which sits in the output looking like a
+finished copy while the mutated file is still in the tree.
+
+Restore with the same edit script run in reverse, or with `/bin/cp -f`, which skips the alias.
+Put the restore in its own call, not chained after a Jest run that may outlive the foreground
+timeout. Confirm with `git diff` that only the intended change is left.
 
 ## Telling a new failure from an existing one
 
