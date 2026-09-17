@@ -13,7 +13,7 @@ const {
 const grantService = require('@/services/grants');
 const { assertPossible, withStateFields } = require('@/state').import('collection');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
-const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessibleIdsQuery } = require('@/authorization');
 const { RESOURCE_SCOPES } = require('./resources');
 
 /**
@@ -381,7 +381,7 @@ const COLLECTION_SCOPE_PATH_KINDS = {
 
 /**
  * The collections a user reaches under one list scope, as the `accessible_ids` CTE.
- * @see src/authorization/builtin/accessPaths.js
+ * @see src/authorization/builtin/paths
  * @param {string} user_id - subject id
  * @param {string} scope - one of RESOURCE_SCOPES
  * @param {string[]} grant_access_types - `satisfiedBy(['COLLECTION:VIEW_METADATA'])`, the

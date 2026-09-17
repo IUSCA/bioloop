@@ -106,4 +106,27 @@ function findAsyncTerms(policyRegistry) {
   return [...found];
 }
 
-module.exports = { collectRequirements, findUnhydratableRequirements, findAsyncTerms };
+/**
+ * Throws at startup when the registries break either check above.
+ *
+ * An unmet requirement would otherwise be a 500 on the first ordinary request that evaluates it.
+ * An async term's read belongs in a hydrator virtual attribute.
+ *
+ * @param {import('./policies/PolicyRegistry')} policyRegistry
+ * @param {import('./hydrators/HydratorRegistry').HydratorRegistry} hydratorRegistry
+ * @see docs/design/groups/implementation/access-model-verification-plan.md — The static checks that already exist
+ */
+function assertRegistriesValid(policyRegistry, hydratorRegistry) {
+  const unhydratable = findUnhydratableRequirements(policyRegistry, hydratorRegistry);
+  if (unhydratable.length) {
+    throw new Error(`Policies declare attributes no hydrator supplies:\n  ${unhydratable.join('\n  ')}`);
+  }
+  const asyncTerms = findAsyncTerms(policyRegistry);
+  if (asyncTerms.length) {
+    throw new Error(`Policies read the database inside evaluate:\n  ${asyncTerms.join('\n  ')}`);
+  }
+}
+
+module.exports = {
+  collectRequirements, findUnhydratableRequirements, findAsyncTerms, assertRegistriesValid,
+};

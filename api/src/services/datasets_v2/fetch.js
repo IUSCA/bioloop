@@ -5,7 +5,7 @@ const prisma = require('@/db');
 const { withStateFields } = require('@/state').import('dataset');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const grantService = require('@/services/grants');
-const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessibleIdsQuery } = require('@/authorization');
 const { RESOURCE_SCOPES } = require('../resources');
 
 /**
@@ -316,7 +316,7 @@ const DATASET_SCOPE_PATH_KINDS = {
 
 /**
  * The datasets a user reaches under one list scope, as the `accessible_ids` CTE.
- * @see src/authorization/builtin/accessPaths.js
+ * @see src/authorization/builtin/paths
  * @param {string} user_id - subject id
  * @param {string} scope - one of RESOURCE_SCOPES
  * @param {string[]} grant_access_types - `satisfiedBy([LISTING_ACCESS_TYPE])`

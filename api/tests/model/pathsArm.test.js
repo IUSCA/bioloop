@@ -24,8 +24,7 @@ global.__basedir = path.join(__dirname, '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
-const { policyRegistry } = require('@/authorization');
-const { accessPathsQuery, accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
+const { policyRegistry, accessPathsQuery, accessibleIdsQuery } = require('@/authorization');
 const { PUBLIC_GROUP_ID } = require('@/constants');
 
 const { modelTablesFrom } = require('./tables');

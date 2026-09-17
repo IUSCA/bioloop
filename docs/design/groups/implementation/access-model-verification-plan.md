@@ -179,6 +179,10 @@ evaluate the same terms over many rows.
 row names the resource, the path kind, and the group, grant, collection, and access type the path
 runs through. Lists, single checks, standing, and capabilities all read it.
 
+On 2026-09-17 the statement was split by resource type. Each type's SQL is now
+`src/authorization/builtin/paths/<type>.js`, registered in `authorization/index.js`, and
+`accessPathsQuery` lives in `builtin/paths/index.js`. Standing moved to `builtin/paths/standing.js`.
+
 Three inputs stay outside the statement. The platform admin is checked once before it runs.
 Attribute filters project the row afterwards. Terms that name no resource, such as `isRequester`,
 stay hydrated policies. Phase 4 measured a detail check at a median of 3 queries, against 7

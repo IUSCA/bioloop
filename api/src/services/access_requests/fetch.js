@@ -4,7 +4,7 @@ const {
 
 const prisma = require('@/db');
 const { enumToSql, buildWhereClause } = require('@/utils/sql');
-const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessPathsQuery } = require('@/authorization');
 const { withGrantCounts, getAccessSummaryForRequest } = require('./access_summary');
 
 const INCLUDES_CONFIG = {

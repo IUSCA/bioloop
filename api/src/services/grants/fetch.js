@@ -9,7 +9,7 @@ const { GRANT_ACCESS_TYPE_CATEGORY_LABELS } = require('@/constants');
 const { buildWhereClause, createLikePattern } = require('@/utils/sql');
 const Expiry = require('@/utils/expiry');
 const { isGrantActive } = require('@/utils/grantValidity');
-const { accessibleIdsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessibleIdsQuery } = require('@/authorization');
 const accessTypeClosure = require('./accessTypeClosure');
 
 /**

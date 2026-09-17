@@ -29,10 +29,11 @@ const { evaluateAttributeFilters, createFilterFunction } = require('./attributeF
 const { initializePolicyContext, createAuthorizationMiddlewareFunction, refusalMessage } = require('./middlewares');
 const { createDecisionPipeline } = require('./pipeline');
 
-const { findUnhydratableRequirements } = require('./requiresCheck');
+const { findUnhydratableRequirements, assertRegistriesValid } = require('./requiresCheck');
 
 module.exports = {
   findUnhydratableRequirements,
+  assertRegistriesValid,
   // Policy classes
   Policy,
   PolicyContainer,

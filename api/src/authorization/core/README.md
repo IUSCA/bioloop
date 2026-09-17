@@ -19,8 +19,9 @@ Only edit these files if you are:
 Base Policy class representing an authorization rule.
 
 **Key Features:**
-- Pure function evaluation
+- Pure, synchronous evaluation of a leaf term; the startup check rejects an async term
 - Explicit attribute requirements (`requires: { user, resource, context }`)
+- A path kind in `meta`, which standing and the access model's tables read
 - Policy combinators: `Policy.or()`, `Policy.and()`, `Policy.not()`
 - Static policies: `Policy.always`, `Policy.never`
 - Cloning and renaming support
@@ -30,8 +31,9 @@ Base Policy class representing an authorization rule.
 const isOwner = new Policy({
   name: 'isOwner',
   resourceType: 'project',
+  meta: { pathKind: 'self' },
   requires: { user: ['id'], resource: ['owner_id'] },
-  evaluate: async (user, resource) => user.id === resource.owner_id,
+  evaluate: (user, resource) => user.id === resource.owner_id,
 });
 ```
 
@@ -40,18 +42,28 @@ Container for organizing resource-level policies.
 
 **Key Features:**
 - Fluent API for policy registration
-- Action-to-policy mapping
+- Action-to-policy mapping, with a restriction class per action: `mutating`, `reading`, or `readingData`
 - Attribute filtering rules
 - Immutability via `freeze()`
 - Automatic policy naming
 
 **Example:**
 ```javascript
+const { mutating, reading } = PolicyContainer;
+
 const container = new PolicyContainer({ resourceType: 'project' })
-  .actions({ view: isOwner, edit: isAdmin })
+  .actions({ view: reading(isOwner), edit: mutating(isAdmin) })
   .attributes({ '*': [{ policy: isOwner, attribute_filters: ['*'] }] })
   .freeze();
 ```
+
+#### [policies/PolicyRegistry.js](policies/PolicyRegistry.js)
+Registry of policy containers by resource type.
+
+**Key Features:**
+- `register(container)` throws on a duplicate resource type
+- `get(type)` throws when nothing is registered for the type
+- `listTypes()` returns every registered type, which the completeness checks iterate
 
 ### Hydrator Framework
 
@@ -110,6 +122,10 @@ Prisma schema introspection utility.
 #### [hydrators/errors.js](hydrators/errors.js)
 Custom error class for hydration failures.
 
+#### [hydrationUtils.js](hydrationUtils.js)
+Resolves the hydrators a policy needs and hydrates the user, resource, and context it declares,
+using the request caches and any pre-fetched entities.
+
 ### Authorization Engine
 
 #### [authorize.js](authorize.js)
@@ -117,36 +133,56 @@ Core authorization functions.
 
 **Key Functions:**
 
-##### `authorize(policy, identifiers, registry, policyExecutionContext)`
-Evaluates a policy and returns a boolean decision.
+##### `authorizeWithFilters({ policy, attributeRules, identifiers, registry, policyExecutionContext, preFetched })`
+Two-phase authorization: action check + attribute filtering. Returns `{ granted, filter }`.
 
 **Example:**
 ```javascript
-const allowed = await authorize(
-  somePolicy,
-  { user: userId, resource: resourceId, context: contextId },
-  hydratorRegistry,
-  req.policyContext
-);
-```
-
-##### `authorizeWithFilters(actionPolicy, attributeRules, identifiers, registry, policyExecutionContext)`
-Two-phase authorization: action check + attribute filtering.
-
-**Example:**
-```javascript
-const result = await authorizeWithFilters(
-  container.getPolicy('view'),
-  container.getAttributeRules('view'),
-  { user: userId, resource: resourceId },
-  hydratorRegistry,
-  req.policyContext
-);
+const result = await authorizeWithFilters({
+  policy: container.getPolicy('view'),
+  attributeRules: container.getAttributeRules('view'),
+  identifiers: { user: userId, resource: resourceId },
+  registry: hydratorRegistry,
+  policyExecutionContext: req.policyContext,
+});
 
 if (result.granted) {
   const filtered = result.filter(resourceObject);
 }
 ```
+
+#### [pipeline.js](pipeline.js)
+The decision pipeline. The middleware and an application's `authorizeAction` both call it, so the
+two cannot answer the same question differently.
+
+**Key Functions:**
+
+##### `createDecisionPipeline({ policyRegistry, hydratorRegistry, restrictionChecker, platformAdmin, expandPath, concealRefusalsWithoutStanding })`
+Returns `decide(resourceType, action, options)`. It runs, in order, the injected restriction
+checker, the injected platform-admin policy, and the action's policy and attribute rules. A refusal
+carries `status`: 404 for a caller with no standing on a type in `concealRefusalsWithoutStanding`,
+and 403 otherwise.
+
+##### `filterRestrictedCapabilities({ capabilities, resourceType, resourceId, preFetchedResource, restrictionChecker })`
+Turns off the capabilities a restriction blocks, keeping the map shape.
+
+#### [capabilities.js](capabilities.js)
+What a caller could do on a resource, and why.
+
+**Key Functions:**
+- `evaluateCapabilitySet({ policyContainer, identifiers, ... })`: a map of action name to boolean
+- `deriveStanding({ policyContainer, identifiers, ..., expandPath })`: every path by which the
+  caller reaches the resource, from the terms that hold on non-mutating actions. The application
+  injects `expandPath` to turn a term into paths; the default reads the term's `meta`.
+- `toCapabilitiesArray(capabilities)`: the granted action names
+
+#### [requiresCheck.js](requiresCheck.js)
+Startup checks over the registries.
+
+**Key Functions:**
+- `findUnhydratableRequirements(policyRegistry, hydratorRegistry)`: attributes no hydrator supplies
+- `findAsyncTerms(policyRegistry)`: terms whose `evaluate` is async
+- `assertRegistriesValid(policyRegistry, hydratorRegistry)`: throws when either finds a problem
 
 #### [attributeFilters.js](attributeFilters.js)
 Attribute filtering logic using the Notation library.
@@ -154,10 +190,11 @@ Attribute filtering logic using the Notation library.
 **Key Functions:**
 
 ##### `evaluateAttributeFilters(rules, identifiers, hydrators, caches)`
-Evaluates attribute rules with short-circuit logic.
+Evaluates every attribute rule and collects the filter lists of those that match.
 
-##### `createFilterFunction(attributeFilters)`
-Creates a filter function for object attribute filtering.
+##### `createFilterFunction(filterLists)`
+Creates a filter function that projects an object through each filter list and returns the union.
+An empty list of filter lists denies every field.
 
 Supports:
 - Inclusion: `['id', 'name']`
@@ -179,6 +216,11 @@ Initializes request-scoped caches for hydration.
 ```javascript
 app.use(initializePolicyContext);
 ```
+
+##### `createAuthorizationMiddlewareFunction(policyRegistry, hydratorRegistry, events, restrictionChecker, platformAdmin, expandPath, options)`
+Returns `authorize(resourceType, action, options)`, a middleware factory that decides through
+`createDecisionPipeline` and sets `req.permission`. It throws at setup when the action is not
+registered.
 
 ## Architecture Patterns
 
@@ -311,6 +353,16 @@ Policy.xor = xor;
 ```
 
 ## Troubleshooting
+
+### "No policies registered for resource type: X"
+- Register the policy container in `src/authorization/index.js`
+
+### "Policies declare attributes no hydrator supplies" at startup
+- A policy's `requires` names an attribute no column, relation, or virtual attribute provides
+- Add a virtual attribute to the type's hydrator, or fix the name
+
+### "Policies read the database inside evaluate" at startup
+- A leaf term's `evaluate` is async; move its read into a hydrator virtual attribute
 
 ### "No hydrator registered for type: X"
 - Check that the hydrator is registered in `index.js`

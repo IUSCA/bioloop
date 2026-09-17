@@ -1,7 +1,7 @@
 const { Prisma } = require('@prisma/client');
 
 const prisma = require('@/db');
-const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessPathsQuery } = require('@/authorization');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const { normalize_name } = require('./create');
 

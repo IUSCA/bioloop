@@ -92,7 +92,9 @@ composed policy's name carries the names of its parts, so `JSON.stringify(contai
 is enough to assert that a term is absent without reaching inside the combinators.
 
 Registering a container takes two lines in `authorization/index.js`: the `require` in section
-2 and a `policyRegistry.register(...)` in section 4. A resource-free action, such as
+2 and a `policyRegistry.register(...)` in section 4. `index.js` holds only imports, registration,
+and wiring; the list helpers live in `builtin/lists.js`, built by `createListHelpers` with the
+pipeline, and the startup checks run through `assertRegistriesValid` from core. A resource-free action, such as
 `audit.read_records`, is guarded with `authorize('audit', 'read_records', { resourceIdFn: () => null })`.
 
 ## Grants pin their resource, so a resource carrying one cannot be hard-deleted
@@ -143,8 +145,8 @@ the type lives on the `resource` row — so `builtin/hydrators/grant.js` resolve
 entry in `hydratorRegistry` gets `createDefaultHydrator`, which has no virtual attributes at
 all, so adding a policy requirement to such a model is where this bites.
 
-**Both are now caught before a request.** `authorization/index.js` runs
-`findUnhydratableRequirements` at boot and throws, listing each term, attribute rule, and
+**Both are now caught before a request.** `authorization/index.js` calls
+`assertRegistriesValid`, which runs `findUnhydratableRequirements` at boot and throws, listing each term, attribute rule, and
 transition whose requirement no hydrator can supply. That check found `grant.subject_type`
 missing on 2026-09-15, and the API refused to start until a virtual attribute was added.
 A boot throw shows as nodemon crash-looping in the API log. It can prove only that a name
@@ -307,15 +309,22 @@ admin, and a platform admin: the capability is blind to status, and `available_a
 ## The builtin terms read `access_paths`
 
 The dataset, collection, and group terms decide from one context attribute, `access_paths`.
-`loadAccessPaths` in `builtin/accessPaths.js` runs `accessPathsQuery` bound to the one resource
+`loadAccessPaths` in `builtin/paths/index.js` runs `accessPathsQuery` bound to the one resource
 and returns `{ rows, kinds, access_types }`, with the grant types widened. A term is a set test,
 such as `context.access_paths.kinds.has('admin')`. Do not add a user fact such as a group id list
 for a new dataset, collection, or group term; add a path kind to the statement instead, and the
 Paths arm checks it.
 
+Each path-based type's SQL is its own file, `builtin/paths/<type>.js`, exporting
+`{ resourceType, sql, prospectiveKinds }`, and `authorization/index.js` registers it with
+`pathRegistry.register(...)`. A type whose terms never read `access_paths` registers nothing.
+Services import `accessPathsQuery` and `accessibleIdsQuery` from `@/authorization`, not from
+`builtin/paths`. The registrations run when `index.js` loads, so a service that imported the paths
+module directly failed under jest with `no paths are registered for resource type dataset`.
+
 A create has no resource id. `contextIdentifiers` in `core/hydrationUtils.js` passes the
 pre-fetched resource as `prospective`, and the loader reads the owning group's rows limited to
-`PROSPECTIVE_KINDS`. The context cache key includes the prospective resource, because the batch
+the type's `prospectiveKinds`. The context cache key includes the prospective resource, because the batch
 create route checks several owning groups in one request.
 
 `findAsyncTerms` runs at boot. An `evaluate` declared `async` fails startup, because it reads the
@@ -378,7 +387,7 @@ A `list` action needs a `list: always` state rule too, or the startup sync check
 
 A route whose own decision is about the resource in the URL, such as ancestors, descendants, or
 source and derived datasets, gets the list filter with `listFilter(req, type)` from
-`src/authorization/index.js`.
+`src/authorization/builtin/lists.js`, exported from `src/authorization/index.js`.
 
 `tests/authorization/listFilter.test.js` pins that an owning-group admin still sees only
 public fields on a list row.
@@ -403,7 +412,7 @@ it by hand from fields their own queries fetch. `tests/model/listRowsArm.test.js
 ## Standing replaces the first-match role
 
 `deriveStanding` collects every term with `meta.pathKind` from the container's reading actions
-and expands each held term through `expandPath` in `builtin/standing.js`. A platform admin's
+and expands each held term through `expandPath` in `builtin/paths/standing.js`. A platform admin's
 standing starts with `platform_admin` and lists every other path too.
 
 A dataset never has a `member` path in standing. Its only member term serves `contribute`, which
@@ -439,8 +448,8 @@ policy, then the action's policy. Capabilities are every action for a platform a
 again. Neither branch reads the resource's state.
 
 A refusal carries `status`. `concealRefusalsWithoutStanding` lists the resource types whose
-refusals are concealed, and the application passes `RESOURCE_TYPES`: dataset, collection, and
-group. Any other container answers 403, because its id may name another type's resource. The
+refusals are concealed, and the application passes `pathRegistry.listTypes()`: dataset,
+collection, and group. Any other container answers 403, because its id may name another type's resource. The
 grant listing authorizes `grant` on a dataset id, and a member of the owning group holds no
 grant-container term, so concealing there answered them 404. For a listed type, a
 refusal on a named resource is 404 when `deriveStanding` finds nothing and the caller is not a

@@ -71,7 +71,7 @@ An **access path** is one reason a caller reaches a resource. There are four kin
 - `member`: the caller is a member of that group.
 - `grant`: a grant names the caller, or a group the caller belongs to, on the resource.
 
-One SQL statement, `accessPathsQuery` in `api/src/authorization/builtin/accessPaths.js`, returns
+One SQL statement, `accessPathsQuery` in `api/src/authorization/builtin/paths/index.js`, returns
 every path a caller has to a resource. The builtin terms decide from its result, which the
 policy reads as `context.access_paths`:
 

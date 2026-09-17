@@ -1,5 +1,5 @@
 const { Hydrator, HydrationError } = require('../../core');
-const { loadAccessPaths } = require('../accessPaths');
+const { loadAccessPaths } = require('../paths');
 
 class ContextHydrator extends Hydrator {
   constructor({ appConfig }) {

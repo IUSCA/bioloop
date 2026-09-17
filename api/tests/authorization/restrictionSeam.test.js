@@ -24,8 +24,8 @@ const prisma = require('@/db');
 const { policyRegistry, hydratorRegistry } = require('@/authorization');
 const { createDecisionPipeline, filterRestrictedCapabilities } = require('@/authorization/core/pipeline');
 const { isPlatformAdmin } = require('@/authorization/builtin/policies/utils/index');
-const { expandPath } = require('@/authorization/builtin/standing');
-const { RESOURCE_TYPES } = require('@/authorization/builtin/accessPaths');
+const { expandPath } = require('@/authorization/builtin/paths/standing');
+const { pathRegistry } = require('@/authorization/builtin/paths');
 const {
   createTestUser, createTestGroup, createTestDataset, deleteDataset, deleteGroup, deleteUser,
 } = require('../services/helpers');
@@ -43,7 +43,7 @@ const decideWithChecker = createDecisionPipeline({
   restrictionChecker: oneActionChecker,
   platformAdmin: { policy: isPlatformAdmin },
   expandPath,
-  concealRefusalsWithoutStanding: RESOURCE_TYPES,
+  concealRefusalsWithoutStanding: pathRegistry.listTypes(),
 });
 
 const freshContext = () => ({ cache: { user: new Map(), resource: new Map(), context: new Map() } });

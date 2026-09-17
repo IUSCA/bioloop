@@ -3,7 +3,7 @@ const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
 const prisma = require('@/db');
 
-const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessPathsQuery } = require('@/authorization');
 const accessTypeClosure = require('./accessTypeClosure');
 const { buildEffectiveGrants } = require('./issue');
 

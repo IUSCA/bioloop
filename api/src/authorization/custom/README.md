@@ -11,6 +11,8 @@ custom/
 │   └── utils/       # Shared custom policies (optional)
 ├── hydrators/       # Custom hydrators for your resources
 │   └── project.js   # Example: Project hydrator
+├── paths/           # Custom path SQL, only for types whose terms read access_paths
+│   └── project.js   # Example: Project paths
 └── README.md        # This file
 ```
 
@@ -130,7 +132,28 @@ projectHydrator.registerVirtualAttribute('member_count', async ({ id, hydrator }
 module.exports = projectHydrator;
 ```
 
-### 3. Register in Main Index
+### 3. Add Custom Paths (only if your terms read `context.access_paths`)
+
+The builtin dataset, collection, and group terms decide from `context.access_paths`: the rows of
+one SQL statement naming every path by which a user reaches the resource. A type whose terms read
+it registers a paths file. A type whose terms read only user and resource attributes skips this
+step, and nothing in `builtin/paths/` needs to change for it.
+
+A paths file exports `{ resourceType, sql, prospectiveKinds }`. `sql(userId, { resourceIds, accessTypes })`
+returns rows with the columns `resource_id`, `path_kind`, `group_id`, `grant_id`, `collection_id`,
+`access_type`, and `direct`, and may read the `subjects` CTE. `prospectiveKinds` is optional, and
+lists the path kinds a create of the type can reach through its owning group. See
+[builtin/paths/index.js](../builtin/paths/index.js) and [builtin/paths/collection.js](../builtin/paths/collection.js).
+
+A registered type's refusals are 404 for a caller with no standing on the resource.
+
+### 4. Add State Rules
+
+Every policy action needs a state rule, or startup throws. Create
+`src/state/custom/project.js` and register it in `src/state/index.js`. See
+[src/state/custom/README.md](../../state/custom/README.md).
+
+### 5. Register in Main Index
 
 After creating your policy/hydrator files, register them in the main `index.js`:
 
@@ -138,11 +161,12 @@ After creating your policy/hydrator files, register them in the main `index.js`:
 
 ```javascript
 // ============================================================================
-// SECTION 3: IMPORT CUSTOM POLICIES & HYDRATORS (derived app code)
+// SECTION 3: IMPORT CUSTOM POLICIES, HYDRATORS & PATHS (derived app code)
 // Add your custom policy and hydrator imports here
 // ============================================================================
 const projectPolicies = require('./custom/policies/project');
 const projectHydrator = require('./custom/hydrators/project');
+const projectPaths = require('./custom/paths/project');
 
 // ... later in the file ...
 
@@ -151,11 +175,16 @@ policyRegistry.register(projectPolicies);
 
 // ... and for hydrators ...
 
-// Register custom hydrators (add yours here in derived apps)
+// Register custom hydrators here
 hydratorRegistry.register('project', projectHydrator);
+
+// ... and, only if the type has paths ...
+
+// Register custom paths here
+pathRegistry.register(projectPaths);
 ```
 
-### 4. Place the New Type in the Access Model
+### 6. Place the New Type in the Access Model
 
 The test suite fails until a new container is placed. Three tests read the registry:
 
@@ -190,9 +219,9 @@ const experimentPolicies = require('./custom/policies/experiment');
 ## Guidelines
 
 ### DO:
-- ✅ Create new files in `custom/policies/` and `custom/hydrators/`
+- ✅ Create new files in `custom/policies/`, `custom/hydrators/`, and `custom/paths/`
 - ✅ Import and reuse utilities from `core/` and `builtin/`
-- ✅ Register your custom policies/hydrators in `index.js`
+- ✅ Register your custom policies, hydrators, and paths in `index.js`
 - ✅ Follow the naming conventions (PascalCase for classes, camelCase for instances)
 - ✅ Use `Policy.or()`, `Policy.and()`, `Policy.not()` to combine policies
 - ✅ Freeze your PolicyContainer after configuration

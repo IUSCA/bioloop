@@ -10,7 +10,7 @@
  * @see docs/design/groups/access-model.md — The badge vocabulary
  */
 
-const ROW_KINDS = ['admin', 'oversight', 'member', 'grant'];
+const { PATH_KINDS } = require('.');
 
 function pathFromRow(row, term) {
   switch (row.path_kind) {
@@ -37,7 +37,7 @@ function pathFromRow(row, term) {
 function expandPath(term, { context }) {
   const { pathKind, rule } = term.meta;
   const rows = context?.access_paths?.rows;
-  if (!rows || !ROW_KINDS.includes(pathKind)) return [rule ? { kind: pathKind, rule } : { kind: pathKind }];
+  if (!rows || !PATH_KINDS.includes(pathKind)) return [rule ? { kind: pathKind, rule } : { kind: pathKind }];
   return rows.filter((row) => row.path_kind === pathKind).map((row) => pathFromRow(row, term));
 }
 

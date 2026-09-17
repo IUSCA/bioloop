@@ -18,11 +18,10 @@ global.__basedir = path.join(__dirname, '..', '..', '..');
 require('module-alias/register');
 
 const prisma = require('@/db');
-const { authorizeAction, decideRows } = require('@/authorization');
+const { accessPathsQuery, authorizeAction, decideRows } = require('@/authorization');
 const datasetService = require('@/services/datasets_v2');
 const collectionService = require('@/services/collections');
 const { AUTHENTICATED_USERS_GROUP_ID } = require('@/constants');
-const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
 const {
   createTestUser,
   createTestGroup,

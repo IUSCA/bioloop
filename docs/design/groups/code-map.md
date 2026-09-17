@@ -25,7 +25,7 @@ It is a snapshot. Re-verify against `api/prisma/schema.prisma`, `api/src/authori
 |---|---|---|---|---|
 | Group + hierarchy | `group`, `group_closure` | `routes/groups.js` | `services/groups.js` | `pages/v2/groups/`, `components/v2/groups/` |
 | Membership + roles | `group_user` (validity columns), `GROUP_MEMBER_ROLE`, view `active_group_user` | `/groups/:id/members`, `/admins/:userId` | `services/groups.js` | `GroupMembersTab.vue` |
-| Membership transitivity | view `effective_user_groups` over `active_group_user` | — | `authorization/builtin/accessPaths.js` → `member` paths | — |
+| Membership transitivity | view `effective_user_groups` over `active_group_user` | — | `authorization/builtin/paths/` → `member` paths | — |
 | Oversight visibility | view `effective_user_oversight_groups` | — | `hydrators/user.js` → `oversight_group_ids` | — |
 | Collections | `collection`, `collection_dataset` (validity columns), view `active_collection_dataset` | `routes/collections.js` | `services/collections.js` | `pages/v2/collections/` |
 | Profiles | `tagline`, `about_md`, `profile_visibility` on `group` and `collection`, `avatar_key` on `group`, `PROFILE_VISIBILITY` enum, `links`/`citation`/`publications` under `metadata` | `PATCH /groups/:id/profile`, `PUT` and `DELETE /groups/:id/avatar`, `PATCH /collections/:id/profile`, and the GET-only `routes/public.js` | `services/profiles/` | `components/v2/profiles/`, `pages/public/`, `layouts/public.vue` |

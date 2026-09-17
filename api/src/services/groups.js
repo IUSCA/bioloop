@@ -4,7 +4,7 @@ const createError = require('http-errors');
 const { randomUUID } = require('crypto');
 
 const prisma = require('@/db');
-const { accessPathsQuery } = require('@/authorization/builtin/accessPaths');
+const { accessPathsQuery } = require('@/authorization');
 
 const { generate_slug } = require('@/utils/slug');
 const audit = require('@/services/audit');
@@ -889,7 +889,7 @@ async function searchGroupsForUser({
 
   // Visibility is any path to the group, including a grant on a resource it owns, which the
   // group page admits too. `admin` and `direct` filter on the caller's own membership row.
-  // @see src/authorization/builtin/accessPaths.js
+  // @see src/authorization/builtin/paths
   let membershipClause = Prisma.empty;
   if (scope === 'admin') {
     membershipClause = Prisma.sql`
