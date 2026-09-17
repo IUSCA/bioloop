@@ -1,6 +1,6 @@
 const { Prisma, RESOURCE_TYPE } = require('@prisma/client');
 
-const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
+const { isSystemPrincipal } = require('@/services/system_principals');
 const prisma = require('@/db');
 
 const { accessPathsQuery } = require('@/authorization');
@@ -87,7 +87,7 @@ async function getEffectiveCoverage({
   return rows.map((row) => {
     let via = COVERAGE_VIA.GROUP;
     if (row.subject_id === subject_id) via = COVERAGE_VIA.DIRECT;
-    else if (SYSTEM_PRINCIPAL_GROUP_IDS.includes(row.subject_id)) via = COVERAGE_VIA.PRINCIPAL;
+    else if (isSystemPrincipal(row.subject_id)) via = COVERAGE_VIA.PRINCIPAL;
     return { ...row, via, via_group_id: via === COVERAGE_VIA.DIRECT ? null : row.subject_id };
   });
 }

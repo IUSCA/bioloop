@@ -3,6 +3,7 @@ const { Prisma } = require('@prisma/client');
 const prisma = require('@/db');
 const { accessPathsQuery } = require('@/authorization');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const { normalize_name } = require('./create');
 
 /**
@@ -69,15 +70,15 @@ async function listOwnerGroupCandidates({ user_id, everyGroup }) {
 
 /**
  * The owning group's contribution flag, for authorizing against a group that owns nothing
- * yet. Returns null when the group does not exist, is archived, or is a system principal.
+ * yet. Returns null when the group does not exist or is archived.
  *
- * Every v2 creation route resolves its owning group through here, so refusing the system
- * principals in one place refuses them for create, import, and upload alike. A platform
- * admin passes the `dataset.contribute` check against any group, so the exclusion has to
- * sit ahead of the policy engine rather than inside it.
+ * Every v2 creation route that decides `dataset.contribute` resolves its owning group through
+ * here, so create-by-import, upload, and the name check all refuse a system principal.
+ *
+ * @throws {HttpError} 409 when the id is a system principal
  */
 async function getOwnerGroupForAuthorization(owner_group_id) {
-  if (SYSTEM_PRINCIPAL_GROUP_IDS.includes(owner_group_id)) return null;
+  assertNotSystemPrincipal(owner_group_id, 'owner');
 
   return prisma.group.findFirst({
     where: { id: owner_group_id, is_archived: false },

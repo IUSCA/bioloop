@@ -19,6 +19,7 @@ const auditService = require('@/services/audit');
 const accessRequestsService = require('@/services/access_requests');
 const { buildMeta } = require('@/services/meta');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 
 const { createAuthorizationMiddleware: authorize, callerIsPlatformAdmin } = authorization;
 const datasetAuth = authorization.import('dataset');
@@ -460,6 +461,10 @@ router.post(
     body('use_conditions.*.label').optional().isString(),
     body('use_conditions.*.note').optional().isString(),
   ]),
+  asyncHandler(async (req, res, next) => {
+    assertNotSystemPrincipal(req.body.owner_group_id, 'owner');
+    next();
+  }),
   authorize('dataset', 'create', {
     resourceIdFn: () => null,
     preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),
@@ -534,6 +539,7 @@ router.post(
     // is hydrated once however many groups the batch names.
     const ownerGroupIds = [...new Set(req.body.datasets.map((d) => d.owner_group_id))];
     for (const owner_group_id of ownerGroupIds) {
+      assertNotSystemPrincipal(owner_group_id, 'owner');
       // eslint-disable-next-line no-await-in-loop
       const decision = await decideCreate({
         identifiers: { user: req.user?.subject_id, resource: null },

@@ -10,6 +10,7 @@ const groupState = state.import('group');
 const invitationState = state.import('invitation');
 const logger = require('@/services/logger');
 const { normalizeEmail } = require('@/utils/email');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const audit = require('@/services/audit');
 const AuditBuilder = require('@/services/audit/AuditBuilder');
 const { resolveEntityName } = require('@/services/audit/helpers');
@@ -81,6 +82,9 @@ async function createInvitation({
       SELECT id FROM "group" g WHERE g.id = ${group_id} FOR UPDATE;
     `;
     if (groupRows.length === 0) throw createError.NotFound('Group not found');
+    // The database refuses the membership only when the invitation is accepted, after the mail
+    // went out, so the invitation is refused here.
+    assertNotSystemPrincipal(group_id, 'member');
     // Read after the lock, so the state checked is the state this transaction writes against.
     groupState.assertPossible('invite', await tx.group.findUniqueOrThrow(
       groupState.withStateFields({ where: { id: group_id }, select: { id: true } }),

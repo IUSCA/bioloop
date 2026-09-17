@@ -1,4 +1,5 @@
 const prisma = require('@/db');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 
 /**
  * Attribution: who to credit for a dataset, and who funded the work.
@@ -62,8 +63,9 @@ async function recordFunding(dataset_row_id, sources) {
 /**
  * Record an organisation to credit.
  *
- * Exactly one of `group_id` and `organization` may be given. A database CHECK enforces it as
- * well; this reports the mistake as an argument error rather than as a constraint violation.
+ * Exactly one of `group_id` and `organization` may be given, and the group may not be a system
+ * principal. A database CHECK enforces each as well. This reports the first as an argument error
+ * and the second as a 409, rather than either as a constraint violation.
  *
  * @param {number} dataset_row_id
  * @param {Array<{group_id?: string, organization?: string, role?: string}>} affiliations
@@ -76,6 +78,7 @@ async function recordAffiliations(dataset_row_id, affiliations) {
     if ((group_id == null) === (organization == null)) {
       throw new Error('An affiliation names exactly one of a group or an organization');
     }
+    assertNotSystemPrincipal(group_id, 'affiliation');
   });
 
   const { count } = await prisma.dataset_affiliation.createMany({

@@ -89,6 +89,27 @@ middleware, rate limiting, and a decision about what metadata is safe to expose.
 The reason for doing the foundation half now is that retrofitting a second principal into
 every zero-default query later is the expensive move. Adding the row is not.
 
+**A system principal is only ever a grant subject.** Nobody governs one, so no row may name one
+in any other role. The database refuses each case with a CHECK constraint:
+
+- a member or a place in the hierarchy (`no_system_principal_members`,
+  `no_system_principal_hierarchy`);
+- the owning group of a dataset, collection, or import source;
+- the group a contribution is made to, or an affiliated group;
+- a grant's issuing or revoking authority.
+
+The two rows themselves cannot be modified. The trigger `system_principal_immutable` refuses any
+UPDATE to either one, and the rule `prevent_system_principal_delete` absorbs a DELETE. A later
+migration that must change one of these rows disables the trigger around its UPDATE.
+
+The API answers any of these refusals with 409 `Request could not be processed due to a
+constraint violation`. The response names no constraint, id, or row. That answer says nothing
+about why, so the services refuse invitations, new members, and new sub-groups first, each with
+a 409 that says the group is a system group. The dataset and collection creation routes and
+`GET /v2/datasets/name-available` do the same through `assertOwnerIsNotSystemPrincipal`. A
+platform admin passes the create policies on any group, so those routes refuse ahead of
+authorization.
+
 [Decision 19](#_19-the-anonymous-caller-is-a-principal-not-a-second-code-path) takes up the
 unauthenticated path.
 

@@ -43,6 +43,11 @@ saying `-- This is an empty migration.` means no drift; delete it.
   `@@unique` in the schema is permanent drift. Comment on the model where the indexes are.
 - **`has` filters only scalar lists** such as `grant_preset.resource_types`. On a relation it
   fails at runtime with a 500; use `{ some: { ... } }`.
+- **A CHECK lives only in the migration.** Name it in a comment on the column. A NULL passes
+  it. Prisma gives a violation (`23514`) no code of its own; `prismaConstraintFailedHandler`
+  answers it 409 with a generic message. Refuse a user-reachable case in the service first,
+  with a message that says why. A refusing trigger raises `ERRCODE = 'check_violation'` to get
+  the same answer.
 - **A nested relation `create` rejects a sibling scalar foreign key** with
   `Argument 'owner_group' is missing`. Use `owner_group: { connect: { id } }`.
 - **Changing a compound unique key renames its lookup** (`name_type_is_deleted` ->

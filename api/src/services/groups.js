@@ -13,6 +13,7 @@ const { AuditBuilder } = audit;
 const { resolveEntityName } = require('@/services/audit/helpers');
 const sqlUtils = require('@/utils/sql');
 const { SYSTEM_PRINCIPAL_GROUP_IDS } = require('@/constants');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const { assertPossible, withStateFields } = require('@/state').import('group');
 const assert = require('assert');
 
@@ -208,6 +209,7 @@ async function createGroup({
     // Archiving reaches the group itself and what it owns, so an archived parent takes no new
     // sub-group. A deeper descendant of an archived group keeps its own state.
     if (parent_id != null) {
+      assertNotSystemPrincipal(parent_id, 'parent');
       assertPossible('create_child', await lockGroup(tx, parent_id));
     }
 
@@ -727,6 +729,7 @@ async function removeGroupMembers(group_id, {
  */
 async function addGroupMembers(group_id, { user_ids, actor_id }) {
   return prisma.$transaction(async (tx) => {
+    assertNotSystemPrincipal(group_id, 'member');
     assertPossible('add_member', await lockGroup(tx, group_id));
 
     const createdRecords = await tx.$queryRaw`

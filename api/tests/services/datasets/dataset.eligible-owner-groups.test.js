@@ -150,11 +150,11 @@ describe('GET /v2/datasets/eligible-owner-groups', () => {
   });
 
   test('refuses a system principal as an owning group for authorization', async () => {
-    // The creation routes resolve the group through this call, so returning null here is
-    // what stops a platform admin from importing a dataset into Public.
+    // The import, upload, and name-check routes resolve the group through this call, so the
+    // refusal here is what stops a platform admin from importing a dataset into Public.
     for (const id of SYSTEM_PRINCIPAL_GROUP_IDS) {
       // eslint-disable-next-line no-await-in-loop
-      expect(await getOwnerGroupForAuthorization(id)).toBeNull();
+      await expect(getOwnerGroupForAuthorization(id)).rejects.toMatchObject({ status: 409 });
     }
 
     expect(await getOwnerGroupForAuthorization(closedGroup.id)).not.toBeNull();

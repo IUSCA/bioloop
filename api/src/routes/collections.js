@@ -22,6 +22,7 @@ const decideRequestStage = datasetAuth.action('request_stage');
 const decideDatasetRows = datasetAuth.rows('view_metadata');
 const { pickNonNil, setsEqual } = require('@/utils');
 const { RESOURCE_SCOPES } = require('@/services/resources');
+const { assertNotSystemPrincipal } = require('@/services/system_principals');
 const { dataset: DATASET_PUBLIC_ATTRIBUTES } = require('@/authorization/builtin/policies/base_attributes');
 const { buildMeta } = require('@/services/meta');
 
@@ -110,6 +111,10 @@ router.post(
     body('dataset_resource_ids').optional().isArray({ min: 1 }),
     body('dataset_resource_ids.*').isUUID(),
   ]),
+  asyncHandler(async (req, res, next) => {
+    assertNotSystemPrincipal(req.body.owner_group_id, 'owner');
+    next();
+  }),
   authorize('collection', 'create', {
     resourceIdFn: () => null,
     preFetchedResourceFn: (req) => ({ owner_group_id: req.body.owner_group_id }),

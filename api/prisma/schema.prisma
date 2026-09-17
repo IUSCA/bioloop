@@ -30,7 +30,7 @@ model dataset {
   // The group that governs this dataset. The database default is the seeded
   // 'Unassigned Datasets' group, so a caller that names no group still produces a row with
   // an owner. datasets_v2 refuses without an explicit group, so only legacy callers reach
-  // the default.
+  // the default. A CHECK (`dataset_owner_not_system_principal`) refuses a system principal.
   // @see docs/design/groups/dataset-storage.md — What group scoping changed
   // @see docs/design/groups/decisions.md — 2. Every dataset has an owning group
   owner_group_id    String   @default("ffffffff-0000-4000-8000-000000000001")
@@ -510,7 +510,10 @@ model subject {
   recorded_use_conditions dataset_use_condition[] @relation("use_condition_recorder")
 }
 
-// created everyone group and added rules to protect modification in migration script
+// The system principals `Authenticated Users` and `Public` are rows of this table, inserted by
+// migrations. The rule `prevent_system_principal_delete` absorbs a DELETE of either, and the trigger
+// `system_principal_immutable` refuses an UPDATE.
+// @see docs/design/groups/decisions.md — 3. A public principal exists, and `Everyone` is renamed
 model group {
   id          String  @id @default(uuid())
   name        String  @unique
@@ -674,6 +677,7 @@ enum INVITATION_STATUS {
 
 model user_dataset_contribution {
   id         Int      @id @default(autoincrement())
+  // A CHECK (`user_dataset_contribution_group_not_system_principal`) refuses a system principal.
   group_id   String
   user_id    String
   dataset_id String
@@ -700,7 +704,8 @@ model collection {
   description String?
   version     Int     @default(1) // For optimistic concurrency control
 
-  // Ownership (single owning group)
+  // Ownership (single owning group). A CHECK (`collection_owner_not_system_principal`) refuses
+  // a system principal.
   owner_group_id String
   owner_group    group  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)
 
@@ -817,6 +822,8 @@ model grant {
   // Useful for: transfer review ("which grants were issued under the prior owner?"),
   // audit queries ("all grants issued under Group X's authority"), and provenance explanation.
   // NULL means the grant was issued by a platform admin acting outside any group's authority.
+  // A CHECK (`grant_authority_not_system_principal`) refuses a system principal here and in
+  // revoking_authority_id.
   issuing_authority_id String?
   issuing_authority    group?  @relation(fields: [issuing_authority_id], references: [id], onDelete: SetNull, name: "grant_issuing_authority")
 
@@ -978,7 +985,8 @@ model dataset_affiliation {
   id         String @id @default(dbgenerated("(gen_random_uuid())::text"))
   dataset_id Int
 
-  /// A group on this platform. Mutually exclusive with `organization`.
+  /// A group on this platform. Mutually exclusive with `organization`. A CHECK
+  /// (`dataset_affiliation_group_not_system_principal`) refuses a system principal.
   group_id     String?
   /// An organisation with no presence here. Mutually exclusive with `group_id`.
   organization String?
@@ -1261,7 +1269,8 @@ model import_source {
 
   // The group whose members may browse and import from this source. Nullable: a source with
   // no group stays reachable through the legacy browse routes, which are global. The v2
-  // routes serve only sources that name a group.
+  // routes serve only sources that name a group. A CHECK
+  // (`import_source_owner_not_system_principal`) refuses a system principal.
   // @see docs/design/groups/dataset-creation.md — Import sources are visible to everyone
   owner_group_id String?
   owner_group    group?  @relation(fields: [owner_group_id], references: [id], onDelete: Restrict)

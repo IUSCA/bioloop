@@ -202,6 +202,32 @@ Check two things before reaching for this:
 - **An explicit `NULL` still fails, and that is correct.** The default covers a caller that
   omits the column. Say so in the test, because the two cases read alike.
 
+### A CHECK constraint
+
+`schema.prisma` cannot declare a CHECK, so it lives only in the migration. Prisma does not see
+it, and `migrate dev` reports no drift for it. Name the constraint in a comment on the column,
+because nothing else in the schema says the column is restricted.
+
+Two properties decide how to write one and how to surface it:
+
+- **A NULL passes a CHECK.** `NULL NOT IN (...)` is NULL, which Postgres treats as satisfied.
+  A nullable column therefore keeps admitting "none" with no extra clause. Two nullable columns
+  in one CHECK joined by `AND` still refuse a bad value in either one, because
+  `NULL AND FALSE` is FALSE. `grant_authority_not_system_principal` relies on this, and
+  `tests/services/groups/systemPrincipals.test.js` sets one column and leaves the other NULL.
+- **Prisma gives a CHECK violation no code of its own.** Postgres reports `23514`. A client
+  query throws `PrismaClientUnknownRequestError`, with `code` undefined and the Postgres code
+  only inside the message. A raw query throws `P2010` with the Postgres code in `meta.code`.
+  `prismaConstraintFailedHandler` in `api/src/middleware/error.js` recognises both and answers
+  409 with a generic message, because the Postgres message names the constraint and echoes the
+  failing row. That answer says nothing about why, so refuse a case a user can reach in the
+  service first, with a message that says why. Tests match the constraint name in the message.
+
+A trigger that refuses a write can raise the same code, with
+`RAISE EXCEPTION ... USING ERRCODE = 'check_violation'`, so the middleware answers it the same
+way. `system_principal_immutable` does this. Its message reaches Prisma but its `CONSTRAINT`
+name does not, so tests match the message text.
+
 ### A NOT NULL column on a populated lookup table
 
 `grant_access_type` has `category`, `sort_order`, and `is_requestable`, all `NOT NULL` and all

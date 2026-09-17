@@ -25,8 +25,33 @@ function prismaNotFoundHandler(e, req, res, next) {
   return next(e);
 }
 
+// Postgres check_violation, raised by a CHECK constraint or by a trigger that refuses a write.
+const PG_CHECK_VIOLATION = '23514';
+
+/**
+ * Whether a Prisma error is a Postgres check_violation.
+ *
+ * Prisma has no code of its own for one. A client query throws PrismaClientUnknownRequestError,
+ * which carries the Postgres code only inside its message. A raw query throws P2010 with the
+ * Postgres code in `meta.code`.
+ */
+function isCheckViolation(e) {
+  if (e instanceof Prisma.PrismaClientKnownRequestError) {
+    return e.code === 'P2010' && e.meta?.code === PG_CHECK_VIOLATION;
+  }
+  if (e instanceof Prisma.PrismaClientUnknownRequestError) {
+    return e.message.includes(`PostgresError { code: "${PG_CHECK_VIOLATION}"`);
+  }
+  return false;
+}
+
 // catch prisma constraint failed errors and send 40
 function prismaConstraintFailedHandler(e, req, res, next) {
+  // The Postgres message names the constraint and can echo the failing row, so it stays in the log.
+  if (isCheckViolation(e)) {
+    logger.error(e);
+    return next(createError.Conflict('Request could not be processed due to a constraint violation'));
+  }
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
     // P2002 - Unique constraint failed
     if (e?.code === 'P2002') {

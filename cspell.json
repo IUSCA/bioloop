@@ -69,6 +69,7 @@
     "dtype",
     "echarts",
     "econnrefused",
+    "ERRCODE",
     "euid",
     "eventlet",
     "eventloop",
