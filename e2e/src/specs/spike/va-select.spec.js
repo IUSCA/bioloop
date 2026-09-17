@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect } = require('../../fixtures');
 
 /**
  * Spike 1 — can Playwright drive a Vuestic `va-select`?
@@ -16,32 +16,25 @@ const { test, expect } = require('@playwright/test');
  * navigations from a signed-in start. There are no test hooks in the v2 tree yet, so this
  * throwaway spec selects by text and role.
  *
+ * It runs as `alice`, who administers the world's `lab`. Which seeded account administers which
+ * seeded group is decided by a hash and moves whenever the seed changes, so the spike borrows
+ * the fixture world rather than naming a seeded group and its admin.
+ *
  * @see docs/design/groups/implementation/e2e-test-plan.md — Phase 0
  */
 
-// Dr. Alice Wong Lab, seeded in api/prisma/seed_data/groups.js.
-const WONG_LAB_ID = '0bc7fa6c-6f01-4385-aaee-96d5847d8b1b';
-// Its admin in the current seed. Deliberately not a platform admin: the engine allows a
-// platform admin before any policy runs, so a pass driven as one exercises nothing.
-const WONG_LAB_ADMIN = 'user-084';
-
-test('a va-select changes value under real Playwright input', async ({ page }) => {
+// Alice is deliberately not a platform admin: the engine allows a platform admin before any
+// policy runs, so a pass driven as one exercises nothing.
+test('a va-select changes value under real Playwright input', async ({ world, as }) => {
   // Collected only after sign-in. The dev-login round trip itself logs a 401, because the
   // first request goes out before a token exists, and that is the login working rather than
   // a defect.
+  const { page } = await as('alice', `/v2/groups/${world.groups.lab.id}`);
+  await page.waitForURL(`**/v2/groups/${world.groups.lab.id}`, { timeout: 30_000 });
   const consoleErrors = [];
-  let collecting = false;
   page.on('console', (msg) => {
-    if (collecting && msg.type() === 'error') consoleErrors.push(msg.text());
+    if (msg.type() === 'error') consoleErrors.push(msg.text());
   });
-
-  await page.goto(
-    `/dev-login?username=${WONG_LAB_ADMIN}&next=/v2/groups/${WONG_LAB_ID}`,
-  );
-
-  // dev-login redirects on its own once the token is stored.
-  await page.waitForURL(`**/v2/groups/${WONG_LAB_ID}`, { timeout: 30_000 });
-  collecting = true;
 
   // Vuestic renders a tab as a div carrying role="tab", not as a button.
   await page.getByRole('tab', { name: 'Members' }).click();
@@ -76,8 +69,8 @@ test('a va-select changes value under real Playwright input', async ({ page }) =
  * `UploadDatasetModal`'s dataset-type select sits in a different modal, is built from a
  * constant rather than from the same inline array, and is reached by a different path.
  */
-test('a second va-select, in a different component, also changes', async ({ page }) => {
-  await page.goto(`/dev-login?username=${WONG_LAB_ADMIN}&next=/v2/datasets`);
+test('a second va-select, in a different component, also changes', async ({ as }) => {
+  const { page } = await as('alice', '/v2/datasets');
   await page.waitForURL('**/v2/datasets**', { timeout: 30_000 });
 
   await page.getByRole('button', { name: 'New Dataset' }).click();

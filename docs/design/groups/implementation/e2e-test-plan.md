@@ -155,6 +155,11 @@ both unchanged. Adding one user to `createRandomUsers` reshuffles every membersh
 that hard-codes `user-084` is a spec that fails the next time somebody edits the seed for an
 unrelated reason.**
 
+> **Note (2026-09-17).** This happened. After a reseed, `user-084` no longer belonged to Dr. Alice
+> Wong Lab, and the Phase 0 spike `spike/va-select.spec.js`, which named both, failed with "You do
+> not have access to this group". The spike now signs in as `alice` through the fixtures, on the
+> world's own `lab`, so no spec in the suite names a seeded group or a `user-0NN` account.
+
 **Three accounts are stable, and they are the ones the zero-access flows need.** The
 [dev-servers skill](https://github.com/IUSCA/bioloop/blob/main/.claude/skills/dev-servers/SKILL.md)
 names `ajohnson`, `sdavis`, and `ethompson` as seeded users who hold the `user` role and
