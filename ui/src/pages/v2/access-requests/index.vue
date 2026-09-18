@@ -82,7 +82,7 @@
             class="mt-5 px-5"
             v-model:page="pendingPage"
             v-model:page_size="itemsPerPage"
-            :total_results="pendingTotal"
+            :total_results="pendingTotal ?? 0"
             :curr_items="pendingRequests.length"
           />
         </div>
@@ -127,7 +127,7 @@
             class="mt-5 px-5"
             v-model:page="reviewedPage"
             v-model:page_size="itemsPerPage"
-            :total_results="reviewedTotal"
+            :total_results="reviewedTotal ?? 0"
             :curr_items="reviewedRequests.length"
           />
         </div>
@@ -172,7 +172,7 @@
             class="mt-5 px-5"
             v-model:page="minePage"
             v-model:page_size="itemsPerPage"
-            :total_results="mineTotal"
+            :total_results="mineTotal ?? 0"
             :curr_items="myRequests.length"
           />
         </div>
